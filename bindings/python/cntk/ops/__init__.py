@@ -73,7 +73,7 @@ def as_block(composite, block_arguments_map, block_op_name, block_instance_name=
 
     Args:
         composite: The composite Function that the block encapsulates
-        block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to 
+        block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to
         actual variables they are connected to
         block_op_name: Name of the op that the block represents
         block_instance_name (str, optional): the name of the block Function in the network
@@ -357,8 +357,11 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    return convolution(convolution_map, operand, tuple(strides), sharing, auto_padding,
-                       tuple(lower_pad), tuple(upper_pad), transpose,
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return convolution(convolution_map, operand, strides, sharing, auto_padding,
+                       lower_pad, upper_pad, transpose,
                        max_temp_mem_size_in_samples, name)
 
 
@@ -431,6 +434,51 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     upper_pad = sanitize_shape(upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
                    lower_pad, upper_pad, name)
+
+
+MAX_UNPOOLING = PoolingType_Max
+@typemap
+def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
+            lower_pad=(0,), upper_pad=(0,), name=''):
+    '''
+    Unpools the ``operand`` using information from ``pooling_input``. Unpooling mirrors the operations
+    performed by pooling and depends on the values provided to the corresponding pooling node. The output
+    should have the same shape as pooling_input. Pooling the result of an unpooling operation should
+    give back the original input.
+
+    Example:
+        >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+        >>> x = C.input_variable(img.shape)
+        >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
+        >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
+	array([[[[[  0.,   0.,   0.,   0.],
+		  [  0.,   5.,   0.,   7.],
+		  [  0.,   0.,   0.,   0.],
+		  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
+
+    Args:
+        operand: unpooling input
+        pooling_input: input to the corresponding pooling node
+        unpooling_type: only :const:`~cntk.ops.MAX_UNPOOLING` is supported now
+        unpooling_window_shape: dimensions of the unpooling window
+        strides (default 1): strides.
+        auto_padding: automatic padding flags for each input dimension.
+        lower_pad: precise lower padding for each input dimension
+        upper_pad: precise upper padding for each input dimension
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import unpooling
+    operand = sanitize_input(operand)
+    pooling_input = sanitize_input(pooling_input)
+    unpooling_window_shape = sanitize_shape(unpooling_window_shape)
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return unpooling(operand, pooling_input, unpooling_type,
+                     unpooling_window_shape, strides, auto_padding,
+                     lower_pad, upper_pad, name)
 
 
 @typemap
@@ -1550,7 +1598,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    # FIXME figure out how to only SKIP the doctest in CPU 
+    # FIXME figure out how to only SKIP the doctest in CPU
     from cntk.cntk_py import optimized_rnnstack
     operand = sanitize_input(operand)
     if recurrent_op not in set(['lstm','gru','relu','tanh']):

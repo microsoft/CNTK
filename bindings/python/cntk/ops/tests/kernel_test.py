@@ -11,7 +11,7 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant, cntk_device
-from cntk.ops import AVG_POOLING, MAX_POOLING
+from cntk.ops import AVG_POOLING, MAX_POOLING, MAX_UNPOOLING
 from ...utils import sanitize_dtype_cntk
 
 CONVOLUTION_OPERANDS = [
@@ -74,14 +74,14 @@ ASYM_CONVOLUTION_DATA = [
     ([1, 1, 1, 3, 3], # input_size
      [1, 2, 2], # convolution size
      [[[[ 19, 25, 10],
-        [ 37, 43, 16], 
+        [ 37, 43, 16],
         [ 7, 8, 0]]]]) # result
 ]
 # this test handles convolution with asymmetric padding, in particular, with auto_padding is set to True
-# and the kernel shape is even 
+# and the kernel shape is even
 @pytest.mark.skip(reason="Reference model takes too long to run causing timeout, needs further investigation")
 @pytest.mark.parametrize("input_size, conv_size, result", ASYM_CONVOLUTION_DATA)
-def test_asym_convolution(input_size, conv_size, result, device_id, precision): 
+def test_asym_convolution(input_size, conv_size, result, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
     dev = cntk_device(device_id)
 
@@ -96,9 +96,9 @@ def test_asym_convolution(input_size, conv_size, result, device_id, precision):
         needs_gradient=False,
         name='a')
 
-    # do the same for convolution kernel 
+    # do the same for convolution kernel
     total_size = np.prod(conv_size)
-    y = np.arange(total_size, dtype=dt) 
+    y = np.arange(total_size, dtype=dt)
     conv_map = constant(value=y.reshape(conv_size), device=dev)
 
     from cntk import convolution
@@ -115,7 +115,7 @@ POOLING_GEOMETRY_DATA = [
     ([1, 1, 1, 6, 6], # input_size
      (1, 5, 5), # pooling_window
      (1, 3, 3), # strides
-     [True], # padding flag 
+     [True], # padding flag
      [[[[ 21,   23],
        [ 33,   35]]]]), # result
     ([1, 1, 1, 8, 8],
@@ -124,10 +124,10 @@ POOLING_GEOMETRY_DATA = [
      [False],
      [[[[ 27 ]]]])
 ]
-# the pooling geometry test also tests convolution geometry since they go through the same path 
-# in the CPU code 
+# the pooling geometry test also tests convolution geometry since they go through the same path
+# in the CPU code
 @pytest.mark.parametrize("input_size, pooling_window, strides, padding, result", POOLING_GEOMETRY_DATA)
-def test_op_pooling_geometry(input_size, pooling_window, strides, padding, result, device_id, precision): 
+def test_op_pooling_geometry(input_size, pooling_window, strides, padding, result, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     # fill input operand with a sequence 1,2,3,... til total size and then
@@ -195,14 +195,16 @@ MAX_POOLING_DATA = [
     ([1, 2, 2, 4, 3], # input_size
      (2, 2, 1), # pooling_window
      (2, 2, 1), # strides
+     [False],   # autopad
      [[[[ 16.,  17.,  18.],
          [ 22.,  23.,  24.]]],
        [[[ 40.,  41.,  42.],
          [ 46.,  47.,  48.]]]]), # result
 
-    ([1, 2, 4, 4 ,4],
+    ([1, 2, 4, 4, 4],
      (2, 2, 2),
      (2, 2, 2),
+     [False],
      [[[[  22.,   24.],
         [  30.,   32.]],
        [[  54.,   56.],
@@ -211,11 +213,20 @@ MAX_POOLING_DATA = [
         [  94.,   96.]],
        [[ 118.,  120.],
         [ 126.,  128.]]]]),
+
+    ([1, 1, 1, 8, 8],
+     (5, 5),
+     (2, 2),
+     [True],
+     [[[[ 19.,  21.,  23.,  24.],
+        [ 35.,  37.,  39.,  40.],
+        [ 51.,  53.,  55.,  56.],
+        [ 59.,  61.,  63.,  64.]]]])
 ]
 
 
-@pytest.mark.parametrize("input_size, pooling_window, strides, result", MAX_POOLING_DATA)
-def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, precision):
+@pytest.mark.parametrize("input_size, pooling_window, strides, autopad, result", MAX_POOLING_DATA)
+def test_op_max_pooling(input_size, pooling_window, strides, autopad, result, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     # fill input operand with a sequence 1,2,3,... til total size and then
@@ -238,7 +249,7 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
         backward += np.asarray(input_operand == element)
 
     from cntk import pooling
-    input_op = pooling(a, MAX_POOLING, pooling_window, strides)
+    input_op = pooling(a, MAX_POOLING, pooling_window, strides, autopad)
 
     forward_input = {a: input_operand}
 
@@ -248,6 +259,46 @@ def test_op_max_pooling(input_size, pooling_window, strides, result, device_id, 
     unittest_helper(input_op,
                 forward_input, expected_forward, expected_backward,
                 device_id=device_id, precision=precision)
+
+
+@pytest.mark.parametrize("input_size, pooling_window, strides, autopad, result", MAX_POOLING_DATA)
+def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(1, total_size + 1, 1, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = I(shape=input_operand.shape[2:],
+        dtype=sanitize_dtype_cntk(precision),
+        needs_gradient=True,
+        name='a')
+
+    pooling_result = np.asarray(result, dtype=dt)
+    max_elements = pooling_result.reshape(pooling_result.size).tolist()
+
+    # place 1.0s where maximum elements are
+    backward = np.zeros_like(input_operand)
+    for element in max_elements:
+        backward += np.asarray(input_operand == element)
+
+    from cntk import pooling, unpooling
+    p = pooling(a, MAX_POOLING, pooling_window, strides, autopad)
+    u = unpooling(p, a, MAX_UNPOOLING, pooling_window, strides, autopad)
+    q = pooling(u, MAX_POOLING, pooling_window, strides, autopad)
+
+    forward_input = {a: input_operand}
+
+    expected_forward = backward * input_operand
+    expected_backward = {a: backward}
+
+    unittest_helper(u,
+                forward_input, expected_forward, expected_backward,
+                device_id=device_id, precision=precision)
+    assert np.allclose(p.eval(forward_input), q.eval(forward_input))
 
 # ROI pooling test setup
 # --- forward ---
@@ -280,7 +331,7 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     roi_input         = AA(input_rois, dtype=dt)
     exp_fwd_value     = AA(expected_fwd, dtype=dt)
     exp_bkwd_value    = AA(expected_bkwd, dtype=dt)
-    
+
     # adding batch, sequence and roi axis
     exp_fwd_value.shape  = (1,1,1) + exp_fwd_value.shape
     exp_bkwd_value.shape = (1,1) + exp_bkwd_value.shape
@@ -299,7 +350,7 @@ def test_op_roipooling(input_map, input_rois, expected_fwd, expected_bkwd, devic
     # adding batch and sequence axis
     conv_input.shape     = (1,1) + conv_input.shape
     roi_input.shape      = (1,1) + roi_input.shape
-    
+
     from cntk import roipooling
     input_op = roipooling(a, b, (3,3))
 

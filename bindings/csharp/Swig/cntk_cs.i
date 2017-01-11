@@ -257,6 +257,10 @@
                       const NDShape& lowerPad = {0}, 
                       const NDShape& upperPad = {0}, 
                       const std::wstring& name = L"");
+
+
+%ignore CNTK::Unpooling; 
+
 %ignore CNTK::BatchNormalization(const Variable& operand, 
                                  const Variable& scale, 
                                  const Variable& bias, 

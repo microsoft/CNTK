@@ -1073,6 +1073,28 @@ namespace CNTK
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
     }
 
+    FunctionPtr Unpooling(const Variable& operand,
+                          const Variable& poolingInput,
+                          PoolingType unpoolingType,
+                          const NDShape& poolingWindowShape,
+                          const NDShape& strides,
+                          const std::vector<bool>& autoPadding,
+                          const NDShape& lowerPad,
+                          const NDShape& upperPad,
+                          const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)unpoolingType;
+        additionalProperties[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = poolingWindowShape;
+        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
+        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+
+        std::vector<Variable> operands = { operand, poolingInput};
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Unpooling, operands, std::move(additionalProperties), name), name);
+    }
+
     FunctionPtr BatchNormalization(const Variable& operand,
                                    const Variable& scale,
                                    const Variable& bias,
