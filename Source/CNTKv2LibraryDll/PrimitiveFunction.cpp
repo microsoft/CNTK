@@ -381,7 +381,7 @@ namespace CNTK
 
                 NDShape inferredInputShape = ConvolutionOpOutputShape(PrimitiveOpType::Pooling, outputShape, unpoolingWindowShape, inputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
                 if (inferredInputShape != inputShape)
-                    RuntimeError("The shape of the unpooling operand %ls is different from the result of pooling the poolingInput argument using the provided options %ls", inputShape.AsString(), inferredInputShape.AsString());
+                    RuntimeError("The shape of the unpooling operand %ls is different from the result of pooling the poolingInput argument using the provided options %ls", inputShape.AsString().c_str(), inferredInputShape.AsString().c_str());
 
                 break;
             }
