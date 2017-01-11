@@ -198,6 +198,9 @@ namespace CNTK
     class DistributedCommunicator;
     typedef std::shared_ptr<DistributedCommunicator> DistributedCommunicatorPtr;
 
+    class ParameterServerBasedCommunicator;
+    typedef std::shared_ptr<ParameterServerBasedCommunicator> ParameterServerBasedCommunicatorPtr;
+
     class QuantizedDistributedCommunicator;
     typedef std::shared_ptr<QuantizedDistributedCommunicator> QuantizedDistributedCommunicatorPtr;
 

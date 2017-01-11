@@ -64,4 +64,10 @@ ASGDHelper<ElemType>* NewASGDHelper(
     int traceLevel = 0,                                                      // log level
     int syncPerfStats = 0);                                                  // shown perf data every syncPerfStats
 
+
+// Factory method to create a ASGDHelper instance for V2 Library
+template<class ElemType = float>
+ASGDHelper<ElemType>* NewASGDHelperV2(
+    size_t nodeNumRanks);                                                    // Number of working nodes                                     
+
 }}}

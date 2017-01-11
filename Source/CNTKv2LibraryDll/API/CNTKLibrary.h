@@ -3884,6 +3884,24 @@ namespace CNTK
     };
 
     ///
+    /// A parameter server based communicator that supports push and pull values. 
+    ///
+    class ParameterServerBasedCommunicator : public DistributedCommunicator
+    {
+    public:
+
+        CNTK_API virtual void PullAndFetchInPlace(
+            const std::vector<NDArrayViewPtr>& values) = 0;
+
+        // TODO: Currently this is a workaround to free static MPIWrapper, it will go away soon.
+        // Should be called before executable exits.
+        CNTK_API static void Finalize();
+
+    protected:
+        ParameterServerBasedCommunicator() {};
+    };
+
+    ///
     /// Built-in MPI-based communicator.
     ///
     CNTK_API DistributedCommunicatorPtr MPICommunicator();
@@ -3892,6 +3910,11 @@ namespace CNTK
     /// Distributed communicator that allows quantized aggregations.
     ///
     CNTK_API QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits);
+
+    ///
+    /// Build-in Parameter Server Based communicator.
+    ///
+    CNTK_API ParameterServerBasedCommunicatorPtr ParameterServerBasedCommunicator();
 }
 
 
