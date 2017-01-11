@@ -25,6 +25,14 @@
     },
     {
         "category": ["Image"],
+        "name":  "Feature Extraction",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/FeatureExtraction",
+        "description":  "Evaluate and write out different layers of a trained model using Python.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "Video Action Recognition",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Video/GettingStarted",
         "description":  "Train a Basic 3-D convolutional neural network for video action recognition on the UCF11 dataset.",
