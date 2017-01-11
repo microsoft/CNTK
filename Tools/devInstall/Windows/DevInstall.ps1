@@ -137,11 +137,6 @@ Function main
         Write-Host "Exception caught - function main / failure"
         Write-Host ($Error[0]).Exception
         Write-Host
-        Write-Host "
-If you want to restart this installation script, please close this Powershell Instance and start a new Powershell instance. 
-This will guarantee that you pick up all changes to the environment already performed by the script.
-
-"
     }
 }
 

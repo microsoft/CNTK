@@ -8,7 +8,8 @@ function PreReqOperations(
     $continueInstallation = $true
     foreach ($item in $actionList) {
         foreach ($prereqItem in $item.PreReq) {
-            $continueInstallation = $continueInstallation -and (PreRequisiteItem $prereqItem)
+            $continueInstallation = $false
+            PreRequisiteItem $prereqItem
         }
     }
     if (-not $continueInstallation) {
@@ -29,19 +30,6 @@ function PreRequisiteItem(
     Invoke-Expression $expr 
 }
 
-function PrereqInfo2013Up5(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
-{
-    FunctionIntro $table
-
-    Write-Host "
-
-We require the installation of Visual Studio 2013 Update 5 to continue.
-"
-    return $false
-}
-
 function PrereqInfoVS15(
     [Parameter(Mandatory = $true)][hashtable] $table
 )
@@ -54,7 +42,6 @@ Please check
   https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows
 for more details.
 "
-    return $false
 }
 
 function PrereqInfoCuda8(

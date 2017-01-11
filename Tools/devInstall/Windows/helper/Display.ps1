@@ -117,7 +117,6 @@ Function DisplayEnd()
     Write-Host "
 
 Installation finished.
-Please close all Powershell windows to pick up any changes to environment variables in Powershell.
 
 "
 }

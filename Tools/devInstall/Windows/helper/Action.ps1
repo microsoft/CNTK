@@ -15,9 +15,6 @@ function ActionOperations(
             ActionItem $actionItem
         }
     }
-
-    Write-Host "Install operations finished"
-    Write-Host
 }
 
 function ActionItem(
@@ -87,9 +84,9 @@ function InstallYml(
     $env= $table["Env"]
     $ymlFile  = $table["ymlFile"]
 
-    $envsDir = Join-Path $basePath "envs"
+    $envsDir = Join-Path $basePath envs
     $targetDir = Join-Path $envsDir $env
-    $condaPath = Join-Path $basePath "Scripts\conda.exe"
+    $condaPath = Join-Path $basePath Scripts\conda.exe
 
     if (test-path -path $targetDir -PathType Container) {
         $newTable = @{ Function = "InstallExe"; Command = $condaPath; Param = "env update --file `"$ymlFile`" --name $targetDir"; WorkDir = "$basePath\Scripts"; runAs=$false }
@@ -389,7 +386,7 @@ function ExtractAllFromTarGz(
 
     $app = CallGetCommand -application "git.exe"
 
-    if ($app.length -eq 0) {
+    if ($app) {
         throw "Unpacking the file [$targzFileName] requires extraction utility TAR.EXE.\n Make sure GIT is installed on your maschine."
     }
 

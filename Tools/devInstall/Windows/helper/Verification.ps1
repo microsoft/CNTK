@@ -281,7 +281,7 @@ function VerifyEnvironmentAndData(
     $location = "User"
 
     $envContent = GetEnvironmentVariableContent $name 
-    $noInstallRequired = ($envContent -ieq $content)
+    $noInstallRequired = $envContent -eq $content
 
     Write-Verbose "[$func]: [$name] == [$content] returned [$noInstallRequired]"
     return $noInstallRequired
