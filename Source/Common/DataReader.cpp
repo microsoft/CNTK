@@ -79,6 +79,7 @@ void DataReader::Destroy()
 
 // DataReader Constructor
 // options - [in] string  of options (i.e. "-windowsize:11 -addenergy") data reader specific
+#pragma optimize("", off) // TODO work around potential VS2015 code optimization bug, replacing virtual- by non-virtual call in Init() below
 template <class ConfigRecordType>
 DataReader::DataReader(const ConfigRecordType& config)
 {

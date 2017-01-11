@@ -211,23 +211,18 @@ PrefetchGPUDataTransferer::~PrefetchGPUDataTransferer()
     {
         PrepareDevice(m_deviceId);
     }
-    catch (...) 
+    catch (...)
     {
         // the error is already logged
         return;
     }
 
-    try 
+    auto code = cudaStreamDestroy(m_stream);
+    if (code != cudaSuccess)
     {
-        cudaStreamDestroy(m_stream) || "cudaStreamDestroy failed (PrefetchGPUDataTransferer dtor)";
+        std::cerr << "cudaStreamDestroy failed (PrefetchGPUDataTransferer dtor): "
+            << cudaGetErrorString(code) << " (cuda error " <<  code << ")"<< std::endl;
     }
-    catch (const std::exception& e)
-    {
-        // log, but do not re-throw
-        std::cerr << e.what() << std::endl;
-    }
-    catch (...) { }
-    
 }
 
 }}}

@@ -12,7 +12,9 @@ import numpy as np
 import pytest
 from ..functions import *
 from ...trainer import *
+from ...initializer import glorot_uniform
 from .. import constant, parameter, input_variable, placeholder_variable, times, plus
+from ... import InferredDimension
 from .ops_test_utils import compare_lists_of_np_arrays
 
 def test_variable_forwarding():
@@ -126,3 +128,30 @@ def test_getting_output_from_non_existent_node():
 
     with pytest.raises(ValueError):
         sum_output = times_node.forward({x: x0, y: y0}, sum_node.outputs)
+
+def test_set_name():
+    x = input_variable((1,))
+    y = input_variable((1,))
+    x_plus_y = x + y
+    assert (x_plus_y.name == '')
+    x_plus_y.name = 'x_plus_y'
+    assert (x_plus_y.name == 'x_plus_y')
+
+    x_plus_y_2 = plus(x, y, name='x_plus_y_2')
+    assert (x_plus_y_2.name == 'x_plus_y_2')
+    with pytest.raises(ValueError):
+        x_plus_y_2.name = 'x_plus_y_2_new'
+
+    from ... import cntk_py
+    cntk_py.allow_renaming_functions()
+
+    x_plus_y_2.name = 'x_plus_y_2_new'
+
+
+def test_data_type_inference():
+    x_float = input_variable((1,), dtype = np.float64)
+    param1 = parameter((InferredDimension, 1), init = glorot_uniform(), dtype = cntk_py.DataType_Unknown)
+    assert (param1.get_data_type() == cntk_py.DataType_Unknown)
+
+    x_times_param1 = times(x_float, param1)
+    assert (param1.dtype == np.float64)

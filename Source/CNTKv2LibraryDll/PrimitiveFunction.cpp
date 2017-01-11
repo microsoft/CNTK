@@ -114,6 +114,16 @@ namespace CNTK
         if (outputDataType == DataType::Unknown)
             outputDataType = firstKnownInputDataType;
 
+        // Propagate the data type to any input Parameters/Constants with unknown data type
+        if (inferDimensions && (outputDataType != DataType::Unknown))
+        {
+            for (auto& input : inputs)
+            {
+                if ((input.GetDataType() == DataType::Unknown) && (input.IsConstant() || input.IsParameter()))
+                    input.m_dataFields->m_dataType = outputDataType;
+            }
+        }
+
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||
@@ -372,7 +382,7 @@ namespace CNTK
 
                 NDShape inferredInputShape = ConvolutionOpOutputShape(PrimitiveOpType::Pooling, outputShape, unpoolingWindowShape, inputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, inferDimensions);
                 if (inferredInputShape != inputShape)
-                    RuntimeError("The shape of the unpooling operand %ls is different from the result of pooling the poolingInput argument using the provided options %ls", inputShape.AsString(), inferredInputShape.AsString());
+                    RuntimeError("The shape of the unpooling operand %ls is different from the result of pooling the poolingInput argument using the provided options %ls", inputShape.AsString().c_str(), inferredInputShape.AsString().c_str());
 
                 break;
             }
@@ -673,7 +683,7 @@ namespace CNTK
 
         dict[inputsKey] = std::move(inputUids);
 
-        if (m_op == PrimitiveOpType::Unpooling)
+        if (m_op == PrimitiveOpType::Block)
         {
             auto blockCompositeFunc = dynamic_cast<const CompositeFunction*>(BlockComposite().get());
             dict[blockFunctionCompositeKey] = blockCompositeFunc->SerializeBlockComposite();
@@ -709,7 +719,7 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list, after Combine.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::Block)
+        if (op > PrimitiveOpType::Unpooling)
         {
             LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 
