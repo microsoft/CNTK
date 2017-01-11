@@ -386,7 +386,7 @@ function ExtractAllFromTarGz(
 
     $app = CallGetCommand -application git.exe
 
-    if ($app) {
+    if (-not $app) {
         throw "Unpacking the file [$targzFileName] requires extraction utility TAR.EXE.\n Make sure `"Git for Windows`" is installed on your machine."
     }
 

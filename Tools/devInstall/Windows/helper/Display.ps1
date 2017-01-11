@@ -117,7 +117,6 @@ Function DisplayEnd()
     Write-Host "
 
 Installation finished.
-
 "
 }
 
