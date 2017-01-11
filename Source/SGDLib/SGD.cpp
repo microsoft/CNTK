@@ -1021,6 +1021,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     bool noMoreSamplesToProcess = false;
     bool isFirstMinibatch = true;
+    double loc_learnRatePerSample = 0;
+    double loc_momentum = 0;
+    double loc_actualMBSize = 0;
+
     for (;;)
     {
         auto profMinibatch = ProfilerTimeBegin();
@@ -1258,6 +1262,15 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                     double momentumPerSample = GetMomentumPerSample(epochNumber /*BUGBUG workaround:*/, net->GetMBLayoutPtrOfNetwork()->GetNumParallelSequences());
                     // TODO: Check why l2Factor is not applied to L1. Bug?
                     // BUGBUG (Issue #95): Access to net MBLayout can no longer be done if we have multiple input layouts
+                    if (loc_actualMBSize != numSamplesInMinibatch || loc_learnRatePerSample != nodeDependentLearningRatePerSample || loc_momentum != momentumPerSample) {
+                        LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
+                            nodeDependentLearningRatePerSample, momentumPerSample, numSamplesInMinibatch);
+
+                        loc_actualMBSize = numSamplesInMinibatch;
+                        loc_learnRatePerSample = nodeDependentLearningRatePerSample;
+                        loc_momentum = momentumPerSample;
+                    }
+
                     UpdateWeights(dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Value(),
                                   dynamic_pointer_cast<ComputationNode<ElemType>>(node)->Gradient(),
                                   *smoothedGradientIter, *smoothedCountIter,
@@ -2158,11 +2171,14 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 {
     // we use simple linear (instead of log linear) exponentiation here
     const double momentum = MomentumPerMB(momentumPerSample, actualMBSize);
+
+
+
 #if DUMPOUTPUT
     LOGPRINTF(stderr, "learnRatePerSample=%0.8f, momentum=%0.8f, actualMBSize=%ld\n",
-              learnRatePerSample, momentum, actualMBSize);
+        learnRatePerSample, momentum, actualMBSize);
     LOGPRINTF(stderr, "GradUpdateType()=%d, GradientUpdateNoiseStd()=%0.8f\n",
-              GradUpdateType(), GradientUpdateNoiseStd());
+        GradUpdateType(), GradientUpdateNoiseStd());
     gradientValues.Print("Gradient Input");
     smoothedGradient.Print("Smoothed Gradient Input");
 #endif
