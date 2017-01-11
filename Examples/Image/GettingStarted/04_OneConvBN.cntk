@@ -33,7 +33,7 @@ trainNetwork = {
 
         DenseBnReluLayer {outDim} = Sequential (
             LinearLayer             {outDim} :   
-            BatchNormalizationLayer {spatialRank = 1} : ReLU
+            BatchNormalizationLayer {spatialRank = 0} : ReLU
         )
 		
         model = Sequential (

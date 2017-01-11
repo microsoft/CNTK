@@ -13,7 +13,7 @@ inline FunctionPtr ConvBNLayer(Variable input, size_t outFeatureMapCount, size_t
     auto scaleParams = Parameter({ NDShape::InferredDimension }, (float)scValue, device);
     auto runningMean = Constant({ NDShape::InferredDimension }, 0.0f, device);
     auto runningInvStd = Constant({ NDShape::InferredDimension }, 0.0f, device);
-    return BatchNormalization(convFunction, scaleParams, biasParams, runningMean, runningInvStd, spatial, (double)bnTimeConst, 0.0, 0.000000001 /* epsilon */);
+    return BatchNormalization(convFunction, scaleParams, biasParams, runningMean, runningInvStd, spatial, (double)bnTimeConst, 0.0, 1e-5 /* epsilon */);
 }
 
 inline FunctionPtr ConvBNReLULayer(Variable input, size_t outFeatureMapCount, size_t kernelWidth, size_t kernelHeight, size_t hStride, size_t vStride, double wScale, double bValue, double scValue, size_t bnTimeConst, bool spatial, const DeviceDescriptor& device)
@@ -33,7 +33,7 @@ inline FunctionPtr ProjLayer(Variable wProj, Variable input, size_t hStride, siz
     size_t numInputChannels = input.Shape()[input.Shape().Rank() - 1];
 
     auto c = Convolution(wProj, input, { hStride, vStride, numInputChannels }, { true }, { false });
-    return BatchNormalization(c, sc, b, m, v, true /*spatial*/, (double)bnTimeConst);
+    return BatchNormalization(c, sc, b, m, v, true /*spatial*/, (double)bnTimeConst, 0, 1e-5, false); // TODO: cudnn engine does not work in Linux debug build here
 }
 
 inline FunctionPtr ResNetNode2(Variable input, size_t outFeatureMapCount, size_t kernelWidth, size_t kernelHeight, double wScale, double bValue, double scValue, size_t bnTimeConst, bool spatial, const DeviceDescriptor& device)
