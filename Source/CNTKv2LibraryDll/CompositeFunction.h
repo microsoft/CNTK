@@ -254,7 +254,7 @@ namespace CNTK
                                                                     std::unordered_map<Variable, bool>& isVariableRootMap);
 
         template <typename ElementType>
-        static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
+        static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, std::unordered_map< Microsoft::MSR::CNTK::MBLayoutPtr, Variable>& layoutsPopulated);
         void PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments);
 
         template <typename ElementType>

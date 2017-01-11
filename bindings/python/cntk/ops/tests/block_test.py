@@ -99,3 +99,14 @@ def test_combine_op_as_block():
 
     expected_forward = [[[2.]]]
     assert np.array_equal(res, expected_forward)
+
+
+def test_block_with_duplicate_inputs():
+    from .. import placeholder_variable, as_block, input_variable
+    input = input_variable((1,), name='input')
+    
+    left_operand_placeholder = placeholder_variable(name='left_placeholder')
+    right_operand_placeholder = placeholder_variable()
+    plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, input), (right_operand_placeholder, input)], 'plus')
+
+    plus_block_clone = plus_block.clone('share')
