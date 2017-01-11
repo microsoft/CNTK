@@ -679,7 +679,7 @@ namespace CNTK
 
         dict[inputsKey] = std::move(inputUids);
 
-        if (m_op == PrimitiveOpType::Unpooling)
+        if (m_op == PrimitiveOpType::Block)
         {
             auto blockCompositeFunc = dynamic_cast<const CompositeFunction*>(BlockComposite().get());
             dict[blockFunctionCompositeKey] = blockCompositeFunc->SerializeBlockComposite();
@@ -715,7 +715,7 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list, after Combine.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::Block)
+        if (op > PrimitiveOpType::Unpooling)
         {
             LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 
