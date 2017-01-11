@@ -260,6 +260,8 @@
 
 
 %ignore CNTK::Unpooling; 
+%ignore CNTK::LambdaRank
+%ignore CNTK::NDCGAt1;
 
 %ignore CNTK::BatchNormalization(const Variable& operand, 
                                  const Variable& scale, 

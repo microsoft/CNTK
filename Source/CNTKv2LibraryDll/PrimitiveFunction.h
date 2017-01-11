@@ -89,6 +89,7 @@ namespace CNTK
         { PrimitiveOpType::Block, L"Block" },
         { PrimitiveOpType::Unpooling, L"Unpooling" },
         { PrimitiveOpType::LambdaRank, L"LambdaRank" },
+        { PrimitiveOpType::NDCG, L"NDCG" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -121,6 +122,8 @@ namespace CNTK
         }
         else if (op == PrimitiveOpType::LambdaRank)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 }, { 2, 2 } });
+        else if (op == PrimitiveOpType::NDCG)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 },{ 1, 0 },{ 2, 2 } });
         else if (op == PrimitiveOpType::CrossEntropyWithSoftmax)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else if (op == PrimitiveOpType::GatherPacked)

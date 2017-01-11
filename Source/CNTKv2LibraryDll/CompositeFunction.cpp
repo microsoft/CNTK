@@ -666,6 +666,9 @@ namespace CNTK
             case PrimitiveOpType::LambdaRank:
                 computationNodePtr = New<LambdaRankNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::NDCG:
+                computationNodePtr = New<NDCG1EvalNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::PastValue:
             case PrimitiveOpType::FutureValue:
             {

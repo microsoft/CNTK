@@ -262,11 +262,14 @@ def lambda_rank(output, gain, group, name=''):
     (NDCG) at infinity for each group. Concretely,
     the Discounted Cumulative Gain (DCG) at infinity is:
     
-    :math:`\mathrm{DCG_{\infty}}()=\sum_{i=0}^{\infty} \frac{gain_i}{\log(i+2)}`
+    :math:`\mathrm{DCG_{\infty}}()=\sum_{i=0}^{\infty} \frac{gain_{(i)}}{\log(i+2)}`
     
-    and the NDCG is just the DCG  divided by the 
-    maximum achievable DCG (obtained by placing the samples with 
-    the largest gain at the top of the ranking).
+    where :math:`gain_{(i)}` means the gain of the :math:`i`-th ranked sample.
+    
+    The NDCG is just the DCG  divided by the maximum achievable DCG (obtained 
+    by placing the samples with the largest gain at the top of the ranking).
+    
+    Samples in the same group must appear in order of decreasing gain.
 
     It returns 1 minus the average NDCG across all the groups in the minibatch 
     multiplied by 100 times the number of samples in the minibatch.
@@ -304,6 +307,52 @@ def lambda_rank(output, gain, group, name=''):
     gain = sanitize_input(gain, dtype)
     group = sanitize_input(group, dtype)
     return lambda_rank(output, gain, group, name)
+
+
+@typemap
+def ndcg_at_1(output, gain, group, name=''):
+    r'''
+    Groups samples according to ``group``, sorts 
+    them within each group based on ``output`` and 
+    computes the Normalized Discounted Cumulative Gain 
+    (NDCG) at 1 for each group. Concretely,
+    the NDCG at 1 is:
+    
+    :math:`\mathrm{NDCG_1} = \frac{gain_{(1)}}{\max_i gain_i}`
+    
+    where :math:`gain_{(1)}` means the gain of the first ranked sample.
+    
+    Samples in the same group must appear in order of decreasing gain.
+
+    It returns the average NDCG at 1 across all the groups in the minibatch 
+    multiplied by 100 times the number of samples in the minibatch.
+    
+    This is a forward-only node, there is no gradient for it.
+
+    Example:
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,))
+        >>> gain  = C.input_variable((1,))
+        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
+        >>> s = np.array([2, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> C.ndcg_at_1(score, gain, group).eval({score:s, gain:n, group: g})
+        array(400.0, dtype=float32)
+
+    Args:
+        output: score of each sample 
+        gain: gain of each sample
+        group: group of each sample
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import ndcg_at_1
+    dtype = get_data_type(output, gain, group)
+    output = sanitize_input(output, dtype)
+    gain = sanitize_input(gain, dtype)
+    group = sanitize_input(group, dtype)
+    return ndcg_at_1(output, gain, group, name)
 
 
 @typemap

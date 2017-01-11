@@ -221,7 +221,7 @@ LAMBDA_RANK_GRADIENTS_VALUES_AND_INPUTS = [
 ]
 
 @pytest.mark.parametrize("grad, value, output, gain", LAMBDA_RANK_GRADIENTS_VALUES_AND_INPUTS)
-def test_op_classification_error_with_axis(grad, value, output, gain, device_id, precision):
+def test_lambda_rank(grad, value, output, gain, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
 
     score = AA(output, dtype=dt).reshape(-1,1,1)
@@ -243,3 +243,30 @@ def test_op_classification_error_with_axis(grad, value, output, gain, device_id,
 
     assert np.allclose(actual_value, expected_value)
     assert np.allclose(actual_grad,  expected_grad)
+
+NDCG_VALUES_AND_INPUTS = [
+    # (value, output, gain)
+    (200, [2, 1],    [7, 1]),
+    (300, [4, 2, 1], [3, 2, 1])
+]
+
+@pytest.mark.parametrize("value, output, gain", NDCG_VALUES_AND_INPUTS)
+def test_ndcg(value, output, gain, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    score = AA(output, dtype=dt).reshape(-1,1,1)
+    gain  = AA(gain, dtype=dt).reshape(-1,1,1)
+    group = np.ones_like(score).reshape(-1,1,1)
+
+    expected_value = AA(value, dtype=dt)
+
+    from .. import ndcg_at_1
+
+    g = I((1,))
+    s = I((1,))
+    n = I((1,))
+    f = ndcg_at_1(s, n, g)
+
+    actual_value = np.copy(f.eval({s:score, n:gain, g:group}))
+
+    assert np.allclose(actual_value, expected_value)
