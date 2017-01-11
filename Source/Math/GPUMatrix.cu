@@ -2808,21 +2808,27 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
     uint64_t* outIdx = nullptr;
     // Determine temp buffer size needed for SortPairsDescending to sort values on the first pass.
     size_t cbtemp = 0;
-    // If first param is nullptr then no actual work is done except writing result to cbtemp.
-    CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
+    {
+        SyncGuard syncGuard1;
+        // If first param is nullptr then no actual work is done except writing result to cbtemp.
+        CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(nullptr, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
+    }
     size_t ctemp1 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
     // Determine temp buffer size needed for SortPairs to sort indices on the second pass.
     cbtemp = 0;
-    CUDA_CALL(cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
+    {
+        SyncGuard syncGuard2;
+        CUDA_CALL(cub::DeviceRadixSort::SortPairs(nullptr, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
+    }
     size_t ctemp2 = (cbtemp + sizeof(ElemType) - 1) / sizeof(ElemType);
     size_t ctemp = std::max(ctemp1, ctemp2);
-    cbtemp = ctemp * sizeof(ElemType);
+    cbtemp = ctemp * sizeof(ElemType); // Make sure there is some space for 16 bit alignment.
     // ElemType count needed to store indices, accounting for natural alignment for uint64_t type.
     size_t cidx = ((celt + 1) * sizeof(uint64_t) - 1 + sizeof(ElemType) - 1) / sizeof(ElemType);
     // Get temp workspace.
     auto workspace = GetOrCreateWorkspace();
     // RequireSize to store: output values for the 1st and 2nd passes, input indices, output indices, and temp storage.
-    workspace->RequireSize(m, 2 * n + (2 * cidx + ctemp + m - 1) / m);
+    workspace->RequireSize(m, 2 * n + (2 * cidx + (ctemp + 4) + m - 1) / m); // Make sure that ctemp can be 16 bit aligned
     outVal1 = workspace->Data();
     outVal2 = outVal1 + celt;
     inIdx = reinterpret_cast<uint64_t*>(outVal2 + celt);
@@ -2832,16 +2838,27 @@ void GPUMatrix<ElemType>::VectorMax(GPUMatrix<ElemType>& maxIndexes, GPUMatrix<E
         reinterpret_cast<uint8_t*&>(inIdx) += sizeof(uint64_t) - cbAlign;
     outIdx = inIdx + celt;
     void* ptmp = outIdx + celt;
+
+    cbAlign = reinterpret_cast<size_t>(ptmp) % 16;
+    if (cbAlign != 0)
+        reinterpret_cast<uint8_t*&>(ptmp) += 16 - cbAlign;
+
     assert(reinterpret_cast<ElemType*>(reinterpret_cast<uint8_t*>(ptmp) + cbtemp) <= workspace->Data() + workspace->GetNumElements());
 
     // Initialize indices.
     const int ThreadsPerBlock = 128;
     int cblock = (celt + ThreadsPerBlock - 1) / ThreadsPerBlock;
-    _initIndicesForSort<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, m, n);
-    // Sort by values.
-    CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(ptmp, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream));
-    // Sort by column indices. outIdx contains indices after the first pass so it's used as an input.
-    CUDA_CALL(cub::DeviceRadixSort::SortPairs(ptmp, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
+    _initIndicesForSort << <cblock, ThreadsPerBlock, 0, t_stream >> >(inIdx, m, n);
+    {
+        SyncGuard syncGuard3;
+        // Sort by values.
+        CUDA_CALL(cub::DeviceRadixSort::SortPairsDescending(ptmp, cbtemp, inVal, outVal1, inIdx, outIdx, celt, 0, sizeof(ElemType) * 8, t_stream, true));
+    }
+    {
+        SyncGuard syncGuard4;
+        // Sort by column indices. outIdx contains indices after the first pass so it's used as an input.
+        CUDA_CALL(cub::DeviceRadixSort::SortPairs(ptmp, cbtemp, outIdx, inIdx, outVal1, outVal2, celt, 0, 32, t_stream));
+    }
     // Copy results.
     cblock = (topK * n + ThreadsPerBlock - 1) / ThreadsPerBlock;
     _copyTopKResults<<<cblock, ThreadsPerBlock, 0, t_stream>>>(inIdx, outVal2, maxIndexes.Data(), maxValues.Data(), m, n, topK);
