@@ -280,9 +280,7 @@ function VerifyEnvironmentAndData(
     $content = $table["Content"]
     $location = "User"
 
-    $path = Join-Path "env:" $name
-    $envContent = Get-ChildItem $path -ErrorAction SilentlyContinue
-    $envContent = $envContent.Value
+    $envContent = GetEnvironmentVariableContent $name 
     $noInstallRequired = ($envContent -ieq $content)
 
     Write-Verbose "[$func]: [$name] == [$content] returned [$noInstallRequired]"

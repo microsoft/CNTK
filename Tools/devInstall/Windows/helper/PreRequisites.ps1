@@ -5,13 +5,16 @@
 function PreReqOperations(
     [array] $actionList = @())
 {
-   foreach ($item in $actionList) {
+    $continueInstallation = $true
+    foreach ($item in $actionList) {
         foreach ($prereqItem in $item.PreReq) {
-            PreRequisiteItem $prereqItem
+            $continueInstallation = $continueInstallation -and (PreRequisiteItem $prereqItem)
         }
     }
-
-    Write-Host "Install operations finished"
+    if (-not $continueInstallation) {
+        throw "Not all pre-requisites installed, installation terminated."
+    }
+    Write-Host "Checking pre-requisites finished"
     Write-Host
 }
 
@@ -36,6 +39,7 @@ function PrereqInfo2013Up5(
 
 We require the installation of Visual Studio 2013 Update 5 to continue.
 "
+    return $false
 }
 
 function PrereqInfoVS15(
@@ -43,13 +47,14 @@ function PrereqInfoVS15(
 )
 {
     FunctionIntro $table
-    Write-Host "
+    Write-Warning "
 
-Installation of Visual Studio 2015 Update 3 is a pre-requisite before installation 
-can continue. Please check [https://www.visualstudio.com/vs/] for more details on
-Visual Studion 2015
+Installation of Visual Studio 2015 Update 3 is a pre-requisite before installation can continue.
+Please check 
+  https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows
+for more details.
 "
-return
+    return $false
 }
 
 function PrereqInfoCuda8(
@@ -57,11 +62,13 @@ function PrereqInfoCuda8(
 )
 {
     FunctionIntro $table
-    Write-Host "
+    Write-Warning "
 
 Installation of NVidia CUDA 8.0 is a pre-requisite before installation can continue.
+Please check 
+  https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows
+for more details.
 "
-return
 }
 
 function StopInstallation(

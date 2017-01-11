@@ -1,4 +1,8 @@
-﻿function DownloadOperations(
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
+function DownloadOperations(
     [parameter(Mandatory=$true)][array] $downloadList)
 {
     Write-Host "Performing download operations"
@@ -87,28 +91,6 @@ function LocalCopyFile(
     Write-Host Copying [$source] to local disk ...
     new-item $destination -type File -Force -ErrorAction SilentlyContinue
     copy-Item $source $destination -Force -ErrorAction SilentlyContinue
-}
-
-function RobocopyFromServer(
-    [Parameter(Mandatory = $true)][hashtable] $table
-)
-{
-    FunctionIntro $table
-    
-    $source = $table["Source"]
-    $destination = $table["Destination"]
-
-    $source = $LocalServer+"\$source"
-
-    if (-not (test-path $source)) {
-        throw "SourceDirectory [$source] is missing"
-    }
-
-    $option = "/MIR /NFL /copy:DT /dcopy:D /xj"
-
-    $param = "$source $destination $option"
-
-    DoProcess -command $roboCopyCmd -param "$param" -IgnoreNonZeroExitCode $true
 }
 
 function NotImplemented(

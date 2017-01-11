@@ -1,4 +1,8 @@
-﻿<#
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
+<#
   .SYNOPSIS
  Use this cmdlet to install a CNTK development environment on your machine
 
@@ -126,12 +130,18 @@ Function main
 
             ActionOperations $operationList 
 
-            #DisplayEnd
+            DisplayEnd
         }
     }
     catch {
         Write-Host "Exception caught - function main / failure"
         Write-Host ($Error[0]).Exception
+        Write-Host
+        Write-Host "
+If you want to restart this installation script, please close this Powershell Instance and start a new Powershell instance. 
+This will guarantee that you pick up all changes to the environment already performed by the script.
+
+"
     }
 }
 

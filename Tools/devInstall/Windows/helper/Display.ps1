@@ -1,4 +1,8 @@
-﻿function FunctionIntro(
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
+function FunctionIntro(
     [Parameter(Mandatory = $true)][hashtable] $table
 )
 {
@@ -110,7 +114,12 @@ function DisplayStart()
 
 Function DisplayEnd() 
 {
-    # empty by design
+    Write-Host "
+
+Installation finished.
+Please close all Powershell windows to pick up any changes to environment variables in Powershell.
+
+"
 }
 
 function DisplayAfterVerify(
