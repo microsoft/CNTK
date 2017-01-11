@@ -224,8 +224,17 @@ public:
     }
 
     ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
-    void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul);
-    ElemType RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
+    
+    void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, 
+                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+
+    ElemType RmsProp(GPUMatrix<ElemType>& gradients, 
+                     ElemType RMS_GAMMA, 
+                     ElemType RMS_WGT_INC, 
+                     ElemType RMS_WGT_MAX, 
+                     ElemType RMS_WGT_DEC, 
+                     ElemType RMS_WGT_MIN, 
+                     const bool needAveMultiplier);
 
     void Reshape(const size_t numRows, const size_t numCols);
 

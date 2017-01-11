@@ -416,7 +416,7 @@ Trainer BuildTrainer(const FunctionPtr& function, const Variable& labels,
 {
     auto trainingLoss = CNTK::CrossEntropyWithSoftmax(function, labels, L"lossFunction");
     auto prediction = CNTK::ClassificationError(function, labels, L"classificationError");
-    auto learner = MomentumSGDLearner(function->Parameters(), lr, m);
+    auto learner = MomentumSGDLearner(function->Parameters(), lr, m, /*unitGainMomentum = */true);
     return Trainer(function, trainingLoss, prediction, { learner }); 
 }
 
@@ -674,7 +674,7 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
 
     LearningRatePerSampleSchedule learningRateSchedule2({ { 0.04, 0.02, 0.01, 0.008, 0.004, 0.002, 0.001 } }, actualMBSize);
     MomentumAsTimeConstantSchedule momentumSchedule({ { 900, 800, 700, 600, 500 } }, actualMBSize);
-    auto learner2 = AdamLearner(classifierOutput->Parameters(), learningRateSchedule, momentumSchedule);
+    auto learner2 = AdamLearner(classifierOutput->Parameters(), learningRateSchedule, momentumSchedule, /*unitGainMomentum = */true);
     Trainer trainer2(classifierOutput, trainingLoss, prediction, { learner });
 
 

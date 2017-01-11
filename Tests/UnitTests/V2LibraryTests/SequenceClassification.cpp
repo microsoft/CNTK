@@ -48,7 +48,9 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool useSparseLa
 
     LearningRatePerSampleSchedule learningRatePerSample = 0.0005;
     MomentumAsTimeConstantSchedule momentumTimeConstant = 256;
-    Trainer trainer(classifierOutput, trainingLoss, prediction, { MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, momentumTimeConstant) });
+    Trainer trainer(classifierOutput, trainingLoss, prediction, 
+                    { MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, 
+                                         momentumTimeConstant, /*unitGainMomentum = */true) });
 
     size_t outputFrequencyInMinibatches = 1;
     for (size_t i = 0; true; i++)

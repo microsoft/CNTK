@@ -98,6 +98,7 @@ def train_and_evaluate(create_train_reader, test_reader, network_name, max_epoch
     
     # trainer object
     learner     = create_dist_learner(momentum_sgd(z.parameters, lr_schedule, mm_schedule,
+                                                   unit_gain = True,
                                                    l2_regularization_weight = l2_reg_weight))
     trainer     = Trainer(z, ce, pe, learner)
 

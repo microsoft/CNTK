@@ -29,7 +29,7 @@ def test_trainer(tmpdir):
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, ce, errs,
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant)])
+            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
@@ -57,7 +57,7 @@ def test_output_to_retain():
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, ce, errs,
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant)])
+            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[[1]], [[2]]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}

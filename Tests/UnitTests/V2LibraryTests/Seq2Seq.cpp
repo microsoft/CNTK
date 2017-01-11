@@ -180,7 +180,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     AdditionalLearningOptions additionalOptions;
     additionalOptions.gradientClippingThresholdPerSample = 2.3;
     additionalOptions.gradientClippingWithTruncation = true;
-    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumTimeConstant, additionalOptions) });
+    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumTimeConstant, /*unitGainMomentum = */true, additionalOptions) });
 
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize1 = 72;

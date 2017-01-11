@@ -1484,70 +1484,137 @@ void Matrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const ElemT
                             NOT_IMPLEMENTED);
 }
 
+// Vanilla SGD update. 
+// Modifies "this" parameter matrix, on which this method is invoked.
 template <class ElemType>
-void Matrix<ElemType>::NormalGrad(Matrix<ElemType>& gradients,
-                                  Matrix<ElemType>& functionValues,
-                                  const ElemType learnRatePerSample,
-                                  const ElemType momentum,
-                                  const bool useNesterovMomentum)
+void Matrix<ElemType>::SGDUpdate(Matrix<ElemType>& gradients, ElemType learnRatePerSample)
 {
-    DecideAndMoveToRightDevice(*this, gradients, functionValues);
+    DecideAndMoveToRightDevice(gradients, *this);
 
-    if (!useNesterovMomentum)
-    {
-        DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
-            { 
-                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                functionValues -= *this;
-            },
-            { 
-                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                functionValues -= *this;
-            },
-            { 
-                if (momentum != 0) gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
-                ScaleAndAdd(-learnRatePerSample, gradients, functionValues);
-            },
-            { 
-                if (momentum != 0) gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
-                ScaleAndAdd(-learnRatePerSample, gradients, functionValues);
-            });
-    }
-    else
-    {
-        DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
-            { /* CPU dense */
-                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                ScaleAndAdd(-momentum, *this, functionValues);
-                ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradients, functionValues);
-                // w_t = w_{t-1} - momentum * v_ {t-1} - (1-momentum)*learnRatePerSampele*gardient,
-            },
-            { /* GPU dense */
-                ScaleAndAdd((1 - momentum) * learnRatePerSample, gradients, momentum, *this);
-                ScaleAndAdd(-momentum, *this, functionValues);
-                ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradients, functionValues);
-            },
-            { /* CPU sparse */
-                if (momentum != 0)
-                {
-                    Matrix<ElemType> gradientCache(gradients.GetDeviceId());
-                    gradientCache.AssignValuesOf(gradients);
-                    gradients.m_CPUSparseMatrix->NormalGrad(*m_CPUMatrix, momentum);
-                    ScaleAndAdd(-momentum, *this, functionValues);
-                    ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradientCache, functionValues);
-                }
-            },
-            { /* GPU sparse */
-                if (momentum != 0)
-                {
-                    Matrix<ElemType> gradientCache(gradients.GetDeviceId());
-                    gradientCache.AssignValuesOf(gradients);
-                    gradients.m_GPUSparseMatrix->NormalGrad(*m_GPUMatrix, momentum);
-                    ScaleAndAdd(-momentum, *this, functionValues);
-                    ScaleAndAdd(-(1 - momentum) * learnRatePerSample, gradientCache, functionValues);
-                }
-            });
-    }
+    DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+    { 
+        // w_t = w_{t-1} - learnRatePerSample * g_{t-1},
+        ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
+    },
+    { 
+        // BUGBUG: cannot call ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this) here,
+        // it produces different results from the scale and add below.
+        // g'_{t-1} = learnRatePerSample * g_{t-1}
+        // w_t = w_{t-1} - g'_{t-1}
+        Scale(ElemType(learnRatePerSample), gradients);
+        *this -= gradients;
+    },
+    { 
+        ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
+    },
+    { 
+        ScaleAndAdd(ElemType(-learnRatePerSample), gradients, *this);
+    });
+    
+}
+
+// SGD update with momentum.
+// Modifies "this" parameter matrix, on which this method is invoked.
+template <class ElemType>
+void Matrix<ElemType>::MomentumSGDUpdate(Matrix<ElemType>& gradients,
+                                         Matrix<ElemType>& smoothedGradients,
+                                         ElemType learnRatePerSample,
+                                         ElemType momentum,
+                                         bool unitGainMomentum)
+{
+    DecideAndMoveToRightDevice(smoothedGradients, gradients, *this);
+
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+
+    DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+        { 
+            // Classic momentum (unitGainFactor == 1.0):
+            // 1) sg_t = momentum * sg_{t-1} + learnRatePerSample * g_{t-1}
+            // Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+            // 1) sg_t = momentum * sg_{t-1} + learnRatePerSample * (1.0 - momentum) * g_{t-1}
+            // 2) w_t = w_{t-1} - sg_t
+            ScaleAndAdd(unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
+            *this -= smoothedGradients;
+        },
+        { 
+            ScaleAndAdd(unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
+            *this -= smoothedGradients;
+        },
+        { 
+            // The sparse update is slightly different from the dense implementation above:
+            // Classic momentum (unitGainFactor == 1.0):
+            // 1) sg_t = momentum * sg_{t-1} + g_{t-1}
+            // Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+            // 1) sg_t = momentum * sg_{t-1} + (1.0 - momentum) * g_{t-1}
+            // 2) g'_{t-1} = sg_t
+            // 3) w_t = w_{t-1} - learnRatePerSample * g'_{t-1}
+            if (momentum != 0)
+            {
+                gradients.m_CPUSparseMatrix->NormalGrad(*smoothedGradients.m_CPUMatrix, momentum, unitGainMomentum);
+            }
+            ScaleAndAdd(-learnRatePerSample, gradients, *this);
+        },
+        { 
+            if (momentum != 0)
+            {
+                gradients.m_GPUSparseMatrix->NormalGrad(*smoothedGradients.m_GPUMatrix, momentum, unitGainMomentum);
+            }
+            ScaleAndAdd(-learnRatePerSample, gradients, *this);
+        });
+}
+
+// Nesterov accelerated SGD update.
+// Modifies "this" parameter matrix, on which this method is invoked.
+template <class ElemType>
+void Matrix<ElemType>::NesterovAcceleratedMomentumSGDUpdate(Matrix<ElemType>& gradients,
+                                                            Matrix<ElemType>& smoothedGradients,
+                                                            ElemType learnRatePerSample,
+                                                            ElemType momentum,
+                                                            bool unitGainMomentum)
+{
+    DecideAndMoveToRightDevice(smoothedGradients, gradients, *this);
+
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+
+    DISPATCH_MATRIX_ON_FLAG(&gradients, nullptr,
+        { /* CPU dense */
+            // 1) sg_t = momentum * sg_{t-1} + learnRatePerSample * unitGainFactor * g_{t-1}
+            // 2) w'_t = w_{t-1} - momentum * sg_t
+            // 3) w_t = w'_t - learnRatePerSample * unitGainFactor * g_{t-1}
+            // The end result:
+            //  w_t = w_{t-1} - momentum^2 * sg_{t-1} - learnRatePerSample * unitGainFactor * (1 + momentum) * g_{t-1}
+            //  sg_t = momentum * sg_{t-1} + learnRatePerSample * unitGainFactor * g_{t-1}
+            ScaleAndAdd( unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
+            ScaleAndAdd(-momentum, smoothedGradients, *this);
+            ScaleAndAdd(-unitGainFactor * learnRatePerSample, gradients, *this);
+        },
+        { /* GPU dense */
+            ScaleAndAdd(unitGainFactor * learnRatePerSample, gradients, momentum, smoothedGradients);
+            ScaleAndAdd(-momentum, smoothedGradients, *this);
+            ScaleAndAdd(-unitGainFactor * learnRatePerSample, gradients, *this);
+        },
+        { /* CPU sparse */
+            if (momentum != 0)
+            {
+                // Identical to the above, except that as a side effect "NormalGrad" modifies 
+                // gradient values in place, so that gradientCache is needed to store the original values.
+                Matrix<ElemType> gradientCache(gradients.GetDeviceId());
+                gradientCache.AssignValuesOf(gradients);
+                gradients.m_CPUSparseMatrix->NormalGrad(*smoothedGradients.m_CPUMatrix, momentum, unitGainMomentum);
+                ScaleAndAdd(-momentum, smoothedGradients, *this);
+                ScaleAndAdd(-unitGainFactor * learnRatePerSample, gradientCache, *this);
+            }
+        },
+        { /* GPU sparse */
+            if (momentum != 0)
+            {
+                Matrix<ElemType> gradientCache(gradients.GetDeviceId());
+                gradientCache.AssignValuesOf(gradients);
+                gradients.m_GPUSparseMatrix->NormalGrad(*smoothedGradients.m_GPUMatrix, momentum, unitGainMomentum);
+                ScaleAndAdd(-momentum, smoothedGradients, *this);
+                ScaleAndAdd(-unitGainFactor * learnRatePerSample, gradientCache, *this);
+            }
+        });
 }
 
 // both 'this' and gradients will be changed
@@ -1575,7 +1642,7 @@ template <class ElemType>
 void Matrix<ElemType>::FSAdagradUpdate(size_t mbSize,
                                        Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
                                        const double learnRatePerSample, const double targetAdagradAvDenom,
-                                       const double meanMomentum, const double varMomentum)
+                                       const double meanMomentum, const double varMomentum, bool unitGainMomentum)
 {
     // keep track on how many samples have been accumulated into the g^2 accumulator
     smoothedCount = varMomentum * smoothedCount + (1.0 - varMomentum) * mbSize;
@@ -1587,10 +1654,20 @@ void Matrix<ElemType>::FSAdagradUpdate(size_t mbSize,
     let targetAdagradAvDenom_x_sqrtAdagradSqrFrames = (ElemType)(targetAdagradAvDenom * sqrt(smoothedCount));
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-        { m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, targetAdagradAvDenom_x_sqrtAdagradSqrFrames); SetDataLocation(CPU); },
-        { m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, targetAdagradAvDenom_x_sqrtAdagradSqrFrames); SetDataLocation(GPU); },
+        { 
+            m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, 
+                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, 
+                                   targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainMomentum); 
+            SetDataLocation(CPU); 
+        },
+        {
+            m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, 
+                                   (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, 
+                                   targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainMomentum); 
+            SetDataLocation(GPU); 
+        },
         { NOT_IMPLEMENTED; },
-        { gradients.m_GPUSparseMatrix->FSAdagrad(*m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, targetAdagradAvDenom_x_sqrtAdagradSqrFrames); SetDataLocation(GPU); });
+        { gradients.m_GPUSparseMatrix->FSAdagrad(*m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, targetAdagradAvDenom_x_sqrtAdagradSqrFrames, unitGainMomentum); SetDataLocation(GPU); });
 
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
@@ -4796,6 +4873,9 @@ template <class ElemType>
     {
         ScaleAndAdd(alpha / beta, a, c); // c1=alpha/beta * a + c
         Scale(beta, c);                  // c/beta * beta
+        // TODO: two lines above should be changed as follows:
+        // Scale(beta, c);                  // c1 = c * beta
+        // ScaleAndAdd(alpha, a, c); // c=alpha * a + c1 = alpha * a + beta * c
     }
 }
 

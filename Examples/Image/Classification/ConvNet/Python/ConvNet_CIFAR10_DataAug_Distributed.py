@@ -93,7 +93,9 @@ def convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learne
 
     # trainer object
     learner = create_dist_learner(
-        cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight))
+        cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, 
+                                  unit_gain = True,
+                                  l2_regularization_weight=l2_reg_weight))
 
     trainer = cntk.Trainer(z, ce, pe, learner)
 

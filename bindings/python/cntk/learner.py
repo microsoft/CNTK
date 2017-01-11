@@ -343,7 +343,7 @@ def sgd(parameters, lr,
     return cntk_py.sgd_learner(parameters, lr, additional_options)
 
 @typemap
-def momentum_sgd(parameters, lr, momentum,
+def momentum_sgd(parameters, lr, momentum, unit_gain,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
@@ -358,6 +358,7 @@ def momentum_sgd(parameters, lr, momentum,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
@@ -385,11 +386,11 @@ def momentum_sgd(parameters, lr, momentum,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.momentum_sgd_learner(parameters, lr, momentum,
+    return cntk_py.momentum_sgd_learner(parameters, lr, momentum, unit_gain,
             additional_options)
 
 @typemap
-def nesterov(parameters, lr, momentum,
+def nesterov(parameters, lr, momentum, unit_gain,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
@@ -406,6 +407,7 @@ def nesterov(parameters, lr, momentum,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
@@ -442,7 +444,7 @@ def nesterov(parameters, lr, momentum,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.nesterov_learner(parameters, lr, momentum,
+    return cntk_py.nesterov_learner(parameters, lr, momentum, unit_gain,
             additional_options)
 
 @typemap
@@ -495,7 +497,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
 
 # TODO: unCamelCase and integrate upcoming CR
 @typemap
-def adam_sgd(parameters, lr, momentum,
+def adam_sgd(parameters, lr, momentum, unit_gain,
         variance_momentum = momentum_as_time_constant_schedule(720000),
         low_memory=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
@@ -513,6 +515,7 @@ def adam_sgd(parameters, lr, momentum,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter.
         variance_momentum (output of :func:`momentum_schedule` or
          :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
          to ``momentum_as_time_constant_schedule(720000)``.
@@ -551,7 +554,7 @@ def adam_sgd(parameters, lr, momentum,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.adam_learner(parameters, lr, momentum,
+    return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
             variance_momentum, low_memory, additional_options)
 
 @typemap

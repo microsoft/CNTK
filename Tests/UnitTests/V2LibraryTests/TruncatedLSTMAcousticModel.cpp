@@ -111,7 +111,7 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
 
     LearningRatePerSampleSchedule learningRatePerSample = 0.000781;
     MomentumAsTimeConstantSchedule momentumTimeConstant = 6074;
-    auto learner = MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, momentumTimeConstant);
+    auto learner = MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, momentumTimeConstant, /*unitGainMomentum = */true);
     Trainer trainer(classifierOutput, trainingLoss, prediction, {learner});
 
     size_t outputFrequencyInMinibatches = 1;

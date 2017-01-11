@@ -157,7 +157,8 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
     learner = momentum_sgd(z.parameters, 
-                           lr_per_minibatch, momentum_time_constant, 
+                           lr_per_minibatch, momentum_time_constant,
+                           unit_gain=True,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     trainer = Trainer(z, ce, errs, learner)
@@ -241,7 +242,8 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     ce = cross_entropy_with_softmax(z, label_sequence)
     errs = classification_error(z, label_sequence)
     trainer = Trainer(z, ce, errs, [momentum_sgd(
-                    z.parameters, lr_per_minibatch, momentum_time_constant, clipping_threshold_per_sample, gradient_clipping_with_truncation)])
+                    z.parameters, lr_per_minibatch, momentum_time_constant, True,
+                    clipping_threshold_per_sample, gradient_clipping_with_truncation)])
 
     error2 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 

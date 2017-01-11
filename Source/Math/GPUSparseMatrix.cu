@@ -1413,9 +1413,16 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
     return *this;
 }
 
-// normal update for smoothed gradients c and current gradients (this)
+// A helper method used in MomentumSGDUpdate and NesterovAcceleratedMomentumSGDUpdate.
+// Modifies the smoothed gradients "c", as well as the current gradients "this" on which this method is invoked. 
+// Classic momentum (unitGainFactor == 1.0):
+// 1) c = momentum * c + this
+// Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+// 1) c = momentum * c + (1.0 - momentum) * this
+// 2) this = c
+// TODO: NormalGrad is a misnomer here. Come up with a better name.
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum)
+void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
 {
     VerifyWritable(__FUNCTION__);
 
@@ -1440,7 +1447,8 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
             GetBlockSize(),
             Data(),
             BlockId2ColOrRow(),
-            c.Data());
+            c.Data(),
+            unitGainMomentum);
     }
     else
     {
@@ -1512,7 +1520,8 @@ void GPUSparseMatrix<ElemType>::FSAdagrad(
     ElemType learnRatePerSample,
     ElemType momentum,
     ElemType adaWeight,
-    ElemType adaMul)
+    ElemType adaMul,
+    bool unitGainMomentum)
 {
     if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
     {
@@ -1534,7 +1543,7 @@ void GPUSparseMatrix<ElemType>::FSAdagrad(
     _fsadagrad4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
         n, Data(), ColOrRow2BlockId(), GetNumRows(),
         c.Data(), c.Data() + n, functionValues.Data(),
-        learnRatePerSample, momentum, adaWeight, adaMul);
+        learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
 }
 
 template <class ElemType>

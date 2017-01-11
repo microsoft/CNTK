@@ -308,16 +308,19 @@
                          AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 %ignore CNTK::MomentumSGDLearner(const std::vector<Parameter>& parameters, 
                                  const LearningRateSchedule& learningRateSchedule, 
-                                 const MomentumSchedule& momentumSchedule, 
+                                 const MomentumSchedule& momentumSchedule,
+                                 bool unitGain,
                                  AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 %ignore CNTK::NesterovLearner(const std::vector<Parameter>& parameters, 
                               const LearningRateSchedule& learningRateSchedule, 
-                              const MomentumSchedule& momentumSchedule, 
+                              const MomentumSchedule& momentumSchedule,
+                              bool unitGain,
                               AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 %ignore CNTK::DefaultVarianceMomentum;
 %ignore CNTK::AdamLearner(const std::vector<Parameter>& parameters, 
                           const LearningRateSchedule& learningRateSchedule, 
-                          const MomentumSchedule& momentumSchedule, 
+                          const MomentumSchedule& momentumSchedule,
+                          bool unitGain,
                           const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum, 
                           bool lowMemory = true, 
                           AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());

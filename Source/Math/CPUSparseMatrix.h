@@ -217,7 +217,7 @@ public:
     }
 
 public:
-    void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum);
+    void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum = true);
     ElemType Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier);
 
 public:

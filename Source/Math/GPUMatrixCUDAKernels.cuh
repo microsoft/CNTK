@@ -1421,8 +1421,9 @@ __global__ void _adagrad4BlockSparse(
 
 template <class ElemType>
 __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul)
+                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
 {
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -1449,7 +1450,7 @@ __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, 
 
         if (mom > 0.0f)
         {
-            g = mom * smoothMom[idx] + (1.0f - mom) * g;
+            g = mom * smoothMom[idx] + unitGainFactor * g;
             smoothMom[idx] = g;
         }
 
@@ -1483,8 +1484,9 @@ template <class ElemType>
 __global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size, 
     ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
     ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul)
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
 {
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -1511,7 +1513,7 @@ __global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size,
 
         if (mom > 0.0f)
         {
-            g = mom * smoothMom[idx] + (1.0f - mom) * g;
+            g = mom * smoothMom[idx] + unitGainFactor * g;
             smoothMom[idx] = g;
         }
 
@@ -3980,8 +3982,10 @@ __global__ void _normalGradForSparseBlock(
     const size_t numBlocks,
     ElemType* lhsValues, // lhs is blockCol or blockRow
     const GPUSPARSE_INDEX_TYPE* blockIds,
-    ElemType* rhs)
+    ElemType* rhs,
+    bool unitGainMomentum)
 {
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - momentum) : 1.0;
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG row, col;
     if (blockCol)
@@ -4000,7 +4004,7 @@ __global__ void _normalGradForSparseBlock(
         col = index - numCols * blockId;
         row = blockIds[blockId];
     }
-    rhs[IDX2C(row, col, numRows)] = (1 - momentum) * lhsValues[index] + momentum * rhs[IDX2C(row, col, numRows)];
+    rhs[IDX2C(row, col, numRows)] = unitGainFactor * lhsValues[index] + momentum * rhs[IDX2C(row, col, numRows)];
     lhsValues[index] = rhs[IDX2C(row, col, numRows)];
 }
 

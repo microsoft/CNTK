@@ -2149,7 +2149,7 @@ void SGD<ElemType>::InitModelAggregationHandler(int traceLevel, DEVICEID_TYPE de
 // UpdateWeights() - actual weight update, implementing various update rules
 template <class ElemType>
 void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemType>& gradientValues,
-                                  Matrix<ElemType>& smoothedGradient, double& smoothedCount,
+                                  Matrix<ElemType>& smoothedGradientValues, double& smoothedCount,
                                   const double learnRatePerSample, const double momentumPerSample,
                                               size_t actualMBSize,
                                   const double L2RegWeight, const double L1RegWeight,
@@ -2164,7 +2164,7 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     LOGPRINTF(stderr, "GradUpdateType()=%d, GradientUpdateNoiseStd()=%0.8f\n",
               GradUpdateType(), GradientUpdateNoiseStd());
     gradientValues.Print("Gradient Input");
-    smoothedGradient.Print("Smoothed Gradient Input");
+    smoothedGradientValues.Print("Smoothed Gradient Input");
 #endif
 
     // make actualMBSize is a valid value
@@ -2194,12 +2194,23 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
 
     if (adpType == GradientsUpdateType::None)
     {
-        smoothedGradient.NormalGrad(gradientValues, functionValues,
-                                    (ElemType) learnRatePerSample, (ElemType) momentum, useNesterovMomentum);
+        // even if momentum is 0.0, still need to call a momentum-based update to store 
+        // [learning rate * current gradient values] in the smoothed gradients, in case
+        // the momentum value for the next epoch is non-zero.
+        if (!useNesterovMomentum)
+        {
+            functionValues.MomentumSGDUpdate(gradientValues, smoothedGradientValues, 
+                                             ElemType(learnRatePerSample), ElemType(momentum));
+        }
+        else
+        {
+            functionValues.NesterovAcceleratedMomentumSGDUpdate(gradientValues, smoothedGradientValues, 
+                                                                ElemType(learnRatePerSample), ElemType(momentum));
+        }
     }
     else if (adpType == GradientsUpdateType::AdaGrad)
     {
-        double aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
+        double aveMultiplier = smoothedGradientValues.Adagrad(gradientValues, needAveMultiplier);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
     else if (adpType == GradientsUpdateType::FSAdaGrad)
@@ -2209,14 +2220,14 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
         static double smoothedCount = 0;
 #endif
 
-        smoothedGradient.FSAdagradUpdate(actualMBSize,
+        smoothedGradientValues.FSAdagradUpdate(actualMBSize,
                                          gradientValues, functionValues, smoothedCount,
                                          learnRatePerSample, m_gradType.targetAdagradAvDenom,
                                          momentum, varMomentum);
     }
     else if (adpType == GradientsUpdateType::RmsProp)
     {
-        double aveMultiplier = smoothedGradient.RmsProp(gradientValues, (ElemType) m_rpi.gamma,
+        double aveMultiplier = smoothedGradientValues.RmsProp(gradientValues, (ElemType) m_rpi.gamma,
                                                         (ElemType) m_rpi.inc, (ElemType) m_rpi.max,
                                                         (ElemType) m_rpi.dec, (ElemType) m_rpi.min, needAveMultiplier);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
@@ -2299,8 +2310,8 @@ void SGD<ElemType>::SaveCheckPointInfo(const size_t epoch, const size_t totalSam
 
             for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
             {
-                const Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
-                fstream << smoothedGradient;
+                const Matrix<ElemType>& smoothedGradientValues = *smoothedGradientIter;
+                fstream << smoothedGradientValues;
             }
 
             fstream.PutMarker(FileMarker::fileMarkerEndSection, L"EGradient");
@@ -2395,8 +2406,8 @@ void SGD<ElemType>::LoadCheckPointInfo(const size_t epochNumber,
 
     for (auto smoothedGradientIter = smoothedGradients.begin(); smoothedGradientIter != smoothedGradients.end(); smoothedGradientIter++)
     {
-        Matrix<ElemType>& smoothedGradient = *smoothedGradientIter;
-        fstream >> smoothedGradient;
+        Matrix<ElemType>& smoothedGradientValues = *smoothedGradientIter;
+        fstream >> smoothedGradientValues;
     }
     fstream.GetMarker(FileMarker::fileMarkerEndSection, L"EGradient");
 

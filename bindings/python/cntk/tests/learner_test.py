@@ -73,16 +73,16 @@ def test_learner_init():
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant)
+    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, True)
 
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample)
-    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=False)
 
     lr_per_sample = learning_rate_schedule([0.1]*3 +[0.2]*2 +[0.3], UnitType.sample)
     adagrad(res.parameters, lr=lr_per_sample, need_ave_multiplier=True)
 
     lr_per_sample = learning_rate_schedule([(3,0.1), (2, 0.2), (1, 0.3)], UnitType.sample)
-    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=True)
 
     gamma, inc, dec, max, min = [0.1]*5
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)
