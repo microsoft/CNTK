@@ -96,9 +96,10 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install CNTK custom MKL, version 2
-RUN mkdir /usr/local/CNTKCustomMKL && \
-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
+# Install CNTK custom MKL
+RUN CNTK_CUSTOM_MKL_VERSION=3 && \
+    mkdir /usr/local/CNTKCustomMKL && \
+    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-$CNTK_CUSTOM_MKL_VERSION.tgz | \
     tar -xzf - -C /usr/local/CNTKCustomMKL
 
 # Install Kaldi
