@@ -41,7 +41,12 @@ function GetTableDefaultInt(
 function GetEnvironmentVariableContent(
     [string] $envVarName)
 {
-    return [environment]::GetEnvironmentVariable($envVarName)
+    $envContent = [environment]::GetEnvironmentVariable($envVarName, "USER")
+    if ($envContent) {
+        return $envContent
+    }
+    $envContent = [environment]::GetEnvironmentVariable($envVarName, "MACHINE")
+    return $envContent
 }
 
-# vim:set expandtab shiftwidth=2 tabstop=2:q
+# vim:set expandtab shiftwidth=2 tabstop=2:

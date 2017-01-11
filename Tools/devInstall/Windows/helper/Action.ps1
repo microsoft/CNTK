@@ -384,10 +384,10 @@ function ExtractAllFromTarGz(
         return 
     }
 
-    $app = CallGetCommand -application "git.exe"
+    $app = CallGetCommand -application git.exe
 
     if ($app) {
-        throw "Unpacking the file [$targzFileName] requires extraction utility TAR.EXE.\n Make sure GIT is installed on your maschine."
+        throw "Unpacking the file [$targzFileName] requires extraction utility TAR.EXE.\n Make sure `"Git for Windows`" is installed on your machine."
     }
 
     $location = Get-Command "git.exe" -CommandType Application
@@ -398,24 +398,24 @@ function ExtractAllFromTarGz(
     $appDir = Join-Path $location "usr\bin"
     $completeApp = Join-Path $appDir "tar.exe"
 
-    if (-not (test-path -path "$completeApp" -PathType Leaf)) {
+    if (-not (Test-Path -path $completeApp -PathType Leaf)) {
         throw "Unpacking the file [$targzFileName] requires extraction utility [$completeApp].\n The utility wasn't found"
     }
 
-    $compleDestination = Join-Path $destination $targzFileName
+    $completeDestination = Join-Path $destination $targzFileName
 
-    Copy-Item $sourceFile $compleDestination -ErrorAction SilentlyContinue
+    Copy-Item $sourceFile $completeDestination -ErrorAction SilentlyContinue
 
     $dosCommand = @"
-set path="$appDir";%PATH% & tar.exe -xz --force-local -f "$compleDestination" -C "$destination"
+set path=$appDir;%PATH% & tar.exe -xz --force-local -f "$completeDestination" -C "$destination"
 "@
 
     & cmd /c $dosCommand
     if ($LASTEXITCODE -gt 0) {
         throw "Running [$completeApp] Command failed with exit code $LASTEXITCODE"
     }
-
-    Remove-Item "$compleDestination" -ErrorAction SilentlyContinue
+    
+    Remove-Item "$completeDestination" -ErrorAction SilentlyContinue
 }
 
 function CreateBatch(
