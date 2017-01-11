@@ -2,6 +2,15 @@
 
 # Latest news
 
+***2017-01-10.*** CNTK for Windows supports Visual 2015
+If you pull or merge the master branch, CNTK will now require Visual Studio 2015 to build on Windows. There are two ways to move your development environment to Visual Studio 2015:
+
+[Migrate VS2013 to VS2015](https://github.com/Microsoft/CNTK/wiki/Setup-Migrate-VS13-to-VS15):
+This gives you a fine grained control over where components are installed 
+
+[Script driven setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows):
+This gives you an mostly automated migration to Visual Studio 2015
+
 ***2016-12-22.*** V 2.0 Beta 7 Release
 Highlights of this Release:
 
@@ -51,17 +60,6 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_4_Release_Notes)
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-***2016-11-11.*** V 2.0 Beta 3 Release
-Highlights of this Release:
-
-* Integration with [NVIDIA NCCL](https://github.com/NVIDIA/nccl). Works with Linux when building CNTK from sources. See here [how to enable](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#optional-nccl)
-* The first V.2.0 Prerelease Nuget Package for CNTK Evaluation library
-* Stability Improvements and bug fixes
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_3_Release_Notes)
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
-See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
 # What is The Microsoft Cognitive Toolkit
 
