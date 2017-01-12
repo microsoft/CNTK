@@ -17,7 +17,7 @@ function OpAnaconda3411(
     @( @{ShortName = "ANA3-411"; Name = $prodName;  VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath; } );
          Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
-         # command line parameters for Anaconda installer: $targetPath must be the last parameter and can not be surrounded by quotes
+         # command line parameters for Anaconda installer: /D=$targetPath must be the last parameter and can not be surrounded by quotes
          Action = @( @{Function = "InstallExe"; Command = "$cache\$prodFile"; Param = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$targetPath"; runAs=$false; Message = ".... This will take some time. Please be patient ...." } );
      } )
 }

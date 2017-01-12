@@ -166,7 +166,7 @@ function InstallMSI(
     $completeMsiName = Join-Path $dir $msi
 
     $windDir = GetEnvironmentVariableContent("WINDIR")
-    $cmd = Join-Path $windDir "System32\MSIEXEC.EXE"
+    $cmd = Join-Path $windDir System32\MSIEXEC.EXE
 
     $param= "/i `"$completeMsiName`" /quiet /norestart"
   
