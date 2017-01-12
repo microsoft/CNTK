@@ -15,8 +15,9 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_by_name, find_all_with_name
-from cntk.blocks import LSTM, Stabilizer
-from cntk.layers import Dense
+#from cntk.blocks import *
+from cntk.layers import *
+#from cntk.default_options import default_options
 from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from attention import create_attention_augment_hook
@@ -126,7 +127,8 @@ def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recu
         create_aux = True
 
     # only the first layer should create an auxiliary input (the attention weights are shared amongs the layers)
-    output_h, output_c, aux = LSTM_layer(Stabilizer()(input), output_dim, 
+    input = Stabilizer()(input)
+    output_h, output_c, aux = LSTM_layer(input, output_dim, 
                                          recurrence_hook_h, recurrence_hook_c, augment_input_hook, create_aux)
     for layer_index in range(1, num_layers):
         (output_h, output_c, aux) = LSTM_layer(output_h.output, output_dim, recurrence_hook_h, recurrence_hook_c, aux, False)
@@ -181,13 +183,27 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
 
     # Encoder: create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
+    # This is the plain s2s encoder. The attention encoder will keep the entire sequence instead.
+    with default_options(enable_self_stabilization=True, go_backwards=True):
+        encoder = Sequential([
+            Stabilizer(),
+            For(range(num_layers-1), lambda:
+                Recurrence(LSTM(hidden_dim))),
+            Fold(LSTM(hidden_dim), return_full_state=True)
+        ])
     # note: future_value since we encode right-to-left
-    encoder_output_h, encoder_output_c = LSTM_stack(input_embedded, num_layers, hidden_dim, 
-                                                    recurrence_hook_h=future_value, recurrence_hook_c=future_value)
+    #encoder_output_h, encoder_output_c = LSTM_stack(input_embedded, num_layers, hidden_dim, 
+    #                                                recurrence_hook_h=future_value, recurrence_hook_c=future_value)
+    encoder_output = encoder(input_embedded)
+    #encoder_output_h, encoder_output_c = encoder_output.outputs
+    #encoder_output_h, encoder_output_c = encoder(input_embedded).outputs
+    # BUGBUG: With this, the slice() inside first() below ^^ fails with an Access Violation from a bad m_onwerFunction for ElementTimes757=encoder_output_h
 
     # Prepare encoder output to be used in decoder
-    thought_vector_h = sequence.first(encoder_output_h)
-    thought_vector_c = sequence.first(encoder_output_c)
+    #encoder_output.dump('encoder_output')
+    #thought_vector_h = sequence.first(encoder_output_h)
+    #thought_vector_c = sequence.first(encoder_output_c)
+    thought_vector_h, thought_vector_c = encoder_output.outputs
 
     # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
     thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
@@ -255,11 +271,11 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     #model = model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable())
     #model = model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
 
-    model.dump('model')
+    #model.dump('model')
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                            Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                            #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
-    model.dump('model after update')
+    #model.dump('model after update')
 
     # do some hooks so that we can direct data to the right place
     label_sequence = find_by_name(model, 'label_sequence')

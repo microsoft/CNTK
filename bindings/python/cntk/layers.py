@@ -10,18 +10,17 @@
 # TODO: clean up the dependencies
 from __future__ import division
 import numpy as np
-from .ops import parameter, input_variable, placeholder_variable, combine
-from .ops import times, convolution, pooling, batch_normalization, dropout, splice
-from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
-from .utils import Record, _as_tuple
-from .blocks import *  # TODO: reduce to what we actually use
-from .blocks import _trace_layers  # (debugging)
-
 from .ops.functions import Function
 from .ops.variables import Variable
+from .ops import parameter, input_variable, placeholder_variable, combine
+from .ops import times, convolution, pooling, batch_normalization, dropout, splice, sequence
+from .utils import Record, _as_tuple
+from .blocks import _initializer_for, _INFERRED # init helpers
 
-# this is what we initialize weight matrices from by default
-from .blocks import _initializer_for, _INFERRED
+# import the other pieces of the Layers lib so that users can just use import layers to get the entire Layers lib
+from .blocks import *
+from .models import *
+
 
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
           input_rank=None, map_rank=None,
@@ -336,8 +335,9 @@ def _get_initial_state_or_default(initial_state):
 
 # Recurrence() -- run a block recurrently over a time sequence
 # TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
-def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
+def Recurrence(over, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
 
+    go_backwards  = get_default_override(Recurrence, go_backwards=go_backwards)
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
@@ -389,9 +389,27 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         #print('out.outputs', [p.uid for p in list(out.outputs)])
         out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
-        return combine([out.outputs[0]])  # BUGBUG: Without this, it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
+        if not return_full_state:
+            out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
+
+        return out
 
     return Block(recurrence, 'Recurrence', Record(over=over))
+
+# Fold -- final state of a Recurrence()
+def Fold(over, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
+
+    go_backwards  = get_default_override(Fold, go_backwards=go_backwards)
+    initial_state = get_default_override(Fold, initial_state=initial_state)
+
+    # get the scan function
+    recurrence = Recurrence(over, go_backwards=go_backwards, initial_state=initial_state, return_full_state=return_full_state)
+
+    # now take the last or first
+    select = sequence.first if go_backwards else sequence.last
+    fold = recurrence >> tuple(select for output in recurrence.outputs)
+
+    return Block(fold, 'Fold', Record(over=over))
 
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
