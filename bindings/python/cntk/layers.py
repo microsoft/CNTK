@@ -381,6 +381,8 @@ def Recurrence(over, go_backwards=default_override_or(False), initial_state=defa
         # connect the recurrent dependency
         replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
         out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
+        #replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, out) }
+        #combine(out).replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
         if not return_full_state:
             out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?

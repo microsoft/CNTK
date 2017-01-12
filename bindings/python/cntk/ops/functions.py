@@ -249,12 +249,20 @@ class Function(cntk_py.Function):
         arg_map = self.argument_map(*args, **kwargs)
 
         # determine whether this is eval() or clone()
-        #from .variables import Variable
         is_symbolic = any(isinstance(arg, (cntk_py.Function, cntk_py.Variable)) for arg in arg_map.values())
 
         # symbolic: return a cloned Function
         if is_symbolic:
-            return self.clone(CloneMethod.share, arg_map)
+            out = self.clone(CloneMethod.share, arg_map)
+            # TODO: return the Variables as a Python tuple, rather than the CNTK Function object
+            #outputs = out.outputs
+            #if len(outputs) == 1:   # not tuple-valued: return the output
+            #    output = outputs[0]
+            #    output._root_reference = out # keep a ref count in the Python wrapper of the Output Variable
+            #    out = output
+            #else:                   # tuple-valued: return an ordered record, indexable and with name fields
+            #    out = Function.OrderedRecord([(output.name, output) for output in outputs])
+            return out
 
         # numeric: evaluate
         outputs = self.outputs
