@@ -178,12 +178,12 @@ $RECYCLE.BIN/
 bin/
 LOG
 *.log
-core	
+core
 *.lyx#
 *.lyx#
 *.lyx~
 
-# prebuild file 
+# prebuild file
 Source/CNTK/buildinfo.h
 Source/CNTK/buildinfo.h$$
 Source/CNTKv2LibraryDll/buildinfo.h
@@ -235,6 +235,16 @@ bindings/python/cntk/i_plus_i_0.mod
 bindings/csharp/Swig/cntk_cs_wrap.h
 bindings/csharp/Swig/cntk_cs_wrap.cxx
 bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
+
+# Java bindings
+bindings/java/Swig/cntk_java_wrap.h
+bindings/java/Swig/cntk_java_wrap.cxx
+bindings/java/Swig/*.java
+bindings/java/Swig/*.class
+bindings/java/Swig/*.class
+bindings/java/ScalaEvalExample/.idea
+bindings/java/**/target
+bindings/java/**/*.jar
 
 # Examples and Tutorials
 Examples/Image/DataSets/Pascal/VOC*
