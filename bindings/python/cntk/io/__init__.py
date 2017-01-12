@@ -372,33 +372,52 @@ class ImageDeserializer(Deserializer):
         self.input[node] = dict(labelDim=num_classes) # reader distinguishes labels from features by calling this 'labelDim'
 
     @staticmethod
-    def crop(crop_type='center', ratio=1.0, jitter_type='uniRatio'):
+    def crop(crop_type='center', crop_size=None, side_ratio=None, area_ratio=None, aspect_ratio=1.0, jitter_type=None):
         '''
         Crop transform that can be used to pass to `map_features`
 
         Args:
-            crop_type (str, default 'center'): 'center' or 'random'.  'random'
-             is usually used during training while 'center' is usually for testing.
+            crop_type (str, default 'center'): 'center', 'randomside', 'randomarea', 
+             or 'multiview10'.  'randomside' and 'randomarea' are usually used during
+             training, while 'center' and 'multiview10' are usually used during testing. 
              Random cropping is a popular data augmentation technique used to improve
              generalization of the DNN.
-            ratio (`float`, default 1.0): crop ratio. It specifies the ratio of
-             final image dimension, e.g.  width , to the size of the random crop
-             taken from the image. For example, the ratio 224 / 256 = 0.875 means
-             crop of size 224 will be taken from the image rescaled to 256 (implementation
-             detail:  ImageReader  takes the crop and then rescales instead of doing
-             the other way around). To enable scale jitter (another popular data
-             augmentation technique), use colon-delimited values like  cropRatio=0.875:0.466
-             which means 224 crop will be taken from images randomly scaled to have
-             size in [256, 480] range.
-            jitter_type (str, default 'uniRatio'): crop scale jitter type, possible
-             values are 'None', 'UniRatio'. 'uniRatio' means uniform distributed jitter
-             scale between the minimum and maximum cropRatio values.
+            crop_size (int): crop size in pixels. For example, crop_size=256 means crop
+             of size 256x256 pixels will be taken from the image. If one want to crop with
+             non-square shapes, specify crop_size=256:224 will crop 256x224 (widthxheight) 
+             pixels. `When crop_size is specified, side_ratio, area_ratio and aspect_ratio
+             will be ignored.` 
+            side_ratio (`float`, default None): It specifies the ratio of final image 
+             side (width or height) with respect to the original image. Must be within
+             `(0,1]`. For example, with an input image size of 640x480, side_ratio of 0.5 
+             means we crop a square region (if aspect_ratio is 1.0) of the input image, 
+             whose width and height are equal to 0.5*min(640, 480) = 240. To enable scale 
+             jitter (a popular data augmentation technique), use colon-delimited values 
+             like side_ratio=0.5:0.75, which means the crop will have size between 240 
+             (0.5*min(640, 480)) and 360 (0.75*min(640, 480)). 
+            area_ratio (`float`, default None): It specifies the area ratio of final image 
+             with respect to the original image. Must be within `(0,1]`. For example, for
+             an input image size of 200x150 pixels, the area is 30,000. If area_ratio is
+             0.3333, we crop a square region (if aspect_ratio is 1.0) with width and height
+             equal to sqrt(30,000*0.3333) = 100. To enable scale jitter, use colon-delimited
+             values such as area_ratio=0.3333:0.8, which means the crop will have size 
+             between 100 (sqrt(30,000*0.3333)) and 155 (sqrt(30,000*0.8)). 
+            aspect_ratio (`float`, default 1.0): It specifies the aspect ratio (width/height)
+             of the crop window. Must be positive. For example, if due to size_ratio the 
+             crop size is 240x240, an aspect_ratio of 0.64 will change the window size to
+             non-square: 192x300. Note the area of the crop window does not change. To enable
+             aspect ratio jitter, use colon-delimited values such as aspect_ratio=0.64:0.81, 
+             which means the crop will have size between 192x300 and 216x266.67 (keeping area
+             of the crop window constant). 
+            jitter_type (str, default None): crop scale jitter type, possible
+             values are 'None' and 'UniRatio'. 'uniRatio' means uniform distributed jitter
+             scale between the minimum and maximum ratio values.
 
         Returns:
             dict describing the crop transform
         '''
-        return dict(type='Crop', cropType=crop_type, cropRatio=ratio,
-                jitterType=jitter_type)
+        return dict(type='Crop', cropType=crop_type, cropSize=crop_size, sideRatio=side_ratio, 
+                    areaRatio=area_ratio, aspectRatio=aspect_ratio, jitterType=jitter_type)
 
     @staticmethod
     def scale(width, height, channels, interpolations='linear', scale_mode="fill", pad_value=-1):

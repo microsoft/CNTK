@@ -41,25 +41,63 @@ SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransformerBase(config)
 {
-    floatargvector cropRatio = config(L"cropRatio", "1.0");
-    m_cropRatioMin = cropRatio[0];
-    m_cropRatioMax = cropRatio[1];
-
-    if (!(0 < m_cropRatioMin && m_cropRatioMin <= 1.0) ||
-        !(0 < m_cropRatioMax && m_cropRatioMax <= 1.0) ||
-        m_cropRatioMin > m_cropRatioMax)
+    intargvector cropSize = config(L"cropSize", "0"); 
+    m_cropWidth = cropSize[0]; 
+    m_cropHeight = cropSize[1]; 
+    if (m_cropWidth < 0 || m_cropHeight < 0)
     {
-        RuntimeError("Invalid cropRatio value, must be > 0 and <= 1. cropMin must "
-                     "<= cropMax");
+        RuntimeError("Invalid cropSize value, must be >= 0"); 
+    }
+
+    m_useSideRatio = true;
+    if (!config.Exists(L"sideRatio")) 
+        m_useSideRatio = false; 
+    else
+    {
+        floatargvector sideRatio = config(L"sideRatio", "1.0");
+        m_sideRatioMin = sideRatio[0];
+        m_sideRatioMax = sideRatio[1];
+        if (!(m_sideRatioMin > 0 && m_sideRatioMax <= 1.0) ||
+            m_sideRatioMin > m_sideRatioMax)
+        {
+            m_useSideRatio = false;
+            RuntimeError("Invalid sideRatio value, must be > 0 and <= 1. sideMin must <= sideMax");
+        }
+    }
+
+    m_useAreaRatio = true; 
+    if (!config.Exists(L"areaRatio"))
+        m_useAreaRatio = false; 
+    else
+    {
+        floatargvector areaRatio = config(L"areaRatio", "1.0");
+        m_areaRatioMin = areaRatio[0];
+        m_areaRatioMax = areaRatio[1];
+        if (!(m_areaRatioMin > 0 && m_areaRatioMax <= 1.0) ||
+            m_areaRatioMin > m_areaRatioMax)
+        {
+            m_useAreaRatio = false; 
+            RuntimeError("Invalid areaRatio value, must be > 0 and <= 1. areaMin must <= areaMax");
+        }
+    }
+
+    if (m_useSideRatio && m_useAreaRatio)
+        RuntimeError("sideRatio and areaRatio cannot be specified simultaneously"); 
+
+    floatargvector aspectRatio = config(L"aspectRatio", "1.0");
+    m_aspectRatioMin = aspectRatio[0];
+    m_aspectRatioMax = aspectRatio[1];
+    if (m_aspectRatioMin < 0 || m_aspectRatioMin > m_aspectRatioMax)
+    {
+        RuntimeError("Invalid aspectRatio value, must be > 0. aspectMin must <= aspectMax");
     }
 
     m_jitterType = ParseJitterType(config(L"jitterType", ""));
-
     m_cropType = ImageConfigHelper::ParseCropType(config(L"cropType", ""));
 
     if (!config.ExistsCurrent(L"hflip"))
     {
-        m_hFlip = m_cropType == CropType::Random;
+        m_hFlip = (m_cropType == CropType::RandomSide || m_cropType == CropType::RandomArea);
     }
     else
     {
@@ -71,47 +109,38 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
     {
         m_hFlip = false;
     }
-
-    m_aspectRatioRadius = config(L"aspectRatioRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
 }
 
 void CropTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curAspectRatioRadius = m_aspectRatioRadius[config.m_epochIndex];
-    if (!(0 <= m_curAspectRatioRadius && m_curAspectRatioRadius <= 1.0))
-        InvalidArgument("aspectRatioRadius must be >= 0.0 and <= 1.0");
     ImageTransformerBase::StartEpoch(config);
 }
 
 void CropTransformer::Apply(size_t id, cv::Mat &mat)
 {
     auto seed = GetSeed();
-    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
-
-    double ratio = 1;
-    switch (m_jitterType)
-    {
-    case RatioJitterType::None:
-        ratio = m_cropRatioMin;
-        break;
-    case RatioJitterType::UniRatio:
-        if (m_cropRatioMin == m_cropRatioMax)
-        {
-            ratio = m_cropRatioMin;
-        }
-        else
-        {
-            ratio = UniRealT(m_cropRatioMin, m_cropRatioMax)(*rng);
-            assert(m_cropRatioMin <= ratio && ratio < m_cropRatioMax);
-        }
-        break;
-    default:
-        RuntimeError("Jitter type currently not implemented.");
-    }
-
+    auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); }); 
     int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
 
-    mat = mat(GetCropRect(m_cropType, viewIndex, mat.rows, mat.cols, ratio, *rng));
+    switch (m_cropType)
+    {
+    case CropType::Center: 
+        mat = mat(GetCropRectCenter(mat.rows, mat.cols, *rng));
+        break; 
+    case CropType::RandomSide: 
+        mat = mat(GetCropRectRandomSide(mat.rows, mat.cols, *rng)); 
+        break; 
+    case CropType::RandomArea: 
+        mat = mat(GetCropRectRandomArea(mat.rows, mat.cols, *rng));
+        break;
+    case CropType::MultiView10: 
+        mat = mat(GetCropRectMultiView10(viewIndex, mat.rows, mat.cols, *rng));
+        break; 
+    default: 
+        RuntimeError("Invalid crop type."); 
+        break; 
+    }
+
     // for MultiView10 m_hFlip is false, hence the first 5 will be unflipped, the later 5 will be flipped
     if ((m_hFlip && boost::random::bernoulli_distribution<>()(*rng)) ||
         viewIndex >= 5)
@@ -135,106 +164,152 @@ CropTransformer::ParseJitterType(const std::string &src)
         return RatioJitterType::UniRatio;
     }
 
-    if (AreEqualIgnoreCase(src, "unilength"))
-    {
-        return RatioJitterType::UniLength;
-    }
-
-    if (AreEqualIgnoreCase(src, "uniarea"))
-    {
-        return RatioJitterType::UniArea;
-    }
-
     RuntimeError("Invalid jitter type: %s.", src.c_str());
 }
 
-cv::Rect CropTransformer::GetCropRect(CropType type, int viewIndex, int crow, int ccol,
-                                          double cropRatio, std::mt19937 &rng)
+double CropTransformer::ApplyRatioJitter(const double minVal, const double maxVal, std::mt19937 &rng)
+{
+    assert(minVal > 0 && minVal <= maxVal);     // ratio should always be > 0
+    switch (m_jitterType)
+    {
+    case RatioJitterType::None: 
+        return minVal; 
+    case RatioJitterType::UniRatio: 
+        if (minVal == maxVal)
+            return minVal;
+        else
+            return UniRealT(minVal, maxVal)(rng); 
+    default: 
+        RuntimeError("Jitter type currently not implemented.");
+    }
+    return -1;
+}
+
+cv::Rect CropTransformer::GetCropRectCenter(int crow, int ccol, std::mt19937 &rng) 
 {
     assert(crow > 0);
-    assert(ccol > 0);
-    assert(0 < cropRatio && cropRatio <= 1.0);
+    assert(ccol > 0); 
+    assert(!(m_useSideRatio && m_useAreaRatio));    // cannot be applied simultaneously 
 
-    // Get square crop size that preserves aspect ratio.
-    int cropSize = (int)(std::min(crow, ccol) * cropRatio);
-    int cropSizeX = cropSize;
-    int cropSizeY = cropSize;
-    // Change aspect ratio, if this option is enabled.
-    if (m_curAspectRatioRadius > 0)
+    int cropSizeX=ccol, cropSizeY=crow; 
+    if (m_cropWidth > 0 && m_cropHeight > 0)    // crop sizes are specified with meanful values 
     {
-        double factor = 1.0 + UniRealT(-m_curAspectRatioRadius, m_curAspectRatioRadius)(rng);
-        double area = cropSize * cropSize;
-        double newArea = area * factor;
-        if (boost::random::bernoulli_distribution<>()(rng))
-        {
-            cropSizeX = (int)std::sqrt(newArea);
-            cropSizeY = (int)(area / cropSizeX);
-        }
-        else
-        {
-            cropSizeY = (int)std::sqrt(newArea);
-            cropSizeX = (int)(area / cropSizeY);
-        }
-        // This clamping should be ok if jittering ratio is not too big.
-        cropSizeX = std::min(cropSizeX, ccol);
-        cropSizeY = std::min(cropSizeY, crow);
+        cropSizeX = min(ccol, m_cropWidth);
+        cropSizeY = min(crow, m_cropHeight);
+        int xOff = (ccol - cropSizeX) / 2;
+        int yOff = (crow - cropSizeY) / 2;
+        return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
     }
-
-    int xOff = -1;
-    int yOff = -1;
-    switch (type)
+    
+    bool bFound = false;
+    int nAttempt = 0;
+    while (!bFound && nAttempt < 10)
     {
-    case CropType::Center:
-        assert(viewIndex == 0);
+        if (m_useSideRatio)
+        {
+            double sideRatio = ApplyRatioJitter(m_sideRatioMin, m_sideRatioMax, rng);
+            assert(sideRatio >= m_sideRatioMin && sideRatio <= m_sideRatioMax);
+            cropSizeX = cropSizeY = (int)std::round(std::min(crow, ccol) * sideRatio);      // we always crop square shape unless aspectRatio is not 1.0
+        }
+        else if (m_useAreaRatio)
+        {
+            double areaRatio = ApplyRatioJitter(m_areaRatioMin, m_areaRatioMax, rng); 
+            assert(areaRatio >= m_areaRatioMin && areaRatio <= m_sideRatioMax); 
+            cropSizeX = cropSizeY = (int)std::round(std::sqrt(crow * ccol * areaRatio));    // we always crop square shape unless aspectRatio is not 1.0
+        }
+
+        double aspectRatio = ApplyRatioJitter(m_aspectRatioMin, m_aspectRatioMax, rng);
+        assert(aspectRatio >= m_aspectRatioMin && aspectRatio <= m_aspectRatioMax);
+        if (aspectRatio != 1.0)
+        {
+            double area = cropSizeX * cropSizeY;
+            if (boost::random::bernoulli_distribution<>()(rng))
+            {
+                cropSizeX = (int)std::sqrt(area * aspectRatio);
+                cropSizeY = (int)std::sqrt(area / aspectRatio);
+            }
+            else
+            {
+                cropSizeY = (int)std::sqrt(area * aspectRatio);
+                cropSizeX = (int)std::sqrt(area / aspectRatio);
+            }
+        }
+        if (cropSizeX <= ccol && cropSizeY <= crow)
+        {
+            bFound = true;
+            break;
+        }
+        nAttempt++;
+    }
+    if (bFound)
+    {
+        int xOff = (ccol - cropSizeX) / 2;
+        int yOff = (crow - cropSizeY) / 2;
+        return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
+    }
+    else
+    {   // fall back to return the whole image 
+        return cv::Rect(0, 0, ccol, crow); 
+    }
+}
+
+cv::Rect CropTransformer::GetCropRectRandomSide(int crow, int ccol, std::mt19937 &rng)
+{
+    assert(m_useSideRatio); 
+    cv::Rect rc = GetCropRectCenter(crow, ccol, rng); 
+
+    int xOff = UniIntT(0, ccol - rc.width)(rng);
+    int yOff = UniIntT(0, crow - rc.height)(rng); 
+    return cv::Rect(xOff, yOff, rc.width, rc.height); 
+}
+
+cv::Rect CropTransformer::GetCropRectRandomArea(int crow, int ccol, std::mt19937 &rng)
+{
+    assert(m_useAreaRatio); 
+    cv::Rect rc = GetCropRectCenter(crow, ccol, rng);
+
+    int xOff = UniIntT(0, ccol - rc.width)(rng);
+    int yOff = UniIntT(0, crow - rc.height)(rng);
+    return cv::Rect(xOff, yOff, rc.width, rc.height);
+}
+
+cv::Rect CropTransformer::GetCropRectMultiView10(int viewIndex, int crow, int ccol, std::mt19937 &rng)
+{
+    assert(viewIndex >= 0); 
+    cv::Rect rc = GetCropRectCenter(crow, ccol, rng); 
+    viewIndex = viewIndex % 10; 
+
+    // 0 - 4: 4 corners + center crop. 5 - 9: same, but with a flip in CropTransformer::Apply(). 
+    int isubView = viewIndex % 5;
+    int xOff=-1, yOff=-1, cropSizeX = rc.width, cropSizeY = rc.height; 
+    switch (isubView)
+    {
+    case 0: // top-left
+        xOff = 0;
+        yOff = 0;
+        break;
+    case 1: // top-right
+        xOff = ccol - cropSizeX;
+        yOff = 0;
+        break;
+    case 2: // bottom-left
+        xOff = 0;
+        yOff = crow - cropSizeY;
+        break;
+    case 3: // bottom-right
+        xOff = ccol - cropSizeX;
+        yOff = crow - cropSizeY;
+        break;
+    case 4: // center
         xOff = (ccol - cropSizeX) / 2;
         yOff = (crow - cropSizeY) / 2;
         break;
-    case CropType::Random:
-        assert(viewIndex == 0);
-        xOff = UniIntT(0, ccol - cropSizeX)(rng);
-        yOff = UniIntT(0, crow - cropSizeY)(rng);
-        break;
-    case CropType::MultiView10:
-    {
-        assert(0 <= viewIndex && viewIndex < 10);
-        // 0 - 4: 4 corners + center crop. 5 - 9: same, but with a flip.
-        int isubView = viewIndex % 5;
-        switch (isubView)
-        {
-            // top-left
-        case 0:
-            xOff = 0;
-            yOff = 0;
-            break;
-            // top-right
-        case 1:
-            xOff = ccol - cropSizeX;
-            yOff = 0;
-            break;
-            // bottom-left
-        case 2:
-            xOff = 0;
-            yOff = crow - cropSizeY;
-            break;
-            // bottom-right
-        case 3:
-            xOff = ccol - cropSizeX;
-            yOff = crow - cropSizeY;
-            break;
-            // center
-        case 4:
-            xOff = (ccol - cropSizeX) / 2;
-            yOff = (crow - cropSizeY) / 2;
-            break;
-        }
-        break;
-    }
-    default:
-        assert(false);
+    default: // should never happen 
+        assert(false); 
     }
 
-    assert(0 <= xOff && xOff <= ccol - cropSizeX);
-    assert(0 <= yOff && yOff <= crow - cropSizeY);
+    assert(xOff >= 0 && xOff <= ccol - cropSizeX);
+    assert(yOff >= 0 && yOff <= crow - cropSizeY);
     return cv::Rect(xOff, yOff, cropSizeX, cropSizeY);
 }
 

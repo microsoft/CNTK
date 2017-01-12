@@ -89,24 +89,37 @@ private:
     enum class RatioJitterType
     {
         None = 0,
-        UniRatio = 1,
-        UniLength = 2,
-        UniArea = 3
+        UniRatio = 1
     };
 
     void StartEpoch(const EpochConfiguration &config) override;
 
     RatioJitterType ParseJitterType(const std::string &src);
-    cv::Rect GetCropRect(CropType type, int viewIndex, int crow, int ccol, double cropRatio, std::mt19937 &rng);
+
+    // assistent functions for GetCropRect****(). 
+    double ApplyRatioJitter(const double minVal, const double maxVal, std::mt19937 &rng);
+
+    cv::Rect GetCropRectCenter(int crow, int ccol, std::mt19937 &rng);
+    cv::Rect GetCropRectRandomSide(int crow, int ccol, std::mt19937 &rng);
+    cv::Rect GetCropRectRandomArea(int crow, int ccol, std::mt19937 &rng);
+    cv::Rect GetCropRectMultiView10(int viewIndex, int crow, int ccol, std::mt19937 &rng);
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
-    CropType m_cropType;
-    double m_cropRatioMin;
-    double m_cropRatioMax;
+    CropType m_cropType; 
+    int m_cropWidth; 
+    int m_cropHeight; 
+
+    bool m_useSideRatio; 
+    double m_sideRatioMin;
+    double m_sideRatioMax;
+    bool m_useAreaRatio; 
+    double m_areaRatioMin;
+    double m_areaRatioMax;
+    double m_aspectRatioMin;
+    double m_aspectRatioMax; 
+
     RatioJitterType m_jitterType;
     bool m_hFlip;
-    doubleargvector m_aspectRatioRadius;
-    double m_curAspectRatioRadius;
 };
 
 // Scale transformation of the image.

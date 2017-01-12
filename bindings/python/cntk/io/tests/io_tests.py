@@ -109,8 +109,9 @@ def test_image():
     assert t0['type'] == 'Crop'
     assert t1['type'] == 'Scale'
     assert t2['type'] == 'Mean'
-    t0['cropType'] == 'Random'
-    t0['cropRatio'] == 0.8
+    t0['cropType'] == 'RandomSide'
+    t0['sideRatio'] == 0.8
+    t0['aspectRatio'] == 0.9
     t0['jitterType'] == 'uniRatio'
     t1['width'] == image_width
     t1['height'] == image_height
