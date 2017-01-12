@@ -23,7 +23,7 @@ public:
 
 public:
 
-    BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+    BackPropStatePtr Forward(const std::vector<ValuePtr>& inputValues,
                              std::unordered_map<Variable, ValuePtr>& outputs,
                              const DeviceDescriptor& computeDevice,
                              const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override
@@ -33,14 +33,22 @@ public:
         if (!outputsToRetainBackwardStateFor.empty())
             retainBackwardStateFor = { m_timesOrPlusFunc->Output() };
 
+        auto inputs = Inputs();
+        auto GetInputIndex = [&inputs](const Variable& input) -> size_t {
+            for (size_t i = 0; i < inputs.size(); ++i)
+            {
+                if (inputs[i] == input)
+                    return i;
+            }
+
+            std::runtime_error("GetInputIndex: Specified variable is not an input of this Function");
+            return 0;
+        };
+
         std::unordered_map<Variable, ValuePtr> argumentValues;
         for (auto argumentMapping : m_timesOrPlusFuncArgumentMap)
         {
-            ValuePtr argValue;
-            if (argumentMapping.second.IsConstant() || argumentMapping.second.IsParameter())
-                argValue = MakeSharedObject<Value>(argumentMapping.second.IsConstant() ? Constant(argumentMapping.second).Value() : Parameter(argumentMapping.second).Value());
-            else
-                argValue = arguments.at(argumentMapping.second);
+            ValuePtr argValue = inputValues[GetInputIndex(argumentMapping.second)];
 
             if (argumentMapping.first.IsParameter())
                 Parameter(argumentMapping.first).SetValue(argValue->Data());

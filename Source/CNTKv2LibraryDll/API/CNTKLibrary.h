@@ -2304,20 +2304,40 @@ namespace CNTK
     {
     public:
         ///
+        /// Constructs a BackPropState object
+        /// The function and computeDevice parameters record the Function and compute device that 'this' BackPropState corresponds to
+        /// The forwardPropValuesToSave is an optional map of forward compute values saved for later use during back propagation of gradients
+        /// in the backward call that 'this' BackPropState object is used.
+        ///
+        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, const std::unordered_map<Variable, ValuePtr>& forwardPropValuesToSave = {})
+            : m_function(function), m_forwardComputeDevice(computeDevice), m_savedForwardPropValues(forwardPropValuesToSave)
+        {}
+
+        ///
+        /// Destructor
+        ///
+        virtual ~BackPropState() {}
+
+        ///
         /// Returns the Function that 'this' BackPropState belongs to
         ///
         FunctionPtr Function() const { return m_function; }
-        DeviceDescriptor Device() const { return m_forwardComputeDevice; }
-        virtual ~BackPropState() {}
 
-    protected:
-        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice)
-            : m_function(function), m_forwardComputeDevice(computeDevice)
-        {}
+        ///
+        /// Returns the DeviceDescriptor that the forward call, that created 'this' BackPropState, was executed on
+        ///
+        DeviceDescriptor Device() const { return m_forwardComputeDevice; }
+
+        ///
+        /// Returns the forward prop values saved when constructing 'this' BackPropState state
+        /// for later use during back propagation of gradients in a backward call that 'this' BackPropState object is used.
+        ///
+        const std::unordered_map<Variable, ValuePtr>& SavedForwardPropValues() const { return m_savedForwardPropValues; }
 
     protected:
         FunctionPtr m_function;
         DeviceDescriptor m_forwardComputeDevice;
+        std::unordered_map<Variable, ValuePtr> m_savedForwardPropValues;
     };
     typedef std::shared_ptr<BackPropState> BackPropStatePtr;
 
@@ -2373,10 +2393,10 @@ namespace CNTK
         /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
         /// for backpropagating gradients through this Function.
         ///
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
-                                         std::unordered_map<Variable, ValuePtr>& outputs,
-                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
-                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
+        CNTK_API BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                          std::unordered_map<Variable, ValuePtr>& outputs,
+                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
+                                          const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {});
 
         ///
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
@@ -2387,14 +2407,34 @@ namespace CNTK
         /// The 'state' parameter is an instance of an BackPropState instance obtained from a previous call to the Forward method on 'this; Function for the 
         /// computation that this gradient backpropagation corresponds to.
         ///
-        virtual void Backward(const BackPropStatePtr& state,
-                              const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
-                              std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs) = 0;
+        CNTK_API virtual void Backward(const BackPropStatePtr& state,
+                                       const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
+                                       std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
 
         ///
         /// Returns the name of the operation that this Function denotes
         ///
         virtual const std::wstring& OpName() const = 0;
+
+    protected:
+        ///
+        /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values for each input of the Function.
+        /// The variables specified in the 'outputs' map denote the subset of 'this' Function's output variables that the caller wants to obtain values of. 
+        /// Callers may specify the storage to be used for storing the 'outputs' Values or pass null in which case the implementation allocates the actual storage
+        /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.
+        /// The optional 'outputsToRetainBackwardStateFor' parameter specifies the subset of the Function's output variables for which gradients will be specified
+        /// in a subsequent Backward call for backpropagation.
+        /// The method returns a BackPropState object containing all intermediate variable values needed during backpropagation of gradients from the 
+        /// 'outputsToRetainBackwardStateFor' outputs of the Function to any of the inputs of the Function, in a subsequent Backward call.
+        /// Note that the returned BackPropState instance also stores a reference to the supplied 'inputs' Values and generated 'outputs' Values
+        /// and the user is responsible for ensuring that the contents of the inputs and outputs are unchanged until after any uses of the BackPropState instance
+        /// for backpropagating gradients through this Function.
+        /// User defined Functions that derive from the Function type must implement this method.
+        ///
+        virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& inputValues,
+                                         std::unordered_map<Variable, ValuePtr>& outputs,
+                                         const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
+                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
 
     public:
 

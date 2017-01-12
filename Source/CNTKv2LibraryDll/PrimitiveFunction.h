@@ -231,17 +231,11 @@ namespace CNTK
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
         {}
 
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& /*arguments*/,
+        // Primitive functions are currently implemented using the core CNTK engine ComputationNode types
+        virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
                                          const DeviceDescriptor& /*computeDevice*/,
-                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
-        {
-            NOT_IMPLEMENTED;
-        }
-
-        virtual void Backward(const BackPropStatePtr& /*state*/,
-                              const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
-                              std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/)
         {
             NOT_IMPLEMENTED;
         }
@@ -427,6 +421,12 @@ namespace CNTK
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
+            if (leftOperandShape == NDShape::Unknown)
+                leftOperandShape = rightOperandShape;
+
+            if (rightOperandShape == NDShape::Unknown)
+                rightOperandShape = leftOperandShape;
+
             // All operand shapes should be known
             assert((leftOperandShape != NDShape::Unknown) && (rightOperandShape != NDShape::Unknown));
 
@@ -476,16 +476,16 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed)
+        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions)
         {
             assert(operands.size() > 1);
 
             // TODO: Is this logic of transitively constructing the output shape from the operands correct?
             Variable dummyOutputVariable = PlaceholderVariable(NDShape());
             for (auto& operand : operands)
-                dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, false);
+                dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, inferInputDimensions);
 
-            return dummyOutputVariable.m_dataFields->m_shape;
+            return dummyOutputVariable.Shape();
         }
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
@@ -690,6 +690,8 @@ namespace CNTK
 
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
+        static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
+        static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig);
         static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
                                                         std::vector<Variable>& inputs,
                                                         Dictionary& functionConfig,

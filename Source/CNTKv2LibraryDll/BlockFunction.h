@@ -40,24 +40,25 @@ namespace CNTK
         // Mapping from each argument of the composite underlying the block to the corresponding Variable it is mapped to
         std::vector<std::pair<Variable, Variable>> CompositeArgumentsMap() const
         {
-            std::unordered_map<Variable, Variable> argumentsMappingAsMap;
+            std::vector<std::pair<Variable, Variable>> argumentsMap;
             auto arguments = m_composite->Arguments();
             for (auto argument : arguments)
             {
                 if (argument.BlockFunctionVariableMapping() == Variable())
                     LogicError("BlockFunction (%S) with OpName (%S) does not have a mapping for argument (%S)", Name().c_str(), OpName().c_str(), argument.Name().c_str());
 
-                argumentsMappingAsMap[argument] = argument.BlockFunctionVariableMapping();
+                argumentsMap.push_back({ argument, argument.BlockFunctionVariableMapping() });
             }
 
-            std::vector<std::pair<Variable, Variable>> argumentsMap;
+            // Now sort the mapping by the order of occurence of the argument mapping in the block's inputs
             auto blockInputs = Inputs();
-            for (auto blockInput : blockInputs)
-            {
-                auto iter = std::find_if(argumentsMappingAsMap.begin(), argumentsMappingAsMap.end(), [&blockInput](const std::pair<Variable, Variable>& entry) {return entry.second == blockInput; });
-                if (iter != argumentsMappingAsMap.end())
-                    argumentsMap.push_back({iter->first, iter->second});
-            }
+            std::unordered_map<Variable, size_t> inputIndices;
+            for (size_t i = 0; i < blockInputs.size(); ++i)
+                inputIndices.insert({ blockInputs[i], i });
+
+            std::stable_sort(argumentsMap.begin(), argumentsMap.end(), [&inputIndices](const std::pair<Variable, Variable>& first, const std::pair<Variable, Variable>& second) {
+                return inputIndices.at(first.second) < inputIndices.at(second.second);
+            });
 
             return argumentsMap;
         }

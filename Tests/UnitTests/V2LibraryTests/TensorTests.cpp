@@ -65,7 +65,7 @@ void TestTensorPlus(size_t numAxesLeftOperand, size_t numAxesRightOperand, const
     std::unordered_map<Variable, ValuePtr> outputs = { { plusFunc->Output(), outputValue } };
     BackPropStatePtr backPropState;
     if (useConstantInputsOnly)
-        backPropState = plusFunc->Forward({}, outputs, device, { plusFunc->Output() });
+        backPropState = plusFunc->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device, { plusFunc->Output() });
     else
         backPropState = plusFunc->Forward({ { leftInputVar, MakeSharedObject<Value>(leftInputValue) }, { rightInputVar, MakeSharedObject<Value>(rightInputValue) } }, outputs, device, { plusFunc->Output() });
 
@@ -111,7 +111,7 @@ void TestInfAndNans()
     auto outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape(0), outputData));
 
     std::unordered_map<Variable, ValuePtr> outputs = { { divideFunc->Output(), outputValue } };
-    divideFunc->Forward({}, outputs, device);
+    divideFunc->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
 
     if (outputData[0] != std::numeric_limits<float>::infinity())
         throw std::runtime_error("1/0 != Infinity");
