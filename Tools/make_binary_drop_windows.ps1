@@ -80,14 +80,6 @@ Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
-If (Test-Path $baseDropPath\cntk\Python\cntk-*-cp27*.whl)
-{
-	Remove-Item $baseDropPath\cntk\Python\cntk-*-cp27*.whl
-}
-If (Test-Path $baseDropPath\cntk\Python\cntk-*-cp35*.whl)
-{
-	Remove-Item $baseDropPath\cntk\Python\cntk-*-cp35*.whl
-}
 If (Test-Path $baseDropPath\cntk\CPPEvalClientTest.exe)
 {
 	Remove-Item $baseDropPath\cntk\CPPEvalClientTest.exe
