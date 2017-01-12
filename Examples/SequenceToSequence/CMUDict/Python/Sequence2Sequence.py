@@ -193,7 +193,7 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
     thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_embedded)
 
-    testit(thought_vector_broadcast_h, True)
+    #testit(thought_vector_broadcast_h, True)
 
     # Decoder: during training we use the ground truth as input to the decoder. During model execution,
     # we need to redirect the output of the network back in as the input to the decoder. We do this by
