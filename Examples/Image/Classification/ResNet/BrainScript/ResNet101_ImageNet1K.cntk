@@ -183,7 +183,7 @@ Eval = {
             height = 224
             channels = 3
             cropType = "Center"
-            cropRatio = 0.875
+            sideRatio = 0.875
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
