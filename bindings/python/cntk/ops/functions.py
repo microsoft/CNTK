@@ -310,7 +310,7 @@ class Function(cntk_py.Function):
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
 
-    def dump(self):
+    def dump(self, tag=None):
         from ..graph import depth_first_search
         graph = depth_first_search(self.root_function, lambda x: not isinstance(x, cntk_py.Variable) or not x.is_output)
         names = dict()
@@ -363,9 +363,9 @@ class Function(cntk_py.Function):
                 shape = item.shape
                 name = name + " " + item.uid
                 inputs = ''
-            print(' ', op_name, name, inputs, ':', shape)
+            print('  {:20} {:30} {} : {}'.format(op_name, name, inputs, shape))
             pass
-        print(name_it(self))
+        print(tag if tag else name_it(self))
         for item in graph:
             print_item(item)
 

@@ -212,6 +212,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # parameters
     b  = Parameter(            cell_shape_stacked,   init=init_bias, name='b')                              # bias
     W  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='W')                              # input
+    #combine([W]).dump('W')
     A  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='A') if has_aux else None         # aux input (optional)  --TODO: remove
     H  = Parameter(shape     + cell_shape_stacked_H, init=init,      name='H')                              # hidden-to-hidden
     H1 = Parameter(shape     + cell_shape,           init=init,      name='H') if type == 'GRU' else None   # hidden-to-hidden
@@ -343,11 +344,12 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # This is part of the contract with Recurrence(), which relies on this.
     # BUGBUG: If V2 type inference could handle unknown shapes here, we would not need this.
     # BUGBUG: This fails if recurrent cells are composed, since we won't know the true feedback dimension. V2 inference should just handle this.
-    function.replace_placeholders({ function.placeholders[index] : Placeholder(shape=shape) for index, shape in {
-        'RNNUnit': { 1: shape },
-        'GRU':     { 1: shape },
-        'LSTM':    { 1: shape, 2: cell_shape }
-    }[type].items() })
+    # Ha! LU.py still works after removing this. Good start.
+    #function.replace_placeholders({ function.placeholders[index] : Placeholder(shape=shape) for index, shape in {
+    #    'RNNUnit': { 1: shape },
+    #    'GRU':     { 1: shape },
+    #    'LSTM':    { 1: shape, 2: cell_shape }
+    #}[type].items() })
 
     return function
 

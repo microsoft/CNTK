@@ -359,9 +359,10 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
 
         if len(over.outputs) != len(prev_state_args):
             raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
-        out_vars_fwd = [Placeholder(state_var.shape) for state_var in prev_state_args] # create list of placeholders for the state variables
-        #out_vars_fwd = [Placeholder() for state_var in prev_state_args] # create list of placeholders for the state variables
+        #out_vars_fwd = [Placeholder(state_var.shape) for state_var in prev_state_args] # create list of placeholders for the state variables
+        out_vars_fwd = [Placeholder() for state_var in prev_state_args] # create list of placeholders for the state variables
         # BUGBUG: ^^ This currently leads to "ValueError: Cannot create an NDArrayView using a view shape that has unknown dimensions for any of its axes!"
+        # NOPE: works now.
 
         #print('out_vars_fwd', [p.uid for p in out_vars_fwd])
 
@@ -372,7 +373,11 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
         def previous_hook(state):
             return past_value  (state, initial_state) if not go_backwards else \
                    future_value(state, initial_state)
-        prev_out_vars = [previous_hook(s) for s in out_vars_fwd]  # delay (state vars)
+        #prev_out_vars = [previous_hook(s) for s in out_vars_fwd]  # delay (state vars)
+        prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=initial_state)(s) for s in out_vars_fwd]  # delay (state vars)
+        # TODO: allow a learnable initial_state to be passed to each state
+        #       Actually, if initial_state is a CNTK Function rather than an initializer, then require to pass it multiple times; otherwise broadcast to all
+
         #print('prev_out_vars', [p.uid for p in prev_out_vars])
 
         # apply the recurrent block ('over')
@@ -391,10 +396,8 @@ def Recurrence(over, go_backwards=False, initial_state=default_override_or(0)):
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
 def Delay(T=1, initial_state=default_override_or(0)):
-    # TODO: change initial_state to a per-function default
-    initial_state = get_default_override(Recurrence, initial_state=initial_state)
+    initial_state = get_default_override(Delay, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
-    UntestedBranchError("Delay")
 
     # expression
     @Function

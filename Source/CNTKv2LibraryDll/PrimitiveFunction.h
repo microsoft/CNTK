@@ -702,12 +702,12 @@ namespace CNTK
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
         static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
         static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig);
-        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
+        /*static*/ std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
                                                         std::vector<Variable>& inputs,
                                                         PrimitiveFunction* owner,
                                                         Dictionary& functionConfig,
                                                         bool inferDimensions,
-                                                        const std::wstring& functionName);
+                                                        const std::wstring& functionName) const;
 
     private:
         PrimitiveOpType m_op;
