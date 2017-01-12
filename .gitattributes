@@ -72,6 +72,8 @@ Makefile text
 *.proto text
 
 *.cs text
+*.java text
+bindings/java/JavaEvalTest/*.iml text
 
 *.yml text
 *.yml.bak text

@@ -13,17 +13,17 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="InterfaceFiles">
-      <UniqueIdentifier>{65512252-99b8-4b2c-ae95-65f0fad700b9}</UniqueIdentifier>
+    <Filter Include="Interface FIles">
+      <UniqueIdentifier>{8132eaf4-2faa-4db3-8df9-e3811a5880b1}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="cntk_cs_wrap.cxx">
+    <ClCompile Include="cntk_java_wrap.cxx">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="cntk_cs_wrap.h">
+    <ClInclude Include="cntk_java_wrap.h">
       <Filter>Source Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h">
@@ -35,21 +35,23 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\common\CNTK_ExceptionHandling.i">
-      <Filter>InterfaceFiles</Filter>
+      <Filter>Interface FIles</Filter>
     </None>
     <None Include="..\..\common\CNTKValueExtend.i">
-      <Filter>InterfaceFiles</Filter>
+      <Filter>Interface FIles</Filter>
     </None>
     <None Include="std_unordered_map.i">
-      <Filter>InterfaceFiles</Filter>
+      <Filter>Interface FIles</Filter>
     </None>
+    <None Include="..\JavaEvalTest\src\Main.java" />
+    <None Include="generate-java-bindings.cmd" />
     <None Include="..\..\common\CNTKManagedCommon.i">
-      <Filter>InterfaceFiles</Filter>
+      <Filter>Interface FIles</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>
-    <CustomBuild Include="cntk_cs.i">
-      <Filter>InterfaceFiles</Filter>
+    <CustomBuild Include="cntk_java.i">
+      <Filter>Interface FIles</Filter>
     </CustomBuild>
   </ItemGroup>
 </Project>

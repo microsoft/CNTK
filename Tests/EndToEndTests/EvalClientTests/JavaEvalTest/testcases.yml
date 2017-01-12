@@ -1,0 +1,10 @@
+dataDir: .
+
+tags: 
+  - bvt-l (build_sku == 'cpu')
+  - nightly-l (build_sku == 'cpu')
+
+testCases:
+  Test case EvaluateSingleImage:
+    patterns:
+      - Evaluation Complete
