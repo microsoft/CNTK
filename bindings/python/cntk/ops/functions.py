@@ -118,6 +118,10 @@ class Function(cntk_py.Function):
         #args2 = [placeholder_variable(name=name) for name in arg_names]
         #arg_map = list(zip(args,args2))
         #out = as_block(out, arg_map, f_name)
+        # BUGBUG: Latest loses arguments. When each item in a Sequential() is a Block, then suddenly there are no args anymore.
+
+        # for debugging
+        out.f_name = f_name  # keep in Python wrapper for debugging
 
         # add all members to the Python class
         # TODO: This should really be a dictionary inside BlockFunction
@@ -132,7 +136,26 @@ class Function(cntk_py.Function):
     # TODO: get by with placeholders only, do NOT replace with Input but rather Placeholder(shape).
     # TODO: move this inside argument_map()
     def _get_arguments(self):
-        return [arg for arg in self.inputs if arg.is_input or arg.is_placeholder]
+        if self.is_block:
+            # TODO: so far never triggered
+            return [exposed_arg for inner_arg, exposed_arg in self.block_arguments_mapping]
+        else:
+            # TODO: does this work for mixed Placeholders()/Inputs()?
+            return self.arguments
+            # the following seems to be no longer needed
+            ## not a BlockFunction: traverse
+            #args = self.arguments
+            #if len(args)>0:
+            #    nargs=args[0].name
+            #phs = self.placeholders
+            #if len(phs)>0:
+            #    nargs=phs[0].name
+            #if not args:
+            #    return phs
+            #elif not phs:
+            #    return args
+            #else:  # mixed Placeholder() / Input() signature: explicitly traverse
+            #    return [arg for arg in self.inputs if arg.is_input or arg.is_placeholder]
 
     # determine the {placeholder: variable} map for use with various call operations
     # Accepted are both positional and keyword arguments.
@@ -142,6 +165,11 @@ class Function(cntk_py.Function):
         params = self._get_arguments()    # function parameters
         #param_names = [param.name for param in params] # (debugging)
         if len(args) + len(kwargs) != len(params):
+            try:
+                name = self.f_name
+            except:
+                name = ''
+                pass
             raise TypeError("CNTK Function expected {} arguments, got {}".format(len(params), len(args)))
 
         # start with positional arguments
@@ -253,7 +281,11 @@ class Function(cntk_py.Function):
 
         # symbolic: return a cloned Function
         if is_symbolic:
+            a1 = self.arguments
+            a1_names = [arg.name for arg in a1]
             out = self.clone(CloneMethod.share, arg_map)
+            a2 = out.arguments
+            a2_names = [arg.name for arg in a2]
             # TODO: return the Variables as a Python tuple, rather than the CNTK Function object
             #outputs = out.outputs
             #if len(outputs) == 1:   # not tuple-valued: return the output
