@@ -24,7 +24,7 @@ def test_feature_extraction(device_id):
     set_default_device(cntk_device(device_id))
 
     base_path = os.path.dirname(os.path.abspath(__file__))
-    externalData = 'cCNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ
+    externalData = 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ
     if externalData:
         extPath = os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY']
         print("Reading data and model from %s" % extPath)
