@@ -122,9 +122,10 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
 
 def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None):
 
-    create_aux = False
-    if augment_input_hook != None:
-        create_aux = True
+    #create_aux = False
+    #if augment_input_hook != None:
+    #    create_aux = True
+    create_aux = augment_input_hook != None
 
     # only the first layer should create an auxiliary input (the attention weights are shared amongs the layers)
     input = Stabilizer()(input)
@@ -222,21 +223,34 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
         decoder_history_hook))
 
     # Parameters to the decoder stack depend on the model type (use attention or not)
-    augment_input_hook = None
     if use_attention:
         augment_input_hook = create_attention_augment_hook(attention_dim, attention_span, 
                                                            label_embedded, encoder_output_h)
         recurrence_hook_h = past_value
         recurrence_hook_c = past_value
+        decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
     else:
+      if True:
+        # William's original
+        augment_input_hook = None
         def recurrence_hook_h(operand):
-            return element_select(
-            is_first_label, thought_vector_broadcast_h, past_value(operand))
+            return element_select(is_first_label, thought_vector_broadcast_h, past_value(operand))
         def recurrence_hook_c(operand):
-            return element_select(
-            is_first_label, thought_vector_broadcast_c, past_value(operand))
-
-    decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
+            return element_select(is_first_label, thought_vector_broadcast_c, past_value(operand))
+        decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
+      else:
+        # with Layers
+        with default_options(enable_self_stabilization=True):
+            decoder = Sequential([
+                Stabilizer(),
+                Recurrence(LSTM(hidden_dim), initial_state=(thought_vector_h, thought_vector_c)),
+                For(range(1, num_layers), lambda:
+                    Recurrence(LSTM(hidden_dim), initial_state=(thought_vector_h, thought_vector_c))),
+                # TODO: is it correct to pass the initial state to all layers?
+            ])
+        # TODO: Problem of argument ordering? What's the parameters of Recurrence()? May need to use BlockFunction in Sequential
+        decoder_output = decoder(decoder_input)
+        decoder_output_h, decoder_output_c = decoder_output.outputs
 
     # dense Linear output layer    
     label_sequence = find_by_name(decoder_output_h, 'label_sequence', max_depth=200)

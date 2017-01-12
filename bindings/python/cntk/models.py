@@ -28,6 +28,7 @@ def Sequential(layers):
     from functools import reduce
     layers = [Sequential(layer) for layer in layers] # expand all layers recursively
     composed_function = reduce(lambda f, g: f >> g, layers, identity)
+    # TODO: wrap this in a BlockFunction as to enforce inputs = inputs of first function
     return Block(composed_function, 'Sequential', Record(layers=layers))
 
 # For(range(3), lambda i: Dense(2000))

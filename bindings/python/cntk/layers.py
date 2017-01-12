@@ -323,11 +323,12 @@ def GlobalAveragePooling():
 
 # helper to get the initial_state or the default
 def _get_initial_state_or_default(initial_state):
-    # TODO: remove this line
-    #initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
+    # if initial_state is a tuple (multiple state vars), then apply this recursively to all
+    if isinstance(initial_state, tuple):
+        return tuple(_get_initial_state_or_default(s) for s in initial_state)
     # if initial state is given and a numeric constant, then turn it into a Constant() object
-    if initial_state is None:
-        return Constant(0) # note: don't pass None to past_value, because that would default to float32
+    elif initial_state is None:
+        return Constant(0) # note: don't pass None to past_value, because that would default to float32 --TODO: still the case?
     elif np.isscalar(initial_state):
         return Constant(initial_state, shape=(1))
     else:
@@ -349,50 +350,45 @@ def Recurrence(over, go_backwards=default_override_or(False), initial_state=defa
     if isinstance(over, types.FunctionType):
         over = Function(over)
 
+    # TODO: move this entire placeholder business to Function.__call__
+    # compute the delayed state variable(s)
+    _, *prev_state_args = over.placeholders
+
+    if len(over.outputs) != len(prev_state_args):
+        raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
+
+    # initial state can be a single value or one per state variable (if more than one, like for LSTM)
+    if isinstance(initial_state, tuple) and len(initial_state) == 1:
+        initial_state = initial_state[0]
+    if not isinstance(initial_state, tuple):
+        # TODO: if initial_state is a CNTK Function rather than an initializer, then require to pass it multiple times; otherwise broadcast to all
+        initial_state = tuple(initial_state for out_var in prev_state_args)
+
     # function that this layer represents
     @Function
     def recurrence(x):
 
-        # TODO: move this entire placeholder business to Function.__call__
-        # compute the delayed state variable(s)
-        _, *prev_state_args = over.placeholders
-
-        if len(over.outputs) != len(prev_state_args):
-            raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
-        #out_vars_fwd = [Placeholder(state_var.shape) for state_var in prev_state_args] # create list of placeholders for the state variables
         out_vars_fwd = [Placeholder() for state_var in prev_state_args] # create list of placeholders for the state variables
-        # BUGBUG: ^^ This currently leads to "ValueError: Cannot create an NDArrayView using a view shape that has unknown dimensions for any of its axes!"
-        # NOPE: works now.
-
-        #print('out_vars_fwd', [p.uid for p in out_vars_fwd])
 
         # previous function; that is, past or future_value with initial_state baked in
         # BUGBUG: If initial_state itself depends on a Placeholder at this point (e.g. seq2seq), previous_hook will be a binary function...
         # All state variables get delayed with the same function.
-        # TODO: Can we use Delay() here?
-        def previous_hook(state):
-            return past_value  (state, initial_state) if not go_backwards else \
-                   future_value(state, initial_state)
-        #prev_out_vars = [previous_hook(s) for s in out_vars_fwd]  # delay (state vars)
-        prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=initial_state)(s) for s in out_vars_fwd]  # delay (state vars)
-        # TODO: allow a learnable initial_state to be passed to each state
-        #       Actually, if initial_state is a CNTK Function rather than an initializer, then require to pass it multiple times; otherwise broadcast to all
-
-        #print('prev_out_vars', [p.uid for p in prev_out_vars])
+        prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
 
         # apply the recurrent block ('over')
         out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
-        #print('over.placeholders', [p.uid for p in over.placeholders])
 
         # connect the recurrent dependency
         replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
-        #print('out.outputs', [p.uid for p in list(out.outputs)])
         out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
         if not return_full_state:
             out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
 
         return out
+
+    rec_args = recurrence.arguments
+    rec_ph = recurrence.placeholders
 
     return Block(recurrence, 'Recurrence', Record(over=over))
 
