@@ -12,11 +12,11 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --py-version)
       case "$2" in
-        34 | 35)
+        27 | 34 | 35)
           PY_VERSION="$2"
           ;;
         *)
-          echo Invalid or missing value for --py-version option, please specify 34 or 35.
+          echo Invalid or missing value for --py-version option, please specify 27, 34, or 35.
           exit 1
           ;;
       esac
@@ -46,7 +46,7 @@ CNTK_EXAMPLES_PATH="$PWD/Examples"
 CNTK_TUTORIALS_PATH="$PWD/Tutorials"
 CNTK_BINARY="$CNTK_BIN_PATH/cntk"
 CNTK_PY_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py$PY_VERSION-environment.yml"
-CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta7.0-cp$PY_VERSION-cp${PY_VERSION}m-linux_x86_64.whl"
+CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta7.0-cp$PY_VERSION-cp${PY_VERSION}m*-linux_x86_64.whl"
 test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" && 
 test -d "$CNTK_TUTORIALS_PATH" &&
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
