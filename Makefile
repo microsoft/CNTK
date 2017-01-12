@@ -110,6 +110,7 @@ SEPARATOR = "=-----------------------------------------------------------="
 ALL:=
 ALL_LIBS:=
 PYTHON_LIBS:=
+JAVA_LIBS:=
 LIBS_FULLPATH:=
 SRC:=
 
@@ -408,6 +409,7 @@ MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(M
 CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
 ALL_LIBS += $(CNTKMATH_LIB)
 PYTHON_LIBS += $(CNTKMATH_LIB)
+JAVA_LIBS += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
 $(CNTKMATH_LIB): $(MATH_OBJ) | $(PERF_PROFILER_LIB)
@@ -508,6 +510,7 @@ CNTKLIBRARY_OBJ:=\
 CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL_LIBS+=$(CNTKLIBRARY_LIB)
 PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
+JAVA_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
@@ -1324,7 +1327,7 @@ python: $(PYTHON_LIBS)
             py_paths[35]=$(PYTHON35_PATH); \
             py_paths[36]=$(PYTHON36_PATH); \
             export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$$(echo $(GDK_NVML_LIB_PATH) $(LIBPATH) | tr " " :); \
-            ldd $(LIBDIR)/* | grep "not found" && false; \
+            ldd $$(find $(LIBDIR) -maxdepth 1 -type f -print) | grep "not found" && false; \
             export CNTK_COMPONENT_VERSION=$(CNTK_COMPONENT_VERSION); \
             export CNTK_LIBRARIES="$(PYTHON_LIBS)"; \
             export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(PYTHON_EXTRA_LIBS_BASENAMES) | xargs -n1)); \
@@ -1344,6 +1347,34 @@ python: $(PYTHON_LIBS)
             done'
 
 ALL += python
+
+endif
+
+ifeq ("$(JAVA_SUPPORT)","true")
+
+BINDINGS_DIR=bindings
+JAVA_SWIG_DIR=$(BINDINGS_DIR)/java/Swig
+JAVA_TEST_DIR=Tests/EndToEndTests/EvalClientTests/JavaEvalTest
+GENERATED_JAVA_DIR=$(JAVA_SWIG_DIR)/com/microsoft/CNTK
+JDK_BIN_PATH=$(JDK_PATH)/bin
+JDK_INCLUDE_PATH:=$(JDK_PATH)/include
+JDK_INCLUDE_PATH+=$(JDK_INCLUDE_PATH)/linux
+
+.PHONY: java
+java: $(JAVA_LIBS)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	mkdir -p $(GENERATED_JAVA_DIR)
+	rm -f $(GENERATED_JAVA_DIR)/*.java $(GENERATED_JAVA_DIR)/*.class
+	$(SWIG_PATH)/swig -c++ -java -package com.microsoft.CNTK $(INCLUDEPATH:%=-I%) -I$(BINDINGS_DIR)/common -outdir $(GENERATED_JAVA_DIR) $(JAVA_SWIG_DIR)/cntk_java.i
+	$(JDK_BIN_PATH)/javac $(GENERATED_JAVA_DIR)/*.java
+	mkdir -p $(LIBDIR)/java
+	cd $(JAVA_SWIG_DIR) && $(JDK_BIN_PATH)/jar -cvf cntk.jar com
+	cp $(JAVA_SWIG_DIR)/cntk.jar $(LIBDIR)/java
+	javac -cp $(JAVA_SWIG_DIR) $(JAVA_TEST_DIR)/src/Main.java -d $(LIBDIR)/java
+	$(CXX) $(LDFLAGS) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(patsubst %,$(RPATH)%, $(ORIGINDIR)) -L$(LIBDIR) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -l$(CNTKMATH) -l$(CNTKLIBRARY) -o $(LIBDIR)/libCntk.Core.JavaBinding-$(CNTK_COMPONENT_VERSION).so
+
+ALL += java
 
 endif
 
