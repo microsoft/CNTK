@@ -188,7 +188,7 @@ class Test:
         # saving generated lambda into tags dictionary
         self.tags[tagName] = predicate
 
-  # Populates Tests.allTestsIndexedByFullName by scanning directory tree
+  # Populates Test.allTestsIndexedByFullName by scanning directory tree
   # and finding all testcases.yml files
   @staticmethod
   def discoverAllTests():
@@ -386,7 +386,7 @@ class Test:
   # TODO make more general, provide GPU selection
   def getGpuBaselinePatternList(self):
     if not self.gpuBaselinePatternList:
-      self.gpuBaselinePatternList = [".gpu", ""]
+      Test.gpuBaselinePatternList = [".gpu", ""]
       if windows:
         nvidiaSmiPath = '/cygdrive/c/Program Files/NVIDIA Corporation/NVSMI/nvidia-smi.exe'
       else:
@@ -412,9 +412,9 @@ class Test:
       except OSError:
         pass
       if cc != sys.maxint:
-        self.gpuBaselinePatternList.insert(0, ".gpu.cc" + str(cc))
+        Test.gpuBaselinePatternList.insert(0, ".gpu.cc" + str(cc))
 
-    return self.gpuBaselinePatternList
+    return Test.gpuBaselinePatternList
 
   # Finds a location of a baseline file by probing different names in the following order:
   #   baseline.$os.$flavor.$device.txt
