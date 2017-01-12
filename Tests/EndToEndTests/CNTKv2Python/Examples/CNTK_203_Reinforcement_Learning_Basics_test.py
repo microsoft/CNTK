@@ -17,5 +17,9 @@ def test_cntk_203_reinforcement_learning_basics_noErrors(nb):
     assert errors == []
 
 def test_cntk_203_reinforcement_learning_basics_tasks_are_solved(nb):
-    testCells = [cell for cell in nb.cells if cell.cell_type == 'code' and len(cell.outputs) > 0 and 'text' in cell.outputs[0] and re.search('Task solved in[ :]', cell.outputs[0]['text'])]
+    testCells = [cell for cell in nb.cells
+                 if cell.cell_type == 'code' and
+                     len(cell.outputs) > 0 and
+                     'text' in cell.outputs[0] and
+                     re.search('Task solved in[ :]', cell.outputs[0]['text'])]
     assert len(testCells) == 2
