@@ -64,7 +64,7 @@ Train = {
         epochSize     = 256000
         maxEpochs     = 1
         minibatchSize = 128 # 16 GPU
-        dropoutRate   = 0.8
+        dropoutRate   = 0.2
 
         learningRatesPerMB     = 1
         momentumAsTimeConstant = 4096
