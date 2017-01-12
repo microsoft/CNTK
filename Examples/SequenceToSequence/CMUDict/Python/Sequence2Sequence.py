@@ -62,6 +62,7 @@ labelAxis=Axis('labelAxis')
 
 def testit(r, with_labels=True):
     from cntk.blocks import Constant, Type
+    #if True:
     try:
         r.dump()
         if with_labels:
@@ -77,16 +78,12 @@ def testit(r, with_labels=True):
         print(res)
     except Exception as e:
         print(e)
+        r.dump()     # maybe some updates were already made?
         pass
-    input("hit enter")
+    #input("hit enter")
     exit()
 
 def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None, create_aux=False):
-    #dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
-    #dc = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
-    dh = placeholder_variable(shape=(output_dim), dynamic_axes=inputAxis)
-    dc = placeholder_variable(shape=(output_dim), dynamic_axes=inputAxis)
-
     aux_input = None
     has_aux   = False
     if augment_input_hook != None:
@@ -96,12 +93,19 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
         else:
             aux_input = augment_input_hook
 
+    #dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
+    #dc = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
+    #dh = placeholder_variable(dynamic_axes=input.dynamic_axes)
+    #dc = placeholder_variable(dynamic_axes=input.dynamic_axes)
+    dh = placeholder_variable()
+    dc = placeholder_variable()
+    LSTM_cell = LSTM(output_dim, enable_self_stabilization=True)
     if has_aux:    
-        LSTM_cell = LSTM(output_dim, has_aux=has_aux, enable_self_stabilization=True) # BUGBUG (layers): currently not supported
-        f_x_h_c = LSTM_cell(input, dh, dc, aux_input)
+        f_x_h_c = LSTM_cell(splice(input, aux_input), dh, dc)
     else:
-        LSTM_cell = LSTM(output_dim, enable_self_stabilization=True)
+        LSTM_cell.dump('lstm')
         f_x_h_c = LSTM_cell(input, dh, dc)
+        f_x_h_c.dump('lstm applied')
     h_c = f_x_h_c.outputs
 
     h = recurrence_hook_h(h_c[0])
@@ -224,7 +228,9 @@ def train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs, epo
 
     from cntk.blocks import Constant, Type
 
-    model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+    model = model(placeholder_variable(), placeholder_variable())
+    #model = model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable())
+    #model = model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
 
     model.dump()
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
@@ -547,9 +553,9 @@ if __name__ == '__main__':
     x2 = sqr2.find_by_name('x')
 
     stest = sqr2
-    stest.dump()
+    #stest.dump()
     stest = stest.replace_placeholders({stest.arguments[0]: input_variable(13)})
-    stest.dump()
+    #stest.dump()
 
     # hook up data
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
@@ -561,10 +567,10 @@ if __name__ == '__main__':
     #model = create_model(inputs)
 
     # train
-    try:
-        train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs=10, epoch_size=908241)
-    except:
-        x = input("hit enter")
+    #try:
+    train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs=10, epoch_size=908241)
+    #except:
+    #    x = input("hit enter")
 
     # write
     #model = load_model("model_epoch0.cmf")

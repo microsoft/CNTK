@@ -257,8 +257,12 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
         ft_proj  = slice (proj4, stack_axis, 2*stacked_dim, 3*stacked_dim)
         ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
+        #it_proj.dump('it_proj')
+        #bit_proj.dump('bit_proj')
+        #ft_proj.dump('ft_proj')
+        #ot_proj.dump('ot_proj')
 
-            # helper to inject peephole connection if requested
+        # helper to inject peephole connection if requested
         def peep(x, c, C):
             return x + C * c if use_peepholes else x
 
@@ -334,11 +338,13 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         return Function.NamedOutput(h=h)
 
     # return the corresponding lambda as a CNTK Function
+    #lstm.dump('lstm')
     function = Block({
         'RNNUnit': rnn,
         'GRU':     gru,
         'LSTM':    lstm
     }[type], type)
+    #function.dump('recurrent block')
 
     # we already know our state input's shapes, so implant the shape there
     # This is part of the contract with Recurrence(), which relies on this.

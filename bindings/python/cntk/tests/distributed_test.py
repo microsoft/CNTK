@@ -62,7 +62,7 @@ def run_distributed_training(tmpdir, create_func):
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
     z_output = z.output
-    updated, var_map = trainer.train_minibatch(arguments, [z_output])
+    updated, var_map = trainer.train_minibatch(arguments, outputs=[z_output])
     
     p = str(tmpdir / 'checkpoint.dat')
     trainer.save_checkpoint(p)
