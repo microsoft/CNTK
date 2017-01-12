@@ -28,7 +28,7 @@ Simple_Test = [
             height=8
             channels=3
             cropType=Center
-            cropRatio=1.0
+            sideRatio=1.0
             jitterType=UniRatio
             interpolations=linear
             #meanFile=$RootDir$/ImageReaderSimple_mean.xml
@@ -54,7 +54,7 @@ Composite_Test= {
             input = {
                 features = {
                     transforms = (
-                        { type = "Crop" ;  cropType = "center" ;  cropRatio = 1.0 ;  jitterType = "uniRatio" }:
+                        { type = "Crop" ;  cropType = "center" ;  sideRatio = 1.0 ;  jitterType = "uniRatio" }:
                         { type = "Scale" ;  width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" }:
                         { type = "Mean" ; }:
                         { type = "Transpose" }

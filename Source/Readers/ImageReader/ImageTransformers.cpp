@@ -50,35 +50,33 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
     }
 
     m_useSideRatio = true;
-    if (!config.Exists(L"sideRatio")) 
-        m_useSideRatio = false; 
-    else
+    floatargvector sideRatio = config(L"sideRatio", "0.0");
+    m_sideRatioMin = sideRatio[0];
+    m_sideRatioMax = sideRatio[1];
+    if (m_sideRatioMin == 0.0 && m_sideRatioMax == 0.0) // taking default value means not specified 
     {
-        floatargvector sideRatio = config(L"sideRatio", "1.0");
-        m_sideRatioMin = sideRatio[0];
-        m_sideRatioMax = sideRatio[1];
-        if (!(m_sideRatioMin > 0 && m_sideRatioMax <= 1.0) ||
-            m_sideRatioMin > m_sideRatioMax)
-        {
-            m_useSideRatio = false;
-            RuntimeError("Invalid sideRatio value, must be > 0 and <= 1. sideMin must <= sideMax");
-        }
+        m_useSideRatio = false;
+    }
+    else if (!(m_sideRatioMin > 0 && m_sideRatioMax <= 1.0) ||
+        m_sideRatioMin > m_sideRatioMax)
+    {
+        m_useSideRatio = false;
+        RuntimeError("Invalid sideRatio value, must be > 0 and <= 1. sideMin must <= sideMax");
     }
 
     m_useAreaRatio = true; 
-    if (!config.Exists(L"areaRatio"))
-        m_useAreaRatio = false; 
-    else
+    floatargvector areaRatio = config(L"areaRatio", "0.0");
+    m_areaRatioMin = areaRatio[0];
+    m_areaRatioMax = areaRatio[1];
+    if (m_areaRatioMin == 0.0 && m_areaRatioMax == 0.0) // taking default value means not specified 
     {
-        floatargvector areaRatio = config(L"areaRatio", "1.0");
-        m_areaRatioMin = areaRatio[0];
-        m_areaRatioMax = areaRatio[1];
-        if (!(m_areaRatioMin > 0 && m_areaRatioMax <= 1.0) ||
-            m_areaRatioMin > m_areaRatioMax)
-        {
-            m_useAreaRatio = false; 
-            RuntimeError("Invalid areaRatio value, must be > 0 and <= 1. areaMin must <= areaMax");
-        }
+        m_useAreaRatio = false;
+    }
+    else if (!(m_areaRatioMin > 0 && m_areaRatioMax <= 1.0) ||
+        m_areaRatioMin > m_areaRatioMax)
+    {
+        m_useAreaRatio = false;
+        RuntimeError("Invalid areaRatio value, must be > 0 and <= 1. areaMin must <= areaMax");
     }
 
     if (m_useSideRatio && m_useAreaRatio)
@@ -87,9 +85,10 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
     floatargvector aspectRatio = config(L"aspectRatio", "1.0");
     m_aspectRatioMin = aspectRatio[0];
     m_aspectRatioMax = aspectRatio[1];
-    if (m_aspectRatioMin < 0 || m_aspectRatioMin > m_aspectRatioMax)
+    if (!(m_aspectRatioMin <= 0 && m_aspectRatioMax <= 1.0) ||  
+        m_aspectRatioMin > m_aspectRatioMax)
     {
-        RuntimeError("Invalid aspectRatio value, must be > 0. aspectMin must <= aspectMax");
+        RuntimeError("Invalid aspectRatio value, must be > 0 and <= 1. aspectMin must <= aspectMax");
     }
 
     m_jitterType = ParseJitterType(config(L"jitterType", ""));

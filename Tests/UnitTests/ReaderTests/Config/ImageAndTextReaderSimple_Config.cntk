@@ -43,7 +43,7 @@ reader = [
                             [
                                 type = "Crop"
                                 cropType = "center"
-                                cropRatio = 1.0
+                                sideRatio = 1.0
                                 jitterType = "uniRatio"
                             ]:[
                                 type = "Scale"
