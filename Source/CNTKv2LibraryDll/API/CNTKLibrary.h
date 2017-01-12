@@ -1338,7 +1338,7 @@ namespace CNTK
                 FreePtrAsType<std::vector<DictionaryValue>>();
             else if (m_valueType == Type::Dictionary)
                 FreePtrAsType<Dictionary>();
-            else if (m_valueType == Type::Dictionary)
+            else if (m_valueType == Type::NDArrayView)
                 FreePtrAsType<NDArrayView>();
         }
 
