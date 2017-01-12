@@ -165,10 +165,12 @@ function InstallMSI(
 
     $completeMsiName = Join-Path $dir $msi
 
-    $cmd  = "c:\Windows\System32\MSIEXEC.EXE"
+    $windDir = GetEnvironmentVariableContent("WINDIR")
+    $cmd = Join-Path $windDir "System32\MSIEXEC.EXE"
+
     $param= "/i `"$completeMsiName`" /quiet /norestart"
   
-    DoProcess -doExecute $Execute -command $cmd -param "$param" -requiresRunAs $true -maxErrorLevel 0 -throwOnError $true
+    DoProcess -doExecute $Execute -command $cmd -param $param -requiresRunAs $true -maxErrorLevel 0 -throwOnError $true
 }
                
 function MakeDirectory(
@@ -562,22 +564,14 @@ function DoProcess(
          return
     }
 
-    if ($workingDir.Length -eq 0) {
-        if ($requiresRunAs) {
-            $process = start-process -FilePath "$command" -ArgumentList "$param" -Wait -PassThru -Verb runas
-        }
-        else {
-            $process = start-process -FilePath "$command" -ArgumentList "$param" -Wait -PassThru
-        }
-
+    if (-not $workingDir) {
+        $workingDir = $(get-location).Path
+    }
+    if ($requiresRunAs) {
+        $process = start-process -FilePath $command -ArgumentList $param -Wait -PassThru -Verb runas -WorkingDirectory $workingDir
     }
     else {
-        if ($requiresRunAs) {
-            $process = start-process -FilePath "$command" -ArgumentList "$param" -Wait -PassThru -Verb runas -WorkingDirectory "$workingDir"
-        }
-        else {
-            $process = start-process -FilePath "$command" -ArgumentList "$param" -Wait -PassThru -WorkingDirectory "$workingDir"
-        }
+        $process = start-process -FilePath $command -ArgumentList $param -Wait -PassThru -WorkingDirectory $workingDir
     }
 
     $eCode = ($process.ExitCode)
