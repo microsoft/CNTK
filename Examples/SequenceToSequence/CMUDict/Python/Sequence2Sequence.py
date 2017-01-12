@@ -103,9 +103,9 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
     if has_aux:    
         f_x_h_c = LSTM_cell(splice(input, aux_input), dh, dc)
     else:
-        LSTM_cell.dump('lstm')
+        #LSTM_cell.dump('lstm')
         f_x_h_c = LSTM_cell(input, dh, dc)
-        f_x_h_c.dump('lstm applied')
+        #f_x_h_c.dump('lstm applied')
     h_c = f_x_h_c.outputs
 
     h = recurrence_hook_h(h_c[0])
@@ -133,8 +133,30 @@ def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recu
 
     return (output_h, output_c)
 
-
-#@Function
+# note: non-att s2s model in layer style:
+# with default_options(go_backwards=True, enable_stabilization=Trye)
+# encoder = For(range(2), lambda: Recurrence(LSTM(250))) >> Fold(LSTM(500))
+# s0 = encoder(input)
+# s0 |> decoder_model
+# decoder_step = H' >> R2(G) >> R(F) >> D     # note: stateful w.r.t. n
+#              :: (s0, history*) -> (z*)      # history = label_delayed or hard_max(z_delayed); s0 = encoder state
+# decoder_model = Unfold(decoder_step, cond)  # for the case of decoding (training: decoder_step(s0, Delay(labels, initial_state='<s>'))
+#               :: (s0) -> (z*)
+# cond(x) = hard_max(x) == '</s>'
+# !!!TODO!!!: implement numpy syntax as a wrapper for slice(), __getitem__(self, arg), if isinstance(arg, slice)...
+#   then say cond(x) = hard_max(x)[index_of_EOS]  and  initial_state=embedding[index_of_BOS,:]
+#   This is so cool!! But not working for time and batch axis :(
+# where decoder has two LSTM layers F and G, and an embedding layer for output H
+# In decoding, use input to guide output len using where(2 like input)
+# Special processing:
+#  - H' = (identity, H)   # pass through s0, which is the actual input
+#  - R2(G) = R(G') with
+#    G'(x, dh1, dc1) = G(x, dh1', dc1) with dh1' = output of H' if first step else Delay(h1)
+#    R2(s0, history) = R(history, initial_state=s0)
+#  - Unfold(f)(x) = x |> (E >> R(f))  until cond(output)
+#    E broadcasts the initial state to the entire sequence, so that R can run over it
+#    Better: This R should be a special recurrence. It really is an Unfold().
+@Function
 def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
     # Set up sequences...
@@ -210,32 +232,34 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
 
     return z
 
-def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-
-    # get inputs to the model (has to include labels for input to the decoder)
-    raw_input, raw_labels = inputs
-
-    arg_names = [arg.name for arg in model.arguments]
-
-    return model(raw_input, raw_labels)
+#def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+#
+#    # get inputs to the model (has to include labels for input to the decoder)
+#    raw_input, raw_labels = inputs
+#
+#    arg_names = [arg.name for arg in model.arguments]
+#
+#    return model(raw_input, raw_labels)
 
 ########################
 # train action         #
 ########################
 
-def train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs, epoch_size):
+def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size):
+
+    #inputs = create_inputs()
 
     from cntk.blocks import Constant, Type
 
-    model = model(placeholder_variable(), placeholder_variable())
+    #model = model(placeholder_variable(), placeholder_variable())
     #model = model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable())
     #model = model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
 
-    model.dump()
+    model.dump('model')
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                            Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                            #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
-    model.dump()
+    model.dump('model after update')
 
     # do some hooks so that we can direct data to the right place
     label_sequence = find_by_name(model, 'label_sequence')
@@ -360,8 +384,10 @@ def write(reader, model, vocab, i2w):
     while True:
         # get next minibatch of data
         mb = reader.next_minibatch(minibatch_size)
-        if not mb: break
-                
+        if not mb:
+            break
+
+        # TODO: just use __call__() syntax
         e = model.eval({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
                         find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
         print_sequences(e, i2w)
@@ -512,23 +538,23 @@ def debug_attention(model, mb, reader):
         att_value = output[1][att_key]
         print(att_value[0,0,:])
 
-# function to model the inputs
-def create_inputs():
-    
-    # Source and target inputs to the model
-    batch_axis = Axis.default_batch_axis()
-    input_seq_axis = Axis('inputAxis')
-    label_seq_axis = Axis('labelAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    raw_input = input_variable(
-        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes, name='raw_input')
-
-    label_dynamic_axes = [batch_axis, label_seq_axis]
-    raw_labels = input_variable(
-        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes, name='raw_labels')
-
-    return (raw_input, raw_labels)
+## function to model the inputs
+#def create_inputs():
+#    
+#    # Source and target inputs to the model
+#    batch_axis = Axis.default_batch_axis()
+#    input_seq_axis = Axis('inputAxis')
+#    label_seq_axis = Axis('labelAxis')
+#
+#    input_dynamic_axes = [batch_axis, input_seq_axis]
+#    raw_input = input_variable(
+#        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes, name='raw_input')
+#
+#    label_dynamic_axes = [batch_axis, label_seq_axis]
+#    raw_labels = input_variable(
+#        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes, name='raw_labels')
+#
+#    return (raw_input, raw_labels)
 
 #############################
 # main function boilerplate #
@@ -562,12 +588,12 @@ if __name__ == '__main__':
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
-    inputs = create_inputs()
+    #inputs = create_inputs()
     #model = create_model(inputs)
 
     # train
     #try:
-    train(train_reader, valid_reader, vocab, i2w, model, inputs, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
     #except:
     #    x = input("hit enter")
 
