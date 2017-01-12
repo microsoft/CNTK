@@ -228,16 +228,17 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
                                                            label_embedded, encoder_output_h)
         recurrence_hook_h = past_value
         recurrence_hook_c = past_value
-        decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
+        decoder_output_h, _ = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
     else:
-      if True:
+      if False:
         # William's original
         augment_input_hook = None
         def recurrence_hook_h(operand):
             return element_select(is_first_label, thought_vector_broadcast_h, past_value(operand))
         def recurrence_hook_c(operand):
             return element_select(is_first_label, thought_vector_broadcast_c, past_value(operand))
-        decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
+        decoder_output_h, _ = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
+        z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
       else:
         # with Layers
         with default_options(enable_self_stabilization=True):
@@ -247,14 +248,14 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
                 For(range(1, num_layers), lambda:
                     Recurrence(LSTM(hidden_dim), initial_state=(thought_vector_h, thought_vector_c))),
                 # TODO: is it correct to pass the initial state to all layers?
+                Stabilizer(),
+                Dense(label_vocab_dim)
             ])
         # TODO: Problem of argument ordering? What's the parameters of Recurrence()? May need to use BlockFunction in Sequential
-        decoder_output = decoder(decoder_input)
-        decoder_output_h, decoder_output_c = decoder_output.outputs
+        z = decoder(decoder_input)
 
     # dense Linear output layer    
     label_sequence = find_by_name(decoder_output_h, 'label_sequence', max_depth=200)
-    z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
     #label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
 
     #arg_names = [arg.name for arg in z.arguments]

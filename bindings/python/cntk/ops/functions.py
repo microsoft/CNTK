@@ -100,7 +100,7 @@ class Function(cntk_py.Function):
             arg_map = list(zip(args1,args2))
             combined_args = as_block(combined_args, arg_map, f_name + '_parameter_ordering')
             # this now is a BlockFunction that maps all args to themselves, with forced ordering
-            combined_args.replace_placeholders(list(zip(args2,args)))
+            combined_args.replace_placeholders(dict(zip(args2,args)))
             args = combined_args.outputs
             # and try it again
             out = f(*args)
