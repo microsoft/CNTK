@@ -83,7 +83,7 @@ def test_image():
     
     image = ImageDeserializer(map_file)
     image.map_features(feature_name,
-            [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
+            [ImageDeserializer.crop(crop_type='RandomSide', side_ratio=0.8,
                 jitter_type='uniRatio'),
              ImageDeserializer.scale(width=image_width, height=image_height,
                  channels=num_channels, interpolations='linear'),

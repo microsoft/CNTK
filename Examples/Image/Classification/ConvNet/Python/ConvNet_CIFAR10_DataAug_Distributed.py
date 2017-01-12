@@ -34,7 +34,7 @@ def create_reader(map_file, mean_file, train, total_number_of_samples, distribut
     transforms = []
     if train:
         transforms += [
-            cntk.io.ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
+            cntk.io.ImageDeserializer.crop(crop_type='RandomSide', side_ratio=0.8, jitter_type='uniRatio') # train uses jitter
         ]
 
     transforms += [

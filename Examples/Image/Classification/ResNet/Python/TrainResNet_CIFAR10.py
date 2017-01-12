@@ -40,7 +40,7 @@ def create_reader(map_file, mean_file, train):
     transforms = []
     if train:
         transforms += [
-            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
+            ImageDeserializer.crop(crop_type='RandomSide', side_ratio=0.8, jitter_type='uniRatio') # train uses jitter
         ]
     transforms += [
         ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
