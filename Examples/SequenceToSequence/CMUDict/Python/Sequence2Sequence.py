@@ -62,21 +62,21 @@ labelAxis=Axis('labelAxis')
 
 def testit(r, with_labels=True):
     from cntk.blocks import Constant, Type
-    #if True:
-    try:
+    if True:
+    #try:
         r.dump()
         if with_labels:
             r.update_signature(Type(3, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                               Type(5, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+                               Type(3, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
         else:
             r.update_signature(Type(3, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
         r.dump()
         if with_labels:
-            res = r.eval({r.arguments[0]: [[[0.9, 0.7, 0.8]]]}, {r.arguments[1]: [[[0, 1, 0, 0, 0]]]})
+            res = r.eval({r.arguments[0]: [[[0.9, 0.7, 0.8]]], r.arguments[1]: [[[0, 1, 0]]]})
         else:
             res = r.eval({r.arguments[0]: [[[0.9, 0.7, 0.8]]]})
         print(res)
-    except Exception as e:
+    #except Exception as e:
         print(e)
         r.dump()     # maybe some updates were already made?
         pass
@@ -116,8 +116,6 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
 
     h = f_x_h_c.outputs[0]
     c = f_x_h_c.outputs[1]
-
-    testit(combine([h]), False)
 
     return combine([h]), combine([c]), aux_input
 
@@ -161,10 +159,9 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
 
     # Encoder: create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
+    # note: future_value since we encode right-to-left
     encoder_output_h, encoder_output_c = LSTM_stack(input_embedded, num_layers, hidden_dim, 
                                                     recurrence_hook_h=future_value, recurrence_hook_c=future_value)
-
-    testit(encoder_output_h, False)
 
     # Prepare encoder output to be used in decoder
     thought_vector_h = sequence.first(encoder_output_h)
@@ -173,6 +170,8 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
     thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
     thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_embedded)
+
+    testit(thought_vector_broadcast_h, True)
 
     # Decoder: during training we use the ground truth as input to the decoder. During model execution,
     # we need to redirect the output of the network back in as the input to the decoder. We do this by
