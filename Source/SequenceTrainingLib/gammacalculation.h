@@ -254,13 +254,13 @@ public:
         const Microsoft::MSR::CNTK::Matrix<ElemType>& prob, 
         Microsoft::MSR::CNTK::Matrix<ElemType>& functionValues, 
         std::vector<size_t> &uids, 
-        size_t samplesInRecurrentStep,
+        size_t numChannels,
         std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
         std::vector<size_t> &extrauttmap, 
         int delayConstraint = -1)
     {
         std::vector<size_t> validframes;
-        validframes.assign(samplesInRecurrentStep, 0);
+        validframes.assign(numChannels, 0);
         //convert from Microsoft::MSR::CNTK::Matrix to  msra::math::ssematrixbase
         size_t numrows = prob.GetNumRows();
         size_t numcols = prob.GetNumCols();
@@ -277,7 +277,7 @@ public:
         std::vector<size_t> phonebound;
         size_t blankid = numrows - 1;
 
-        size_t mbsize = numcols / samplesInRecurrentStep;
+        size_t mbsize = numcols / numChannels;
 
         size_t mapi = 0;
 
@@ -290,7 +290,7 @@ public:
 
         std::vector<std::vector<size_t>> alluttphoneseqs;
         std::vector<std::vector<size_t>> alluttphonebounds;
-        size_t maxSizeT = std::numeric_limits<size_t>::max();
+        size_t maxSizeT = 65535;
         int maxPhoneNum = 0;
 
         for (size_t i = 0; i < extrauttmap.size(); i++)
@@ -319,14 +319,14 @@ public:
 
             phonebound.clear();
             phonebound.push_back(0);
-            for (size_t i = 0; i < uidsstripe.size(); i++)
+            for (size_t j = 0; j < uidsstripe.size(); j++)
             {
-                if (uidsstripe[i] != maxSizeT && uidsstripe[i] != blankid)
+                if (uidsstripe[j] != maxSizeT && uidsstripe[j] != blankid)
                 {
                     phoneseq.push_back(blankid);
-                    phonebound.push_back(i);
-                    phoneseq.push_back(uidsstripe[i]);
-                    phonebound.push_back(i);
+                    phonebound.push_back(j);
+                    phoneseq.push_back(uidsstripe[j]);
+                    phonebound.push_back(j);
                 }
             }
             phoneseq.push_back(blankid);
@@ -340,7 +340,7 @@ public:
             if (phoneseq.size() > maxPhoneNum)
                 maxPhoneNum = phoneseq.size();
 
-            if (samplesInRecurrentStep > 1)
+            if (numChannels > 1)
                 validframes[mapi] += numframes;
 
             ts += numframes;
@@ -366,17 +366,9 @@ public:
         matrixphonebounds.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
 
         functionValues.AssignCTCScore_m(prob, alpha, beta, matrixphoneseqs, matrixphonebounds, finalscore, extrauttmap, uttBeginFrame,
-            uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, delayConstraint, true);
-        rowsum.Resize(1, samplesInRecurrentStep*mbsize);
-
-        if (finalscore > 100)
-        {
-            prob.Print("prob");
-            alpha.Print("alpha");
-            beta.Print("beta");
-            functionValues.Print("gamma");
-        }
-        fprintf(stderr, "totalscore: %f\n", finalscore);
+            uttFrameNum, uttPhoneNum, numChannels, mbsize, delayConstraint, true);
+        
+        rowsum.Resize(1, numChannels*mbsize);
 
         functionValues.VectorSum(functionValues, rowsum, true);
         functionValues.RowElementDivideBy(rowsum);

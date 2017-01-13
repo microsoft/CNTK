@@ -37,6 +37,7 @@ typedef unsigned char byte;
 #define LZERO -10e10
 #define MINLOGEXP -9.2103
 #define LSMALL -0.5E10
+#define CNMINLOGEXP -69
 
 #define GPUSPARSE_INDEX_TYPE int // cuSparse only supports int array indexes
 #define CPUSPARSE_INDEX_TYPE int // to be consistent with cuSparse but limited the possible size of the matrix.
