@@ -921,24 +921,20 @@ namespace CNTK
                 return (m_isVariableRootMap[outputVar] && (!ownerBlockFunc || IsVariableRoot(ownerBlockFunc->CompositeOutputsMap().at(outputVar))));
             };
 
-            // If any of the function outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
-            for (auto rootOutput : rootFunctionOutputs)
+            // If any of the network outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
+            std::unordered_set<Variable> networkOutputs(backpropRoots);
+            networkOutputs.insert(outputs.begin(), outputs.end());
+            for (auto networkOutput : networkOutputs)
             {
-                if (!IsVariableRoot(rootOutput))
-                    m_computationNetwork->AddToNodeGroup(L"output", m_variableToNodeMap.at(rootOutput));
-            }
-
-            // If any of the requested outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
-            for (auto output : outputs)
-            {
-                if (!IsVariableRoot(output))
+                if (!IsVariableRoot(networkOutput))
                 {
-                    auto computationNode = m_variableToNodeMap[output];
+                    auto computationNode = m_variableToNodeMap[networkOutput];
 
                     if (!computationNode)
                         InvalidArgument("One of the requested outputs for the Function forward computation is not part of the graph underlying the Function");
 
                     m_computationNetwork->AddToNodeGroup(L"output", computationNode);
+
                 }
             }
 
@@ -1011,36 +1007,17 @@ namespace CNTK
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
         {
             ComputationNodeBasePtr backpropRootNode;
-
-            // Now recursively traverse the network in a top-down fashion
-            auto rootFunction = RootFunction();
-            auto rootFunctionOutputs = rootFunction->Outputs();
-            std::vector<ComputationNodeBasePtr> forwardRootNodes;
-            for (auto rootOutput : rootFunctionOutputs)
-            {
-                auto currentRootNode = m_variableToNodeMap.at(rootOutput);
-                forwardRootNodes.push_back(currentRootNode);
-
-                if (m_currentBackpropRoots.find(rootOutput) != m_currentBackpropRoots.end())
-                    backpropRootNode = currentRootNode;
-            }
+            if (!m_currentBackpropRoots.empty())
+                backpropRootNode = m_variableToNodeMap.at(*m_currentBackpropRoots.begin());
 
             std::vector<ComputationNodeBasePtr> forwardOutputNodes;
             for (auto output : outputs)
-            {
-                auto currentOutputNode = m_variableToNodeMap.at(output);
-                forwardOutputNodes.push_back(currentOutputNode);
+                forwardOutputNodes.push_back(m_variableToNodeMap.at(output));
 
-                // Select the root node for backpropagation
-                if (m_currentBackpropRoots.find(output) != m_currentBackpropRoots.end())
-                    backpropRootNode = currentOutputNode;
-            }
-
-            m_computationNetwork->AllocateAllMatrices(forwardRootNodes, forwardOutputNodes, backpropRootNode);
+            m_computationNetwork->AllocateAllMatrices({}, forwardOutputNodes, backpropRootNode);
             m_networkMatricesAllocated = allocateNetworkMatrices;
 
             m_currentOutputs = outputs;
-            m_currentOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
             m_currentOutputs.insert(m_currentBackpropRoots.begin(), m_currentBackpropRoots.end());
         }
         else

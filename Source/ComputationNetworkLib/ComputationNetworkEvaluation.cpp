@@ -1000,6 +1000,9 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     for (auto& rootNode : forwardPropRoots)
         rootNode->MarkValueNonSharable();
 
+    // Sort the forwardPropRoots by global eval order
+    forwardPropRoots = SortByGlobalEvalOrder(forwardPropRoots);
+
     // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
     MarkValueNonSharableNodes();
 
@@ -1010,10 +1013,18 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     // node is needed during back propagation
     std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
     std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
+    std::unordered_set<ComputationNodeBasePtr> uniqueForwardPropRootsEvalNodes;
+    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder;
     for (auto& rootNode : forwardPropRoots)
     {
         for (const auto& node : GetEvalOrder(rootNode))
         {
+            if (uniqueForwardPropRootsEvalNodes.find(node) == uniqueForwardPropRootsEvalNodes.end())
+            {
+                uniqueForwardPropRootsEvalNodes.insert(node);
+                compositeForwardPropEvalOrder.push_back(node);
+            }
+
             for (int i = 0; i < node->GetNumInputs(); i++)
             {
                 ComputationNodeBasePtr input = node->GetInputs()[i];
@@ -1053,9 +1064,6 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     // Construct the composite forward prop eval order by enumerating the
     // nodes corresponding to each of our roots and then arranging them in the
     // relative order that they appear in the global evaluation order
-
-    std::list<ComputationNodeBasePtr> nodesForForwardPropRoots = ComputationNodeBase::EnumerateNodes(forwardPropRoots);
-    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder = SortByGlobalEvalOrder(nodesForForwardPropRoots);
 
     set<ComputationNodeBasePtr> completedEvaluate;
     for (auto& nodeIter : compositeForwardPropEvalOrder)
