@@ -33,7 +33,7 @@ static const wchar_t* BilinearInitializerTypeName =         L"bilinear";
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>, public IFreezable
+class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>, public IFreezable, public TransformerNode
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"LearnableParameter"; }
@@ -152,6 +152,17 @@ public:
     }
     // called from SGD UpdateWeights, to adjust the reg for each node
     float GetRegMultiplier() const { return m_regMultiplier; }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t /*index*/) override
+    {
+        RuntimeError("LearnableParameter should not be asked for input transforms, since it has no inputs.");
+    }
+
+    // Has no inputs, hence does not support transforms on any input.
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        RuntimeError("LearnableParameter should not be asked for input transforms, since it has no inputs.");
+    }
 
 private:
     // init parameters for deferred initialization (which happens in Validate())
