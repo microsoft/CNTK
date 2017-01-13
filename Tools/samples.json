@@ -87,7 +87,7 @@
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
-	{
+    {
         "category": ["Image"],
         "name":  "MNIST Autoencoder Dim Reduction",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb",
