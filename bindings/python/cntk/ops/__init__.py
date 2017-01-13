@@ -31,10 +31,10 @@ def combine(operands, name=''):
         >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
         >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
 
-        >>> plus_node = in1 + in2
-        >>> minus_node = in1 - in2
+        >>> plus_operation = in1 + in2
+        >>> minus_operation = in1 - in2
 
-        >>> forward = C.combine([plus_node, minus_node]).eval({in1: in1_data, in2: in2_data})
+        >>> forward = C.combine([plus_operation, minus_operation]).eval({in1: in1_data, in2: in2_data})
         >>> len(forward)
         2
         >>> list(forward.values()) # doctest: +SKIP
@@ -228,7 +228,7 @@ def squared_error(output, target, name=''):
     '''
     This operation computes the sum of the squared difference between elements
     in the two input matrices. The result is a scalar (i.e., one by one matrix).
-    This is often used as a training criterion node.
+    This is often used as a training criterion.
 
     Example:
         >>> i1 = C.input_variable((1,2))
@@ -252,28 +252,28 @@ def squared_error(output, target, name=''):
     output = sanitize_input(output, dtype)
     target = sanitize_input(target, dtype)
     return squared_error(output, target, name)
-    
+
 @typemap
 def lambda_rank(output, gain, group, name=''):
     r'''
-    Groups samples according to ``group``, sorts 
-    them within each group based on ``output`` and 
+    Groups samples according to ``group``, sorts
+    them within each group based on ``output`` and
     computes the Normalized Discounted Cumulative Gain
     (NDCG) at infinity for each group. Concretely,
     the Discounted Cumulative Gain (DCG) at infinity is:
-    
+
     :math:`\mathrm{DCG_{\infty}}()=\sum_{i=0}^{\infty} \frac{gain_{(i)}}{\log(i+2)}`
-    
+
     where :math:`gain_{(i)}` means the gain of the :math:`i`-th ranked sample.
-    
-    The NDCG is just the DCG  divided by the maximum achievable DCG (obtained 
+
+    The NDCG is just the DCG  divided by the maximum achievable DCG (obtained
     by placing the samples with the largest gain at the top of the ranking).
-    
+
     Samples in the same group must appear in order of decreasing gain.
 
-    It returns 1 minus the average NDCG across all the groups in the minibatch 
+    It returns 1 minus the average NDCG across all the groups in the minibatch
     multiplied by 100 times the number of samples in the minibatch.
-    
+
     In the backward direction it back-propagates LambdaRank gradients.
 
     Example:
@@ -294,7 +294,7 @@ def lambda_rank(output, gain, group, name=''):
                [[ 0.1486]]], dtype=float32)
 
     Args:
-        output: score of each sample 
+        output: score of each sample
         gain: gain of each sample
         group: group of each sample
         name (str, optional): the name of the Function instance in the network
@@ -312,22 +312,22 @@ def lambda_rank(output, gain, group, name=''):
 @typemap
 def ndcg_at_1(output, gain, group, name=''):
     r'''
-    Groups samples according to ``group``, sorts 
-    them within each group based on ``output`` and 
-    computes the Normalized Discounted Cumulative Gain 
+    Groups samples according to ``group``, sorts
+    them within each group based on ``output`` and
+    computes the Normalized Discounted Cumulative Gain
     (NDCG) at 1 for each group. Concretely,
     the NDCG at 1 is:
-    
+
     :math:`\mathrm{NDCG_1} = \frac{gain_{(1)}}{\max_i gain_i}`
-    
+
     where :math:`gain_{(1)}` means the gain of the first ranked sample.
-    
+
     Samples in the same group must appear in order of decreasing gain.
 
-    It returns the average NDCG at 1 across all the groups in the minibatch 
+    It returns the average NDCG at 1 across all the groups in the minibatch
     multiplied by 100 times the number of samples in the minibatch.
-    
-    This is a forward-only node, there is no gradient for it.
+
+    This is a forward-only operation, there is no gradient for it.
 
     Example:
         >>> group = C.input_variable((1,))
@@ -340,7 +340,7 @@ def ndcg_at_1(output, gain, group, name=''):
         array(400.0, dtype=float32)
 
     Args:
-        output: score of each sample 
+        output: score of each sample
         gain: gain of each sample
         group: group of each sample
         name (str, optional): the name of the Function instance in the network
@@ -543,7 +543,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
             lower_pad=(0,), upper_pad=(0,), name=''):
     '''
     Unpools the ``operand`` using information from ``pooling_input``. Unpooling mirrors the operations
-    performed by pooling and depends on the values provided to the corresponding pooling node. The output
+    performed by pooling and depends on the values provided to the corresponding pooling operation. The output
     should have the same shape as pooling_input. Pooling the result of an unpooling operation should
     give back the original input.
 
@@ -559,7 +559,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
 
     Args:
         operand: unpooling input
-        pooling_input: input to the corresponding pooling node
+        pooling_input: input to the corresponding pooling operation
         unpooling_type: only :const:`~cntk.ops.MAX_UNPOOLING` is supported now
         unpooling_window_shape: dimensions of the unpooling window
         strides (default 1): strides.
@@ -591,7 +591,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     and applies affine transformation to preserve representation of the layer.
 
     Args:
-        operand: input of the batch normalization node
+        operand: input of the batch normalization operation
         scale: parameter tensor that holds the learned componentwise-scaling factors
         bias: parameter tensor that holds the learned bias. ``scale`` and ``bias`` must have the same
          dimensions which must be equal to the input dimensions in case of ``spatial`` = False or
@@ -1357,7 +1357,7 @@ def hardmax(x, name=''):
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        name (str): the name of the node in the network
+        name (str): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -2082,7 +2082,7 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
     Estimates inclusion frequencies for random sampling with or without
     replacement.
 
-    The node's value is a set of num_samples random samples represented
+    The output value is a set of num_samples random samples represented
     by a (sparse) matrix of shape [num_samples x len(weights)],
     where len(weights) is the number of classes (categories) to choose
     from. The output has no dynamic axis.
@@ -2117,7 +2117,7 @@ def random_sample_inclusion_frequency(
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
-    this node computes the expected number of occurences of each class
+    this operation computes the expected number of occurences of each class
     in the the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
@@ -2222,7 +2222,8 @@ from cntk.axis import Axis
 def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
                    dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
-    It creates an input node.
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
 
     Args:
         shape (tuple or int): the shape of the input tensor
