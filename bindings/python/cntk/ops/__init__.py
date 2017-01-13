@@ -286,11 +286,11 @@ def lambda_rank(output, gain, group, name=''):
         >>> f = C.lambda_rank(score, gain, group)
         >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score])[0],4)
         array([[[-0.2121]],
-               <BLANKLINE>
+        <BLANKLINE>
                [[ 0.2121]],
-               <BLANKLINE>
+        <BLANKLINE>
                [[-0.1486]],
-               <BLANKLINE>
+        <BLANKLINE>
                [[ 0.1486]]], dtype=float32)
 
     Args:
