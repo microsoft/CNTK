@@ -2197,12 +2197,8 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
         smoothedGradient.NormalGrad(gradientValues, functionValues,
                                     (ElemType) learnRatePerSample, (ElemType) momentum, useNesterovMomentum);
     }
-    else if (adpType == GradientsUpdateType::AdaGrad ||
-             (adpType == GradientsUpdateType::RmsProp && gradientValues.GetMatrixType() == MatrixType::SPARSE) ||
-             (adpType == GradientsUpdateType::FSAdaGrad && gradientValues.GetMatrixType() == MatrixType::SPARSE))
+    else if (adpType == GradientsUpdateType::AdaGrad)
     {
-        // rmsprop for sparse is not implemented yet, delegate it with adagrad
-
         double aveMultiplier = smoothedGradient.Adagrad(gradientValues, needAveMultiplier);
         Matrix<ElemType>::ScaleAndAdd((ElemType)(-learnRatePerSample / aveMultiplier), gradientValues, functionValues);
     }
