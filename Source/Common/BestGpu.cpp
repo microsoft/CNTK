@@ -589,16 +589,15 @@ void BestGpu::DisallowUnsupportedDevices()
 
 GpuData GetGpuData(DEVICEID_TYPE deviceId)
 {
-    std::vector<GpuData> gpusData = GetAllGpusData();
+    cudaDeviceProp dp;
+    cudaError_t err = cudaGetDeviceProperties(&dp, (int)deviceId);
+    if(err != cudaSuccess) return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0);
 
-    auto it = std::find_if(gpusData.begin(), gpusData.end(), [&deviceId](const GpuData& gpu){return gpu.deviceId == deviceId;});
+    int cores = _ConvertSMVer2Cores(dp.major, dp.minor) * dp.multiProcessorCount;
+    size_t totalMemory = dp.totalGlobalMem/(1024*1024);
+    GpuValidity validity = dp.major < BestGpu::MininumCCMajorForGpu ? GpuValidity::ComputeCapabilityNotSupported : GpuValidity::Valid;
 
-    if (it != gpusData.end())
-    {
-        return *it;
-    }
-
-    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0);
+    return GpuData(dp.major, dp.minor, deviceId, cores, validity, string(dp.name), totalMemory);
 }
 
 // populate a vector with data (id, major/minor version, cuda cores, name and memory) for each gpu device in the machine

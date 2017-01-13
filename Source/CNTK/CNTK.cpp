@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // CNTK.cpp : Defines the entry point for the console application.
@@ -773,7 +774,17 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // full config info
     PrintBuiltInfo();
-    PrintGpuInfo();
+    if(EqualCI(val, "localRank")) {
+      auto data = GetGpuData(paralleltrain ? mpi->CurrentLocalNodeRank() : 0);
+
+      LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+      LOGPRINTF(stderr, "GPU info(only print info of gpu being used in localRank mode):\n\n");
+      LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
+		data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory);
+      LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+      LOGPRINTF(stderr, "\n");
+    }
+    else PrintGpuInfo();
 
 #ifdef _DEBUG
     if (traceLevel > 0)
