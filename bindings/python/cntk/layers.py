@@ -358,7 +358,8 @@ def Delay(T=1, initial_state=default_override_or(0)):
     return Block(delay, 'Delay')
 
 # RecurrenceFrom() -- run a block recurrently over a time sequence, with initial state
-# initial state consists of N arguments, matching 'over'
+# This form is meant for use in sequence-to-sequence scenarios.
+# Initial state consists of N arguments, matching 'over'.
 def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_state=False):
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
@@ -375,11 +376,7 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
         raise TypeError('RecurrenceFrom: number of state variables inconsistent between create_placeholder() and recurrent block')
 
     # function that this layer represents
-    @Function
-    def recurrence_from(x, h, c):
-
-        # BUGBUG: currently only supports the LSTM case
-        initial_state = (h, c)
+    def _recurrence_from_n(x, *initial_state):
 
         # TODO: move this entire placeholder business to Function.__call__
         out_vars_fwd = [Placeholder() for state_var in prev_state_args] # create list of placeholders for the state variables
@@ -401,11 +398,28 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
 
         return out
 
+    # functions that this layer represents
+    # The @Function pattern only supports fixed signatures, so we need one for each #states we support.
+    def recurrence_from_1(x, h):
+        return _recurrence_from_n(x, h)
+    def recurrence_from_2(x, h, c):
+        return _recurrence_from_n(x, h, c)
+    def recurrence_from_3(x, h, c, a):
+        return _recurrence_from_n(x, h, c, a)
+
+    recurrence_from_functions = [recurrence_from_1, recurrence_from_2, recurrence_from_3]
+    num_state_args = len(prev_state_args)
+    if num_state_args == 0 or num_state_args > len(recurrence_from_functions):
+        raise ValueError('RecurrenceFrom() currently supports recurrence with up to {} state variables'.format(len(recurrence_from_functions)))
+
+    # this creates the CNTK Function
+    recurrence_from = Function(recurrence_from_functions[num_state_args-1])
+
     return Block(recurrence_from, 'RecurrenceFrom', Record(over=over))
 
-
 # Recurrence() -- run a block recurrently over a time sequence
-# initial_state must not be a data input; use RecurrenceFrom() instead
+# This form is meant for use in regular recurrent-model scenarios.
+# Initial_state must not be a data input; use RecurrenceFrom() instead.
 # TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
 def Recurrence(over, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
 
