@@ -59,7 +59,7 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
     assert block_primitive.name == 'reshape_test_op'
     assert block_primitive.is_primitive
     assert block_primitive.is_block
-    element_times_inside_block = block_primitive.block_composite.root_function.find_by_name('element_times_inside_block')
+    element_times_inside_block = block_primitive.block_root.find_by_name('element_times_inside_block')
     assert element_times_inside_block.name == 'element_times_inside_block'
     assert element_times_inside_block.is_primitive
     block_arguments_map = block_primitive.block_arguments_mapping
