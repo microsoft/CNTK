@@ -92,19 +92,13 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
         else:
             aux_input = augment_input_hook
 
-    #dh = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
-    #dc = placeholder_variable(shape=(output_dim), dynamic_axes=input.dynamic_axes)
-    #dh = placeholder_variable(dynamic_axes=input.dynamic_axes)
-    #dc = placeholder_variable(dynamic_axes=input.dynamic_axes)
     dh = placeholder_variable()
     dc = placeholder_variable()
     LSTM_cell = LSTM(output_dim, enable_self_stabilization=True)
     if has_aux:    
         f_x_h_c = LSTM_cell(splice(input, aux_input), dh, dc)
     else:
-        #LSTM_cell.dump('lstm')
         f_x_h_c = LSTM_cell(input, dh, dc)
-        #f_x_h_c.dump('lstm applied')
     h_c = f_x_h_c.outputs
 
     h = recurrence_hook_h(h_c[0])
@@ -118,11 +112,9 @@ def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_
 
     return combine([h]), combine([c]), aux_input
 
+# Stabilizer >> num_layers * LSTM_layer
 def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None):
 
-    #create_aux = False
-    #if augment_input_hook != None:
-    #    create_aux = True
     create_aux = augment_input_hook != None
 
     # only the first layer should create an auxiliary input (the attention weights are shared amongs the layers)
@@ -209,21 +201,27 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     #thought_vector_c = sequence.first(encoder_output_c)
     thought_vector_h, thought_vector_c = encoder_output.outputs
 
-    # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
-    thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
-    thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_embedded)
-
-    #testit(thought_vector_broadcast_h, True)
-
     # Decoder: during training we use the ground truth as input to the decoder. During model execution,
     # we need to redirect the output of the network back in as the input to the decoder. We do this by
     # setting up a 'hook' whose output will be changed during model execution
     decoder_history_hook = alias(label_embedded, name='decoder_history_hook') # copy label_embedded
 
     # The input to the decoder always starts with the special label sequence start token.
-    # Then, use the previous value of the label sequence (for training) or the output (for execution)
-    decoder_input = element_select(is_first_label, label_sequence_start_embedded_scattered, past_value(
-        decoder_history_hook))
+    # Then, use the previous value of the label sequence (for training) or the output (for execution).
+    # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
+    # For that reason, we reconcile the dynamic axis, which for now can be done by must for now adding a dummy zero to the input.
+    # This will get hidden in Unfold(), and also streamlined.
+    zeroes_like_axis = future_value(sequence.is_first(label_embedded))
+    decoder_input = past_value(zeroes_like_axis + decoder_history_hook, initial_state=embed(label_sequence_start))
+    # TODO: replace initial_state by a lookup in the embedding directly
+
+    #decoder_input = element_select(is_first_label, label_sequence_start_embedded_scattered, past_value(decoder_history_hook))
+
+    #decoder_input = element_select(is_first_label, label_embedded, past_value(decoder_history_hook))
+    # This ^^ version is somewhat wasteful as it embeds the entire label sequence, when we only need the first step.
+
+    #decoder_input = past_value(decoder_history_hook, initial_state=sequence.first(label_sequence_start_embedded_scattered))
+    # BUGBUG: ^^ does not work for decoding, as this has no dynamic axis for the output.
 
     # Parameters to the decoder stack depend on the model type (use attention or not)
     if use_attention:
@@ -235,6 +233,9 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     else:
       if False:
         # William's original
+        # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
+        thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
+        thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_embedded)
         augment_input_hook = None
         def recurrence_hook_h(operand):
             return element_select(is_first_label, thought_vector_broadcast_h, past_value(operand))
@@ -245,42 +246,31 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
       else:
         # with Layers
         with default_options(enable_self_stabilization=True):
-            S = Stabilizer()
-            R2 = RecurrenceFrom(LSTM(hidden_dim)) # :: x, h0, c0 -> h
-            decoder_rest = Sequential([
-                For(range(1, num_layers), lambda:
-#                    #Recurrence(LSTM(hidden_dim), initial_state=(thought_vector_h, thought_vector_c))),
-                    Recurrence(LSTM(hidden_dim))),
-                # TODO: is it correct to pass the initial state to all layers?
-                Stabilizer(),
-                Dense(label_vocab_dim)
-            ])
+            #decoder_rest = Sequential([
+            #    #For(range(1, num_layers), lambda:
+            #    #    Recurrence(LSTM(hidden_dim))),
+            #    # TODO: is it correct to pass the initial state to all layers?
+            #    Stabilizer(),
+            #    Dense(label_vocab_dim)
+            #])
             @Function
             def decoder(x, h, c):
-                x = S(x)
-                x = R2(x, h, c)
-                x = decoder_rest(x)
+                x = Stabilizer()(x)
+                for i in range(num_layers):
+                    x = RecurrenceFrom(LSTM(hidden_dim))(x, h, c) # :: x, h0, c0 -> h
+                x = Stabilizer()(x)
+                x = Dense(label_vocab_dim)(x)
                 return x
-        # TODO: Problem of argument ordering? What's the parameters of Recurrence()? May need to use BlockFunction in Sequential
         z = decoder(decoder_input, thought_vector_h, thought_vector_c)
 
     # dense Linear output layer    
-    label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
+    #label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
     #label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
 
     #arg_names = [arg.name for arg in z.arguments]
     #z.dump()
 
     return z
-
-#def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-#
-#    # get inputs to the model (has to include labels for input to the decoder)
-#    raw_input, raw_labels = inputs
-#
-#    arg_names = [arg.name for arg in model.arguments]
-#
-#    return model(raw_input, raw_labels)
 
 ########################
 # train action         #
@@ -306,8 +296,6 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     label_sequence = find_by_name(model, 'label_sequence')
     decoder_history_hook = find_by_name(model, 'decoder_history_hook')
 
-    sh = model.shape
-    sh1 = label_sequence.shape
     # TODO: this is funky; how to know which is which?
     embedding = find_all_with_name(model, 'E')
     embed_param = 1

@@ -1554,6 +1554,8 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     if initial_state is None:
         initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+    else:
+        initial_state = sanitize_input(initial_state)
 
     x = sanitize_input(x)
     return past_value(x, initial_state, time_step, name)
