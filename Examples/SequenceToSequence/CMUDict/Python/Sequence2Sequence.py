@@ -162,12 +162,11 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
 
     # Embedding (right now assumes shared embedding and shared vocab size)
     embed = Embedding(embedding_dim) if use_embedding else identity
-    #input_embedded = embed(input_sequence)
-    #label_embedded = embed(label_sequence)
 
     # Encoder: create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
     # This is the plain s2s encoder. The attention encoder will keep the entire sequence instead.
+    # Note: We go_backwards.
     with default_options(enable_self_stabilization=True, go_backwards=True):
         encoder = Sequential([
             embed,
@@ -176,21 +175,20 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
                 Recurrence(LSTM(hidden_dim))),
             Fold(LSTM(hidden_dim), return_full_state=True)
         ])
-    # note:  we go_backwards
     encoder_output = encoder(input_sequence)
 
     # Decoder: during training we use the ground truth as input to the decoder. During model execution,
     # we need to redirect the output of the network back in as the input to the decoder. We do this by
     # setting up a 'hook' whose output will be changed during model execution
-    decoder_history_hook = alias(embed(label_sequence), name='decoder_history_hook') # copy label_embedded
+    decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_embedded
 
     # The input to the decoder always starts with the special label sequence start token.
     # Then, use the previous value of the label sequence (for training) or the output (for execution).
     # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
-    # For that reason, we reconcile the dynamic axis, which for now can be done by must for now adding a dummy zero to the input.
+    # For that reason, we reconcile the dynamic axis, which for now can be done by adding a dummy zero to the input.
     # This will get hidden in Unfold(), and also streamlined.
     zeroes_like_axis = future_value(sequence.is_first(label_sequence))
-    decoder_input = past_value(zeroes_like_axis + decoder_history_hook, initial_state=embed(label_sequence_start))
+    decoder_input = past_value(zeroes_like_axis + embed(decoder_history_hook), initial_state=embed(label_sequence_start))
     # TODO: replace initial_state by a lookup in the embedding directly
 
     # Parameters to the decoder stack depend on the model type (use attention or not)
@@ -249,12 +247,6 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     label_sequence = find_by_name(model, 'label_sequence')
     decoder_history_hook = find_by_name(model, 'decoder_history_hook')
 
-    # TODO: this is funky; how to know which is which?
-    embedding = find_all_with_name(model, 'E')
-    embed_param = 1
-    if len(embedding) > 0:
-        embed_param = embedding[0]
-
     # Criterion nodes
     # TODO: change to @Function to ensure parameter order (William seemed to have worked around it by naming them)
     arg_names = [arg.name for arg in model.arguments]
@@ -271,7 +263,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     # This does not need to be done in training generally though
     def clone_and_hook():
         # network output for decoder history
-        net_output = times(hardmax(model), embed_param)
+        net_output = hardmax(model)
 
         # make a clone of the graph where the ground truth is replaced by the network output
         return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
