@@ -32,7 +32,7 @@ IntensityTransform_Test = [
             jitterType=UniRatio
             interpolations=linear
             intensityFile="$RootDir$/ImageNet1K_intensity.xml"
-            intensityStdDev=0:0.1
+            intensityStdDev=0.1
         ]
         labels=[
             labelDim=4
