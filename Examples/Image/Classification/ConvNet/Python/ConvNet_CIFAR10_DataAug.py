@@ -133,7 +133,7 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
                            l2_regularization_weight = 0.002)
     
     # trainer object
-    trainer = Trainer(model, criterion, learner)
+    trainer = Trainer(None, criterion, learner)
 
     # perform model training
     log_number_of_parameters(model) ; print()
@@ -189,7 +189,7 @@ def evaluate(reader, model):
     criterion.update_signature((num_channels, image_height, image_width), num_classes)
 
     # process minibatches and perform evaluation
-    evaluator = Evaluator(model, criterion)
+    evaluator = Evaluator(None, criterion)
 
     progress_printer = ProgressPrinter(tag='Evaluation')
 
