@@ -1,4 +1,8 @@
-﻿<#
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
+<#
   .SYNOPSIS
  Use this cmdlet to install a CNTK development environment on your machine
 
@@ -126,12 +130,13 @@ Function main
 
             ActionOperations $operationList 
 
-            #DisplayEnd
+            DisplayEnd
         }
     }
     catch {
         Write-Host "Exception caught - function main / failure"
         Write-Host ($Error[0]).Exception
+        Write-Host
     }
 }
 

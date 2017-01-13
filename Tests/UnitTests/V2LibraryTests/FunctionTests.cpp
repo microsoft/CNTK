@@ -531,7 +531,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, outputData, false));
 
     std::unordered_map<Variable, ValuePtr> outputs = { { plus->Output(), outputValue } };
-    plus->Forward({}, outputs, device);
+    plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
 
     NDArrayViewPtr cpuView;
     auto getParameterData = [&cpuView](const Parameter& p) -> const ElementType*
@@ -563,7 +563,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
         }
 
         param.RecordValueUpdate();
-        plus->Forward({}, outputs, device);
+        plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
         parameterData = getParameterData(param);
         for (int i = 0; i < numElements; i++)
         {
@@ -582,7 +582,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     auto newValuesNDarray = MakeSharedObject<NDArrayView>(shape, newValues, false);
 
     param.SetValue(newValuesNDarray);
-    plus->Forward({}, outputs, device);
+    plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
     parameterData = getParameterData(param);
     for (int i = 0; i < numElements; i++)
     {

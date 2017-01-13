@@ -2523,22 +2523,20 @@ public:
                               sliceInputGrad,                   // (out) gradient for data input goes here
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
-                              *m_savedMean, *m_savedInvStdDev,   // (in)  saved mean/invstddev values used in ForwardProp()
+                              *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
                               *m_dScale, *m_dBias);             // (out) gradients for scale and bias
         }
         else if (inputIndex == 1) // derivative with respect to the scale
         {
             // Derivative with respect to the scale was precomputed during input derivative computation.
             Matrix<ElemType>& grad = Input(1)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->Data());
-            // BUGBUG: ^^ This should add the gradient, not overwrite it.
+            Matrix<ElemType>::ScaleAndAdd(1, *m_dScale, grad);
         }
         else if (inputIndex == 2) // derivative with respect to the bias
         {
             // Derivative with respect to the bias was precomputed during input derivative computation.
             Matrix<ElemType>& grad = Input(2)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->Data());
-            // BUGBUG: ^^ Also here, this should add the gradient, not overwrite it.
+            Matrix<ElemType>::ScaleAndAdd(1, *m_dBias, grad);
         }
         // No derivatives with respect to running mean and variance.
     }
@@ -2588,7 +2586,7 @@ public:
         {
             // The current implementation requires that the gradient of the first operand/input be computed
             // in order to compute gradients for the bias and scale parameters (2nd and 3rd inputs)
-            if ((Input(1)->NeedsGradient() || Input(2)->NeedsGradient()) && !Input(0)->NeedsGradient())
+            if (Environment().IsTraining() && ((Input(1)->NeedsGradient() || Input(2)->NeedsGradient()) && !Input(0)->NeedsGradient()))
                 InvalidArgument("%ls %ls currently supports learnable scale and bias parameters only if the first input also needs gradient (i.e. is dependent on at-least one learnable parameter).", NodeName().c_str(), OperationName().c_str());
 
             if (m_convertRunningVariancePending)
@@ -2631,6 +2629,29 @@ public:
                     "Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript "
                     "and make sure your input data layout is CHW", NodeName().c_str(), OperationName().c_str());
             }
+
+            if (!m_useCntkEngine)
+            {
+                // Fallback to cntk engine on CPU device if cuDnn is not available,
+                bool cpuDevice = (m_deviceId == CPUDEVICE);
+
+                // or if parameters cannot be handled by cuDnn (which is needed for compatibility when changing the default to cudnn)
+                // In Source/Math/CuDnnBatchNormalization.cu :
+                //   if (blendFactor != 0 && (blendFactor != 1 || expAvgFactor > 0))
+                //      InvalidArgument("cuDNN batch normalization engine currently supports blendTimeConstant of 0 or 1 only.");
+                // Check ComputeBlendFactor()/ComputeExpAvgFactor() for inferring blendFactor/expAvgFactor from m_blendTimeConst/m_normTimeConst
+                bool cuDnnUnsupportedParams = (m_blendTimeConst != 0 && (isfinite(m_blendTimeConst) || isfinite(m_normTimeConst)));
+
+                if (cpuDevice || cuDnnUnsupportedParams)
+                {
+                    m_useCntkEngine = true;
+                    if (cuDnnUnsupportedParams)
+                    {
+                        fprintf(stderr, "\nWARNING: batch normalization falls back to cntk engine for parameters not supported by cuDnn.\n");
+                    }
+                }
+            }
+
             double cudnnMinEps = 1e-5; // CUDNN_BN_MIN_EPSILON
             if (!m_useCntkEngine && m_epsilon < cudnnMinEps) 
                 fprintf(stderr, "\nWARNING: cuDNN batch normalization requires epsilon >= %e. Epsilon will be reset to that value.\n", cudnnMinEps);

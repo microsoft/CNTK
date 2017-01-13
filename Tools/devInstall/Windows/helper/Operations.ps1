@@ -1,4 +1,8 @@
-﻿function OpAnaconda3411(
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
+function OpAnaconda3411(
     [parameter(Mandatory=$true)][string] $cache,
     [parameter(Mandatory=$true)][string] $AnacondaBasePath)
 {
@@ -13,6 +17,7 @@
     @( @{ShortName = "ANA3-411"; Name = $prodName;  VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath; } );
          Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+         # command line parameters for Anaconda installer: /D=$targetPath must be the last parameter and can not be surrounded by quotes
          Action = @( @{Function = "InstallExe"; Command = "$cache\$prodFile"; Param = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$targetPath"; runAs=$false; Message = ".... This will take some time. Please be patient ...." } );
      } )
 }
@@ -62,7 +67,7 @@ function OpBoost160VS15(
         Download = @( @{Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
         Action = @( @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content = $targetPath },
                     @{Function = "SetEnvironmentVariable"; EnvVar = $envVarLib; Content  = $envContentLib },
-                    @{Function = "InstallExe"; Command = "$cache\$prodFile"; Param = "/dir=$targetPath /SP- /SILENT /NORESTART"; runAs=$false } );
+                    @{Function = "InstallExe"; Command = "$cache\$prodFile"; Param = "/dir=`"$targetPath`" /SP- /SILENT /NORESTART"; runAs=$false } );
      } )
 }
 
@@ -133,7 +138,7 @@ function OpMSMPI70SDK(
          Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Microsoft MPI SDK \(\d+\."; Version = "7.0.12437.6"; MatchExact = $false } );
          #Verification = @( @{Function = "VerifyWinProductExists"; Match = "^Microsoft MPI SDK \(\d+\."; Compare = "^Microsoft MPI SDK \(7\.0\.12437\.6\)"; MatchExact = $false } );
          Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$localFilename"; ExpectedSize = $downloadSize } );
-         Action = @( @{Function = "InstallMsi"; MsiName =  "$localFilename" ; MsiDir   = "$cache" } )
+         Action = @( @{Function = "InstallMsi"; MsiName = "$localFilename" ; MsiDir = "$cache" } )
         } )
 }
 

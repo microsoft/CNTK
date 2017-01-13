@@ -74,10 +74,18 @@ namespace CNTK
             return MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name, uid);
         }
 
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
-                                         std::unordered_map<Variable, ValuePtr>& outputs,
-                                         const DeviceDescriptor& computeDevice,
-                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override;
+        BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                 std::unordered_map<Variable, ValuePtr>& outputs,
+                                 const DeviceDescriptor& computeDevice,
+                                 const std::unordered_set<Variable>& outputsToRetainBackwardStateFor);
+
+        virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
+                                         std::unordered_map<Variable, ValuePtr>& /*outputs*/,
+                                         const DeviceDescriptor& /*computeDevice*/,
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/)
+        {
+            NOT_IMPLEMENTED;
+        }
 
         virtual void Backward(const BackPropStatePtr& state,
                               const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
@@ -246,7 +254,7 @@ namespace CNTK
                                                                     std::unordered_map<Variable, bool>& isVariableRootMap);
 
         template <typename ElementType>
-        static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode);
+        static void PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, std::unordered_map< Microsoft::MSR::CNTK::MBLayoutPtr, Variable>& layoutsPopulated);
         void PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments);
 
         template <typename ElementType>

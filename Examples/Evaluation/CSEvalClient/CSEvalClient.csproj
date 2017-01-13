@@ -11,7 +11,8 @@
     <AssemblyName>CSEvalClient</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <NuGetPackageImportStamp>931e68df</NuGetPackageImportStamp>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
     <PublishUrl>publish\</PublishUrl>
     <Install>true</Install>
     <InstallFrom>Disk</InstallFrom>
@@ -36,7 +37,7 @@
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>    
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>$(SolutionDir)..\..\$(Platform)\CSEvalClient.$(Configuration)\</OutputPath>
@@ -45,10 +46,10 @@
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>    
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EvalWrapper, Version=0.0.0.0, Culture=neutral, processorArchitecture=AMD64">
+    <Reference Include="EvalWrapper, Version=0.0.0.0, Culture=neutral, PublicKeyToken=52681d72504348ec, processorArchitecture=AMD64">
       <HintPath>..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-beta7\lib\net45\x64\EvalWrapper.dll</HintPath>
       <Private>True</Private>
     </Reference>
@@ -88,8 +89,8 @@
   <Import Project="..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-beta7\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets" Condition="Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-beta7\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
-      <ErrorText>This project references NuGet package(s) that are missing on this computer. Enable NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-beta7\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Microsoft.Research.CNTK.CpuEval-mkl.2.0-beta7\build\net45\Microsoft.Research.CNTK.CpuEval-mkl.targets'))" />
-  </Target> 
+  </Target>
 </Project>

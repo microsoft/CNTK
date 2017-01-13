@@ -2,7 +2,6 @@
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
-
 function GetTableDefaultBool(
     [hashtable] $table,
     [string] $entryName,
@@ -37,6 +36,17 @@ function GetTableDefaultInt(
         return $defaultValue
     }
     return $table[$entryName]
+}
+
+function GetEnvironmentVariableContent(
+    [string] $envVarName)
+{
+    $envContent = [environment]::GetEnvironmentVariable($envVarName, "USER")
+    if ($envContent) {
+        return $envContent
+    }
+    $envContent = [environment]::GetEnvironmentVariable($envVarName, "MACHINE")
+    return $envContent
 }
 
 # vim:set expandtab shiftwidth=2 tabstop=2:

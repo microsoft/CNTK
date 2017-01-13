@@ -1,5 +1,7 @@
 **The [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) has all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine), [examples](https://github.com/Microsoft/CNTK/wiki/Examples), etc.**
 
+Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
+
 # Latest news
 
 ***2017-01-10.*** CNTK for Windows supports Visual 2015

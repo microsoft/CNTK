@@ -13,7 +13,7 @@ import pytest
 from ..functions import *
 from ...trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input_variable, placeholder_variable, times, plus
+from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value, sequence
 from ... import InferredDimension
 from .ops_test_utils import compare_lists_of_np_arrays
 
@@ -155,3 +155,29 @@ def test_data_type_inference():
 
     x_times_param1 = times(x_float, param1)
     assert (param1.dtype == np.float64)
+
+def test_recurrence_shape_inference():
+    i = input_variable((2,))
+    p = placeholder_variable()
+    p_past = past_value(p)
+    p_past_plus_i = p_past + i
+
+    p_past_plus_i.replace_placeholder(p_past_plus_i.output)
+    assert p_past_plus_i.output.shape == (2,)
+
+def test_sequence_data_mismatch():
+    x = input_variable((1,), name='x')
+    ones = input_variable((1,), name='ones')
+    y_broadcast_last = sequence.broadcast_as(sequence.last(ones), x)
+    y_broadcast_first = sequence.broadcast_as(sequence.first(ones), x)
+
+    x0 = np.array([1,2,3,4],dtype=np.float32).reshape(4,1)
+    o0 = np.array([1], dtype=np.float32).reshape(1,1)
+
+    with pytest.raises(ValueError):
+        y_broadcast_last_result = y_broadcast_last.eval({x:[x0], ones:[o0]})
+
+    with pytest.raises(ValueError):
+        y_broadcast_first_result = y_broadcast_first.eval({x:[x0], ones:[o0]})
+
+    
