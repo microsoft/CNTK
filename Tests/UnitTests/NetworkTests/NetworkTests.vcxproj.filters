@@ -20,6 +20,7 @@
     <ClCompile Include="AccumulatorNodeTests.cpp" />
     <ClCompile Include="CropNodeTests.cpp" />
     <ClCompile Include="TestHelpers.cpp" />
+    <ClCompile Include="EditDistanceTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Config">

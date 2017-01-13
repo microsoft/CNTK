@@ -7,13 +7,15 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "gammacalculation.h"
-
+#include "InputAndParamNodes.h"
+#include "Sequences.h"
 #include <map>
 #include <string>
 #include <vector>
 #include <stdexcept>
 #include <list>
 #include <memory>
+
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -455,6 +457,287 @@ protected:
 
 template class NDCG1EvalNode<float>;
 template class NDCG1EvalNode<double>;
+
+// Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
+// Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
+// 
+// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and samplesToIgnore contains label '-' then
+// given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
+//
+// The returned error is computed as: EditDistance(s1,s2) * length(s1') / length(s1)
+//
+// Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
+// Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
+// Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+template<class ElemType>
+class EditDistanceErrorNode : public ComputationNodeNonLooping/*ComputationNode*/<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"EditDistanceError"; }
+
+public:
+    // subPen - substitution penalty
+    // delPen - deletion penalty
+    // insPen - insertion penalty
+    // squashInputs - whether to merge sequences of identical samples.
+    // samplesToIgnore - list of samples to ignore during edit distance evaluation
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen, float delPen, float insPen, bool squashInputs, vector<int> samplesToIgnore)
+        : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
+    {
+    }
+
+    EditDistanceErrorNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : EditDistanceErrorNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), configp->Get(L"samplesToIgnore"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
+    {
+        LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        bool isInput0Sparse = Input(0)->template Is<SparseInputValue<ElemType>>();
+        bool isInput1Sparse = Input(1)->template Is<SparseInputValue<ElemType>>();
+        if (isInput0Sparse || isInput1Sparse)
+            LogicError("EditDistanceError node was not tested for sparse inputs.");
+
+        FrameRange frameRange(Input(0)->GetMBLayout());
+        Input(0)->ValueFor(frameRange).VectorMax(*m_maxIndexes0, *m_maxValues, true);
+        Input(1)->ValueFor(frameRange).VectorMax(*m_maxIndexes1, *m_maxValues, true);
+
+        MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
+        MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
+        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_SamplesToIgnore);
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        ValidateBinaryReduce(isFinalValidationPass);
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        Base::UpdateFunctionMBSize();
+
+        // resize the temporaries to their proper size
+        size_t cols = Input(0)->Value().GetNumCols();
+        m_maxIndexes0->Resize(1, cols);
+        m_maxIndexes1->Resize(1, cols);
+        m_maxValues->Resize(1, cols);
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr  nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<EditDistanceErrorNode<ElemType>>(nodeP);
+            node->m_maxIndexes0 = m_maxIndexes0;
+            node->m_maxIndexes1 = m_maxIndexes1;
+            node->m_maxValues = m_maxValues;
+            node->m_SquashInputs = m_SquashInputs;
+            node->m_SubPen = m_SubPen;
+            node->m_DelPen = m_DelPen;
+            node->m_InsPen = m_InsPen;
+            node->m_SamplesToIgnore = m_SamplesToIgnore;
+        }
+    }
+
+    //request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_maxIndexes0, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes1, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
+    }
+
+    //release temp matrices that are only used by forward computation
+    //don't release matrices that need to be used in the gradient computation
+    virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes0, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes1, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
+    }
+
+    // firstSeq - first sequence of samples
+    // secondSeq - second sequence of samples
+    // numParallelSequences - number of parallel sequences in the minibatch
+    // subPen - substitution penalty
+    // delPen - deletion penalty
+    // insPen - insertion penalty
+    // squashInputs - whether to merge sequences of identical samples.
+    // samplesToIgnore - list of samples to ignore during edit distance evaluation
+    static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
+        float subPen, float delPen, float insPen, bool squashInputs, const vector<int>& samplesToIgnore)
+    {
+        std::vector<int> firstSeqVec, secondSeqVec;
+
+        // Edit distance between subsequences
+        Matrix<float> grid(CPUDEVICE);
+        
+        // Number of insertions between subsequences
+        Matrix<float> insMatrix(CPUDEVICE);
+        
+        //Number of deletions between subsequences
+        Matrix<float> delMatrix(CPUDEVICE);
+
+        // Number of substitutions between subsequences
+        Matrix<float> subMatrix(CPUDEVICE);
+
+        float del, ins, sub;
+        ElemType wrongSampleNum = 0.0;
+        size_t totalSampleNum = 0, totalframeNum = 0;
+        size_t sequenceStartFrame = 0;
+
+        for (const auto& sequence : pMBLayout->GetAllSequences())
+        {
+            if (sequence.seqId == GAP_SEQUENCE_ID)
+                continue;
+
+            auto numFrames = pMBLayout->GetNumSequenceFramesInCurrentMB(sequence);
+
+            if (numFrames > 0)
+            {
+                totalframeNum += numFrames;
+
+                auto columnIndices = pMBLayout->GetColumnIndices(sequence);
+
+                ExtractSampleSequence(firstSeq, columnIndices, squashInputs, samplesToIgnore, firstSeqVec);
+                ExtractSampleSequence(secondSeq, columnIndices, squashInputs, samplesToIgnore, secondSeqVec);
+
+                //calculate edit distance
+                size_t firstSize = firstSeqVec.size();
+                totalSampleNum += firstSize;
+                size_t secondSize = secondSeqVec.size();
+                grid.Resize(firstSize + 1, secondSize + 1);
+                insMatrix.Resize(firstSize + 1, secondSize + 1);
+                delMatrix.Resize(firstSize + 1, secondSize + 1);
+                subMatrix.Resize(firstSize + 1, secondSize + 1);
+                insMatrix.SetValue(0.0f);
+                delMatrix.SetValue(0.0f);
+                subMatrix.SetValue(0.0f);
+
+                for (size_t i = 0; i < firstSize + 1; i++)
+                {
+                    grid(i, 0) = (float)(i * delPen);
+                    delMatrix(i, 0) = (float)i;
+                }
+
+                for (size_t j = 0; j < secondSize + 1; j++)
+                {
+                    grid(0, j) = (float)(j * insPen);
+                    insMatrix(0, j) = (float)j;
+                }
+                for (size_t i = 1; i < firstSize + 1; i++)
+                {
+                    for (size_t j = 1; j < secondSize + 1; j++)
+                    {
+                        if (firstSeqVec[i - 1] == secondSeqVec[j - 1])
+                        {
+                            grid(i, j) = grid(i - 1, j - 1);
+                            insMatrix(i, j) = insMatrix(i - 1, j - 1);
+                            delMatrix(i, j) = delMatrix(i - 1, j - 1);
+                            subMatrix(i, j) = subMatrix(i - 1, j - 1);
+                        }
+                        else
+                        {
+                            del = grid(i - 1, j) + delPen; //deletion 
+                            ins = grid(i, j - 1) + insPen;  //insertion
+                            sub = grid(i - 1, j - 1) + subPen; //substitution 
+                            if (sub <= del && sub <= ins)
+                            {
+                                insMatrix(i, j) = insMatrix(i - 1, j - 1);
+                                delMatrix(i, j) = delMatrix(i - 1, j - 1);
+                                subMatrix(i, j) = subMatrix(i - 1, j - 1) + 1.0f;
+                                grid(i, j) = sub;
+                            }
+                            else if (del < ins)
+                            {
+                                insMatrix(i, j) = insMatrix(i - 1, j);
+                                subMatrix(i, j) = subMatrix(i - 1, j);
+                                delMatrix(i, j) = delMatrix(i - 1, j) + 1.0f;
+                                grid(i, j) = del;
+                            }
+                            else
+                            {
+                                delMatrix(i, j) = delMatrix(i, j - 1);
+                                subMatrix(i, j) = subMatrix(i, j - 1);
+                                insMatrix(i, j) = insMatrix(i, j - 1) + 1.0f;
+                                grid(i, j) = ins;
+                            }
+                        }
+                    }
+                }
+
+                wrongSampleNum += insMatrix(firstSize, secondSize) + delMatrix(firstSize, secondSize) + subMatrix(firstSize, secondSize);
+            }
+
+            sequenceStartFrame += numFrames;
+        }
+
+        return (ElemType)(wrongSampleNum * totalframeNum / totalSampleNum);
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
+    bool m_SquashInputs;
+    float m_SubPen;
+    float m_DelPen;
+    float m_InsPen;
+    std::vector<int> m_SamplesToIgnore;
+
+    // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
+    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<int>& samplesToIgnore, std::vector<int>& out_SampleSeqVec)
+    {
+        out_SampleSeqVec.clear();
+
+        // Get the first element in the sequence
+        size_t lastId = (int)firstSeq(0, columnIndices[0]);
+        if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), lastId) == samplesToIgnore.end())
+            out_SampleSeqVec.push_back(lastId);
+
+        // Remaining elements
+        if (squashInputs)
+        {
+            //squash sequences of identical samples
+            for (size_t i = 1; i < columnIndices.size(); i++)
+            {
+                size_t refId = (int)firstSeq(0, columnIndices[i]);
+                if (lastId != refId)
+                {
+                    lastId = refId;
+                    if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
+                        out_SampleSeqVec.push_back(refId);
+                }
+            }
+        }
+        else
+        {
+            for (size_t i = 1; i < columnIndices.size(); i++)
+            {
+                auto refId = (int)firstSeq(0, columnIndices[i]);
+                if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
+                    out_SampleSeqVec.push_back(refId);
+            }
+        }
+    }
+};
+
+template class EditDistanceErrorNode<float>;
+template class EditDistanceErrorNode<double>;
 
 #ifdef COMING_SOON
 
