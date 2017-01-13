@@ -77,14 +77,14 @@ class Function(cntk_py.Function):
             elif isinstance(output, cntk_py.Variable):
                 output = combine([output]) # workaround: wrap in another combine() call
             return output
-        if isinstance(out, tuple): # multi-value function, returned as a tuple
+        if isinstance(out, tuple): # multi-valued function, returned as a tuple
             out = [resolve_named(output) for output in out]
             out = combine(out)
         else:
             out = resolve_named(out)
         # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
-        if len(out.placeholders) != len(args):
-            unused_args = set(args) - set(out.placeholders)
+        if len(out.arguments) != len(args):
+            unused_args = set(args) - set(out.arguments)
             unused_arg_names = [arg.name for arg in unused_args]
             raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
 
@@ -259,9 +259,8 @@ class Function(cntk_py.Function):
         Call a Function, either on symbolic or numeric inputs.
 
            * If at least one input is a CNTK Function or Variable, then
-             result is in the form of CNTK Function objects, with inputs bound to the arguments.
-             This differs `f.clone(share, argument_map(*args, **kwargs))` in that
-             tuple-valued results are returned as a Python tuple.
+             result is a CNTK Function object, with inputs bound to the arguments.
+             This is a short-hand for `f.clone(share, argument_map(*args, **kwargs))`.
            * Otherwise, all arguments must be numbers, numpy arrays, or a :class:`~cntk.io.MinibatchData` instance.
              Then perform the actual computation and return the numeric result.
              This is a short-hand for `f.eval(argument_map(*args, **kwargs))`,
@@ -289,11 +288,13 @@ class Function(cntk_py.Function):
             a2 = out.arguments
             a2_names = [arg.name for arg in a2]
             # return the Variables as a Python tuple, rather than the CNTK Function object
-            outputs = out.outputs
-            if len(outputs) > 1:   # tuple-valued: turn into a Python tuple
-                # TODO: Ideally, we should return Variables instead of Functions, but that leads to various failures presently.
-                from cntk import combine
-                out = Function.OrderedRecord([(output.name, combine([output], name=output.name)) for output in outputs])
+            # TODO: naw, must be able to apply the result in case a new function with placeholders is created
+            #       Maybe instead .outputs should return an OrderedRecord
+            #outputs = out.outputs
+            #if len(outputs) > 1:   # tuple-valued: turn into a Python tuple
+            #    # TODO: Ideally, we should return Variables instead of Functions, but that leads to various failures presently.
+            #    from cntk import combine
+            #    out = Function.OrderedRecord([(output.name, combine([output], name=output.name)) for output in outputs])
             return out
 
         # numeric: evaluate

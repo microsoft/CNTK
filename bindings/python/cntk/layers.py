@@ -389,19 +389,13 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
 
         # apply the recurrent block ('over')
         out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
-        is_tuple_valued = isinstance(out, (tuple, list))
 
         # connect the recurrent dependency
-        if is_tuple_valued: # tuple of Functions
-            outf = combine(list(out)) # must do the replace op on the union of all outputs
-        else: # a single Function Object
-            outf = out
-        replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(outf.outputs)) }
-        outf.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
+        replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
+        out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
-        if is_tuple_valued and not return_full_state:
-            out = out[0]
-            #out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
+        if not return_full_state:
+            out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
 
         return out
 
@@ -462,6 +456,7 @@ def Recurrence(over, go_backwards=default_override_or(False), initial_state=defa
 
     return Block(recurrence, 'Recurrence', Record(over=over))
 
+# DELETE THIS ONE
 # Recurrence() -- run a block recurrently over a time sequence
 # initial_state must not be a data input; use RecurrenceFrom() instead
 # TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
