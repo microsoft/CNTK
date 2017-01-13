@@ -377,10 +377,10 @@ template<class ElemType, int direction>
         tgt.AssignCopyOf(init);
     if (!m_inputAllSeqValid[fr.t()] && InputRef(1).HasMBLayout())    // implant per-sequence state
     {
-        let& idx  =              DataFor(*m_packedIndexMatrix, fr); // column indices that guide the copy operation
-        auto tgt  =             ValueFor                      (fr); // output goes here
-        let& init = InputRef(1).Value();                            // source data is the initial state. Not sliced, but we only copy parts.
-        tgt.DoGatherColumnsOf(/*beta=*/1, idx, init, /*alpha=*/1);  // beta=1 so that we add to what we previously initialized to 0
+        let& idx   =             DataFor(*m_packedIndexMatrix, fr);  // column indices that guide the copy operation
+        auto tgt2  =             ValueFor                      (fr); // output goes here
+        let& init2 = InputRef(1).Value();                            // source data is the initial state. Not sliced, but we only copy parts.
+        tgt2.DoGatherColumnsOf(/*beta=*/1, idx, init2, /*alpha=*/1); // beta=1 so that we add to what we previously initialized to 0
     }
 }
 
