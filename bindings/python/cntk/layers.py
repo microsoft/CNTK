@@ -359,6 +359,7 @@ def Delay(T=1, initial_state=default_override_or(0)):
 
 # RecurrenceFrom() -- run a block recurrently over a time sequence, with initial state
 # This form is meant for use in sequence-to-sequence scenarios.
+# The difference to Recurrence() is that this returns a function that accepts the initial state as data argument(s).
 # Initial state consists of N arguments, matching 'over'.
 def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_state=False):
 
@@ -388,13 +389,19 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
 
         # apply the recurrent block ('over')
         out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
+        is_tuple_valued = isinstance(out, (tuple, list))
 
         # connect the recurrent dependency
-        replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
-        out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
+        if is_tuple_valued: # tuple of Functions
+            outf = combine(list(out)) # must do the replace op on the union of all outputs
+        else: # a single Function Object
+            outf = out
+        replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(outf.outputs)) }
+        outf.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
-        if not return_full_state:
-            out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
+        if is_tuple_valued and not return_full_state:
+            out = out[0]
+            #out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
 
         return out
 
@@ -419,7 +426,7 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
 
 # Recurrence() -- run a block recurrently over a time sequence
 # This form is meant for use in regular recurrent-model scenarios.
-# Initial_state must not be a data input; use RecurrenceFrom() instead.
+# Initial_state must be a constant (or at least have known shape). To pass initial_state as a data input, use RecurrenceFrom() instead.
 # TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
 def Recurrence(over, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
 
