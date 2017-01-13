@@ -796,7 +796,6 @@ public:
         {
             FrameRange frameRange(Input(0)->GetMBLayout());
             BackpropToRight(*m_softmaxOfRight, Input(inputIndex)->Gradient(), Gradient(), *m_CTCposterior);
-            //MaskMissingColumnsToZero(Inputs(inputIndex)->GradientValues(), Inputs(0)->GetMBLayout(), frameRange);
             Input(inputIndex)->MaskMissingGradientColumnsToZero(frameRange);
         }
         else
@@ -830,7 +829,6 @@ public:
         inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right-in");
 #endif  
         Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues);
-        //inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right");
 
 #if DUMPOUTPUT
         inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right");
@@ -840,7 +838,7 @@ public:
     {
         return false;
     }
-    virtual void ForwardPropNonLooping() override   //-sum(left_i * log(softmax_i(right)))
+    virtual void ForwardPropNonLooping() override
     {
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value(), true);
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
@@ -895,7 +893,6 @@ public:
             node->m_delayConstraint = m_delayConstraint;
         }
     }
-
 
     //request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)

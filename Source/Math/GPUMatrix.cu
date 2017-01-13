@@ -4253,10 +4253,30 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
     return *this;
 }
 
+// Calculate CTC score
+// prob (input): the posterior output from the network
+// alpha, beta (output): alpha and beta for forward-backward calculation. 
+// phoneseq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phonebound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttframenum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttphonenum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numChannels (input): channel number in this minibatch
+// maxframenum (input): the maximum channel frame number
 template<class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob, GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& beta,
-    const GPUMatrix<ElemType> phoneseq, const GPUMatrix<ElemType> phonebound, ElemType &totalscore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
-    std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxframenum, int delayConstraint, const bool isColWise)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob,
+    GPUMatrix<ElemType>& alpha, 
+    GPUMatrix<ElemType>& beta,
+    const GPUMatrix<ElemType> phoneseq, 
+    const GPUMatrix<ElemType> phonebound, 
+    ElemType &totalscore, 
+    std::vector<size_t>& uttToChanInd, 
+    std::vector<size_t> & uttBeginFrame, 
+    std::vector<size_t> & uttFrameNum,
+    std::vector<size_t> & uttPhoneNum, 
+    size_t numChannels, 
+    const size_t maxframenum, int delayConstraint, const bool isColWise)
 {
     if (isColWise)
     {
@@ -4278,9 +4298,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemT
         CUDA_CALL(cudaMalloc((void **)&gpubeginframe, uttnum*sizeof(size_t)));
         CUDA_CALL(cudaMemcpy(gpubeginframe, uttBeginFrame.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
 
-        size_t *gpuuttmap;
-        CUDA_CALL(cudaMalloc((void **)&gpuuttmap, uttnum*sizeof(size_t)));
-        CUDA_CALL(cudaMemcpy(gpuuttmap, uttMap.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
+        size_t *gpuuttToChanInd;
+        CUDA_CALL(cudaMalloc((void **)&gpuuttToChanInd, uttnum*sizeof(size_t)));
+        CUDA_CALL(cudaMemcpy(gpuuttToChanInd, uttToChanInd.data(), uttnum*sizeof(size_t), cudaMemcpyHostToDevice));
 
         ElemType *gpuscores;
         CUDA_CALL(cudaMalloc((void **)&gpuscores, uttnum*sizeof(ElemType)));
@@ -4293,30 +4313,27 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemT
         for (long t = 0; t < maxframenum; t++)
         {
 
-            _assignAlphaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneseq.Data(), phonebound.Data(), gpuuttmap,
-                gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
+            _assignAlphaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneseq.Data(), phonebound.Data(), gpuuttToChanInd,
+                gpuframenum, gpubeginframe, gpuphonenum, numChannels, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
         }
         for (long t = maxframenum - 1; t >= 0; t--)
         {
-            _assignBetaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneseq.Data(), phonebound.Data(), gpuuttmap,
-                gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
+            _assignBetaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneseq.Data(), phonebound.Data(), gpuuttToChanInd,
+                gpuframenum, gpubeginframe, gpuphonenum, numChannels, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
         }
 
-        _assigntotalscore_m << <uttnum, 1, 0, t_stream >> > (beta.Data(), gpuscores, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
+        _assigntotalscore_m << <uttnum, 1, 0, t_stream >> > (beta.Data(), gpuscores, uttnum, gpuuttToChanInd, gpubeginframe, numChannels, maxphonenum);
 
         dim3 block_tail_2((uttnum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxframenum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-        _assignCTCScore_m << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneseq.Data(), uttnum, gpuuttmap,
-            gpubeginframe, gpuphonenum, gpuframenum, samplesInRecurrentStep, maxframenum*samplesInRecurrentStep, maxphonenum, totalphonenum);
-        _assigntotaluttscore_m << <1, 1, 0, t_stream >> > (beta.Data(), totalscore, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
+        _assignCTCScore_m << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneseq.Data(), uttnum, gpuuttToChanInd,
+            gpubeginframe, gpuphonenum, gpuframenum, numChannels, maxphonenum, totalphonenum);
 
         ElemType *scores;
         scores = (ElemType*)malloc(sizeof(ElemType)*uttnum);
         CUDA_CALL(cudaMemcpyAsync(scores, gpuscores, sizeof(ElemType) * uttnum, cudaMemcpyDeviceToHost, t_stream));
 
-
         size_t totalframenum = 0;
-
 
         for (size_t utt = 0; utt < uttFrameNum.size(); utt++)
         {
@@ -4329,7 +4346,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemT
         CUDA_CALL(cudaFree(gpuframenum));
         CUDA_CALL(cudaFree(gpuphonenum));
         CUDA_CALL(cudaFree(gpubeginframe));
-        CUDA_CALL(cudaFree(gpuuttmap));
+        CUDA_CALL(cudaFree(gpuuttToChanInd));
         CUDA_CALL(cudaFree(gpuscores));
 
         CUDA_CALL(cudaEventRecord(done));
