@@ -1585,11 +1585,13 @@ void Matrix<ElemType>::FSAdagradUpdate(size_t mbSize,
     //  - makes up for general scaling (targetAdagradAvDenom, a constant chosen by the user that should resemble the typical value range of gradients)
     //  - sqrt(1/#samples accumulated) to turn the sqr sum into an average
     let targetAdagradAvDenom_x_sqrtAdagradSqrFrames = (ElemType)(targetAdagradAvDenom * sqrt(smoothedCount));
+
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
         { m_CPUMatrix->FSAdagrad(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, targetAdagradAvDenom_x_sqrtAdagradSqrFrames); SetDataLocation(CPU); },
         { m_GPUMatrix->FSAdagrad(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, targetAdagradAvDenom_x_sqrtAdagradSqrFrames); SetDataLocation(GPU); },
         { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+        { gradients.m_GPUSparseMatrix->FSAdagrad(*m_GPUMatrix, *functionValues.m_GPUMatrix, (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum, targetAdagradAvDenom_x_sqrtAdagradSqrFrames); SetDataLocation(GPU); });
+
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
@@ -1604,11 +1606,11 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
 {
     DecideAndMoveToRightDevice(*this, gradients);
 
-    DISPATCH_MATRIX_ON_FLAG(this, &gradients,
+    DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
         { return m_CPUMatrix->RmsProp(*gradients.m_CPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(CPU); },
         { return m_GPUMatrix->RmsProp(*gradients.m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(GPU); },
         { NOT_IMPLEMENTED; },
-        { NOT_IMPLEMENTED; });
+        { return gradients.m_GPUSparseMatrix->RmsProp(*m_GPUMatrix, RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN, needAveMultiplier); SetDataLocation(GPU); });
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 

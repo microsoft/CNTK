@@ -3370,15 +3370,16 @@ void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix
     int k = int(transposeA ? a.m_numRows : a.m_numCols);
     int l = int(transposeB ? b.m_numCols : b.m_numRows);
 
-    c.RequireSize(m, n);
+    if (beta == 0)
+        c.RequireSize(m, n);
+    else
+        c.VerifySize(m, n); // Can't resize if beta != 0
 
     if (!(m > 0 && k > 0 && l > 0 && n > 0))
         RuntimeError("!(m>0 && k>0 && l>0 && n>0)"); // converting from size_t to int may cause overflow
     if (k != l)
         RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
     CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, &alpha, a.Data(), (int) a.m_numRows, b.Data(), (int) b.m_numRows, &beta, c.Data(), (int) c.m_numRows));
-    c.m_numRows = m;
-    c.m_numCols = n;
 }
 
 template <class ElemType>
