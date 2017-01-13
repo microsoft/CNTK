@@ -513,7 +513,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/DeviceSelectionTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/MinibatchSourceTest.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/UserDefinedFunctionTests.cpp \
-	Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp \
+	Examples/Evaluation/CNTKLibraryCPPEvalExamples/EvalMultithreads.cpp \
 
 CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
 CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
@@ -633,11 +633,11 @@ $(EVAL_EXTENDED_CLIENT): $(EVAL_EXTENDED_CLIENT_OBJ) | $(EVAL_LIB) $(READER_LIBS
 ########################################
 # Eval V2 Sample client
 ########################################
-EVALV2_SAMPLE_CLIENT:=$(BINDIR)/cppevalv2client
+EVALV2_SAMPLE_CLIENT:=$(BINDIR)/CNTKLibraryCPPEvalExamples
 
 EVALV2_SAMPLE_CLIENT_SRC=\
-	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalV2Client/CPPEvalV2Client.cpp  \
-	$(SOURCEDIR)/../Examples/Evaluation/CPPEvalV2Client/EvalMultithreads.cpp
+	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalExamples/CNTKLibraryCPPEvalExamples.cpp  \
+	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalExamples/EvalMultithreads.cpp
 
 EVALV2_SAMPLE_CLIENT_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(EVALV2_SAMPLE_CLIENT_SRC))
 
