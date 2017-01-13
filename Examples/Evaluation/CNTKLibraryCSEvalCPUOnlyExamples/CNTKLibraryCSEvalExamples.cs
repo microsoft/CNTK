@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// program.cs -- Example for using C# Eval V2 API.
+// CNTKLibraryCSEvalExamples.cs -- Examples for using CNTK Library C# Eval API.
 //
 
 using System;
@@ -10,13 +10,11 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using CNTK;
 
-namespace CNTKLibraryManagedExampleTest
+namespace CNTKLibraryCSEvalExamples
 {
-    public class Program
+    public class CNTKLibraryManagedExamples
     {
         // 
         // The example shows
@@ -26,13 +24,13 @@ namespace CNTKLibraryManagedExampleTest
         // - how to evaluate a model.
         // - how to retrieve evaluation result and retrieve output data in dense format.
         //
-        static void EvaluationSingleImage(DeviceDescriptor device)
+        public static void EvaluationSingleImage(DeviceDescriptor device)
         {
             const string outputName = "Plus2060";
             var inputDataMap = new Dictionary<Variable, Value>();
 
             // Load the model.
-            Function modelFunc = Function.LoadModel("z.model");
+            Function modelFunc = Function.LoadModel("z.model", device);
 
             // Get output variable based on name
             Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
@@ -85,13 +83,13 @@ namespace CNTKLibraryManagedExampleTest
         // - how to evaluate a model.
         // - how to retrieve evaluation result and retrieve output data in dense format.
         //
-        static void EvaluationBatchOfImages(DeviceDescriptor device)
+        public static void EvaluationBatchOfImages(DeviceDescriptor device)
         {
             const string outputName = "Plus2060";
             var inputDataMap = new Dictionary<Variable, Value>();
 
             // Load the model.
-            Function modelFunc = Function.LoadModel("z.model");
+            Function modelFunc = Function.LoadModel("z.model", device);
 
             // Get output variable based on name
             Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
@@ -157,12 +155,12 @@ namespace CNTKLibraryManagedExampleTest
         // - how to evaluate a model.
         // - how to retrieve evaluation result and retrieve output data in the one-hot vector format.
         //
-        static void EvaluationSingleSequenceUsingOneHot(DeviceDescriptor device)
+        public static void EvaluationSingleSequenceUsingOneHot(DeviceDescriptor device)
         {
             var vocabToIndex = buildVocabIndex("ATIS.vocab");
             var indexToVocab = buildInvVocabIndex("ATIS.label");
 
-            Function myFunc = Function.LoadModel("atis.model");
+            Function myFunc = Function.LoadModel("atis.model", device);
 
             Console.WriteLine("Evaluate single sequence using one-hot vector");
 
@@ -237,12 +235,12 @@ namespace CNTKLibraryManagedExampleTest
         // - how to evaluate a model.
         // - how to retrieve evaluation result and retrieve output data in the one-hot vector format.
         //
-        static void EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor device)
+        public static void EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor device)
         {
             var vocabToIndex = buildVocabIndex("ATIS.vocab");
             var indexToVocab = buildInvVocabIndex("ATIS.label");
 
-            Function myFunc = Function.LoadModel("atis.model");
+            Function myFunc = Function.LoadModel("atis.model", device);
 
             Console.WriteLine("Evaluate batch of sequences with variable length using one-hot vector");
 
@@ -366,23 +364,6 @@ namespace CNTKLibraryManagedExampleTest
         private static string[] buildInvVocabIndex(string filePath)
         {
             return File.ReadAllLines(filePath);
-        }
-
-        static void Main(string[] args)
-        {
-            Console.WriteLine("======== Evaluate model using C# ========");
-
-            EvaluationSingleImage(DeviceDescriptor.CPUDevice);
-            EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
-            //TODO: Add examples with OneHot.
-            //EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
-            //EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
-
-            // TODO: using GPU.
-            //EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
-            //EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
-
-            Console.WriteLine("======== Evaluation completes. ========");
         }
     }
 }
