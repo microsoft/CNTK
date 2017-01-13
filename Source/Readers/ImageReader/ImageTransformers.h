@@ -212,8 +212,7 @@ private:
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
-    doubleargvector m_stdDev;
-    double m_curStdDev;
+    double m_stdDev;
 
     cv::Mat m_eigVal;
     cv::Mat m_eigVec;
@@ -235,12 +234,9 @@ private:
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
-    doubleargvector m_brightnessRadius;
-    double m_curBrightnessRadius;
-    doubleargvector m_contrastRadius;
-    double m_curContrastRadius;
-    doubleargvector m_saturationRadius;
-    double m_curSaturationRadius;
+    double m_brightnessRadius;
+    double m_contrastRadius;
+    double m_saturationRadius;
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
     conc_stack<std::unique_ptr<cv::Mat>> m_hsvTemp;

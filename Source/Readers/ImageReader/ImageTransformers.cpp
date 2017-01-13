@@ -575,7 +575,7 @@ SequenceDataPtr TransposeTransformer::TypedTranspose<TElementTo>::Apply(ImageSeq
 
 IntensityTransformer::IntensityTransformer(const ConfigParameters &config) : ImageTransformerBase(config)
 {
-    m_stdDev = config(L"intensityStdDev", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    m_stdDev = config(L"intensityStdDev", "0.0");
     std::wstring intFile = config(L"intensityFile", L"");
     if (intFile.empty())
     {
@@ -600,7 +600,6 @@ IntensityTransformer::IntensityTransformer(const ConfigParameters &config) : Ima
 
 void IntensityTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curStdDev = m_stdDev[config.m_epochIndex];
     ImageTransformerBase::StartEpoch(config);
 }
 
@@ -608,7 +607,7 @@ void IntensityTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
 
-    if (m_eigVal.empty() || m_eigVec.empty() || m_curStdDev == 0)
+    if (m_eigVal.empty() || m_eigVec.empty() || m_stdDev == 0.0)
         return;
 
     // Have to convert to float.
@@ -631,7 +630,7 @@ void IntensityTransformer::Apply(cv::Mat &mat)
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); } );
 
     // Using single precision as EigVal and EigVec matrices are single precision.
-    boost::random::normal_distribution<float> d(0, (float)m_curStdDev);
+    boost::random::normal_distribution<float> d(0, (float)m_stdDev);
     cv::Mat alphas(1, 3, CV_32FC1);
     assert(m_eigVal.rows == 1 && m_eigVec.cols == 3);
     alphas.at<float>(0) = d(*rng) * m_eigVal.at<float>(0);
@@ -661,25 +660,21 @@ void IntensityTransformer::Apply(cv::Mat &mat)
 
 ColorTransformer::ColorTransformer(const ConfigParameters &config) : ImageTransformerBase(config)
 {
-    m_brightnessRadius = config(L"brightnessRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
-    m_contrastRadius = config(L"contrastRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
-    m_saturationRadius = config(L"saturationRadius", ConfigParameters::Array(doubleargvector(vector<double>{0.0})));
+    m_brightnessRadius = config(L"brightnessRadius", "0.0"); 
+    if (m_brightnessRadius < 0 || m_brightnessRadius > 1.0) 
+        InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0"); 
+    
+    m_contrastRadius = config(L"contrastRadius", "0.0");
+    if (m_contrastRadius < 0 || m_contrastRadius > 1.0) 
+        InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
+
+    m_saturationRadius = config(L"saturationRadius", "0.0");
+    if (m_saturationRadius < 0 || m_saturationRadius > 1.0)
+        InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
 }
 
 void ColorTransformer::StartEpoch(const EpochConfiguration &config)
 {
-    m_curBrightnessRadius = m_brightnessRadius[config.m_epochIndex];
-    if (!(0 <= m_curBrightnessRadius && m_curBrightnessRadius <= 1.0))
-        InvalidArgument("brightnessRadius must be >= 0.0 and <= 1.0");
-
-    m_curContrastRadius = m_contrastRadius[config.m_epochIndex];
-    if (!(0 <= m_curContrastRadius && m_curContrastRadius <= 1.0))
-        InvalidArgument("contrastRadius must be >= 0.0 and <= 1.0");
-
-    m_curSaturationRadius = m_saturationRadius[config.m_epochIndex];
-    if (!(0 <= m_curSaturationRadius && m_curSaturationRadius <= 1.0))
-        InvalidArgument("saturationRadius must be >= 0.0 and <= 1.0");
-
     ImageTransformerBase::StartEpoch(config);
 }
 
@@ -687,7 +682,7 @@ void ColorTransformer::Apply(size_t id, cv::Mat &mat)
 {
     UNUSED(id);
 
-    if (m_curBrightnessRadius == 0 && m_curContrastRadius == 0 && m_curSaturationRadius == 0)
+    if (m_brightnessRadius == 0.0 && m_contrastRadius == 0.0 && m_saturationRadius == 0.0)
         return;
 
     // Have to convert to float
@@ -707,15 +702,15 @@ void ColorTransformer::Apply(cv::Mat &mat)
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); });
 
-    if (m_curBrightnessRadius > 0 || m_curContrastRadius > 0)
+    if (m_brightnessRadius > 0 || m_contrastRadius > 0)
     {
         // To change brightness and/or contrast the following standard transformation is used:
         // Xij = alpha * Xij + beta, where
         // alpha is a contrast adjustment and beta - brightness adjustment.
         ElemType beta = 0;
-        if (m_curBrightnessRadius > 0)
+        if (m_brightnessRadius > 0)
         {
-            UniRealT d(-m_curBrightnessRadius, m_curBrightnessRadius);
+            UniRealT d(-m_brightnessRadius, m_brightnessRadius);
             // Compute mean value of the image.
             cv::Scalar imgMean = cv::sum(cv::sum(mat));
             // Compute beta as a fraction of the mean.
@@ -723,9 +718,9 @@ void ColorTransformer::Apply(cv::Mat &mat)
         }
 
         ElemType alpha = 1;
-        if (m_curContrastRadius > 0)
+        if (m_contrastRadius > 0)
         {
-            UniRealT d(-m_curContrastRadius, m_curContrastRadius);
+            UniRealT d(-m_contrastRadius, m_contrastRadius);
             alpha = (ElemType)(1 + d(*rng));
         }
 
@@ -739,9 +734,9 @@ void ColorTransformer::Apply(cv::Mat &mat)
         }
     }
 
-    if (m_curSaturationRadius > 0 && mat.channels() == 3)
+    if (m_saturationRadius > 0 && mat.channels() == 3)
     {
-        UniRealT d(-m_curSaturationRadius, m_curSaturationRadius);
+        UniRealT d(-m_saturationRadius, m_saturationRadius);
         double ratio = 1.0 + d(*rng);
         assert(0 <= ratio && ratio <= 2);
 

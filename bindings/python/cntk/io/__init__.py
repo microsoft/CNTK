@@ -460,8 +460,48 @@ class ImageDeserializer(Deserializer):
         '''
         return dict(type='Mean', meanFile=filename)
 
-    # TODO color transpose
+    @staticmethod
+    def color(brightness_radius=0.0, contrast_radius=0.0, saturation_radius=0.0): 
+        '''
+        Color transform that can be used to pass to `map_features` for data augmentation.
 
+        Args: 
+            brightness_radius (float, default 0.0): Radius for brightness change. Must be 
+             set within [0.0, 1.0]. For example, assume brightness_radius = 0.2, a random 
+             number `x` is uniformly drawn from [-0.2, 0.2], and every pixel's value is 
+             added by `x*meanVal`, where meanVal is the mean of the image pixel intensity 
+             combining all color channels. 
+            contrast_radius (float, default 0.0): Radius for contrast change. Must be 
+             set within [0.0, 1.0]. For example, assume contrast_radius = 0.2, a random 
+             number `x` is uniformly drawn from [-0.2, 0.2], and every pixel's value is 
+             multiplied by `1+x`. 
+            saturation_radius (float, default 0.0): Radius for saturation change. Only for
+             color images and must be set within [0.0, 1.0]. For example, assume 
+             saturation_radius = 0.2, a random number `x` is uniformly drawn from [-0.2, 0.2], 
+             and every pixel's saturation is multiplied by `1+x`.
+
+        Returns:
+            dict describing the mean transform
+        '''
+        return dict(type='Color', brightnessRadius=brightness_radius, 
+                    contrastRadius=contrast_radius, saturationRadius=saturation_radius)
+
+    #@staticmethod
+    #def intensity(intensity_stddev, intensity_file): 
+    #    '''
+    #    Intensity transform that can be used to pass to `map_features` for data augmentation. 
+    #    Intensity jittering based on PCA transform as described in original `AlexNet paper
+    #    <http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf>`_
+
+    #    Currently uses precomputed values from 
+    #    https://github.com/facebook/fb.resnet.torch/blob/master/datasets/imagenet.lua
+
+    #    Args: 
+    #        intensity_stddev (float): intensity standard deviation. 
+    #        intensity_file (str): intensity file. 
+    #    Returns:
+    #        dict describing the mean transform        '''
+    #    return dict(type='Intensity', intensityStdDev=intensity_stddev, intensityFile=intensity_file)
 
 class CTFDeserializer(Deserializer):
     '''
