@@ -335,6 +335,7 @@ def _get_initial_state_or_default(initial_state):
         return initial_state # already in good shape: return as is
 
 # helper that subsumes past_value() and future_value() into one
+# TODO: make this match past_value() and future_value() actually, and expose it
 def _delayed_value(x, T, initial_state):
     if T > 0:
         return past_value  (x, time_step=T, initial_state=initial_state)
@@ -344,7 +345,7 @@ def _delayed_value(x, T, initial_state):
         return x
 
 # Delay -- delay input
-# TODO: This does not really have bound parameters. Should it still be a layer?
+# This is provided as a layer instead of a function so that it can easily be used in a Sequential() expression.
 def Delay(T=1, initial_state=default_override_or(0)):
     initial_state = get_default_override(Delay, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
@@ -361,7 +362,6 @@ def Delay(T=1, initial_state=default_override_or(0)):
 def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_state=False):
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
-    initial_state = _get_initial_state_or_default(initial_state)
 
     # TEST THIS
     import types
@@ -374,27 +374,20 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
     if len(over.outputs) != len(prev_state_args):
         raise TypeError('RecurrenceFrom: number of state variables inconsistent between create_placeholder() and recurrent block')
 
-    # initial state can be a single value or one per state variable (if more than one, like for LSTM)
-    if isinstance(initial_state, tuple) and len(initial_state) == 1:
-        initial_state = initial_state[0]
-    if not isinstance(initial_state, tuple):
-        # TODO: if initial_state is a CNTK Function rather than an initializer, then require to pass it multiple times; otherwise broadcast to all
-        initial_state = tuple(initial_state for out_var in prev_state_args)
-
     # function that this layer represents
     @Function
     def recurrence_from(x, h, c):
 
+        # BUGBUG: currently only supports the LSTM case
         initial_state = (h, c)
 
         # TODO: move this entire placeholder business to Function.__call__
         out_vars_fwd = [Placeholder() for state_var in prev_state_args] # create list of placeholders for the state variables
 
         # previous function; that is, past or future_value with initial_state baked in
-        # BUGBUG: If initial_state itself depends on a Placeholder at this point (e.g. seq2seq), previous_hook will be a binary function...
-        # All state variables get delayed with the same function.
-        # BUGBUG: currently only supports a single state
-        prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
+        #prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
+        # BUGBUG: This fails ^^ due to current as_block() bugs; can only use Python function for now:
+        prev_out_vars = [_delayed_value(out_var, T = -1 if go_backwards else +1, initial_state=init) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
 
         # apply the recurrent block ('over')
         out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
@@ -410,10 +403,48 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
 
     return Block(recurrence_from, 'RecurrenceFrom', Record(over=over))
 
+
 # Recurrence() -- run a block recurrently over a time sequence
 # initial_state must not be a data input; use RecurrenceFrom() instead
 # TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
 def Recurrence(over, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
+
+    go_backwards  = get_default_override(Recurrence, go_backwards=go_backwards)
+    initial_state = get_default_override(Recurrence, initial_state=initial_state)
+    initial_state = _get_initial_state_or_default(initial_state)
+
+    # TEST THIS
+    import types
+    if isinstance(over, types.FunctionType):
+        over = Function(over)
+
+    # get signature of cell
+    _, *prev_state_args = over.placeholders  # TODO: change to arguments?
+
+    if len(over.outputs) != len(prev_state_args):
+        raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
+
+    # initial state can be a single value or one per state variable (if more than one, like for LSTM)
+    if isinstance(initial_state, tuple) and len(initial_state) == 1:
+        initial_state = initial_state[0]
+    if not isinstance(initial_state, tuple):
+        # TODO: if initial_state is a CNTK Function rather than an initializer, then require to pass it multiple times; otherwise broadcast to all
+        initial_state = tuple(initial_state for out_var in prev_state_args)
+
+    # express it w.r.t. RecurrenceFrom
+    recurrence_from = RecurrenceFrom(over, go_backwards, return_full_state) # :: (x, state seq) -> (new state seq)
+
+    # function that this layer represents
+    @Function
+    def recurrence(x):
+        return recurrence_from(x, *initial_state)
+
+    return Block(recurrence, 'Recurrence', Record(over=over))
+
+# Recurrence() -- run a block recurrently over a time sequence
+# initial_state must not be a data input; use RecurrenceFrom() instead
+# TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
+def Recurrence1(over, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
 
     go_backwards  = get_default_override(Recurrence, go_backwards=go_backwards)
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
@@ -447,7 +478,9 @@ def Recurrence(over, go_backwards=default_override_or(False), initial_state=defa
         # previous function; that is, past or future_value with initial_state baked in
         # BUGBUG: If initial_state itself depends on a Placeholder at this point (e.g. seq2seq), previous_hook will be a binary function...
         # All state variables get delayed with the same function.
-        prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
+        #prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
+        # BUGBUG: This fails ^^ due to current as_block() bugs; can only use Python function for now:
+        prev_out_vars = [_delayed_value(out_var, T = -1 if go_backwards else +1, initial_state=init) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
 
         # apply the recurrent block ('over')
         out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
