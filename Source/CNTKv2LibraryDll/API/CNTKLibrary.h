@@ -2516,10 +2516,10 @@ namespace CNTK
         CNTK_API bool IsBlock() const;
 
         ///
-        /// Returns the composite Function underlying this block Function.
+        /// Returns the root of the Function graph underlying this block Function.
         /// Throws an exception of this is not a block Function
         ///
-        CNTK_API FunctionPtr BlockComposite() const;
+        CNTK_API FunctionPtr BlockRoot() const;
 
         ///
         /// Returns the mapping from the arguments of the composite underlying this block Function

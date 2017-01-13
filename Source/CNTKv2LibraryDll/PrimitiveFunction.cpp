@@ -709,7 +709,8 @@ namespace CNTK
 
         if (m_op == PrimitiveOpType::Block)
         {
-            auto blockCompositeFunc = dynamic_cast<const CompositeFunction*>(BlockComposite().get());
+            auto blockFunction = dynamic_cast<const BlockFunction*>(this);
+            auto blockCompositeFunc = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
             dict[blockFunctionCompositeKey] = blockCompositeFunc->SerializeBlockComposite();
             dict[blockFunctionOpNameKey] = OpName();
 
