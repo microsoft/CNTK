@@ -91,7 +91,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         sequences.clear();
 
         size_t totalSamplesRead = 0;
-        while (m_currentChunkCursor < m_randomizedChunks.size())
+        while (m_currentChunkCursor < m_randomizedChunks.size() &&
+               globalSamplesLeft > 0 && localSamplesLeft > 0)
         {
             size_t sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
             const RandomizedSequenceDescription* sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];

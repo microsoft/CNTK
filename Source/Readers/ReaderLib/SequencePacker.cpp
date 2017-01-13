@@ -81,7 +81,7 @@ void SequencePacker::SetConfiguration(const ReaderConfiguration& config, const s
     if (m_useLocalTimeline)
     {
         // Set global minibatch size to max and local minibatch per worker.
-        bool shouldAddOneSample = m_localMinibatchSizeInSamples % m_config.m_numberOfWorkers > m_config.m_workerRank;
+        bool shouldAddOneSample = (int)m_config.m_minibatchSizeInSamples % m_config.m_numberOfWorkers > m_config.m_workerRank;
         m_localMinibatchSizeInSamples = (int)m_config.m_minibatchSizeInSamples / (int)m_config.m_numberOfWorkers + (shouldAddOneSample ? 1 : 0);
         m_globalMinibatchSizeInSamples = SIZE_MAX;
 
