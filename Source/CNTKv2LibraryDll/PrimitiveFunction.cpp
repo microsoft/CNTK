@@ -253,8 +253,8 @@ namespace CNTK
                     if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
                         LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
 
-                    if (!initialStateVar.DynamicAxes().empty())
-                        LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
+                    //if (!initialStateVar.DynamicAxes().empty())
+                    //    LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
                 }
 
                 outputShape = BinaryElementwiseOpOutputShape(op, inputs[0], inputs[1], true, inferDimensions);

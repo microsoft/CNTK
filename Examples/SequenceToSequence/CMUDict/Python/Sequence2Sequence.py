@@ -15,9 +15,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.ops.sequence import broadcast_as
 from cntk.graph import find_by_name, find_all_with_name
-#from cntk.blocks import *
 from cntk.layers import *
-#from cntk.default_options import default_options
 from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from attention import create_attention_augment_hook
@@ -172,13 +170,18 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
 
     # Embedding (right now assumes shared embedding and shared vocab size)
     #embedding = parameter(shape=(input_vocab_dim, embedding_dim), init=glorot_uniform(), name='embedding')
-    embedding = parameter(shape=(-1, embedding_dim), init=glorot_uniform(), name='embedding')
-    input_embedded = times(input_sequence, embedding) if use_embedding else input_sequence
-    label_embedded = times(label_sequence, embedding) if use_embedding else label_sequence
+    # TODO: change to Embedding(); should be the same
+    #embedding = parameter(shape=(-1, embedding_dim), init=glorot_uniform(), name='embedding')
+    #input_embedded = times(input_sequence, embedding) if use_embedding else input_sequence
+    #label_embedded = times(label_sequence, embedding) if use_embedding else label_sequence
+    embed = Embedding(embedding_dim) if use_embedding else identity
+    input_embedded = embed(input_sequence)
+    label_embedded = embed(label_sequence)
 
     # Setup primer for decoder
     is_first_label = sequence.is_first(label_sequence)  # 1 0 0 0 ...
-    label_sequence_start_embedded = times(label_sequence_start, embedding) if use_embedding else label_sequence_start
+    #label_sequence_start_embedded = times(label_sequence_start, embedding) if use_embedding else label_sequence_start
+    label_sequence_start_embedded = embed(label_sequence_start)
     label_sequence_start_embedded_scattered = sequence.scatter(label_sequence_start_embedded,
                                                                is_first_label)
 
@@ -242,20 +245,27 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
       else:
         # with Layers
         with default_options(enable_self_stabilization=True):
-            decoder = Sequential([
-                Stabilizer(),
-                Recurrence(LSTM(hidden_dim), initial_state=(thought_vector_h, thought_vector_c)),
+            S = Stabilizer()
+            R2 = RecurrenceFrom(LSTM(hidden_dim)) # :: x, h0, c0 -> h
+            decoder_rest = Sequential([
                 For(range(1, num_layers), lambda:
-                    Recurrence(LSTM(hidden_dim), initial_state=(thought_vector_h, thought_vector_c))),
+#                    #Recurrence(LSTM(hidden_dim), initial_state=(thought_vector_h, thought_vector_c))),
+                    Recurrence(LSTM(hidden_dim))),
                 # TODO: is it correct to pass the initial state to all layers?
                 Stabilizer(),
                 Dense(label_vocab_dim)
             ])
+            @Function
+            def decoder(x, h, c):
+                x = S(x)
+                x = R2(x, h, c)
+                x = decoder_rest(x)
+                return x
         # TODO: Problem of argument ordering? What's the parameters of Recurrence()? May need to use BlockFunction in Sequential
-        z = decoder(decoder_input)
+        z = decoder(decoder_input, thought_vector_h, thought_vector_c)
 
     # dense Linear output layer    
-    label_sequence = find_by_name(decoder_output_h, 'label_sequence', max_depth=200)
+    label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
     #label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
 
     #arg_names = [arg.name for arg in z.arguments]
@@ -299,7 +309,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     sh = model.shape
     sh1 = label_sequence.shape
     # TODO: this is funky; how to know which is which?
-    embedding = find_all_with_name(model, 'embedding')
+    embedding = find_all_with_name(model, 'E')
     embed_param = 1
     if len(embedding) > 0:
         embed_param = embedding[0]
