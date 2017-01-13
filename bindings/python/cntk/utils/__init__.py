@@ -16,6 +16,7 @@ from cntk.device import use_default_device, cpu
 from .swig_helper import typemap
 from ..axis import Axis
 from .progress_print import *
+import warnings
 
 
 def sanitize_precision(precision):
@@ -476,10 +477,11 @@ class Value(cntk_py.Value):
         value (None or value that can be cast to NumPy array): the value to
          be converted
         dtype: data type (np.float32 or np.float64)
-        batch: batch input for `var`. It can be
-         * a pure Python structure (list of lists, ...),
-         * a list of NumPy arrays or SciPy sparse CSR matrices
-         * a :class:`Value` object (e.g. returned by :func:`one_hot`)
+        batch: batch input for `var`. 
+         It can be:
+          * a pure Python structure (list of lists, ...),
+          * a list of NumPy arrays or SciPy sparse CSR matrices
+          * a :class:`Value` object (e.g. returned by :func:`one_hot`)
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -516,9 +518,10 @@ class Value(cntk_py.Value):
         Args:
             var (:class:`~cntk.ops.variables.Variable`): input variable into which
              ``batch`` is passed
-            batch: batch input. It can be
-             * a single NumPy array denoting the full minibatch
-             * a list of NumPy arrays or SciPy sparse CSR matrices
+            batch: batch input. 
+             It can be:
+              * a single NumPy array denoting the full minibatch
+              * a list of NumPy arrays or SciPy sparse CSR matrices
             seq_starts (list of `bool`s or None): if None, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -574,8 +577,8 @@ class Value(cntk_py.Value):
 
             if isinstance(sample, np.ndarray):
                 if not _is_c_contiguous(sample):
-                    raise ValueError('supplied data is not C contiguous; use '
-                            'np.ascontiguousarray (slow) or rearrange your data/computation')
+                    warnings.warn('supplied data is not C contiguous; rearrange your data/computation to avoid this', RuntimeWarning)
+                    sample = np.ascontiguousarray(sample)
                 ndav = _create_NDArrayView_from_NumPy(sample, cpu_dev)
 
             elif sparse.issparse(sample):

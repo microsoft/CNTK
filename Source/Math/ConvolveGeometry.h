@@ -390,6 +390,25 @@ public:
         return -(center - (kernSize - 1) / 2);
     }
 
+    int GetUpperPad(size_t dim) const
+    {
+        if (!GetAutoPad(dim))
+            return (int)m_upperPad[m_upperPad.size() == 1 ? 0 : dim];
+
+        int kernSize = (int)m_kernelShape[dim];
+        int inpSize = (int)m_inputShape[dim];
+        int outSize = (int)m_outputShape[dim];
+        int stride = (int)GetStride(dim);
+
+        // Taken from computation in ConvolveGeometry ctor.
+        // Number of cells between first and last "centers", inclusive.
+        int cells = (outSize - 1) * stride + 1;
+        // Extra cells, to the left and right of "cells".
+        int extra = inpSize - cells;
+        int center = extra / 2; 
+        return (kernSize - 1) - (kernSize - 1) / 2 - (extra - center); 
+    }
+
     // Computes output shape given input shape and other convolution parameters.
     static TensorShape ComputeOutputShape(const TensorShape& inputShape, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& stride,
                                           const BoolVec& sharing, const BoolVec& autoPad, const TensorShape& lowerPad, const TensorShape& upperPad)

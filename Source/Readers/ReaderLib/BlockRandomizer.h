@@ -11,6 +11,7 @@
 #include "DataDeserializer.h"
 #include "ChunkRandomizer.h"
 #include "SequenceRandomizer.h"
+#include "ReaderUtil.h"
 #include <future>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -40,7 +41,8 @@ public:
         size_t randomizationRangeInSamples,
         IDataDeserializerPtr deserializer,
         bool shouldPrefetch,
-        bool multithreadedGetNextSequences = false);
+        bool multithreadedGetNextSequences = false,
+        size_t maxNumberOfInvalidSequences = 0); // per worker
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;
@@ -147,9 +149,8 @@ private:
     // Sequence buffer, used to avoid reallocation only.
     std::vector<RandomizedSequenceDescription> m_sequenceBuffer;
 
-    // Flag indicating whether in distributed mode the minibatch is filled completely
-    // with data local to the worker.
-    bool m_useLocalTimeline;
+    // Helper class for removing invalid sequences.
+    SequenceCleaner m_cleaner;
 };
 
 }}}

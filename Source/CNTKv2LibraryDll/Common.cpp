@@ -49,6 +49,17 @@ namespace CNTK
             return s_alwaysAllowSettingDefaultDevice.load();
         }
 
+        std::atomic<bool> s_allowRenamingFunctions(false);
+        void AllowRenamingFunctions()
+        {
+            s_allowRenamingFunctions.store(true);
+        }
+
+        bool IsRenamingFunctionsAllowed()
+        {
+            return s_allowRenamingFunctions.load();
+        }
+
         std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
         void SetAutomaticUnpackingOfPackedValues(bool disable)
         {
@@ -62,22 +73,32 @@ namespace CNTK
 
         void EnableForwardValuesSharing()
         {
-            Microsoft::MSR::CNTK::Globals::EnableShareNodeValueMatrices();
+            Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ true);
+        }
+
+        void DisableForwardValuesSharing()
+        {
+            Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ false);
         }
 
         void EnableHyperMemoryCompress()
         {
-            Microsoft::MSR::CNTK::Globals::EnableHyperCompressMemory();
+            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ true);
+        }
+
+        void DisableHyperMemoryCompress()
+        {
+            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ false);
         }
 
         void EnableGradientAccumulationOptimization()
         {
-            Microsoft::MSR::CNTK::Globals::EnableGradientAccumulationOptimization();
+            Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ true);
         }
 
         void DisableGradientAccumulationOptimization()
         {
-            Microsoft::MSR::CNTK::Globals::DisableGradientAccumulationOptimization();
+            Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ false);
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)

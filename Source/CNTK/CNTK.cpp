@@ -483,6 +483,8 @@ static wstring PathToBSStringLiteral(const wstring& path) // quote a pathname fo
         return L'"' + path + L'"';
 }
 
+// TODO: There is a lot of duplication between this function and the NDL version.
+// The code here should be properly refactored to enable sharing.
 int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapper that catches & reports Win32 exceptions
 {
     vector<wstring> args(argv, argv + argc);
@@ -581,12 +583,9 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
         mpi = MPIWrapper::GetInstance(true /*create*/);
     }  
 
-    if (config(L"shareNodeValueMatrices", false))
-        Globals::EnableShareNodeValueMatrices();
-    if (config(L"hyperCompressMemory", false))
-        Globals::EnableHyperCompressMemory();
-    if (config(L"optimizeGradientAccumulation", true))
-        Globals::EnableGradientAccumulationOptimization();
+    Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
+    Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
+    Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -728,12 +727,9 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
        mpi = MPIWrapper::GetInstance(true /*create*/);
     } 
 
-    if (config(L"shareNodeValueMatrices", false))
-        Globals::EnableShareNodeValueMatrices();
-    if (config(L"hyperCompressMemory", false))
-        Globals::EnableHyperCompressMemory();
-    if (config(L"optimizeGradientAccumulation", true))
-        Globals::EnableGradientAccumulationOptimization();
+    Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
+    Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
+    Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -777,12 +773,12 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     // This simply merges all the different config parameters specified (eg, via config files or via command line directly),
     // and prints it.
         fprintf(stderr, "\nConfiguration, Raw:\n\n");
-    LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
+        LOGPRINTF(stderr, "%s\n", rawConfigString.c_str());
 
     // Same as above, but all variables are resolved.  If a parameter is set multiple times (eg, set in config, overridden at command line),
     // All of these assignments will appear, even though only the last assignment matters.
         fprintf(stderr, "\nConfiguration After Variable Resolution:\n\n");
-    LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
+        LOGPRINTF(stderr, "%s\n", config.ResolveVariables(rawConfigString).c_str());
     }
 #endif
 
@@ -793,12 +789,12 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (traceLevel > 0)
     {
         fprintf(stderr, "\nConfiguration After Processing and Variable Resolution:\n\n");
-    config.dumpWithResolvedVariables();
+        config.dumpWithResolvedVariables();
 
-    LOGPRINTF(stderr, "Commands:");
-    for (int i = 0; i < command.size(); i++)
-        fprintf(stderr, " %s", command[i].c_str());
-    fprintf(stderr, "\n");
+        LOGPRINTF(stderr, "Commands:");
+        for (int i = 0; i < command.size(); i++)
+            fprintf(stderr, " %s", command[i].c_str());
+        fprintf(stderr, "\n");
     }
 
     // Setup profiling

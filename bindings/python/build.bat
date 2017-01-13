@@ -2,7 +2,7 @@ setlocal
 
 cd "%~dp0"
 
-call "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall" amd64
+call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall" amd64
 
 set MSSdk=1
 set DISTUTILS_USE_SDK=1

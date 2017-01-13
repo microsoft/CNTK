@@ -65,12 +65,10 @@ public:
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
+            m_net->ForwardProp(outputNodes);
 
             for (int i = 0; i < outputNodes.size(); i++)
-            {
-                m_net->ForwardProp(outputNodes[i]);
                 outputMatrices[outputNodes[i]->NodeName()] = (void*) (&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
-            }
 
             if (doWriterUnitTest)
             {
@@ -109,11 +107,9 @@ public:
 
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
 
+        m_net->ForwardProp(outputNodes);
         for (int i = 0; i < outputNodes.size(); i++)
-        {
-            m_net->ForwardProp(outputNodes[i]);
             outputMatrices[outputNodes[i]->NodeName()] = (void*)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
-        }
 
         // TODO: What should the data size be?
         dataWriter.SaveData(0, outputMatrices, 1, 1, 0);
@@ -237,12 +233,12 @@ public:
         for (size_t numMBsRun = 0; DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr); numMBsRun++)
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
+            m_net->ForwardProp(outputNodes);
 
             for (auto & onode : outputNodes)
             {
                 // compute the node value
                 // Note: Intermediate values are memoized, so in case of multiple output nodes, we only compute what has not been computed already.
-                m_net->ForwardProp(onode);
 
                 FILE* file = *outputStreams[onode];
                 WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false);

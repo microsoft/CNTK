@@ -439,7 +439,7 @@ def Dropout(prob):
 def BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=default_override_or(5000), blend_time_constant=0,
-                       epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(True)):
+                       epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(False)):
 
     map_rank                    = get_default_override(BatchNormalization, map_rank=map_rank)
     normalization_time_constant = get_default_override(BatchNormalization, normalization_time_constant=normalization_time_constant)

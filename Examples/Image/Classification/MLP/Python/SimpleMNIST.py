@@ -14,7 +14,7 @@ from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "..", "Examples", "common"))
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "common"))
 from nn import fully_connected_classifier_net, print_training_progress
 
 def check_path(path):
@@ -51,12 +51,9 @@ def simple_mnist(debug_output=False):
     ce = cross_entropy_with_softmax(z, label)
     pe = classification_error(z, label)
 
-    try:
-        rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
-                                *"Image/MNIST/v0/Train-28x28_cntk_text.txt".split("/"))
-    except KeyError:
-        rel_path = os.path.join(abs_path, "..", "..", "..", "..", "..", "Examples", "Image", "DataSets", "MNIST", "Train-28x28_cntk_text.txt")
-    path = os.path.normpath(os.path.join(abs_path, rel_path))
+    data_dir = os.path.join(abs_path, "..", "..", "..", "DataSets", "MNIST")
+
+    path = os.path.normpath(os.path.join(data_dir, "Train-28x28_cntk_text.txt"))
     check_path(path)
 
     reader_train = create_reader(path, True, input_dim, num_output_classes)
@@ -77,8 +74,6 @@ def simple_mnist(debug_output=False):
     num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
     training_progress_output_freq = 500
 
-
-
     if debug_output:
         training_progress_output_freq = training_progress_output_freq/4
 
@@ -88,12 +83,7 @@ def simple_mnist(debug_output=False):
         print_training_progress(trainer, i, training_progress_output_freq)
 
     # Load test data
-    try:
-        rel_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
-                                *"Image/MNIST/v0/Test-28x28_cntk_text.txt".split("/"))
-    except KeyError:
-        rel_path = os.path.join(abs_path, "..", "..", "..", "..", "..", "Examples", "Image", "DataSets", "MNIST", "Test-28x28_cntk_text.txt")
-    path = os.path.normpath(os.path.join(abs_path, rel_path))
+    path = os.path.normpath(os.path.join(data_dir, "Test-28x28_cntk_text.txt"))
     check_path(path)
 
     reader_test = create_reader(path, False, input_dim, num_output_classes)

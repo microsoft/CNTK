@@ -577,6 +577,17 @@ namespace CNTK
                 computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
                 break;
             }
+            case PrimitiveOpType::Unpooling:
+            {
+                auto unpoolingWindowShape = functionConfig[PrimitiveFunction::AttributeNameUnpoolingWindowShape].Value<NDShape>();
+                auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                //We only get here after validation so it is safe to assume unpooling is max
+                computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
+                break;
+            }
             case PrimitiveOpType::SumAll:
                 computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
@@ -833,12 +844,11 @@ namespace CNTK
             // For block function, map each argument placeholder of the underlying composite to
             // the computation node corresponding to the block input that the argument placeholder
             // of the composite is mapped to.
-            auto& compositeArgumentsMap = blockFunction->CompositeArgumentsMap();
-            for (auto& compositeArgumentMapping : compositeArgumentsMap)
-                variableToNodeMap[compositeArgumentMapping.first] = variableToNodeMap.at(compositeArgumentMapping.second);
+            auto compositeArguments = blockFunction->Composite()->Arguments();
+            for (auto compositeArgument : compositeArguments)
+                variableToNodeMap[compositeArgument] = variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
-            auto& compositeOutputsMap = blockFunction->CompositeOutputsMap();
-            return GetNode(compositeOutputsMap.at(variable), network, builder, variableToNodeMap, isVariableRootMap);
+            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, variableToNodeMap, isVariableRootMap);
         }
         else
             computationNodePtr = CreateComputationNode(variable, function, inputNodes, network, variableToNodeMap);
@@ -892,11 +902,12 @@ namespace CNTK
             // since for recurrent inputs, the mappings are not fully established the first time
             std::function<void(const FunctionPtr&)> PatchBlockArgumentsMapping;
             PatchBlockArgumentsMapping = [this, &PatchBlockArgumentsMapping](const FunctionPtr& function) {
-                if (function->IsBlock())
+                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(function.get());
+                if (blockFunction)
                 {
-                    auto& compositeArgumentsMap = function->BlockArgumentsMapping();
-                    for (auto& compositeArgumentMapping : compositeArgumentsMap)
-                        m_variableToNodeMap[compositeArgumentMapping.first] = m_variableToNodeMap.at(compositeArgumentMapping.second);
+                    auto compositeArguments = blockFunction->Composite()->Arguments();
+                    for (auto compositeArgument : compositeArguments)
+                        m_variableToNodeMap[compositeArgument] = m_variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
                     PreorderTraverseFunctions(function->BlockComposite()->RootFunction(), PatchBlockArgumentsMapping);
                 }
@@ -1047,7 +1058,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ void CompositeFunction::PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, ComputationNodeBasePtr& computationNode)
+    /*static*/ void CompositeFunction::PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, ComputationNodeBasePtr& computationNode, std::unordered_map<MBLayoutPtr, Variable>& layoutsPopulated)
     {
         if (!computationNode->Is<InputValueBase<ElementType>>())
             CNTK::LogicError("CompositeFunction::Forward: Illegal to populate value of computation node type other than InputValueBase!");
@@ -1059,17 +1070,27 @@ namespace CNTK
         else
             CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second);
 
-        MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
-
-        auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
-
         // Switch the node matrix to the right matrix type
+        auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
         nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
-        computationNode->GetMBLayout()->CopyFrom(layout);
+
+        auto layout = CNTKMatrixAndMBLayout.second;
+        auto& nodeLayout = computationNode->GetMBLayout();
+        if (layoutsPopulated.find(nodeLayout) == layoutsPopulated.end())
+        {
+            nodeLayout->CopyFrom(layout);
+            layoutsPopulated.insert({ nodeLayout, variableValue.first });
+        }
+        else
+        {
+            if (*nodeLayout != *layout)
+                InvalidArgument("Function::Forward: Different minibatch layouts detected (difference in sequence lengths or count or start flags) in data specified for 2 of the Function's argument ('%S', '%S') having same dynamic axes", variableValue.first.Name().c_str(), layoutsPopulated.at(nodeLayout).Name().c_str());
+        }
     }
 
     void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments)
     {
+        std::unordered_map<MBLayoutPtr, Variable> layoutsPopulated;
         std::vector<ComputationNodeBasePtr> inputNodes;
         for (auto argumentValuePair : arguments)
         {
@@ -1079,15 +1100,13 @@ namespace CNTK
             inputNodes.push_back(argumentComputationNode);
 
             ValuePtr argumentValue = arguments.at(argument);
-
-            MBLayoutPtr layout;
             switch (argumentValue->GetDataType())
             {
             case DataType::Float:
-                PopulateComputationNodeValue<float>({ argument, argumentValue }, argumentComputationNode);
+                PopulateComputationNodeValue<float>({ argument, argumentValue }, argumentComputationNode, layoutsPopulated);
                 break;
             case DataType::Double:
-                PopulateComputationNodeValue<double>({ argument, argumentValue }, argumentComputationNode);
+                PopulateComputationNodeValue<double>({ argument, argumentValue }, argumentComputationNode, layoutsPopulated);
                 break;
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(argumentValue->GetDataType()));

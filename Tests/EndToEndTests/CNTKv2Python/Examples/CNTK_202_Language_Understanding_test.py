@@ -10,6 +10,8 @@ import numpy
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_202_Language_Understanding.ipynb")
+# Runs on GPU only, batch normalization training on CPU is not yet implemented.
+notebook_deviceIdsToRun = [0]
 
 def test_cntk_202_language_understanding_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell

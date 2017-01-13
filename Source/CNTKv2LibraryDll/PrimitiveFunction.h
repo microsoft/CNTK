@@ -11,6 +11,7 @@
 #include "Utils.h"
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
+#include "Variable.h"
 
 namespace std
 {
@@ -86,6 +87,7 @@ namespace CNTK
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
         {PrimitiveOpType::Block, L"Block"},
+        {PrimitiveOpType::Unpooling, L"Unpooling"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -217,6 +219,7 @@ namespace CNTK
         static const std::wstring AttributeNameNumLayers;
         static const std::wstring AttributeNameHiddenSize;
         static const std::wstring AttributeNameRecurrentOp;
+        static const std::wstring AttributeNameUnpoolingWindowShape;
 
     protected:
         PrimitiveFunction(const std::vector<Variable>& blockInputs, const std::vector<Variable>& blockOutputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -228,17 +231,11 @@ namespace CNTK
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
         {}
 
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& /*arguments*/,
+        // Primitive functions are currently implemented using the core CNTK engine ComputationNode types
+        virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
                                          const DeviceDescriptor& /*computeDevice*/,
-                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
-        {
-            NOT_IMPLEMENTED;
-        }
-
-        virtual void Backward(const BackPropStatePtr& /*state*/,
-                              const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
-                              std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/)
         {
             NOT_IMPLEMENTED;
         }

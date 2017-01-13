@@ -64,7 +64,7 @@ Train = {
         epochSize     = 256000
         maxEpochs     = 1
         minibatchSize = 128 # 16 GPU
-        dropoutRate   = 0.8
+        dropoutRate   = 0.2
 
         learningRatesPerMB     = 1
         momentumAsTimeConstant = 4096
@@ -87,17 +87,6 @@ Train = {
             distributedMBReading = true
             dataParallelSGD = { 
                 gradientBits = 32
-            }
-        }
-        
-        ParallelTrain = {
-            parallelizationMethod = BlockMomentumSGD
-            distributedMBReading = true
-            syncPerfStats = 5
-            BlockMomentumSGD={
-                syncPeriod = 120000
-                resetSGDMomentum = true
-                useNesterovMomentum = true
             }
         }
     }

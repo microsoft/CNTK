@@ -344,6 +344,18 @@ namespace CNTK
 
                     opType = PrimitiveOpType::ROIPooling;
                 }
+                else if (node->OperationName() == OperationNameOf(MaxUnpoolingNode))
+                {
+                    auto unpoolingNode = node->As<MaxUnpoolingNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)PoolingType::Max;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = AsNDShape(unpoolingNode->KernelShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(unpoolingNode->Strides());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(unpoolingNode->AutoPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(unpoolingNode->LowerPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(unpoolingNode->UpperPad());
+
+                    opType = PrimitiveOpType::Unpooling;
+                }
                 else if (node->OperationName() == OperationNameOf(PoolingNode))
                 {
                     auto poolingNode = node->As<PoolingNode<ElementType>>();

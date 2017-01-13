@@ -68,6 +68,53 @@ namespace CNTK
 
     /*virtual*/ Function::~Function() {}
 
+    BackPropStatePtr Function::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                       std::unordered_map<Variable, ValuePtr>& outputs,
+                                       const DeviceDescriptor& computeDevice,
+                                       const std::unordered_set<Variable>& outputsToRetainBackwardStateFor)
+    {
+        auto compositeFunction = dynamic_cast<CompositeFunction*>(this);
+        if (compositeFunction)
+            return compositeFunction->Forward(arguments, outputs, computeDevice, outputsToRetainBackwardStateFor);
+
+        std::vector<ValuePtr> inputValues;
+        auto functionInputs = Inputs();
+        for (const auto& input : functionInputs)
+        {
+            ValuePtr inputValue;
+            if (input.IsConstant())
+                inputValue = MakeSharedObject<Value>(Constant(input).Value());
+            else if (input.IsParameter())
+                inputValue = MakeSharedObject<Value>(Parameter(input).Value());
+            else
+            {
+                if (arguments.find(input) == arguments.end())
+                    InvalidArgument("Function::Forward: No value specified for input variable (Name=%S, Uid=%S)", input.Name().c_str(), input.Uid().c_str());
+
+                inputValue = arguments.at(input);
+            }
+
+            inputValues.push_back(inputValue);
+        }
+
+        return Forward(inputValues, outputs, computeDevice, outputsToRetainBackwardStateFor);
+    }
+
+    /*virtual*/ void Function::Backward(const BackPropStatePtr& /*state*/,
+                                        const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
+                                        std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/)
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    void Function::SetName(const std::wstring& name)
+    {
+        if (!Name().empty() && !Internal::IsRenamingFunctionsAllowed())
+            InvalidArgument("Function::SetName: Illegal to set name of a Function with an existing name (%S)", Name().c_str());
+
+        m_name = name;
+    }
+
     bool Function::IsBlock() const
     {
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
@@ -83,13 +130,13 @@ namespace CNTK
         return blockFunction->Composite();
     }
 
-    const std::vector<std::pair<Variable, Variable>>& Function::BlockArgumentsMapping() const
+    std::shared_ptr<std::vector<std::pair<Variable, Variable>>> Function::BlockArgumentsMappingImpl() const
     {
         if (!IsBlock())
             InvalidArgument("Function::BlockArgumentsMapping() cannot be called for a Function which is not a block");
 
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
-        return blockFunction->CompositeArgumentsMap();
+        return std::shared_ptr<std::vector<std::pair<Variable, Variable>>>(new std::vector<std::pair<Variable, Variable>>(std::move(blockFunction->CompositeArgumentsMap())), [](std::vector<std::pair<Variable, Variable>>* ptr) { delete ptr; });
     }
 
     /*static*/ void Function::ReplacePlaceholderInPlace(Variable& var,
@@ -1072,6 +1119,28 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
 
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr Unpooling(const Variable& operand,
+                          const Variable& poolingInput,
+                          PoolingType unpoolingType,
+                          const NDShape& poolingWindowShape,
+                          const NDShape& strides,
+                          const std::vector<bool>& autoPadding,
+                          const NDShape& lowerPad,
+                          const NDShape& upperPad,
+                          const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePoolingType] = (size_t)unpoolingType;
+        additionalProperties[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = poolingWindowShape;
+        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
+        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+
+        std::vector<Variable> operands = { operand, poolingInput};
+        return CompositeFunction::Create(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Unpooling, operands, std::move(additionalProperties), name), name);
     }
 
     FunctionPtr BatchNormalization(const Variable& operand,

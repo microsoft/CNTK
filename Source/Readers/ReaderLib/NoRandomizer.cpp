@@ -12,14 +12,15 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences)
+    NoRandomizer::NoRandomizer(IDataDeserializerPtr deserializer, bool multithreadedGetNextSequences, size_t maxNumberOfInvalidSequences)
     : m_deserializer(deserializer),
       m_currentChunkPosition(CHUNKID_MAX),
       m_globalSamplePosition(0),
       m_globalSequencePosition(0),
       m_totalNumberOfSamples(0),
       m_currentSequencePositionInChunk(0),
-      m_multithreadedGetNextSequences(multithreadedGetNextSequences)
+      m_multithreadedGetNextSequences(multithreadedGetNextSequences),
+      m_cleaner(maxNumberOfInvalidSequences)
 {
     assert(deserializer != nullptr);
     m_streams = m_deserializer->GetStreamDescriptions();
@@ -220,6 +221,7 @@ Sequences NoRandomizer::GetNextSequences(size_t globalSampleCount, size_t localS
             process(i);
     }
 
+    m_cleaner.Clean(result);
     return result;
 }
 

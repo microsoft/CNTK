@@ -34,7 +34,7 @@ checkEmptyStdout \
   "git ls-tree: path names will illegal characters encountered:"
 
 checkEmptyStdout \
-  "git grep -l \$'\t' $gitTree -- *.cpp *.h *.cu *.bat *.bs | cut -d: -f2-" \
+  "git grep -l \$'\t' $gitTree -- *.cpp *.h *.cu *.bat *.bs CNTK.Cpp.props | cut -d: -f2-" \
   "files with hard tabs encountered"
 
 checkEmptyStdout \
