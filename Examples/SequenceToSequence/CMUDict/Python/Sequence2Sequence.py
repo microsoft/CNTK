@@ -156,26 +156,14 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     input_sequence = raw_input
 
     # Drop the sequence start token from the label, for decoder training
-    label_sequence = sequence.slice(raw_labels, 1, 0, 
-                                    name='label_sequence') # <s> A B C </s> --> A B C </s>
-    label_sequence_start = sequence.first(raw_labels)      # <s>
+    label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+    label_sequence_start = sequence.first(raw_labels)                        # <s>
+    # TODO: replace label_sequence_start by one-hot vector with 1 at <s> position
 
     # Embedding (right now assumes shared embedding and shared vocab size)
-    #embedding = parameter(shape=(input_vocab_dim, embedding_dim), init=glorot_uniform(), name='embedding')
-    # TODO: change to Embedding(); should be the same
-    #embedding = parameter(shape=(-1, embedding_dim), init=glorot_uniform(), name='embedding')
-    #input_embedded = times(input_sequence, embedding) if use_embedding else input_sequence
-    #label_embedded = times(label_sequence, embedding) if use_embedding else label_sequence
     embed = Embedding(embedding_dim) if use_embedding else identity
     input_embedded = embed(input_sequence)
     label_embedded = embed(label_sequence)
-
-    # Setup primer for decoder
-    is_first_label = sequence.is_first(label_sequence)  # 1 0 0 0 ...
-    #label_sequence_start_embedded = times(label_sequence_start, embedding) if use_embedding else label_sequence_start
-    label_sequence_start_embedded = embed(label_sequence_start)
-    label_sequence_start_embedded_scattered = sequence.scatter(label_sequence_start_embedded,
-                                                               is_first_label)
 
     # Encoder: create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
@@ -187,19 +175,8 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
                 Recurrence(LSTM(hidden_dim))),
             Fold(LSTM(hidden_dim), return_full_state=True)
         ])
-    # note: future_value since we encode right-to-left
-    #encoder_output_h, encoder_output_c = LSTM_stack(input_embedded, num_layers, hidden_dim, 
-    #                                                recurrence_hook_h=future_value, recurrence_hook_c=future_value)
+    # note:  we go_backwards
     encoder_output = encoder(input_embedded)
-    #encoder_output_h, encoder_output_c = encoder_output.outputs
-    #encoder_output_h, encoder_output_c = encoder(input_embedded).outputs
-    # BUGBUG: With this, the slice() inside first() below ^^ fails with an Access Violation from a bad m_onwerFunction for ElementTimes757=encoder_output_h
-
-    # Prepare encoder output to be used in decoder
-    #encoder_output.dump('encoder_output')
-    #thought_vector_h = sequence.first(encoder_output_h)
-    #thought_vector_c = sequence.first(encoder_output_c)
-    thought_vector_h, thought_vector_c = encoder_output.outputs
 
     # Decoder: during training we use the ground truth as input to the decoder. During model execution,
     # we need to redirect the output of the network back in as the input to the decoder. We do this by
@@ -215,14 +192,6 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     decoder_input = past_value(zeroes_like_axis + decoder_history_hook, initial_state=embed(label_sequence_start))
     # TODO: replace initial_state by a lookup in the embedding directly
 
-    #decoder_input = element_select(is_first_label, label_sequence_start_embedded_scattered, past_value(decoder_history_hook))
-
-    #decoder_input = element_select(is_first_label, label_embedded, past_value(decoder_history_hook))
-    # This ^^ version is somewhat wasteful as it embeds the entire label sequence, when we only need the first step.
-
-    #decoder_input = past_value(decoder_history_hook, initial_state=sequence.first(label_sequence_start_embedded_scattered))
-    # BUGBUG: ^^ does not work for decoding, as this has no dynamic axis for the output.
-
     # Parameters to the decoder stack depend on the model type (use attention or not)
     if use_attention:
         augment_input_hook = create_attention_augment_hook(attention_dim, attention_span, 
@@ -233,10 +202,12 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     else:
       if False:
         # William's original
+        thought_vector_h, thought_vector_c = encoder_output.outputs
         # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
         thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
         thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_embedded)
         augment_input_hook = None
+        is_first_label = sequence.is_first(label_sequence)  # 1 0 0 0 ...
         def recurrence_hook_h(operand):
             return element_select(is_first_label, thought_vector_broadcast_h, past_value(operand))
         def recurrence_hook_c(operand):
@@ -246,13 +217,6 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
       else:
         # with Layers
         with default_options(enable_self_stabilization=True):
-            #decoder_rest = Sequential([
-            #    #For(range(1, num_layers), lambda:
-            #    #    Recurrence(LSTM(hidden_dim))),
-            #    # TODO: is it correct to pass the initial state to all layers?
-            #    Stabilizer(),
-            #    Dense(label_vocab_dim)
-            #])
             @Function
             def decoder(x, h, c):
                 x = Stabilizer()(x)
@@ -261,14 +225,7 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
                 x = Stabilizer()(x)
                 x = Dense(label_vocab_dim)(x)
                 return x
-        z = decoder(decoder_input, thought_vector_h, thought_vector_c)
-
-    # dense Linear output layer    
-    #label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
-    #label_sequence = find_by_name(z, 'label_sequence', max_depth=200)
-
-    #arg_names = [arg.name for arg in z.arguments]
-    #z.dump()
+        z = decoder(decoder_input, *encoder_output.outputs)
 
     return z
 
@@ -278,15 +235,8 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
 
 def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size):
 
-    #inputs = create_inputs()
-
     from cntk.blocks import Constant, Type
 
-    #model = model(placeholder_variable(), placeholder_variable())
-    #model = model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable())
-    #model = model(placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), inputAxis]), placeholder_variable(dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
-
-    #model.dump('model')
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                            Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                            #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
@@ -566,24 +516,6 @@ def debug_attention(model, mb, reader):
         att_key = list(output[1].keys())[0]
         att_value = output[1][att_key]
         print(att_value[0,0,:])
-
-## function to model the inputs
-#def create_inputs():
-#    
-#    # Source and target inputs to the model
-#    batch_axis = Axis.default_batch_axis()
-#    input_seq_axis = Axis('inputAxis')
-#    label_seq_axis = Axis('labelAxis')
-#
-#    input_dynamic_axes = [batch_axis, input_seq_axis]
-#    raw_input = input_variable(
-#        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes, name='raw_input')
-#
-#    label_dynamic_axes = [batch_axis, label_seq_axis]
-#    raw_labels = input_variable(
-#        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes, name='raw_labels')
-#
-#    return (raw_input, raw_labels)
 
 #############################
 # main function boilerplate #
