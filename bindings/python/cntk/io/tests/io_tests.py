@@ -83,8 +83,8 @@ def test_image():
     
     image = ImageDeserializer(map_file)
     image.map_features(feature_name,
-            [ImageDeserializer.crop(crop_type='RandomSide', side_ratio=0.8,
-                jitter_type='uniRatio'),
+            [ImageDeserializer.crop(crop_type='randomside', side_ratio=0.8,
+                jitter_type='uniratio'),
              ImageDeserializer.scale(width=image_width, height=image_height,
                  channels=num_channels, interpolations='linear'),
              ImageDeserializer.mean(mean_file)])
@@ -109,10 +109,10 @@ def test_image():
     assert t0['type'] == 'Crop'
     assert t1['type'] == 'Scale'
     assert t2['type'] == 'Mean'
-    t0['cropType'] == 'RandomSide'
+    t0['cropType'] == 'randomside'
     t0['sideRatio'] == 0.8
     t0['aspectRatio'] == 0.9
-    t0['jitterType'] == 'uniRatio'
+    t0['jitterType'] == 'uniratio'
     t1['width'] == image_width
     t1['height'] == image_height
     t1['channels'] == num_channels

@@ -60,7 +60,6 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
     else if (!(m_sideRatioMin > 0 && m_sideRatioMax <= 1.0) ||
         m_sideRatioMin > m_sideRatioMax)
     {
-        m_useSideRatio = false;
         RuntimeError("Invalid sideRatio value, must be > 0 and <= 1. sideMin must <= sideMax");
     }
 
@@ -75,7 +74,6 @@ CropTransformer::CropTransformer(const ConfigParameters& config) : ImageTransfor
     else if (!(m_areaRatioMin > 0 && m_areaRatioMax <= 1.0) ||
         m_areaRatioMin > m_areaRatioMax)
     {
-        m_useAreaRatio = false;
         RuntimeError("Invalid areaRatio value, must be > 0 and <= 1. areaMin must <= areaMax");
     }
 
@@ -191,7 +189,7 @@ cv::Rect CropTransformer::GetCropRectCenter(int crow, int ccol, std::mt19937 &rn
     assert(!(m_useSideRatio && m_useAreaRatio));    // cannot be applied simultaneously 
 
     int cropSizeX=ccol, cropSizeY=crow; 
-    if (m_cropWidth > 0 && m_cropHeight > 0)    // crop sizes are specified with meanful values 
+    if (m_cropWidth > 0 && m_cropHeight > 0)    // crop sizes are specified with meaningful values 
     {
         cropSizeX = min(ccol, m_cropWidth);
         cropSizeY = min(crow, m_cropHeight);

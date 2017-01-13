@@ -124,9 +124,9 @@ Train = {
                     transforms = (
                         {
                             type = "Crop"
-                            cropType = "randomSide"
+                            cropType = "RandomSide"
                             sideRatio = 0.88671875
-                            jitterType = "uniRatio"
+                            jitterType = "UniRatio"
                         }:{
                             type = "Scale"
                             width = 227

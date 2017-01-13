@@ -42,9 +42,9 @@ reader = [
                         transforms = (
                             [
                                 type = "Crop"
-                                cropType = "center"
+                                cropType = "Center"
                                 sideRatio = 1.0
-                                jitterType = "uniRatio"
+                                jitterType = "UniRatio"
                             ]:[
                                 type = "Scale"
                                 width = 4

@@ -372,7 +372,7 @@ class ImageDeserializer(Deserializer):
         self.input[node] = dict(labelDim=num_classes) # reader distinguishes labels from features by calling this 'labelDim'
 
     @staticmethod
-    def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect_ratio=1.0, jitter_type=None):
+    def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect_ratio=1.0, jitter_type='none'):
         '''
         Crop transform that can be used to pass to `map_features`
 
@@ -382,10 +382,10 @@ class ImageDeserializer(Deserializer):
              training, while 'center' and 'multiview10' are usually used during testing. 
              Random cropping is a popular data augmentation technique used to improve
              generalization of the DNN.
-            crop_size (`int`, default 0.0): crop size in pixels. Ignored if set to 0. 
+            crop_size (`int`, default 0): crop size in pixels. Ignored if set to 0. 
              When crop_size is non-zero, for example, crop_size=256, it means a cropping
              window of size 256x256 pixels will be taken. If one want to crop with
-             non-square shapes, specify crop_size=256:224 will crop 256x224 (widthxheight) 
+             non-square shapes, specify crop_size=256:224 will crop 256x224 (width x height) 
              pixels. `When crop_size is specified, side_ratio, area_ratio and aspect_ratio
              will be ignored.` 
             side_ratio (`float`, default 0.0): It specifies the ratio of final image 
@@ -412,8 +412,8 @@ class ImageDeserializer(Deserializer):
              chance. Note the area of the crop window does not change. To enable aspect 
              ratio jitter, use colon-delimited values such as aspect_ratio=0.64:1.0, which means 
              the crop will have size between 192x300 (or euqally likely 300x192) and 240x240. 
-            jitter_type (str, default None): crop scale jitter type, possible
-             values are 'None' and 'UniRatio'. 'uniRatio' means uniform distributed jitter
+            jitter_type (str, default 'none'): crop scale jitter type, possible
+             values are 'none' and 'uniratio'. 'uniratio' means uniform distributed jitter
              scale between the minimum and maximum ratio values.
 
         Returns:

@@ -70,9 +70,9 @@ Train=[
             width=32
             height=32
             channels=3
-            cropType="randomSide"
+            cropType="RandomSide"
             sideRatio=0.8
-            jitterType="uniRatio"
+            jitterType="UniRatio"
             interpolations="linear"
             meanFile="$DataDir$/CIFAR-10_mean.xml"
         ]
@@ -96,9 +96,9 @@ Test=[
             width=32
             height=32
             channels=3
-            cropType="center"
+            cropType="Center"
             sideRatio=1
-            jitterType="uniRatio"
+            jitterType="UniRatio"
             interpolations="linear"
             meanFile="$DataDir$/CIFAR-10_mean.xml"
         ]
