@@ -121,13 +121,13 @@ namespace CNTK
         return (blockFunction != nullptr);
     }
 
-    FunctionPtr Function::BlockComposite() const
+    FunctionPtr Function::BlockRoot() const
     {
         if (!IsBlock())
-            InvalidArgument("Function::BlockComposite() cannot be called for a Function which is not a block");
+            InvalidArgument("Function::BlockRoot() cannot be called for a Function which is not a block");
 
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
-        return blockFunction->Composite();
+        return blockFunction->Composite()->RootFunction();
     }
 
     std::shared_ptr<std::vector<std::pair<Variable, Variable>>> Function::BlockArgumentsMappingImpl() const
@@ -557,9 +557,10 @@ namespace CNTK
             clonedFunction = MakeSharedObject<PrimitiveFunction>(primitiveFunction->OpType(), inputs, std::move(attributesCopy), primitiveFunction->Name());
         else
         {
-            auto clonedComposite = primitiveFunction->BlockComposite()->Clone(parameterCloneMethod, replacements);
+            auto cloneeComposite = dynamic_cast<const BlockFunction*>(primitiveFunction)->Composite();
+            auto clonedComposite = cloneeComposite->Clone(parameterCloneMethod, replacements);
 
-            auto cloneeBlockCompositeArguments = primitiveFunction->BlockComposite()->Arguments();
+            auto cloneeBlockCompositeArguments = cloneeComposite->Arguments();
             auto clonedBlockCompositeArguments = clonedComposite->Arguments();
             std::unordered_map<Variable, Variable> cloneeToClonedBlockCompositeArgumentsMap;
             for (size_t i = 0; i < cloneeBlockCompositeArguments.size(); ++i)

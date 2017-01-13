@@ -474,12 +474,12 @@ class Function(cntk_py.Function):
 
     @property
     @typemap
-    def block_composite(self):
+    def block_root(self):
         '''
-        Returns the composite function underlying this block Function.
+        Returns the root of the Function graph underlying this block Function.
         Throws an exception of this is not a block Function.
         '''
-        return super(Function, self).block_composite()
+        return super(Function, self).block_root()
 
     @property
     @typemap

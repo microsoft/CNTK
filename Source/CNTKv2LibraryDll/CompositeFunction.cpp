@@ -88,7 +88,7 @@ namespace CNTK
 
             // For block functions we need to recursively traverse the underlying composite
             if (function->IsBlock())
-                PreorderTraverseFunctions(function->BlockComposite()->RootFunction(), SerializationTraversalFunc);
+                PreorderTraverseFunctions(function->BlockRoot(), SerializationTraversalFunc);
         };
 
         PreorderTraverseFunctions(RootFunction(), SerializationTraversalFunc);
@@ -909,7 +909,7 @@ namespace CNTK
                     for (auto compositeArgument : compositeArguments)
                         m_variableToNodeMap[compositeArgument] = m_variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
-                    PreorderTraverseFunctions(function->BlockComposite()->RootFunction(), PatchBlockArgumentsMapping);
+                    PreorderTraverseFunctions(function->BlockRoot(), PatchBlockArgumentsMapping);
                 }
             };
             PreorderTraverseFunctions(rootFunction, PatchBlockArgumentsMapping);
