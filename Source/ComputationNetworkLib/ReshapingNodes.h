@@ -750,7 +750,19 @@ template class RowRepeatNode<float>;
 template class RowRepeatNode<double>;
 
 // -----------------------------------------------------------------------
-// WhereNode(cond) -- extract indices of non-0 values in a sequence
+// WhereNode(cond) -- extract indices of a sequence repeated according to
+// an indicator vector. Kinds of indicator values:
+//  - 0 and 1: frames with 0 are deleted
+//  - int > 0: each frame be repeated this many times
+//  - float > 0: each frame will on average be repeated this many times
+//               by rounding and carrying over the error
+// Example for float:
+//  - weights all 1.5
+//  - sequence A B C D E F G H I J
+//  - ->       A A B C C D E E F G G H I I J
+//  - algorithm:
+//     - keep an accumulated count of actual and desired #frames at any point
+//     - append as many frames as missing (rounded up)
 // As this implies a runtime-value dependent reduction in dimension, it can
 // only be applied to time sequences, and not other tensor dimensions.
 // The result will have a different MBLayout reflecting the shortened result sequences.

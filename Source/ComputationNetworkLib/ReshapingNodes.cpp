@@ -253,10 +253,22 @@ template <class ElemType>
         if (seq.seqId == GAP_SEQUENCE_ID)
             continue;
         auto& indexSequence = indexSequences[i];
+        // create index map for one sequence
+        // this is the condition check that this node performs; the meat
         indexSequence.clear();
+        double desiredCount = 0.0;
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
-            if (input(0, inMBLayout->GetColumnIndex(seq, t))) // this is the condition check that this node performs; the meat
+        {
+            double delta = input(0, inMBLayout->GetColumnIndex(seq, t)); // how many frames the current time step should expand into
+            desiredCount += delta; // this is now how many frames we should have
+            // use a margin against round-off errors, so that we get non-binary ratios like 1/3 and 1/5 right
+            // This really means generate a frame if too few, unless we are within machine accuracy of the target.
+            // The assumption is that the delta has this error, while accumulation (in double) has no error.
+            ElemType relativeMargin = 1 - std::numeric_limits<ElemType>::epsilon();
+            while ((indexSequence.empty() && desiredCount > 0)  // no margin for the first frame (always include unless flag is 0)
+                   || indexSequence.size() < desiredCount * relativeMargin)
                 indexSequence.push_back(t);
+        }
         // Note: The above accesses m_value directly on the CPU, putting it into BOTH state, possibly for other consumers as well.
     }
     input.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
