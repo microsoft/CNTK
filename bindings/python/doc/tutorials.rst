@@ -8,6 +8,10 @@ Tutorials
     * Part A: `MNIST data preparation`_
     * Part B: `Feed Forward classifier`_
 #.  CNTK 104: `Time Series basics`_ with Finance data
+#.  CNTK 105: Autoencoder for dimensionality reduction with MNIST data
+
+    * Part A: `MNIST data preparation`_
+    * Part B: `Feed Forward autoencoder`_
 
 #.  CNTK 201: Image classifiers with CIFAR-10 data
 
@@ -29,6 +33,8 @@ For our Japanese users, you can find some of the `tutorials in Japanese`_.
 .. _`MNIST data preparation`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb
 .. _`Feed Forward classifier`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb
 .. _`Time Series basics`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb
+.. _`Feed Forward autoencoder`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb
+
 .. _`CIFAR-10 Data preparation`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb
 .. _`VGG and ResNet classifiers`: https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Tutorials/CNTK_201B_CIFAR-10_ImageHandsOn.ipynb
 .. _`Language understanding`: https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_202_Language_Understanding.ipynb
