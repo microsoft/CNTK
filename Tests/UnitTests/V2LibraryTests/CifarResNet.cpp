@@ -20,8 +20,8 @@ MinibatchSourcePtr CreateCifarMinibatchSource(size_t epochSize)
 
     Dictionary cropTransformConfig;
     cropTransformConfig[L"type"] = L"Crop";
-    cropTransformConfig[L"cropType"] = L"Random";
-    cropTransformConfig[L"cropRatio"] = L"0.8";
+    cropTransformConfig[L"cropType"] = L"RandomSide";
+    cropTransformConfig[L"sideRatio"] = L"0.8";
     cropTransformConfig[L"jitterType"] = L"uniRatio";
 
     Dictionary scaleTransformConfig;
