@@ -1387,6 +1387,8 @@ namespace CNTK
 
         FunctionPtr ReconcileDynamicAxis(const Variable& operand, const Variable& layout, const std::wstring& name)
         {
+            // TODO: In V1 graph generation, ReconcileDynamicAxis() should be treated like a no-op if the axis is know to be the same.
+            //       E.g. used for seq2seq.
             return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, layout, Dictionary(), name);
         }
 
@@ -1396,6 +1398,7 @@ namespace CNTK
             if (operand.GetDataType() != DataType::Unknown)
                 return ReconcileDynamicAxis(Constant({ 1 }, operand.GetDataType(), 0.0), operand/*acts as layout input*/);
             // BUGBUG: If data type is unknown, it does not get rectified later, so we cannot use this optimization here.
+            // TODO: Amit said in that case I can pass DataType::Float
 #endif
             if (operand.IsSparse())
             {

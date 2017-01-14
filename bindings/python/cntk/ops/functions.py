@@ -284,7 +284,12 @@ class Function(cntk_py.Function):
         if is_symbolic:
             a1 = self.arguments
             a1_names = [arg.name for arg in a1]
+            sn = self.name
             out = self.clone(CloneMethod.share, arg_map)
+            on = out.name
+            if sn == 'hidden_representation':
+                ic = out.is_composite
+                print(13)
             a2 = out.arguments
             a2_names = [arg.name for arg in a2]
             # return the Variables as a Python tuple, rather than the CNTK Function object
@@ -446,6 +451,13 @@ class Function(cntk_py.Function):
         Returns:
             :class:`~cntk.ops.functions.Function`: the cloned Function
         '''
+        # C++ clone() can only clone composites. If we are not a composite, make it one using combine()
+        if not self.is_composite:
+            from cntk import combine
+            #return combine([self]).clone(method, substitutions).root_function.arguments[0].owner
+            # BUGBUG: This does not give me the correct .arguments
+            return combine([self]).clone(method, substitutions)
+
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         if substitutions is None:

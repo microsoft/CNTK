@@ -84,7 +84,9 @@ def create_model_function():
   from cntk.ops import plus
   with default_options(initial_state=0.1, enable_self_stabilization=False):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
+        #Label('input'), # BUGBUG: PassNode must work for sparse (no reason it cannot)
         Embedding(emb_dim),
+        Label('embedded_input'),
         #Stabilizer(),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
         #(Recurrence(LSTM(hidden_dim), go_backwards=False), Recurrence(LSTM(hidden_dim), go_backwards=True)),
@@ -97,6 +99,7 @@ def create_model_function():
         #Recurrence(pr_rnn, go_backwards=False),
         #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),
         #Stabilizer(),
+        Label('hidden_representation'),
         Dense(num_labels)
         #last,
         #Dense(num_intents)
@@ -155,6 +158,15 @@ def train(reader, model, max_epochs):
     # declare the model's input dimension, so that the saved model is usable
     model.update_signature(Type(vocab_size, is_sparse=True))
     # BUGBUG (layers): need to verify compatibility when using it as part of another function
+
+    # example of how to clone out the feature-extraction part, using Label() layers:
+    hidden_representation = model.find_by_name('hidden_representation')
+    embedded_input = hidden_representation.find_by_name('embedded_input')
+    from cntk.ops.functions import CloneMethod
+    inner_model = hidden_representation.clone(CloneMethod.share, {embedded_input.output: Placeholder(name='catch_me')})
+    #inner_model = hidden_representation.clone(CloneMethod.share, {Placeholder(): Placeholder()})
+    # BUGBUG: This ^^ should fail, but does not, so I must assume this is bogus.
+    inner_model.update_signature(Type(emb_dim))
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)

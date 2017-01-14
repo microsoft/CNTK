@@ -541,3 +541,12 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
         return x_hat * scale + bias    # denormalize with learned parameters
 
     return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))
+
+# assign a label string to an intermediate Function
+# Dense(...) >> Label('hidden') >> Dense(...)
+def Label(name):
+    @Function
+    def label(x):
+        return alias(x, name=name)
+    # BUGBUG: Fails for sparse, since PassNode cannot pass on sparse data presently. Shallow fix would be to add an 'if' inside PassNode.
+    return label
