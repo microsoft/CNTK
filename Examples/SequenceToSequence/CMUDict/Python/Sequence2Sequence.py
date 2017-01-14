@@ -155,6 +155,9 @@ def create_model():
     # Right now assumes shared embedding and shared vocab size.
     embed = Embedding(embedding_dim) if use_embedding else identity
 
+    # sentence-start symbol as a constant
+    sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
+
     # Encoder: (embedded_input*) --> (h0, c0)
     # Create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
@@ -186,36 +189,21 @@ def create_model():
             return r
 
     @Function
-    def model_train(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+    def model_train(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
-        # Set up sequences...
-        input_sequence = raw_input
-
+        # TODO: drop this, move into criterion nodes and/or train() function
         # Drop the sequence start token from the label, for decoder training
         label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
         # label sequence is only used in training as the history --> move this out to trainer function
 
         # Connect encoder and decoder
-        encoder_output = encoder(input_sequence)
-
-        # During training we use the ground truth as input to the decoder. During model execution,
-        # we need to redirect the output of the network back in as the input to the decoder. We do this by
-        # setting up a 'hook' whose output will be changed during model execution
-        decoder_history_hook = alias(label_sequence, name='decoder_history_hook')
+        encoder_output = encoder(input)
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
-        # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
-        # For that reason, we reconcile the dynamic axis, which for now can be done by adding a dummy zero to the input.
-        # This will get hidden in Unfold(), and also streamlined.
-        sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
-        decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(sentence_start), dynamic_axes_like=label_sequence)
-        # TODO: move the reconcile to the decoder creator.
-        # the history hook has to go, and be explicit in the function that constructs the trainer and testing network
-
+        decoder_input = delayed_value(embed(label_sequence), initial_state=embed(sentence_start), dynamic_axes_like=label_sequence)
         z = decoder(decoder_input, *encoder_output.outputs)
         return z
-
         # OLD CODE which I may still need later:
         # Parameters to the decoder stack depend on the model type (use attention or not)
         if use_attention:
@@ -246,15 +234,38 @@ def create_model():
 
         return z
 
-    # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
-    # This does not need to be done in training generally though
-    net_output = hardmax(model_train)
-    # make a clone of the graph where the ground truth is replaced by the network output
-    decoder_history_hook = find_by_name(model_train, 'decoder_history_hook')
-    model_greedy = model_train.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
-    #@Function
-    #def model_greedy(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-    #    return model_greedy1(raw_input=raw_input, raw_labels=raw_labels)
+    @Function
+    def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+
+        # TODO: drop this, move into criterion nodes and/or train() function
+        # Drop the sequence start token from the label, for decoder training
+        label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+        # label sequence is only used in training as the history --> move this out to trainer function
+
+        # Connect encoder and decoder
+        encoder_output = encoder(input)
+
+        # During training we use the ground truth as input to the decoder. During model execution,
+        # we need to redirect the output of the network back in as the input to the decoder. We do this by
+        # setting up a 'hook' whose output will be changed during model execution
+        # decoder_history_hook gets replaced by the feedback loop
+
+        # The input to the decoder always starts with the special label sequence start token.
+        # Then, use the previous value of the label sequence (for training) or the output (for execution).
+        # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
+        # For that reason, we reconcile the dynamic axis, which for now can be done by adding a dummy zero to the input.
+        # This will get hidden in Unfold(), and also streamlined.
+        #decoder_history_hook = alias(label_sequence, name='decoder_history_hook')
+
+        # TODO: express this as a Recurrence()
+        decoder_history_hook = Placeholder()
+
+        decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(sentence_start), dynamic_axes_like=label_sequence)
+        z = decoder(decoder_input, *encoder_output.outputs)
+
+        z.replace_placeholders({decoder_history_hook : hardmax(z).output})
+
+        return z
 
     return (model_train, model_greedy)
 
