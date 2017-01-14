@@ -192,7 +192,9 @@ def create_model():
 
         # Drop the sequence start token from the label, for decoder training
         label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+        # label sequence is only used in training as the history --> move this out to trainer function
         label_sequence_start = sequence.first(raw_labels)                        # <s>
+        # ^^ This is a constant, no need for labels
         # TODO: replace label_sequence_start by one-hot vector with 1 at <s> position
 
         #labels = np.zeros(label_vocab_dim) #, np.float32)
@@ -212,8 +214,12 @@ def create_model():
         # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
         # For that reason, we reconcile the dynamic axis, which for now can be done by adding a dummy zero to the input.
         # This will get hidden in Unfold(), and also streamlined.
-        zeroes_like_axis = future_value(sequence.is_first(label_sequence))
-        decoder_input = past_value(zeroes_like_axis + embed(decoder_history_hook), initial_state=embed(label_sequence_start))
+        #from cntk.utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
+        #from cntk.utils import sanitize_input, typemap
+        #from _cntk_py import reconcile_dynamic_axis
+        #decoder_input = typemap(reconcile_dynamic_axis)(sanitize_input(past_value(embed(decoder_history_hook), initial_state=embed(label_sequence_start))),
+        #                                                sanitize_input(label_sequence))
+        decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(label_sequence_start), dynamic_axes_like=label_sequence)
         # TODO: replace initial_state by a lookup in the embedding directly
 
         # Parameters to the decoder stack depend on the model type (use attention or not)
