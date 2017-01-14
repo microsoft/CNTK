@@ -173,7 +173,8 @@ def create_model():
     # where history is one of these, delayed by 1 step and <s> prepended:
     #  - training: labels
     #  - testing:  its own output hardmax(z)
-    with default_options(enable_self_stabilization=True):
+    #with default_options(enable_self_stabilization=True):
+    with default_options(enable_self_stabilization=False):
         @Function
         def decoder(history, h0, c0):
             r = history
@@ -185,7 +186,7 @@ def create_model():
             return r
 
     @Function
-    def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+    def model_train(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
         # Set up sequences...
         input_sequence = raw_input
@@ -194,26 +195,23 @@ def create_model():
         label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
         # label sequence is only used in training as the history --> move this out to trainer function
 
-        #label_sequence_start = sequence.first(raw_labels)                        # <s>
-        # ^^ This is a constant, no need for labels
-        # TODO: replace label_sequence_start by one-hot vector with 1 at <s> position
-
         # Connect encoder and decoder
         encoder_output = encoder(input_sequence)
 
         # During training we use the ground truth as input to the decoder. During model execution,
         # we need to redirect the output of the network back in as the input to the decoder. We do this by
         # setting up a 'hook' whose output will be changed during model execution
-        decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_embedded
+        decoder_history_hook = alias(label_sequence, name='decoder_history_hook')
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
         # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
         # For that reason, we reconcile the dynamic axis, which for now can be done by adding a dummy zero to the input.
         # This will get hidden in Unfold(), and also streamlined.
-        label_sequence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
-        decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(label_sequence_start), dynamic_axes_like=label_sequence)
+        sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
+        decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(sentence_start), dynamic_axes_like=label_sequence)
         # TODO: move the reconcile to the decoder creator.
+        # the history hook has to go, and be explicit in the function that constructs the trainer and testing network
 
         z = decoder(decoder_input, *encoder_output.outputs)
         return z
@@ -248,24 +246,46 @@ def create_model():
 
         return z
 
-    return model
+    # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
+    # This does not need to be done in training generally though
+    net_output = hardmax(model_train)
+    # make a clone of the graph where the ground truth is replaced by the network output
+    decoder_history_hook = find_by_name(model_train, 'decoder_history_hook')
+    model_greedy = model_train.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
+    #@Function
+    #def model_greedy(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+    #    return model_greedy1(raw_input=raw_input, raw_labels=raw_labels)
+
+    return (model_train, model_greedy)
 
 ########################
 # train action         #
 ########################
 
-def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size):
+def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epochs, epoch_size):
 
     from cntk.blocks import Constant, Type
+
+    #decoder_history_hook = find_by_name(model, 'decoder_history_hook')
+    ## network output for decoder history
+    #net_output = hardmax(model)
+    ## make a clone of the graph where the ground truth is replaced by the network output
+    ## get a new model that uses the network output as input to the decoder
+    #decoder_output_model = model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                            Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                            #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
+    model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+                                  Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+                                  #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
+    decoder_output_model = model_greedy
+    # BUGBUG: Update fails with Stabilizer enabled, since scalar dim infects type inference and does not widen.
+
     #model.dump('model after update')
 
     # do some hooks so that we can direct data to the right place
     label_sequence = find_by_name(model, 'label_sequence')
-    decoder_history_hook = find_by_name(model, 'decoder_history_hook')
 
     # Criterion nodes
     # TODO: change to @Function to ensure parameter order (William seemed to have worked around it by naming them)
@@ -281,16 +301,6 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
-    def clone_and_hook():
-        # network output for decoder history
-        net_output = hardmax(model)
-
-        # make a clone of the graph where the ground truth is replaced by the network output
-        return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
-
-    # get a new model that uses the network output as input to the decoder
-    decoder_output_model = clone_and_hook()
-
     # Instantiate the trainer object to drive the model training
     lr_per_sample = learning_rate_schedule(0.005, UnitType.sample)
     minibatch_size = 72
@@ -566,11 +576,11 @@ if __name__ == '__main__':
 
     # create inputs and create model
     #inputs = create_inputs()
-    model = create_model()
+    model_train, model_greedy = create_model()
 
     # train
     #try:
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model_train, model_greedy, max_epochs=10, epoch_size=908241)
     #except:
     #    x = input("hit enter")
 
