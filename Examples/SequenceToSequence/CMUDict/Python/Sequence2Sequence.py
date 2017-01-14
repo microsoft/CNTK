@@ -41,6 +41,7 @@ attention_span = 20
 use_attention = False   #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
+sent_start_index = { w:i for i,w in enumerate([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()]) }['<s>']
 
 ########################
 # define the reader    #
@@ -160,6 +161,10 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
     label_sequence_start = sequence.first(raw_labels)                        # <s>
     # TODO: replace label_sequence_start by one-hot vector with 1 at <s> position
 
+    #labels = np.zeros(label_vocab_dim) #, np.float32)
+    #labels[sent_start_index] = 1
+    # or something like [w[i] == '<s>' for i in vocab]
+
     # Embedding (right now assumes shared embedding and shared vocab size)
     embed = Embedding(embedding_dim) if use_embedding else identity
 
@@ -175,9 +180,22 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
                 Recurrence(LSTM(hidden_dim))),
             Fold(LSTM(hidden_dim), return_full_state=True)
         ])
+
+    # Decoder:
+    with default_options(enable_self_stabilization=True):
+        @Function
+        def decoder(x, h0, c0):
+            x = Stabilizer()(x)
+            for i in range(num_layers):
+                x = RecurrenceFrom(LSTM(hidden_dim))(x, h0, c0) # :: x, h0, c0 -> h
+            x = Stabilizer()(x)
+            x = Dense(label_vocab_dim)(x)
+            return x
+
+    # Connect encoder and decoder
     encoder_output = encoder(input_sequence)
 
-    # Decoder: during training we use the ground truth as input to the decoder. During model execution,
+    # During training we use the ground truth as input to the decoder. During model execution,
     # we need to redirect the output of the network back in as the input to the decoder. We do this by
     # setting up a 'hook' whose output will be changed during model execution
     decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_embedded
@@ -216,16 +234,6 @@ def model(raw_input, raw_labels): # (input_sequence, decoder_history_sequence) -
         decoder_output_h, _ = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
         z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
       else:
-        # with Layers
-        with default_options(enable_self_stabilization=True):
-            @Function
-            def decoder(x, h0, c0):
-                x = Stabilizer()(x)
-                for i in range(num_layers):
-                    x = RecurrenceFrom(LSTM(hidden_dim))(x, h0, c0) # :: x, h0, c0 -> h
-                x = Stabilizer()(x)
-                x = Dense(label_vocab_dim)(x)
-                return x
         z = decoder(decoder_input, *encoder_output.outputs)
 
     return z
@@ -481,9 +489,10 @@ def interactive_session(model, vocab, i2w, show_attention=False):
 def get_vocab(path):
     # get the vocab for printing output sequences in plaintext
     vocab = [w.strip() for w in open(path).readlines()]
-    i2w = { i:ch for i,ch in enumerate(vocab) }
+    i2w = { i:w for i,w in enumerate(vocab) }
+    w2i = { w:i for i,w in enumerate(vocab) }
     
-    return (vocab, i2w)
+    return (vocab, i2w, w2i)
 
 # Given a vocab and tensor, print the output
 def print_sequences(sequences, i2w):
@@ -541,7 +550,7 @@ if __name__ == '__main__':
     # hook up data
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
-    vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
+    vocab, i2w, w2i = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
     #inputs = create_inputs()
