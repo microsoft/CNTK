@@ -42,6 +42,7 @@ use_attention = False   #True  --BUGBUG (layers): not working for now due to has
 use_embedding = True
 embedding_dim = 200
 vocab = enumerate([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
+length_increase = 1.5
 
 ########################
 # define the reader    #
@@ -235,11 +236,12 @@ def create_model():
         return z
 
     @Function
-    def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+    #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+    def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
         # TODO: drop this, move into criterion nodes and/or train() function
         # Drop the sequence start token from the label, for decoder training
-        label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+        #label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
         # label sequence is only used in training as the history --> move this out to trainer function
 
         # Connect encoder and decoder
@@ -257,10 +259,18 @@ def create_model():
         # This will get hidden in Unfold(), and also streamlined.
         #decoder_history_hook = alias(label_sequence, name='decoder_history_hook')
 
-        # TODO: express this as a Recurrence()
+        # create a new axis
+        from cntk.utils import sanitize_input, typemap
+        from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
+        factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(input))
+        indices = typemap(where)(sanitize_input(factors))
+        zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
+        out_axis = zeroes
+
+        # TODO: express this as UnfoldFrom()
         decoder_history_hook = Placeholder()
 
-        decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(sentence_start), dynamic_axes_like=label_sequence)
+        decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(sentence_start), dynamic_axes_like=out_axis)
         z = decoder(decoder_input, *encoder_output.outputs)
 
         z.replace_placeholders({decoder_history_hook : hardmax(z).output})
@@ -287,8 +297,8 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                            Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                            #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
-    model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                                  Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+    model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
+                                  #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
     decoder_output_model = model_greedy
     # BUGBUG: Update fails with Stabilizer enabled, since scalar dim infects type inference and does not widen.
@@ -354,6 +364,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
 
             # every N MBs evaluate on a test sequence to visually show how we're doing
             if mbs % sample_freq == 0:
+                print(13)
                 mb_valid = valid_reader.next_minibatch(minibatch_size)
                 
                 q = noop(mb_valid[valid_reader.streams.features])
@@ -365,7 +376,8 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
                 #                               mb_valid[valid_reader.streams.features], 
                 #                               find_arg_by_name('raw_labels', decoder_output_model) : 
                 #                               mb_valid[valid_reader.streams.labels]})
-                e = decoder_output_model(mb_valid[valid_reader.streams.features], mb_valid[valid_reader.streams.labels])
+                #e = decoder_output_model(mb_valid[valid_reader.streams.features], mb_valid[valid_reader.streams.labels])
+                e = decoder_output_model(mb_valid[valid_reader.streams.features])
                 print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
