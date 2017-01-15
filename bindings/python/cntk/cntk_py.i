@@ -1168,6 +1168,7 @@ public:
   Py_END_ALLOW_THREADS;
 }
 
+
 //
 // Setting up hash calculation so that __hash__ on Swig objects
 // are redirected to the std::hash computation of the C++ API
@@ -1175,10 +1176,12 @@ public:
 %define %py_hash_for(DATA_TYPE)
 %extend CNTK::DATA_TYPE {
     const size_t __hash__() {
+        //fliss
         return std::hash<CNTK::DATA_TYPE>()(*$self);
     }
 }
 %enddef
+
 
 %define %py_eq_for(DATA_TYPE, EQ)
 %pythoncode %{
@@ -1189,8 +1192,14 @@ DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
 %py_eq_for(Variable, Variable_eq)
 %py_hash_for(Variable)
 
-%py_eq_for(Constant, Variable_eq)
-%py_hash_for(Constant)
+%feature("python:slot", "tp_hash", functype="hashfunc") CNTK::Constant::hash;
+%rename(__hash__) CNTK::Constant::hash;
+
+%feature("python:slot", "tp_hash", functype="hashfunc") Constant::hash;
+%rename(__hash__) Constant::hash;
+
+//%py_eq_for(Constant, Variable_eq)
+//%py_hash_for(Constant)
 
 %py_eq_for(Parameter, Variable_eq)
 %py_hash_for(Parameter)

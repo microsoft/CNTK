@@ -1939,6 +1939,7 @@ private:
         {
             return Variable::Value();
         }
+        CNTK_API size_t hash(); 
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)

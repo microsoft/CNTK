@@ -127,7 +127,8 @@ cntk_module = Extension(
     name="_cntk_py",
 
     sources = [os.path.join("cntk", "cntk_py.i")],
-    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
+    swig_opts = ["-builtin", "-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
+    #swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
     libraries = link_libs,
     library_dirs = [CNTK_LIB_PATH],
 
@@ -155,7 +156,7 @@ if IS_WINDOWS:
     kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
                   package_data = package_data)
 else:
-    # On Linux copy all runtime libs into the cntk/lib folder. 
+    # On Linux copy all runtime libs into the cntk/lib folder.
     package_data['cntk'] += rt_libs
     kwargs = dict(package_data = package_data)
 

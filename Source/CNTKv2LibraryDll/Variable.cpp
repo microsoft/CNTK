@@ -478,4 +478,6 @@ namespace CNTK
     {
         m_dataFields->SetValueInitialization(initializer, device);
     }
+
+    size_t Constant::hash() { return std::hash<::CNTK::Constant>{}(*this); }
 }
