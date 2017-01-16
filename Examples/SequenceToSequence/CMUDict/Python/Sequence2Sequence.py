@@ -305,41 +305,18 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
     decoder_output_model = model_greedy
     # BUGBUG: Update fails with Stabilizer enabled, since scalar dim infects type inference and does not widen.
 
-    #model.dump('model after update')
-
-    ## Criterion nodes
-    ## TODO: change to @Function to ensure parameter order (William seemed to have worked around it by naming them)
-    #arg_names = [arg.name for arg in model.arguments]
-    #
     ## criterion function must drop the <s> from the labels
     ## TODO: use same as in LU with filter
-    #@Function
-    #def criterion(input, labels):
-    #    # Drop the sequence start token from the label, for decoder training
-    #    label_sequence = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
-    #    z = model(input, label_sequence)
-    #    ce = cross_entropy_with_softmax(z, label_sequence)
-    #    errs = classification_error(z, label_sequence)
-    #    return (ce, errs)
-    #
-    #criterion.outputs[0].owner.dump()
-    #label_sequence = model.arguments[1]
-    #label_sequence = sequence.slice(label_sequence, 1, 0)
     @Function
-    def crit(input, labels):
-        z = model(input=input, labels=labels)
-        label_sequence = find_by_name(z, 'label_sequence')
-        ce = cross_entropy_with_softmax(z, label_sequence)
-        errs = classification_error(z, label_sequence)
+    def criterion(input, labels):
+        z = model(input, labels)
+        postprocessed_labels = find_by_name(z, 'postprocessed_labels')
+        ce = cross_entropy_with_softmax(z, postprocessed_labels)
+        errs = classification_error(z, postprocessed_labels)
         return (ce, errs)
-    # BUGBUG: above does not work; need to keep doing this, i.e. can't remove slicing yet
-    postprocessed_labels = find_by_name(model, 'postprocessed_labels')
-    ce = cross_entropy_with_softmax(model, postprocessed_labels)
-    errs = classification_error(model, postprocessed_labels)
-    crit = (ce, errs)
-
-    arg_names = [arg.name for arg in ce.arguments]
-    ce.dump()
+    criterion.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+                               Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+    criterion.dump()
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
@@ -353,7 +330,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
                            lr_per_sample, momentum_time_constant,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-    trainer = Trainer(None, crit, learner)
+    trainer = Trainer(None, criterion, learner)
 
     # Get minibatches of sequences to train with and perform model training
     i = 0
