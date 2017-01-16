@@ -41,8 +41,13 @@ attention_span = 20
 use_attention = False   #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
-vocab = enumerate([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
+vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
 length_increase = 1.5
+
+# sentence-start symbol as a constant
+sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
+sentence_end_index = vocab.index('</s>')
+# TODO: move these where they belong
 
 ########################
 # define the reader    #
@@ -156,10 +161,6 @@ def create_model():
     # Right now assumes shared embedding and shared vocab size.
     embed = Embedding(embedding_dim) if use_embedding else identity
 
-    # sentence-start symbol as a constant
-    sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
-    sentence_end_index = vocab.index('</s>')
-
     # Encoder: (embedded_input*) --> (h0, c0)
     # Create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
@@ -184,6 +185,7 @@ def create_model():
         def decoder(history, input):
             encoder_output = encoder(input)
             r = history
+            r = embed(r)
             r = Stabilizer()(r)
             for i in range(num_layers):
                 r = RecurrenceFrom(LSTM(hidden_dim))(r, *encoder_output.outputs) # :: r, h0, c0 -> h
@@ -191,59 +193,7 @@ def create_model():
             r = Dense(label_vocab_dim)(r)
             return r
 
-    # note: the labels must not contain the initial <s>
-    @Function
-    def model_train(input, labels): # (input, labels) --> (word_sequence)
-
-        # The input to the decoder always starts with the special label sequence start token.
-        # Then, use the previous value of the label sequence (for training) or the output (for execution).
-        decoder_input = delayed_value(embed(labels), initial_state=embed(sentence_start))
-        z = decoder(decoder_input, input)
-        return z
-
-    @Function
-    #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-    def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-
-        def UnfoldFrom(over, length_increase=1, initial_state=None):
-            # TODO: use @Function -- is that possible?
-            def unfold_from(input, dynamic_axes_like):
-                # create a new axis
-                out_axis = dynamic_axes_like
-                if length_increase != 1:
-                    from cntk.utils import sanitize_input, typemap
-                    from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
-                    from cntk.ops.sequence import where, gather
-                    factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(out_axis))
-                    indices = where(factors)
-                    zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
-                    out_axis = zeroes
-    
-                input1 = Placeholder(name='input1')
-    
-                history_fwd = Placeholder(name='hook')
-                prev_history = delayed_value(embed(history_fwd), initial_state=initial_state, dynamic_axes_like=out_axis)
-                z = over(prev_history, input1)
-                z.replace_placeholders({history_fwd : hardmax(z).output})
-    
-                #z.dump_signature()
-                z = z.clone(CloneMethod.share, {input1 : input})
-                #z.dump_signature('z')
-                return z
-            return unfold_from
-        z = UnfoldFrom(decoder, length_increase=length_increase, initial_state=embed(sentence_start))(input, dynamic_axes_like=input)
-
-        # add another loop to cut at <s/>
-        # TODO: change to Python slicing syntax
-        # BUGBUG: This leads to a different result
-        #is_sent_end = slice(z, axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
-        #valid_frames = Recurrence(lambda x, h: (1-x) * h, initial_state=1)(is_sent_end)
-        ## BUGBUG? check parameter order of lambda
-        #z = gather(z, valid_frames)
-
-        return z
-
-    return (model_train, model_greedy)
+    return decoder
 
 def old_code():
         # OLD CODE which I may still need later:
@@ -280,9 +230,62 @@ def old_code():
 # train action         #
 ########################
 
-def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epochs, epoch_size):
+def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_size):
 
     from cntk.blocks import Constant, Type
+
+    # note: the labels must not contain the initial <s>
+    @Function
+    def model_train(input, labels): # (input, labels) --> (word_sequence)
+
+        # The input to the decoder always starts with the special label sequence start token.
+        # Then, use the previous value of the label sequence (for training) or the output (for execution).
+        decoder_input = delayed_value(labels, initial_state=sentence_start)
+        z = decoder(decoder_input, input)
+        return z
+    model = model_train
+
+    @Function
+    #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+    def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+
+        def UnfoldFrom(over, length_increase=1, initial_state=None):
+            # TODO: use @Function -- is that possible?
+            def unfold_from(input, dynamic_axes_like):
+                # create a new axis
+                out_axis = dynamic_axes_like
+                if length_increase != 1:
+                    from cntk.utils import sanitize_input, typemap
+                    from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
+                    from cntk.ops.sequence import where, gather
+                    factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(out_axis))
+                    indices = where(factors)
+                    zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
+                    out_axis = zeroes
+    
+                input1 = Placeholder(name='input1')
+    
+                history_fwd = Placeholder(name='hook')
+                prev_history = delayed_value(history_fwd, initial_state=initial_state, dynamic_axes_like=out_axis)
+                z = over(prev_history, input1)
+                z.replace_placeholders({history_fwd : hardmax(z).output})
+    
+                #z.dump_signature()
+                z = z.clone(CloneMethod.share, {input1 : input})
+                #z.dump_signature('z')
+                return z
+            return unfold_from
+        z = UnfoldFrom(decoder, length_increase=length_increase, initial_state=sentence_start)(input, dynamic_axes_like=input)
+
+        # add another loop to cut at <s/>
+        # TODO: change to Python slicing syntax
+        # BUGBUG: This leads to a different result
+        #is_sent_end = slice(z, axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
+        #valid_frames = Recurrence(lambda x, h: (1-x) * h, initial_state=1)(is_sent_end)
+        ## BUGBUG? check parameter order of lambda
+        #z = gather(z, valid_frames)
+
+        return z
 
     #decoder_history_hook = find_by_name(model, 'decoder_history_hook')
     ## network output for decoder history
@@ -613,11 +616,11 @@ if __name__ == '__main__':
 
     # create inputs and create model
     #inputs = create_inputs()
-    model_train, model_greedy = create_model()
+    model = create_model()
 
     # train
     #try:
-    train(train_reader, valid_reader, vocab, i2w, model_train, model_greedy, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
     #except:
     #    x = input("hit enter")
 
