@@ -64,7 +64,7 @@ namespace CNTK
             if (info.IsEmpty())
                 return false;
 
-            return m_learner->Update(gradientValues, info.numberOfSamples);
+            return m_learner->Update(gradientValues, info.numberOfSamples, info.atEndOfSweep);
         }
 
         // Optionally overridable method to get checkpoint state associated with this Distributed train method

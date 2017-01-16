@@ -79,7 +79,7 @@ namespace CNTK
 
             // For block momentum the number of aggreagate/checkpoints should match, so for now we ignore the return value of local learners.
             if (!info.IsEmpty())
-                m_learner->Update(gradientValues, info.numberOfSamples);
+                m_learner->Update(gradientValues, info.numberOfSamples, info.atEndOfSweep);
 
             return updated;
         }
