@@ -1316,6 +1316,9 @@ typedef CNTK::TrainingParameterPerUnitSchedule<size_t, CNTK::TrainingParameterSc
 
 namespace CNTK {
 
+    class UserBackPropState;
+    typedef std::shared_ptr<UserBackPropState> UserBackPropStatePtr;
+
     class UserBackPropState : public BackPropState {
     public:
         UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
@@ -1327,11 +1330,19 @@ namespace CNTK {
             return m_userData;
         }
 
+        static const PyObject* Data(BackPropStatePtr state)
+        {
+            CNTK::UserBackPropStatePtr user_state = std::dynamic_pointer_cast<CNTK::UserBackPropState>(state);
+            if (user_state == nullptr)
+                InvalidArgument("Invalid backprop state specified");
+
+            return user_state->Data();
+        }
+
+
     private:
         const PyObject* m_userData;
     };
-
-    typedef std::shared_ptr<UserBackPropState> UserBackPropStatePtr;
 }
 
 %}

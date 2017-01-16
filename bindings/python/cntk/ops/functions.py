@@ -680,8 +680,8 @@ class UserFunction(Function):
         map_if_possible(outputs_to_retain)
 
         state, results = self.forward(arguments, outputs, device, outputs_to_retain)
-        if state is None:
-            state = cntk_py.BackPropState(self, device)
+        if not isinstance(state, cntk_py.BackPropState):
+            state = cntk_py.UserBackPropState(self, device, state)
 
         for k,v in outputs.items():
             if v is None:
@@ -721,7 +721,7 @@ class UserFunction(Function):
             root_gradients[v] = value_to_seq(root_gradients[v])
         map_if_possible(variables)
 
-        self.backward(state, root_gradients, variables)
+        self.backward(cntk_py.UserBackPropState.data(state), root_gradients, variables)
 
         for k,v in variables.items():
             if v is None:

@@ -119,3 +119,49 @@ def test_ext_train():
         i+=1
         input_data = np.random.rand(dim)
         trainer.train_minibatch([input_data])
+
+@pytest.mark.parametrize("payload", [
+    (77,),
+    ("a", 2),
+    (),
+    (None)
+    ])
+def test_ext_backpropstate(payload):
+
+    class TestBackPropState(UserFunction):
+        def __init__(self, in1, payload, name='f1'):
+            outputs = [output_variable(in1.shape, in1.dtype, in1.dynamic_axes)]
+            self.payload = payload
+            super(TestBackPropState, self).__init__([in1], outputs, op_name='test')
+
+        def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
+            for k in outputs:
+                outputs[k] = arguments[0]
+                break
+
+            return self.payload, outputs
+
+        def backward(self, state, root_gradients, variables):
+            assert state == self.payload
+            for rk, rv in root_gradients.items():
+                break
+            for var_key in variables:
+                break
+
+            variables[var_key] = rv
+
+    dim = 4
+
+    p = parameter(shape=(dim,), init=10)
+    i = input_variable(dim, needs_gradient=True, name='i_var')
+    m = TestBackPropState(i, payload)
+    z = m+p
+
+    momentum_time_constant = momentum_as_time_constant_schedule(1100)
+    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
+    trainer = Trainer(z, z+0, z+0, \
+            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant)])
+
+    i = 0
+    input_data = np.random.rand(dim)
+    trainer.train_minibatch([input_data])
