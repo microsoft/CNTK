@@ -2253,6 +2253,35 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
 
 
 @typemap
+def output_variable(shape, dtype, dynamic_axes, name=''):
+    '''
+    It creates an output node that is used to define a user defined function.
+
+    Args:
+        shape (tuple or int): the shape of the input tensor
+        dtype (type): np.float32 or np.float64
+        dynamic_axes (list or tuple): a list of dynamic axis (e.g., batch axis, time axis)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.variables.Variable` that is of output type
+    '''
+    from cntk.cntk_py import output_variable
+    from ..utils import sanitize_shape, sanitize_dtype_cntk
+
+    shape = sanitize_shape(shape)
+
+    dtype = sanitize_dtype_cntk(dtype)
+
+    for a in dynamic_axes:
+        if not a.is_dynamic_axis:
+            raise ValueError('axis in dynamic_axes attribute is not dynamic')
+    dynamic_axes = list(reversed(dynamic_axes))
+
+    return output_variable(shape, dtype, dynamic_axes, name)
+
+
+@typemap
 def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     '''
     It creates a variable place holder for recurrence networks, when the network's dynamic axes

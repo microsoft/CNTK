@@ -18,6 +18,7 @@ from ..axis import Axis
 from .progress_print import *
 import warnings
 
+_VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
 def sanitize_precision(precision):
     '''
@@ -161,7 +162,7 @@ def get_data_type(*args):
 
     cntk_dtypes = set()
     numpy_dtypes = set()
-    if len(args) == 1 and isinstance(args, cntk_py.Function):
+    if len(args) == 1 and isinstance(args, _VARIABLE_OR_FUNCTION):
         args = [args]
 
     for arg in args:
@@ -178,7 +179,7 @@ def get_data_type(*args):
                 raise ValueError(
                     'NumPy type "%s" is not supported' % arg.dtype)
             numpy_dtypes.add(arg.dtype.type)
-        elif isinstance(arg, cntk_py.Function):
+        elif isinstance(arg, _VARIABLE_OR_FUNCTION):
             var_outputs = arg.outputs
             if len(var_outputs) > 1:
                 raise ValueError(
@@ -312,7 +313,7 @@ def sanitize_function(arg):
         arg = arg.owner
 
     if not isinstance(arg, cntk_py.Function):
-        raise TypeError("Object of type '%s' cannot be cast to Variable" %
+        raise TypeError("Object of type %s cannot be cast to Variable" %
                 str(type(arg)))
 
     return arg
@@ -540,6 +541,9 @@ class Value(cntk_py.Value):
         Returns:
             :class:`Value` object.
         '''
+        if not isinstance(var, cntk_py.Variable):
+            raise TypeError('Variable expected, but got "%s"'%type(var))
+
         if isinstance(batch, np.ndarray):
             # The outermost axis has to be Python list. If the user passes a
             # full minibatch as one NumPy array, we have to convert it.
