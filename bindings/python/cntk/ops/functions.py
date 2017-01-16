@@ -665,9 +665,7 @@ class UserFunction(Function):
         user.
 
         Args:
-            arguments: maps variables to their input data. 
-            TBD
-
+            arguments (tuple): Value objects of the Function's input
             outputs (iterable): outputs to fetch values for.
             device (:class:`~cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
@@ -676,18 +674,14 @@ class UserFunction(Function):
         Returns:
              A BackpropState instance, which is used by :func:`backward`.
         '''
-        for v in arguments:
-            arguments[v] = value_to_seq(arguments[v])
+        arguments = tuple(value_to_seq(v) for v in arguments)
 
-        map_if_possible(arguments)
         map_if_possible(outputs)
         map_if_possible(outputs_to_retain)
 
         state, results = self.forward(arguments, outputs, device, outputs_to_retain)
         if state is None:
-            state = cntk_py.UserBackPropState(self, device, 77)
-        elif not isinstance(state, cntk_py.BackPropState):
-            state = cntk_py.UserBackPropState(self, device, state)
+            state = cntk_py.BackPropState(self, device)
 
         for k,v in outputs.items():
             if v is None:
@@ -733,7 +727,7 @@ class UserFunction(Function):
             if v is None:
                 raise ValueError('gradients were not provided for all variables')
 
-            variables[k] = sanitize_batch(k, v, None, None, state.device())
+            variables[k] = sanitize_batch(k, v, None, state.device())
 
 @typemap
 def load_model(filename, device=None):

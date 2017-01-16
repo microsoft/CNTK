@@ -371,6 +371,9 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     '''
     from ..io import MinibatchData
 
+    if not op_arguments:
+        return {}
+
     if isinstance(arguments, tuple):
         arguments, seq_starts = arguments
     else:

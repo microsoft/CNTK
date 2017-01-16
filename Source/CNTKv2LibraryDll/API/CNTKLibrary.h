@@ -2381,8 +2381,6 @@ namespace CNTK
     public:
 
 // We need to have parameter names in Forward/Backward so that Swig can generate correct wrappings.
-#pragma warning(push)
-#pragma warning(disable: 4100)
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
         /// to each leaf variable of the Function of VariableKind 'Input'.
@@ -2414,7 +2412,6 @@ namespace CNTK
         CNTK_API virtual void Backward(const BackPropStatePtr& state,
                                        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
-
         ///
         /// Returns the name of the operation that this Function denotes
         ///
@@ -2704,20 +2701,10 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
-#ifndef SWIG
-        // SWIG chokes at the Dictionary&&
-    protected:
-        ///
-        /// Constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
-        ///
-        CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
-
-#endif
     public:
 		CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
     private:
-
         CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
 
         std::vector<Variable> m_inputs;

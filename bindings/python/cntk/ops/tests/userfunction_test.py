@@ -10,7 +10,6 @@ Unit tests for function extension
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import precision
 
 from cntk import *
 from cntk.trainer import *
@@ -18,22 +17,19 @@ from cntk.learner import *
 from cntk.ops.functions import UserFunction
 
 class Plus3Func(UserFunction):
-
-    def __init__(self, in1):
+    def __init__(self, in1, name='f1'):
         outputs = [output_variable(in1.shape, in1.dtype, in1.dynamic_axes)]
-        super(Plus3Func, self).__init__([in1], outputs, op_name='Plus3Func', name='f1')
+        super(Plus3Func, self).__init__([in1], outputs, op_name='Plus3Func',
+                name=name)
 
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         assert len(self.inputs)==1
-        # TODO for now we can only work with inputs that have an MBLayout and
-        # thus have an input_variable
         assert len(arguments)==1
-        for v in arguments.values():
-            break
-
         assert len(outputs)==1
+
         for k in outputs:
-            outputs[k] = v + 3
+            outputs[k] = arguments[0] + 3
+            break
 
         return None, outputs
 
@@ -48,21 +44,20 @@ class Plus3Func(UserFunction):
 
         variables[var_key] = rv
 
-def test_ext_eval_1(precision):
+def test_ext_eval_1():
     dim = 4
-    p = parameter(shape=(dim,), init=10)
+    p = parameter(shape=(dim,), init=10, name='p')
     i = input_variable(dim, needs_gradient=True, name='i_var')
     m = Plus3Func(i)
     z = m+p
 
     input_data = np.random.rand(dim)
     result = z.eval([input_data])
-    assert np.allclose(result[0][0]-input_data, 13+np.zeros_like(input_data))
+    assert np.allclose(result[0][0], input_data+3+10)
 
-# FIXME disabled until we can read arbitrary PyObject* inputs from self.inputs
-def _test_ext_eval_2(precision):
+def test_ext_eval_2_only_param():
     dim = 4
-    p = parameter(shape=(dim,), init=10)
+    p = parameter(shape=(dim,), init=10, name='p')
     i = input_variable(dim, needs_gradient=True, name='i_var')
     m = Plus3Func(p)
     # combine does not work
@@ -71,11 +66,42 @@ def _test_ext_eval_2(precision):
 
     input_data = np.random.rand(dim)
     result = z.eval([input_data])
-    assert np.allclose(result[0][0]-input_data, 13+np.zeros_like(input_data))
+    assert np.allclose(result[0][0], input_data+3+10)
+
+def test_ext_eval_3_no_input():
+    dim = 4
+    p = parameter(shape=(dim,), init=10, name='p')
+    m = Plus3Func(p)
+    z = m+0
+
+    result = z.eval()
+    # No batch dimension since we have no input
+    assert np.allclose(result, np.zeros_like(p)+10+3)
+
+def test_ext_eval_4_a_inside_graph():
+    dim = 4
+    p_init = 10
+    p = parameter(shape=(dim,), init=p_init, name='p')
+    m = Plus3Func(p)
+    z = p * m
+
+    result = z.eval()
+    # No batch dimension since we have no input
+    assert np.allclose(result, ((p_init*np.ones_like(result))+3)*p_init)
+
+def _test_ext_eval_4_b_inside_graph():
+    dim = 4
+    p_init = 10
+    p = parameter(shape=(dim,), init=p_init, name='p')
+    z = p * Plus3Func(p)
+
+    result = z.eval()
+    # No batch dimension since we have no input
+    assert np.allclose(result, ((p_init*np.ones_like(result))+3)*p_init)
+
 
 # TODO change to real training example
-# FIXME disabled until we can read arbitrary PyObject* inputs from self.inputs
-def _test_ext_train(precision):
+def test_ext_train():
     dim = 4
 
     p = parameter(shape=(dim,), init=10)
