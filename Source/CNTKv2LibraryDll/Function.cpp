@@ -805,13 +805,16 @@ namespace CNTK
 
     FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
     {
-        if (axis.IsStaticAxis())
+        if (((endIndex > 0 && beginIndex >= 0) || (beginIndex < 0 && endIndex <= 0))
+            && (endIndex - beginIndex) <= 0)
         {
-            if ((endIndex - beginIndex) <= 0)
-                InvalidArgument("CNTK::Slice: endIndex (%d) - beginIndex (%d) must be a positive number", endIndex, beginIndex);
-
-            return Internal::Slice(operand, axis, beginIndex, endIndex, name);
+            // range check only applies if both begin and end are from start or both are from end,
+            // otherwise we can't determine anything without knowing the actual dimensions
+            InvalidArgument("CNTK::Slice: endIndex (%d) - beginIndex (%d) must be a positive number", endIndex, beginIndex);
         }
+
+        if (axis.IsStaticAxis())
+            return Internal::Slice(operand, axis, beginIndex, endIndex, name);
 
         if (axis == Axis::DefaultBatchAxis())
             LogicError("Slice is currently unsupported along the batch axis");

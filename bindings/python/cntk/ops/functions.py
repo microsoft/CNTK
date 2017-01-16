@@ -360,6 +360,12 @@ class Function(cntk_py.Function):
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
 
+    def __getitem__(self, arg):
+        '''
+        Slicing of a Function result.
+        '''
+        return self.output.__getitem__(arg)
+
     def dump_signature(self, tag=None):
         f_name = self.name if self.name else tag if tag else 'Function'
         #if f_name == '':

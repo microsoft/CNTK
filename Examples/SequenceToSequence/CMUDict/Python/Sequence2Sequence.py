@@ -297,11 +297,14 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
         # TODO: change to Python slicing syntax
         # BUGBUG: This leads to a different result
         from cntk.ops.sequence import where, gather
-        is_sent_end = slice(hardmax(z), axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
+        zmax = hardmax(z)
+        #is_sent_end = slice(zmax, axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
+        is_sent_end = zmax[...,sentence_end_index] # use ... because with beam decoding, there will be more dimensions here
+        #is_sent_end = zmax[sentence_end_index:sentence_end_index+1, ..., :, 3:, :2, 3:10:2]
         valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(is_sent_end)
         z = gather(z, valid_frames)
 
-        return (z, is_sent_end, valid_frames)
+        return z   #(z, is_sent_end, valid_frames)
 
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
@@ -392,7 +395,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
                 #                               mb_valid[valid_reader.streams.labels]})
                 #e = decoder_output_model(mb_valid[valid_reader.streams.features], mb_valid[valid_reader.streams.labels])
                 e = decoder_output_model(mb_valid[valid_reader.streams.features])
-                print_sequences(e[0], i2w)
+                print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 debug_attention(decoder_output_model, mb_valid, valid_reader)                
