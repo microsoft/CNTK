@@ -194,8 +194,8 @@ def create_model():
     @Function
     def model_train(input, labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
-        #labels = alias(labels, 'label_sequence')
-        labels = sequence.slice(labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+        labels = alias(labels, 'label_sequence')
+        #labels = sequence.slice(labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
@@ -292,6 +292,9 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
     ## make a clone of the graph where the ground truth is replaced by the network output
     ## get a new model that uses the network output as input to the decoder
     #decoder_output_model = model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
+
+    drop_start = sequence.slice(Placeholder(name='labels'), 1, 0) # <s> A B C </s> --> A B C </s>
+    model.replace_placeholders({model.arguments[0]: drop_start.output})
 
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                            Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
