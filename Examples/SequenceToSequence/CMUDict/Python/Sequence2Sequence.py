@@ -293,12 +293,6 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
     ## get a new model that uses the network output as input to the decoder
     #decoder_output_model = model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
-    drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
-    model.replace_placeholders({model.arguments[0]: drop_start.output})
-
-    model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                           Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
-                           #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
@@ -307,6 +301,13 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
 
     ## criterion function must drop the <s> from the labels
     ## TODO: use same as in LU with filter
+    drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
+    model = model.clone(CloneMethod.share) # note: use separate clone(), otherwise model.arguments[0] below is not the right one
+    model = model.replace_placeholders({model.arguments[0]: drop_start.output})
+
+    model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+                           Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+                           #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
     @Function
     def criterion(input, labels):
         z = model(input, labels)
