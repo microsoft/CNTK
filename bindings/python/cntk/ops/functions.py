@@ -37,8 +37,6 @@ class Function(cntk_py.Function):
 
     If it has only one output, one can invoke Variable methods on it, which it
     will relay to its only output.
-
-    For all available methods, see :class:`Function`.
     '''
 
     # define input shapes, in-place
@@ -642,7 +640,7 @@ class UserFunction(Function):
     will relay to its only output.
 
     '''
-    def __init__(self, inputs, outputs, op_name, name=''):
+    def __init__(self, inputs, outputs, name=''):
         var_inputs = []
         # TODO: this should be done in Swig
         for i in inputs:
@@ -653,7 +651,7 @@ class UserFunction(Function):
             else:
                 raise ValueError('expected Variable, but got "%s"'%type(i))
 
-        super(Function, self).__init__(var_inputs, outputs, name, op_name)
+        super(Function, self).__init__(var_inputs, outputs, name)
 
     def _forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         '''
