@@ -181,11 +181,12 @@ def create_model():
     #with default_options(enable_self_stabilization=True):
     with default_options(enable_self_stabilization=False):
         @Function
-        def decoder(history, h0, c0):
+        def decoder(history, input):
+            encoder_output = encoder(input)
             r = history
             r = Stabilizer()(r)
             for i in range(num_layers):
-                r = RecurrenceFrom(LSTM(hidden_dim))(r, h0, c0) # :: r, h0, c0 -> h
+                r = RecurrenceFrom(LSTM(hidden_dim))(r, *encoder_output.outputs) # :: r, h0, c0 -> h
             r = Stabilizer()(r)
             r = Dense(label_vocab_dim)(r)
             return r
@@ -199,12 +200,11 @@ def create_model():
         # label sequence is only used in training as the history --> move this out to trainer function
 
         # Connect encoder and decoder
-        encoder_output = encoder(input)
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
         decoder_input = delayed_value(embed(label_sequence), initial_state=embed(sentence_start), dynamic_axes_like=label_sequence)
-        z = decoder(decoder_input, *encoder_output.outputs)
+        z = decoder(decoder_input, input)
         return z
         # OLD CODE which I may still need later:
         # Parameters to the decoder stack depend on the model type (use attention or not)
@@ -246,7 +246,7 @@ def create_model():
         # label sequence is only used in training as the history --> move this out to trainer function
 
         # Connect encoder and decoder
-        encoder_output = encoder(input)
+        #encoder_output = encoder(input)
 
         # During training we use the ground truth as input to the decoder. During model execution,
         # we need to redirect the output of the network back in as the input to the decoder. We do this by
@@ -273,7 +273,7 @@ def create_model():
         decoder_history_hook = Placeholder()
 
         decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(sentence_start), dynamic_axes_like=out_axis)
-        z = decoder(decoder_input, *encoder_output.outputs)
+        z = decoder(decoder_input, input)#*encoder_output.outputs)
 
         z.replace_placeholders({decoder_history_hook : hardmax(z).output})
 
