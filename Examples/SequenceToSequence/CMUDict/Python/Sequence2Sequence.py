@@ -199,7 +199,7 @@ def create_model():
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
-        decoder_input = delayed_value(embed(labels), initial_state=embed(sentence_start), dynamic_axes_like=labels)
+        decoder_input = delayed_value(embed(labels), initial_state=embed(sentence_start))
         z = decoder(decoder_input, input)
         return z
 
@@ -293,7 +293,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
     ## get a new model that uses the network output as input to the decoder
     #decoder_output_model = model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
-    drop_start = sequence.slice(Placeholder(name='labels'), 1, 0) # <s> A B C </s> --> A B C </s>
+    drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
     model.replace_placeholders({model.arguments[0]: drop_start.output})
 
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
@@ -333,9 +333,9 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
         errs = classification_error(z, label_sequence)
         return (ce, errs)
     # BUGBUG: above does not work; need to keep doing this, i.e. can't remove slicing yet
-    label_sequence = find_by_name(model, 'label_sequence')
-    ce = cross_entropy_with_softmax(model, label_sequence)
-    errs = classification_error(model, label_sequence)
+    postprocessed_labels = find_by_name(model, 'postprocessed_labels')
+    ce = cross_entropy_with_softmax(model, postprocessed_labels)
+    errs = classification_error(model, postprocessed_labels)
     crit = (ce, errs)
 
     arg_names = [arg.name for arg in ce.arguments]
