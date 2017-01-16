@@ -1,7 +1,7 @@
 dataDir: ../../Data
 tags:
      # Note: Sequence training is currently not supported on the CPU
-     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') and (device=='gpu'))
+     - bvt-s (build_sku == 'gpu') and (device=='gpu') and ((flavor == 'debug') ^ (os == 'windows'))
      - nightly-s (build_sku == 'gpu') and (device=='gpu')
 
 testCases:
