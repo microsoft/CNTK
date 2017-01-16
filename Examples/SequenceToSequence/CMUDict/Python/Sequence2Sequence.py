@@ -158,6 +158,7 @@ def create_model():
 
     # sentence-start symbol as a constant
     sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
+    sentence_end_index = vocab.index('</s>')
 
     # Encoder: (embedded_input*) --> (h0, c0)
     # Create multiple layers of LSTMs by passing the output of the i-th layer
@@ -262,8 +263,9 @@ def create_model():
         # create a new axis
         from cntk.utils import sanitize_input, typemap
         from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
+        from cntk.ops.sequence import where, gather
         factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(input))
-        indices = typemap(where)(sanitize_input(factors))
+        indices = where(factors)
         zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
         out_axis = zeroes
 
@@ -274,6 +276,14 @@ def create_model():
         z = decoder(decoder_input, *encoder_output.outputs)
 
         z.replace_placeholders({decoder_history_hook : hardmax(z).output})
+
+        # add another loop to cut at <s/>
+        # TODO: change to Python slicing syntax
+        # BUGBUG: This leads to a different result
+        #is_sent_end = slice(z, axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
+        #valid_frames = Recurrence(lambda x, h: (1-x) * h, initial_state=1)(is_sent_end)
+        ## BUGBUG? check parameter order of lambda
+        #z = gather(z, valid_frames)
 
         return z
 
@@ -364,7 +374,6 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
 
             # every N MBs evaluate on a test sequence to visually show how we're doing
             if mbs % sample_freq == 0:
-                print(13)
                 mb_valid = valid_reader.next_minibatch(minibatch_size)
                 
                 q = noop(mb_valid[valid_reader.streams.features])
@@ -542,6 +551,8 @@ def get_vocab(path):
 # Given a vocab and tensor, print the output
 def print_sequences(sequences, i2w):
     for s in sequences:
+        print([[np.max(w)] for w in s], sep=" ")
+    for s in sequences:
         print([i2w[np.argmax(w)] for w in s], sep=" ")
 
 # helper function to find variables by name
@@ -574,6 +585,11 @@ if __name__ == '__main__':
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
+
+    #L = Dense(500)
+    #L1 = L.clone(CloneMethod.clone)
+    #x = placeholder_variable()
+    #y = L(x) + L1(x)
 
     # repro for name loss
     from cntk import plus, as_block
