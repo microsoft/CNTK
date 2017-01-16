@@ -133,30 +133,8 @@ def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recu
 
     return (output_h, output_c)
 
-# note: non-att s2s model in layer style:
-# with default_options(go_backwards=True, enable_stabilization=Trye)
-# encoder = For(range(2), lambda: Recurrence(LSTM(250))) >> Fold(LSTM(500))
-# s0 = encoder(input)
-# s0 |> decoder_model
-# decoder_step = H' >> R2(G) >> R(F) >> D     # note: stateful w.r.t. n
-#              :: (s0, history*) -> (z*)      # history = label_delayed or hard_max(z_delayed); s0 = encoder state
-# decoder_model = Unfold(decoder_step, cond)  # for the case of decoding (training: decoder_step(s0, Delay(labels, initial_state='<s>'))
-#               :: (s0) -> (z*)
-# cond(x) = hard_max(x) == '</s>'
-# !!!TODO!!!: implement numpy syntax as a wrapper for slice(), __getitem__(self, arg), if isinstance(arg, slice)...
-#   then say cond(x) = hard_max(x)[index_of_EOS]  and  initial_state=embedding[index_of_BOS,:]
-#   This is so cool!! But not working for time and batch axis :(
-# where decoder has two LSTM layers F and G, and an embedding layer for output H
-# In decoding, use input to guide output len using where(2 like input)
-# Special processing:
-#  - H' = (identity, H)   # pass through s0, which is the actual input
-#  - R2(G) = R(G') with
-#    G'(x, dh1, dc1) = G(x, dh1', dc1) with dh1' = output of H' if first step else Delay(h1)
-#    R2(s0, history) = R(history, initial_state=s0)
-#  - Unfold(f)(x) = x |> (E >> R(f))  until cond(output)
-#    E broadcasts the initial state to the entire sequence, so that R can run over it
-#    Better: This R should be a special recurrence. It really is an Unfold().
-def create_model():
+# create the s2s model
+def create_model(): # :: (history*, input*) -> logP(w)*
     # Embedding: (input*) --> (embedded_input*)
     # Right now assumes shared embedding and shared vocab size.
     embed = Embedding(embedding_dim) if use_embedding else identity
@@ -230,7 +208,14 @@ def old_code():
 # train action         #
 ########################
 
-def UnfoldFrom(over, length_increase=1, initial_state=None, until_predicate=None):
+def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None):
+
+    import types
+    if isinstance(map_state_function, types.FunctionType):
+        map_state_function = Function(map_state_function)
+    if isinstance(until_predicate, types.FunctionType):
+        until_predicate = Function(until_predicate)
+
     # TODO: use @Function -- is that possible?
     #@Function
     # BUGBUG: fails with "SyntaxError: got multiple values for argument 'dynamic_axes_like'"
@@ -252,9 +237,9 @@ def UnfoldFrom(over, length_increase=1, initial_state=None, until_predicate=None
         # nearly the same as RecurrenceFrom()
         history_fwd = Placeholder(name='hook')
         prev_history = delayed_value(history_fwd, initial_state=initial_state)
-        z = over(prev_history, input1)
+        z = over_function(prev_history, input1)
         # map_state function
-        fb = hardmax(z)
+        fb = map_state_function(z)
         from cntk.utils import sanitize_input, typemap
         from _cntk_py import reconcile_dynamic_axis
         fb = typemap(reconcile_dynamic_axis)(sanitize_input(fb), sanitize_input(out_axis))
@@ -296,15 +281,15 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
     model = model_train
 
     @Function
-    #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-    def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-        # add another loop to cut at <s/>
-        @Function
-        def until_predicate(z):
-            return hardmax(z)[...,sentence_end_index] # use ... because with beam decoding, there will be more dimensions here
-        z = UnfoldFrom(decoder, length_increase=length_increase, initial_state=sentence_start, until_predicate=until_predicate)(input, dynamic_axes_like=input)
+    def model_greedy(input): # (input) --> (word_sequence)
 
-        return z   #(z, is_sent_end, valid_frames)
+        U = UnfoldFrom(decoder,
+                       map_state_function=hardmax,                                    # feedback goes through hardmax
+                       until_predicate=lambda z: hardmax(z)[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
+                       length_increase=length_increase, initial_state=sentence_start)
+        z = U(input, dynamic_axes_like=input)
+
+        return z
 
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))

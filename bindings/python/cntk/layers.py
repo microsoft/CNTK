@@ -373,19 +373,19 @@ def Delay(T=1, initial_state=default_override_or(0)):
 # This form is meant for use in sequence-to-sequence scenarios.
 # The difference to Recurrence() is that this returns a function that accepts the initial state as data argument(s).
 # Initial state consists of N arguments, matching 'over'.
-def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_state=False):
+def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False):
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
 
     import types
-    if isinstance(over, types.FunctionType):
+    if isinstance(over_function, types.FunctionType):
         UntestedBranchError("RecurrenceFrom() over a Python function")
-        over = Function(over)
+        over_function = Function(over_function)
 
     # get signature of cell
-    _, *prev_state_args = over.placeholders  # TODO: change to arguments?
+    _, *prev_state_args = over_function.placeholders  # TODO: change to arguments?
 
-    if len(over.outputs) != len(prev_state_args):
+    if len(over_function.outputs) != len(prev_state_args):
         raise TypeError('RecurrenceFrom: number of state variables inconsistent between create_placeholder() and recurrent block')
 
     # function that this layer represents
@@ -399,8 +399,8 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
         # BUGBUG: This fails ^^ due to current as_block() bugs; can only use Python function for now:
         prev_out_vars = [delayed_value(out_var, initial_state=init, time_step=-1 if go_backwards else +1) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
 
-        # apply the recurrent block ('over')
-        out = over(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
+        # apply the recurrent block ('over_function')
+        out = over_function(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
 
         # connect the recurrent dependency
         replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
@@ -428,26 +428,26 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
     # this creates the CNTK Function
     recurrence_from = Function(recurrence_from_functions[num_state_args-1])
 
-    return Block(recurrence_from, 'RecurrenceFrom', Record(over=over))
+    return Block(recurrence_from, 'RecurrenceFrom', Record(over_function=over_function))
 
 # Recurrence() -- run a block recurrently over a time sequence
 # This form is meant for use in regular recurrent-model scenarios.
 # Initial_state must be a constant (or at least have known shape). To pass initial_state as a data input, use RecurrenceFrom() instead.
 # TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
-def Recurrence(over, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
+def Recurrence(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
 
     go_backwards  = get_default_override(Recurrence, go_backwards=go_backwards)
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
     import types
-    if isinstance(over, types.FunctionType):
-        over = Function(over)
+    if isinstance(over_function, types.FunctionType):
+        over_function = Function(over_function)
 
     # get signature of cell
-    _, *prev_state_args = over.placeholders  # TODO: change to arguments?
+    _, *prev_state_args = over_function.placeholders  # TODO: change to arguments?
 
-    if len(over.outputs) != len(prev_state_args):
+    if len(over_function.outputs) != len(prev_state_args):
         raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
 
     # initial state can be a single value or one per state variable (if more than one, like for LSTM)
@@ -458,14 +458,14 @@ def Recurrence(over, go_backwards=default_override_or(False), initial_state=defa
         initial_state = tuple(initial_state for out_var in prev_state_args)
 
     # express it w.r.t. RecurrenceFrom
-    recurrence_from = RecurrenceFrom(over, go_backwards, return_full_state) # :: (x, state seq) -> (new state seq)
+    recurrence_from = RecurrenceFrom(over_function, go_backwards, return_full_state) # :: (x, state seq) -> (new state seq)
 
     # function that this layer represents
     @Function
     def recurrence(x):
         return recurrence_from(x, *initial_state)
 
-    return Block(recurrence, 'Recurrence', Record(over=over))
+    return Block(recurrence, 'Recurrence', Record(over_function=over_function))
 
 # Fold -- final state of a Recurrence()
 def Fold(over, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
