@@ -270,12 +270,17 @@ def create_model():
         out_axis = zeroes
 
         # TODO: express this as UnfoldFrom()
-        decoder_history_hook = Placeholder()
+        input1 = Placeholder(name='input1')
+        decoder_history_hook = Placeholder(name='hook')
 
         decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(sentence_start), dynamic_axes_like=out_axis)
-        z = decoder(decoder_input, input)#*encoder_output.outputs)
+        z = decoder(decoder_input, input1)#*encoder_output.outputs)
+        z.dump_signature()
 
         z.replace_placeholders({decoder_history_hook : hardmax(z).output})
+        z.dump_signature()
+        z = z.clone(CloneMethod.share, {input1 : input})
+        z.dump_signature('z')
 
         # add another loop to cut at <s/>
         # TODO: change to Python slicing syntax
