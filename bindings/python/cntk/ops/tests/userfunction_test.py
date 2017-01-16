@@ -17,9 +17,9 @@ from cntk.learner import *
 from cntk.ops.functions import UserFunction
 
 class Plus3Func(UserFunction):
-    def __init__(self, in1, name='f1'):
-        outputs = [output_variable(in1.shape, in1.dtype, in1.dynamic_axes)]
-        super(Plus3Func, self).__init__([in1], outputs, op_name='Plus3Func',
+    def __init__(self, arg, name='f1'):
+        outputs = [output_variable(arg.shape, arg.dtype, arg.dynamic_axes)]
+        super(Plus3Func, self).__init__([arg], outputs, 
                 name=name)
 
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
@@ -129,10 +129,10 @@ def test_ext_train():
 def test_ext_backpropstate(payload):
 
     class TestBackPropState(UserFunction):
-        def __init__(self, in1, payload, name='f1'):
-            outputs = [output_variable(in1.shape, in1.dtype, in1.dynamic_axes)]
+        def __init__(self, arg, payload, name='f1'):
+            outputs = [output_variable(arg.shape, arg.dtype, arg.dynamic_axes)]
             self.payload = payload
-            super(TestBackPropState, self).__init__([in1], outputs, op_name='test')
+            super(TestBackPropState, self).__init__([arg], outputs)
 
         def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
             for k in outputs:
@@ -165,3 +165,67 @@ def test_ext_backpropstate(payload):
     i = 0
     input_data = np.random.rand(dim)
     trainer.train_minibatch([input_data])
+
+class LambdaFunc(UserFunction):
+    def __init__(self, 
+            arg, 
+            when=lambda arg: True, 
+            execute=lambda arg:print(arg), 
+            name=''):
+        self.when = when
+        self.execute = execute
+        outputs = [output_variable(arg.shape, arg.dtype, arg.dynamic_axes)]
+        super(LambdaFunc, self).__init__([arg], outputs, 
+                name=name)
+
+    def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
+        if self.when(arguments):
+            self.execute(arguments)
+
+        for k in outputs:
+            outputs[k] = arguments[0]
+            break
+
+        return None, outputs
+
+    def backward(self, state, root_gradients, variables):
+        for rk, rv in root_gradients.items():
+            break
+        for var_key in variables:
+            break
+
+        variables[var_key] = rv
+
+
+def test_ext_lambdafunc():
+    dim = 4
+
+    class CallbackCounter(object):
+        def __init__(self):
+            self.count = 0
+        def inc(self, arg):
+            self.count += 1
+
+    cb = CallbackCounter()
+
+    p = parameter(shape=(dim,), init=1)
+    i = input_variable(dim, needs_gradient=True, name='i_var')
+    k = i*p
+    m = LambdaFunc(k,
+            when=lambda arg: np.sum(arg)>1,
+            execute=cb.inc)
+    z = m+0
+
+    momentum_time_constant = momentum_as_time_constant_schedule(1100)
+    lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
+    trainer = Trainer(z, z+0, z+0, \
+            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant)])
+
+    i = 0
+    input_data = 0.1 * np.ones(dim) 
+    trainer.train_minibatch([input_data])
+    assert cb.count == 0
+
+    input_data = 0.3 * np.ones(dim) 
+    trainer.train_minibatch([input_data])
+    assert cb.count == 1
