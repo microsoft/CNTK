@@ -18,7 +18,7 @@ from cntk.graph import find_by_name, find_all_with_name
 from cntk.layers import *
 from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter
-from attention import create_attention_augment_hook
+#from attention import create_attention_augment_hook
 
 ########################
 # variables and stuff  #
@@ -209,6 +209,21 @@ def old_code():
 ########################
 
 def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None):
+    '''
+    This layer implements an unfold() operation. It creates a function that, starting with a seed input,
+    applies 'over_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
+    it may have this form:
+       `result = f(... f(f([g(input), initial_state])) ... )`
+    or this form:
+       `result = f(g(input), ... f(g(input), f(g(input), initial_state)) ... )`
+    where `f` is `over_function`.
+    An example use of this is sequence-to-sequence decoding, where `g(input)` is the sequence encoder,
+    `initial_state` is the sentence-start symbol, and `f` is the decoder. The first
+    of the two forms above is a plain sequence-to-sequence model where encoder output
+    is the start state for the output recursion.
+    The second form is an attention-based decoder, where the encoded input affects every application
+    of `f` differently.
+    '''
 
     import types
     if isinstance(map_state_function, types.FunctionType):
@@ -216,7 +231,6 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
     if isinstance(until_predicate, types.FunctionType):
         until_predicate = Function(until_predicate)
 
-    # TODO: use @Function -- is that possible?
     #@Function
     # BUGBUG: fails with "SyntaxError: got multiple values for argument 'dynamic_axes_like'"
     def unfold_from(input, dynamic_axes_like):
@@ -238,8 +252,9 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
         history_fwd = Placeholder(name='hook')
         prev_history = delayed_value(history_fwd, initial_state=initial_state)
         z = over_function(prev_history, input1)
-        # map_state function
+        # apply map_state_function
         fb = map_state_function(z)
+        # apply dynamic_axes_like
         from cntk.utils import sanitize_input, typemap
         from _cntk_py import reconcile_dynamic_axis
         fb = typemap(reconcile_dynamic_axis)(sanitize_input(fb), sanitize_input(out_axis))
