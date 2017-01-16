@@ -191,11 +191,9 @@ def create_model():
             r = Dense(label_vocab_dim)(r)
             return r
 
+    # note: the labels must not contain the initial <s>
     @Function
-    def model_train(input, labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-
-        labels = alias(labels, 'label_sequence')
-        #labels = sequence.slice(labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+    def model_train(input, labels): # (input, labels) --> (word_sequence)
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
