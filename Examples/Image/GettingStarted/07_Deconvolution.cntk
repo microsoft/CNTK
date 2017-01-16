@@ -19,13 +19,14 @@ trainNetwork = {
     action = "train"
     
     BrainScriptNetworkBuilder = {
+		cMap = 1
         model = inputFeatures => {
-            c1      = ConvolutionalLayer {16, (5:5), pad = true}(inputFeatures)
+            c1      = ConvolutionalLayer {cMap, (5:5), pad = true}(inputFeatures)
             r1      = ReLU(c1)
-            p1      = MaxPoolingLayer {(2:2), stride=(2:2)}(r1)
-            unpool1 = MaxUnpooling(p1, r1, (2:2:1), stride=(2:2:1), autoPadding=(false:false:false), lowerPad=0, upperPad=0)
-            W       = ParameterTensor{(1:5:5:16), init="uniform", initValueScale=0.1, initOnCPUOnly=true}
-            deconv  = Convolution(W, unpool1, (5:5:1), mapDims=16, stride=(1:1), sharing=(true:true:true), autoPadding=(false:false:false), lowerPad=(2:2:0), upperPad=(2:2:0), deconv=true)
+            p1      = MaxPoolingLayer {(4:4), stride=(4:4)}(r1)
+            unpool1 = MaxUnpooling(p1, r1, (4:4:1), stride=(4:4:1), autoPadding=(false:false:false), lowerPad=0, upperPad=0)
+            W       = ParameterTensor{(1:5:5:cMap), init="uniform", initValueScale=0.1, initOnCPUOnly=true}
+            deconv  = Convolution(W, unpool1, (5:5:1), mapDims=cMap, stride=(1:1), sharing=(true:true:true), autoPadding=(false:false:false), lowerPad=(2:2:0), upperPad=(2:2:0), deconv=true)
         }.deconv
 
         # inputs
@@ -62,7 +63,7 @@ trainNetwork = {
     SGD = {
         epochSize = 60000
         minibatchSize = 64
-        maxEpochs = 2
+        maxEpochs = 3
         
         learningRatesPerSample = 0.00015
         momentumAsTimeConstant = 600
@@ -102,12 +103,11 @@ writeResults = {
     action = "write"
     minibatchSize = 1
     outputPath = "$outputDir$/output.txt"
-    #outputNodeNames = "z"
     
     reader = {
         randomize = False
         readerType = "CNTKTextFormatReader"
-        file = "$DataDir$/Dummy.txt"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
         input = {
             features = { dim = 784 ; format = "dense" }
             labels =   { dim = 10  ; format = "dense" }
