@@ -188,10 +188,14 @@ def dynamic_axes(self):
             void *cntk_key = 0 ;
             int res = SWIG_ConvertPtr(py_key, &cntk_key, swig_type,  0);
             if (!SWIG_IsOK(res)) {
-                SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to typeid(T)::name()");
+                std::string s("cannot convert key of dictionary to ");
+                s+=typeid(T).name();
+                SWIG_exception_fail(SWIG_ArgError(res), s.c_str());
             }
             if (!cntk_key) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to typeid(T)::name()");
+                std::string s("invalid null reference when converting key of dictionary to ");
+                s+=typeid(T).name();
+                SWIG_exception_fail(SWIG_ValueError, s.c_str());
             }
 
             T* cntk_var = reinterpret_cast<T*>(cntk_key);
