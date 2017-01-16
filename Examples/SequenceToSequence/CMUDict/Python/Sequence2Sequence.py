@@ -192,16 +192,14 @@ def create_model():
             return r
 
     @Function
-    def model_train(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+    def model_train(input, labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
-        # TODO: drop this, move into criterion nodes and/or train() function
-        # Drop the sequence start token from the label, for decoder training
-        label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
-        # TODO: move this out to trainer function
+        #labels = alias(labels, 'label_sequence')
+        labels = sequence.slice(labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
-        decoder_input = delayed_value(embed(label_sequence), initial_state=embed(sentence_start), dynamic_axes_like=label_sequence)
+        decoder_input = delayed_value(embed(labels), initial_state=embed(sentence_start), dynamic_axes_like=labels)
         z = decoder(decoder_input, input)
         return z
 
@@ -209,28 +207,8 @@ def create_model():
     #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
     def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
 
-        # TODO: drop this, move into criterion nodes and/or train() function
-        # Drop the sequence start token from the label, for decoder training
-        #label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
-        # label sequence is only used in training as the history --> move this out to trainer function
-
-        # Connect encoder and decoder
-        #encoder_output = encoder(input)
-
-        # During training we use the ground truth as input to the decoder. During model execution,
-        # we need to redirect the output of the network back in as the input to the decoder. We do this by
-        # setting up a 'hook' whose output will be changed during model execution
-        # decoder_history_hook gets replaced by the feedback loop
-
-        # The input to the decoder always starts with the special label sequence start token.
-        # Then, use the previous value of the label sequence (for training) or the output (for execution).
-        # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
-        # For that reason, we reconcile the dynamic axis, which for now can be done by adding a dummy zero to the input.
-        # This will get hidden in Unfold(), and also streamlined.
-        #decoder_history_hook = alias(label_sequence, name='decoder_history_hook')
-
-        # not right yet--need to split off the data inputs
         def UnfoldFrom(over, length_increase=1, initial_state=None):
+            # TODO: use @Function -- is that possible?
             def unfold_from(input, dynamic_axes_like):
                 # create a new axis
                 out_axis = dynamic_axes_like
@@ -329,17 +307,29 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
     # do some hooks so that we can direct data to the right place
     label_sequence = find_by_name(model, 'label_sequence')
 
-    # Criterion nodes
-    # TODO: change to @Function to ensure parameter order (William seemed to have worked around it by naming them)
-    arg_names = [arg.name for arg in model.arguments]
-
+    ## Criterion nodes
+    ## TODO: change to @Function to ensure parameter order (William seemed to have worked around it by naming them)
+    #arg_names = [arg.name for arg in model.arguments]
+    #
+    ## criterion function must drop the <s> from the labels
+    ## TODO: use same as in LU with filter
+    #@Function
+    #def criterion(input, labels):
+    #    # Drop the sequence start token from the label, for decoder training
+    #    label_sequence = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
+    #    z = model(input, label_sequence)
+    #    ce = cross_entropy_with_softmax(z, label_sequence)
+    #    errs = classification_error(z, label_sequence)
+    #    return (ce, errs)
+    #
+    #criterion.outputs[0].owner.dump()
+    #label_sequence = model.arguments[1]
+    #label_sequence = sequence.slice(label_sequence, 1, 0) 
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
 
     arg_names = [arg.name for arg in ce.arguments]
     ce.dump()
-
-    arg_names = [arg.name for arg in errs.arguments]
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
@@ -450,7 +440,9 @@ def test(reader, model, num_minibatches=None):
     # we use the test_minibatch() function so need to setup a trainer
     label_sequence = sequence.slice(find_arg_by_name('raw_labels', model), 1, 0)
     lr = learning_rate_schedule(0.007, UnitType.sample)
-    momentum = momentum_as_time_constant_schedule(1100)
+    momentum = momentum_as_time_constant_schedule(1100) # BUGBUG: use Evaluator
+
+    # BUGBUG: Must do the same as in train(), drop the first token
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
     trainer = Trainer(model, ce, errs, [momentum_sgd(model.parameters, lr, momentum)])
