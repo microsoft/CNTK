@@ -9,30 +9,9 @@ import os
 import numpy as np
 from cntk import load_model
 from cntk.ops import combine
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, FULL_DATA_SWEEP
+from PIL import Image
 
-#####################################################
-#####################################################
-# helpers to print all node names
-def dfs_walk(node, visited):
-    if node in visited:
-        return
-    visited.add(node)
-    print("visiting %s"%node.name)
-    if hasattr(node, 'root_function'):
-        node = node.root_function
-        for child in node.inputs:
-            dfs_walk(child, visited)
-    elif hasattr(node, 'is_output') and node.is_output:
-        dfs_walk(node.owner, visited)
-
-def print_all_node_names(model_file):
-    print("loading model...")
-    loaded_model = load_model(model_file)
-    print("walking tree...")
-    dfs_walk(loaded_model, set())
-#####################################################
-#####################################################
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -40,63 +19,56 @@ data_path  = os.path.join(abs_path, "..", "DataSets", "MNIST")
 model_path = os.path.join(abs_path, "Output", "Models")
 
 
-# Define the reader for both training and evaluation action.
-def create_reader(path, is_training, input_dim, label_dim):
-    return cntk.io.MinibatchSource(CTFDeserializer(path, StreamDefs(
-        features  = StreamDef(field='features', shape=input_dim),
-        labels    = StreamDef(field='labels',   shape=label_dim)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+# Helper to save array as grayscale image
+def save_as_png(val_array, img_file_name):
+    img_array = val_array.reshape((28, 28))
+    img_array = np.clip(img_array, 0, img_array.max())
+    img_array *= 255.0 / img_array.max()
+    img_array = np.rint(img_array).astype('uint8')
 
+    im = Image.fromarray(img_array)
+    im.save(img_file_name)
 
-def eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects):
-    # load model and pick desired node as output
-    loaded_model  = load_model(model_file)
-    node_in_graph = loaded_model.find_by_name(node_name)
-    output_nodes  = combine([node_in_graph.owner])
-
-    # evaluate model and get desired node output
-    features_si = minibatch_source['features']
-    with open(output_file, 'wb') as results_file:
-        for i in range(0, num_objects):
-            mb = minibatch_source.next_minibatch(1)
-            output = output_nodes.eval(mb[features_si])
-
-            # write results to file
-            out_values = output[0,0].flatten()
-            np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
-    return
 
 if __name__ == '__main__':
-    #import pdb
-    #pdb.set_trace()
+    num_objects_to_eval = 5
 
-    # define location of model and data and check existence
-    model_file  = os.path.join(model_path, "07_Deconvolution.model")
-    loaded_model = load_model(model_file)
-
-    data_file    = os.path.join(data_path, "Dummy.txt")
-    #os.chdir(os.path.join(base_folder, "..", "DataSets", "grocery"))
+    # define location of output, model and data and check existence
+    output_file = os.path.join(abs_path, "Output", "imageAutoEncoder.txt")
+    model_file = os.path.join(model_path, "07_Deconvolution.model")
+    data_file = os.path.join(data_path, "Test-28x28_cntk_text.txt")
     if not (os.path.exists(model_file) and os.path.exists(data_file)):
-        print("Cannot find required data or model.")
+        print("Cannot find required data or model. "
+              "Please get the MNIST data set and run 'cntk configFile=07_Deconvolution.cnkt' to create the model.")
         exit(0)
 
-    # use this to print all node names of the model (and knowledge of the model to pick the correct one)
-    print("Printing node names...")
-    print_all_node_names(model_file)
-
     # create minibatch source
-    image_height = 28
-    image_width  = 28
-    num_channels = 1
-    input_dim = image_height * image_width * num_channels
-    num_output_classes = 10
-    minibatch_source = create_reader(data_file, False, input_dim, num_output_classes)
+    minibatch_source = MinibatchSource(CTFDeserializer(data_file, StreamDefs(
+        features  = StreamDef(field='features', shape=(28*28)),
+        labels    = StreamDef(field='labels',   shape=10)
+    )), randomize=False, epoch_size = FULL_DATA_SWEEP)
 
-    # use this to get 28 * 28 output features from the decoder
-    node_name = "z.x._._"
-    output_file = os.path.join(abs_path, "Output", "decoderOutput.txt")
+    # load model and pick desired nodes as output
+    loaded_model = load_model(model_file)
+    output_nodes = combine([loaded_model.find_by_name('f1').owner, loaded_model.find_by_name('z').owner])
 
-    # evaluate model and write out the desired layer output
-    eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects=3)
+    # evaluate model save output
+    features_si = minibatch_source['features']
+    with open(output_file, 'wb') as results_file:
+        for i in range(0, num_objects_to_eval):
+            mb = minibatch_source.next_minibatch(1)
+            raw_dict = output_nodes.eval(mb[features_si])
+            output_dict = {}
+            for key in raw_dict.keys(): output_dict[key.name] = raw_dict[key]
+
+            decoder_input = output_dict['f1']
+            decoder_output = output_dict['z']
+            in_values = (decoder_input[0,0].flatten())[np.newaxis]
+            out_values = (decoder_output[0,0].flatten())[np.newaxis]
+
+            # write results as text and png
+            np.savetxt(results_file, out_values, fmt="%.6f")
+            save_as_png(in_values,  "%s_%s_input.png"  % (output_file, i))
+            save_as_png(out_values, "%s_%s_output.png" % (output_file, i))
 
     print("Done. Wrote output to %s" % output_file)

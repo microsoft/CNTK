@@ -325,7 +325,7 @@ namespace CNTK
         return (int)(axis.StaticAxisIndex() + 1);
     }
 
-    inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
+    inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape, bool transpose)
     {
         NDShape kernelShape = convolutionMapShape.SubShape(0, operandShape.Rank());
         auto outputMapCount = convolutionMapShape.SubShape(kernelShape.Rank());
@@ -333,7 +333,15 @@ namespace CNTK
         for (size_t i = 0; i < outputMapCount.Rank(); ++i)
             paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
 
-        return{ paddedOutputMapCount, kernelShape };
+		if (transpose) {
+			size_t kernelRank = kernelShape.Rank();
+			NDShape transposedKernel(kernelRank);
+			for (size_t i = 0; i < kernelRank; ++i)
+				transposedKernel[kernelRank - i - 1] = kernelShape[i];
+			kernelShape = transposedKernel;
+		}
+
+		return{ paddedOutputMapCount, kernelShape };
     }
 
     template <typename SourceElementType, typename TargetElementType>

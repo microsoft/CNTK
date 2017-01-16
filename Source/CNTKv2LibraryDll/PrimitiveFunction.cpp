@@ -505,7 +505,7 @@ namespace CNTK
                             InvalidArgument("The convolution map should have at least as many axes as the shape of the input it operates on!");
 
                         NDShape outputMapCount, kernelShape;
-                        std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape());
+                        std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape(), transpose);
                         auto originalKernelShape = kernelShape;
                         outputShape = ConvolutionOpOutputShape(op, inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, inferDimensions);
                         if (originalKernelShape != kernelShape)
