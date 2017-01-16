@@ -5,7 +5,7 @@
 
 import math
 from . import cntk_py
-from .utils import typemap
+from .utils import typemap, NDArrayView
 from enum import Enum, unique
 import numpy as np
 
@@ -99,8 +99,7 @@ class Learner(cntk_py.Learner):
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
         '''
-        from .utils import _create_NDArrayView_from_NumPy
-        var_nd_map = { var: _create_NDArrayView_from_NumPy(val) for var, val in
+        var_nd_map = { var: NDArrayView.from_dense(val) for var, val in
                 gradient_values.items() }
 
         return super(Learner, self).update(var_nd_map, training_sample_count)

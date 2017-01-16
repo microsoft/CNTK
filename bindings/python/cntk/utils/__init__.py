@@ -288,7 +288,7 @@ def sanitize_value(shape, value, dtype, device):
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
         cntk_dtype = sanitize_dtype_cntk(dtype)
-        ndav = _create_NDArrayView(shape, cntk_dtype, device)
+        ndav = NDArrayView(shape, cntk_dtype, device)
     else:
         np_dtype = sanitize_dtype_numpy(dtype)
         if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
@@ -297,7 +297,7 @@ def sanitize_value(shape, value, dtype, device):
             else:
                 value = np.asarray(value, dtype=np_dtype)
 
-        ndav = _create_NDArrayView_from_NumPy(value, device)
+        ndav = NDArrayView.from_dense(value, device)
 
     return ndav
 
@@ -457,22 +457,109 @@ def _ones_like(batch, precision):
     '''
     return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
 
+class NDArrayView(cntk_py.NDArrayView):
+    '''
+    Creates an empty dense internal data representation of a :class:`Value` object.
+    To create an NDArrayView from a NumPy array, use :meth:`from_dense`.
+    To create an NDArrayView from a sparse array, use :meth:`from_csr`.
 
-def _create_NDArrayView(shape, data_type=cntk_py.DataType_Float, device=None):
-    shape = sanitize_shape(shape)
-    if device is None:
-        device = use_default_device()
-    # FIXME only dense supported so far
-    view = cntk_py.NDArrayView(data_type, cntk_py.StorageFormat_Dense, shape,
-            device)
-    return view
+    Args:
+        shape (tuple): shape of the data
+        data_type (np.float32, np.float64): data type of the data
+        device (:class:`~cntk.device.DeviceDescriptor`): device this value should be put
+         on
+    '''
+
+    def __init__(self, shape, data_type, device=None):
+        shape = sanitize_shape(shape)
+        data_type = sanitize_dtype_cntk(data_type)
+        if device is None:
+            device = use_default_device()
+        super(NDArrayView, self).__init__(data_type, cntk_py.StorageFormat_Dense, shape,
+                device)
+
+    @staticmethod
+    @typemap
+    def from_dense(np_array, device=None, read_only=False):
+        '''
+        Create a :class:`NDArrayView` instance from a NumPy array.
+
+        Args:
+            np_array (numpy.ndarray): NumPy array
+            device (:class:`~cntk.device.DeviceDescriptor`): device this value should be put
+             on
+            read_only (bool): whether the data can be modified or not
+
+        Returns:
+            :class:`NDArrayView` instance
+        '''
+        if not isinstance(np_array, np.ndarray):
+            raise TypeError('data must be of type numpy.ndarray'
+                    ' and not %s'%type(np_array))
+
+        if not _is_c_contiguous(np_array):
+            raise ValueError('supplied data is not C contiguous; use '
+                    'np.ascontiguousarray (slow) or rearrange your data/computation')
+
+        if device is None:
+            device = use_default_device()
+
+        return cntk_py.NDArrayView(np_array, device, read_only)
+
+    @staticmethod
+    @typemap
+    def from_csr(csr_array, device=None, read_only=False):
+        '''
+        Create a :class:`NDArrayView` instance from a SciPy sparse array in CSR
+        format.
+
+        Args:
+            csr_array (scipy.sparse.csr.csr_matrix): SciPy sparse matrix in CSR
+             format
+            device (:class:`~cntk.device.DeviceDescriptor`): device this value should be put
+             on
+            read_only (bool): whether the data can be modified or not
+
+        Returns:
+            :class:`NDArrayView` instance
+        '''
+        if not sparse.isspmatrix_csr(csr_array):
+            raise TypeError("only CSR is supported as of now. Please "
+                    "convert your data using 'tocsr()'")
+
+        if device is None:
+            device = use_default_device()
+
+        return cntk_py.NDArrayView(csr_array.shape, csr_array.data,
+                csr_array.indptr, csr_array.indices, device, read_only)
+
+    @staticmethod
+    @typemap
+    def from_data(data, device=None, read_only=False):
+        '''
+        Create a :class:`NDArrayView` instance from a NumPy or SciPy sparse array in CSR
+        format.
+
+        Args:
+            data (numpy.ndarray or scipy.sparse.csr.csr_matrix): data
+            device (:class:`~cntk.device.DeviceDescriptor`): device this value should be put
+             on
+            read_only (bool): whether the data can be modified or not
+
+        Returns:
+            :class:`NDArrayView` instance
+        '''
+        if isinstance(data, np.ndarray):
+            ndav = NDArrayView.from_dense(data, device)
+        elif sparse.issparse(data):
+            ndav = NDArrayView.from_csr(data, device)
+        else:
+            raise TypeError('data type "%s" is not supported. Please '
+                    'provide the data as a Python list of NumPy arrays '
+                    'or Scipy CSR matrices.'%type(data))
 
 
-def _create_NDArrayView_from_NumPy(nd, device=None):
-    if device is None:
-        device = use_default_device()
-
-    return cntk_py.NDArrayView(nd, device, False)
+        return ndav
 
 class Value(cntk_py.Value):
     '''
@@ -502,11 +589,11 @@ class Value(cntk_py.Value):
 
         if shape and dtype:
             # FIXME is this needed?
-            ndav = _create_NDArrayView(shape, dtype, device)
+            ndav = NDArrayView(shape, dtype, device)
 
         elif batch:
             if isinstance(batch, np.ndarray):
-                ndav = _create_NDArrayView_from_NumPy(batch, device)
+                ndav = NDArrayView.from_dense(batch, device)
             else:
                 ndav = batch
 
@@ -516,18 +603,37 @@ class Value(cntk_py.Value):
             super(Value, self).__init__(ndav)
 
     @staticmethod
+    def _as_best_data_type(var, sample):
+        if isinstance(sample, list):
+            sample = np.asarray(sample, dtype=var.dtype)
+            if sample.dtype != var.dtype:
+                raise ValueError('could not convert sample data to '
+                        'NumPy array')
+
+        if np.issubdtype(sample.dtype, int):
+            sample = sample.astype(var.dtype)
+        elif sample.dtype not in (np.float32, np.float64):
+            raise ValueError('only integer, float32 and float64 are supported, '
+                    'you gave %s'%sample.dtype)
+        else:
+            sample = sample.astype(var.dtype)
+
+        return sample
+
+    @staticmethod
     @typemap
-    def create(var, batch, seq_starts=None, device=None, read_only=False):
+    def create(var, data, seq_starts=None, device=None, read_only=False):
         '''
         Creates a :class:`Value` object.
 
         Args:
-            var (:class:`~cntk.ops.variables.Variable`): input variable into which
-             ``batch`` is passed
-            batch: batch input.
+            var (:class:`~cntk.ops.variables.Variable`): variable into which
+             ``data`` is passed
+            data: data for `var`
              It can be:
               * a single NumPy array denoting the full minibatch
               * a list of NumPy arrays or SciPy sparse CSR matrices
+              * a single NumPy array denoting one parameter or constant
             seq_starts (list of `bool`s or None): if None, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -543,18 +649,27 @@ class Value(cntk_py.Value):
         if not isinstance(var, cntk_py.Variable):
             raise TypeError('Variable expected, but got "%s"'%type(var))
 
-        if isinstance(batch, np.ndarray):
+        cpu_dev = cpu()
+
+        if not var.dynamic_axes:
+            # No dynamic axes -> no batch
+            data = Value._as_best_data_type(var, data)
+            ndav = NDArrayView.from_data(data, cpu_dev)
+
+            return cntk_py.Value(ndav)
+
+        if isinstance(data, np.ndarray):
             # The outermost axis has to be Python list. If the user passes a
             # full minibatch as one NumPy array, we have to convert it.
-            if batch.dtype == object:
+            if data.dtype == object:
                 raise ValueError('dtype object is not supported. If this is a batch '
                         'of sequences, you need to pass them as a pure-Python list '
                         'of NumPy arrays')
 
             # FIXME if not seq_starts: directly pass it to Value constructor
-            batch = list(np.atleast_1d(batch))
+            data = list(data)
 
-        if not isinstance(batch, list):
+        if not isinstance(data, list):
             raise ValueError('batch has to be a list of NumPy arrays or '
                     'SciPy CSR matrices')
 
@@ -562,43 +677,9 @@ class Value(cntk_py.Value):
 
         # NDArrayViews are all created on CPU. The Value object later then will
         # move it to the requested device.
-        cpu_dev = cpu()
-        for sample in batch:
-            if isinstance(sample, list):
-                sample = np.asarray(sample, dtype=var.dtype)
-                if sample.dtype != var.dtype:
-                    raise ValueError('could not convert sample data to '
-                            'NumPy array')
-
-            if isinstance(sample, np.number):
-                sample = np.asarray(sample)
-
-            if not (isinstance(sample, np.ndarray) or sparse.issparse(sample)):
-                raise ValueError('sample type "%s" is not supported. Please '
-                        'provide the data as a Python list of NumPy arrays '
-                        'or Scipy CSR matrices.'%type(sample))
-
-            if np.issubdtype(sample.dtype, int):
-                sample = sample.astype(var.dtype)
-            elif sample.dtype not in (np.float32, np.float64):
-                raise ValueError('only integer, float32 and float64 are supported, '
-                        'you gave %s'%sample.dtype)
-            else:
-                sample = sample.astype(var.dtype)
-
-            if isinstance(sample, np.ndarray):
-                if not _is_c_contiguous(sample):
-                    warnings.warn('supplied data is not C contiguous; rearrange your data/computation to avoid this', RuntimeWarning)
-                    sample = np.ascontiguousarray(sample)
-                ndav = _create_NDArrayView_from_NumPy(sample, cpu_dev)
-
-            elif sparse.issparse(sample):
-                if not sparse.isspmatrix_csr(sample):
-                    raise ValueError("only CSR is supported as of now. Please "
-                            "convert your data using 'tocsr()'")
-
-                ndav = cntk_py.NDArrayView(sample.shape, sample.data,
-                        sample.indptr, sample.indices, cpu_dev, False)
+        for sample in data:
+            sample = Value._as_best_data_type(var, sample)
+            ndav = NDArrayView.from_data(sample, cpu_dev)
 
             list_of_ndavs.append(ndav)
 

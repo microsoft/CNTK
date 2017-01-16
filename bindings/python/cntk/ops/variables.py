@@ -2,7 +2,7 @@ import numpy as np
 from cntk import cntk_py
 from ..tensor import TensorOpsMixin
 from ..utils import typemap, sanitize_precision, sanitize_value, \
-        sanitize_shape, sanitize_dtype_cntk, _create_NDArrayView_from_NumPy
+        sanitize_shape, sanitize_dtype_cntk, NDArrayView
 
 class VariableMixin(object):
     '''
@@ -182,7 +182,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     @value.setter
     def value(self, val):
         if isinstance(val, np.ndarray):
-            ndarray = _create_NDArrayView_from_NumPy(val.astype(self.dtype))
+            ndarray = NDArrayView.from_dense(val.astype(self.dtype))
             super(Parameter, self).set_value(ndarray)
         elif isinstance(val, cntk_py.NDArrayView):
             super(Parameter, self).set_value(val)
