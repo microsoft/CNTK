@@ -304,7 +304,7 @@ Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT7688.tmp'
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT2EF2.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -313,7 +313,7 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT7688.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT2EF2.tmp'
 Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github6/CNTK/x64/release
@@ -462,7 +462,7 @@ Current working directory is now: d:/TestPreparation/Speech/AN4Corpus/v0
 reading script file ./glob_0000.scp ... 948 entries
 total 132 state names in state list ./state.list
 htkmlfreader: reading MLF file ./glob_0000.mlf ... total 948 entries
-biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNTEEF5.tmp'
+biggrowablevectorarray: creating disk backup store at 'F:\cygwin64\tmp\CNT6FE4.tmp'
 minibatchframesourcemulti: reading 1 feature sets and 1 label sets..................................................................................................
 minibatchframesourcemulti: read label set 0: 129 classes
 
@@ -471,7 +471,7 @@ biggrowablevectorarray: disk backup store created, 252734 frames, 37748736 bytes
 minibatchiterator: epoch 0: frames [0..500] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 recoverblock: recovering feature block 0 [0..65535)
 minibatchiterator: epoch 1: frames [500..1000] (first utterance at frame 500), data subset 0 of 1, with 1 datapasses
-biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNTEEF5.tmp'
+biggrowablevectorarray: deleted disk backup store at 'F:\cygwin64\tmp\CNT6FE4.tmp'
 Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Current working directory: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 Executable path: C:/repo/cntk_github6/CNTK/x64/release
@@ -1247,7 +1247,7 @@ htkmlfreader: reading MLF file ./labels.smlf ... total 4974 entries
 ....................................................................................................feature set 0: 1669414 frames in 4963 out of 4963 utterances
 label set 0: 9000 classes
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
-....................................................................................................Running 114 test cases...
+....................................................................................................Running 122 test cases...
 feature set 1: 1669414 frames in 4963 out of 4963 utterances
 minibatchutterancesource: 4963 utterances grouped into 19 chunks, av. chunk size: 261.2 utterances, 87863.9 frames
 minibatchiterator: epoch 0: frames [0..400] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
@@ -1266,8 +1266,8 @@ Legacy configuration is used for truncated BPTT mode, please adapt the config to
 Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 
 Test module "ReaderTests" has passed with:
-  114 test cases out of 114 passed
-  16973520 assertions out of 16973520 passed
+  122 test cases out of 122 passed
+  22235579 assertions out of 22235579 passed
 
   Test suite "ReaderTestSuite" has passed with:
     92 test cases out of 92 passed
@@ -1567,7 +1567,7 @@ Test module "ReaderTests" has passed with:
 
   Test suite "ReaderLibTests" has passed with:
     18 test cases out of 18 passed
-    2177 assertions out of 2177 passed
+    2265 assertions out of 2265 passed
 
     Test case "ReaderLibTests/CheckGetCurrentCursorForRandomizers" has passed with:
       16 assertions out of 16 passed
@@ -1599,7 +1599,7 @@ Test module "ReaderTests" has passed with:
       128 assertions out of 128 passed
 
     Test case "ReaderLibTests/BlockRandomizerChaosMonkey" has passed with:
-      1748 assertions out of 1748 passed
+      1836 assertions out of 1836 passed
 
     Test case "ReaderLibTests/BlockRandomizerOneEpochLegacyRandomization" has passed with:
       68 assertions out of 68 passed
@@ -1621,4 +1621,32 @@ Test module "ReaderTests" has passed with:
 
     Test case "ReaderLibTests/CheckEpochBoundarySingleWorker" has passed with:
       4 assertions out of 4 passed
+
+  Test suite "PackerTests" has passed with:
+    8 test cases out of 8 passed
+    5261971 assertions out of 5261971 passed
+
+    Test case "PackerTests/SequencePackerBigChunksWithFrames1Sweep" has passed with:
+      1637325 assertions out of 1637325 passed
+
+    Test case "PackerTests/SequencePackerSmallChunksWithFrames1Sweep" has passed with:
+      102756 assertions out of 102756 passed
+
+    Test case "PackerTests/SequencePackerBigChunksWithSequences1Sweep" has passed with:
+      13496 assertions out of 13496 passed
+
+    Test case "PackerTests/SequencePackerSmallChunksWithSequences1Sweep" has passed with:
+      1396 assertions out of 1396 passed
+
+    Test case "PackerTests/SequencePackerBigChunksWithFrames" has passed with:
+      3274012 assertions out of 3274012 passed
+
+    Test case "PackerTests/SequencePackerSmallChunksWithFrames" has passed with:
+      204609 assertions out of 204609 passed
+
+    Test case "PackerTests/SequencePackerBigChunksWithSequences" has passed with:
+      26481 assertions out of 26481 passed
+
+    Test case "PackerTests/SequencePackerSmallChunksWithSequences" has passed with:
+      1896 assertions out of 1896 passed
 
