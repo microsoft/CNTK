@@ -1722,7 +1722,7 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
 
     The output tensor has the shape specified by 'shape'.
 
-    Examples:
+    Example:
         >>> i1 = C.input_variable(shape=(3,2))
         >>> C.reshape(i1, (2,3)).eval({i1:np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=np.float32)})
         array([[[[ 0.,  1.,  2.],
@@ -1773,7 +1773,7 @@ def transpose(x, axis1=0, axis2=1, name=''):
     Swaps two axes of the tensor. The output tensor has the same data but with
     ``axis1`` and ``axis2`` swapped.
 
-    Examples:
+    Example:
         >>> C.transpose([[[0,1],[2,3],[4,5]]], 1, 2).eval()
         array([[[ 0.,  2.,  4.],
                 [ 1.,  3.,  5.]]], dtype=float32)
@@ -1798,7 +1798,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     '''
     Slice the input along an axis.
 
-    Examples:
+    Example:
         >>> # Slice using input variable
         >>> # create 2x3 matrix
         >>> x1 = C.input_variable((2,3))
@@ -1824,8 +1824,8 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     NumPy's way of slicing works, too:
 
-    Examples:
-        TODO: Make following lines work. Uncomment when done
+    Example:
+        #TODO: Make following lines work. Uncomment when done
         #>>> x1[1].eval()
         #array([[ 4.,  5.,  6.]], dtype=float32)
         #>>> x1[:,:2,:].eval()
@@ -1859,7 +1859,7 @@ def splice(inputs, axis=-1, name=''):
     '''
     Concatenate the input tensors along an axis.
 
-    Examples:
+    Example:
         >>> # create 2x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data1 = np.asarray([[[1, 2],
         ...                      [4, 5]]], dtype=np.float32)
@@ -1908,7 +1908,7 @@ def reduce_sum(x, axis=None, name=''):
     is not specified then the sum will be computed over all axes, that is, the output is a scalar,
     which is the sum of tensor's elements.
 
-    Examples:
+    Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
 
@@ -1957,7 +1957,7 @@ def reduce_log_sum(x, axis=None, name=''):
     Computes the log of the sum of the exponentiations of the input tensor's
     elements across the specified axis.
 
-    Examples:
+    Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
         >>> lse = C.reduce_log_sum(x)
@@ -1985,7 +1985,7 @@ def reduce_mean(x, axis=None, name=''):
     '''
     Computes the mean of the input tensor's elements across the specified axis.
 
-    Examples:
+    Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[5, 20],[30, 40],[55, 60]]
 
@@ -2016,7 +2016,7 @@ def reduce_max(x, axis=None, name=''):
     '''
     Computes the max of the input tensor's elements across the specified axis.
 
-    Examples:
+    Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
 
@@ -2047,7 +2047,7 @@ def reduce_min(x, axis=None, name=''):
     '''
     Computes the min of the input tensor's elements across the specified axis.
 
-    Examples:
+    Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
 
@@ -2133,7 +2133,7 @@ def random_sample_inclusion_frequency(
         allow_duplicates (bool): If sampling is done
          with replacement (`True`) or without (`False`).
 
-    Examples:
+    Example:
         >>> import numpy as np
         >>> from cntk import *
         >>> # weight vector with 100 '1000'-values followed
@@ -2179,7 +2179,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     In CNTK's implementation, because the values that are not set to 0 are multiplied
     with (1 / (1 - ``dropout_rate``)), this is not necessary.
 
-    Examples:
+    Example:
         >>> data = [[10, 20],[30, 40],[50, 60]]
         >>> C.dropout(data, 0.5).eval() # doctest: +SKIP
         array([[  0.,  40.],
@@ -2313,7 +2313,7 @@ def parameter(shape=None, init=None, dtype=None, device=None, name=''):
     '''
     It creates a parameter tensor.
 
-    Examples:
+    Example:
         >>> init_parameter = C.parameter(shape=(3,4), init=2)
         >>> np.asarray(init_parameter) # doctest: +SKIP
         array([[ 2.,  2.,  2.,  2.],
@@ -2357,7 +2357,7 @@ def constant(value=None, shape=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
-    Examples
+    Example:
         >>> constant_data = C.constant([[1., 2.], [3., 4.], [5., 6.]])
         >>> constant_data.value
         array([[ 1.,  2.],
