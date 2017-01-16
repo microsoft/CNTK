@@ -7,7 +7,7 @@
 from . import cntk_py
 from .device import use_default_device
 from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
-from .io import _py_dict_to_cntk_dict
+from .io import _py_dict_to_cntk_dict, MinibatchData
 
 __doc__= '''\
 A trainer encapsulates the overall training process and employs one or more
@@ -78,18 +78,36 @@ class Trainer(cntk_py.Trainer):
             device = use_default_device()
 
         if arguments:
-            arguments = sanitize_var_map(self.model.arguments, arguments)
+            arguments = sanitize_var_map(self.model.arguments, arguments,
+                extract_values_from_minibatch_data = False)
+
+        contains_minibatch_data = False
+        if (len(arguments) > 0):
+            value = next(iter(arguments.values()))
+            contains_minibatch_data = isinstance(value, MinibatchData)
 
         if outputs:
             output_map = {v: None for v in outputs}
-            updated = super(Trainer, self).train_minibatch(arguments,
+            
+            if contains_minibatch_data:
+                updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
+                    arguments, output_map, device)
+            else:    
+                updated = super(Trainer, self).train_minibatch(arguments,
                     output_map, device)
+
             for k,v in output_map.items():
                 output_map[k] = value_to_seq(v)
 
             return updated, output_map
         else:
-            updated = super(Trainer, self).train_minibatch(arguments, device)
+
+            if contains_minibatch_data:
+                updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
+                    arguments, device)
+            else:    
+                updated = super(Trainer, self).train_minibatch(arguments,
+                    device)
 
         return updated
 

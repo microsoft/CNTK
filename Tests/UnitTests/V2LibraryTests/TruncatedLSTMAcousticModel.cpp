@@ -125,11 +125,11 @@ void TrainTruncatedLSTMAcousticModelClassifer(const DeviceDescriptor& device, bo
             break;
 
         // Make sure our truncation length setting was honored
-        auto actualMaxSequenceLength = minibatchData[featureStreamInfo].m_data->Shape()[featureStreamInfo.m_sampleLayout.Rank()];
+        auto actualMaxSequenceLength = minibatchData[featureStreamInfo].data->Shape()[featureStreamInfo.m_sampleLayout.Rank()];
         if (actualMaxSequenceLength != truncationLength)
             ReportFailure("Actual max sequence length (%d) in minibatch data does not equal specified truncation length (%d)", (int)actualMaxSequenceLength, (int)truncationLength);
 
-        trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }
