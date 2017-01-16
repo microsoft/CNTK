@@ -230,6 +230,42 @@ def old_code():
 # train action         #
 ########################
 
+def UnfoldFrom(over, length_increase=1, initial_state=None):
+    # TODO: use @Function -- is that possible?
+    #@Function
+    # BUGBUG: fails with "SyntaxError: got multiple values for argument 'dynamic_axes_like'"
+    def unfold_from(input, dynamic_axes_like):
+        # create a new axis
+        out_axis = dynamic_axes_like
+        if length_increase != 1:
+            from cntk.utils import sanitize_input, typemap
+            from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
+            from cntk.ops.sequence import where, gather
+            factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(out_axis))
+            indices = where(factors)
+            zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
+            out_axis = zeroes
+
+        input1 = Placeholder(name='input1')
+
+        # BUGBUG: This will fail with sparse input.
+        # nearly the same as RecurrenceFrom()
+        history_fwd = Placeholder(name='hook')
+        prev_history = delayed_value(history_fwd, initial_state=initial_state)
+        z = over(prev_history, input1)
+        # map_state function
+        fb = hardmax(z)
+        from cntk.utils import sanitize_input, typemap
+        from _cntk_py import reconcile_dynamic_axis
+        fb = typemap(reconcile_dynamic_axis)(sanitize_input(fb), sanitize_input(dynamic_axes_like))
+        z.replace_placeholders({history_fwd : fb.output})
+
+        #z.dump_signature()
+        z = z.clone(CloneMethod.share, {input1 : input})
+        #z.dump_signature('z')
+        return z
+    return unfold_from
+
 def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_size):
 
     from cntk.blocks import Constant, Type
@@ -240,6 +276,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
+        # BUGBUG: This will fail with sparse input.
         decoder_input = delayed_value(labels, initial_state=sentence_start)
         z = decoder(decoder_input, input)
         return z
@@ -248,33 +285,6 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
     @Function
     #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
     def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-
-        def UnfoldFrom(over, length_increase=1, initial_state=None):
-            # TODO: use @Function -- is that possible?
-            def unfold_from(input, dynamic_axes_like):
-                # create a new axis
-                out_axis = dynamic_axes_like
-                if length_increase != 1:
-                    from cntk.utils import sanitize_input, typemap
-                    from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
-                    from cntk.ops.sequence import where, gather
-                    factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(out_axis))
-                    indices = where(factors)
-                    zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
-                    out_axis = zeroes
-    
-                input1 = Placeholder(name='input1')
-    
-                history_fwd = Placeholder(name='hook')
-                prev_history = delayed_value(history_fwd, initial_state=initial_state, dynamic_axes_like=out_axis)
-                z = over(prev_history, input1)
-                z.replace_placeholders({history_fwd : hardmax(z).output})
-    
-                #z.dump_signature()
-                z = z.clone(CloneMethod.share, {input1 : input})
-                #z.dump_signature('z')
-                return z
-            return unfold_from
         z = UnfoldFrom(decoder, length_increase=length_increase, initial_state=sentence_start)(input, dynamic_axes_like=input)
 
         # add another loop to cut at <s/>
@@ -286,13 +296,6 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
         #z = gather(z, valid_frames)
 
         return z
-
-    #decoder_history_hook = find_by_name(model, 'decoder_history_hook')
-    ## network output for decoder history
-    #net_output = hardmax(model)
-    ## make a clone of the graph where the ground truth is replaced by the network output
-    ## get a new model that uses the network output as input to the decoder
-    #decoder_output_model = model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
 
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
