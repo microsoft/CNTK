@@ -2702,7 +2702,7 @@ namespace CNTK
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
     public:
-		CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+        CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
     private:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
