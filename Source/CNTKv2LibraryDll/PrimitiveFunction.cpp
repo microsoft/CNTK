@@ -121,7 +121,7 @@ namespace CNTK
         return outputDataType;
     }
 
-    /*static*/ std::vector<Axis> PrimitiveFunction::GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig)
+    /*static*/ std::vector<Axis> PrimitiveFunction::GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, PrimitiveFunction* owner, Dictionary& functionConfig)
     {
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
@@ -199,7 +199,7 @@ namespace CNTK
                         else
                         {
                             if (currentInputDynamicAxes != outputDynamicAxes)
-                                CNTK::LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
+                                owner->LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
                         }
                     }
                 }
@@ -220,7 +220,7 @@ namespace CNTK
             return inputs;
 
         DataType outputDataType = GetOutputDataType(op, inputs, inferDimensions);
-        std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(op, inputs, functionConfig);
+        std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(op, inputs, owner, functionConfig);
 
         NDShape outputShape = NDShape::Unknown;
         bool allInputShapesUnknown = (std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == inputs.end());

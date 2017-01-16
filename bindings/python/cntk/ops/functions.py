@@ -92,8 +92,12 @@ class Function(cntk_py.Function):
         # force parameter order
         # BUGBUG: as_block() on the entire function is not really working, it looses names of its contents.
         #         As a workaround, wrap the args themselves into alias(), combine(), as_block().
-        out_arg_names = [arg.name for arg in out.placeholders]
-        if out_arg_names != arg_names   and False: # if order changed then force the order
+        out_arg_names = [arg.name for arg in out.arguments]
+        #if len(arg_names) > 1:
+        # BUGBUG: ^^ causes random errors, use conservatively
+        if out_arg_names != arg_names     and False: # if order changed then force the order
+            # we only encapsulate the combine() function as to force the order,
+            # but not the actual function, as to not hide names inside
             args1 = [placeholder_variable(name=name) for name in arg_names]
             combined_args = combine([alias(arg, arg.name) for arg in args1])
             args2 = [placeholder_variable(name=name) for name in arg_names]
@@ -109,7 +113,7 @@ class Function(cntk_py.Function):
                 out = combine(out)
             else:
                 out = resolve_named(out)
-            out_arg_names = [arg.name for arg in out.placeholders]
+            out_arg_names = [arg.name for arg in out.arguments]
             assert out_arg_names == arg_names
         # END WORKAROUND
 
