@@ -442,7 +442,6 @@ def Recurrence(over, go_backwards=default_override_or(False), initial_state=defa
 
     import types
     if isinstance(over, types.FunctionType):
-        UntestedBranchError("Recurrence() over a Python function")
         over = Function(over)
 
     # get signature of cell

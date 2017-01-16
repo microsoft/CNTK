@@ -240,7 +240,7 @@ def UnfoldFrom(over, length_increase=1, initial_state=None):
         if length_increase != 1:
             from cntk.utils import sanitize_input, typemap
             from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
-            from cntk.ops.sequence import where, gather
+            from cntk.ops.sequence import where
             factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(out_axis))
             indices = where(factors)
             zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
@@ -257,7 +257,7 @@ def UnfoldFrom(over, length_increase=1, initial_state=None):
         fb = hardmax(z)
         from cntk.utils import sanitize_input, typemap
         from _cntk_py import reconcile_dynamic_axis
-        fb = typemap(reconcile_dynamic_axis)(sanitize_input(fb), sanitize_input(dynamic_axes_like))
+        fb = typemap(reconcile_dynamic_axis)(sanitize_input(fb), sanitize_input(out_axis))
         z.replace_placeholders({history_fwd : fb.output})
 
         #z.dump_signature()
@@ -296,12 +296,12 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
         # add another loop to cut at <s/>
         # TODO: change to Python slicing syntax
         # BUGBUG: This leads to a different result
-        #is_sent_end = slice(z, axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
-        #valid_frames = Recurrence(lambda x, h: (1-x) * h, initial_state=1)(is_sent_end)
-        ## BUGBUG? check parameter order of lambda
-        #z = gather(z, valid_frames)
+        from cntk.ops.sequence import where, gather
+        is_sent_end = slice(hardmax(z), axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
+        valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(is_sent_end)
+        z = gather(z, valid_frames)
 
-        return z
+        return (z, is_sent_end, valid_frames)
 
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
@@ -392,7 +392,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
                 #                               mb_valid[valid_reader.streams.labels]})
                 #e = decoder_output_model(mb_valid[valid_reader.streams.features], mb_valid[valid_reader.streams.labels])
                 e = decoder_output_model(mb_valid[valid_reader.streams.features])
-                print_sequences(e, i2w)
+                print_sequences(e[0], i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 debug_attention(decoder_output_model, mb_valid, valid_reader)                
