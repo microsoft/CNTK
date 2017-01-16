@@ -270,6 +270,12 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
 
     from cntk.blocks import Constant, Type
 
+    # this is what we train here
+    #decoder.update_signature(Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]),
+    #                         Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+    # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
+    #         Maybe also attributable to a parameter-order mix-up?
+
     # note: the labels must not contain the initial <s>
     @Function
     def model_train(input, labels): # (input, labels) --> (word_sequence)
@@ -310,9 +316,9 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
     model = model.replace_placeholders({model.arguments[0]: drop_start.output})
     # ^^ this is a workaround around the problem described inside criterion()
 
-    model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                           Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
-                           #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
+    #model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+    #                       Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+    #                       #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
     @Function
     def criterion(input, labels):
         model1 = model
