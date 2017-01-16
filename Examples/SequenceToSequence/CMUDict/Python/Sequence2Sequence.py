@@ -174,7 +174,7 @@ def create_model():
             Fold(LSTM(hidden_dim), return_full_state=True)
         ])
 
-    # Decoder: (history*, h0, c0) --> z*
+    # Decoder: (history*, input) --> z*
     # where history is one of these, delayed by 1 step and <s> prepended:
     #  - training: labels
     #  - testing:  its own output hardmax(z)
@@ -197,15 +197,79 @@ def create_model():
         # TODO: drop this, move into criterion nodes and/or train() function
         # Drop the sequence start token from the label, for decoder training
         label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
-        # label sequence is only used in training as the history --> move this out to trainer function
-
-        # Connect encoder and decoder
+        # TODO: move this out to trainer function
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
         decoder_input = delayed_value(embed(label_sequence), initial_state=embed(sentence_start), dynamic_axes_like=label_sequence)
         z = decoder(decoder_input, input)
         return z
+
+    @Function
+    #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+    def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
+
+        # TODO: drop this, move into criterion nodes and/or train() function
+        # Drop the sequence start token from the label, for decoder training
+        #label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
+        # label sequence is only used in training as the history --> move this out to trainer function
+
+        # Connect encoder and decoder
+        #encoder_output = encoder(input)
+
+        # During training we use the ground truth as input to the decoder. During model execution,
+        # we need to redirect the output of the network back in as the input to the decoder. We do this by
+        # setting up a 'hook' whose output will be changed during model execution
+        # decoder_history_hook gets replaced by the feedback loop
+
+        # The input to the decoder always starts with the special label sequence start token.
+        # Then, use the previous value of the label sequence (for training) or the output (for execution).
+        # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
+        # For that reason, we reconcile the dynamic axis, which for now can be done by adding a dummy zero to the input.
+        # This will get hidden in Unfold(), and also streamlined.
+        #decoder_history_hook = alias(label_sequence, name='decoder_history_hook')
+
+        # not right yet--need to split off the data inputs
+        def UnfoldFrom(over, length_increase=1, initial_state=None):
+            def unfold_from(input, dynamic_axes_like):
+                # create a new axis
+                out_axis = dynamic_axes_like
+                if length_increase != 1:
+                    from cntk.utils import sanitize_input, typemap
+                    from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
+                    from cntk.ops.sequence import where, gather
+                    factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(out_axis))
+                    indices = where(factors)
+                    zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
+                    out_axis = zeroes
+    
+                input1 = Placeholder(name='input1')
+    
+                history_fwd = Placeholder(name='hook')
+                prev_history = delayed_value(embed(history_fwd), initial_state=initial_state, dynamic_axes_like=out_axis)
+                z = over(prev_history, input1)
+                z.replace_placeholders({history_fwd : hardmax(z).output})
+    
+                #z.dump_signature()
+                z = z.clone(CloneMethod.share, {input1 : input})
+                #z.dump_signature('z')
+                return z
+            return unfold_from
+        z = UnfoldFrom(decoder, length_increase=length_increase, initial_state=embed(sentence_start))(input, dynamic_axes_like=input)
+
+        # add another loop to cut at <s/>
+        # TODO: change to Python slicing syntax
+        # BUGBUG: This leads to a different result
+        #is_sent_end = slice(z, axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
+        #valid_frames = Recurrence(lambda x, h: (1-x) * h, initial_state=1)(is_sent_end)
+        ## BUGBUG? check parameter order of lambda
+        #z = gather(z, valid_frames)
+
+        return z
+
+    return (model_train, model_greedy)
+
+def old_code():
         # OLD CODE which I may still need later:
         # Parameters to the decoder stack depend on the model type (use attention or not)
         if use_attention:
@@ -235,64 +299,6 @@ def create_model():
             z = decoder(decoder_input, *encoder_output.outputs)
 
         return z
-
-    @Function
-    #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-    def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-
-        # TODO: drop this, move into criterion nodes and/or train() function
-        # Drop the sequence start token from the label, for decoder training
-        #label_sequence = sequence.slice(raw_labels, 1, 0, name='label_sequence') # <s> A B C </s> --> A B C </s>
-        # label sequence is only used in training as the history --> move this out to trainer function
-
-        # Connect encoder and decoder
-        #encoder_output = encoder(input)
-
-        # During training we use the ground truth as input to the decoder. During model execution,
-        # we need to redirect the output of the network back in as the input to the decoder. We do this by
-        # setting up a 'hook' whose output will be changed during model execution
-        # decoder_history_hook gets replaced by the feedback loop
-
-        # The input to the decoder always starts with the special label sequence start token.
-        # Then, use the previous value of the label sequence (for training) or the output (for execution).
-        # In decoding, 'decoder_history_hook' will be rewired to a feedback loop.
-        # For that reason, we reconcile the dynamic axis, which for now can be done by adding a dummy zero to the input.
-        # This will get hidden in Unfold(), and also streamlined.
-        #decoder_history_hook = alias(label_sequence, name='decoder_history_hook')
-
-        # create a new axis
-        from cntk.utils import sanitize_input, typemap
-        from _cntk_py import reconcile_dynamic_axis, zeroes_with_dynamic_axes_like, where
-        from cntk.ops.sequence import where, gather
-        factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(input))
-        indices = where(factors)
-        zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
-        out_axis = zeroes
-
-        # TODO: express this as UnfoldFrom()
-        input1 = Placeholder(name='input1')
-        decoder_history_hook = Placeholder(name='hook')
-
-        decoder_input = delayed_value(embed(decoder_history_hook), initial_state=embed(sentence_start), dynamic_axes_like=out_axis)
-        z = decoder(decoder_input, input1)#*encoder_output.outputs)
-        z.dump_signature()
-
-        z.replace_placeholders({decoder_history_hook : hardmax(z).output})
-        z.dump_signature()
-        z = z.clone(CloneMethod.share, {input1 : input})
-        z.dump_signature('z')
-
-        # add another loop to cut at <s/>
-        # TODO: change to Python slicing syntax
-        # BUGBUG: This leads to a different result
-        #is_sent_end = slice(z, axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
-        #valid_frames = Recurrence(lambda x, h: (1-x) * h, initial_state=1)(is_sent_end)
-        ## BUGBUG? check parameter order of lambda
-        #z = gather(z, valid_frames)
-
-        return z
-
-    return (model_train, model_greedy)
 
 ########################
 # train action         #
