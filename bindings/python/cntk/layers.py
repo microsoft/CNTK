@@ -377,9 +377,9 @@ def RecurrenceFrom(over, go_backwards=default_override_or(False), return_full_st
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
 
-    # TEST THIS
     import types
     if isinstance(over, types.FunctionType):
+        UntestedBranchError("RecurrenceFrom() over a Python function")
         over = Function(over)
 
     # get signature of cell
@@ -440,9 +440,9 @@ def Recurrence(over, go_backwards=default_override_or(False), initial_state=defa
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
-    # TEST THIS
     import types
     if isinstance(over, types.FunctionType):
+        UntestedBranchError("Recurrence() over a Python function")
         over = Function(over)
 
     # get signature of cell

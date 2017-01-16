@@ -304,13 +304,22 @@ def train(train_reader, valid_reader, vocab, i2w, model, model_greedy, max_epoch
     drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
     model = model.clone(CloneMethod.share) # note: use separate clone(), otherwise model.arguments[0] below is not the right one
     model = model.replace_placeholders({model.arguments[0]: drop_start.output})
+    # ^^ this is a workaround around the problem described inside criterion()
 
     model.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                            Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                            #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
     @Function
     def criterion(input, labels):
-        z = model(input, labels)
+        model1 = model
+        #drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
+        #model1 = model1.clone(CloneMethod.share) # note: use separate clone(), otherwise model1.arguments[0] below is not the right one
+        #model1 = model1.replace_placeholders({model1.arguments[0]: drop_start.output})
+        #postprocessed_labels = sequence.slice(labels, 1, 0, 'postprocessed_labels')
+        #z = model1(input, postprocessed_labels)
+        # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
+        #         A mix-up of parameter order?
+        z = model1(input, labels)
         postprocessed_labels = find_by_name(z, 'postprocessed_labels')
         ce = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error(z, postprocessed_labels)

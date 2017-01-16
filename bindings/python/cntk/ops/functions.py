@@ -356,6 +356,17 @@ class Function(cntk_py.Function):
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
 
+    def dump_signature(self, tag=None):
+        f_name = self.name if self.name else tag if tag else 'Function'
+        #if f_name == '':
+        #    f_name = tag
+        #if f_name == '':
+        #    f_name = 'Function'
+        #f_name = tag if self.name != '' else self.name
+        args = self.arguments
+        arg_names = [param.name for param in args]
+        print(f_name + '(' + ", ".join(arg_names) + ')')
+
     def dump(self, tag=None):
         from ..graph import depth_first_search
         graph = depth_first_search(self.root_function, lambda x: not isinstance(x, cntk_py.Variable) or not x.is_output)
@@ -411,7 +422,7 @@ class Function(cntk_py.Function):
                 inputs = ''
             print('  {:20} {:30} {} : {}'.format(op_name, name, inputs, shape))
             pass
-        print(tag if tag else name_it(self))
+        self.dump_signature(tag)
         for item in graph:
             print_item(item)
 
