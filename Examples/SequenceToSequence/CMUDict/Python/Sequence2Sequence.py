@@ -230,7 +230,7 @@ def old_code():
 # train action         #
 ########################
 
-def UnfoldFrom(over, length_increase=1, initial_state=None):
+def UnfoldFrom(over, length_increase=1, initial_state=None, until_predicate=None):
     # TODO: use @Function -- is that possible?
     #@Function
     # BUGBUG: fails with "SyntaxError: got multiple values for argument 'dynamic_axes_like'"
@@ -263,6 +263,13 @@ def UnfoldFrom(over, length_increase=1, initial_state=None):
         #z.dump_signature()
         z = z.clone(CloneMethod.share, {input1 : input})
         #z.dump_signature('z')
+
+        # apply until_predicate if given
+        if until_predicate is not None:
+            from cntk.ops.sequence import gather
+            valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(until_predicate(z))
+            z = gather(z, valid_frames)
+
         return z
     return unfold_from
 
@@ -291,18 +298,11 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
     @Function
     #def model_greedy(input, raw_labels): # (input_sequence, decoder_history_sequence) --> (word_sequence)
     def model_greedy(input): # (input_sequence, decoder_history_sequence) --> (word_sequence)
-        z = UnfoldFrom(decoder, length_increase=length_increase, initial_state=sentence_start)(input, dynamic_axes_like=input)
-
         # add another loop to cut at <s/>
-        # TODO: change to Python slicing syntax
-        # BUGBUG: This leads to a different result
-        from cntk.ops.sequence import where, gather
-        zmax = hardmax(z)
-        #is_sent_end = slice(zmax, axis=-1, begin_index=sentence_end_index, end_index=sentence_end_index+1)
-        is_sent_end = zmax[...,sentence_end_index] # use ... because with beam decoding, there will be more dimensions here
-        #is_sent_end = zmax[sentence_end_index:sentence_end_index+1, ..., :, 3:, :2, 3:10:2]
-        valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(is_sent_end)
-        z = gather(z, valid_frames)
+        @Function
+        def until_predicate(z):
+            return hardmax(z)[...,sentence_end_index] # use ... because with beam decoding, there will be more dimensions here
+        z = UnfoldFrom(decoder, length_increase=length_increase, initial_state=sentence_start, until_predicate=until_predicate)(input, dynamic_axes_like=input)
 
         return z   #(z, is_sent_end, valid_frames)
 
