@@ -59,7 +59,6 @@ namespace CNTK
             m_globalModelAggregationBlockSize(globalModelAggregationBlockSize),
             m_numSamplesSeenInCurrentBlock(0),
             m_endOfDataReached(false),
-            m_shutdown(false),
             m_localTotalNumSamplesSeen(0),
             m_syncPeriodPerWorker(globalModelAggregationBlockSize / communicator->Workers().size())
         {
@@ -94,19 +93,21 @@ namespace CNTK
             std::vector<NDArrayViewPtr> values;
             GetParameterValues(parameters, values);
 
-            // Always aggregate before the checkpoint
-            SynchronizeAction(Action::Aggregate);
-            AggregateImpl(values);
-
             // During checkpoint, other workers could be in aggregation state. Let's allow them to finish aggregation.
             Action action;
             while ((action = SynchronizeAction(Action::Checkpoint)) != Action::Checkpoint)
             {
+                if (action == Action::Wait)
+                    continue;
                 if (action == Action::Aggregate)
                     AggregateImpl(values);
                 else
                     RuntimeError("Unexpected action received.");
             }
+
+            // Always aggregate before the checkpoint
+            SynchronizeAction(Action::Aggregate);
+            AggregateImpl(values);
 
             Dictionary result;
             result[L"base"] = DistributedLearnerBase::CreateCheckpoint();
@@ -131,13 +132,12 @@ namespace CNTK
             m_localTotalNumSamplesSeen += info.numberOfSamples;
             m_sampleCount += info.numberOfSamples;
 
-            // TODO: Should be on the higher level of abstraction. Distributed trainer should not even be called during warmup phase.
             if (m_distributeAfterSamples > m_sampleCount)
             {
                 if (m_endOfDataReached)
                 {
-                    // We have not even reached distributed state.
-                    m_shutdown = true;
+                    // We have not even reached distributed state,
+                    // simply stop processing by returning false.
                     return false;
                 }
                 return true;
@@ -159,7 +159,7 @@ namespace CNTK
             return Shutdown(values);
         }
 
-        // Before doing any work, the distributed trainer synchronizes with other trainers to
+        // Before doing any work, the distributed learner synchronizes with other learners to
         // decide what to do next.
         // The priority of actons are:
         // 1) If any worker wants to aggregate - aggregation is done.
@@ -169,6 +169,7 @@ namespace CNTK
         // and other workers require checkpointing or aggregation.
         enum class Action
         {
+            Wait, // Waits in the current state without doing anything.
             Aggregate,
             Checkpoint,
             Shutdown
@@ -212,7 +213,6 @@ namespace CNTK
 
             // Last synchronization
             AggregateImpl(parameters);
-            m_shutdown = true;
             return false; // Make compiler happy.
         }
 
@@ -242,16 +242,29 @@ namespace CNTK
             }
             m_sampleCount = std::accumulate(localNumberOfSamples.begin(), localNumberOfSamples.end(), (size_t)0);
 
-            auto aggregate = std::find_if(actions.begin(), actions.end(), [](Action c) { return c == Action::Aggregate; }) != actions.end();
-            if (aggregate)
-                return Action::Aggregate;
+            // If all want to shutdown - we shutdown.
+            if (std::all_of(actions.begin(), actions.end(), [](Action c) { return c == Action::Shutdown; }))
+                return Action::Shutdown;
 
-            auto checkpoint = std::find_if(actions.begin(), actions.end(), [](Action c) { return c == Action::Checkpoint; }) != actions.end();
-            if (checkpoint)
+            // If all want to checkpoint - we checkpoint.
+            if (std::all_of(actions.begin(), actions.end(), [](Action c) { return c == Action::Checkpoint; }))
                 return Action::Checkpoint;
 
-            // All neither aggregate nor checkpoint -> shutdown.
-            return Action::Shutdown;
+            // If some are in the shutdown state - we return checkpoint for those, but 
+            // for those who are in checkpoint state - they have to wait.
+            if (std::all_of(actions.begin(), actions.end(), [](Action c) { return c == Action::Checkpoint || c == Action::Shutdown; }))
+            {
+                if (self == Action::Shutdown)
+                    return Action::Checkpoint;
+                else
+                {
+                    assert(self == Action::Checkpoint);
+                    return Action::Wait;
+                }
+            }
+
+            // Otherwise we always aggregate.
+            return Action::Aggregate;
         }
 
         void AggregateImpl(std::vector<NDArrayViewPtr>& parameters)
@@ -279,6 +292,8 @@ namespace CNTK
             Action action;
             while ((action = SynchronizeAction(Action::Checkpoint)) != Action::Checkpoint)
             {
+                if (action == Action::Wait)
+                    continue;
                 if (action == Action::Aggregate)
                     AggregateImpl(parameters);
                 else
@@ -446,7 +461,6 @@ namespace CNTK
         std::vector<NDArrayViewPtr> m_actionBuffer;
 
         bool m_endOfDataReached;
-        bool m_shutdown;
 
         DISABLE_COPY_AND_MOVE(BlockMomentumDistributedLearner);
      };
