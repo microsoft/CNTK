@@ -741,6 +741,15 @@
 
 %rename (GetShape) CNTK::Variable::Shape;
 %rename (GetName) CNTK::Variable::Name;
+%rename (GetVariableKind) CNTK::Variable::Kind;
+%rename (GetDynamicAxes) CNTK::Variable::DynamicAxes;
+%rename (_IsSparse) CTNK::Variable::IsSparse;
+%rename (_IsInput) CTNK::Variable::IsInput;
+%rename (_IsOutput) CTNK::Variable::IsOutput;
+%rename (_IsParameter) CTNK::Variable::IsParameter;
+%rename (_IsConstant) CTNK::Variable::IsConstant;
+%rename (_IsPlaceholder) CTNK::Variable::IsPlaceholder;
+%rename (GetOwner) CNTK::Variable::Owner;
 %rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
 
 %typemap(cscode) CNTK::Variable %{
@@ -754,6 +763,58 @@
     {
         get { return GetName(); }
     }
+
+	public VariableKind Kind
+	{
+		get { return GetVariableKind(); }
+	}
+
+	public System.Collections.Generic.List<Axis> DynamicAxes()
+	{
+		get { 
+			var axes = new System.Collections.Generic.List<Axis>();
+			foreach (var axis in GetDynamicAxes())
+			{
+				axes.Add(axis);
+			}
+			return axes;
+		}
+	}
+
+	public bool IsSparse
+	{
+		get { return _IsSparse(); }
+	}
+
+	public bool IsInput
+	{
+		get { return _IsInput(); }
+	}
+
+	public bool IsOutput
+	{
+		get { return _IsOutput(); }
+	}
+
+	public bool IsParameter
+	{
+		get { return _IsParameter(); }
+	}
+
+	public bool IsConstant
+	{
+		get { return _IsConstant(); }
+	}
+
+	public bool IsPlaceholder
+	{
+		get { return _IsPlaceholder(); }
+	}
+
+	public Function Owner
+	{
+		get { return GetOwner(); }
+	}
 
     public override bool Equals(System.Object obj)
     {
@@ -968,11 +1029,11 @@
         }
     }
 
-    public int MaskedCount
+    public uint MaskedCount
     {
         get
         {
-            return (int)_MaskedCount();
+            return _MaskedCount();
         }
     }
 
@@ -991,8 +1052,9 @@
                 input.Add(seq);
             }
             seq.Add(element);
-        }
-        return Create(shape, input, device, readOnly);
+        }        
+		// Pass the empty seqStartFlags means all sequences have the start flag with true.
+		return Create<T>(sampleShape, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
      public static Value CreateSequence<T>(NDShape shape,
@@ -1013,6 +1075,14 @@
         return Create(shape, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
     }
 
+	public static Value CreateBatchOfSequences<T>(NDShape shape,
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
+                                                  DeviceDescriptor device,
+                                                  bool readOnly = false)
+    {
+        return Create(shape, batchOfSequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+    }
+
     public static Value CreateBatchOfSequences<T>(NDShape shape,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
                                                   System.Collections.Generic.List<bool> seqStartFlags,
@@ -1022,63 +1092,7 @@
         return Create(shape, batchOfSequences, seqStartFlags, device, readOnly);
     }
 
-    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
-    public static Value CreateBatch<T>(uint dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
-    {
-        // Is CreateBatch for OneHot really useful? 
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
-        batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
- 
-        return Create<T>(dimension, input, device, readOnly);
-    }
-
-    public static Value CreateSequence<T>(uint dimension,
-                                          System.Collections.Generic.List<uint> sequence,
-                                          DeviceDescriptor device,
-                                          bool readOnly = false)
-    {
-        return CreateSequence<T>(dimension, sequence, true, device, readOnly);
-    }
-
-    public static Value CreateSequence<T>(uint dimension,
-                                          System.Collections.Generic.List<uint> sequence,
-                                          bool seqStartFlag,
-                                          DeviceDescriptor device,
-                                          bool readOnly = false)
-    {
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>(1) {sequence};
-        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
-    }
-
-    public static Value CreateBatchOfSequences<T>(uint dimension, 
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
-                                                  System.Collections.Generic.List<bool> seqStartFlags,
-                                                  DeviceDescriptor device,
-                                                  bool readOnly = false)
-    {
-        return Create<T>(dimension, batchOfSequences, seqStartFlags, device, readOnly);
-    }
-
-    public static Value Create(NDShape sampleShape,
-                               System.Collections.Generic.List<NDArrayView> sequences,
-                               System.Collections.Generic.List<bool> sequenceStartFlags,
-                               DeviceDescriptor device,
-                               bool readOnly = false)
-    {
-        var seqVector = new NDArrayViewVector(sequences);
-        var startVector = new BoolVector(sequenceStartFlags);
-        return Create(sampleShape, seqVector, startVector, device, false);
-    }
-
-    public static Value Create(NDShape sampleShape,
-                               System.Collections.Generic.List<NDArrayView> sequences,
-                               DeviceDescriptor device,
-                               bool readOnly = false)
-    {
-        return Create(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
-    }
-
-    public static Value Create<T>(NDShape sampleShape,
+	private static Value Create<T>(NDShape sampleShape,
                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
@@ -1109,15 +1123,53 @@
         }
     }
 
-    public static Value Create<T>(NDShape sampleShape,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
-                                  DeviceDescriptor device,
-                                  bool readOnly = false)
+    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
+    public static Value CreateBatch<T>(uint dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
     {
-        return Create<T>(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+        // Is CreateBatch for OneHot really useful? 
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
+        batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
+        
+		return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
-    public static Value Create<T>(uint dimension,
+    public static Value CreateSequence<T>(uint dimension,
+                                          System.Collections.Generic.List<uint> sequence,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        return CreateSequence<T>(dimension, sequence, true, device, readOnly);
+    }
+
+    public static Value CreateSequence<T>(uint dimension,
+                                          System.Collections.Generic.List<uint> sequence,
+                                          bool seqStartFlag,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>(1) {sequence};
+        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
+    }
+
+	public static Value CreateBatchOfSequences<T>(uint dimension, 
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
+                                                  DeviceDescriptor device,
+                                                  bool readOnly = false)
+    {
+        return Create<T>(dimension, batchOfSequences, new System.Collections.Generic.List<bool>(0),, device, readOnly);
+    }
+
+    public static Value CreateBatchOfSequences<T>(uint dimension, 
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
+                                                  System.Collections.Generic.List<bool> seqStartFlags,
+                                                  DeviceDescriptor device,
+                                                  bool readOnly = false)
+    {
+        return Create<T>(dimension, batchOfSequences, seqStartFlags, device, readOnly);
+    }
+
+	    
+    private static Value Create<T>(uint dimension,
                                   System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
@@ -1148,13 +1200,27 @@
         }
     }
 
-    public static Value Create<T>(uint dimension,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
-                                  DeviceDescriptor device,
-                                  bool readOnly = false)
+	// Create value object from NDArrayView
+    public static Value Create(NDShape sampleShape,
+                               System.Collections.Generic.List<NDArrayView> sequences,
+                               System.Collections.Generic.List<bool> sequenceStartFlags,
+                               DeviceDescriptor device,
+                               bool readOnly = false)
     {
-        return Create<T>(dimension, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+        var seqVector = new NDArrayViewVector(sequences);
+        var startVector = new BoolVector(sequenceStartFlags);
+        return Create(sampleShape, seqVector, startVector, device, false);
     }
+
+    public static Value Create(NDShape sampleShape,
+                               System.Collections.Generic.List<NDArrayView> sequences,
+                               DeviceDescriptor device,
+                               bool readOnly = false)
+    {
+        return Create(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+    }
+
+
 %}
 
 %extend CNTK::Value {
