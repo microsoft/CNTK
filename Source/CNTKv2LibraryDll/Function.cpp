@@ -29,8 +29,8 @@ namespace CNTK
         : Function(inputs, outputs, std::move(functionConfig), nullptr, name, uid)
     {}
 
-	Function::Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const std::wstring& name, const std::wstring& uid) :
-		Function(inputs, outputs, Dictionary(), name, uid) {}
+    Function::Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const std::wstring& name, const std::wstring& uid) :
+        Function(inputs, outputs, Dictionary(), name, uid) {}
 
     Function::Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
         : m_rootFunction(rootFunction), m_name(name != L"" ? name : uid), m_uid(uid), m_attributes(std::move(functionConfig))

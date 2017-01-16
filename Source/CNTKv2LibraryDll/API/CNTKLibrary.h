@@ -2416,7 +2416,7 @@ namespace CNTK
         /// Returns the name of the operation that this Function denotes
         ///
         virtual const std::wstring& OpName() const 
-		{ NOT_IMPLEMENTED; }
+        { NOT_IMPLEMENTED; }
 
     protected:
         ///
