@@ -3,17 +3,27 @@
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2016-01-16.* V 2.0 Beta 8 Release**  
+Highlights of this Release:
+* Support of Python v. 2.7, 3.4, and 3.5. See [binary and source setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine) instructions to find out about how to select Python version.
+* New Python API features.
+* New Python example [Feature extraction using a trained model in Python API](https://github.com/Microsoft/CNTK/tree/v2.0.beta8.0/Examples/Image/FeatureExtraction).
+* Support of [Visual Studio 2015](https://github.com/Microsoft/CNTK/wiki/Setup-Migrate-VS13-to-VS15) for Windows version.
+* Introduction of [C# API in CNTK Evaluation Library](https://github.com/Microsoft/CNTK/wiki/CNTK-Library-Managed-API) and a new set of [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
+* CNTK Runtime packages are now available as [Public Images at Docker Hub](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers). (**Beta 7** is currently available; Beta 8 Images availability will be announced separately in a few days)
+* Version 3 of [CNTK Custom MKL Library](https://cntk.ai/mkl/) is available.
 
-***2017-01-10.*** CNTK for Windows supports Visual 2015
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_8_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
+***2017-01-10.* CNTK for Windows supports Visual 2015**
+
 If you pull or merge the master branch, CNTK will now require Visual Studio 2015 to build on Windows. There are two ways to move your development environment to Visual Studio 2015:
 
-[Migrate VS2013 to VS2015](https://github.com/Microsoft/CNTK/wiki/Setup-Migrate-VS13-to-VS15):
-This gives you a fine grained control over where components are installed 
+* [Migrate VS2013 to VS2015](https://github.com/Microsoft/CNTK/wiki/Setup-Migrate-VS13-to-VS15): This gives you a fine grained control over where components are installed 
+* [Script driven setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows): This gives you an mostly automated migration to Visual Studio 2015
 
-[Script driven setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows):
-This gives you an mostly automated migration to Visual Studio 2015
-
-***2016-12-22.*** V 2.0 Beta 7 Release
+***2016-12-22.* V 2.0 Beta 7 Release**
 Highlights of this Release:
 
 * Python API behaviour is changed to be more strict.
@@ -26,7 +36,7 @@ and [GoogLeNet (Inception V3)](https://github.com/Microsoft/CNTK/tree/v2.0.beta7
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_7_Release_Notes)
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-***2016-12-13.*** V 2.0 Beta 6 Release
+***2016-12-13.* V 2.0 Beta 6 Release**
 Highlights of this Release:
 
 * Both Windows and Linux packages are now created using NVIDIA CUDA 8.0 toolkit.
@@ -38,7 +48,7 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_6_Release_Notes)
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-***2016-11-25.*** V 2.0 Beta 5 Release
+***2016-11-25.* V 2.0 Beta 5 Release**
 Highlights of this Release:
 
 * The Windows binary packages are now created using the NVIDIA CUDA 8 toolkit, see the [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_5_Release_Notes) for details. The CNTK-Linux binary packages are still built with CUDA 7.5. The Linux support for Cuda8 will follow shortly!
@@ -50,18 +60,7 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_5_Release_Notes)
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
-***2016-11-21.*** V 2.0 Beta 4 Release
-Highlights of this Release:
-
-* New ASGD/Hogwild! training using Microsoft’s Parameter Server ([Project Multiverso](https://github.com/Microsoft/multiverso))
-* Distributed Scenarios now supported in CNTK Python API
-* New [Memory Compression](https://github.com/Microsoft/CNTK/wiki/Top-level-configurations#hypercompressmemory) mode to reduce memory usage on GPU
-* CNTK Docker image with 1bit-SGD support
-* Stability Improvements and bug fixes
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_4_Release_Notes)
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
+See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
 # What is The Microsoft Cognitive Toolkit
 
