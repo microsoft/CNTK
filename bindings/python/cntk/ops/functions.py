@@ -87,9 +87,14 @@ class Function(cntk_py.Function):
                 out = resolve_named(out)
             # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
             if len(out.arguments) != len(args):
-                unused_args = set(args) - set(out.arguments)
-                unused_arg_names = [arg.name for arg in unused_args]
-                raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
+                unfulfilled_args = set(out.arguments) - set(args)
+                if unfulfilled_args:
+                    unfulfilled_arg_names = [arg.name for arg in unfulfilled_args]
+                    raise TypeError("CNTK Function '{}' has {} missing arguments ({}), which is currently not supported".format(f_name, len(unfulfilled_arg_names), ", ".join(unfulfilled_arg_names)))
+                else:
+                    unused_args = set(args) - set(out.arguments)
+                    unused_arg_names = [arg.name for arg in unused_args]
+                    raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
 
             # BEGIN WORKAROUND
             # force parameter order

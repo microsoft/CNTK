@@ -38,7 +38,7 @@ hidden_dim = 128
 num_layers = 2
 attention_dim = 128
 attention_span = 20
-use_attention = False   #True  --BUGBUG (layers): not working for now due to has_aux
+use_attention = False  #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -145,12 +145,13 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # This is the plain s2s encoder. The attention encoder will keep the entire sequence instead.
     # Note: We go_backwards.
     with default_options(enable_self_stabilization=True, go_backwards=True):
+        last_layer = Fold if not use_attention else Recurrence
         encoder = Sequential([
             embed,
             Stabilizer(),
             For(range(num_layers-1), lambda:
                 Recurrence(LSTM(hidden_dim))),
-            Fold(LSTM(hidden_dim), return_full_state=True) if not use_attention else identity
+            last_layer(LSTM(hidden_dim), return_full_state=True)
         ])
 
     # Decoder: (history*, input) --> z*
@@ -176,12 +177,15 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                 if use_attention:
                     @Function
                     def lstm_with_attention(x, dh, dc):
-                        x = splice (x, dh)
+                        atth = ([sequence.first(output) for output in encoder_output.outputs])
+                        # BUGBUG: This does not work, since atth has an additional Placeholder
+                        x = splice(x, *atth)
                         r = rec_block(x, dh, dc)
                         (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
                         return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
-                    rec_block = lstm_with_attention
-                r = RecurrenceFrom(rec_block)(r, *encoder_output.outputs) # :: r, h0, c0 -> h
+                    r = Recurrence(lstm_with_attention)(r)
+                else:
+                    r = RecurrenceFrom(rec_block)(r, *encoder_output.outputs) # :: r, h0, c0 -> h
             r = Sout(r)
             r = D(r)
             return r

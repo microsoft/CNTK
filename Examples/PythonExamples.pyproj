@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{292ff4ee-d9dd-4ba7-85f7-6a22148d1e01}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>LanguageUnderstanding\ATIS\Python\LanguageUnderstanding.py</StartupFile>
+    <StartupFile>SequenceToSequence\CMUDict\Python\Sequence2Sequence.py</StartupFile>
     <SearchPath>..\Tests\EndToEndTests\CNTKv2Python;..\bindings\python</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -13,7 +13,7 @@
     <LaunchProvider>Standard Python launcher</LaunchProvider>
     <InterpreterId>{c2abc240-2da9-4409-8b09-0ee30a5b56e2}</InterpreterId>
     <InterpreterVersion>3.4</InterpreterVersion>
-    <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <IsWindowsApplication>False</IsWindowsApplication>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />

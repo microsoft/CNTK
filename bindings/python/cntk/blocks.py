@@ -124,7 +124,7 @@ def Block(f, op_name, members={}):
 def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
     pure = get_default_override(None, pure=default_override_or(False))
     if pure:
-        raise TypeError('Function defs must be pure')
+        raise TypeError('parameters cannot be created inside a @Function def')
     dtype = get_default_override(Parameter, dtype=dtype)
     init = _initializer_for(init)
     p = parameter(shape, init=init, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
