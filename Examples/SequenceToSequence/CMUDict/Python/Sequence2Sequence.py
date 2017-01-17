@@ -159,15 +159,21 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     #  - testing:  its own output hardmax(z)
     #with default_options(enable_self_stabilization=True):
     with default_options(enable_self_stabilization=False):
+        # sub-layers
+        Sin = Stabilizer()
+        Sout = Stabilizer()
+        rec_blocks = [LSTM(hidden_dim) for i in range(num_layers)]
+        D = Dense(label_vocab_dim)
+        # layer function
         @Function
         def decoder(history, input):
             encoder_output = encoder(input)
             r = history
             r = embed(r)
-            r = Stabilizer()(r)
+            r = Sin(r)
             for i in range(num_layers):
-                rec_block = LSTM(hidden_dim)  # :: (x, dh, dc) -> (h, c)
-                if True or use_attention:
+                rec_block = rec_blocks[i]   #LSTM(hidden_dim)  # :: (x, dh, dc) -> (h, c)
+                if use_attention:
                     @Function
                     def lstm_with_attention(x, dh, dc):
                         x = splice (x, dh)
@@ -176,8 +182,8 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                         return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
                     rec_block = lstm_with_attention
                 r = RecurrenceFrom(rec_block)(r, *encoder_output.outputs) # :: r, h0, c0 -> h
-            r = Stabilizer()(r)
-            r = Dense(label_vocab_dim)(r)
+            r = Sout(r)
+            r = D(r)
             return r
 
     return decoder

@@ -122,6 +122,9 @@ def Block(f, op_name, members={}):
 # TODO: Move this into the lower layer where these are defined.
 # some mappings--these currently exist only so that I can name the nodes for debugging
 def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
+    pure = get_default_override(None, pure=default_override_or(False))
+    if pure:
+        raise TypeError('Function defs must be pure')
     dtype = get_default_override(Parameter, dtype=dtype)
     init = _initializer_for(init)
     p = parameter(shape, init=init, dtype=dtype, name=name) # TODO: use (*args, **kwargs)

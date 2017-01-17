@@ -66,20 +66,21 @@ def get_default_override(function, **kwargs):
     if len(kwargs) != 1:
         raise ValueError("_get_default_override() expects 1 keyword argument")
     key, value = [kvp for kvp in kwargs.items()][0] # this is the keyword argument that the user passed in  --TODO: can this be simplified?
-    from inspect import signature, isfunction  # check if key is a valid parameter  --TODO: should check for kw arguments
-    if not isfunction(function):
-        raise ValueError('First argument must be a function')
-    try:
-        signature(function).parameters[key]
-    except:
-        raise TypeError("{0}() has no argument named '{1}'".format(function.__name__, key))
+    if function:
+        from inspect import signature, isfunction  # check if key is a valid parameter  --TODO: should check for kw arguments
+        if not isfunction(function):
+            raise ValueError('First argument must be a function')
+        try:
+            signature(function).parameters[key]
+        except:
+            raise TypeError("{0}() has no argument named '{1}'".format(function.__name__, key))
     # if the value passed in is not a default, then use that value
     if not is_default_override(value):
         return value
     # traverse linked list of scopes inside-out until an override was found, else fall back to default
     opts = _current_default_overrides
     while opts is not None:
-        if opts._scope is None or function in opts._scope: # we are in the right scope
+        if opts._scope is None or function is None or function in opts._scope: # we are in the right scope
             if hasattr(opts, key):
                 return opts[key]  # look up the option override and return it if present in this scope
         opts = opts._outer # step out one scope and try again

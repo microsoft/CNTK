@@ -52,86 +52,89 @@ class Function(cntk_py.Function):
     #   @Function
     #   def f(x): return x * x
     def __new__(cls, f, members = {}):
-        # get the parameter list, and also the function name, through inspection
-        from inspect import signature, Parameter
-        params = signature(f).parameters
-        f_name = f.__name__
-        arg_names = [name for name, param in params.items() if param.default == Parameter.empty] # only non-optional params become Placeholders
-        # execute the lambda with placeholders as inputs, which creates a piece of graph
-        from cntk import placeholder_variable, combine, alias, as_block
-        args = [placeholder_variable(name=name) for name in arg_names]
-        out = f(*args)
-
-        # resolve NamedOutputs
-        # TODO: check for duplicates
-        def resolve_named(output):
-            if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                output = combine([output.arg], name=output.name)
-                #output = alias(output.arg, name=output.name)
-                #output = plus(output.arg, 0, name=output.name)
-                # BUGBUG: Fails with "ValueError: Variable(ElementTimes64_output) with unknown shape detected when compiling the Function graph!"
-                #  TODO: verify that this is still the case. Either way, alias() is slow.
-                # BUGBUG: Without alias, the names are not propagated into outputs.
-                # BUGBUG: Forgetting [] in combine will hang combine().
-            # BUGBUG: as_block() only accepts Functions, not Variables
-            elif isinstance(output, cntk_py.Variable):
-                output = combine([output]) # workaround: wrap in another combine() call
-            return output
-        if isinstance(out, tuple): # multi-valued function, returned as a tuple
-            out = [resolve_named(output) for output in out]
-            out = combine(out)
-        else:
-            out = resolve_named(out)
-        # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
-        if len(out.arguments) != len(args):
-            unused_args = set(args) - set(out.arguments)
-            unused_arg_names = [arg.name for arg in unused_args]
-            raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
-
-        # BEGIN WORKAROUND
-        # force parameter order
-        # BUGBUG: as_block() on the entire function is not really working, it looses names of its contents.
-        #         As a workaround, wrap the args themselves into alias(), combine(), as_block().
-        out_arg_names = [arg.name for arg in out.arguments]
-        #if len(arg_names) > 1:
-        # BUGBUG: ^^ causes random errors, use conservatively
-        if out_arg_names != arg_names     and False: # if order changed then force the order
-            # we only encapsulate the combine() function as to force the order,
-            # but not the actual function, as to not hide names inside
-            args1 = [placeholder_variable(name=name) for name in arg_names]
-            combined_args = combine([alias(arg, arg.name) for arg in args1])
-            args2 = [placeholder_variable(name=name) for name in arg_names]
-            arg_map = list(zip(args1,args2))
-            combined_args = as_block(combined_args, arg_map, f_name + '_parameter_ordering')
-            # this now is a BlockFunction that maps all args to themselves, with forced ordering
-            combined_args.replace_placeholders(dict(zip(args2,args)))
-            args = combined_args.outputs
-            # and try it again
+        # Parameter() creation inside code of a Function def is forbidden
+        from ..default_options import default_options
+        with default_options(pure=True):
+            # get the parameter list, and also the function name, through inspection
+            from inspect import signature, Parameter
+            params = signature(f).parameters
+            f_name = f.__name__
+            arg_names = [name for name, param in params.items() if param.default == Parameter.empty] # only non-optional params become Placeholders
+            # execute the lambda with placeholders as inputs, which creates a piece of graph
+            from cntk import placeholder_variable, combine, alias, as_block
+            args = [placeholder_variable(name=name) for name in arg_names]
             out = f(*args)
-            if isinstance(out, tuple): # multi-value function, returned as a tuple
+
+            # resolve NamedOutputs
+            # TODO: check for duplicates
+            def resolve_named(output):
+                if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                    output = combine([output.arg], name=output.name)
+                    #output = alias(output.arg, name=output.name)
+                    #output = plus(output.arg, 0, name=output.name)
+                    # BUGBUG: Fails with "ValueError: Variable(ElementTimes64_output) with unknown shape detected when compiling the Function graph!"
+                    #  TODO: verify that this is still the case. Either way, alias() is slow.
+                    # BUGBUG: Without alias, the names are not propagated into outputs.
+                    # BUGBUG: Forgetting [] in combine will hang combine().
+                # BUGBUG: as_block() only accepts Functions, not Variables
+                elif isinstance(output, cntk_py.Variable):
+                    output = combine([output]) # workaround: wrap in another combine() call
+                return output
+            if isinstance(out, tuple): # multi-valued function, returned as a tuple
                 out = [resolve_named(output) for output in out]
                 out = combine(out)
             else:
                 out = resolve_named(out)
+            # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
+            if len(out.arguments) != len(args):
+                unused_args = set(args) - set(out.arguments)
+                unused_arg_names = [arg.name for arg in unused_args]
+                raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
+
+            # BEGIN WORKAROUND
+            # force parameter order
+            # BUGBUG: as_block() on the entire function is not really working, it looses names of its contents.
+            #         As a workaround, wrap the args themselves into alias(), combine(), as_block().
             out_arg_names = [arg.name for arg in out.arguments]
-            assert out_arg_names == arg_names
-        # END WORKAROUND
+            #if len(arg_names) > 1:
+            # BUGBUG: ^^ causes random errors, use conservatively
+            if out_arg_names != arg_names     and False: # if order changed then force the order
+                # we only encapsulate the combine() function as to force the order,
+                # but not the actual function, as to not hide names inside
+                args1 = [placeholder_variable(name=name) for name in arg_names]
+                combined_args = combine([alias(arg, arg.name) for arg in args1])
+                args2 = [placeholder_variable(name=name) for name in arg_names]
+                arg_map = list(zip(args1,args2))
+                combined_args = as_block(combined_args, arg_map, f_name + '_parameter_ordering')
+                # this now is a BlockFunction that maps all args to themselves, with forced ordering
+                combined_args.replace_placeholders(dict(zip(args2,args)))
+                args = combined_args.outputs
+                # and try it again
+                out = f(*args)
+                if isinstance(out, tuple): # multi-value function, returned as a tuple
+                    out = [resolve_named(output) for output in out]
+                    out = combine(out)
+                else:
+                    out = resolve_named(out)
+                out_arg_names = [arg.name for arg in out.arguments]
+                assert out_arg_names == arg_names
+            # END WORKAROUND
 
-        # wrap into a block as to ensure ordering of parameters
-        # BUGBUG: This looses names. So avoid as_block() entirely unless needed; hoping it will not be used for where it matters
-        #args2 = [placeholder_variable(name=name) for name in arg_names]
-        #arg_map = list(zip(args,args2))
-        #out = as_block(out, arg_map, f_name)
-        # BUGBUG: Latest loses arguments. When each item in a Sequential() is a Block, then suddenly there are no args anymore.
+            # wrap into a block as to ensure ordering of parameters
+            # BUGBUG: This looses names. So avoid as_block() entirely unless needed; hoping it will not be used for where it matters
+            #args2 = [placeholder_variable(name=name) for name in arg_names]
+            #arg_map = list(zip(args,args2))
+            #out = as_block(out, arg_map, f_name)
+            # BUGBUG: Latest loses arguments. When each item in a Sequential() is a Block, then suddenly there are no args anymore.
 
-        # for debugging
-        out.f_name = f_name  # keep in Python wrapper for debugging
+            # for debugging
+            out.f_name = f_name  # keep in Python wrapper for debugging
 
-        # add all members to the Python class
-        # TODO: This should really be a dictionary inside BlockFunction
-        for key in members:   # UNTESTED
-            out.__dict__[key] = members[key]
-        return out
+            # add all members to the Python class
+            # TODO: This should really be a dictionary inside BlockFunction
+            for key in members:   # UNTESTED
+                out.__dict__[key] = members[key]
+            return out
 
     def __init__(self, f, members = {}):
         # don't call the base class, since Function is abstract in C++
