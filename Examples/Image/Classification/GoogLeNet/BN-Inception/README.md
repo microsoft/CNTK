@@ -12,7 +12,7 @@
 ## Running the example
 
 ### Getting the data
-We use the ILSVRC2012 datasets to demonstrate how to train a BN-Inception network. BN-Inception was initially published by Researchers at Google Inc., and it is fine-tuned to have excellent classification accuracy and low computation cost. It won first place in the [ILSVRC](http://www.image-net.org/challenges/LSVRC/) 2014 detection challenge.
+We use the ILSVRC2012 datasets to demonstrate how to train a BN-Inception network. BN-Inception was initially published by Researchers at Google Inc., and it is firstly described in the Batch Normalization paper (https://arxiv.org/abs/1502.03167) to demonstrate the power of Batch Normalization with minor changes on the original GoogLeNet. It has been proved that it could increase the training speed and achieve better accuracy, compared with the GoogLeNet v1 which have been well known for winning first place in the [ILSVRC](http://www.image-net.org/challenges/LSVRC/) 2014 detection challenge.
 
 
 ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it through http://image-net.org.
