@@ -177,7 +177,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                 if use_attention:
                     @Function
                     def lstm_with_attention(x, dh, dc):
-                        atth = ([sequence.first(output) for output in encoder_output.outputs])
+                        atth = ([sequence.broadcast_as(sequence.first(output), x) for output in encoder_output.outputs])
                         # BUGBUG: This does not work, since atth has an additional Placeholder
                         x = splice(x, *atth)
                         r = rec_block(x, dh, dc)
@@ -250,8 +250,7 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
     if isinstance(until_predicate, types.FunctionType):
         until_predicate = Function(until_predicate)
 
-    #@Function
-    # BUGBUG: fails with "SyntaxError: got multiple values for argument 'dynamic_axes_like'"
+    @Function
     def unfold_from(input, dynamic_axes_like):
         # create a new axis
         out_axis = dynamic_axes_like
@@ -265,6 +264,7 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
             out_axis = zeroes
 
         input1 = Placeholder(name='input1')
+        # TODO: Can this be fixed, now that we handle outer Placeholders?
 
         # BUGBUG: This will fail with sparse input.
         # nearly the same as RecurrenceFrom()
@@ -321,7 +321,8 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
                        map_state_function=hardmax,                                    # feedback goes through hardmax
                        until_predicate=lambda z: hardmax(z)[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                        length_increase=length_increase, initial_state=sentence_start)
-        z = U(input, dynamic_axes_like=input)
+        z = U(input=input, dynamic_axes_like=input)
+        # BUGBUG: parameter-order mix-up requires to pass parameters with keywords
 
         return z
 
@@ -406,15 +407,11 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
                 q = noop(mb_valid[valid_reader.streams.features])
                 print_sequences(q, i2w)
                 print(end=" -> ")
-                
+
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                #e = decoder_output_model.eval({find_arg_by_name('raw_input' , decoder_output_model) : 
-                #                               mb_valid[valid_reader.streams.features], 
-                #                               find_arg_by_name('raw_labels', decoder_output_model) : 
-                #                               mb_valid[valid_reader.streams.labels]})
-                #e = decoder_output_model(mb_valid[valid_reader.streams.features], mb_valid[valid_reader.streams.labels])
-                e = decoder_output_model(mb_valid[valid_reader.streams.features])
-                print_sequences(e, i2w)
+                if not use_attention: # BUGBUG: currently fails with attention enabled
+                    e = decoder_output_model(mb_valid[valid_reader.streams.features])
+                    print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 debug_attention(decoder_output_model, mb_valid, valid_reader)                

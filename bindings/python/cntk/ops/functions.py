@@ -61,9 +61,17 @@ class Function(cntk_py.Function):
             f_name = f.__name__
             arg_names = [name for name, param in params.items() if param.default == Parameter.empty] # only non-optional params become Placeholders
             # execute the lambda with placeholders as inputs, which creates a piece of graph
+            # During execution, the Placeholders of this function are hidden from signatures of any
+            # further Functions that may be defined inside this invocation.
             from cntk import placeholder_variable, combine, alias, as_block
             args = [placeholder_variable(name=name) for name in arg_names]
-            out = f(*args)
+            try:
+                for arg in args:
+                    Function._placeholders_under_construction.add(arg)
+                out = f(*args)
+            finally:
+                for arg in args:
+                    Function._placeholders_under_construction.remove(arg)
 
             # resolve NamedOutputs
             # TODO: check for duplicates
@@ -145,13 +153,22 @@ class Function(cntk_py.Function):
         # don't call the base class, since Function is abstract in C++
         pass
 
+    _placeholders_under_construction = set()
+
     @property
     def signature(self):
         '''
         Returns the signature of a Function.
         This is the argument list less placeholders that belong to an outer, not yet completed @Function def.
         '''
-        return self.arguments
+        #arg_names_under_construction = [arg.name for arg in Function._placeholders_under_construction]
+        #arg_names = [arg.name for arg in self.arguments]
+        #sig_names = [arg.name for arg in self.arguments if arg not in Function._placeholders_under_construction]
+        #for arg in self.arguments:
+        #    for uc in Function._placeholders_under_construction:
+        #        if arg == uc:
+        #            print(uc.name)
+        return tuple(arg for arg in self.arguments if arg not in Function._placeholders_under_construction)
 
     def argument_map(self, *args, **kwargs):
         '''
@@ -266,12 +283,20 @@ class Function(cntk_py.Function):
         # parse argument list and map to the function's input
         arg_map = self.argument_map(*args, **kwargs)
 
+        # if placeholders were excluded due to being under construction,
+        # we must include them in the argmap, otherwise they will be cloned
+        for ph in self.arguments:
+            if ph not in arg_map:
+                arg_map[ph] = ph
+
         # determine whether this is eval() or clone()
         is_symbolic = any(isinstance(arg, (cntk_py.Function, cntk_py.Variable)) for arg in arg_map.values())
 
         # symbolic: return a cloned Function
         if is_symbolic:
-            a1 = self.signature
+            s = self.signature
+            s_names = [arg.name for arg in s]
+            a1 = self.arguments
             a1_names = [arg.name for arg in a1]
             sn = self.name
             out = self.clone(CloneMethod.share, arg_map)
@@ -279,7 +304,7 @@ class Function(cntk_py.Function):
             if sn == 'hidden_representation':
                 ic = out.is_composite
                 print(13)
-            a2 = out.signature
+            a2 = out.arguments
             a2_names = [arg.name for arg in a2]
             # return the Variables as a Python tuple, rather than the CNTK Function object
             # TODO: naw, must be able to apply the result in case a new function with placeholders is created
