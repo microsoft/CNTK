@@ -48,12 +48,16 @@ If ($buildConfig -ne "Release")
 # Set Paths
 $basePath = "BinaryDrops\ToZip"
 $baseDropPath = Join-Path $basePath -ChildPath cntk
+$baseIncludePath = Join-Path $baseDropPath -ChildPath Include
 $zipFile = "BinaryDrops\BinaryDrops.zip"
 $buildPath = "x64\Release"
 If ($targetConfig -eq "CPU")
 {
 	$buildPath = "x64\Release_CpuOnly"
 }
+$includePath = "Source\Common\Include"
+# TBD To be redone either via white-list or via array
+$includeFile = Join-Path $includePath -ChildPath Eval.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 
@@ -71,18 +75,56 @@ If (Test-Path $baseDropPath\cntk\UnitTests)
 }
 Remove-Item $baseDropPath\cntk\*test*.exe
 Remove-Item $baseDropPath\cntk\*.pdb
-Remove-Item $baseDropPath\cntk\*.lib
+# Keep EvalDll.lib
+Remove-Item $baseDropPath\cntk\*.lib  -exclude EvalDll.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
+# Remove specific items
+If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
+{
+	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
+}
+If (Test-Path $baseDropPath\cntk\CPPEvalClient.exe)
+{
+	Remove-Item $baseDropPath\cntk\CPPEvalClient.exe
+}
+If (Test-Path $baseDropPath\cntk\CSEvalClient.exe)
+{
+	Remove-Item $baseDropPath\cntk\CSEvalClient.exe
+}
+If (Test-Path $baseDropPath\cntk\CSEvalClient.exe.config)
+{
+	Remove-Item $baseDropPath\cntk\CSEvalClient.exe.config
+}
+If (Test-Path $baseDropPath\cntk\CommandEval.exe)
+{
+	Remove-Item $baseDropPath\cntk\CommandEval.exe
+}
+
+# Make Include folder
+New-Item -Path $baseIncludePath -ItemType directory
+
+# Copy Include
+Write-Verbose "Copying Include files ..."
+Copy-Item $includeFile -Destination $baseIncludePath
 
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 
+# Copy Scripts
+Write-Verbose "Copying Scripts ..."
+Copy-Item Scripts -Recurse -Destination $baseDropPath\Scripts
+# Remove test related file(s) if exist(s)
+If (Test-Path $baseDropPath\Scripts\pytest.ini)
+{
+	Remove-Item $baseDropPath\Scripts\pytest.ini
+}
+
 # Copy all items from the share
 # For whatever reason Copy-Item in the line below does not work
 # Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
-# Copying with Robocopy. Maximum 2 retries, 30 sec waiting times in between
+# Copying with Robocopy. Maximum 2 retries, 30 sec waiting time in between
 Write-Verbose "Copying dependencies and other files from Remote Share ..."
 robocopy $sharePath $baseDropPath /s /e /r:2 /w:30
 # Check that Robocopy finished OK.

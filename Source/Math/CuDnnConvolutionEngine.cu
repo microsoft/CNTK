@@ -138,9 +138,16 @@ public:
         }
 
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
+#if CUDNN_MAJOR >= 5
+        CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
+                                               kind == PoolKind::Max ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
+                                               CUDNN_PROPAGATE_NAN,
+                                               (int)dims.size(), dims.data(), pad.data(), stride.data()));
+#else
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
                                                kind == PoolKind::Max ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
                                                (int)dims.size(), dims.data(), pad.data(), stride.data()));
+#endif
     }
 
     ~CuDnnPool()
@@ -297,6 +304,15 @@ protected:
         m_outT.UpdateBatchSize(batchSize);
         CUDNN_CALL(cudnnPoolingBackward(*m_cudnn, *(m_pool), &C::One, m_outT, ptr(out), m_outT, ptr(srcGrad),
                                         m_inT, ptr(in), &C::One, m_inT, ptr(grad)));
+    }
+
+    void MaxUnpoolingCore(const Mat& out, const Mat& poolIn, Mat& in) override
+    {
+        UNUSED(out);
+        UNUSED(poolIn);
+        UNUSED(in);
+        // Not implemented but potentially can make a fallback to reference engine.
+        LogicError("MaxUnpooling is not implemented for cuDNN engine.");
     }
 
 private:

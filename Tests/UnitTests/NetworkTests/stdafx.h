@@ -8,7 +8,15 @@
 #define _CRT_SECURE_NO_WARNINGS // "secure" CRT not available on all platforms
 #define _SCL_SECURE_NO_WARNINGS // current API of matrix does not allow safe invokations. TODO: change api to proper one.
 
+#ifdef _WIN32
 #include "targetver.h"
-#include "basics.h"
+#endif 
+
+#include "Basics.h"
 #include "BrainScriptParser.h"
+
+#ifndef _WIN32
+// Use dynamic library on Linux
+#define BOOST_TEST_DYN_LINK
+#endif
 #include <boost/test/unit_test.hpp>

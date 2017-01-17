@@ -1,0 +1,1 @@
+do = Print(Format( (13:(fortytwo:1):100), '')) ; fortytwo=42 

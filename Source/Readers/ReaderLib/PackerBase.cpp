@@ -45,6 +45,7 @@ PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
     assert(m_inputStreamDescriptions.size() == m_outputStreamDescriptions.size());
 
     m_streamBuffers.reserve(m_outputStreamDescriptions.size());
+    m_checkSampleShape.resize(m_outputStreamDescriptions.size(), false);
 
     // Sanity checks:
     for (size_t i = 0; i < m_outputStreamDescriptions.size(); ++i)
@@ -56,7 +57,17 @@ PackerBase::PackerBase(MemoryProviderPtr memoryProvider,
         assert(stream->m_elementType == ElementType::tfloat || stream->m_elementType == ElementType::tdouble);
         assert(stream->m_name == m_inputStreamDescriptions[i]->m_name);
         assert(stream->m_id == m_inputStreamDescriptions[i]->m_id);
-        assert(GetSampleSize(m_inputStreamDescriptions[i]) == GetSampleSize(stream));
+
+        if (m_inputStreamDescriptions[i]->m_sampleLayout == nullptr)
+        {
+            // Have to check shapes for each and every sequence.
+            m_checkSampleShape[i] = true;
+        }
+        // Shape the same for complete stream, checking only input/output stream shape.
+        else if (GetSampleSize(m_inputStreamDescriptions[i]) != GetSampleSize(stream))
+        {
+            RuntimeError("Packer cannot unify samples of different dimensions for stream '%ls'.", m_inputStreamDescriptions[i]->m_name.c_str());
+        }
 
         if (m_inputStreamDescriptions[i]->m_storageType == StorageType::dense &&
             stream->m_storageType == StorageType::sparse_csc)

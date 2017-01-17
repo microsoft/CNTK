@@ -28,22 +28,22 @@ def test_tensor_conversion_exceptions(idx, alias_tensor_map, expected):
 @pytest.mark.parametrize("idx, alias_tensor_map, expected", [
     (0, {'W': AA([])}, ""),
     (0, {'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]])}, """\
-0\t|W 1 1 0 0 0 0 0 0\
+0\t|W 1 0 0 0 1 0 0 0\
 """),
     (0, {
         'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]]),
         'L': AA([[[2]]])
     },
         """\
-0\t|L 2 |W 1 1 0 0 0 0 0 0\
+0\t|L 2 |W 1 0 0 0 1 0 0 0\
 """),
     (0, {
         'W': AA([[[1, 0], [1, 0]], [[5, 6], [7, 8]]]),
         'L': AA([[[2]]])
     },
         """\
-0\t|L 2 |W 1 1 0 0
-0\t|W 5 7 6 8"""),
+0\t|L 2 |W 1 0 1 0
+0\t|W 5 6 7 8"""),
 ])
 def test_tensor_conversion_dense(idx, alias_tensor_map, expected):
     assert tensors_to_text_format(idx, alias_tensor_map) == expected
@@ -58,7 +58,6 @@ def test_tensor_conversion_dense(idx, alias_tensor_map, expected):
 ])
 def test_is_tensor(data, expected):
     assert is_tensor(data) == expected
-
 
 @pytest.mark.parametrize("data, expected", [
     ([], False),

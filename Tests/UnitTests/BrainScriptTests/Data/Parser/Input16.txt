@@ -1,0 +1,13 @@
+do = Print(val) 
+val = new NDLComputationNetwork [
+  featDim=40*31 ; labelDim=9000 ; hiddenDim=2048 ; numHiddenLayers = 3 
+  myFeatures = Input(featDim, tag='features') ; myLabels = Input(labelDim, tag='labels') 
+  featNorm = MeanVarNorm(myFeatures) 
+  layers[layer:1..numHiddenLayers] = if layer > 1 then SBFF(layers[layer-1].Eh, hiddenDim, hiddenDim) else SBFF(featNorm, hiddenDim, featDim) 
+  outLayer = BFF(layers[numHiddenLayers].Eh, labelDim, hiddenDim) 
+  outZ = outLayer.z + Delay(outZ, 1) 
+  CE = CrossEntropyWithSoftmax(myLabels, outZ) 
+  Err = ErrorPrediction(myLabels, outZ) 
+  logPrior = LogPrior(myLabels) 
+  ScaledLogLikelihood = outZ - logPrior 
+]

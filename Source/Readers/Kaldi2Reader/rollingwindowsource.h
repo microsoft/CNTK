@@ -13,6 +13,7 @@
 #include "minibatchiterator.h"
 #include "biggrowablevectors.h"
 #include "ssematrix.h"
+#include "RandomOrdering.h"
 
 namespace msra { namespace dbn {
 
@@ -266,7 +267,7 @@ class minibatchframesourcemulti : public minibatchsource
     std::vector<char> boundaryflags;                         // [t] -1 for first and +1 for last frame, 0 else (for augmentneighbors())
     std::vector<std::vector<CLASSIDTYPE>> classids;          // [t] the state that the frame belongs to
     size_t numframes;                                        // total frames (==frames.size()==boundaryflags.size()==classids.size()) unless special modes vdim == 0 and/or no labels
-    msra::dbn::RandomOrdering RandomOrdering;                // [t] -> t'
+    Microsoft::MSR::CNTK::RandomOrdering m_randomOrdering;   // [t] -> t';
     double timegetbatch;
     int verbosity;
 
@@ -465,7 +466,7 @@ public:
 
         // initialize randomizer
         if (numframes > 0)
-            RandomOrdering.resize(numframes, randomizationrange);
+            m_randomOrdering.Resize(numframes, randomizationrange);
     }
     virtual ~minibatchframesourcemulti()
     {
@@ -526,7 +527,7 @@ public:
 
         // get random sequence (each time index occurs exactly once)
         // If the sweep changes, this will re-cache the sequence. We optimize for rare, monotonous sweep changes.
-        const auto &tmap = RandomOrdering(sweep);
+        const auto &tmap = m_randomOrdering(sweep);
 
         feat.resize(pframes.size());
         uids.resize(classids.size());
@@ -543,7 +544,7 @@ public:
                 leftextent = leftcontext[i];
                 rightextent = rightcontext[i];
             }
-            readfromdisk = pframes[i]->require(RandomOrdering.bounds(max(ts, leftextent) - leftextent, te + 1 + rightextent));
+            readfromdisk = pframes[i]->require(m_randomOrdering.Bounds(max(ts, leftextent) - leftextent, te + 1 + rightextent));
             // generate features and uids
             feat[i].resize(vdim[i], te - ts); // note: special mode vdim == 0 means no features to be loaded
             if (issupervised())               // empty means unsupervised training -> return empty uids
@@ -554,7 +555,7 @@ public:
 
             for (size_t t = ts; t < te; t++)
             {
-                size_t trand = tmap[t]; // the random-sequence sample point for this point in time
+                size_t trand = m_randomOrdering.IsRandomizationDisabled() ? t : tmap[t]; // the random-sequence sample point for this point in time
                 if (vdim[i] != 0)
                 {
                     auto v_t = feat[i].col(t - ts); // the vector to fill in

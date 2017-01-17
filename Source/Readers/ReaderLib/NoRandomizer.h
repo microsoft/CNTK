@@ -32,7 +32,7 @@ private:
     std::vector<SequenceDescription> GetNextSequenceDescriptions(size_t sampleCount);
 
     // Get chunk index for the sample offset from the beginning of the sweep.
-    size_t GetChunkIndexOf(size_t samplePosition);
+    ChunkIdType GetChunkIndexOf(size_t samplePosition);
 
     // Moves the cursor to the sequence possibly updating the chunk.
     void MoveToNextSequence();
@@ -59,7 +59,7 @@ private:
     // Current chunk data.
     ChunkPtr m_currentChunk;
     // Current chunk data id.
-    size_t m_currentChunkId;
+    ChunkIdType m_currentChunkId;
 
     // Current window of sequence descriptions.
     std::vector<SequenceDescription> m_sequenceWindow;
@@ -69,7 +69,7 @@ private:
 
     // Current chunk position that the randomizer works with.
     // An index inside the m_chunkDescriptions.
-    size_t m_currentChunkPosition;
+    ChunkIdType m_currentChunkPosition;
 
     // Global sample position on the timeline.
     // TODO: possible recalculate it base on samplePositionInEpoch.

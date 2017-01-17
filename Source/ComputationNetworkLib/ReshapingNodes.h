@@ -196,7 +196,7 @@ class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     void ValidateOp();
 public:
     ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = 0) :
-        Base(deviceId, name), m_operation(operation), m_axis(axis), m_op((ElementWiseOperator)-1/*invalid*/)
+        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/)
     {
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
@@ -220,7 +220,7 @@ public:
 private:
     int m_axis;
     std::wstring m_operation; // the operation as a string, e.g. "Sum", see ValidateOp()
-    ElementWiseOperator m_op; // the operation mapped to our internal opCode
+    ElementWiseOperator m_reductionOp; // the reduction operation mapped to our internal opCode
 };
 
 // -----------------------------------------------------------------------

@@ -355,12 +355,12 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
 
             CudaTimer time1;
             time1.Start();
-            engCntk->Backward(x, dy, dx, scale, saveMean, saveInvStdDev, dScale, dBias);
+            engCntk->Backward(x, dy, dx, scale, 0, saveMean, saveInvStdDev, dScale, dBias);
             time1.Stop();
 
             CudaTimer time2;
             time2.Start();
-            engCudnn->Backward(xB, dyB, dxB, scaleB, saveMeanB, saveInvStdDevB, dScaleB, dBiasB);
+            engCudnn->Backward(xB, dyB, dxB, scaleB, 0, saveMeanB, saveInvStdDevB, dScaleB, dBiasB);
             time2.Stop();
 
             std::stringstream tmsg;
@@ -376,6 +376,7 @@ BOOST_AUTO_TEST_CASE(BatchNormalizationBackward)
 
             BOOST_REQUIRE_MESSAGE(!dx.HasNan("dx"), "dx" << msgNan);
             BOOST_REQUIRE_MESSAGE(CheckEqual(dx, dxB, emsg, relErr * 16, absErr * 16), "dx" << msg << ". " << emsg);
+            // BUGBUG: Why does this pass for CNTK engine?
             BOOST_REQUIRE_MESSAGE(CountNans(dxBuf) == crow * 2 * ccol, "out" << msgNotNan);
             // REVIEW alexeyk: add cases for testing numerical stability.
 

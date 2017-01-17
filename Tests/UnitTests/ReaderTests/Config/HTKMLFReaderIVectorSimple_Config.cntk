@@ -1,0 +1,38 @@
+RootDir = .
+DataDir = $RootDir$
+
+# deviceId = -1 for CPU, >= 0 for GPU devices
+deviceId = -1
+
+precision = "double"
+
+Simple_Test = [
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = 450000
+        verbosity = 0
+
+        features1 = [
+            dim = 40
+            contextWindow=1
+            type = "real"
+            scpFile = "$DataDir$/features.rscp"
+        ]
+   
+        features2 = [
+            dim = 100
+            scpFile = "$DataDir$/ivector.rscp"
+            type = "real"
+            expandToUtterance = true
+        ]
+
+        labels = [
+            mlfFile = "$DataDir$/labels.smlf"
+            labelMappingFile = "$DataDir$/labels.statelist"
+            labelDim = 9000
+            labelType = "category"
+        ]
+    ]
+]

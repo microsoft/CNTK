@@ -45,12 +45,13 @@ def test_overload_types(root_node, expected):
 
 
 def test_overload_exception():
-    with pytest.raises(ValueError):
-        C(range(0, 10))[:]
+    c = C(list(range(0, 10)))
 
-    with pytest.raises(ValueError):
-        C(range(0, 10))[0:3:2]
+    with pytest.raises(TypeError):
+        c[:]
 
+    with pytest.raises(TypeError):
+        c[0:3:2]
 
 def _to_list(desc):
     return [line.strip() for line in desc.split('\n')]
@@ -92,8 +93,8 @@ def test_loose_coupling():
     dh = past_value(1, 'outnode')
     out = times(dh, constant(2), name='outnode')
 
-    expected = ['v0 = PastValue(1, outnode, timeStep=1, defaultHiddenActivation=0.1)',
-                "v1 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='2.0000", "', initOnCPUOnly=true, randomSeed=-1)",
+    expected = ["v0 = ParameterTensor(1, learningRateMultiplier=0.0, init='fromLiteral', initValueScale=1, value=0, initFromFilePath='', initFromLiteral='2.0000", "', initOnCPUOnly=true, randomSeed=-1)",
+                'v1 = PastValue(1, outnode, timeStep=1, defaultHiddenActivation=0.1)',                
                 'outnode = CNTK2.Times(v0, v1, outputRank=1)']
 
     description, inputs = out._to_config_description()

@@ -41,9 +41,9 @@ Simple_Demo_Train = [
     ]
 
     SGD = [
-	    # epochSize = 0 means epochSize is the size of the training set 
+        # epochSize = 0 means epochSize is the size of the training set 
         epochSize = 0 
-        minibatchSize = 25	
+        minibatchSize = 25  
         learningRatesPerMB = 0.5:0.2*20:0.1
         momentumPerMB = 0.9
         dropoutRate = 0.0
@@ -52,22 +52,17 @@ Simple_Demo_Train = [
        
     # Parameter values for the reader
     reader = [
-        readerType = "UCIFastReader"
-        file = "$DataDir$/SimpleDataTrain.txt"
-        miniBatchMode = "partial"
-        randomize = "auto"
-        verbosity = 1  
-
-        features = [
-            dim = 2        # two-dimensional input data
-            start = 0      # Start with first element on line
-        ]
-
-        labels = [
-            start = 2      # Skip two elements
-            dim = 1        # One label dimension
-            labelDim = 2   # Two labels possible
-            labelMappingFile = "$DataDir$/SimpleMapping.txt"
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTrain_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
         ]
     ]
 ]
@@ -84,20 +79,17 @@ Simple_Demo_Test = [
 
     # Parameter values for the reader
     reader = [
-        readerType = "UCIFastReader"
-        file = "$DataDir$/SimpleDataTest.txt"
-        randomize = "none"
-	  
-        features = [
-            dim = 2
-            start = 0
-        ]
-	  
-        labels = [
-            start = 2
-            dim = 1
-            labelDim = 2
-            labelMappingFile = "$DataDir$/SimpleMapping.txt"
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
         ]
     ]
 ]
@@ -113,20 +105,17 @@ Simple_Demo_Output=[
 
     # Parameter values for the reader
     reader = [
-        readerType = "UCIFastReader"
-        file = "$DataDir$/SimpleDataTest.txt"
-        randomize = "none"
-	  
-        features = [
-            dim = 2
-            start = 0
-        ]
-	  
-        labels = [
-            start = 2
-            dim = 1
-            labelDim = 2
-            labelMappingFile = "$DataDir$/SimpleMapping.txt"
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTest_cntk_text.txt"
+        input = [
+            features = [
+                dim = 2        # two-dimensional input data
+                format = "dense"
+            ]
+            labels = [
+                dim = 2        # two-dimensional labels
+                format = "dense"
+            ]
         ]
     ]
 

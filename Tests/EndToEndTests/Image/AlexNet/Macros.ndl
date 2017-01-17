@@ -9,8 +9,8 @@ ConvReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue)
 
 DNNReLULayer(inDim, outDim, x, wScale, bValue)
 {
-    W = Parameter(outDim, inDim, init = Gaussian, initValueScale = wScale) 
-    b = Parameter(outDim, init = fixedValue, value = bValue) 
+    W = Parameter(outDim, 0, init = Gaussian, initValueScale = wScale) 
+    b = Parameter(outDim,    init = fixedValue, value = bValue) 
     t = Times(W, x)
     z = Plus(t, b)
     y = RectifiedLinear(z)
@@ -27,8 +27,8 @@ DNNImageReLULayer(inW, inH, inC, outDim, x, wScale, bValue)
 
 DNNLastLayer(hiddenDim, labelDim, x, wScale, bValue)
 {
-    W = Parameter(labelDim, hiddenDim, init = Gaussian, initValueScale = wScale)
-    b = Parameter(labelDim, init = fixedValue, value = bValue)
+    W = Parameter(labelDim, 0, init = Gaussian, initValueScale = wScale)
+    b = Parameter(labelDim,    init = fixedValue, value = bValue)
     t = Times(W, x)
     z = Plus(t, b)
 }

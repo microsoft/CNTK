@@ -8,6 +8,13 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 #ifndef CPUONLY
+
+inline static void CheckCudaReturnCode(cudaError_t rc, const char* msg)
+{
+    if (rc != cudaSuccess)
+        RuntimeError("%s: %s (cuda error %d)", msg, cudaGetErrorString(rc), (int)rc);
+}
+
 CUDAPageLockedMemAllocator::CUDAPageLockedMemAllocator(int deviceID)
     : m_deviceID(deviceID)
 {
@@ -15,19 +22,18 @@ CUDAPageLockedMemAllocator::CUDAPageLockedMemAllocator(int deviceID)
 
 void* CUDAPageLockedMemAllocator::Malloc(size_t size, int deviceId)
 {
-    void* p;
-    cudaSetDevice(deviceId);
+    void* p = nullptr;
+    CheckCudaReturnCode(cudaSetDevice(deviceId), "Cannot set cuda device");
 
     // Note: I ask for cudaHostAllocDefault but cudaHostGetFlags() shows that it is allocated as 'cudaHostAllocMapped'
-    cudaHostAlloc(&p, size, cudaHostAllocDefault) || "Malloc in CUDAPageLockedMemAllocator failed";
-
+    CheckCudaReturnCode(cudaHostAlloc(&p, size, cudaHostAllocDefault), "Malloc in CUDAPageLockedMemAllocator failed");
     return p;
 }
 
 void CUDAPageLockedMemAllocator::Free(void* p, int deviceId)
 {
-    cudaSetDevice(deviceId);
-    cudaFreeHost(p) || "Free in CUDAPageLockedMemAllocator failed";
+    CheckCudaReturnCode(cudaSetDevice(deviceId), "Cannot set cuda device");
+    CheckCudaReturnCode(cudaFreeHost(p), "Free in CUDAPageLockedMemAllocator failed");
 }
 
 void* CUDAPageLockedMemAllocator::Malloc(size_t size)

@@ -5,9 +5,6 @@
     <ClCompile Include="dllmain.cpp">
       <Filter>Misc</Filter>
     </ClCompile>
-    <ClCompile Include="stdafx.cpp">
-      <Filter>Misc</Filter>
-    </ClCompile>
     <ClCompile Include="..\CNTK\BrainScript\BrainScriptEvaluator.cpp">
       <Filter>BrainScript</Filter>
     </ClCompile>
@@ -30,12 +27,6 @@
     </ClInclude>
     <ClInclude Include="..\Common\Include\Basics.h">
       <Filter>Common\Include</Filter>
-    </ClInclude>
-    <ClInclude Include="stdafx.h">
-      <Filter>Misc</Filter>
-    </ClInclude>
-    <ClInclude Include="targetver.h">
-      <Filter>Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\Common\Include\Config.h">
       <Filter>Common\Include</Filter>

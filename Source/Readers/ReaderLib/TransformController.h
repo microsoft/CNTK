@@ -9,6 +9,7 @@
 
 #include "Transformer.h"
 #include "SequenceEnumerator.h"
+#include "ExceptionCapture.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -70,15 +71,20 @@ public:
             return sequences;
         }
 
+        ExceptionCapture capture;
 #pragma omp parallel for schedule(dynamic)
         for (int j = 0; j < sequences.m_data.front().size(); ++j)
         {
-            for (auto& t : m_transformations)
+            capture.SafeRun([this, &sequences](int sequenceId)
             {
-                sequences.m_data[t.second][j] = t.first.m_transformer->Transform(sequences.m_data[t.second][j]);
-            }
+                for (auto& t : m_transformations)
+                {
+                    sequences.m_data[t.second][sequenceId] = t.first.m_transformer->Transform(sequences.m_data[t.second][sequenceId]);
+                }
+            }, j);
         }
 
+        capture.RethrowIfHappened();
         return sequences;
     }
 

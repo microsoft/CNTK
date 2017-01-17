@@ -1,0 +1,56 @@
+ []
+ delta =
+  42
+ do =
+  (
+   Print
+   ()
+    +
+     'result='
+     (
+      i2s
+      ()
+       +
+        (
+         . v
+          []
+           v =
+            =>
+             ()
+              i
+
+             +
+              i
+              delta
+
+
+
+
+         ()
+          5
+
+
+        13
+
+
+
+
+
+
+ i2s =
+  =>
+   ()
+    i
+
+   new StringFunction
+    []
+     arg =
+      i
+     how =
+      '.2'
+     what =
+      'Format'
+
+
+
+

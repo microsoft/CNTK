@@ -65,7 +65,7 @@ speechTrain = [
             distributedMBReading = true
             syncPerfStats=1
             BlockMomentumSGD = [
-                syncPeriod=2048
+                blockSizePerWorker=2048
                 resetSGDMomentum=true
                 useNesterovMomentum=true
             ]

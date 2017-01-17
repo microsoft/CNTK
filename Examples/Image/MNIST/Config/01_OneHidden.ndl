@@ -20,17 +20,15 @@ DNN = [
     # DNNSigmoidLayer and DNNLayer are defined in Macros.ndl
     h1 = DNNSigmoidLayer(featDim, hiddenDim, featScaled, 1)
     ol = DNNLayer(hiddenDim, labelDim, h1, 1)
-    
+
     ce = CrossEntropyWithSoftmax(labels, ol)
-    err = ErrorPrediction(labels, ol)
-    
+    errs = ErrorPrediction(labels, ol)
+    top5Errs = ErrorPrediction(labels, ol, Const(5), tag="eval")  # only used in testing
+
     # Special Nodes
-    # errTop1 can be used to compute, for example, top-5 error by changing Const(1) to Const(5).
-    errTop1 = ErrorPrediction(labels, ol, Const(1), tag="eval")
     FeatureNodes = (features)
     LabelNodes = (labels)
     CriterionNodes = (ce)
-    EvalNodes = (err)
+    EvalNodes = (errs)
     OutputNodes = (ol)
 ]
-

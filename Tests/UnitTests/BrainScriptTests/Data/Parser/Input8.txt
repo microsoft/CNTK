@@ -1,0 +1,1 @@
+do = Print(1+2*3) : Print('hello'+' world')

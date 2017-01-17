@@ -6,9 +6,7 @@ Installation on Linux.
 - If not installed, install Open MPI version 1.10 or later as described at https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi 
 - Set the following environment variables (the example below assumes, that CNTK is extracted to /home/username/cntk)
   export PATH=/home/username/cntk/cntk/bin:$PATH
-  export LD_LIBRARY_PATH=/home/username/cntk/cntk/lib: /home/username/cntk/cntk/dependencies/lib:$LD_LIBRARY_PATH
-  export ACML_FMA=0
-  (ACML_FMA is set to ensure the correct work of ACML library)
+  export LD_LIBRARY_PATH=/home/username/cntk/cntk/lib:/home/username/cntk/cntk/dependencies/lib:$LD_LIBRARY_PATH
 
 See additional information on verifying installation at https://github.com/Microsoft/CNTK/wiki/CNTK-Binary-Download-and-Configuration
 

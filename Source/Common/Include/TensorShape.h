@@ -665,6 +665,41 @@ public:
         std::swap(m_strides[i], m_strides[j]);
     }
 
+    // Flatten a tensor shape into a 2D tensor, where splitPoint is the first index to go into the second dimension
+    // The tensor shape must be flattenable this way, i.e. each of the two index ranges must be dense.
+    void FlattenTo2DInPlace(size_t splitPoint, const char* errorPrefix/* = nullptr*/)
+    {
+        // check & print meaningful error message
+        SmallVector<bool> dimsToDrop(GetRank(), false);
+        for (size_t k = 1; k < GetRank(); k++)
+            if (k != splitPoint)
+                if (!CanFlatten(k))
+                    InvalidArgument("%sShape [%s] is not dense at dimension %d.", (errorPrefix != nullptr) ? (std::string(errorPrefix) + ": ").c_str() : "", string(*this).c_str(), (int)k);
+                else
+                    dimsToDrop[k - 1] = true;
+        // handle case where last dimension missing, e.g. u'v where u and v are column vectors
+        if (splitPoint == GetRank())
+        {
+            PadRankInPlace(splitPoint + 1);
+            dimsToDrop.resize(splitPoint + 1, false);
+        }
+        // flatten the dimensions
+        for (size_t k = 1; k < GetRank(); k++)
+            if (dimsToDrop[k - 1])
+                FlattenInPlace(k);
+        DropDimsInPlace(dimsToDrop);
+        // handle edge case where first dimension missing, e.g. u'v where both are scalars
+        if (splitPoint == 0)
+        {
+            // we must insert a 1 dimension at the start
+            assert(GetRank() == 1); // we have reduced everything after the split point at this point
+            PadRankInPlace(2);      // append a 1
+            SwapDimsInPlace(0, 1);  // and swap--this preserves the stride of the second dimension
+        }
+        // now we have a matrix
+        assert(GetRank() == 2);
+    }
+
     // compare two TensorShapes, whether they are compatible, considering padding and broadcasting
     bool IsElementwiseCompatibleWith(const TensorShape& other) const
     {

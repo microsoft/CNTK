@@ -106,13 +106,13 @@ void ComputationNetwork::FormRecurrentLoops(const ComputationNodeBasePtr& rootNo
                 assert(node->m_numNonDelayedParentsInLoop == 0); // (in PurgeStateForFormingRecurrentLoops())
         }
         for (let& node : nestedNodes)
-            {
+        {
             for (auto& input : node->GetInputs())
-                {
+            {
                 if (input->m_loopId == node->m_loopId && GetRecurrenceSteppingDirection(node) == 0/*not a Delay node*/)
                     input->m_numNonDelayedParentsInLoop++; // cound #parents of 'input' that are not delay nodes
-                }
             }
+        }
 
         // re-traverse the graph for all nestedNodes, starting with the first
         // Then update m_nestedNodes with the re-traversed order.

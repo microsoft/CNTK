@@ -34,7 +34,13 @@ struct DataFixture
         m_parentPath = boost::filesystem::canonical(path.parent_path()).generic_string();
         fprintf(stderr, "Executable path: %s\n", m_parentPath.c_str());
 
+#ifdef _WIN32
+	// The executable path on Windows is e.g. <cntk>/x64/Debug/Unittests/
         m_testDataPath = m_parentPath + "/../../../Tests/UnitTests/NetworkTests";
+#else
+	// The executable path on Linux is e.g. <cntk>/build/cpu/release/bin/
+        m_testDataPath = m_parentPath + "/../../../../Tests/UnitTests/NetworkTests";
+#endif
         boost::filesystem::path absTestPath(m_testDataPath);
         absTestPath = boost::filesystem::canonical(absTestPath);
         m_testDataPath = absTestPath.generic_string();
@@ -70,7 +76,7 @@ struct DataFixture
                     if (!envVariableErrorMessage.empty())
                     {
                         BOOST_TEST_MESSAGE(envVariableErrorMessage);
-                        fprintf(stderr, envVariableErrorMessage.c_str());
+                        fprintf(stderr, "%s", envVariableErrorMessage.c_str());
                     }
 
                     newCurrentPath = m_testDataPath;

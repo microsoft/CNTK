@@ -1,0 +1,30 @@
+RootDir = .
+precision = "float"
+traceLevel = 1
+
+MissingImage_Test = [
+    # Parameter values for the reader
+    reader = [
+        # reader to use
+        readerType = "ImageReader"
+        file = "$RootDir$/ImageReaderMissingImage_map.txt"
+
+        randomize = "auto"
+        verbosity = 1
+
+        numCPUThreads = 1
+        features=[
+            width=4
+            height=8
+            channels=3
+            cropType=Center
+            cropRatio=1.0
+            jitterType=UniRatio
+            interpolations=Linear
+            #meanFile=$RootDir$/ImageReaderSimple_mean.xml
+        ]
+        labels=[
+            labelDim=4
+        ]
+    ]
+]

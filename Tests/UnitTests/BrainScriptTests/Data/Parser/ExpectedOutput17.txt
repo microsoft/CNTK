@@ -1,0 +1,383 @@
+ []
+ do =
+  (
+   Print
+   ()
+    val
+
+
+ val =
+  new NDLComputationNetwork
+   []
+    CE =
+     (
+      CrossEntropyWithSoftmax
+      ()
+       myLabels
+       outZ
+
+
+    Err =
+     (
+      ErrorPrediction
+      ()
+       myLabels
+       outZ
+
+
+    ScaledLogLikelihood =
+     -
+      outZ
+      logPrior
+
+    T =
+     3
+    featDim =
+     40
+    hiddenDim =
+     512
+    labelDim =
+     9000
+    layers =
+     array 
+      1
+      numHiddenLayers
+      =>
+       ()
+        layer
+
+       []
+        H_bwd =
+         (
+          Parameter
+          ()
+           hiddenDim
+           hiddenDim
+
+
+        H_fwd =
+         (
+          Parameter
+          ()
+           hiddenDim
+           hiddenDim
+
+
+        W_bwd =
+         if
+          >
+           layer
+           1
+
+          (
+           Parameter
+           ()
+            hiddenDim
+            hiddenDim
+
+
+          (
+           Fail
+           ()
+            'no W_bwd'
+
+
+
+        W_fwd =
+         (
+          Parameter
+          ()
+           hiddenDim
+           featDim
+
+
+        b =
+         (
+          Parameter
+          ()
+           hiddenDim
+           1
+
+
+        h_bwd =
+         array 
+          0
+          -
+           T
+           1
+
+          =>
+           ()
+            t
+
+           (
+            step
+            ()
+             H_bwd
+             h_bwd
+             1
+             t
+
+
+
+
+        h_fwd =
+         array 
+          0
+          -
+           T
+           1
+
+          =>
+           ()
+            t
+
+           (
+            step
+            ()
+             H_fwd
+             h_fwd
+             -(
+              1
+
+             t
+
+
+
+
+        step =
+         =>
+          ()
+           H
+           h
+           dt
+           t
+
+          (
+           Sigmoid
+           ()
+            if
+             &&
+              >=
+               +
+                t
+                dt
+
+               0
+
+              <
+               +
+                t
+                dt
+
+               T
+
+
+             +
+              [
+               z_shared
+               t
+
+              *
+               H
+               [
+                h
+                +
+                 t
+                 dt
+
+
+
+
+             [
+              z_shared
+              t
+
+
+
+
+
+        z_shared =
+         array 
+          0
+          -
+           T
+           1
+
+          =>
+           ()
+            t
+
+           +
+            if
+             >
+              layer
+              1
+
+             +
+              *
+               W_fwd
+               [
+                . h_fwd
+                 [
+                  layers
+                  -
+                   layer
+                   1
+
+
+
+                t
+
+
+              *
+               W_bwd
+               [
+                . h_bwd
+                 [
+                  layers
+                  -
+                   layer
+                   1
+
+
+
+                t
+
+
+
+             *
+              W_fwd
+              [
+               subframes
+               t
+
+
+
+            b
+
+
+
+
+
+
+    logPrior =
+     (
+      LogPrior
+      ()
+       myLabels
+
+
+    myFeatures =
+     (
+      Input
+      ()
+       featDim
+
+
+    myLabels =
+     (
+      Input
+      ()
+       labelDim
+
+
+    numHiddenLayers =
+     2
+    outLayer =
+     []
+      W_bwd =
+       (
+        Parameter
+        ()
+         labelDim
+         hiddenDim
+
+
+      W_fwd =
+       (
+        Parameter
+        ()
+         labelDim
+         hiddenDim
+
+
+      b =
+       (
+        Parameter
+        ()
+         labelDim
+         1
+
+
+      centerT =
+       (
+        Floor
+        ()
+         /
+          T
+          2
+
+
+
+      topHiddenLayer =
+       [
+        layers
+        numHiddenLayers
+
+      z =
+       +
+        +
+         *
+          W_fwd
+          [
+           . h_fwd
+            topHiddenLayer
+
+           centerT
+
+
+         *
+          W_bwd
+          [
+           . h_bwd
+            topHiddenLayer
+
+           centerT
+
+
+
+        b
+
+
+    outZ =
+     . z
+      outLayer
+
+    subframes =
+     array 
+      0
+      -
+       T
+       1
+
+      =>
+       ()
+        t
+
+       (
+        RowSlice
+        ()
+         *
+          t
+          featDim
+
+         featDim
+         myFeatures
+
+
+
+
+
+
+

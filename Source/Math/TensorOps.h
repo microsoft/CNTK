@@ -225,12 +225,12 @@ DefBinaryOp(ElementwiseQuotient, ClippedQuotient(a, b));
 DefBinaryOp(LogSum, LogAdd(a, b));
 DefBinaryOp(Max, a > b ? a : b);
 DefBinaryOp(Min, a < b ? a : b);
-DefBinaryOp(EQ, a == b);
-DefBinaryOp(NE, a != b);
-DefBinaryOp(GT, a > b);
-DefBinaryOp(LT, a < b);
-DefBinaryOp(GE, a >= b);
-DefBinaryOp(LE, a <= b);
+DefBinaryOp(Equal, a == b);
+DefBinaryOp(NotEqual, a != b);
+DefBinaryOp(Greater, a > b);
+DefBinaryOp(Less, a < b);
+DefBinaryOp(GreaterEqual, a >= b);
+DefBinaryOp(LessEqual, a <= b);
 DefBinaryOp(And, (float)((!!a) && (!!b)));
 DefBinaryOp(Or, (float)((!!a) || (!!b)));
 DefBinaryOp(Xor, (float)((!!a) ^ (!!b)));
@@ -261,6 +261,8 @@ DefTernaryOp(Cond, a ? b : c);
 DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b copy c, otherwise 0; used for gradient of clip, min, max, etc.
 DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
+DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
+
 
 #pragma pop_macro("DefTernaryOp")
 }}}

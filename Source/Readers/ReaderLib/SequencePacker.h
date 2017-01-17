@@ -33,6 +33,9 @@ protected:
     // Given a number of sequences, creates an MB layout that is used to guide
     // the actual packing.
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch);
+
+    // Helper function to check the sample shape of input samples.
+    void CheckSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamDescriptionPtr outputStream);
 };
 
 typedef std::shared_ptr<SequencePacker> SequencePackerPtr;

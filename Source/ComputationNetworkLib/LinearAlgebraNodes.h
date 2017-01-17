@@ -67,6 +67,8 @@ template class PlusNode<double>;
 
 // -----------------------------------------------------------------------
 // LogPlusNode (summand1, summand2)
+// Computes ln(exp(summand1) + exp(summand2)) in an overflow safe way.
+// Useful e.g. for computing softmax over sequence.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -105,8 +107,16 @@ public:
         if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
             Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-        // TODO: would be nice to state the derivative here in a comment
-        inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
+        if (inputIndex == 0)
+        {
+            // d/dx (ln( exp(x) + (exp(y)) = exp(x) / (exp(x) + exp(y)) = 1 / (1 + exp(y-x)) = sigmoid(x-y)
+            inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input1, input0);
+        }
+        else
+        {
+            // d/dy (ln( exp(x) + (exp(y)) = exp(y) / (exp(x) + exp(y)) = 1 / (1 + exp(x-y)) = sigmoid(y-x)
+            inputGradient.AddElementwiseProductWithLogSumDerivativeOf(gradient, input0, input1);
+        }
     }
 };
 
@@ -381,7 +391,7 @@ public:
             // Note: This is non-ambiguous w.r.t. valid new configurations because this condition would otherwise just be considered an error.
             //       But it will fail to discover trailing reduction dimensions that are 1. We assume that no such legacy models exist.
             // Note: This is very ugly [Wayne Xiong]. I agree [fseide].
-            if (dimsA.size() == 2 && !transpose && m_outputRank == 1 && dimsA[1] != dimsB[0])
+            if (dimsA.size() == 2 && !transpose && m_outputRank == 1 && dimsA[1] != dimsB[0] && dimsB[0] != 0)
             {
                 // search whether we can interpret dimsA[1] as the flattening of the first dimensions
                 size_t dim = 1;
@@ -409,6 +419,17 @@ public:
             for (size_t k = 0; k < m_outputRank; k++) // outputRank dimensions cannot be inferred
                 if (dimsA[k] == 0)
                     InvalidArgument("%ls %ls operation: The outputRank (%d) dimensions in left argument's shape [%s] must not be 0.", NodeName().c_str(), OperationName().c_str(), (int)m_outputRank, dimsAstring.c_str());
+
+            // if the last dimension of A is 0, then extend it to fully match B
+            // E.g. [I x 0] * [X x Y x Z x K] => infer as [I x X x Y x Z], not as [I x X].
+            // I.e. we cannot use inference to infer a matrix product on a part of an input tensor.
+            // We default to inferring the whole, as part of a tensor is a special use case.
+            assert (dimsA.size() == m_outputRank + numReductionDims);
+            while (numReductionDims < dimsB.size() && dimsA.back() == 0)
+            {
+                dimsA.push_back(0);
+                numReductionDims++;
+            }
 
             // fill in the missing ones
             // We fill in dimensions given as 0. The tensor rank is not inferred.
@@ -452,6 +473,8 @@ public:
         // so that the default allocator will not allocate it again.
         Base::AllocateGradientMatricesForInputs(matrixPool);
     }
+
+    size_t OutputRank() const { return m_outputRank; }
 
 private:
     size_t m_outputRank;

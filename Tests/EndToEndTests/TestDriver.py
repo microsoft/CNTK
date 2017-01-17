@@ -265,6 +265,7 @@ class Test:
       os.environ["MPI_BINARY"] = "mpiexec"
     if not os.path.exists(os.environ["TEST_CNTK_BINARY"]):
       raise ValueError("the cntk executable does not exist at path '%s'"%os.environ["TEST_CNTK_BINARY"]) 
+    os.environ["TEST_BIN_DIR"] = os.path.dirname(os.environ["TEST_CNTK_BINARY"])
     os.environ["TEST_DIR"] = self.testDir
     os.environ["TEST_DATA_DIR"] = self.dataDir
     os.environ["TEST_RUN_DIR"] = runDir
@@ -686,89 +687,90 @@ def runCommand(args):
     sys.exit(10)
 
 # ======================= Entry point =======================
-parser = argparse.ArgumentParser(description="TestDriver - CNTK Test Driver")
-subparsers = parser.add_subparsers(help="command to execute. Run TestDriver.py <command> --help for command-specific help")
-runSubparser = subparsers.add_parser("run", help="run test(s)")
-runSubparser.add_argument("test", nargs="*",
-                    help="optional test name(s) to run, specified as Suite/TestName. "
-                         "Use list command to list available tests. "
-                         "If not specified then all tests will be run.")
+if __name__ == "__main__":
+  parser = argparse.ArgumentParser(description="TestDriver - CNTK Test Driver")
+  subparsers = parser.add_subparsers(help="command to execute. Run TestDriver.py <command> --help for command-specific help")
+  runSubparser = subparsers.add_parser("run", help="run test(s)")
+  runSubparser.add_argument("test", nargs="*",
+                      help="optional test name(s) to run, specified as Suite/TestName. "
+                           "Use list command to list available tests. "
+                           "If not specified then all tests will be run.")
 
-defaultBuildSKU = "gpu"
+  defaultBuildSKU = "gpu"
 
-runSubparser.add_argument("-b", "--build-location", help="location of the CNTK build to run")
-runSubparser.add_argument("-t", "--tag", help="runs tests which match the specified tag")
-runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
-runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
-runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
-tmpDir = os.getenv("TEMP") if windows else "/tmp"
-defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
-runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
-runSubparser.add_argument("--update-baseline", action='store_true', help="update baseline file(s) instead of matching them")
-runSubparser.add_argument("--create-baseline", action='store_true', help="create new baseline file(s) (named as baseline.<os>.<device>.txt) for tests that do not currently have baselines")
-runSubparser.add_argument("-v", "--verbose", action='store_true', help="verbose output - dump all output of test script")
-runSubparser.add_argument("-n", "--dry-run", action='store_true', help="do not run the tests, only print test names and configurations to be run along with full command lines")
+  runSubparser.add_argument("-b", "--build-location", help="location of the CNTK build to run")
+  runSubparser.add_argument("-t", "--tag", help="runs tests which match the specified tag")
+  runSubparser.add_argument("-d", "--device", help="cpu|gpu - run on a specified device")
+  runSubparser.add_argument("-f", "--flavor", help="release|debug - run only a specified flavor")
+  runSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - run tests only for a specified build SKU")
+  tmpDir = os.getenv("TEMP") if windows else "/tmp"
+  defaultRunDir=os.path.join(tmpDir, "cntk-test-{0}.{1}".format(time.strftime("%Y%m%d%H%M%S"), random.randint(0,1000000)))
+  runSubparser.add_argument("-r", "--run-dir", default=defaultRunDir, help="directory where to store test output, default: a random dir within /tmp")
+  runSubparser.add_argument("--update-baseline", action='store_true', help="update baseline file(s) instead of matching them")
+  runSubparser.add_argument("--create-baseline", action='store_true', help="create new baseline file(s) (named as baseline.<os>.<device>.txt) for tests that do not currently have baselines")
+  runSubparser.add_argument("-v", "--verbose", action='store_true', help="verbose output - dump all output of test script")
+  runSubparser.add_argument("-n", "--dry-run", action='store_true', help="do not run the tests, only print test names and configurations to be run along with full command lines")
 
-runSubparser.set_defaults(func=runCommand)
+  runSubparser.set_defaults(func=runCommand)
 
-listSubparser = subparsers.add_parser("list", help="list available tests")
-listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the specified tag")
-listSubparser.add_argument("-d", "--device", help="cpu|gpu - tests for a specified device")
-listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
-listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - list tests only for a specified build SKU")
-listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
+  listSubparser = subparsers.add_parser("list", help="list available tests")
+  listSubparser.add_argument("-t", "--tag", help="limits a resulting list to tests matching the specified tag")
+  listSubparser.add_argument("-d", "--device", help="cpu|gpu - tests for a specified device")
+  listSubparser.add_argument("-f", "--flavor", help="release|debug - tests for specified flavor")
+  listSubparser.add_argument("-s", "--build-sku", default=defaultBuildSKU, help="cpu|gpu|1bitsgd - list tests only for a specified build SKU")
+  listSubparser.add_argument("--os", help="windows|linux - tests for a specified operating system")
 
-listSubparser.set_defaults(func=listCommand)
+  listSubparser.set_defaults(func=listCommand)
 
-if len(sys.argv)==1:
-    parser.print_help()
-    sys.exit(1)
-
-args = parser.parse_args(sys.argv[1:])
-
-# parsing a --device, --flavor and --os options:
-args.devices = ["cpu", "gpu"]
-if (args.device):
-  args.device = args.device.lower()
-  if not args.device in args.devices:
-    six.print_("--device must be one of", args.devices, file=sys.stderr)
-    sys.exit(1)
-  args.devices = [args.device]
-
-args.flavors = ["debug", "release"]
-if (args.flavor):
-  args.flavor = args.flavor.lower()
-  if not args.flavor in args.flavors:
-    six.print_("--flavor must be one of", args.flavors, file=sys.stderr)
-    sys.exit(1)
-  args.flavors = [args.flavor]
-
-args.buildSKUs = ["cpu", "gpu", "1bitsgd"]
-if (args.build_sku):
-  args.build_sku = args.build_sku.lower()
-  if not args.build_sku in args.buildSKUs:
-    six.print_("--build-sku must be one of", args.buildSKUs, file=sys.stderr)
-    sys.exit(1)
-  args.buildSKUs = [args.build_sku]
-  if args.build_sku == "cpu" and args.devices == ["gpu"]:
-    print >>sys.stderr, "Invalid combination: --build-sku cpu and --device gpu"
-    sys.exit(1)
-
-if args.func == runCommand and not args.build_location:
-  args.build_location = os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"))
-
-if args.func == listCommand:
-  args.oses = ["windows", "linux"]
-  if (args.os):
-    args.os = args.os.lower()
-    if not args.os in args.oses:
-      six.print_("--os must be one of", args.oses, file=sys.stderr)
+  if len(sys.argv)==1:
+      parser.print_help()
       sys.exit(1)
-  args.oses = [args.os]
 
-# discover all the tests
-Test.discoverAllTests()
+  args = parser.parse_args(sys.argv[1:])
 
-# execute the command
-args.func(args)
+  # parsing a --device, --flavor and --os options:
+  args.devices = ["cpu", "gpu"]
+  if (args.device):
+    args.device = args.device.lower()
+    if not args.device in args.devices:
+      six.print_("--device must be one of", args.devices, file=sys.stderr)
+      sys.exit(1)
+    args.devices = [args.device]
+
+  args.flavors = ["debug", "release"]
+  if (args.flavor):
+    args.flavor = args.flavor.lower()
+    if not args.flavor in args.flavors:
+      six.print_("--flavor must be one of", args.flavors, file=sys.stderr)
+      sys.exit(1)
+    args.flavors = [args.flavor]
+
+  args.buildSKUs = ["cpu", "gpu", "1bitsgd"]
+  if (args.build_sku):
+    args.build_sku = args.build_sku.lower()
+    if not args.build_sku in args.buildSKUs:
+      six.print_("--build-sku must be one of", args.buildSKUs, file=sys.stderr)
+      sys.exit(1)
+    args.buildSKUs = [args.build_sku]
+    if args.build_sku == "cpu" and args.devices == ["gpu"]:
+      print >>sys.stderr, "Invalid combination: --build-sku cpu and --device gpu"
+      sys.exit(1)
+
+  if args.func == runCommand and not args.build_location:
+    args.build_location = os.path.realpath(os.path.join(thisDir, "../..", "x64" if windows else "build/"))
+
+  if args.func == listCommand:
+    args.oses = ["windows", "linux"]
+    if (args.os):
+      args.os = args.os.lower()
+      if not args.os in args.oses:
+        six.print_("--os must be one of", args.oses, file=sys.stderr)
+        sys.exit(1)
+    args.oses = [args.os]
+
+  # discover all the tests
+  Test.discoverAllTests()
+
+  # execute the command
+  args.func(args)
 

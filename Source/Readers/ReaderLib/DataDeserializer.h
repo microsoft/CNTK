@@ -22,27 +22,31 @@ struct KeyType
     // size_t m_prefix;
 
     // Identifies sequence between different deserializers.
-    size_t m_sequence;
+    size_t m_sequence : 40;
 
     // Sample id.
-    size_t m_sample;
+    size_t m_sample : 24;
 };
 
 class Chunk;
 typedef std::shared_ptr<Chunk> ChunkPtr;
+
+typedef uint32_t ChunkIdType;
+#define CHUNKID_MAX ((ChunkIdType)(-1))
+
+#define SEQUENCELEN_MAX ((uint32_t)(-1))
 
 // Defines main properties of a sequence.
 // Sequence descriptions are used by the randomizer to establish a global timeline for complete input.
 // A sequence is defined as an ordered set of samples (size == 1 is used for sample training).
 struct SequenceDescription
 {
-    size_t m_id;              // Sequence id, uniquely identifies the sequence.
-    size_t m_numberOfSamples; // Number of samples in a sequence.
-    size_t m_chunkId;         // Each sequence belongs to an I/O chunk, how chunk is defined is specific to a
-                              // particular data deserializer (or bundler). The randomizer guarantees to request
-                              // sequences from only limited subset of chunks at any moment in time.
-    bool m_isValid;           // Indicates whether the sequence is valid.
-    KeyType m_key;            // Sequence key, used for correlations between sequences of different deserializers.
+    size_t m_id;                               // Sequence id, uniquely identifies the sequence.
+    uint32_t m_numberOfSamples;                // Number of samples in a sequence.
+    ChunkIdType m_chunkId;                     // Each sequence belongs to an I/O chunk, how chunk is defined is specific to a
+                                               // particular data deserializer (or bundler). The randomizer guarantees to request
+                                               // sequences from only limited subset of chunks at any moment in time.
+    KeyType m_key;                             // Sequence key, used for correlations between sequences of different deserializers.
 };
 
 typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
@@ -51,6 +55,8 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // Currently CNTK supports dense and sparse sequences (csc).
 // The storageType in the corresponding stream description identifies what type of SequenceData
 // data deserializer or transformer can provide provides.
+// The layout of samples are described in the sampleLayout.
+// All samples in the sequence should have the same layout.
 // TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.
 struct SequenceDataBase
 {
@@ -59,22 +65,21 @@ struct SequenceDataBase
 
     // Sequence id.
     size_t m_id;
-    size_t m_numberOfSamples;      // Number of samples in the sequence
+    uint32_t m_numberOfSamples;      // Number of samples in the sequence
 
     ChunkPtr m_chunk;
     // A non-owned pointer. The actual size is provided for particular sequences,
     // i.e. see DenseSequenceData, or SparseSequenceData.
     void* m_data;
+
+    TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
 // Dense sequence. Should be returned by the deserializer for streams with storage type StorageType::dense.
 // All samples are stored in the 'data' member as a contiguous array.
-// The layout of samples are described in the sampleLayout.
-// All samples in the sequence should have the same layout.
 struct DenseSequenceData : SequenceDataBase
 {
-    TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
 };
 typedef std::shared_ptr<DenseSequenceData> DenseSequenceDataPtr;
 
@@ -127,7 +132,7 @@ private:
 struct ChunkDescription
 {
     // Chunk id.
-    size_t m_id;
+    ChunkIdType m_id;
     // Number of samples in the chunk.
     size_t m_numberOfSamples;
     // Number of sequences in the chunk.
@@ -155,15 +160,16 @@ public:
     virtual ChunkDescriptions GetChunkDescriptions() = 0;
 
     // Gets sequence descriptions for a given a chunk.
-    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& descriptions) = 0;
+    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& descriptions) = 0;
 
-    // Gets sequence description by its key.
-    // Used by deserializers not in driving/primary mode.
+    // Gets sequence description given the sequence description of the primary deserializer.
+    // Used for deserializers not in driving/primary mode.
+    // Returns false if the corresponding secondary sequence is not valid.
     // TODO: Possibly move this out into a separate interface.
-    virtual void GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& description) = 0;
+    virtual bool GetSequenceDescription(const SequenceDescription& primary, SequenceDescription& description) = 0;
 
     // Gets chunk data given its id.
-    virtual ChunkPtr GetChunk(size_t chunkId) = 0;
+    virtual ChunkPtr GetChunk(ChunkIdType chunkId) = 0;
 
     virtual ~IDataDeserializer() {};
 };

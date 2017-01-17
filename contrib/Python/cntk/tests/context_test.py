@@ -99,7 +99,7 @@ def test_parse_eval_result_output_2():
     assert np.isinf(data[7]) and data[7] < 0
 
 
-def test_parse_test_result_output():
+def test_parse_test_result_output_1():
     output = '''\
 Final Results: Minibatch[1-1]: eval_node = 2.77790430 * 500; crit_node = 0.44370050 * 500; perplexity = 1.55846366
 '''
@@ -110,6 +110,17 @@ Final Results: Minibatch[1-1]: eval_node = 2.77790430 * 500; crit_node = 0.44370
     assert result['crit_node'] == 0.44370050
     assert len(result) == 3
     
+def test_parse_test_result_output_2():
+    output = '''\
+Final Results: Minibatch[1-1]: loss = 47.3% * 500; crit_node = 0.44370050 * 500; perplexity = 1.55846366
+'''
+    result = LocalExecutionContext._parse_test_result(output)
+
+    assert result['perplexity'] == 1.55846366
+    assert result['loss'] == 0.473
+    assert result['crit_node'] == 0.44370050
+    assert len(result) == 3
+
 def test_export_deferred_context():
     X = Input(2)    
     reader = CNTKTextFormatReader("Data.txt")

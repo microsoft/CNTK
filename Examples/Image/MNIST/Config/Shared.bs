@@ -1,0 +1,81 @@
+# Shared.bs -- macros shared by all MNIST examples
+
+# linear layer (no non-linearity)
+DNNLayer (inDim, outDim, x, parmScale) = [
+    W = Parameter (outDim, inDim, init="uniform", initValueScale=parmScale, initOnCPUOnly=true)
+    b = Parameter (outDim, 1,     init="fixedValue", value=0)
+    z = W * x + b
+].z
+
+# sigmoid layer
+DNNSigmoidLayer (inDim, outDim, x, parmScale) = Sigmoid (DNNLayer (inDim, outDim, x, parmScale))
+
+# image sigmoid layer --differs from DNNSigmoidLayer in how dimensions are specified
+DNNImageSigmoidLayer (inW, inH, inC, outDim, x, parmScale) = [
+    W = ImageParameter (outDim, inW, inH, inC, init="uniform", initValueScale=parmScale, initOnCPUOnly=true /* , imageLayout=$imageLayout$*/)
+    b = Parameter      (outDim, 1,         init="fixedValue", value=0)
+    t = Times(W, x)
+    z = Plus(t, b)
+    y = Sigmoid(z) # TODO: fix this for 02_
+].y
+
+# ReLU layer with batch normalization
+# TODO: rename to DNN-
+DnnBNReLULayer (inDim, outDim, x, wScale, bValue, scValue, bnTimeConst) = [
+    W   = Parameter (outDim, inDim, init = "gaussian", initValueScale = wScale, initOnCPUOnly=true) 
+    b   = Parameter (outDim, 1, init = "fixedValue", value = bValue) 
+    sc  = Parameter (outDim, 1, init = "fixedValue", value = scValue) 
+    m   = Parameter (outDim, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
+    isd = Parameter (outDim, 1, init = "fixedValue", value = 0, learningRateMultiplier = 0)
+    t = Times(W, x)  # TODO: W * x
+    bn = BatchNormalization(t, sc, b, m, isd, eval = false, spatial = false, normalizationTimeConstant = bnTimeConst)
+    y = RectifiedLinear(bn)
+].y
+
+# macros to create parameters for convolution   --TODO: rename to newConvX()
+ConvW (outMap, inWCount, wScale) = Parameter (outMap, inWCount, init="uniform", initValueScale=wScale, initOnCPUOnly=true)
+ConvB (outMap, bValue) = ImageParameter (1, 1, outMap, init="fixedValue", value=bValue /* , imageLayout=$imageLayout$*/)
+
+# TODO: find out whether Conv2D is identical to -ND by now, then unify
+Conv2D (w, inp, kW, kH, outMap, hStride, vStride) =
+    Convolution (w, inp, kW, kH, outMap, hStride, vStride, zeroPadding=true /* , imageLayout=$imageLayout$*/)
+
+ConvND (w, inp, kW, kH, inMap, outMap, hStride, vStride) =
+    Convolution (w, inp, (kW:kH:inMap), mapCount=outMap, stride=(hStride:vStride:inMap), sharing=(true:true:true), autoPadding=(true:true:false), lowerPad=0, upperPad=0 /* , imageLayout=$imageLayout$*/)
+
+Conv2DReLULayer (inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
+    w = ConvW (outMap, inWCount, wScale)
+    b = ConvB (outMap, bValue)
+    c = Conv2D (w, inp, kW, kH, outMap, hStride, vStride)
+    out = RectifiedLinear (c + b);
+].out
+
+ConvNDReLULayer (inp, kW, kH, inMap, inWCount, outMap, hStride, vStride, wScale, bValue) = [
+    w = ConvW (outMap, inWCount, wScale)
+    b = ConvB (outMap, bValue)
+    c = ConvND (w, inp, kW, kH, inMap, outMap, hStride, vStride)
+    out = RectifiedLinear (c + b);
+].out
+
+ConvBNLayerW (W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst) = [   # TODO: delete if not needed
+    b   = Parameter(outMap, 1, init="fixedValue", value=bValue)
+    sc  = Parameter(outMap, 1, init="fixedValue", value=scValue)
+    m   = Parameter(outMap, 1, init="fixedValue", value=0, learningRateMultiplier=0)
+    isd = Parameter(outMap, 1, init="fixedValue", value=0, learningRateMultiplier=0)
+    
+    c = Convolution(W, inp, kW, kH, outMap, hStride, vStride, zeroPadding=true /* , imageLayout=$imageLayout$*/)
+    y = BatchNormalization(c, sc, b, m, isd, eval=false, spatial=true, normalizationTimeConstant=bnTimeConst /* , imageLayout=$imageLayout$*/)
+].y
+
+ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, bnTimeConst) = [
+    W = LearnableParameter(outMap, inWCount, init=Gaussian, initValueScale=wScale, initOnCPUOnly=true)
+    c = ConvBNLayerW(W, inp, outMap, kW, kH, hStride, vStride, bValue, scValue, bnTimeConst)
+].c
+
+ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, bnTimeConst) = [
+    c = ConvBNLayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue, scValue, bnTimeConst)
+    y = RectifiedLinear(c)
+].y
+
+MaxNDPooling(inp, kW, kH, hStride, vStride) =
+    Pooling(inp, "max", (kW:kH:1), stride=(hStride:vStride:1), autoPadding=(true:true:false), lowerPad=0, upperPad=0 /* , imageLayout=$imageLayout$*/)

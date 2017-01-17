@@ -11,60 +11,60 @@ deviceId = -1
 
 outputNodeNames = "Dummy"
 traceLevel = 1
-frameMode=false
+frameMode = false
 
 Simple_Test = [
 
 # Parameter values for the reader
 reader = [
-        verbosity=0
-        randomize=true
+        verbosity = 0
+        randomize = true
 
-        deserializers=[
+        deserializers = (
             [
-                type="CNTKTextFormatDeserializer"
-                module="CNTKTextFormatReader"
+                type = "CNTKTextFormatDeserializer"
+                module = "CNTKTextFormatReader"
                 file = "$RootDir$/ImageAndTextReaderSimple_labels.txt"
 
-                input=[
-                    labels=[
-                        dim=4
-                        format="sparse"
+                input = [
+                    labels = [
+                        dim = 4
+                        format = "sparse"
                     ]
                 ]
             ]:[
-                type="ImageDataDeserializer"
-                module="ImageReader"
+                type = "ImageDeserializer"
+                module = "ImageReader"
                 file = "$RootDir$/ImageAndTextReaderSimple_map.txt"
 
-                input=[
-                    features=[
-                        transforms=[
+                input = [
+                    features = [
+                        transforms = (
                             [
-                                type="Crop"
-                                cropType=Center
-                                cropRatio=1.0
-                                jitterType=UniRatio
+                                type = "Crop"
+                                cropType = "center"
+                                cropRatio = 1.0
+                                jitterType = "uniRatio"
                             ]:[
-                                type="Scale"
-                                width=4
-                                height=8
-                                channels=3
-                                interpolations=Linear
+                                type = "Scale"
+                                width = 4
+                                height = 8
+                                channels = 3
+                                interpolations = "linear"
                             ]:[
-                                type="Mean"
+                                type = "Mean"
                             ]:[
-                                type="Transpose"
+                                type = "Transpose"
                             ]
-                        ]
+                        )
                     ]
 
                     # Currently the image deserializer always has labels, we read but ignore them.
-                    ignored=[
-                        labelDim=4
+                    ignored = [
+                        labelDim = 4
                     ]
                 ]
             ]
-        ]
+        )
     ]
 ]

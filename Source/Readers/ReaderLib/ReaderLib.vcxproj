@@ -45,6 +45,7 @@
     <ClInclude Include="Bundler.h" />
     <ClInclude Include="ChunkCache.h" />
     <ClInclude Include="ChunkRandomizer.h" />
+    <ClInclude Include="ExceptionCapture.h" />
     <ClInclude Include="TransformController.h" />
     <ClInclude Include="DataDeserializerBase.h" />
     <ClInclude Include="BlockRandomizer.h" />

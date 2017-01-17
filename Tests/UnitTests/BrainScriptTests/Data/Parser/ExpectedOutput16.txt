@@ -1,0 +1,147 @@
+ []
+ do =
+  (
+   Print
+   ()
+    val
+
+
+ val =
+  new NDLComputationNetwork
+   []
+    CE =
+     (
+      CrossEntropyWithSoftmax
+      ()
+       myLabels
+       outZ
+
+
+    Err =
+     (
+      ErrorPrediction
+      ()
+       myLabels
+       outZ
+
+
+    ScaledLogLikelihood =
+     -
+      outZ
+      logPrior
+
+    featDim =
+     *
+      40
+      31
+
+    featNorm =
+     (
+      MeanVarNorm
+      ()
+       myFeatures
+
+
+    hiddenDim =
+     2048
+    labelDim =
+     9000
+    layers =
+     array 
+      1
+      numHiddenLayers
+      =>
+       ()
+        layer
+
+       if
+        >
+         layer
+         1
+
+        (
+         SBFF
+         ()
+          . Eh
+           [
+            layers
+            -
+             layer
+             1
+
+
+
+          hiddenDim
+          hiddenDim
+
+
+        (
+         SBFF
+         ()
+          featNorm
+          hiddenDim
+          featDim
+
+
+
+
+
+    logPrior =
+     (
+      LogPrior
+      ()
+       myLabels
+
+
+    myFeatures =
+     (
+      Input
+      ()
+       featDim
+
+       tag =
+        'features'
+
+
+    myLabels =
+     (
+      Input
+      ()
+       labelDim
+
+       tag =
+        'labels'
+
+
+    numHiddenLayers =
+     3
+    outLayer =
+     (
+      BFF
+      ()
+       . Eh
+        [
+         layers
+         numHiddenLayers
+
+
+       labelDim
+       hiddenDim
+
+
+    outZ =
+     +
+      . z
+       outLayer
+
+      (
+       Delay
+       ()
+        outZ
+        1
+
+
+
+
+
+

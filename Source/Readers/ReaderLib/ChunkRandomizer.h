@@ -10,18 +10,18 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // Represents an interval closed on the left and opened on the right.
-    struct ClosedOpenInterval
+    // Represents an interval of chunks closed on the left and opened on the right.
+    struct ClosedOpenChunkInterval
     {
-        size_t m_begin;
-        size_t m_end;
+        ChunkIdType m_begin;
+        ChunkIdType m_end;
     };
 
     // Information about randomized chunk.
     struct RandomizedChunk
     {
         // Chunk id.
-        size_t m_chunkId;
+        ChunkIdType m_chunkId;
         // Pointer to the original chunk.
         const ChunkDescription* m_original;
         // Position of the first sample of the chunk in the input.
@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Position of the first sequence of the chunk in the input.
         size_t m_sequencePositionStart;
         // Randomization window for this chunk.
-        ClosedOpenInterval m_randomizationWindow;
+        ClosedOpenChunkInterval m_randomizationWindow;
 
         // Position of the last sample of the chunk in the input.
         size_t SampleEndPosition() const

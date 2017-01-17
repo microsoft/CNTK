@@ -25,8 +25,6 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
         assert(m_inOutT.GetNumElements() == bias.GetNumRows());
         assert(m_inOutT.GetNumElements() == runMean.GetNumRows());
         assert(m_inOutT.GetNumElements() == runInvStdDev.GetNumRows());
-        assert(saveMean.GetNumElements() == 0 || m_inOutT.GetNumElements() == saveMean.GetNumRows());
-        assert(saveInvStdDev.GetNumElements() == 0 || m_inOutT.GetNumElements() == saveInvStdDev.GetNumRows());
     }
     else
     {
@@ -34,26 +32,35 @@ void BatchNormEngine<ElemType>::Forward(const Mat& in, const Mat& scale, const M
         assert((m_inOutT.GetNumElements() % bias.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % runMean.GetNumRows()) == 0);
         assert((m_inOutT.GetNumElements() % runInvStdDev.GetNumRows()) == 0);
-        assert(saveMean.GetNumElements() == 0 || (m_inOutT.GetNumElements() % saveMean.GetNumRows()) == 0);
-        assert(saveInvStdDev.GetNumElements() == 0 || (m_inOutT.GetNumElements() % saveInvStdDev.GetNumRows()) == 0);
     }
     assert(scale.GetNumCols() == 1);
     assert(bias.GetNumCols() == 1);
     assert(runMean.GetNumCols() == 1);
     assert(runInvStdDev.GetNumCols() == 1);
-    assert(saveMean.GetNumElements() == 0 || saveMean.GetNumCols() == 1);
-    assert(saveInvStdDev.GetNumElements() == 0 || saveInvStdDev.GetNumCols() == 1);
 
     EnsureCompatible();
     ForwardCore(in, scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
+
+    if (!m_spatial)
+    {
+        assert(saveMean.GetNumElements() == 0 || m_inOutT.GetNumElements() == saveMean.GetNumRows());
+        assert(saveInvStdDev.GetNumElements() == 0 || m_inOutT.GetNumElements() == saveInvStdDev.GetNumRows());
+    }
+    else
+    {
+        assert(saveMean.GetNumElements() == 0 || (m_inOutT.GetNumElements() % saveMean.GetNumRows()) == 0);
+        assert(saveInvStdDev.GetNumElements() == 0 || (m_inOutT.GetNumElements() % saveInvStdDev.GetNumRows()) == 0);
+    }
+    assert(saveMean.GetNumElements() == 0 || saveMean.GetNumCols() == 1);
+    assert(saveInvStdDev.GetNumElements() == 0 || saveInvStdDev.GetNumCols() == 1);
 }
 
 template <class ElemType>
-void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, 
+void BatchNormEngine<ElemType>::Backward(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor,
                                          const Mat& saveMean, const Mat& saveInvStdDev, Mat& scaleGrad, Mat& biasGrad)
 {
     EnsureCompatible();
-    BackwardCore(in, srcGrad, grad, scale, saveMean, saveInvStdDev, scaleGrad, biasGrad);
+    BackwardCore(in, srcGrad, grad, scale, blendFactor, saveMean, saveInvStdDev, scaleGrad, biasGrad);
 }
 
 template <class ElemType>
@@ -88,10 +95,10 @@ protected:
         in.BatchNormalizationForward(scale, bias, expAvgFactor, blendFactor, runMean, runInvStdDev, out, epsilon, saveMean, saveInvStdDev);
     }
 
-    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, const Mat& saveMean, const Mat& saveInvStdDev,
+    void BackwardCore(const Mat& in, const Mat& srcGrad, Mat& grad, const Mat& scale, double blendFactor, const Mat& saveMean, const Mat& saveInvStdDev,
                       Mat& scaleGrad, Mat& biasGrad) override
     {
-        srcGrad.BatchNormalizationBackward(in, grad, scale, saveMean, saveInvStdDev, scaleGrad, biasGrad);
+        srcGrad.BatchNormalizationBackward(in, grad, scale, blendFactor, saveMean, saveInvStdDev, scaleGrad, biasGrad);
     }
 };
 
@@ -128,4 +135,4 @@ std::unique_ptr<BatchNormEngine<ElemType>> BatchNormEngine<ElemType>::Create(DEV
 template class BatchNormEngine<float>;
 template class BatchNormEngine<double>;
 
-} } }
+}}}

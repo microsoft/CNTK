@@ -1,0 +1,27 @@
+ []
+ do =
+  (
+   f
+   ()
+    42
+
+    option =
+     'value'
+
+
+ f =
+  =>
+   ()
+    x
+
+    option =
+     'default'
+
+   (
+    Print
+    ()
+     option
+
+
+
+

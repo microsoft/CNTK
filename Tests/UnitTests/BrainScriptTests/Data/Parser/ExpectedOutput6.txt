@@ -1,0 +1,25 @@
+ []
+ do =
+  new PrintAction
+   []
+    what =
+     if
+      ||
+       >
+        13
+        42
+
+       >
+        12
+        1
+
+
+      +
+       'Hello World'
+       '!'
+
+      'Oops?'
+
+
+
+

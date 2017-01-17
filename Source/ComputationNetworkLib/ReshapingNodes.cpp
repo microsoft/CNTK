@@ -34,9 +34,9 @@ template <class ElemType>
     if (flags & CopyNodeFlags::copyNodeValue)
     {
         auto node = dynamic_pointer_cast<ReduceElementsNode<ElemType>>(nodeP);
-        node->m_axis      = m_axis;
-        node->m_operation = m_operation;
-        node->m_op        = m_op;
+        node->m_axis        = m_axis;
+        node->m_operation   = m_operation;
+        node->m_reductionOp = m_reductionOp;
     }
 }
 
@@ -64,7 +64,7 @@ template <class ElemType>
     auto input  = Input(0)->ValueTensorFor(rank, fr);
 
     // the actual operation is a Copy with reduction, where the magic is in the reduction op
-    result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_op);
+    result.DoUnaryOpOf(0, input, 1, ElementWiseOperator::opCopy, m_reductionOp);
     // note: we can implement "Mean" by passing 1/dim for alpha
 }
 
@@ -79,32 +79,65 @@ template <class ElemType>
     auto sliceInputGrad  = Input(0)->GradientTensorFor(rank, fr); // ...to this one
 
     // gradients are not as simple as passing an op-code, unfortunately
-    switch (m_op)
+    switch (m_reductionOp)
     {
     case ElementWiseOperator::opSum:
         // "Sum": broadcast the gradient
         sliceInputGrad.AddCopyOf(sliceOutputGrad);
         break;
 
+    case ElementWiseOperator::opLogSum:
+        {
+            auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+            // Let: f(x, y, z) = log(exp x + exp y + exp z)
+            // For the derivative we get:
+            // df / dx = exp(x)/exp(f)
+            //         = exp(x – f)
+            sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
+        }
+        break;
+
+    case ElementWiseOperator::opMin:
+    case ElementWiseOperator::opMax:
+        auto input = Input(inputIndex)->ValueTensorFor(rank, fr);
+        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+
+        // POTENTIAL PROBLEM:
+        // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
+        // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
+        // In these cases there is no correct gradient.The question is if this could lead to any problems.
+        // Let's look at two scenarios where this might happen:
+        //
+        // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
+        //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
+        //
+        // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
+        //
+        // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
+        // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
+        sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+        break;
+
         // more coming
 
         // "LogPlus": softmax
         //   f(x) = log(sum_i exp x_i), hence gradient is:
-        //   df / dx_i = 1 / (sum_j exp x_j) * exp x_i = (Softmax(x))_i = exp(x_i  – ReduceLogPlus(x))
+        //   df / dx_i = 1 / (sum_j exp x_j) * exp x_i = (Softmax(x))_i = exp(x_i  - ReduceLogPlus(x))
         // targetGradient = gradientFromTop .* Exp (inputValue - outputValue)   --TODO: verify
         // i.e. compute dfference if input and output, then Exp in-place. No, would need temp memory. So needs its own opcode AddScaledExpOfDiff(). Ternary.
-
-        // "Max": Copy the gradient only to the max value. targetGradient += gradientFromTop .* (outputValue == inputValue). Needs its own opcode. --TODO : verify
     }
 }
 
 template <class ElemType>
 /*virtual*/ bool ReduceElementsNode<ElemType>::OutputUsedInComputingInputNodesGradients() const /*override*/
 {
-    switch (m_op)
+    switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum: return false;
-    // will be different e.g. for LogPlus, Max, and Min
+    case ElementWiseOperator::opSum:    return false;
+    case ElementWiseOperator::opLogSum: return true;
+    case ElementWiseOperator::opMin:    return true;
+    case ElementWiseOperator::opMax:    return true;
     }
     LogicError("Should not get here.");
 }
@@ -112,25 +145,31 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ bool ReduceElementsNode<ElemType>::InputUsedInComputingInputNodesGradients(size_t inputIndex) const /*override*/
 {
-    switch (m_op)
+    switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum: return false;
-    // will be different for LogPlus, Max, and Min
+    case ElementWiseOperator::opSum:    return false;
+    case ElementWiseOperator::opLogSum: return true;
+    case ElementWiseOperator::opMin:    return true;
+    case ElementWiseOperator::opMax:    return true;
     }
     LogicError("Should not get here.");
 }
 
-// map the operation specific as a string to an ElementWiseOperator to pass to 
+// map the operation specified as a string to an ElementWiseOperator value.
 template <class ElemType>
 void ReduceElementsNode<ElemType>::ValidateOp()
 {
 #if 1 // legacy with initial experiments, delete this soon
-    if (m_operation == L"Plus") m_op = ElementWiseOperator::opSum;
+    if (m_operation == L"Plus") m_reductionOp = ElementWiseOperator::opSum;
     else
 #endif
-    if (m_operation == L"Sum") m_op = ElementWiseOperator::opSum;
+    if      (m_operation == L"Sum")    m_reductionOp = ElementWiseOperator::opSum;
+    else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
+    else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
+    else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
+
     // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum'. And a few more soon.", NodeDescription().c_str(), m_operation.c_str());
+    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min'.", NodeDescription().c_str(), m_operation.c_str());
 }
 
 template <class ElemType>

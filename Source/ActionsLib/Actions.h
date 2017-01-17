@@ -20,7 +20,6 @@
 #define let const auto
 #endif
 
-using namespace std;
 using namespace Microsoft::MSR;
 using namespace Microsoft::MSR::CNTK; // TODO: we should not have this in a header
 
@@ -32,7 +31,7 @@ template <class ConfigRecordType, typename ElemType>
 function<ComputationNetworkPtr(DEVICEID_TYPE)> GetNetworkFactory(const ConfigRecordType& config);
 
 template <class ConfigRecordType, typename ElemType>
-ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, vector<wstring>& outputNodeNamesVector);
+ComputationNetworkPtr GetModelFromConfig(const ConfigRecordType& config, const std::wstring& outputNodeNameConfig, std::vector<std::wstring>& outputNodeNamesVector);
 
 // training (TrainActions.cpp)
 template <class ConfigRecordType, typename ElemType>

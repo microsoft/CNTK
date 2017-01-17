@@ -29,11 +29,11 @@ testCases:
     patterns:
       - ^MPI Rank {{integer}}
       - block momentum = {{float,tolerance=0.1%}}
-      - block momentum time constant = {{float,tolerance=1%}}
+      - block momentum time constant (per worker) = {{float,tolerance=1%}}
       - block learning rate = {{float,tolerance=0.1%}}
-      - sync period = {{integer}} samples
+      - block size per worker = {{integer}} samples
       - resetting SGD momentum after sync
-      - using Nesterov style block momentum
+      - using Nesterov-style block momentum
 
   Per-minibatch training results must match for each MPI Rank:
     patterns:

@@ -11,6 +11,16 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+// -----------------------------------------------------------------------
+// The file contains CUDA kernels that are used in reference convolution
+// engine. All these kernels look very similar as they use the same
+// idea of precomputed maps described in ConvolveGeometry.h
+// That is, 'mpRowCol' maps each convolution output to the start of the
+// input. 'mpRowIwht', 'mpRowRun' and 'runs' provide maps that allow
+// to get indices of the active weight when applying the convolution.
+// See ConvolveGeometry.h (MpRowCol, MpRowIwht etc) for more details.
+// -----------------------------------------------------------------------
+
 template <typename ElemType>
 __global__ void kConvolutionForward(int batchSize, const ElemType* __restrict__ kernel,
                                     const int* mpRowCol, const int* mpRowIwht,
@@ -200,6 +210,53 @@ __global__ void kMaxPoolingBackward(int batchSize, const ElemType* out, const El
         out += blockDim.y * srcVecSize;
         srcGrad += blockDim.y * srcVecSize;
         grad += blockDim.y * dstVecSize;
+    }
+}
+
+template <typename ElemType>
+__global__ void kMaxUnpooling(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
+                              const ElemType* __restrict__ src, const ElemType* poolIn, int srcVecSize,
+                              ElemType* dst, int dstVecSize)
+{
+    int row = blockIdx.x * blockDim.x + threadIdx.x;
+    if (row >= srcVecSize)
+        return;
+
+    src    += blockIdx.y * srcVecSize;
+    poolIn += blockIdx.y * dstVecSize;
+    dst    += blockIdx.y * dstVecSize;
+
+    for (int sample = blockIdx.y; sample < batchSize; sample += gridDim.y)
+    {
+        int colBase = mpRowCol[row];
+        assert(0 <= colBase && colBase < dstVecSize);
+
+        int i0 = mpRowIndices[row];
+        int size = indices[i0++];
+        ElemType curMax = poolIn[colBase + indices[i0]];
+        ElemType prevMax = curMax;
+        int imax = 0;
+        for (int i = 1; i < size; i++)
+        {
+            int dcol = indices[i0 + i];
+            assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
+            curMax = max(curMax, poolIn[colBase + dcol]);
+            if (curMax > prevMax)
+            {
+                prevMax = curMax;
+                imax = i;
+            }
+
+        }
+
+        int dcol = indices[i0 + imax];
+        assert(0 <= colBase + dcol && colBase + dcol < dstVecSize);
+
+        dst[colBase + dcol] = src[row];
+
+        src    += blockIdx.y * srcVecSize;
+        poolIn += blockIdx.y * dstVecSize;
+        dst    += blockIdx.y * dstVecSize;
     }
 }
 

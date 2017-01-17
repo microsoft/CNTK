@@ -1,0 +1,40 @@
+ []
+ N =
+  5
+ arg =
+  arr
+ arr =
+  array 
+   1
+   N
+   =>
+    ()
+     i
+
+    if
+     <
+      i
+      N
+
+     *
+      [
+       arr
+       +
+        i
+        1
+
+
+      i
+
+     N
+
+
+
+ do =
+  (
+   Print
+   ()
+    arg
+
+
+

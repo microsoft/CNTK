@@ -64,13 +64,13 @@ DNN = [
     ol = DNNLayer(h1Dim, labelDim, h1, 1)
     
     ce = CrossEntropyWithSoftmax(labels, ol)
-    err = ErrorPrediction(labels, ol)
+    errs = ErrorPrediction(labels, ol)
     
     # Special Nodes
     FeatureNodes = (features)
     LabelNodes = (labels)
     CriterionNodes = (ce)
-    EvalNodes = (err)
+    EvalNodes = (errs)
     OutputNodes = (ol)
 ]
 

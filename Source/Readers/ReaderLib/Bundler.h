@@ -23,10 +23,10 @@ public:
     virtual ChunkDescriptions GetChunkDescriptions() override;
 
     // Gets sequence descriptions for a particular chunk.
-    virtual void GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescription>& result) override;
+    virtual void GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDescription>& result) override;
 
     // Gets a chunk with data.
-    virtual ChunkPtr GetChunk(size_t chunkId) override;
+    virtual ChunkPtr GetChunk(ChunkIdType chunkId) override;
 
 private:
     DISABLE_COPY_AND_MOVE(Bundler);
@@ -53,6 +53,18 @@ private:
     // correct number of samples/sequences they contain.
     // If this flag is set to false, no cleaning will be done, so additional overhead.
     bool m_cleanse;
+
+    // If flag is set to true the sequence length is counted by the primary deserializer only.
+    // Used for optimization when sequences between different deserializers are of the same length
+    // (i.e. often in speech)
+    bool m_takePrimarySequenceLength;
+
+    // A table of loaded chunks to make sure we do not load same chunk twice.
+    // Inner vector is the table of chunk id into weak pointer, the outer vector has an element per deserializer.
+    std::vector<std::vector<std::weak_ptr<Chunk>>> m_weakChunkTable;
+
+    // General configuration
+    int m_verbosity;
 };
 
 }}}

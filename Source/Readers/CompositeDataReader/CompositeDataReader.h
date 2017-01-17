@@ -38,12 +38,12 @@ struct Minibatch;
 
 // The whole CompositeDataReader is meant as a stopgap to allow deserializers/transformers composition until SGD talkes 
 // directly to the new Reader API. The example of the cntk configuration that this reader supports can be found at
-//     Tests/EndToEndTests/Speech/ExperimentalHtkmlfReader/LSTM/FullUtterance/cntk.cntk
+//     Tests/EndToEndTests/Speech/HtkDeserializers/LSTM/FullUtterance/cntk.cntk
 // CompositeDataReader is a factory for the new readers. Its main responsibility is to read the configuration and create the
 // corresponding set of deserializers, the corpus descriptor, transformers, randomizer and packer, providing the following functionality:
 //     - all input sequences are defined by the corpus descriptor
 //     - deserializers provide sequences according to the corpus descriptor
-//     - sequences can be transformed by the transformers applied on top of deserializer (TODO: not yet in place)
+//     - sequences can be transformed by the transformers applied on top of deserializer
 //     - deserializers are bound together using the bundler - it bundles sequences with the same sequence id retrieved from different deserializers
 //     - packer is used to pack randomized sequences into the minibatch
 // The composite reader is currently also responsible for asynchronous prefetching of the minibatch data.

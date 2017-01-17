@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-def eval(node):        
+def eval(node, clean_up=True):        
     """ 
     It evaluates a node that has taken a numpy array as input. Note that sequences
     are not supported yet by this method
@@ -20,41 +20,15 @@ def eval(node):
 
     Args:
         node (:class:`cntk.graph.ComputationNode`): the node to evaluate        
+        clean_up (bool): whether the temporary directory should be removed when the context is left        
 
     Returns:
         NumPy array containing the result
     """    
     
-    from cntk.context import get_context        
-    from cntk.ops import input_numpy, constant
-    from cntk.graph import ComputationNode
+    from cntk.context import get_new_context        
     
     # call a helper method to get a context
-    ctx = get_context()    
-    first = True    
-    
-    # The params are passed as arryas, e.g. plus([1,2], [3,4]),  and we need to 
-    # wrap them with input and parameter nodes.
-    if node.params:
-        for p in node.params:
-            if p in node.inputs:
-                val = getattr(node, p)
-                if not isinstance(val, ComputationNode):
-                    # One param needs to be an Input() node. This will being fixed in 
-                    # CNTK soon, so that we can remove this workaround and evaluate a 
-                    # network with no inputs.
-                    if first:
-                        if not isinstance(val, list):                
-                            # inputs have the outmost dimension for sequences
-                            val = [val]
-    
-                        ir = input_numpy([val], alias=p, name=p)
-                        setattr(node, p, ir)
-                        first = False
-                    else:
-                        setattr(node, p, constant(getattr(node, p), name=p))
-                else:
-                    if val.op_name == 'CNTK2.Input' and first:
-                        first = False
-                        
-    return ctx.eval(node)
+    with get_new_context() as ctx:
+        ctx.clean_up = clean_up
+        return ctx.eval(node)

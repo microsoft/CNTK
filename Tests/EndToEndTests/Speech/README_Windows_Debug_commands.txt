@@ -72,6 +72,11 @@ COMMAND:     configFile=$(SolutionDir)Examples/Other/Simple2d/Config/Simple.cntk
 COMMAND:    configFile=$(SolutionDir)Examples/Text/PennTreebank/Config/rnn.cntk  RunDir=$(SolutionDir)Examples/Text/PennTreebank/_run  RootDir=$(SolutionDir)Examples/Text/PennTreebank/_run  DataDir=$(SolutionDir)Examples/Text/PennTreebank/Data  ConfigDir=$(SolutionDir)Examples/Text/PennTreebank/Config  stderr=$(SolutionDir)Examples/Text/PennTreebank/_run/Simple.log  train=[SGD=[maxEpochs=1]]  confVocabSize=1000  DeviceId=-1  makeMode=false
 # append this for small set: trainFile=ptb.small.train.txt  validFile=ptb.small.valid.txt testFile=ptb.small.test.txt
 
+--- Text/SeqCla:
+
+COMMAND:    configFile=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/Config/seqcla.cntk  currentDirectory=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/Data  RunDir=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/_run  DataDir=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/Data  ConfigDir=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/Config  OutputDir=$(SolutionDir)Tests/EndToEndTests/Text/SequenceClassification/_out  DeviceId=auto
+
+
 Simple test
 -----------
 

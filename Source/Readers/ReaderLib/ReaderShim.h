@@ -14,6 +14,11 @@
 #include <future>
 #include "Reader.h"
 
+namespace CNTK
+{
+    class CompositeMinibatchSource;
+}
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 typedef ReaderPtr (*ReaderFactory)(const ConfigParameters& parameters);
@@ -21,6 +26,7 @@ typedef ReaderPtr (*ReaderFactory)(const ConfigParameters& parameters);
 template <class ElemType>
 class ReaderShim : public IDataReader
 {
+    friend class ::CNTK::CompositeMinibatchSource;
 public:
     explicit ReaderShim(ReaderFactory factory);
     virtual ~ReaderShim() { }
@@ -71,7 +77,7 @@ private:
     std::vector<StreamDescriptionPtr> m_streams;
     launch m_launchType;
 
-    void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
+    static void FillMatrixFromStream(StorageType type, Matrix<ElemType>* matrix, size_t numRows, const StreamMinibatchPtr& stream);
 };
 
 }}}

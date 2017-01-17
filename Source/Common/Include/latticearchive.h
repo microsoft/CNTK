@@ -1251,7 +1251,7 @@ public:
         // BUGBUG: we only really support one archive file at this point
         // read the TOC in one swoop
         std::vector<char> textbuffer;
-        auto toclines = msra::files::fgetfilelines(tocpath, textbuffer);
+        auto toclines = msra::files::fgetfilelines(tocpath, textbuffer, 3);
 
         // parse it one by one
         size_t archiveindex = SIZE_MAX; // its index

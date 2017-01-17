@@ -28,10 +28,10 @@ def train_eval_logistic_regression_from_file(criterion_name=None,
     X = C.input(2)
     y = C.input(3)
     
-    W = C.parameter(value=np.zeros(shape=(3, 2)))
-    b = C.parameter(value=np.zeros(shape=(3, 1)))
+    W = C.parameter(value=np.zeros(shape=(2, 3)))
+    b = C.parameter(value=np.zeros(shape=(1, 3)))
 
-    out = C.times(W, X) + b
+    out = C.times(X, W) + b
     out.tag = 'output'
     ce = C.cross_entropy_with_softmax(y, out)
     ce.name = criterion_name
@@ -49,9 +49,7 @@ def train_eval_logistic_regression_from_file(criterion_name=None,
     my_sgd = C.SGDParams(
         epoch_size=0, minibatch_size=25, learning_rates_per_mb=0.1, max_epochs=3)
 
-    with C.LocalExecutionContext('logreg') as ctx:
-        ctx.device_id = device_id
-
+    with C.LocalExecutionContext('logreg', device_id=device_id, clean_up=True) as ctx:
         ctx.train(
             root_nodes=[ce, eval], 
             training_params=my_sgd,

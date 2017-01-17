@@ -28,6 +28,22 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+template <class ElemType>
+std::shared_ptr<ElemType> AllocateIntermediateBuffer(int deviceId, size_t numElements)
+{
+    if (deviceId >= 0)
+    {
+        // Use pinned memory for GPU devices for better copy performance
+        size_t totalSize = sizeof(ElemType) * numElements;
+        return std::shared_ptr<ElemType>((ElemType*)CUDAPageLockedMemAllocator::Malloc(totalSize, deviceId),
+                                         [deviceId](ElemType* p) { CUDAPageLockedMemAllocator::Free(p, deviceId); });
+    }
+
+    // Otherwise use usual CPU memory.
+    return std::shared_ptr<ElemType>(new ElemType[numElements], [](ElemType* p) { delete[] p; });
+}
+
+
 DWORD HIDWORD(size_t size)
 {
     return size >> 32;
@@ -41,8 +57,8 @@ template <class ElemType>
 DenseBinaryMatrix<ElemType>::DenseBinaryMatrix(wstring name, int deviceID, size_t numRows, size_t numCols)
     : BinaryMatrix<ElemType>(name, deviceID, numRows, numCols)
 {
-    // this->m_values = (ElemType*)malloc(sizeof(ElemType)*numRows*numCols);
-    this->m_values = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * numRows * numCols, deviceID);
+    // This-> is required for name resolution in gcc, otherwise the compiler complains.
+    this->m_values = AllocateIntermediateBuffer<ElemType>(deviceID, numRows * numCols);
 }
 
 template <class ElemType>
@@ -56,16 +72,14 @@ void DenseBinaryMatrix<ElemType>::Dispose()
 {
     if (this->m_values != nullptr)
     {
-        // free(this->m_values);
-        CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
+        this->m_values = nullptr;
     }
-    this->m_values = nullptr;
 }
 
 template <class ElemType>
 void DenseBinaryMatrix<ElemType>::Fill(Matrix<ElemType>* matrix)
 {
-    matrix->SetValue(this->m_maxNumCols, this->m_numRows, matrix->GetDeviceId(), this->m_values, matrixFlagNormal);
+    matrix->SetValue(this->m_maxNumCols, this->m_numRows, matrix->GetDeviceId(), this->m_values.get(), matrixFlagNormal);
 #if DEBUG
     matrix->Print("testname");
 #endif
@@ -76,16 +90,13 @@ void DenseBinaryMatrix<ElemType>::SetMaxRows(size_t maxRows)
 {
     if (maxRows > this->m_maxNumRows)
     {
-        // ElemType* values = (ElemType*)malloc(sizeof(ElemType)*this->m_maxNumCols*maxRows);
-        ElemType* values = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * this->m_maxNumCols * maxRows, this->m_deviceID);
+        auto values = AllocateIntermediateBuffer<ElemType>(this->m_deviceID, this->m_maxNumCols * maxRows);
         if (this->m_values != nullptr)
         {
             if (this->m_numRows > 0)
             {
-                memcpy(values, this->m_values, sizeof(ElemType) * this->m_numRows * this->m_maxNumCols);
+                memcpy(values.get(), this->m_values.get(), sizeof(ElemType) * this->m_numRows * this->m_maxNumCols);
             }
-            // free(this->m_values);
-            CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
         }
         this->m_values = values;
         this->m_maxNumRows = maxRows;
@@ -95,7 +106,7 @@ void DenseBinaryMatrix<ElemType>::SetMaxRows(size_t maxRows)
 template <class ElemType>
 void DenseBinaryMatrix<ElemType>::AddValues(void* values, size_t numRows)
 {
-    memcpy(this->m_values + this->m_numRows * this->m_maxNumCols, values, sizeof(ElemType) * numRows * this->m_maxNumCols);
+    memcpy(this->m_values.get() + this->m_numRows * this->m_maxNumCols, values, sizeof(ElemType) * numRows * this->m_maxNumCols);
     this->m_numRows += numRows;
 }
 
@@ -103,31 +114,15 @@ template <class ElemType>
 SparseBinaryMatrix<ElemType>::SparseBinaryMatrix(wstring name, int deviceId, size_t numRows, size_t numCols)
     : BinaryMatrix<ElemType>(name, deviceId, numRows, numCols), m_rowIndices(nullptr), m_colIndices(nullptr), m_nnz(0), m_maxNNz(0)
 {
-    // m_colIndices = (int32_t*)malloc(sizeof(int32_t)*(numRows + 1));
-    m_colIndices = (int32_t*) CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t) * (numRows + 1), deviceId);
-    m_colIndices[0] = 0;
+    m_colIndices = AllocateIntermediateBuffer<int32_t>(deviceId, numRows + 1);
+    m_colIndices.get()[0] = 0;
 }
 
 template <class ElemType>
 void SparseBinaryMatrix<ElemType>::Dispose()
 {
-    if (this->m_values != nullptr)
-    {
-        // free(this->m_values);
-        CUDAPageLockedMemAllocator::Free(this->m_values, this->m_deviceID);
-    }
     this->m_values = nullptr;
-    if (m_colIndices != nullptr)
-    {
-        // free(m_colIndices);
-        CUDAPageLockedMemAllocator::Free(this->m_colIndices, this->m_deviceID);
-    }
     m_colIndices = nullptr;
-    if (m_rowIndices != nullptr)
-    {
-        // free(m_rowIndices);
-        CUDAPageLockedMemAllocator::Free(this->m_rowIndices, this->m_deviceID);
-    }
     m_rowIndices = nullptr;
 }
 
@@ -136,16 +131,13 @@ void SparseBinaryMatrix<ElemType>::SetMaxRows(size_t maxRows)
 {
     if (maxRows > this->m_maxNumRows)
     {
-        // int32_t* colIndices = (int32_t*)malloc(sizeof(int32_t)*(maxRows+1));
-        int32_t* colIndices = (int32_t*) CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t) * (maxRows + 1), this->m_deviceID);
+        std::shared_ptr<int32_t> colIndices = AllocateIntermediateBuffer<int32_t>(this->m_deviceID, maxRows + 1);
         if (this->m_colIndices != nullptr)
         {
             if (this->m_numRows > 0)
             {
-                memcpy(colIndices, m_colIndices, sizeof(int32_t) * (this->m_numRows + 1));
+                memcpy(colIndices.get(), m_colIndices.get(), sizeof(int32_t) * (this->m_numRows + 1));
             }
-            // free(this->m_colIndices);
-            CUDAPageLockedMemAllocator::Free(this->m_colIndices, this->m_deviceID);
         }
         this->m_colIndices = colIndices;
         this->m_maxNumRows = maxRows;
@@ -155,31 +147,21 @@ void SparseBinaryMatrix<ElemType>::SetMaxRows(size_t maxRows)
 template <class ElemType>
 void SparseBinaryMatrix<ElemType>::ResizeArrays(size_t newNNz)
 {
-
     if (newNNz + m_nnz < this->m_maxNNz)
     {
         return;
     }
     size_t newMaxNNz = (size_t)((newNNz + m_nnz) * 1.3);
-    // int32_t* rowIndices = (int32_t*)malloc(sizeof(int32_t)*newMaxNNz);
-    // ElemType* values = (ElemType*)malloc(sizeof(ElemType)*newMaxNNz);
-    int32_t* rowIndices = (int32_t*)  CUDAPageLockedMemAllocator::Malloc(sizeof(int32_t)  * newMaxNNz, m_deviceID);
-    ElemType* values    = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * newMaxNNz, m_deviceID);
+    auto rowIndices = AllocateIntermediateBuffer<int32_t>(m_deviceID, newMaxNNz);
+    auto values = AllocateIntermediateBuffer<ElemType>(m_deviceID, newMaxNNz);
 
     // copy old values if any
     if (m_nnz > 0)
     {
         assert(m_rowIndices && m_values); // m_nnz > 0 implies that these pointers are allocated
-        memcpy(rowIndices, m_rowIndices, sizeof(int32_t)  * m_maxNNz);
-        memcpy(values,     m_values,     sizeof(ElemType) * m_maxNNz);
+        memcpy(rowIndices.get(), m_rowIndices.get(), sizeof(int32_t)  * m_maxNNz);
+        memcpy(values.get(),     m_values.get(),     sizeof(ElemType) * m_maxNNz);
     }
-
-    // free old storage
-    if (m_rowIndices != nullptr)
-        CUDAPageLockedMemAllocator::Free(m_rowIndices, m_deviceID);
-
-    if (m_values != nullptr)
-        CUDAPageLockedMemAllocator::Free(m_values, m_deviceID);
 
     m_rowIndices = rowIndices;
     m_values = values;
@@ -196,7 +178,7 @@ void SparseBinaryMatrix<ElemType>::Clear()
 template <class ElemType>
 void SparseBinaryMatrix<ElemType>::AddValues(void* values, size_t nnz)
 {
-    memcpy(this->m_values + this->m_nnz, values, sizeof(ElemType) * nnz);
+    memcpy(this->m_values.get() + this->m_nnz, values, sizeof(ElemType) * nnz);
 }
 
 template <class ElemType>
@@ -205,20 +187,20 @@ void SparseBinaryMatrix<ElemType>::AddColIndices(void* colIndices, size_t numCol
     int32_t* temp = (int32_t*) colIndices;
     for (int c = 1; c < numCols; c++)
     {
-        m_colIndices[this->m_numRows + c] = temp[c] + (int32_t) this->m_nnz;
+        m_colIndices.get()[this->m_numRows + c] = temp[c] + (int32_t) this->m_nnz;
     }
     this->m_numRows += numCols - 1;
 }
 template <class ElemType>
 void SparseBinaryMatrix<ElemType>::AddRowIndices(void* rowIndices, size_t nnz)
 {
-    memcpy(m_rowIndices + this->m_nnz, rowIndices, sizeof(int32_t) * nnz);
+    memcpy(m_rowIndices.get() + this->m_nnz, rowIndices, sizeof(int32_t) * nnz);
 }
 
 template <class ElemType>
 void SparseBinaryMatrix<ElemType>::Fill(Matrix<ElemType>* matrix)
 {
-    matrix->SetMatrixFromCSCFormat(m_colIndices, m_rowIndices, this->m_values, this->m_nnz, this->m_maxNumCols, this->m_numRows);
+    matrix->SetMatrixFromCSCFormat(m_colIndices.get(), m_rowIndices.get(), this->m_values.get(), this->m_nnz, this->m_maxNumCols, this->m_numRows);
 #if DEBUG
     matrix->Print("testname");
 #endif
@@ -770,23 +752,17 @@ void LibSVMBinaryReader<ElemType>::DoDSSMMatrix(Matrix<ElemType>& mat, size_t ac
     size_t numRows = mat.GetNumRows();
     if (DSSMCols < actualMBSize)
     {
-        if (DSSMLabels != nullptr)
-        {
-            // free(DSSMLabels);
-            CUDAPageLockedMemAllocator::Free(DSSMLabels, mat.GetDeviceId());
-        }
         DSSMCols = actualMBSize;
-        // DSSMLabels = (ElemType*)malloc(sizeof(ElemType)*numRows*actualMBSize);
-        DSSMLabels = (ElemType*) CUDAPageLockedMemAllocator::Malloc(sizeof(ElemType) * numRows * actualMBSize, mat.GetDeviceId());
-        memset(DSSMLabels, 0, sizeof(ElemType) * numRows * actualMBSize);
+        m_dssmLabels = AllocateIntermediateBuffer<ElemType>(mat.GetDeviceId(), numRows * actualMBSize);
+        memset(m_dssmLabels.get(), 0, sizeof(ElemType) * numRows * actualMBSize);
         for (size_t c = 0; c < numRows * actualMBSize; c += numRows)
         {
-            DSSMLabels[c] = 1;
+            m_dssmLabels.get()[c] = 1;
         }
     }
     if (mat.GetNumCols() != actualMBSize)
     {
-        mat.SetValue(numRows, actualMBSize, mat.GetDeviceId(), DSSMLabels, matrixFlagNormal);
+        mat.SetValue(numRows, actualMBSize, mat.GetDeviceId(), m_dssmLabels.get(), matrixFlagNormal);
     }
 }
 

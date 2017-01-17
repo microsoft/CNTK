@@ -83,7 +83,7 @@ protected:
 //  - ranges of neighbor frames as a secondary tensor dimension (i.e. can be used to implement a rolling window)
 //  - full support/efficiency of non-recurrent use (in which case the range can be from negative to positive, e.g. a symmetric rolling window)
 //  - denoting which tensor dimension to loop over (this may not be completed, but I will plant a seed)
-//  - support for Yongqiang’s sub-minibatching with truncated BPTT (export/import state)
+//  - support for Yongqiang's sub-minibatching with truncated BPTT (export/import state)
 //  - more efficient storage of carried-over state (only store the needed frames, not a full copy of the previous MB as currently; which will on the other hand also allow windows that reach back beyond a minibatch)
 // -----------------------------------------------------------------------
 
@@ -463,6 +463,9 @@ public:
         else
             LogicError("Unrecognized direction in DelayedValueNodeBase");
     }
+
+    int TimeStep() const { return m_timeStep; }
+    ElemType InitialActivationValue() const { return m_initialActivationValue; }
 
 protected:
     ElemType m_initialActivationValue;       // starting value for hidden activation vector at boundary

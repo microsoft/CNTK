@@ -32,6 +32,7 @@ SimpleMultiGPU = [
         maxEpochs = 4
 
         ParallelTrain = [
+            distributedMBReading = true
             parallelizationMethod = "DataParallelSGD"
             DataParallelSGD = [
                 gradientBits = 1
@@ -39,27 +40,27 @@ SimpleMultiGPU = [
             ]
         ]
     ]
-  
+
     # Parameter values for the reader
     reader = [
         # reader to use
-        readerType = "UCIFastReader"
-        file = "$DataDir$/SimpleDataTrain.txt"
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/SimpleDataTrain_cntk_text.txt"
 
-        miniBatchMode = "partial"
-        randomize = "none"
-        verbosity = 1   
+        randomize = false
 
-        features = [
-            dim = 2      # two-dimensional input data
-            start = 0    # Start with first element on line
-        ]
+        input = [
+            features = [
+                alias = "F"
+                dim = 2
+                format = "dense"
+            ]
 
-        labels = [
-            start = 2      # Skip two elements
-            dim = 1        # One label dimension
-            labelDim = 2   # Two labels possible
-            labelMappingFile = "$DataDir$/SimpleMapping.txt"
+            labels = [
+                alias = "L"
+                dim = 2
+                format = "dense"
+            ]
         ]
     ]
 ]

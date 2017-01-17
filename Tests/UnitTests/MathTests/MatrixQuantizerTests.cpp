@@ -5,7 +5,12 @@
 #include "stdafx.h"
 #include "File.h"
 #include <memory>
+#ifdef _WIN32
 #include <io.h>
+#else // Linux
+#define _dup2 dup2
+#define _fileno fileno
+#endif
 
 #include "../../../Source/Math/MatrixQuantizerImpl.h"
 #include "../../../Source/Math/CUDAPageLockedMemAllocator.h"

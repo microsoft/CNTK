@@ -8,8 +8,8 @@
 MNIST Example, one hidden layer neural network using training and testing data 
 through files. To generate the data first run fetch_mnist_data.py to fetch the data.
 Train and Test files obtained need to be converted to CNTKTextFormatReader format using
-`uci_to_cntk_text_format_converter.py 
-<https://github.com/Microsoft/CNTK/blob/master/Source/Readers/CNTKTextFormatReader/uci_to_cntk_text_format_converter.py>`_
+`uci2ctf.py 
+<https://github.com/Microsoft/CNTK/blob/master/Scripts/uci2ctf.py>`_
 Rename train data to Train-28x28_text.txt and test data to Test-28x28_text.txt
 """
 
@@ -22,17 +22,17 @@ import cntk as C
 
 
 def add_dnn_sigmoid_layer(in_dim, out_dim, x, param_scale):
-    W = C.parameter((out_dim, in_dim)) * param_scale
-    b = C.parameter((out_dim, 1)) * param_scale
-    t = C.times(W, x)
+    W = C.parameter((in_dim, out_dim)) * param_scale
+    b = C.parameter((1, out_dim)) * param_scale
+    t = C.times(x, W)
     z = C.plus(t, b)
     return C.sigmoid(z)
 
 
 def add_dnn_layer(in_dim, out_dim, x, param_scale):
-    W = C.parameter((out_dim, in_dim)) * param_scale
-    b = C.parameter((out_dim, 1)) * param_scale
-    t = C.times(W, x)
+    W = C.parameter((in_dim, out_dim)) * param_scale
+    b = C.parameter((1, out_dim)) * param_scale
+    t = C.times(x, W)
     return C.plus(t, b)
 
 def train_eval_mnist_onelayer_from_file(criterion_name=None, eval_name=None):
@@ -68,13 +68,13 @@ def train_eval_mnist_onelayer_from_file(criterion_name=None, eval_name=None):
     ec.name = criterion_name
     ec.tag = 'criterion'
     
-    eval = C.ops.square_error(labels, out)
+    eval = C.ops.error_prediction(labels, out)
     eval.name = eval_name
     eval.tag = 'eval'
     
     # Specify the training parameters (settings are scaled down)
-    my_sgd = C.SGDParams(epoch_size=600, minibatch_size=32,
-                       learning_rates_per_mb=0.1, max_epochs=5, momentum_per_mb=0)
+    my_sgd = C.SGDParams(epoch_size=60000, minibatch_size=32,
+                       learning_rates_per_mb=0.1, max_epochs=30, momentum_per_mb=0)
 
     # Create a context or re-use if already there
     with C.LocalExecutionContext('mnist_one_layer', clean_up=True) as ctx:
@@ -96,9 +96,9 @@ def _test_mnist_onelayer_from_file():
 
     TOLERANCE_ABSOLUTE = 1E-06
     assert result['SamplesSeen'] == 10000
-    assert np.allclose(result['Perplexity'], 7.6323031, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['crit_node'], 2.0323896, atol=TOLERANCE_ABSOLUTE)
-    assert np.allclose(result['eval_node'], 1.9882504, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['Perplexity'], 1.000002, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['crit_node'], 0.0, atol=TOLERANCE_ABSOLUTE)
+    assert np.allclose(result['eval_node'], 0.000002581, atol=TOLERANCE_ABSOLUTE)
 
 if __name__ == "__main__":
     print(train_eval_mnist_onelayer_from_file('crit_node', 'eval_node'))

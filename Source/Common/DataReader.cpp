@@ -98,8 +98,8 @@ DataReader::DataReader(const ConfigRecordType& config)
         for (const auto& ioName : ioNames) // inputNames should map to node names
         {
             const ConfigRecordType& thisIO = config(ioName);
-            // get the name for the reader we want to use, default to UCIFastReader
-            GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(thisIO(L"readerType", L"UCIFastReader"), GetReaderName(precision));
+            // get the name for the reader we want to use, default to CNTKTextFormatReader
+            GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(thisIO(L"readerType", L"CNTKTextFormatReader"), GetReaderName(precision));
             m_ioNames.push_back(ioName);
             assert(getReaderProc != nullptr);
             getReaderProc(&m_dataReaders[ioName]); // instantiates the reader with the default constructor (no config processed at this point)
@@ -115,12 +115,12 @@ DataReader::DataReader(const ConfigRecordType& config)
         assert(getReaderProc != nullptr);
         getReaderProc(&m_dataReaders[ioName]);
     }
-    else // legacy
+    else
     {
         wstring ioName = L"ioName";
         // backward support to use only one type of data reader
-        // get the name for the reader we want to use, default to UCIFastReader
-        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"UCIFastReader"), GetReaderName(precision));
+        // get the name for the reader we want to use, default to CNTKTextFormatReader
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"CNTKTextFormatReader"), GetReaderName(precision));
         m_ioNames.push_back(ioName);
         assert(getReaderProc != nullptr);
         getReaderProc(&m_dataReaders[ioName]);

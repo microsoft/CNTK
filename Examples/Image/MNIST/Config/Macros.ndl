@@ -48,6 +48,10 @@ ConvND(w, inp, kW, kH, inMap, outMap, hStride, vStride) = [
     c = Convolution(w, inp, {kW, kH, inMap}, mapCount=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
 ]
 
+DeConv(w, inp, kW, kH, inMap, outMap, hStride, vStride, lpad, upad) = [
+    c = Convolution(w, inp, {kW, kH, inMap}, mapCount=outMap, stride={hStride, vStride, inMap}, sharing={true, true, true}, autoPadding=false, lowerPad={lpad, lpad, 0}, upperPad={upad, upad, 0}, transpose=1, imageLayout=$imageLayout$)
+]
+
 Conv2DReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue) = [
     w = ConvW(outMap, inWCount, wScale)
     b = ConvB(outMap, bValue)
@@ -84,6 +88,17 @@ ConvBNReLULayer(inp, outMap, inWCount, kW, kH, hStride, vStride, wScale, bValue,
     y = RectifiedLinear(c)
 ]
 
+DeconvReLULayer(inp, kW, kH, inMap, inWCount, outMap, hStride, vStride, lpad, upad, wScale, bValue) = [
+    # No bias here.
+    w = ConvW(outMap, inWCount, wScale)
+    act = RectifiedLinear(inp)
+    out = DeConv(w, act, kW, kH, inMap, outMap, hStride, vStride, lpad, upad)
+]
+
 MaxNDPooling(inp, kW, kH, hStride, vStride) = [
-		p = Pooling(inp, "max", {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
+    p = Pooling(inp, "max", {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={true, true, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
+]
+
+MaxUnpool(inp, poolInp, kW, kH, hStride, vStride) = [
+    up = MaxUnpooling(inp, poolInp, {kW, kH, 1}, stride={hStride, vStride, 1}, autoPadding={false, false, false}, lowerPad=0, upperPad=0, imageLayout=$imageLayout$)
 ]
