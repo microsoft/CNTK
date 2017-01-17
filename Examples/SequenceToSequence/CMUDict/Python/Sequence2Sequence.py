@@ -263,14 +263,11 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
             zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
             out_axis = zeroes
 
-        input1 = Placeholder(name='input1')
-        # TODO: Can this be fixed, now that we handle outer Placeholders?
-
         # BUGBUG: This will fail with sparse input.
         # nearly the same as RecurrenceFrom()
         history_fwd = Placeholder(name='hook')
         prev_history = delayed_value(history_fwd, initial_state=initial_state)
-        z = over_function(prev_history, input1)
+        z = over_function(prev_history, input)
         # apply map_state_function
         fb = map_state_function(z)
         # apply dynamic_axes_like
@@ -278,10 +275,6 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
         from _cntk_py import reconcile_dynamic_axis
         fb = typemap(reconcile_dynamic_axis)(sanitize_input(fb), sanitize_input(out_axis))
         z.replace_placeholders({history_fwd : fb.output})
-
-        #z.dump_signature()
-        z = z.clone(CloneMethod.share, {input1 : input})
-        #z.dump_signature('z')
 
         # apply until_predicate if given
         if until_predicate is not None:
@@ -409,7 +402,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
                 print(end=" -> ")
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                if not use_attention: # BUGBUG: currently fails with attention enabled
+                if not use_attention: # BUGBUG: currently fails with attention enabled, an axis mismatch in decoder recurrence
                     e = decoder_output_model(mb_valid[valid_reader.streams.features])
                     print_sequences(e, i2w)
 

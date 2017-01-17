@@ -1,6 +1,6 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
-from cntk.utils import typemap, sanitize_var_map, value_to_seq, _as_tuple
+from cntk.utils import typemap, sanitize_var_map, sanitize_input, value_to_seq, _as_tuple
 from enum import Enum, unique
 import numpy as np
 
@@ -493,12 +493,7 @@ class Function(cntk_py.Function):
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         if substitutions is None:
             substitutions = {}
-        # normalize Function args to their Function.output variable
-        # BUGBUG: This is a workaround, I think, since for other cases, this happens automatically.
-        #         Without, SWIG throws "TypeError: cannot convert value of dictionary".
-        #         This mapping should be removed once the TypeError has been fixed.
-        # TODO: latest master still does not have it, so try if it works without by now.
-        substitutions = { param: (arg.output if isinstance(arg, Function) else arg) for param, arg in substitutions.items() }
+        substitutions = { param: sanitize_input(arg) for param, arg in substitutions.items() }
         return super(Function, self).clone(method, substitutions)
 
     @property
