@@ -1,4 +1,4 @@
-# CNTK Examples: Image/Classification/GoogLeNet
+# CNTK Examples: Image/Classification/GoogLeNet/InceptionV3
 
 ## BrainScript
 
