@@ -14,7 +14,7 @@ from cntk.device import set_default_device, gpu
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
-from ConvNet_CIFAR10_DataAug_Distributed import convnet_cifar10_dataaug, create_reader
+from ConvNet_CIFAR10_DataAug_Distributed import convnet_cifar10_dataaug
 
 def run_cifar_convnet_distributed():
     try:
@@ -35,17 +35,12 @@ def run_cifar_convnet_distributed():
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now
 
-    create_train_reader = lambda data_size: create_reader(os.path.join(base_path, 'train_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), True, data_size, 0)
-    test_reader = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False, FULL_DATA_SWEEP)
+    train_data = os.path.join(base_path, 'train_map.txt')
+    mean_data = os.path.join(base_path, 'CIFAR-10_mean.xml')
+    test_data = os.path.join(base_path, 'test_map.txt')
 
-    distributed_after_samples = 0
     num_quantization_bits = 32
-    create_dist_learner = lambda learner: distributed.data_parallel_distributed_learner(
-        learner=learner,
-        num_quantization_bits=num_quantization_bits,
-        distributed_after=distributed_after_samples)
-
-    return convnet_cifar10_dataaug(create_train_reader, test_reader, create_dist_learner, max_epochs=1, num_mbs_per_log=None)
+    return convnet_cifar10_dataaug(train_data, test_data, mean_data, num_quantization_bits, max_epochs=2, num_mbs_per_log=1)
 
 if __name__=='__main__':
     assert distributed.Communicator.rank() < distributed.Communicator.num_workers()

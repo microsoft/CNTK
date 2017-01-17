@@ -131,7 +131,7 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
         else if (desType == DeserializerType::SparseBinaryDataDeserializer)
             m_deserializers[c] = make_shared<SparseBinaryDataDeserializer>(m_file);
         else
-            RuntimeError("Unknown deserializer type %d requested.", desType);
+            RuntimeError("Unknown deserializer type %d requested.", (int)desType);
 
         streamDescription->m_id           = c;
         streamDescription->m_elementType  = m_deserializers[c]->GetElementType();

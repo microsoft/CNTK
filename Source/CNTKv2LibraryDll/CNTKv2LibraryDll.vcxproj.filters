@@ -24,6 +24,7 @@
     <ClCompile Include="PrimitiveFunction.cpp" />
     <ClCompile Include="DistributedLearnerBase.cpp" />
     <ClCompile Include="DataParallelDistributedLearner.cpp" />
+    <ClCompile Include="TrainingSession.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -51,6 +52,7 @@
     <ClInclude Include="DataParallelDistributedLearner.h" />
     <ClInclude Include="BlockFunction.h" />
     <ClInclude Include="Variable.h" />
+    <ClInclude Include="TrainingSession.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">
