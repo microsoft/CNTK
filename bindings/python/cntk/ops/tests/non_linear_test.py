@@ -13,8 +13,11 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
+from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
 from cntk.utils import eval as cntk_eval, sanitize_dtype_cntk
 from .. import constant
+from ..variables import Parameter, Constant
+from cntk import set_default_device
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon
@@ -331,3 +334,39 @@ def test_op_hardmax(sample, device_id, precision):
 
     _test_unary_op(precision, device_id, hardmax, sample,
                    expected_forward, expected_backward)
+                   
+@pytest.mark.parametrize("use_cudnn", [True, False])
+@pytest.mark.parametrize("sample", SAMPLES)
+def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
+    dtype = PRECISION_TO_TYPE[precision]
+    epsilon = 0.00001
+
+    t = AA(sample, dtype=dtype).reshape(-1,1,1)
+    mean = 1
+    var = 2
+    init_scale = 3
+    init_bias = 4
+    
+    forward = [(x - mean) / np.sqrt(var + epsilon) * init_scale + init_bias for x in t]
+
+    expected_forward = AA(forward)
+
+    scale        = Parameter(init=AA([init_scale], dtype=dtype))
+    bias         = Parameter(init=AA([init_bias], dtype=dtype))
+    run_mean     = Constant(mean, shape=(1), dtype=dtype)
+    run_variance = Constant(var, shape=(1), dtype=dtype)
+
+    from cntk import batch_normalization
+    
+    input = I(shape=(1), dtype=dtype, needs_gradient=False, name='input')
+    
+    op = batch_normalization(input, scale, bias, run_mean, run_variance, False,
+                             epsilon=epsilon,
+                             use_cudnn_engine=use_cudnn)
+
+    forward_input = {input: t}
+    actual_forward = op.eval(forward_input)
+
+    for res, exp in zip(actual_forward, expected_forward):
+        assert res.shape == AA(exp).shape
+        assert np.allclose(res, exp, atol=TOLERANCE_ABSOLUTE)

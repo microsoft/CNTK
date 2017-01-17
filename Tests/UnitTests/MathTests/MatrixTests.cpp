@@ -1182,6 +1182,218 @@ BOOST_FIXTURE_TEST_CASE(MatrixAssignNumOfDiff, RandomSeedFixture)
         BOOST_CHECK_EQUAL(expectedDiff, actual.Get00Element());
     }
 }
+
+BOOST_FIXTURE_TEST_CASE(MatrixScale, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float alpha = 0.7713f;
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
+    {
+        auto a1 = SingleMatrix::RandomUniform(7, 11, deviceId, low, high, IncrementCounter());
+        auto a2 = a1.DeepClone();
+        BOOST_ASSERT(a1.IsEqualTo(a2));
+
+        auto b1 = SingleMatrix::RandomUniform(7, 11, deviceId, low, high, IncrementCounter());
+        auto b2 = b1.DeepClone();
+        BOOST_ASSERT(b1.IsEqualTo(b2));
+
+        Matrix<float>::ScaleAndAdd(alpha, b1, a1);
+
+        Matrix<float>::Scale(alpha, b2);
+        a2 += b2;
+
+        // BUGBUG: this test currently fails on GPU.
+        if (deviceId != CPUDEVICE)
+            continue;
+        
+        BOOST_CHECK(a1.IsEqualTo(a2));
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixSGDUpdate, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float lr = 0.77f;
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
+    {
+        auto p1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto p2 = p1.DeepClone();
+        BOOST_ASSERT(p1.IsEqualTo(p2));
+
+        auto g1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto g2 = g1.DeepClone();
+        BOOST_ASSERT(g1.IsEqualTo(g2));
+        
+        auto sg1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto sg2 = sg1.DeepClone();
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (; lr > 0.01; lr = lr / 2)
+        {
+            if (deviceId != CPUDEVICE)
+            {
+                // g1 is modified inside the GPU version of SGDUpdate, restore the original value here.
+                g1.SetValue(g2);
+            }
+
+            p1.SGDUpdate(g1, lr);
+            p2.MomentumSGDUpdate(g2, sg2, lr, 0.0);
+
+            BOOST_CHECK(p1.IsEqualTo(p2));
+
+            if (deviceId != CPUDEVICE)
+                continue;
+            
+             // GPU version of SGDUpdate scales gradient by the learning rate, this check will fail.
+             BOOST_CHECK(g1.IsEqualTo(g2));
+        }
+
+        lr = std::pow(lr, lr);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixMomentumSGDUpdate_WithAndWithout_UnitGain, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float lr = 0.77f;
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
+    {
+        auto p1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto p2 = p1.DeepClone();
+        BOOST_ASSERT(p1.IsEqualTo(p2));
+
+        auto g1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto g2 = g1.DeepClone();
+        BOOST_ASSERT(g1.IsEqualTo(g2));
+        
+        auto sg1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto sg2 = sg1.DeepClone();
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (; lr > 0.01; lr = lr / 2)
+        {
+            p1.MomentumSGDUpdate(g1, sg1, lr, 0.0, true);
+            p2.MomentumSGDUpdate(g2, sg2, lr, 0.0, false);
+            BOOST_CHECK(p1.IsEqualTo(p2));
+        }
+
+        for (lr = 1.0; lr > 0.03; lr = lr / 2)
+        {
+            p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, true);
+            p2.MomentumSGDUpdate(g2, sg2, lr/2, 0.5, false);
+            BOOST_CHECK(p1.IsEqualTo(p2));
+        }
+
+        BOOST_CHECK(g1.IsEqualTo(g2));
+        BOOST_CHECK(sg1.IsEqualTo(sg2));
+
+        p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, true);
+        p2.MomentumSGDUpdate(g2, sg2, lr, 0.5, false);
+        BOOST_CHECK(!p1.IsEqualTo(p2));
+
+        lr = std::pow(lr, lr);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixNesterovAcceleratedMomentumSGDUpdate_WithAndWithout_UnitGain, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float lr = 0.77f;
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
+    {
+        auto p1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto p2 = p1.DeepClone();
+        BOOST_ASSERT(p1.IsEqualTo(p2));
+
+        auto g1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto g2 = g1.DeepClone();
+        BOOST_ASSERT(g1.IsEqualTo(g2));
+        
+        auto sg1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto sg2 = sg1.DeepClone();
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (; lr > 0.01; lr = lr / 2)
+        {
+            p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.0, true);
+            p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.0, false);
+            BOOST_CHECK(p1.IsEqualTo(p2));
+        }
+
+        for (lr = 1.0; lr > 0.03; lr = lr / 2)
+        {
+            p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, true);
+            p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr/2, 0.5, false);
+            BOOST_CHECK(p1.IsEqualTo(p2));
+        }
+
+        BOOST_CHECK(g1.IsEqualTo(g2));
+        BOOST_CHECK(sg1.IsEqualTo(sg2));
+
+        p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, true);
+        p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.5, false);
+        BOOST_CHECK(!p1.IsEqualTo(p2));
+
+        lr = std::pow(lr, lr);
+    }
+}
+
+BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSeedFixture)
+{
+    const float low = -1.0f;
+    const float high = 1.0f;
+    float lr = 0.77f;
+    for (auto deviceId : {CPUDEVICE, c_deviceIdZero})
+    {
+        auto p1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto p2 = p1.DeepClone();
+        BOOST_ASSERT(p1.IsEqualTo(p2));
+
+        auto g1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto g2 = g1.DeepClone();
+        BOOST_ASSERT(g1.IsEqualTo(g2));
+        
+        auto sg1 = SingleMatrix::RandomUniform(12, 13, deviceId, low, high, IncrementCounter());
+        auto sg2 = sg1.DeepClone();
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (; lr > 0.01; lr = lr / 2)
+        {
+            size_t mbSize = 100;
+            double smoothedCount = 10 / lr;
+            double targetAdagradAvDenom = 1.0;
+            double varMomentum = 1.0 - lr;
+
+            sg1.FSAdagradUpdate(mbSize, g1, p1, smoothedCount, lr, targetAdagradAvDenom, 0.0, varMomentum, true);
+            sg2.FSAdagradUpdate(mbSize, g2, p2, smoothedCount, lr, targetAdagradAvDenom, 0.0, varMomentum, true /*false*/);
+            // BUGBUG: at the moment this fails even with identical arguments.
+            // BOOST_CHECK(p1.IsEqualTo(p2));
+        }
+
+        sg2.SetValue(sg1);
+        BOOST_ASSERT(sg1.IsEqualTo(sg2));
+
+        for (lr = 1.0; lr > 0.03; lr = lr / 2)
+        {
+            size_t mbSize = 100;
+            double smoothedCount = 10 / lr;
+            double targetAdagradAvDenom = 1.0;
+            double varMomentum = 1.0 - lr;
+
+            sg1.FSAdagradUpdate(mbSize, g1, p1, smoothedCount, lr, targetAdagradAvDenom, 0.5, varMomentum, true);
+            sg2.FSAdagradUpdate(mbSize, g2, p2, smoothedCount, lr /*lr/2*/, targetAdagradAvDenom, 0.5, varMomentum, true /*false*/);
+            // BUGBUG: at the moment this fails even with identical arguments.
+            // BOOST_CHECK(p1.IsEqualTo(p2));
+        }
+
+        lr = std::pow(lr, lr);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }
 } } }

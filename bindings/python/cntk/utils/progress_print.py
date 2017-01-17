@@ -29,7 +29,15 @@ class ProgressPrinter(object):
         num_epochs (int, default 300): The total number of epochs to be trained.  Used for some metadata.  This parameter is optional.
     '''
     
-    def __init__(self, freq=None, first=0, tag='', log_to_file=None, distributed_learner=None, gen_heartbeat=False, num_epochs=300):
+    def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300):
+        '''
+        Constructor. The optional ``freq`` parameter determines how often
+        printing will occur. The value of 0 means an geometric
+        schedule (1,2,4,...). A value > 0 means a arithmetic schedule
+        (freq, 2*freq, 3*freq,...), and a value of None means no per-minibatch log.
+        set log_to_file if you want the output to go file instead of stdout.
+        set rank to distributed.rank if you are using distibuted parallelism -- each rank's log will go to seperate file.
+        '''
         from sys import maxsize
         if freq is None:
             freq = maxsize
@@ -48,7 +56,7 @@ class ProgressPrinter(object):
         self.epoch_start_time = 0
         self.progress_timer_time = 0
         self.log_to_file = log_to_file
-        self.distributed_learner = distributed_learner
+        self.rank = rank
         self.gen_heartbeat = gen_heartbeat
         self.num_epochs =  num_epochs
 
@@ -56,8 +64,8 @@ class ProgressPrinter(object):
         if self.log_to_file != None:
             self.logfilename = self.log_to_file
 
-            if self.distributed_learner != None:
-                self.logfilename = self.logfilename + "rank" + str(self.distributed_learner.communicator().current_worker().global_rank)
+            if self.rank != None:
+                self.logfilename = self.logfilename + 'rank' + str(self.rank)
 
             # print to stdout
             print("Redirecting log to file " + self.logfilename)
@@ -147,17 +155,19 @@ class ProgressPrinter(object):
         self.epochs += 1
         if self.freq > 0:
             self.updates = 0
-            avg_loss, avg_metric, samples = self.reset_start()
             epoch_end_time = time.time()
             time_delta = epoch_end_time - self.epoch_start_time
             speed = 0
+            avg_loss, avg_metric, samples = (0, 0, 0)
+            if self.samples_since_start != 0:
+                avg_loss, avg_metric, samples = self.reset_start()
             if (time_delta > 0):
                 speed = samples / time_delta
                 self.epoch_start_time = epoch_end_time
             if with_metric:
-                self.___logprint("Finished Epoch [{}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples, time_delta, speed))
+                self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples, time_delta, speed))
             else:
-                self.___logprint("Finished Epoch [{}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.tag, avg_loss, samples, time_delta, speed))
+                self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, time_delta, speed))
             return avg_loss, avg_metric, samples  # BUGBUG: for freq=0, we don't return anything here
 
     def ___gererate_progress_heartbeat(self):
@@ -219,7 +229,6 @@ class ProgressPrinter(object):
             else:
                 self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}'.format(
                     first_mb, self.updates, avg_loss, samples))
-
     def update_with_trainer(self, trainer, with_metric=False):
         '''
         Updates the accumulators using the loss, the minibatch_size and optionally the metric

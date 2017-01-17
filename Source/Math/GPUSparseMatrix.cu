@@ -1413,9 +1413,16 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceSoftThreshold(const
     return *this;
 }
 
-// normal update for smoothed gradients c and current gradients (this)
+// A helper method used in MomentumSGDUpdate and NesterovAcceleratedMomentumSGDUpdate.
+// Modifies the smoothed gradients "c", as well as the current gradients "this" on which this method is invoked. 
+// Classic momentum (unitGainFactor == 1.0):
+// 1) c = momentum * c + this
+// Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+// 1) c = momentum * c + (1.0 - momentum) * this
+// 2) this = c
+// TODO: NormalGrad is a misnomer here. Come up with a better name.
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum)
+void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
 {
     VerifyWritable(__FUNCTION__);
 
@@ -1440,7 +1447,8 @@ void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemTyp
             GetBlockSize(),
             Data(),
             BlockId2ColOrRow(),
-            c.Data());
+            c.Data(),
+            unitGainMomentum);
     }
     else
     {
@@ -1502,6 +1510,131 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
         double aveMultiplier = 0;
         CUBLAS_CALL(cublasDasum(cuHandle, (LONG64) nz, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
         return (ElemType) aveMultiplier / nz;
+    }
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::FSAdagrad(
+    GPUMatrix<ElemType>& c,
+    GPUMatrix<ElemType>& functionValues,
+    ElemType learnRatePerSample,
+    ElemType momentum,
+    ElemType adaWeight,
+    ElemType adaMul,
+    bool unitGainMomentum)
+{
+    if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    size_t numColsNeeded = 2 * GetNumCols();
+
+    if (c.IsEmpty() || (c.GetNumCols() < numColsNeeded))
+    {
+        c.RequireSize(GetNumRows(), numColsNeeded);
+        c.SetValue(0.0);
+    }
+
+    assert((c.GetNumRows() == GetNumRows()) && (c.GetNumCols() == numColsNeeded));
+
+    size_t n = GetNumElements();
+    int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+    _fsadagrad4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
+        n, Data(), ColOrRow2BlockId(), GetNumRows(),
+        c.Data(), c.Data() + n, functionValues.Data(),
+        learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+}
+
+template <class ElemType>
+ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& c,
+    ElemType RMS_GAMMA,
+    ElemType RMS_WGT_INC,
+    ElemType RMS_WGT_MAX,
+    ElemType RMS_WGT_DEC,
+    ElemType RMS_WGT_MIN,
+    const bool needAveMultiplier)
+{
+    if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    const ElemType floor = 1e-6f;
+    static ElemType* upd_gpu = (ElemType*)0;
+
+    size_t n = GetNumElements();
+    int blocksPerGrid = (c.GetNumElements() + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+
+    size_t numColsNeeded = GetNumCols() * 3;
+    if (needAveMultiplier)
+        numColsNeeded += GetNumCols();
+
+    if (c.IsEmpty() || c.GetNumCols() < numColsNeeded)
+    {
+        c.RequireSize(GetNumRows(), numColsNeeded);
+        c.SetValue(0.0);
+
+        ElemType* avars = c.Data();         // accumulated variances for RMS scaling
+        ElemType* signs = c.Data() + n;     // sign of previous gradient
+        ElemType* steps = c.Data() + 2 * n; // current step size
+                                            // Data()+3*n is temp memory used to store multipliers, no need to initialize
+
+        _rmsprop_init4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
+            avars, signs, steps, 
+            Data(), ColOrRow2BlockId(), GetNumRows(),
+            n);
+    }
+    assert(c.GetNumRows() == GetNumRows() && c.GetNumCols() == numColsNeeded);
+
+    ElemType* avars = c.Data();         // accumulated variances for RMS scaling
+    ElemType* signs = c.Data() + n;     // sign of previous gradient
+    ElemType* steps = c.Data() + 2 * n; // current step size
+
+    ElemType* multipliers = nullptr;
+    if (needAveMultiplier)
+        multipliers = c.Data() + 3 * n; // temp memory used to store multipliers,
+
+    if (!upd_gpu)
+    {
+        const ElemType upd[] = {
+            2, 2, 0,
+            2, 2, 0,
+            1, 1, 1,
+            2, 2, 0,
+            1, 2, 1,
+            0, 2, 2,
+            1, 1, 1,
+            0, 2, 2,
+            0, 2, 2,
+        };
+
+        upd_gpu = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), 27);
+        CUDA_CALL(cudaMemcpy(upd_gpu, upd, sizeof(ElemType) * _countof(upd), cudaMemcpyHostToDevice));
+    }
+
+    _rmsprop4BlockSparseCol<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(
+        avars, signs, steps,
+        Data(), ColOrRow2BlockId(), GetNumRows(),
+        n,
+        RMS_GAMMA, RMS_WGT_INC, RMS_WGT_MAX, RMS_WGT_DEC, RMS_WGT_MIN,
+        floor, upd_gpu, multipliers);
+
+    if (!needAveMultiplier)
+        return 1;
+
+    cublasHandle_t cuHandle = GPUMatrix<ElemType>::GetCublasHandle(GetComputeDeviceId());
+    if (sizeof(ElemType) == sizeof(float))
+    {
+        float aveMultiplier = 0;
+        CUBLAS_CALL(cublasSasum(cuHandle, (CUDA_LONG)n, reinterpret_cast<float*>(multipliers), 1, &aveMultiplier));
+        return aveMultiplier / n;
+    }
+    else
+    {
+        double aveMultiplier = 0;
+        CUBLAS_CALL(cublasDasum(cuHandle, (CUDA_LONG)n, reinterpret_cast<double*>(multipliers), 1, &aveMultiplier));
+        return (ElemType)aveMultiplier / n;
     }
 }
 

@@ -284,6 +284,10 @@ namespace CNTK
                     opType = PrimitiveOpType::CrossEntropyWithSoftmax;
                 else if (node->OperationName() == OperationNameOf(ClassificationErrorNode))
                     opType = PrimitiveOpType::ClassificationError;
+                else if (node->OperationName() == OperationNameOf(LambdaRankNode))
+                    opType = PrimitiveOpType::LambdaRank;
+                else if (node->OperationName() == OperationNameOf(NDCG1EvalNode))
+                    opType = PrimitiveOpType::NDCG;
                 else if (node->OperationName() == OperationNameOf(ReduceElementsNode))
                 {
                     auto reduceElementsNode = node->As<ReduceElementsNode<ElementType>>();
@@ -343,6 +347,18 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameROIOutputShape] = AsNDShape(roiPoolingNode->ROIOutputShape());
 
                     opType = PrimitiveOpType::ROIPooling;
+                }
+                else if (node->OperationName() == OperationNameOf(MaxUnpoolingNode))
+                {
+                    auto unpoolingNode = node->As<MaxUnpoolingNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePoolingType] = (size_t)PoolingType::Max;
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = AsNDShape(unpoolingNode->KernelShape());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameStrides] = AsNDShape(unpoolingNode->Strides());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(unpoolingNode->AutoPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(unpoolingNode->LowerPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(unpoolingNode->UpperPad());
+
+                    opType = PrimitiveOpType::Unpooling;
                 }
                 else if (node->OperationName() == OperationNameOf(PoolingNode))
                 {

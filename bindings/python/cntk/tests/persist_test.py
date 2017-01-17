@@ -46,7 +46,7 @@ def test_load_save_input(tmpdir):
 
     loaded_node = load_model(filename)
 
-    # Test spefying the input node names by order
+    # Test specifying the input node names by order
     loaded_result = loaded_node.eval([input1])
     assert np.allclose(loaded_result, expected)
 

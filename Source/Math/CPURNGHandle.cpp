@@ -13,7 +13,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 CPURNGHandle::CPURNGHandle(int deviceId, uint64_t seed, uint64_t offset)
     : RNGHandle(deviceId)
 {
-    m_generator.reset(new std::mt19937_64((unsigned long)seed));
+    m_generator.reset(new std::mt19937_64(seed));
     m_generator->discard(offset);
 }
 

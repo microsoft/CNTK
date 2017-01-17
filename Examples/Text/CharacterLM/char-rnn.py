@@ -164,6 +164,7 @@ def train_lm(training_file):
     clipping_threshold_per_sample = 5.0
     gradient_clipping_with_truncation = True
     learner = momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, 
+                           unit_gain=True,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     trainer = Trainer(z, ce, errs, learner)

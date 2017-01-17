@@ -112,8 +112,9 @@ def test_sanitize_batch_contiguity():
     var = input_variable((2,2), is_sparse=True)
 
     batch = [a1.T,a2.T]
-    with pytest.raises(ValueError):
+    with pytest.warns(RuntimeWarning):
         b = sanitize_batch(var, batch)
+        assert b.shape == (2,1,2,2)
 
     batch = [a1,a2]
     b = sanitize_batch(var, batch)

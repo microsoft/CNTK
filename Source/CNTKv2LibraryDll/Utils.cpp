@@ -534,7 +534,6 @@ namespace CNTK
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
 
-
         size_t maxNumTimeSteps, numSequences;
         std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
 
@@ -831,6 +830,7 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
 
     template class TrainingParameterSchedule<double>;
+    template class TrainingParameterSchedule<size_t>;
 
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),

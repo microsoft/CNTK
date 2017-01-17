@@ -88,7 +88,7 @@ namespace CNTK
 
             // For block functions we need to recursively traverse the underlying composite
             if (function->IsBlock())
-                PreorderTraverseFunctions(function->BlockComposite()->RootFunction(), SerializationTraversalFunc);
+                PreorderTraverseFunctions(function->BlockRoot(), SerializationTraversalFunc);
         };
 
         PreorderTraverseFunctions(RootFunction(), SerializationTraversalFunc);
@@ -577,6 +577,17 @@ namespace CNTK
                 computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
                 break;
             }
+            case PrimitiveOpType::Unpooling:
+            {
+                auto unpoolingWindowShape = functionConfig[PrimitiveFunction::AttributeNameUnpoolingWindowShape].Value<NDShape>();
+                auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
+                auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
+                auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                //We only get here after validation so it is safe to assume unpooling is max
+                computationNodePtr = New<MaxUnpoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(unpoolingWindowShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ImageLayoutKind::CHW);
+                break;
+            }
             case PrimitiveOpType::SumAll:
                 computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
@@ -651,6 +662,12 @@ namespace CNTK
                 break;
             case PrimitiveOpType::ClassificationError:
                 computationNodePtr = New<ClassificationErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
+            case PrimitiveOpType::LambdaRank:
+                computationNodePtr = New<LambdaRankNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
+            case PrimitiveOpType::NDCG:
+                computationNodePtr = New<NDCG1EvalNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
             case PrimitiveOpType::PastValue:
             case PrimitiveOpType::FutureValue:
@@ -898,7 +915,7 @@ namespace CNTK
                     for (auto compositeArgument : compositeArguments)
                         m_variableToNodeMap[compositeArgument] = m_variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
-                    PreorderTraverseFunctions(function->BlockComposite()->RootFunction(), PatchBlockArgumentsMapping);
+                    PreorderTraverseFunctions(function->BlockRoot(), PatchBlockArgumentsMapping);
                 }
             };
             PreorderTraverseFunctions(rootFunction, PatchBlockArgumentsMapping);
@@ -910,15 +927,11 @@ namespace CNTK
                 return (m_isVariableRootMap[outputVar] && (!ownerBlockFunc || IsVariableRoot(ownerBlockFunc->CompositeOutputsMap().at(outputVar))));
             };
 
-            // If any of the function outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
-            for (auto rootOutput : rootFunctionOutputs)
-            {
-                if (!IsVariableRoot(rootOutput))
-                    m_computationNetwork->AddToNodeGroup(L"output", m_variableToNodeMap.at(rootOutput));
-            }
-
-            // If any of the requested outputs is not a root node, we need to explicitly add it to the 'output' group of the ComputationNetwork
-            for (auto output : outputs)
+            // If any of the function or requested outputs is not a root node, we need to explicitly
+            // add it to the 'output' group of the ComputationNetwork
+            std::unordered_set<Variable> networkOutputs(outputs);
+            networkOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
+            for (auto output : networkOutputs)
             {
                 if (!IsVariableRoot(output))
                 {
@@ -1000,33 +1013,27 @@ namespace CNTK
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
         {
             ComputationNodeBasePtr backpropRootNode;
+            if (!m_currentBackpropRoots.empty())
+                backpropRootNode = m_variableToNodeMap.at(*m_currentBackpropRoots.begin());
 
             // Now recursively traverse the network in a top-down fashion
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->Outputs();
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
-            {
-                auto currentRootNode = m_variableToNodeMap.at(rootOutput);
-                forwardRootNodes.push_back(currentRootNode);
-
-                if (m_currentBackpropRoots.find(rootOutput) != m_currentBackpropRoots.end())
-                    backpropRootNode = currentRootNode;
-            }
+                forwardRootNodes.push_back(m_variableToNodeMap.at(rootOutput));
 
             std::vector<ComputationNodeBasePtr> forwardOutputNodes;
             for (auto output : outputs)
-            {
-                auto currentOutputNode = m_variableToNodeMap.at(output);
-                forwardOutputNodes.push_back(currentOutputNode);
-
-                // Select the root node for backpropagation
-                if (m_currentBackpropRoots.find(output) != m_currentBackpropRoots.end())
-                    backpropRootNode = currentOutputNode;
-            }
+                forwardOutputNodes.push_back(m_variableToNodeMap.at(output));
 
             m_computationNetwork->AllocateAllMatrices(forwardRootNodes, forwardOutputNodes, backpropRootNode);
             m_networkMatricesAllocated = allocateNetworkMatrices;
+
+            std::unordered_set<ComputationNodeBasePtr> allNetworkRoots = { backpropRootNode };
+            allNetworkRoots.insert(forwardRootNodes.begin(), forwardRootNodes.end());
+            allNetworkRoots.insert(forwardOutputNodes.begin(), forwardOutputNodes.end());
+            m_allNetworkRootsInGlobalEvalOrder = m_computationNetwork->SortByGlobalEvalOrder(allNetworkRoots);
 
             m_currentOutputs = outputs;
             m_currentOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
@@ -1047,7 +1054,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ void CompositeFunction::PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, ComputationNodeBasePtr& computationNode)
+    /*static*/ void CompositeFunction::PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, ComputationNodeBasePtr& computationNode, std::unordered_map<MBLayoutPtr, Variable>& layoutsPopulated)
     {
         if (!computationNode->Is<InputValueBase<ElementType>>())
             LogicError("CompositeFunction::Forward: Illegal to populate value of computation node type other than InputValueBase!");
@@ -1059,17 +1066,27 @@ namespace CNTK
         else
             CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second);
 
-        MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
-
-        auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
-
         // Switch the node matrix to the right matrix type
+        auto& nodeData = computationNode->As<ComputationNode<ElementType>>()->Value();
         nodeData.AssignValuesOf(*CNTKMatrixAndMBLayout.first);
-        computationNode->GetMBLayout()->CopyFrom(layout);
+
+        auto layout = CNTKMatrixAndMBLayout.second;
+        auto& nodeLayout = computationNode->GetMBLayout();
+        if (layoutsPopulated.find(nodeLayout) == layoutsPopulated.end())
+        {
+            nodeLayout->CopyFrom(layout);
+            layoutsPopulated.insert({ nodeLayout, variableValue.first });
+        }
+        else
+        {
+            if (*nodeLayout != *layout)
+                InvalidArgument("Function::Forward: Different minibatch layouts detected (difference in sequence lengths or count or start flags) in data specified for 2 of the Function's argument ('%S', '%S') having same dynamic axes", variableValue.first.Name().c_str(), layoutsPopulated.at(nodeLayout).Name().c_str());
+        }
     }
 
     void CompositeFunction::PopulateNetworkInputs(const std::unordered_map<Variable, ValuePtr>& arguments)
     {
+        std::unordered_map<MBLayoutPtr, Variable> layoutsPopulated;
         std::vector<ComputationNodeBasePtr> inputNodes;
         for (auto argumentValuePair : arguments)
         {
@@ -1079,15 +1096,13 @@ namespace CNTK
             inputNodes.push_back(argumentComputationNode);
 
             ValuePtr argumentValue = arguments.at(argument);
-
-            MBLayoutPtr layout;
             switch (argumentValue->GetDataType())
             {
             case DataType::Float:
-                PopulateComputationNodeValue<float>({ argument, argumentValue }, argumentComputationNode);
+                PopulateComputationNodeValue<float>({ argument, argumentValue }, argumentComputationNode, layoutsPopulated);
                 break;
             case DataType::Double:
-                PopulateComputationNodeValue<double>({ argument, argumentValue }, argumentComputationNode);
+                PopulateComputationNodeValue<double>({ argument, argumentValue }, argumentComputationNode, layoutsPopulated);
                 break;
             default:
                 LogicError("Unsupported DataType %s", DataTypeName(argumentValue->GetDataType()));
@@ -1363,7 +1378,16 @@ namespace CNTK
 
         ScopedNetworkOperationMode modeGuard(m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
 
-        m_computationNetwork->ForwardProp(outputsToEvaluate);
+        // We may have to include additional nodes in the ForwardProp to align with how the memory sharing structure is setup
+        // We need to include all roots that lie earlier in the global eval order than the actual outputs we are interested
+        // in evaluation.
+        // TODO: This may incur additonal compute costs in some rare scenarios. We need to come up with a better way to handle this.
+        outputsToEvaluate = m_computationNetwork->SortByGlobalEvalOrder(outputsToEvaluate);
+        auto lastOutputInEvalOrder = outputsToEvaluate.back();
+        auto iterEndRootInEvalOrder = std::find(m_allNetworkRootsInGlobalEvalOrder.begin(), m_allNetworkRootsInGlobalEvalOrder.end(), lastOutputInEvalOrder) + 1;
+
+        auto augmentedOutputsToEvaluate = std::vector<ComputationNodeBasePtr>(m_allNetworkRootsInGlobalEvalOrder.begin(), iterEndRootInEvalOrder);
+        m_computationNetwork->ForwardProp(augmentedOutputsToEvaluate);
 
         GetNetworkOutputs(outputs);
 

@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Release|x64">
       <Configuration>Release</Configuration>
@@ -7,20 +7,20 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CPPEvalV2Client.cpp" />
+    <ClCompile Include="CNTKLibraryCPPEvalExamples.cpp" />
     <ClCompile Include="EvalMultithreads.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{D771A06D-CC25-4582-B5CD-D2A4782BB005}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>CPPEvalV2Client</RootNamespace>
-    <ProjectName>CPPEvalV2Client</ProjectName>
+    <RootNamespace>CNTKLibraryCPPEvalExamples</RootNamespace>
+    <ProjectName>CNTKLibraryCPPEvalExamples</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>

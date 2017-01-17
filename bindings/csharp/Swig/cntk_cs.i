@@ -151,6 +151,10 @@
                                 std::unordered_map<Variable, ValuePtr>& outputs, 
                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
                                 const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {});
+%ignore CNTK::Function::Forward(const std::vector<ValuePtr>& inputValues, 
+                                std::unordered_map<Variable, ValuePtr>& outputs, 
+                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
+                                const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {});
 %ignore CNTK::Function::Serialize() const;
 %ignore CNTK::Function::Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 %ignore CNTK::Function::Parameters() const;
@@ -257,6 +261,12 @@
                       const NDShape& lowerPad = {0}, 
                       const NDShape& upperPad = {0}, 
                       const std::wstring& name = L"");
+
+
+%ignore CNTK::Unpooling; 
+%ignore CNTK::LambdaRank;
+%ignore CNTK::NDCGAt1;
+
 %ignore CNTK::BatchNormalization(const Variable& operand, 
                                  const Variable& scale, 
                                  const Variable& bias, 
@@ -298,16 +308,19 @@
                          AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 %ignore CNTK::MomentumSGDLearner(const std::vector<Parameter>& parameters, 
                                  const LearningRateSchedule& learningRateSchedule, 
-                                 const MomentumSchedule& momentumSchedule, 
+                                 const MomentumSchedule& momentumSchedule,
+                                 bool unitGain,
                                  AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 %ignore CNTK::NesterovLearner(const std::vector<Parameter>& parameters, 
                               const LearningRateSchedule& learningRateSchedule, 
-                              const MomentumSchedule& momentumSchedule, 
+                              const MomentumSchedule& momentumSchedule,
+                              bool unitGain,
                               AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 %ignore CNTK::DefaultVarianceMomentum;
 %ignore CNTK::AdamLearner(const std::vector<Parameter>& parameters, 
                           const LearningRateSchedule& learningRateSchedule, 
-                          const MomentumSchedule& momentumSchedule, 
+                          const MomentumSchedule& momentumSchedule,
+                          bool unitGain,
                           const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum, 
                           bool lowMemory = true, 
                           AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
@@ -353,6 +366,7 @@
         double blockLearningRate = 1.0);
 
 %ignore CNTK::Trainer;
+%ignore CNTK::CreateTrainer;
 %ignore CNTK::StreamInformation;
 %ignore std::hash<::CNTK::StreamInformation>;
 
@@ -369,6 +383,9 @@
 %ignore CNTK::QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits);
 %ignore CNTK::MinibatchInfo;
 %ignore CNTK::DistributedTrainer;
+%ignore CNTK::TrainingSession;
+%ignore CNTK::CreateBasicTrainingSession;
+%ignore CNTK::Create;
 %ignore CNTK::CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount = 0);
 %ignore CNTK::CreateQuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, 
                                                             bool useAsyncBufferedParameterUpdate, 

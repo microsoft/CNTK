@@ -394,6 +394,7 @@ class Test:
       ccMajorByCard = {
         'GeForce GTX 780 Ti': 3,
         'GeForce GTX 960': 5,
+        'Quadro K2000' : 3,
         'Quadro M2000M': 5,
         'Quadro M4000': 5,
       }

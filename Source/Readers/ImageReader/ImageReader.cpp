@@ -79,6 +79,7 @@ ImageReader::ImageReader(const ConfigParameters& config)
     m_packer = std::make_shared<FramePacker>(
         m_sequenceEnumerator,
         m_streams,
+        2 /* number of buffers*/,
         useLocalTimeline);
 }
 

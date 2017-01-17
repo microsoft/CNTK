@@ -59,7 +59,7 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
     assert block_primitive.name == 'reshape_test_op'
     assert block_primitive.is_primitive
     assert block_primitive.is_block
-    element_times_inside_block = block_primitive.block_composite.root_function.find_by_name('element_times_inside_block')
+    element_times_inside_block = block_primitive.block_root.find_by_name('element_times_inside_block')
     assert element_times_inside_block.name == 'element_times_inside_block'
     assert element_times_inside_block.is_primitive
     block_arguments_map = block_primitive.block_arguments_mapping
@@ -99,3 +99,14 @@ def test_combine_op_as_block():
 
     expected_forward = [[[2.]]]
     assert np.array_equal(res, expected_forward)
+
+
+def test_block_with_duplicate_inputs():
+    from .. import placeholder_variable, as_block, input_variable
+    input = input_variable((1,), name='input')
+    
+    left_operand_placeholder = placeholder_variable(name='left_placeholder')
+    right_operand_placeholder = placeholder_variable()
+    plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, input), (right_operand_placeholder, input)], 'plus')
+
+    plus_block_clone = plus_block.clone('share')

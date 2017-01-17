@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -14,8 +14,8 @@
     <Prefer32Bit>false</Prefer32Bit>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CNTKLibraryManagedExamplesTest</RootNamespace>
-    <AssemblyName>CNTKLibraryManagedExamplesTest</AssemblyName>
+    <RootNamespace>CNTKLibraryCSEvalExamples</RootNamespace>
+    <AssemblyName>CNTKLibraryCSEvalExamplesTest</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -76,13 +76,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryManagedExamples\Program.cs">
-      <Link>Program.cs</Link>
+    <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCSEvalCPUOnlyExamples\CNTKLibraryCSEvalExamples.cs">
+      <Link>CNTKLibraryCSEvalExamples.cs</Link>
     </Compile>
+    <Compile Include="Program.cs" />
   </ItemGroup>
-  <Target Name="Build" Condition="!Exists('$(SWIG_PATH)\swig.exe')">
-    <Warning Condition="!Exists('$(SWIG_PATH)\swig.exe')" Text="The project requires SWIG to be installed." />
-  </Target>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="Exists('$(SWIG_PATH)\swig.exe')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

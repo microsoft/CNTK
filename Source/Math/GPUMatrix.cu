@@ -1394,7 +1394,8 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
                                     ElemType learnRatePerSample,
                                     ElemType momentum,
                                     ElemType adaWeight,
-                                    ElemType adaMul)
+                                    ElemType adaMul,
+                                    bool unitGainMomentum)
 {
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
@@ -1409,7 +1410,7 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
     size_t n = gradients.GetNumElements();
     int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
     _fsadagrad<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(n, gradients.Data(), Data(), Data()+ n, functionValues.Data(),
-                                                                         learnRatePerSample, momentum, adaWeight, adaMul);
+                                                                         learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
 }
 
 template <class ElemType>
@@ -3370,15 +3371,16 @@ void GPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUMatrix
     int k = int(transposeA ? a.m_numRows : a.m_numCols);
     int l = int(transposeB ? b.m_numCols : b.m_numRows);
 
-    c.RequireSize(m, n);
+    if (beta == 0)
+        c.RequireSize(m, n);
+    else
+        c.VerifySize(m, n); // Can't resize if beta != 0
 
     if (!(m > 0 && k > 0 && l > 0 && n > 0))
         RuntimeError("!(m>0 && k>0 && l>0 && n>0)"); // converting from size_t to int may cause overflow
     if (k != l)
         RuntimeError("matrix dim mismatch in MultiplyAndWeightedAdd");
     CUBLAS_CALL(cublas_gemm(cuHandle, transA, transB, m, n, k, &alpha, a.Data(), (int) a.m_numRows, b.Data(), (int) b.m_numRows, &beta, c.Data(), (int) c.m_numRows));
-    c.m_numRows = m;
-    c.m_numCols = n;
 }
 
 template <class ElemType>

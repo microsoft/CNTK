@@ -267,11 +267,6 @@ void NoRandomizer::SetCurrentSamplePosition(size_t samplePosition)
 void NoRandomizer::SetConfiguration(const ReaderConfiguration& config)
 {
     *((ReaderConfiguration*)&m_config) = config;
-
-    // TODO: should be removed.
-    // Currently no restriction on the epoch size at all when SetConfiguration is used.
-    m_config.m_totalEpochSizeInSamples = std::numeric_limits<size_t>().max() / 2; // Make sure we do not exceed size_t
-    m_config.m_epochIndex = 0;
 }
 
 } } }

@@ -25,6 +25,14 @@
     },
     {
         "category": ["Image"],
+        "name":  "Feature Extraction",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/FeatureExtraction",
+        "description":  "Evaluate and write out different layers of a trained model using Python.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "Video Action Recognition",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Video/GettingStarted",
         "description":  "Train a Basic 3-D convolutional neural network for video action recognition on the UCF11 dataset.",
@@ -73,17 +81,17 @@
     },
     {
         "category": ["Image"],
-        "name":  "MNIST CNN OCR",
-        "url":  "https://github.com/Microsoft/CNTK/wiki/Tutorial2",
-        "description":  "Use CNN on an OCR problem.",
-        "language":  ["Python", "BrainScript"],
+        "name":  "MNIST Feed Forward OCR",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb",
+        "description":  "Use Feed Forward networks on an OCR problem.",
+        "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
     {
         "category": ["Image"],
-        "name":  "MNIST Feed Forward OCR",
-        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb",
-        "description":  "Use Feed Forward networks on an OCR problem.",
+        "name":  "MNIST Autoencoder Dim Reduction",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb",
+        "description":  "Use Autoencoder for dimensionality reduction.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },

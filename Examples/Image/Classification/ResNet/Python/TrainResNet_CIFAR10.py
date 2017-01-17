@@ -40,7 +40,7 @@ def create_reader(map_file, mean_file, train):
     transforms = []
     if train:
         transforms += [
-            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
+            ImageDeserializer.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
         ]
     transforms += [
         ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
@@ -88,6 +88,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
     
     # trainer object
     learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
+                               unit_gain = True,
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, learner)
 

@@ -16,6 +16,7 @@ from cntk.device import use_default_device, cpu
 from .swig_helper import typemap
 from ..axis import Axis
 from .progress_print import *
+import warnings
 
 
 def sanitize_precision(precision):
@@ -474,7 +475,7 @@ class Value(cntk_py.Value):
         value (None or value that can be cast to NumPy array): the value to
          be converted
         dtype: data type (np.float32 or np.float64)
-        batch: batch input for `var`. 
+        batch: batch input for `var`.
          It can be:
           * a pure Python structure (list of lists, ...),
           * a list of NumPy arrays or SciPy sparse CSR matrices
@@ -515,7 +516,7 @@ class Value(cntk_py.Value):
         Args:
             var (:class:`~cntk.ops.variables.Variable`): input variable into which
              ``batch`` is passed
-            batch: batch input. 
+            batch: batch input.
              It can be:
               * a single NumPy array denoting the full minibatch
               * a list of NumPy arrays or SciPy sparse CSR matrices
@@ -540,8 +541,7 @@ class Value(cntk_py.Value):
                         'of NumPy arrays')
 
             # FIXME if not seq_starts: directly pass it to Value constructor
-
-            batch = list(batch)
+            batch = list(np.atleast_1d(batch))
 
         if not isinstance(batch, list):
             raise ValueError('batch has to be a list of NumPy arrays or '
@@ -559,6 +559,9 @@ class Value(cntk_py.Value):
                     raise ValueError('could not convert sample data to '
                             'NumPy array')
 
+            if isinstance(sample, np.number):
+                sample = np.asarray(sample)
+
             if not (isinstance(sample, np.ndarray) or sparse.issparse(sample)):
                 raise ValueError('sample type "%s" is not supported. Please '
                         'provide the data as a Python list of NumPy arrays '
@@ -574,8 +577,8 @@ class Value(cntk_py.Value):
 
             if isinstance(sample, np.ndarray):
                 if not _is_c_contiguous(sample):
-                    raise ValueError('supplied data is not C contiguous; use '
-                            'np.ascontiguousarray (slow) or rearrange your data/computation')
+                    warnings.warn('supplied data is not C contiguous; rearrange your data/computation to avoid this', RuntimeWarning)
+                    sample = np.ascontiguousarray(sample)
                 ndav = _create_NDArrayView_from_NumPy(sample, cpu_dev)
 
             elif sparse.issparse(sample):

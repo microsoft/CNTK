@@ -1126,11 +1126,19 @@ template <class ElemType>
     return result;
 }
 
-// normal update for smoothed gradients c and current gradients (this)
-// TODO: comment seems wrong; cf. SGD.cpp: smoothedGradient.NormalGrad(gradientValues, functionValues,...)
+// A helper method used in MomentumSGDUpdate and NesterovAcceleratedMomentumSGDUpdate.
+// Modifies the smoothed gradients "c", as well as the current gradients "this" on which this method is invoked. 
+// Classic momentum (unitGainFactor == 1.0):
+// 1) c = momentum * c + this
+// Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+// 1) c = momentum * c + (1.0 - momentum) * this
+// 2) this = c
+// TODO: NormalGrad is a misnomer here. Come up with a better name.
 template <class ElemType>
-void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum)
+void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
 {
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+
     if (c.IsEmpty())
     {
         c.RequireSize(GetNumRows(), GetNumCols());
@@ -1140,17 +1148,18 @@ void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemTyp
 
     if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
     {
+        const auto isSparseBlockCol = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol);
         for (size_t j = 0; j < GetBlockSize(); j++)
         {
             size_t i = GetBlockIds()[j] - GetBlockIdShift();
-            size_t len = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
+            size_t len = (isSparseBlockCol) ? GetNumRows() : GetNumCols();
             size_t start = j * len;
             for (size_t p = start; p < start + len; p++)
             {
                 ElemType val = Buffer()[p];
-                size_t row = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
-                size_t col = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
-                c(row, col) = (1 - momentum) * val + momentum * c(row, col);
+                size_t row = (isSparseBlockCol) ? (p - start) : i;
+                size_t col = (isSparseBlockCol) ? i : (p - start);
+                c(row, col) = unitGainFactor * val + momentum * c(row, col);
                 Buffer()[p] = c(row, col);
             }
         }

@@ -8,13 +8,14 @@ import os
 import math
 import numpy as np
 from .. import Function
-from ..ops import times
+from ..ops import times, sequence
 from ..ops.tests.ops_test_utils import cntk_device
 from ..utils import one_hot
 from ..trainer import *
 from ..learner import *
+from ..layers import *
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
-        input_variable, times, plus, reduce_sum
+        input_variable, times, plus, reduce_sum, Axis, cntk_py
 import pytest
 from scipy.sparse import csr_matrix as csr
 
@@ -29,7 +30,7 @@ def test_trainer(tmpdir):
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, ce, errs,
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant)])
+            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
@@ -57,7 +58,7 @@ def test_output_to_retain():
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, ce, errs,
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant)])
+            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[[1]], [[2]]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
@@ -192,3 +193,30 @@ def test_eval_one_hot_bad(one_hot_batch, dim, device_id):
     with pytest.raises(ValueError):
         batch = one_hot(one_hot_batch, num_classes=dim, device=cntk_device(device_id))
 
+def test_model_not_criterion_subset():
+    input_dim = 2
+    proj_dim = 11
+    model1_dim = 3
+    model2_dim = 4
+    x = input_variable((input_dim,))
+
+    core = Embedding(proj_dim)
+    model1 = Dense(model1_dim)(sequence.last(core(x)))
+    model1_label = input_variable((model1_dim,), dynamic_axes=[Axis.default_batch_axis()])
+    ce_model1 = cross_entropy_with_softmax(model1, model1_label)
+    pe_model1 = classification_error(model1, model1_label)
+    
+    model2 = Dense(model2_dim)(core(x))
+    model2_label = input_variable((model2_dim,))
+    ce_model2 = cross_entropy_with_softmax(model2, model2_label)
+    pe_model2 = classification_error(model2, model2_label)
+
+    ce = 0.5 * sequence.reduce_sum(ce_model2) + 0.5 * ce_model1
+
+    lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
+    trainer_multitask = Trainer(model1, ce, pe_model1, sgd(ce.parameters, lr=lr_schedule))
+
+    x_data = np.asarray([[2., 1.], [1., 2.]], np.float32)
+    model1_label_data = np.asarray([1., 0., 0.], np.float32)
+    model2_label_data = np.asarray([[0., 1., 0., 0.], [0., 0., 0., 1.]], np.float32)
+    trainer_multitask.train_minibatch({x : [x_data], model1_label : [model1_label_data], model2_label : [model2_label_data]})

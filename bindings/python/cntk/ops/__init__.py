@@ -31,10 +31,10 @@ def combine(operands, name=''):
         >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
         >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
 
-        >>> plus_node = in1 + in2
-        >>> minus_node = in1 - in2
+        >>> plus_operation = in1 + in2
+        >>> minus_operation = in1 - in2
 
-        >>> forward = C.combine([plus_node, minus_node]).eval({in1: in1_data, in2: in2_data})
+        >>> forward = C.combine([plus_operation, minus_operation]).eval({in1: in1_data, in2: in2_data})
         >>> len(forward)
         2
         >>> list(forward.values()) # doctest: +SKIP
@@ -73,7 +73,7 @@ def as_block(composite, block_arguments_map, block_op_name, block_instance_name=
 
     Args:
         composite: The composite Function that the block encapsulates
-        block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to 
+        block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to
         actual variables they are connected to
         block_op_name: Name of the op that the block represents
         block_instance_name (str, optional): the name of the block Function in the network
@@ -228,7 +228,7 @@ def squared_error(output, target, name=''):
     '''
     This operation computes the sum of the squared difference between elements
     in the two input matrices. The result is a scalar (i.e., one by one matrix).
-    This is often used as a training criterion node.
+    This is often used as a training criterion.
 
     Example:
         >>> i1 = C.input_variable((1,2))
@@ -253,11 +253,112 @@ def squared_error(output, target, name=''):
     target = sanitize_input(target, dtype)
     return squared_error(output, target, name)
 
+@typemap
+def lambda_rank(output, gain, group, name=''):
+    r'''
+    Groups samples according to ``group``, sorts
+    them within each group based on ``output`` and
+    computes the Normalized Discounted Cumulative Gain
+    (NDCG) at infinity for each group. Concretely,
+    the Discounted Cumulative Gain (DCG) at infinity is:
+
+    :math:`\mathrm{DCG_{\infty}}()=\sum_{i=0}^{\infty} \frac{gain_{(i)}}{\log(i+2)}`
+
+    where :math:`gain_{(i)}` means the gain of the :math:`i`-th ranked sample.
+
+    The NDCG is just the DCG  divided by the maximum achievable DCG (obtained
+    by placing the samples with the largest gain at the top of the ranking).
+
+    Samples in the same group must appear in order of decreasing gain.
+
+    It returns 1 minus the average NDCG across all the groups in the minibatch
+    multiplied by 100 times the number of samples in the minibatch.
+
+    In the backward direction it back-propagates LambdaRank gradients.
+
+    Example:
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,), needs_gradient=True)
+        >>> gain  = C.input_variable((1,))
+        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
+        >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1,1)
+        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> f = C.lambda_rank(score, gain, group)
+        >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score])[0],4)
+        array([[[-0.2121]],
+        <BLANKLINE>
+               [[ 0.2121]],
+        <BLANKLINE>
+               [[-0.1486]],
+        <BLANKLINE>
+               [[ 0.1486]]], dtype=float32)
+
+    Args:
+        output: score of each sample
+        gain: gain of each sample
+        group: group of each sample
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import lambda_rank
+    dtype = get_data_type(output, gain, group)
+    output = sanitize_input(output, dtype)
+    gain = sanitize_input(gain, dtype)
+    group = sanitize_input(group, dtype)
+    return lambda_rank(output, gain, group, name)
+
+
+@typemap
+def ndcg_at_1(output, gain, group, name=''):
+    r'''
+    Groups samples according to ``group``, sorts
+    them within each group based on ``output`` and
+    computes the Normalized Discounted Cumulative Gain
+    (NDCG) at 1 for each group. Concretely,
+    the NDCG at 1 is:
+
+    :math:`\mathrm{NDCG_1} = \frac{gain_{(1)}}{\max_i gain_i}`
+
+    where :math:`gain_{(1)}` means the gain of the first ranked sample.
+
+    Samples in the same group must appear in order of decreasing gain.
+
+    It returns the average NDCG at 1 across all the groups in the minibatch
+    multiplied by 100 times the number of samples in the minibatch.
+
+    This is a forward-only operation, there is no gradient for it.
+
+    Example:
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,))
+        >>> gain  = C.input_variable((1,))
+        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
+        >>> s = np.array([2, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> C.ndcg_at_1(score, gain, group).eval({score:s, gain:n, group: g})
+        array(400.0, dtype=float32)
+
+    Args:
+        output: score of each sample
+        gain: gain of each sample
+        group: group of each sample
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import ndcg_at_1
+    dtype = get_data_type(output, gain, group)
+    output = sanitize_input(output, dtype)
+    gain = sanitize_input(gain, dtype)
+    group = sanitize_input(group, dtype)
+    return ndcg_at_1(output, gain, group, name)
+
 
 @typemap
 def classification_error(output_vector, target_vector, axis=-1, topN=1, name=''):
     '''
-    This operation computes the classification_error error. It finds the index of the highest
+    This operation computes the classification error. It finds the index of the highest
     value in the output_vector and compares it to the actual ground truth label
     (the index of the hot bit in the target vector). The result is a scalar
     (i.e., one by one matrix). This is often used as an evaluation criterion.
@@ -357,8 +458,11 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    return convolution(convolution_map, operand, tuple(strides), sharing, auto_padding,
-                       tuple(lower_pad), tuple(upper_pad), transpose,
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return convolution(convolution_map, operand, strides, sharing, auto_padding,
+                       lower_pad, upper_pad, transpose,
                        max_temp_mem_size_in_samples, name)
 
 
@@ -433,6 +537,51 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
                    lower_pad, upper_pad, name)
 
 
+MAX_UNPOOLING = PoolingType_Max
+@typemap
+def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
+            lower_pad=(0,), upper_pad=(0,), name=''):
+    '''
+    Unpools the ``operand`` using information from ``pooling_input``. Unpooling mirrors the operations
+    performed by pooling and depends on the values provided to the corresponding pooling operation. The output
+    should have the same shape as pooling_input. Pooling the result of an unpooling operation should
+    give back the original input.
+
+    Example:
+        >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+        >>> x = C.input_variable(img.shape)
+        >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
+        >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
+	array([[[[[  0.,   0.,   0.,   0.],
+		  [  0.,   5.,   0.,   7.],
+		  [  0.,   0.,   0.,   0.],
+		  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
+
+    Args:
+        operand: unpooling input
+        pooling_input: input to the corresponding pooling operation
+        unpooling_type: only :const:`~cntk.ops.MAX_UNPOOLING` is supported now
+        unpooling_window_shape: dimensions of the unpooling window
+        strides (default 1): strides.
+        auto_padding: automatic padding flags for each input dimension.
+        lower_pad: precise lower padding for each input dimension
+        upper_pad: precise upper padding for each input dimension
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import unpooling
+    operand = sanitize_input(operand)
+    pooling_input = sanitize_input(pooling_input)
+    unpooling_window_shape = sanitize_shape(unpooling_window_shape)
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return unpooling(operand, pooling_input, unpooling_type,
+                     unpooling_window_shape, strides, auto_padding,
+                     lower_pad, upper_pad, name)
+
+
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=5000, blend_time_constant=0,
@@ -442,7 +591,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     and applies affine transformation to preserve representation of the layer.
 
     Args:
-        operand: input of the batch normalization node
+        operand: input of the batch normalization operation
         scale: parameter tensor that holds the learned componentwise-scaling factors
         bias: parameter tensor that holds the learned bias. ``scale`` and ``bias`` must have the same
          dimensions which must be equal to the input dimensions in case of ``spatial`` = False or
@@ -1208,7 +1357,7 @@ def hardmax(x, name=''):
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        name (str): the name of the node in the network
+        name (str): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -1550,7 +1699,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    # FIXME figure out how to only SKIP the doctest in CPU 
+    # FIXME figure out how to only SKIP the doctest in CPU
     from cntk.cntk_py import optimized_rnnstack
     operand = sanitize_input(operand)
     if recurrent_op not in set(['lstm','gru','relu','tanh']):
@@ -1933,7 +2082,7 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
     Estimates inclusion frequencies for random sampling with or without
     replacement.
 
-    The node's value is a set of num_samples random samples represented
+    The output value is a set of num_samples random samples represented
     by a (sparse) matrix of shape [num_samples x len(weights)],
     where len(weights) is the number of classes (categories) to choose
     from. The output has no dynamic axis.
@@ -1968,7 +2117,7 @@ def random_sample_inclusion_frequency(
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
-    this node computes the expected number of occurences of each class
+    this operation computes the expected number of occurences of each class
     in the the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
@@ -2073,7 +2222,8 @@ from cntk.axis import Axis
 def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
                    dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
-    It creates an input node.
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
 
     Args:
         shape (tuple or int): the shape of the input tensor
