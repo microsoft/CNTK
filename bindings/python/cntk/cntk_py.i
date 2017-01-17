@@ -1182,7 +1182,7 @@ public:
 
 %define %py_eq_for(DATA_TYPE, EQ)
 %pythoncode %{
-DATA_TYPE.__eq__ = lambda a,b: EQ(a,b)
+DATA_TYPE.__eq__ = lambda a,b: (a is not None and b is not None and EQ(a,b)) or (a is None and b is None)
 %}
 %enddef
 
