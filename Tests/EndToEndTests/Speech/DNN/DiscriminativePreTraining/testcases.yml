@@ -5,8 +5,8 @@ tags:
      # old CPUs, it produces results different enough to cause the tests to fail
      # In the longer term the old machines will be retired but for now this test
      # is being disabled on the CPU until the retirement of those machines
-     - bvt-s (build_sku == 'gpu') and (device=='gpu') and ((flavor == 'debug') ^ (os == 'windows'))
-     - nightly-s (build_sku == 'gpu') and (device=='gpu')
+     - bvt-s (build_sku == 'gpu') and (device == 'gpu') and ((flavor == 'debug') ^ (os == 'windows'))
+     - nightly-s (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   CNTK Run must be completed:

@@ -2,7 +2,7 @@ dataDir: .
 
 tags:
      # TODO: Enable windows test when Jenkins ready
-     - bvt-p (build_sku == 'gpu') and (os == 'linux') and (device == 'gpu') and (flavor=='debug')
+     - bvt-p (build_sku == 'gpu') and (os == 'linux') and (device == 'gpu') and (flavor == 'debug')
      - nightly-p (build_sku == 'gpu') and (os == 'linux') and (device == 'gpu')
 
 testCases:

@@ -1,7 +1,7 @@
 dataDir: ../Data
 
 tags:
-    - bvt-e (flavor == 'release' if os == 'windows' else (flavor == 'debug') ^ (device == 'cpu'))
+    - bvt-e ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
     - nightly-e
 
 testCases:

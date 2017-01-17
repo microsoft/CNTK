@@ -1,7 +1,7 @@
 dataDir: ../../../../../../Examples/SequenceToSequence/PennTreebank/Data
 
 tags:
-    - bvt-e (build_sku == 'gpu') and (flavor == 'release' if os == 'windows' else (flavor == 'debug') ^ (device == 'cpu'))
+    - bvt-e (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
     - nightly-e (build_sku == 'gpu')
 
 testCases:
