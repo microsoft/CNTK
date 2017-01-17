@@ -482,9 +482,24 @@ public:
                 auto geometry = std::make_shared<ConvolveGeometry>(!m_transpose ? inputShape : outputShape,
                                                                    m_kernelShape, m_mapCount, m_stride, 
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+
+                ConvolutionEngineKind convolutionEngineKind = ConvolutionEngineKind::All;
+                
+                // Check for CDSSM
+                if (m_imageLayout == ImageLayoutKind::CHW)
+                {
+                    const Matrix<ElemType>& input1 = InputRef(inputIdx).Value();
+                    bool isGpuSparse = input1.GetCurrentMatrixLocation() == CurrentDataLocation::GPU && input1.GetMatrixType() == MatrixType::SPARSE;
+                    auto dims = ImageDimensions(GetInputSampleLayout(inputIdx), m_imageLayout);
+                    if (dims.m_numChannels == 1 && isGpuSparse)
+                    {
+                        convolutionEngineKind = ConvolutionEngineKind::Reference;
+                    }
+                }
+                
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
-                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms());
+                                                                convolutionEngineKind, NodeName(), Globals::ShouldForceDeterministicAlgorithms());
             }
 
             if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
