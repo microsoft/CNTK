@@ -82,9 +82,11 @@ def create_model_function():
 
   from cntk.ops.sequence import last
   from cntk.ops import plus
+  #from cntk.initializer import uniform
   with default_options(initial_state=0.1, enable_self_stabilization=False):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         #Label('input'), # BUGBUG: PassNode must work for sparse (no reason it cannot)
+        #Embedding(emb_dim, init=uniform(0.1)),
         Embedding(emb_dim),
         Label('embedded_input'),
         #Stabilizer(),

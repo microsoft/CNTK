@@ -150,7 +150,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
             Stabilizer(),
             For(range(num_layers-1), lambda:
                 Recurrence(LSTM(hidden_dim))),
-            Fold(LSTM(hidden_dim), return_full_state=True)
+            Fold(LSTM(hidden_dim), return_full_state=True) if not use_attention else identity
         ])
 
     # Decoder: (history*, input) --> z*
@@ -166,7 +166,16 @@ def create_model(): # :: (history*, input*) -> logP(w)*
             r = embed(r)
             r = Stabilizer()(r)
             for i in range(num_layers):
-                r = RecurrenceFrom(LSTM(hidden_dim))(r, *encoder_output.outputs) # :: r, h0, c0 -> h
+                rec_block = LSTM(hidden_dim)  # :: (x, dh, dc) -> (h, c)
+                if True or use_attention:
+                    @Function
+                    def lstm_with_attention(x, dh, dc):
+                        x = splice (x, dh)
+                        r = rec_block(x, dh, dc)
+                        (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
+                        return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
+                    rec_block = lstm_with_attention
+                r = RecurrenceFrom(rec_block)(r, *encoder_output.outputs) # :: r, h0, c0 -> h
             r = Stabilizer()(r)
             r = Dense(label_vocab_dim)(r)
             return r
