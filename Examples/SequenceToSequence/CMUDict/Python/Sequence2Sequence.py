@@ -260,11 +260,11 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
             from cntk.ops.sequence import where
             factors = typemap(reconcile_dynamic_axis)(sanitize_input(length_increase), sanitize_input(out_axis))
             indices = where(factors)
-            zeroes = typemap(zeroes_with_dynamic_axes_like)(sanitize_input(indices))
+            zeroes = typemap(reconcile_dynamic_axis)(sanitize_input(0), sanitize_input(indices))
             out_axis = zeroes
 
         # BUGBUG: This will fail with sparse input.
-        # nearly the same as RecurrenceFrom()
+        # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder; then add map_state_function
         history_fwd = Placeholder(name='hook')
         prev_history = delayed_value(history_fwd, initial_state=initial_state)
         z = over_function(prev_history, input)
