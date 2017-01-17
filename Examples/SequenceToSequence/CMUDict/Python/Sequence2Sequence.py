@@ -181,10 +181,10 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     label_sequence = find_by_name(model, 'label_sequence')
     decoder_history_hook = find_by_name(model, 'decoder_history_hook')
 
-    embedding = find_by_name(model, 'embedding')
+    embedding = find_by_name(model, 'embedding')    
     embed_param = 1
-    if embedding != None:
-        embed_param = embedding[0]
+    if embedding is not None:
+        embed_param = embedding
 
     # Criterion nodes
     ce = cross_entropy_with_softmax(model, label_sequence)
@@ -454,11 +454,11 @@ if __name__ == '__main__':
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
-    #inputs = create_inputs()
-    #model = create_model(inputs)
+    inputs = create_inputs()
+    model = create_model(inputs)
     
     # train
-    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     # write
     #model = load_model("model_epoch0.cmf")
