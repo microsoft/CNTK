@@ -37,7 +37,7 @@ hidden_dim = 128
 num_layers = 2
 attention_dim = 128
 attention_span = 20
-use_attention = False  #True  --BUGBUG (layers): not working for now due to has_aux
+use_attention = True  #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -157,16 +157,15 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # where history is one of these, delayed by 1 step and <s> prepended:
     #  - training: labels
     #  - testing:  its own output hardmax(z)
-    #with default_options(enable_self_stabilization=True):
-    with default_options(enable_self_stabilization=False):
+    with default_options(enable_self_stabilization=True):
         # sub-layers
         Sin = Stabilizer()
-        Sout = Stabilizer()
         rec_blocks = [LSTM(hidden_dim) for i in range(num_layers)]
+        Sout = Stabilizer()
         D = Dense(label_vocab_dim)
         # layer function
         @Function
-        def decoder(history, input,      history_axis): # TODO: get rid of history_axis
+        def decoder(history, input,      history_axis): # TODO: get rid of history_axis, does not work for no attention
             # BUGBUG: Get rid of history axis. Currently needed because broadcast_as() below is a recurrent loop, so we must move
             #         it hoist out of the loop over decoder(). It can only depend on the axis of history, but not on history.
             encoder_output = encoder(input)
