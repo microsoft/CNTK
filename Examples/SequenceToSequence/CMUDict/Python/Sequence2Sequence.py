@@ -176,8 +176,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                 if use_attention:
                     @Function
                     def lstm_with_attention(x, dh, dc):
-                        atth = ([sequence.broadcast_as(sequence.first(output), x) for output in encoder_output.outputs])
-                        # BUGBUG: This does not work, since atth has an additional Placeholder
+                        atth = ([sequence.broadcast_as(sequence.first(output), history) for output in encoder_output.outputs])
                         x = splice(x, *atth)
                         r = rec_block(x, dh, dc)
                         (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
