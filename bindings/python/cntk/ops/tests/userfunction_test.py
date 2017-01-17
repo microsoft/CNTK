@@ -19,7 +19,7 @@ from cntk.ops.functions import UserFunction
 class Plus3Func(UserFunction):
     def __init__(self, arg, name='f1'):
         outputs = [output_variable(arg.shape, arg.dtype, arg.dynamic_axes)]
-        super(Plus3Func, self).__init__([arg], outputs, 
+        super(Plus3Func, self).__init__([arg], outputs,
                 name=name)
 
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
@@ -169,18 +169,21 @@ def test_ext_backpropstate(payload):
     trainer.train_minibatch([input_data])
 
 class LambdaFunc(UserFunction):
-    def __init__(self, 
-            arg, 
-            when=lambda arg: True, 
-            execute=lambda arg:print(arg), 
+    def __init__(self,
+            arg,
+            when=lambda arg: True,
+            execute=lambda arg:self.print_tensor(arg),
             name=''):
         self.when = when
         self.execute = execute
         outputs = [output_variable(arg.shape, arg.dtype, arg.dynamic_axes)]
-        super(LambdaFunc, self).__init__([arg], outputs, 
+        super(LambdaFunc, self).__init__([arg], outputs,
                 name=name)
 
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
+        if len(arguments)!=1:
+            raise ValueError('LambdaFunc expects exactly one input')
+
         if self.when(arguments):
             self.execute(arguments)
 
@@ -225,10 +228,10 @@ def test_ext_lambdafunc():
                 True)])
 
     i = 0
-    input_data = 0.1 * np.ones(dim) 
+    input_data = 0.1 * np.ones(dim)
     trainer.train_minibatch([input_data])
     assert cb.count == 0
 
-    input_data = 0.3 * np.ones(dim) 
+    input_data = 0.3 * np.ones(dim)
     trainer.train_minibatch([input_data])
     assert cb.count == 1
