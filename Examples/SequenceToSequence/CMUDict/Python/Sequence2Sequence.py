@@ -166,7 +166,9 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         D = Dense(label_vocab_dim)
         # layer function
         @Function
-        def decoder(history, input):
+        def decoder(history, input,      history_axis): # TODO: get rid of history_axis
+            # BUGBUG: Get rid of history axis. Currently needed because broadcast_as() below is a recurrent loop, so we must move
+            #         it hoist out of the loop over decoder(). It can only depend on the axis of history, but not on history.
             encoder_output = encoder(input)
             r = history
             r = embed(r)
@@ -176,7 +178,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                 if use_attention:
                     @Function
                     def lstm_with_attention(x, dh, dc):
-                        atth = ([sequence.broadcast_as(sequence.first(output), history) for output in encoder_output.outputs])
+                        atth = ([sequence.broadcast_as(sequence.first(output), history_axis) for output in encoder_output.outputs])
                         x = splice(x, *atth)
                         r = rec_block(x, dh, dc)
                         (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
@@ -260,7 +262,7 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
         # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder; then add map_state_function
         history_fwd = Placeholder(name='hook')
         prev_history = delayed_value(history_fwd, initial_state=initial_state)
-        z = over_function(prev_history, input)
+        z = over_function(prev_history, input,      out_axis)
         # apply map_state_function
         fb = map_state_function(z)
         # apply dynamic_axes_like
@@ -296,7 +298,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
         # BUGBUG: This will fail with sparse input.
         decoder_input = delayed_value(labels, initial_state=sentence_start)
-        z = decoder(decoder_input, input)
+        z = decoder(decoder_input, input,       decoder_input)
         return z
     model = model_train
 
@@ -395,9 +397,8 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
                 print(end=" -> ")
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                if not use_attention: # BUGBUG: currently fails with attention enabled, an axis mismatch in decoder recurrence
-                    e = decoder_output_model(mb_valid[valid_reader.streams.features])
-                    print_sequences(e, i2w)
+                e = decoder_output_model(mb_valid[valid_reader.streams.features])
+                print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 debug_attention(decoder_output_model, mb_valid, valid_reader)                
