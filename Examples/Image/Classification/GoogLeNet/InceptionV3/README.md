@@ -12,7 +12,7 @@
 ## Running the example
 
 ### Getting the data
-We use the ILSVRC2012 datasets to demonstrate how to train an Inception V3 network. Inception V3 was initially published by Researchers at Google Inc., and it is fine-tuned to have excellent classification accuracy and low computation cost. It won first place in the [ILSVRC](http://www.image-net.org/challenges/LSVRC/) 2014 detection challenge.
+We use the ILSVRC2012 datasets to demonstrate how to train an Inception V3 network. Inception V3 was initially published by Researchers at Google Inc., and it is fine-tuned to have excellent classification accuracy and low computation cost. Its original version, GoogLeNet, won first place in the [ILSVRC](http://www.image-net.org/challenges/LSVRC/) 2014 detection challenge.
 
 
 ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it through http://image-net.org.
