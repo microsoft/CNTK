@@ -13,11 +13,10 @@ from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learn
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
                      element_select, alias, hardmax, placeholder_variable, combine, parameter, times
 from cntk.ops.functions import CloneMethod, load_model, Function
-from cntk.ops.sequence import broadcast_as
-from cntk.graph import find_by_name, find_all_with_name
-from cntk.layers import *
 from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.graph import find_by_name
+from cntk.layers import *
 #from attention import create_attention_augment_hook
 
 ########################
@@ -208,8 +207,8 @@ def old_code():
             thought_vector_h, thought_vector_c = encoder_output.outputs
             # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
             label_embedded = embed(label_sequence)
-            thought_vector_broadcast_h = broadcast_as(thought_vector_h, label_embedded)
-            thought_vector_broadcast_c = broadcast_as(thought_vector_c, label_embedded)
+            thought_vector_broadcast_h = sequence.broadcast_as(thought_vector_h, label_embedded)
+            thought_vector_broadcast_c = sequence.broadcast_as(thought_vector_c, label_embedded)
             augment_input_hook = None
             is_first_label = sequence.is_first(label_sequence)  # 1 0 0 0 ...
             def recurrence_hook_h(operand):
@@ -250,19 +249,13 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
     if isinstance(until_predicate, types.FunctionType):
         until_predicate = Function(until_predicate)
 
-    def constant_with_dynamic_axes_like(val, dynamic_axes_like):
-        from cntk.utils import sanitize_input, typemap
-        from _cntk_py import reconcile_dynamic_axis
-        return typemap(reconcile_dynamic_axis)(sanitize_input(val), sanitize_input(dynamic_axes_like))
-
     @Function
     def unfold_from(input, dynamic_axes_like):
         # create a new axis
         out_axis = dynamic_axes_like
         if length_increase != 1:
-            from cntk.ops.sequence import where
-            factors = constant_with_dynamic_axes_like(length_increase, out_axis) # repeat each frame 'length_increase' times, on average
-            out_axis = where(factors)  # note: values are irrelevant; only the newly created axis matters
+            factors = sequence.constant_with_dynamic_axes_like(length_increase, out_axis) # repeat each frame 'length_increase' times, on average
+            out_axis = sequence.where(factors)  # note: values are irrelevant; only the newly created axis matters
 
         # BUGBUG: This will fail with sparse input.
         # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder; then add map_state_function
