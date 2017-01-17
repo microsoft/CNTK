@@ -86,13 +86,13 @@ class Function(cntk_py.Function):
             else:
                 out = resolve_named(out)
             # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
-            if len(out.arguments) != len(args):
-                unfulfilled_args = set(out.arguments) - set(args)
+            if len(out.signature) != len(args):
+                unfulfilled_args = set(out.signature) - set(args)
                 if unfulfilled_args:
                     unfulfilled_arg_names = [arg.name for arg in unfulfilled_args]
                     raise TypeError("CNTK Function '{}' has {} missing arguments ({}), which is currently not supported".format(f_name, len(unfulfilled_arg_names), ", ".join(unfulfilled_arg_names)))
                 else:
-                    unused_args = set(args) - set(out.arguments)
+                    unused_args = set(args) - set(out.signature)
                     unused_arg_names = [arg.name for arg in unused_args]
                     raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
 
@@ -100,7 +100,7 @@ class Function(cntk_py.Function):
             # force parameter order
             # BUGBUG: as_block() on the entire function is not really working, it looses names of its contents.
             #         As a workaround, wrap the args themselves into alias(), combine(), as_block().
-            out_arg_names = [arg.name for arg in out.arguments]
+            out_arg_names = [arg.name for arg in out.signature]
             #if len(arg_names) > 1:
             # BUGBUG: ^^ causes random errors, use conservatively
             if out_arg_names != arg_names     and False: # if order changed then force the order
@@ -121,7 +121,7 @@ class Function(cntk_py.Function):
                     out = combine(out)
                 else:
                     out = resolve_named(out)
-                out_arg_names = [arg.name for arg in out.arguments]
+                out_arg_names = [arg.name for arg in out.signature]
                 assert out_arg_names == arg_names
             # END WORKAROUND
 
@@ -145,43 +145,23 @@ class Function(cntk_py.Function):
         # don't call the base class, since Function is abstract in C++
         pass
 
-    # TODO: get by with placeholders only, do NOT replace with Input but rather Placeholder(shape).
-    # TODO: move this inside argument_map()
-    def _get_arguments(self):
-        if self.is_block:
-            # TODO: so far never triggered
-            return [exposed_arg for inner_arg, exposed_arg in self.block_arguments_mapping]
-        else:
-            # TODO: does this work for mixed Placeholders()/Inputs()?
-            return self.arguments
-            # the following seems to be no longer needed
-            ## not a BlockFunction: traverse
-            #args = self.arguments
-            #if len(args)>0:
-            #    nargs=args[0].name
-            #phs = self.placeholders
-            #if len(phs)>0:
-            #    nargs=phs[0].name
-            #if not args:
-            #    return phs
-            #elif not phs:
-            #    return args
-            #else:  # mixed Placeholder() / Input() signature: explicitly traverse
-            #    return [arg for arg in self.inputs if arg.is_input or arg.is_placeholder]
+    @property
+    def signature(self):
+        '''
+        Returns the signature of a Function.
+        This is the argument list less placeholders that belong to an outer, not yet completed @Function def.
+        '''
+        return self.arguments
 
-    # determine the {placeholder: variable} map for use with various call operations
-    # Accepted are both positional and keyword arguments.
-    # This mimics Python's argument interpretation, except that keyword arguments are not optional.
-    # This does not require the arguments to be Variables or Functions. It is also called by train_minibatch().
     def argument_map(self, *args, **kwargs):
-        params = self._get_arguments()    # function parameters
-        #param_names = [param.name for param in params] # (debugging)
+        '''
+        determine the {placeholder: variable} map for use with various call operations
+        Accepted are both positional and keyword arguments.
+        This mimics Python's argument interpretation, except that keyword arguments are not optional.
+        This does not require the arguments to be Variables or Functions. It is also called by train_minibatch().
+        '''
+        params = self.signature    # function parameters
         if len(args) + len(kwargs) != len(params):
-            try:
-                name = self.f_name
-            except:
-                name = ''
-                pass
             raise TypeError("CNTK Function expected {} arguments, got {}".format(len(params), len(args)))
 
         # start with positional arguments
@@ -210,9 +190,6 @@ class Function(cntk_py.Function):
         Currently you can pass an int, a tuple, an Input, or a dict created with Type()
         '''
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
-        #params = self._get_arguments()  # the function arguments to fill in
-        #if len(arg_types) != len(params):
-        #    raise TypeError("CNTK Function.update_signature() expected {} arguments, got {}".format(len(params), len(arg_types)))
         def to_input(arg, name):
             from cntk import input_variable
             if isinstance(arg, (int, tuple)): # just passed a shape
@@ -294,7 +271,7 @@ class Function(cntk_py.Function):
 
         # symbolic: return a cloned Function
         if is_symbolic:
-            a1 = self.arguments
+            a1 = self.signature
             a1_names = [arg.name for arg in a1]
             sn = self.name
             out = self.clone(CloneMethod.share, arg_map)
@@ -302,7 +279,7 @@ class Function(cntk_py.Function):
             if sn == 'hidden_representation':
                 ic = out.is_composite
                 print(13)
-            a2 = out.arguments
+            a2 = out.signature
             a2_names = [arg.name for arg in a2]
             # return the Variables as a Python tuple, rather than the CNTK Function object
             # TODO: naw, must be able to apply the result in case a new function with placeholders is created
@@ -381,7 +358,7 @@ class Function(cntk_py.Function):
         #if f_name == '':
         #    f_name = 'Function'
         #f_name = tag if self.name != '' else self.name
-        args = self.arguments
+        args = self.signature
         arg_names = [param.name for param in args]
         print(f_name + '(' + ", ".join(arg_names) + ')')
 

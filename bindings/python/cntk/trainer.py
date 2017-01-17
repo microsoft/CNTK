@@ -262,20 +262,20 @@ class Trainer(cntk_py.Trainer):
         return super(Trainer, self).total_number_of_samples_seen()
 
 
-    # TODO: anything below are attempts, and will likely not survive this way.
-    # BUGBUG: Should not need to take 'criterion', Trainer should know.
-    def train_minibatch_from_data(self, criterion, *stream_values):
-        def get_args(crit, stream_values):
-            return { criterion.arguments[i]: stream_values[i] for i in range(len(stream_values)) }
-        args = get_args(self.loss_function, stream_values)
-        return self.train_minibatch(args)
-
-    # BUGBUG: Should not need to take 'criterion', Trainer should know.
-    def test_minibatch_from_data(self, criterion, *stream_values):
-        def get_args(crit, stream_values):
-            return { criterion.arguments[i]: stream_values[i] for i in range(len(stream_values)) }
-        args = get_args(self.loss_function, stream_values)
-        return self.test_minibatch(args)
+    ## TODO: anything below are attempts, and will likely not survive this way.
+    ## BUGBUG: Should not need to take 'criterion', Trainer should know.
+    #def train_minibatch_from_data(self, criterion, *stream_values):
+    #    def get_args(crit, stream_values):
+    #        return { criterion.arguments[i]: stream_values[i] for i in range(len(stream_values)) }
+    #    args = get_args(self.loss_function, stream_values)
+    #    return self.train_minibatch(args)
+    #
+    ## BUGBUG: Should not need to take 'criterion', Trainer should know.
+    #def test_minibatch_from_data(self, criterion, *stream_values):
+    #    def get_args(crit, stream_values):
+    #        return { criterion.arguments[i]: stream_values[i] for i in range(len(stream_values)) }
+    #    args = get_args(self.loss_function, stream_values)
+    #    return self.test_minibatch(args)
 
 def Evaluator(model, criterion):
     '''
