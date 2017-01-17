@@ -13,7 +13,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
                      element_select, alias, hardmax, placeholder_variable, combine, parameter, times
 from cntk.ops.functions import CloneMethod, load_model
 from cntk.ops.sequence import broadcast_as
-from cntk.graph import find_nodes_by_name
+from cntk.graph import find_by_name
 #from cntk.blocks import LSTM, Stabilizer
 from localblocks import LSTM, Stabilizer
 from cntk.layers import Dense
@@ -178,12 +178,12 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
 def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size):
     
     # do some hooks so that we can direct data to the right place
-    label_sequence = find_nodes_by_name(model, 'label_sequence')[0]    
-    decoder_history_hook = find_nodes_by_name(model, 'decoder_history_hook')[0]  
+    label_sequence = find_by_name(model, 'label_sequence')
+    decoder_history_hook = find_by_name(model, 'decoder_history_hook')
 
-    embedding = find_nodes_by_name(model, 'embedding')
+    embedding = find_by_name(model, 'embedding')
     embed_param = 1
-    if len(embedding) > 0:
+    if embedding != None:
         embed_param = embedding[0]
 
     # Criterion nodes
@@ -355,7 +355,7 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         import seaborn as sns
         import pandas as pd
     
-        att = find_nodes_by_name(model, 'attention_weights')[0]
+        att = find_by_name(model, 'attention_weights')
         q = combine([model, att])
         output = q.forward({find_arg_by_name('raw_input' , model) : [features], 
                          find_arg_by_name('raw_labels', model) : [labels]},
@@ -412,7 +412,7 @@ def find_arg_by_name(name, expression):
 
 # to help debug the attention window
 def debug_attention(model, mb, reader):
-    att = find_nodes_by_name(model, 'attention_weights')[0]
+    att = find_by_name(model, 'attention_weights')
     q = combine([model, att])
     output = q.forward({find_arg_by_name('raw_input' , model) : 
                          mb[reader.streams.features], 
@@ -454,11 +454,11 @@ if __name__ == '__main__':
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
-    inputs = create_inputs()
-    model = create_model(inputs)
+    #inputs = create_inputs()
+    #model = create_model(inputs)
     
     # train
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     # write
     #model = load_model("model_epoch0.cmf")
@@ -470,7 +470,7 @@ if __name__ == '__main__':
     #test(test_reader, model)
     
     # test the model out in an interactive session
-    #print('loading model...')
-    #model_filename = "model_epoch0.cmf"
-    #model = load_model(model_filename)
-    #interactive_session(model, vocab, i2w, show_attention=True)
+    print('loading model...')
+    model_filename = "model_epoch4.cmf"
+    model = load_model(model_filename)
+    interactive_session(model, vocab, i2w, show_attention=True)
