@@ -39,6 +39,11 @@ def save_as_png(val_array, img_file_name, dim=28):
     img_array *= 255.0 / img_array.max()
     img_array = np.rint(img_array).astype('uint8')
 
+    try:
+        os.remove(img_file_name)
+    except OSError:
+        pass
+
     im = Image.fromarray(img_array)
     im2 = im.resize((224,224))
     im2.save(img_file_name)
@@ -94,6 +99,8 @@ if __name__ == '__main__':
                 save_as_png(out_values, os.path.join(output_path, "imageAutoEncoder_%s_output.png" % i))
 
                 # visualizing the encoding is only possible and meaningful with a single conv filter
-                save_as_png(enc_values, os.path.join(output_path, "imageAutoEncoder_%s_encoding.png" % i), dim=7)
+                enc_dim = 7
+                if(enc_values.size == enc_dim*enc_dim):
+                    save_as_png(enc_values, os.path.join(output_path, "imageAutoEncoder_%s_encoding.png" % i), dim=enc_dim)
 
     print("Done. Wrote output to %s" % output_path)

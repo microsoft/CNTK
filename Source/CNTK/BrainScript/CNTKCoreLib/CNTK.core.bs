@@ -89,7 +89,6 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
 {
     reductionRank = 1 # TODO: shall become an optional parameter
     outputChannelsShape = _AsArray (numOutputChannels)
-    outputRank = Length (outputChannelsShape)
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
     W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
@@ -99,6 +98,25 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
         c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, deconv = deconv, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
+}.apply
+
+# DeconvLayer -- create a deconvolution layer
+DeconvLayer {numOutputChannels,
+             filterShape,         # e.g. (3:3)
+             numInputChannels,
+             init = 'uniform',
+             initValueScale = 0.1,
+             stride = 1, 
+             sharing = true,
+             autoPadding = false,
+             lowerPad = 0, 
+             upperPad = 0,
+             maxTempMemSizeInSamples = 0} =
+{
+    kernelShape = _ConcatArrays (filterShape, _AsArray (numOutputChannels)) 
+    paramShape = _ConcatArrays (kernelShape, _AsArray (numInputChannels)) 
+    W        = ParameterTensor{paramShape, init=init, initValueScale=initValueScale, initOnCPUOnly=true}
+    apply(x) = Convolution(W, x, kernelShape, mapDims=numInputChannels, stride=stride, sharing=sharing, autoPadding=autoPadding, lowerPad=lowerPad, upperPad=upperPad, deconv=true)
 }.apply
 
 # MaxPoolingLayer, AveragePoolingLayer -- create a max- or average-pooling layer
@@ -114,6 +132,15 @@ MaxPoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 
 AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0} =
     _PoolingLayer {"average", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad}
 
+MaxUnpoolingLayer {filterShape,     # e.g. (3:3)
+                   stride = 1, 
+                   pad = false,
+                   lowerPad = 0, 
+                   upperPad = 0} = 
+{
+    apply (unpoolInput, poolInput) = MaxUnpooling (unpoolInput, poolInput, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
+}.apply
+    
 # RecurrentLSTMLayer -- create an LSTM layer
 RecurrentLSTMLayer {outputDim,
                     cellShape = None, # if set then use a projection

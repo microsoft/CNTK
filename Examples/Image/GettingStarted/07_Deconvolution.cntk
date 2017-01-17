@@ -3,8 +3,8 @@
 # For running from Visual Studio add
 # currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
 
-command = trainNetwork:testNetwork:writeResults
-#command = writeResults
+#command = trainNetwork:testNetwork:writeResults
+command = trainNetwork:testNetwork
 
 precision = "float"; traceLevel = 1 ; deviceId = "auto"
 
@@ -12,7 +12,8 @@ rootDir = ".." ; dataDir = "$rootDir$/DataSets/MNIST" ;
 outputDir = "./Output" ;
 
 modelPath = "$outputDir$/Models/07_Deconvolution.model"
-#stderr = "$outputDir$/07_Deconvolution_bs_out"
+#stderr = "$outputDir$/07_Deconvolution_bs_out.txt"
+#makemode=false
 
 # TRAINING CONFIG
 trainNetwork = {
@@ -24,13 +25,12 @@ trainNetwork = {
             c1      = ConvolutionalLayer {cMap, (5:5), pad = true}(inputFeatures)
             r1      = ReLU(c1)
             p1      = MaxPoolingLayer {(4:4), stride=(4:4)}(r1)
-            unpool1 = MaxUnpooling(p1, r1, (4:4:1), stride=(4:4:1), autoPadding=(false:false:false), lowerPad=0, upperPad=0)
-            W       = ParameterTensor{(1:5:5:cMap), init="uniform", initValueScale=0.1, initOnCPUOnly=true}
-            deconv  = Convolution(W, unpool1, (5:5:1), mapDims=cMap, stride=(1:1), sharing=(true:true:true), autoPadding=(false:false:false), lowerPad=(2:2:0), upperPad=(2:2:0), deconv=true)
-        }.deconv
+            unpool1 = MaxUnpoolingLayer {(4:4), stride=(4:4)}(p1, r1)
+            deconv1 = DeconvLayer {1, (5:5), cMap, lowerPad=(2:2:0), upperPad=(2:2:0)}(unpool1)
+        }.deconv1
 
         # inputs
-        imageShape = 28:28:1                        # image dimensions, 1 channel only
+        imageShape = 28:28:1
         features = Input {imageShape}
         labelDim = 10
         labels = Input (labelDim)
@@ -38,16 +38,13 @@ trainNetwork = {
         featScale = 1/256
         Scale{f} = x => Constant(f) .* x
 
-        #Scale = x => (1.0 / 256.0) .* x
-        #featScaled = Scale (features)
-        
         # apply model to features
         f1 = Scale{featScale} (features)
         z = model (f1)
 
         # rmse loss function
         f2 = Scale{featScale} (features)
-        err = z - f2 #featScaled
+        err = z - f2
         sqErr = err .* err
         mse = ReduceMean(sqErr)
         rmse = Sqrt(mse)
@@ -74,7 +71,7 @@ trainNetwork = {
 
     reader = {
         readerType = "CNTKTextFormatReader"
-        # See ../README.md for details on getting the data (Train-28x28_cntk_text.txt).
+        # See DataSets/MNIST/README.md for details on getting the data (Train-28x28_cntk_text.txt).
         file = "$DataDir$/Train-28x28_cntk_text.txt"
         input = {
             features = { dim = 784 ; format = "dense" }
@@ -102,7 +99,7 @@ testNetwork = {
 writeResults = {
     action = "write"
     minibatchSize = 1
-    outputPath = "$outputDir$/output.txt"
+    outputPath = "$outputDir$/decoder_output_bs.txt"
     
     reader = {
         randomize = False

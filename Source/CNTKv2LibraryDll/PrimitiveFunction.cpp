@@ -505,7 +505,7 @@ namespace CNTK
                             InvalidArgument("The convolution map should have at least as many axes as the shape of the input it operates on!");
 
                         NDShape outputMapCount, kernelShape;
-                        std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape(), transpose);
+                        std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(inputs[0].Shape(), inputs[1].Shape());
                         auto originalKernelShape = kernelShape;
                         outputShape = ConvolutionOpOutputShape(op, inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, inferDimensions);
                         if (originalKernelShape != kernelShape)
@@ -707,7 +707,7 @@ namespace CNTK
 
         dict[inputsKey] = std::move(inputUids);
 
-        if (m_op == PrimitiveOpType::Unpooling)
+        if (m_op == PrimitiveOpType::Block)
         {
             auto blockFunction = dynamic_cast<const BlockFunction*>(this);
             auto blockCompositeFunc = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
