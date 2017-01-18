@@ -42,9 +42,9 @@ Train = {
         labels   = Input {labelDim}
 
         # apply model to features
-        model = InceptionV3(features, labelDim, bnTimeConst)
-        z     = model.z
-        aux   = model.aux
+        model    = InceptionV3Norm(features, labelDim, bnTimeConst)
+        z        = model.z
+        aux      = model.aux
 
         # connect to system
         ceAux    = CrossEntropyWithSoftmax     (labels, aux)
@@ -90,9 +90,9 @@ Train = {
             file = "$DataDir$/train_map.txt"
             input = {
                 features = { transforms = (
-                    { type = "Crop" ; cropType = "random" ; cropRatio = 0.8 ; jitterType = "uniRatio" } :
+                    { type = "Crop" ; cropType = "randomArea" ; areaRatio = 0.08:1.0 ; jitterType = "uniRatio" ; aspectRatio = 0.75:1.0 } :
+                    { type = "Color" ; brightnessRadius = 0.2 ; contrastRadius = 0.2 ; saturationRadius = 0.4 } :
                     { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
-                    { type = "Mean" ; meanFile = "$ImageNetDir$/ImageNet1K_mean.xml" } :
                     { type = "Transpose" }
                 )}
                 labels = { labelDim = $NumLabels$ }
@@ -108,7 +108,6 @@ Train = {
             input = {
                 features = { transforms = (
                    { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
-                   { type = "Mean"; meanFile = "$ImageNetDir$/ImageNet1K_mean.xml" } :
                    { type = "Transpose" }
                 )}
                 labels = { labelDim = $NumLabels$ }
@@ -132,7 +131,6 @@ Eval = {
             input = {
                 features = { transforms = (
                    { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
-                   { type = "Mean"; meanFile = "$ImageNetDir$/ImageNet1K_mean.xml" } :
                    { type = "Transpose" }
                 )}
                 labels = { labelDim = $NumLabels$ }
