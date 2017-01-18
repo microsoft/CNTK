@@ -63,7 +63,7 @@ InceptionV3(input, labelDim, bnTimeConst) =
     # Auxiliary
     #
     # 17 x 17 x 768
-    aux_pool_1 = AveragePoolingLayer{(5:5), , stride = (3:3), pad = false}(mixed_8)
+    aux_pool_1 = AveragePoolingLayer{(5:5), stride = (3:3), pad = false}(mixed_8)
     # 5 x 5 x 768
     aux_conv_1 = ConvBNReLULayer{128, (1:1), (1:1), pad=true, bnTimeConst = bnTimeConst}(aux_pool_1)
     # 5 x 5 x 128

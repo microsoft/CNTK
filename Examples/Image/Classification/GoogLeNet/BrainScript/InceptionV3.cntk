@@ -13,8 +13,8 @@ parallelTrain  = true
 
 RootDir     = "."
 ConfigDir   = "$RootDir$"
+ImageNetDir = "$ConfigDir$"
 DataDir     = "$RootDir$"
-ImageNetDir = "$ConfigDir$/../ImageNet"
 OutputDir   = "$RootDir$/Output"
 ModelDir    = "$OutputDir$/Model"
 stderr      = "$OutputDir$/InceptionV3.log"
@@ -35,7 +35,7 @@ Train = {
         imageShape  = $ImageH$:$ImageW$:$ImageC$
         labelDim    = $NumLabels$
         bnTimeConst = 4096
-        auxWeight   = Constant(0.4)
+        auxWeight   = Constant(0.3)
 
         # inputs
         features = Input {imageShape}
