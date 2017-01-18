@@ -25,6 +25,14 @@
     },
     {
         "category": ["Image"],
+        "name":  "Image auto encoder",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#07_deconvolution",
+        "description":  "A simple image auto encoder using deconvolution and unpooling.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "Feature Extraction",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/FeatureExtraction",
         "description":  "Evaluate and write out different layers of a trained model using Python.",

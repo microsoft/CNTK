@@ -333,7 +333,7 @@ namespace CNTK
         for (size_t i = 0; i < outputMapCount.Rank(); ++i)
             paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
 
-		return{ paddedOutputMapCount, kernelShape };
+        return{ paddedOutputMapCount, kernelShape };
     }
 
     template <typename SourceElementType, typename TargetElementType>

@@ -58,7 +58,7 @@ if __name__ == '__main__':
     data_file = os.path.join(data_path, "Test-28x28_cntk_text.txt")
     if not (os.path.exists(model_file) and os.path.exists(data_file)):
         print("Cannot find required data or model. "
-              "Please get the MNIST data set and run 'cntk configFile=07_Deconvolution.cnkt' to create the model.")
+              "Please get the MNIST data set and run 'cntk configFile=07_Deconvolution.cntk' to create the model.")
         exit(0)
 
     # create minibatch source
@@ -67,8 +67,10 @@ if __name__ == '__main__':
         labels    = StreamDef(field='labels',   shape=10)
     )), randomize=False, epoch_size = FULL_DATA_SWEEP)
 
-    # load model and pick desired nodes as output
+    # use this to print all node names in the model
     # print_all_node_names(model_file)
+
+    # load model and pick desired nodes as output
     loaded_model = load_model(model_file)
     output_nodes = combine(
         [loaded_model.find_by_name('f1').owner,

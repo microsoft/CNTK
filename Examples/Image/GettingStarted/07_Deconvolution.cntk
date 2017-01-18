@@ -20,7 +20,7 @@ trainNetwork = {
     action = "train"
     
     BrainScriptNetworkBuilder = {
-		cMap = 1
+        cMap = 1
         model = inputFeatures => {
             c1      = ConvolutionalLayer {cMap, (5:5), pad = true}(inputFeatures)
             r1      = ReLU(c1)
@@ -32,8 +32,6 @@ trainNetwork = {
         # inputs
         imageShape = 28:28:1
         features = Input {imageShape}
-        labelDim = 10
-        labels = Input (labelDim)
 
         featScale = 1/256
         Scale{f} = x => Constant(f) .* x
@@ -51,7 +49,6 @@ trainNetwork = {
         
         # declare special nodes
         featureNodes = (features)
-        labelNodes = (labels)
         criterionNodes = (rmse)
         evaluationNodes = (rmse)
         outputNodes = (z)

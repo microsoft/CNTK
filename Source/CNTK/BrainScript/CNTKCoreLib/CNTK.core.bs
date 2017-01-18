@@ -84,7 +84,6 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
-                    deconv = false,          
                     maxTempMemSizeInSamples = 0} =
 {
     reductionRank = 1 # TODO: shall become an optional parameter
@@ -95,7 +94,7 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     apply (x) = {
-        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, deconv = deconv, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, deconv = false, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
 }.apply
