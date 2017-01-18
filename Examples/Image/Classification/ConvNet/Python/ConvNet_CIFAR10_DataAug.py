@@ -11,7 +11,7 @@ import numpy as np
 
 from cntk.blocks import default_options, Placeholder, identity
 from cntk.layers import Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense
-from cntk.models import Sequential, For
+from cntk.higher_order_layers import Sequential, For
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer, Evaluator

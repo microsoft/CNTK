@@ -75,6 +75,19 @@ def _initializer_for(init, rank_params=None):
 
     return init
 
+# helper to get the initial_state or the default
+def _get_initial_state_or_default(initial_state):
+    # if initial_state is a tuple (multiple state vars), then apply this recursively to all
+    if isinstance(initial_state, tuple):
+        return tuple(_get_initial_state_or_default(s) for s in initial_state)
+    # if initial state is given and a numeric constant, then turn it into a Constant() object
+    elif initial_state is None:
+        return Constant(0) # note: don't pass None to past_value, because that would default to float32 --TODO: still the case?
+    elif np.isscalar(initial_state):
+        return Constant(initial_state, shape=(1))
+    else:
+        return initial_state # already in good shape: return as is
+
 # create a type specifier; that is, all arguments to instantiate a Placeholder or Input
 # All are optional, meaning unspecified.
 # TODO: move to class Value?

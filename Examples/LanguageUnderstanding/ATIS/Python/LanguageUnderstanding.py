@@ -7,9 +7,7 @@
 from __future__ import print_function
 import os
 import math
-from cntk.blocks import *  # non-layer like building blocks such as LSTM()
-from cntk.layers import *  # layer-like stuff such as Linear()
-from cntk.models import *  # higher abstraction level, e.g. entire standard models and also orsisrators like Sequential()
+from cntk.layers import *  # Layers library
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer, Evaluator

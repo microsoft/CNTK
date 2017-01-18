@@ -42,9 +42,6 @@
     <None Include="cntk\learner.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\models.py">
-      <Filter>cntk</Filter>
-    </None>
     <None Include="cntk\pytest.ini">
       <Filter>cntk</Filter>
     </None>
@@ -117,5 +114,9 @@
     <None Include="cntk\utils\tests\utils_test.py" />
     <None Include="cntk\utils\tests\__init__.py" />
     <None Include="cntk\default_options.py" />
+    <None Include="cntk\blocks.py" />
+    <None Include="cntk\higher_order_layers.py">
+      <Filter>cntk</Filter>
+    </None>
   </ItemGroup>
 </Project>
