@@ -176,6 +176,7 @@
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Trainer.cpp" />
+    <ClCompile Include="TrainingSession.cpp" />
     <ClCompile Include="Utils.cpp" />
     <ClCompile Include="Value.cpp" />
     <ClCompile Include="Variable.cpp" />

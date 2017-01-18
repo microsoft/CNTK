@@ -22,6 +22,7 @@ from .device import *
 from .layers import *
 from .models import *
 from .distributed import *
+from .training_session import *
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension

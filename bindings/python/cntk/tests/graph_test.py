@@ -12,7 +12,7 @@ def _graph_dict():
     # This function creates a graph that has no real meaning other than
     # providing something to traverse.
     d = {}
-    
+
     batch_axis = Axis.default_batch_axis()
     input_seq_axis = Axis('ia')
     input_dynamic_axes = [batch_axis, input_seq_axis]
@@ -22,7 +22,7 @@ def _graph_dict():
 
     d['p1'] = parameter(shape=(3,2), name='p1')
 
-    
+
     d['op1'] = plus(d['i1'], d['i2'], name='op1')
     d['op2'] = times(d['op1'], d['p1'], name='op2')
 
@@ -35,7 +35,7 @@ def _graph_dict():
     # duplicate names
     d['op3a'] = plus(d['op2'], d['p2'], name='op3')
     d['op3b'] = plus(d['op3a'], d['p2'], name='op3')
-    
+
     d['first'] = sequence.first(d['op3b'], name='past')
 
     d['root'] = d['first']
@@ -53,7 +53,7 @@ def _simple_dict():
     d['root'] = d['op2']
 
     return d
-    
+
 
 def test_find_nodes():
     d = _graph_dict()
@@ -69,10 +69,11 @@ def test_find_nodes():
 
         n = find_by_name(d['root'], name)
         assert n.name == name, name
-    
+        assert n != None
+
         n = d['root'].find_by_name(name)
         assert n.name == name, name
-    
+
     n = find_all_with_name(d['root'], 'op3')
     assert len(n) == 2, 'op3'
     assert n[0].name == 'op3' and n[1].name == 'op3', 'op3'

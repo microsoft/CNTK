@@ -23,6 +23,11 @@ namespace CNTK
         return GetNextMinibatch(0, minibatchSizeInSamples, device);
     }
 
+    const std::unordered_map<StreamInformation, MinibatchData>& MinibatchSource::GetNextMinibatch(size_t minibatchSizeInSequences, size_t minibatchSizeInSamples, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        return GetNextMinibatch(minibatchSizeInSequences, minibatchSizeInSamples, 1, 0, device);
+    }
+
     const StreamInformation& MinibatchSource::StreamInfo(const std::wstring& streamName)
     {
         std::unordered_set<const StreamInformation*> matchingStreamInfos;
@@ -68,7 +73,6 @@ namespace CNTK
     }
 
     /*static*/ const std::wstring CompositeMinibatchSource::PositionAttributeName = L"minibatchSourcePosition";
-    /*static*/ const std::wstring CompositeMinibatchSource::DistributedAfterSampleCountAttributeName = L"minibatchDistributedAfterSampleCount";
 
     CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration)
         : m_epochEndReached(false),
@@ -77,9 +81,7 @@ namespace CNTK
           m_randomizedWindow(MinibatchSource::DefaultRandomizationWindow),
           m_truncationLength(0),
           m_numWorkers(1),
-          m_workerRank(0),
-          m_distributed(false),
-          m_distributedAfterSampleCount(MinibatchSource::InfiniteSamples)
+          m_workerRank(0)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
@@ -158,11 +160,6 @@ namespace CNTK
             m_truncationLength = augmentedConfiguration[truncationLengthConfigurationKey].Value<size_t>();
         }
 
-        // TODO: change all the dictionary names to string constants
-        const wchar_t* distributedAfterSampleCountConfigurationKey = L"distributedAfterSampleCount";
-        if (augmentedConfiguration.Contains(distributedAfterSampleCountConfigurationKey))
-            m_distributedAfterSampleCount = augmentedConfiguration[distributedAfterSampleCountConfigurationKey].Value<size_t>();
-
         typedef Reader*(*CreateCompositeDataReaderProc)(const ConfigParameters* parameters);
         CreateCompositeDataReaderProc createReaderProc = (CreateCompositeDataReaderProc)Plugin().Load(L"CompositeDataReader", "CreateCompositeDataReader");
         std::shared_ptr<Microsoft::MSR::CNTK::Reader> compositeDataReader(createReaderProc(&config));
@@ -194,6 +191,8 @@ namespace CNTK
     /*virtual*/ const std::unordered_map<StreamInformation, MinibatchData>&
     CompositeMinibatchSource::GetNextMinibatch(size_t minibatchSizeInSequences,
                                                size_t minibatchSizeInSamples,
+                                               size_t numberOfWorkers,
+                                               size_t workerRank,
                                                const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/) /*override*/
     {
         m_minibatchData.clear();
@@ -206,30 +205,11 @@ namespace CNTK
             if (minibatchSizeInSamples == 0)
                 InvalidArgument("GetNextMinibatch: Requested minibatch sizes must be > 0");
 
-            // For the first number of m_distributedAfterSampleCount samples, minibatch source won't run distributed.
-            bool wasDistributed = m_distributed;
-            if (!m_distributed && IsDistributed())
-            {
-                m_distributed = true;
-
-                if (m_numWorkers == 1)
-                {
-                    MPIWrapperPtr mpi = MPIWrapper::GetInstance();
-                    if (mpi == nullptr)
-                    {
-                        // create mpi instance if intended to be distributed
-                        mpi = MPIWrapper::GetInstance(true);
-                    }
-                    m_numWorkers = mpi->NumNodesInUse();
-                    m_workerRank = mpi->CurrentNodeRank();
-                }
-            }
-
             if (m_prevMinibatchSize == 0)
             {
                 EpochConfiguration epochConfig;
-                epochConfig.m_numberOfWorkers = m_distributed ? m_numWorkers : 1;
-                epochConfig.m_workerRank = m_distributed ? m_workerRank : 0;
+                epochConfig.m_numberOfWorkers = numberOfWorkers;
+                epochConfig.m_workerRank = workerRank;
                 epochConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 epochConfig.m_truncationSize = m_truncationLength;
 
@@ -262,24 +242,27 @@ namespace CNTK
 
                 m_shim->StartEpoch(epochConfig, inputs);
                 m_prevMinibatchSize = minibatchSizeInSamples;
-                wasDistributed = m_distributed;
+                m_workerRank = workerRank;
+                m_numWorkers = numberOfWorkers;
             }
 
-            if (minibatchSizeInSamples != m_prevMinibatchSize || wasDistributed != m_distributed)
+            if (minibatchSizeInSamples != m_prevMinibatchSize || m_workerRank != workerRank || m_numWorkers != numberOfWorkers)
             {
                 std::map<std::wstring, int> inputDescriptions;
                 for (const auto& s : m_streamInfos)
                     inputDescriptions[s.m_name] = AsCNTKImplDeviceId(device);
 
                 ReaderConfiguration newConfig;
-                newConfig.m_numberOfWorkers = m_distributed ? m_numWorkers : 1;
-                newConfig.m_workerRank = m_distributed ? m_workerRank : 0;
+                newConfig.m_numberOfWorkers = numberOfWorkers;
+                newConfig.m_workerRank = workerRank;
                 newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 newConfig.m_truncationSize = m_truncationLength;
 
                 m_shim->SetConfiguration(newConfig, inputDescriptions);
 
                 m_prevMinibatchSize = minibatchSizeInSamples;
+                m_workerRank = workerRank;
+                m_numWorkers = numberOfWorkers;
             }
 
             auto hasData = m_shim->GetMinibatch(m_matrices);
@@ -324,7 +307,6 @@ namespace CNTK
     {
         Dictionary checkpointState;
         checkpointState[PositionAttributeName] = m_shim->GetCurrentSamplePosition();
-        checkpointState[DistributedAfterSampleCountAttributeName] = m_distributedAfterSampleCount;
         return checkpointState;
     }
 
@@ -332,6 +314,5 @@ namespace CNTK
     {
         auto checkpointedMinibatchSourcePosition = checkpoint[PositionAttributeName].Value<size_t>();
         m_shim->SetCurrentSamplePosition(checkpointedMinibatchSourcePosition);
-        m_distributedAfterSampleCount = checkpoint[DistributedAfterSampleCountAttributeName].Value<size_t>();
     }
 }

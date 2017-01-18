@@ -341,4 +341,14 @@ namespace CNTK
     {
         return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
     }
+
+    TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners)
+    {
+        return MakeSharedObject<Trainer>(model, lossFunction, parameterLearners);
+    }
+
+    TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
+    {
+        return MakeSharedObject<Trainer>(model, lossFunction, evaluationFunction, parameterLearners);
+    }
 }

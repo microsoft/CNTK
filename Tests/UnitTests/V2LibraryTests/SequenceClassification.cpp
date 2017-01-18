@@ -48,9 +48,9 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool useSparseLa
 
     LearningRatePerSampleSchedule learningRatePerSample = 0.0005;
     MomentumAsTimeConstantSchedule momentumTimeConstant = 256;
-    Trainer trainer(classifierOutput, trainingLoss, prediction, 
-                    { MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, 
-                                         momentumTimeConstant, /*unitGainMomentum = */true) });
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction,
+                                 { MomentumSGDLearner(classifierOutput->Parameters(), learningRatePerSample, 
+                                                      momentumTimeConstant, /*unitGainMomentum = */true) });
 
     size_t outputFrequencyInMinibatches = 1;
     for (size_t i = 0; true; i++)
@@ -59,7 +59,7 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool useSparseLa
         if (minibatchData.empty())
             break;
 
-        trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }
@@ -91,66 +91,66 @@ void TestLearningRateControl(const DeviceDescriptor& device)
 
     LearningRatePerSampleSchedule learningRateSchedule({ { 2, 0.0005 }, { 2, 0.00025 } }, actualMBSize);
     auto learner = SGDLearner(classifierOutput->Parameters(), learningRateSchedule);
-    Trainer trainer(classifierOutput, trainingLoss, prediction, { learner });
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner });
     FloatingPointCompare(learner->LearningRate(), 0.0005, "Learner::LearningRate does not match expectation");
 
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
     FloatingPointCompare(learner->LearningRate(), 0.0005, "Learner::LearningRate does not match expectation");
 
     const wchar_t* modelFile = L"seq2seq.model";
-    trainer.SaveCheckpoint(modelFile);
+    trainer->SaveCheckpoint(modelFile);
 
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-    auto MB2Loss = trainer.PreviousMinibatchLossAverage();
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    auto MB2Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(learner->LearningRate(), 0.00025, "Learner::LearningRate does not match expectation");
 
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-    auto MB3Loss = trainer.PreviousMinibatchLossAverage();
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    auto MB3Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(learner->LearningRate(), 0.00025, "Learner::LearningRate does not match expectation");
 
-    trainer.RestoreFromCheckpoint(modelFile);
+    trainer->RestoreFromCheckpoint(modelFile);
     FloatingPointCompare(learner->LearningRate(), 0.0005, "Learner::LearningRate does not match expectation");
 
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-    auto postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    auto postRestoreMB2Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
     FloatingPointCompare(learner->LearningRate(), 0.00025, "Learner::LearningRate does not match expectation");
 
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-    auto postRestoreMB3Loss = trainer.PreviousMinibatchLossAverage();
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    auto postRestoreMB3Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB3Loss, MB3Loss, "Post checkpoint restoration training loss does not match expectation");
 
-    trainer.RestoreFromCheckpoint(modelFile);
+    trainer->RestoreFromCheckpoint(modelFile);
     FloatingPointCompare(learner->LearningRate(), 0.0005, "Learner::LearningRate does not match expectation");
 
     learner->ResetLearningRate(LearningRatePerSampleSchedule(0.0004));
     FloatingPointCompare(learner->LearningRate(), 0.0004, "Learner::LearningRate does not match expectation");
 
-    trainer.SaveCheckpoint(modelFile);
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-    postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
+    trainer->SaveCheckpoint(modelFile);
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    postRestoreMB2Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
     FloatingPointCompare(learner->LearningRate(), 0.0004, "Learner::LearningRate does not match expectation");
 
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-    postRestoreMB3Loss = trainer.PreviousMinibatchLossAverage();
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    postRestoreMB3Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB3Loss, MB3Loss, "Post checkpoint restoration training loss does not match expectation");
 
     FloatingPointCompare(learner->LearningRate(), 0.0004, "Learner::LearningRate does not match expectation");
 
-    trainer.RestoreFromCheckpoint(modelFile);
+    trainer->RestoreFromCheckpoint(modelFile);
     FloatingPointCompare(learner->LearningRate(), 0.0004, "Learner::LearningRate does not match expectation");
 
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-    postRestoreMB2Loss = trainer.PreviousMinibatchLossAverage();
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    postRestoreMB2Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB2Loss, MB2Loss, "Post checkpoint restoration training loss does not match expectation");
 
     FloatingPointCompare(learner->LearningRate(), 0.0004, "Learner::LearningRate does not match expectation");
 
-    trainer.TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
-    postRestoreMB3Loss = trainer.PreviousMinibatchLossAverage();
+    trainer->TrainMinibatch({ { features, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+    postRestoreMB3Loss = trainer->PreviousMinibatchLossAverage();
     FloatingPointCompare(postRestoreMB3Loss, MB3Loss, "Post checkpoint restoration training loss does not match expectation");
 
     FloatingPointCompare(learner->LearningRate(), 0.0004, "Learner::LearningRate does not match expectation");

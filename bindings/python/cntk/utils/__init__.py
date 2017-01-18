@@ -57,7 +57,7 @@ def one_hot(batch, num_classes, dtype=None, device=None):
                [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
 
     Args:
-        batch (NumPy array or list (of lists, if sequence) of index data): batch input data
+        batch (list of lists of integers): batch input data of indices
         num_classes (int): number of classes
         dtype (`np.float32`, `np.float64`, default None): data type
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
@@ -73,6 +73,14 @@ def one_hot(batch, num_classes, dtype=None, device=None):
     if isinstance(batch, np.ndarray):
         batch = batch.tolist()
 
+    try:
+        data_type = type(batch[0][0])
+    except:
+        raise ValueError('input must be a list of list of integers')
+
+    if data_type != int:
+        raise ValueError('supplied data to one_hot() must be of type integer'
+                ' and not "%s" since it is index data.'%data_type)
     if dtype in [np.float32, None]:
         value = cntk_py.Value.create_one_hot_float(num_classes, batch, device, False)
     elif dtype == np.float64:
