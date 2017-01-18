@@ -13,7 +13,7 @@ import numpy as np
 from .ops.functions import Function
 from .ops.variables import Variable
 from .ops import parameter, input_variable, placeholder_variable, combine
-from .ops import times, convolution, pooling, batch_normalization, dropout, splice, sequence
+from .ops import times, convolution, pooling, batch_normalization, dropout, splice, sequence, delay
 from .utils import Record, _as_tuple
 from .blocks import _initializer_for, _INFERRED # init helpers
 
@@ -334,37 +334,26 @@ def _get_initial_state_or_default(initial_state):
     else:
         return initial_state # already in good shape: return as is
 
-# helper that subsumes past_value() and future_value() into one
-def delay(x, initial_state=None, time_step=1, dynamic_axes_like=None, name=''):
-    if name:
-        UntestedBranchError("delay with name")
-    # if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
-    if dynamic_axes_like:
-        r = delay(x, initial_state=initial_state, time_step=time_step, dynamic_axes_like=None, name='')
-        from .utils import sanitize_input, typemap
-        from _cntk_py import reconcile_dynamic_axis
-        r = typemap(reconcile_dynamic_axis)(sanitize_input(r), sanitize_input(dynamic_axes_like))
-        return r;
-    # regular case
-    if time_step > 0:
-        return past_value  (x, time_step= time_step, initial_state=initial_state, name=name)
-    elif time_step < 0:
-        return future_value(x, time_step=-time_step, initial_state=initial_state, name=name)
-    else:
-        if name:
-            return alias(x, name)
-        else:
-            return x
-
-# Delay -- delay input
-# This is provided as a layer instead of a function so that it can easily be used in a Sequential() expression.
 def Delay(T=1, initial_state=default_override_or(0)):
+    '''
+    Delays input the input by a given number of time steps. Negative means future.
+    This is provided as a layer instead of a function so that it can easily be used in a Sequential() expression.
+    '''
     initial_state = get_default_override(Delay, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
     # expression
     @Function
     def delay_f(x):
+        # TODO: reenable this
+        ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
+        #if dynamic_axes_like:
+        #    r = delay(x, initial_state=initial_state, time_step=time_step, name='')
+        #    from .utils import sanitize_input, typemap
+        #    from _cntk_py import reconcile_dynamic_axis
+        #    r = typemap(reconcile_dynamic_axis)(sanitize_input(r), sanitize_input(dynamic_axes_like), name=name)
+        #    return r;
+        ## regular case
         return delay(x, initial_state=initial_state, time_step=T)
 
     return Block(delay_f, 'Delay')
