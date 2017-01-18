@@ -233,7 +233,10 @@ public:
         if (c.Input(inputIndex)->ReducesInTimeWrt(c.Input(1 - inputIndex)))
             c.Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-        inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
+        if (c.Input(inputIndex)->ParentOverwritesGradient())
+            inputGradient.AssignElementwiseProductOf(gradient, otherInputValue);
+        else
+            inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
     }
 };
 
