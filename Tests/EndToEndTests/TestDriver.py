@@ -398,10 +398,10 @@ class Test:
         'Quadro M2000M': 5,
         'Quadro M4000': 5,
       }
-      cc = sys.maxint
+      cc = sys.maxsize
       try:
         gpuList = subprocess.check_output([nvidiaSmiPath, '-L'])
-        for line in gpuList.split('\n'):
+        for line in gpuList.decode('utf-8').split('\n'):
           m = re.match(r"GPU (?P<id>\d+): (?P<type>[^(]*) \(UUID: (?P<guid>GPU-.*)\)\r?$", line)
           if m:
             try:
@@ -412,7 +412,7 @@ class Test:
               pass
       except OSError:
         pass
-      if cc != sys.maxint:
+      if cc != sys.maxsize:
         self.gpuBaselinePatternList.insert(0, ".gpu.cc" + str(cc))
 
     return self.gpuBaselinePatternList
