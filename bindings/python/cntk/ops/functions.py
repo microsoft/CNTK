@@ -65,13 +65,29 @@ class Function(cntk_py.Function):
             # further Functions that may be defined inside this invocation.
             from cntk import placeholder_variable, combine, alias, as_block
             args = [placeholder_variable(name=name) for name in arg_names]
+
             try:
+                # hide Placeholders of this function from .signature() of any function defined inside
                 for arg in args:
                     Function._placeholders_under_construction.add(arg)
-                out = f(*args)
+                # force them in order by wrapping them into a as_block(combine())
+                fun_args = args
+                if len(args) > 1     and False:  # currently does not work
+                    block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+                    combined_block_args = combine(block_args)                              # the content of the BlockFunction
+                    arg_map = list(zip(block_args, args))                                  # after wrapping, the block_args map to args
+                    combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
+                    fun_args = combined_args.outputs       # the Python function is called with these instead
+                # now invoke the Python function
+                out = f(*fun_args)
             finally:
+                # unhide Placeholders of this function again
                 for arg in args:
                     Function._placeholders_under_construction.remove(arg)
+
+            # verify that we got the parameter order right
+            out_arg_names = [arg.name for arg in out.signature]
+            assert out_arg_names == arg_names
 
             # resolve NamedOutputs
             # TODO: check for duplicates
@@ -109,6 +125,9 @@ class Function(cntk_py.Function):
             # BUGBUG: as_block() on the entire function is not really working, it looses names of its contents.
             #         As a workaround, wrap the args themselves into alias(), combine(), as_block().
             out_arg_names = [arg.name for arg in out.signature]
+            #if out_arg_names != arg_names:
+            #    print(13)
+            assert out_arg_names == arg_names
             #if len(arg_names) > 1:
             # BUGBUG: ^^ causes random errors, use conservatively
             if out_arg_names != arg_names     and False: # if order changed then force the order
@@ -361,11 +380,27 @@ class Function(cntk_py.Function):
         '''
         Access a member inside this object.
         '''
-        try:
+        # We get here for any member that is not a direct member of the class.
+
+        # We do not get here for:
+        #  - actual members of the class, such as f.outputs
+        #  - members that were added to the class, like f.W = W; f.W
+
+        # a direct class member
+        # BUGBUG: Do we ever get here?
+        # TODO: This comes from blocks.py Block(), but should be removed
+        if name in self.__dict__:
             return self.__dict__[name]
-        except KeyError:
-            if len(self.outputs) == 1:
-                return getattr(self.output, name)
+
+        # parameter lookup
+        # Functions are like classes that derive from a base class.
+        # If a Function object has a named parameter, then that is treated like a class member,
+        # which overrides any member of the same name of the base class.
+        # The base is the 'output' if a single output, otherwise none.
+
+        # access an API member of 'output', such as .shape()
+        if len(self.outputs) == 1:
+            return getattr(self.output, name)
 
         raise AttributeError("'%s' object has no attribute '%s'" %
                              (type(self), name))
@@ -414,10 +449,6 @@ class Function(cntk_py.Function):
                 #shape = list(output.shape for output in item.outputs)
                 shape = '(' +  ', '.join([name_it(output) + ':' + "{}".format(output.shape) for output in item.root_function.outputs]) + ')'
                 inputs = '(' +  ', '.join([name_it(input) + ':' + "{}".format(input.shape) for input in item.root_function.inputs]) + ')'
-            #elif isinstance(item, cntk_py.Placeholder):
-            #    op_name = "_"
-            #    shape = item.shape
-            #    inputs = ''
             elif isinstance(item, cntk_py.Constant):
                 op_name = "Constant"
                 shape = item.shape

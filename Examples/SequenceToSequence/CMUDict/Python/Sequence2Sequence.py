@@ -318,8 +318,12 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         ce = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error(z, postprocessed_labels)
         return (ce, errs)
-    criterion.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+    try:
+      criterion.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                                Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+    except:
+      criterion.dump()
+      raise
     criterion.dump()
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
@@ -579,6 +583,33 @@ if __name__ == '__main__':
     #L1 = L.clone(CloneMethod.clone)
     #x = placeholder_variable()
     #y = L(x) + L1(x)
+
+    #L = Dense(500)
+    #o = L.outputs
+    #sh = L.shape
+    #W = L.W
+    #w = L.weights
+
+    # repro for as_block
+    from cntk import placeholder_variable, combine, alias, as_block
+    def f(x,y):
+        return y-x
+    arg_names = ['x', 'y']
+    args = [placeholder_variable(name=name) for name in arg_names]
+    block_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
+    combined_block_args = combine(block_args)                           # the content of the BlockFunction
+    arg_map = list(zip(block_args, args))                               # after wrapping, the block_args map to args
+    combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='f_parameter_pack')
+    funargs = combined_args.outputs       # the Python function is called with these instead
+    #combined_args=None
+    out = f(*funargs)
+    out_arg_names = [arg.name for arg in out.arguments]
+    #out = Recurrence(out, initial_state=13.0)
+    #out_arg_names = [arg.name for arg in out.arguments]
+    out = out.clone(CloneMethod.share, {out.arguments[0]: input_variable(1, name='x1'), out.arguments[1]: input_variable(1, name='y1')})
+    out_arg_names = [arg.name for arg in out.arguments]
+    res = out.eval({out.arguments[0]: [[3.0]], out.arguments[1]: [[5.0]]})
+    #res = out.eval([[3.0]])
 
     # repro for name loss
     from cntk import plus, as_block
