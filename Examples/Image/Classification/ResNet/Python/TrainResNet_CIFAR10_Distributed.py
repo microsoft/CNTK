@@ -130,11 +130,9 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
 
 # Train and evaluate the network.
-def resnet_cifar10(train_data, test_data, mean_data, network_name, num_quantization_bits=32, max_epochs=5, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False):
+def resnet_cifar10(train_data, test_data, mean_data, network_name, num_quantization_bits=32, epoch_size=50000, max_epochs=160, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False):
 
     set_computation_network_trace_level(0)
-
-    epoch_size = 50000                    # for now we manually specify epoch size
     
     # NOTE: scaling up minibatch_size increases sample throughput. In 8-GPU machine,
     # ResNet110 samples-per-second is ~7x of single GPU, comparing to ~3x without scaling
@@ -179,8 +177,9 @@ if __name__=='__main__':
     test_data=os.path.join(data_path, 'test_map.txt')
     mean_data=os.path.join(data_path, 'CIFAR-10_mean.xml')
 
+    epoch_size = 50000
     resnet_cifar10(train_data, test_data, mean_data,
-                   network_name, num_quantization_bits, epochs,
+                   network_name, num_quantization_bits, epoch_size, epochs,
                    scale_up=scale_up)
 
     # Must call MPI finalize when process exit
