@@ -125,9 +125,9 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
     p = parameter(shape, init=init, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'parameter')   # these are factory methods for things with state
 
-def Constant(init, shape=None, dtype=default_override_or(np.float32), name=''):
+def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
     dtype = get_default_override(Constant, dtype=dtype)
-    p = constant(init, shape=shape, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
+    p = constant(value, shape=shape, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'constant')   # these are factory methods for things with state
 
 # TODO: this function should not be necessary anymore
