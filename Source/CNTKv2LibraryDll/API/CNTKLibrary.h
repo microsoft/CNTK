@@ -612,6 +612,11 @@ namespace CNTK
         CNTK_API NDArrayViewPtr Alias(bool readOnly = false) const;
 
         ///
+        /// Creates a new NDArrayView which is an alias of 'this' view but with a new shape.
+        ///
+        CNTK_API NDArrayViewPtr AsShape(const NDShape& newShape) const;
+
+        ///
         /// Copies the contents of the 'source' NDArrayView to 'this' view.
         /// The shapes of the 'source' view and 'this' view must be identical.
         ///
