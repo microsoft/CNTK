@@ -448,8 +448,6 @@
 %apply double INPUT[]  { double *dataBuffer }
 
 %rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
-%rename (GetBestDevice) CNTK::DeviceDescriptor::BestDevice;
-%rename (GetDefaultDevice) CNTK::DeviceDescriptor::DefaultDevice;
 %rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
 %rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
 %rename (GetId) CNTK::DeviceDescriptor::Id;
@@ -471,28 +469,16 @@
     {
         get { return GetCPUDevice(); }
     }
-
-    public static DeviceDescriptor DefaultDevice
+    
+    public static System.Collections.Generic.List<DeviceDescriptor> AllDevices()
     {
-        get { return GetDefaultDevice(); }
-    }
-
-    public static DeviceDescriptor BestDevice
-    {
-        get { return GetBestDevice(); }
-    }
-
-    public static System.Collections.Generic.List<DeviceDescriptor> AllDevices
-    {
-        get {
-            var devices = GetAllDevices();
-            var ret = new System.Collections.Generic.List<DeviceDescriptor>(devices.Count);
-            foreach (var d in devices)
-            {
-                ret.Add(d);
-            }
-            return ret;
+        var devices = GetAllDevices();
+        var ret = new System.Collections.Generic.List<DeviceDescriptor>(devices.Count);
+        foreach (var d in devices)
+        {
+            ret.Add(d);
         }
+        return ret;
     }
 
     public override bool Equals(System.Object obj)
@@ -667,6 +653,10 @@
 %rename (GetOutput) CNTK::Function::Output;
 %rename (GetOutputs) CNTK::Function::Outputs;
 %rename (GetArguments) CNTK::Function::Arguments;
+%rename (GetOpName) CNTK::Function::OpName;
+%rename (_IsComposite) CNTK::Function::IsComposite;
+%rename (_IsPrimitive) CNTK::Function::IsPrimitive;
+%rename (_IsBlock) CNTK::Function::IsBlock;
 
 %typemap(cscode) CNTK::Function %{
 
@@ -713,6 +703,26 @@
         get { return GetOutput(); }
     }
 
+    public string OpName
+    {
+        get { return GetOpName(); }
+    }
+
+    public bool IsComposite
+    {
+        get { return _IsComposite(); }
+    }
+
+    public bool IsPrimitive
+    {
+        get { return _IsPrimitive(); }
+    }
+
+    public bool IsBlock
+    {
+        get { return _IsBlock(); }
+    }
+
     public System.Collections.Generic.List<Variable> Arguments
     {
         get 
@@ -737,6 +747,7 @@
         }
         return CNTKLib.Combine(varVect);
     }
+
 %}
 
 %rename (GetShape) CNTK::Variable::Shape;
@@ -764,57 +775,62 @@
         get { return GetName(); }
     }
 
-	public VariableKind Kind
-	{
-		get { return GetVariableKind(); }
-	}
+    public VariableKind Kind
+    {
+        get { return GetVariableKind(); }
+    }
 
-	public System.Collections.Generic.List<Axis> DynamicAxes
-	{
-		get { 
-			var axes = new System.Collections.Generic.List<Axis>();
-			foreach (var axis in GetDynamicAxes())
-			{
-				axes.Add(axis);
-			}
-			return axes;
-		}
-	}
+    public DataType DataType
+    {
+        get { return GetDataType(); }
+    }
 
-	public bool IsSparse
-	{
-		get { return _IsSparse(); }
-	}
+    public System.Collections.Generic.List<Axis> DynamicAxes
+    {
+        get {
+            var axes = new System.Collections.Generic.List<Axis>();
+            foreach (var axis in GetDynamicAxes())
+            {
+                axes.Add(axis);
+            }
+            return axes;
+        }
+    }
 
-	public bool IsInput
-	{
-		get { return _IsInput(); }
-	}
+    public bool IsSparse
+    {
+        get { return _IsSparse(); }
+    }
 
-	public bool IsOutput
-	{
-		get { return _IsOutput(); }
-	}
+    public bool IsInput
+    {
+        get { return _IsInput(); }
+    }
 
-	public bool IsParameter
-	{
-		get { return _IsParameter(); }
-	}
+    public bool IsOutput
+    {
+        get { return _IsOutput(); }
+    }
 
-	public bool IsConstant
-	{
-		get { return _IsConstant(); }
-	}
+    public bool IsParameter
+    {
+        get { return _IsParameter(); }
+    }
 
-	public bool IsPlaceholder
-	{
-		get { return _IsPlaceholder(); }
-	}
+    public bool IsConstant
+    {
+        get { return _IsConstant(); }
+    }
 
-	public Function Owner
-	{
-		get { return GetOwner(); }
-	}
+    public bool IsPlaceholder
+    {
+        get { return _IsPlaceholder(); }
+    }
+
+    public Function Owner
+    {
+        get { return GetOwner(); }
+    }
 
     public override bool Equals(System.Object obj)
     {
@@ -881,6 +897,8 @@
 %rename (GetRank) CNTK::NDShape::Rank;
 %rename (GetTotalSize) CNTK::NDShape::TotalSize;
 %rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
+%rename (_IsUnknown) CNTK::NDShape::IsUnknown;
+%rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
 
 %typemap(cscode) CNTK::NDShape %{
     public uint Rank
@@ -899,6 +917,16 @@
             }
             return ret;
         }
+    }
+
+    public bool IsUnknown 
+    {
+        get { return _IsUnknown(); }
+    }
+
+    public bool HasInferredDimension
+    {
+        get { return _HasInferredDimension(); }
     }
 
     public uint TotalSize
@@ -1052,9 +1080,9 @@
                 input.Add(seq);
             }
             seq.Add(element);
-        }        
-		// Pass the empty seqStartFlags means all sequences have the start flag with true.
-		return Create<T>(shape, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
+        }
+        // Pass the empty seqStartFlags means all sequences have the start flag with true.
+        return Create<T>(shape, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
      public static Value CreateSequence<T>(NDShape shape,
@@ -1075,7 +1103,7 @@
         return Create(shape, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
     }
 
-	public static Value CreateBatchOfSequences<T>(NDShape shape,
+    public static Value CreateBatchOfSequences<T>(NDShape shape,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
@@ -1092,7 +1120,7 @@
         return Create(shape, batchOfSequences, seqStartFlags, device, readOnly);
     }
 
-	private static Value Create<T>(NDShape sampleShape,
+    private static Value Create<T>(NDShape sampleShape,
                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
@@ -1130,7 +1158,7 @@
         var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
         batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
         
-		return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
+        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
     public static Value CreateSequence<T>(uint dimension,
@@ -1151,7 +1179,7 @@
         return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
     }
 
-	public static Value CreateBatchOfSequences<T>(uint dimension, 
+    public static Value CreateBatchOfSequences<T>(uint dimension,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
@@ -1168,7 +1196,6 @@
         return Create<T>(dimension, batchOfSequences, seqStartFlags, device, readOnly);
     }
 
-	    
     private static Value Create<T>(uint dimension,
                                   System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
@@ -1200,7 +1227,7 @@
         }
     }
 
-	// Create value object from NDArrayView
+    // Create value object from NDArrayView
     public static Value Create(NDShape sampleShape,
                                System.Collections.Generic.List<NDArrayView> sequences,
                                System.Collections.Generic.List<bool> sequenceStartFlags,

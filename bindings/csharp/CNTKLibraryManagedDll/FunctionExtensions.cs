@@ -34,7 +34,5 @@ namespace CNTK
                 outputs[p.Key] = p.Value;
             }
         }
-
-
     }
 }
