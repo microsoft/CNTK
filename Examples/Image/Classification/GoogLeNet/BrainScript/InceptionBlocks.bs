@@ -1,6 +1,9 @@
 #
 # This file contains the basic build block of Inception Network as defined in:
+#
 #   https://arxiv.org/pdf/1512.00567.pdf
+#
+# and in Tensorflow implementation
 #
 
 #
