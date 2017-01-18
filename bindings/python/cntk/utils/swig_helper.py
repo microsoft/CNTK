@@ -18,7 +18,7 @@ def map_if_possible(obj):
         from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
         from cntk.axis import Axis
         from cntk.distributed import WorkerDescriptor, Communicator, DistributedLearner
-        from cntk.utils import Value
+        from cntk import Value
         _typemap = { 
                 cntk_py.Variable: Variable,
                 cntk_py.Parameter: Parameter,
