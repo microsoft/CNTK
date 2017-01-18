@@ -90,7 +90,7 @@
       <SDLCheck>true</SDLCheck>
       <OpenMPSupport>false</OpenMPSupport>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
