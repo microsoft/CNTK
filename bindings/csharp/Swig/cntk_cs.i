@@ -743,12 +743,12 @@
 %rename (GetName) CNTK::Variable::Name;
 %rename (GetVariableKind) CNTK::Variable::Kind;
 %rename (GetDynamicAxes) CNTK::Variable::DynamicAxes;
-%rename (_IsSparse) CTNK::Variable::IsSparse;
-%rename (_IsInput) CTNK::Variable::IsInput;
-%rename (_IsOutput) CTNK::Variable::IsOutput;
-%rename (_IsParameter) CTNK::Variable::IsParameter;
-%rename (_IsConstant) CTNK::Variable::IsConstant;
-%rename (_IsPlaceholder) CTNK::Variable::IsPlaceholder;
+%rename (_IsSparse) CNTK::Variable::IsSparse;
+%rename (_IsInput) CNTK::Variable::IsInput;
+%rename (_IsOutput) CNTK::Variable::IsOutput;
+%rename (_IsParameter) CNTK::Variable::IsParameter;
+%rename (_IsConstant) CNTK::Variable::IsConstant;
+%rename (_IsPlaceholder) CNTK::Variable::IsPlaceholder;
 %rename (GetOwner) CNTK::Variable::Owner;
 %rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
 
@@ -769,7 +769,7 @@
 		get { return GetVariableKind(); }
 	}
 
-	public System.Collections.Generic.List<Axis> DynamicAxes()
+	public System.Collections.Generic.List<Axis> DynamicAxes
 	{
 		get { 
 			var axes = new System.Collections.Generic.List<Axis>();
@@ -1054,7 +1054,7 @@
             seq.Add(element);
         }        
 		// Pass the empty seqStartFlags means all sequences have the start flag with true.
-		return Create<T>(sampleShape, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
+		return Create<T>(shape, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
      public static Value CreateSequence<T>(NDShape shape,
@@ -1156,7 +1156,7 @@
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
     {
-        return Create<T>(dimension, batchOfSequences, new System.Collections.Generic.List<bool>(0),, device, readOnly);
+        return Create<T>(dimension, batchOfSequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
     public static Value CreateBatchOfSequences<T>(uint dimension, 
