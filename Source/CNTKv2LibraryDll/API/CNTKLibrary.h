@@ -2380,7 +2380,6 @@ namespace CNTK
 
     public:
 
-// We need to have parameter names in Forward/Backward so that Swig can generate correct wrappings.
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
         /// to each leaf variable of the Function of VariableKind 'Input'.
@@ -2416,7 +2415,11 @@ namespace CNTK
         /// Returns the name of the operation that this Function denotes
         ///
         virtual const std::wstring& OpName() const 
+#ifdef SWIG 
         { NOT_IMPLEMENTED; }
+#else
+        = 0;
+#endif
 
     protected:
         ///

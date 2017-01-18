@@ -404,7 +404,6 @@ public:
 
 // Callback support
 %feature("director") CNTK::Function;
-//%feature("director:except");
 
 %{
     #include "CNTKLibrary.h"

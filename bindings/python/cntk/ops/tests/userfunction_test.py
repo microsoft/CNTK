@@ -7,7 +7,7 @@
 Unit tests for function extension
 """
 
-from __future__ import division
+from __future__ import division, print_function
 import numpy as np
 import pytest
 
@@ -22,14 +22,18 @@ class Plus3Func(UserFunction):
         super(Plus3Func, self).__init__([arg], outputs,
                 name=name)
 
+        self.forward_calls = 0
+        self.backward_calls = 0
+
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         assert len(self.inputs)==1
-        assert len(arguments)==1
         assert len(outputs)==1
 
         for k in outputs:
             outputs[k] = arguments[0] + 3
             break
+
+        self.forward_calls += 1
 
         return None, outputs
 
@@ -41,6 +45,8 @@ class Plus3Func(UserFunction):
             break
         for var_key in variables:
             break
+
+        self.backward_calls += 1
 
         variables[var_key] = rv
 
@@ -99,6 +105,16 @@ def _test_ext_eval_4_b_inside_graph():
     # No batch dimension since we have no input
     assert np.allclose(result, ((p_init*np.ones_like(result))+3)*p_init)
 
+def test_ext_eval_5_times():
+    dim = 2
+    p_init = 10
+    p = parameter(shape=(dim,), init=p_init, name='p')
+    m = Plus3Func(p)
+    z = times(m, parameter(shape=(2,50), init=2))
+
+    result = z.eval()
+    # No batch dimension since we have no input
+    assert np.allclose(result, ((p_init*np.ones_like(result))+3)*2*2)
 
 # TODO change to real training example
 def test_ext_train():
@@ -120,6 +136,8 @@ def test_ext_train():
         i+=1
         input_data = np.random.rand(dim)
         trainer.train_minibatch([input_data])
+
+    assert m.forward_calls == m.backward_calls == 100
 
 @pytest.mark.parametrize("payload", [
     (77,),
@@ -172,7 +190,7 @@ class LambdaFunc(UserFunction):
     def __init__(self,
             arg,
             when=lambda arg: True,
-            execute=lambda arg:self.print_tensor(arg),
+            execute=lambda arg: print(arg),
             name=''):
         self.when = when
         self.execute = execute
@@ -235,3 +253,4 @@ def test_ext_lambdafunc():
     input_data = 0.3 * np.ones(dim)
     trainer.train_minibatch([input_data])
     assert cb.count == 1
+

@@ -274,8 +274,8 @@ class Function(cntk_py.Function):
              computation is. If `None`, the default device is used.
 
         Returns:
-             A tuple (BackpropState, map of outputs to NumPy arrays). The
-             BackpropState is a handle taken by :func:`backward`.
+             A tuple (BackPropState, map of outputs to NumPy arrays). The
+             BackPropState is a handle taken by :func:`backward`.
         '''
         if device is None:
             device = DeviceDescriptor.use_default_device()
@@ -670,7 +670,7 @@ class UserFunction(Function):
              computation is. If `None`, the default device is used.
 
         Returns:
-             A BackpropState instance, which is used by :func:`backward`.
+             A BackPropState instance, which is used by :func:`backward`.
         '''
         arguments = tuple(value_to_seq(v) for v in arguments)
 
