@@ -9,10 +9,9 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
+namespace CNTKLibraryCSEvalExamples
 {
     public static class CntkBitmapExtensions
     {
