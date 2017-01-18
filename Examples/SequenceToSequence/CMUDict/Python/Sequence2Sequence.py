@@ -37,7 +37,7 @@ hidden_dim = 128
 num_layers = 2
 attention_dim = 128
 attention_span = 20
-use_attention = True  #True  --BUGBUG (layers): not working for now due to has_aux
+use_attention = False  #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -199,7 +199,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # Note: We go_backwards.
     with default_options(enable_self_stabilization=True, go_backwards=True):
         last_layer = Fold if not use_attention else Recurrence
-        encoder = Sequential([
+        encode = Sequential([
             embed,
             Stabilizer(),
             For(range(num_layers-1), lambda:
@@ -211,8 +211,8 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # where history is one of these, delayed by 1 step and <s> prepended:
     #  - training: labels
     #  - testing:  its own output hardmax(z)
-    #with default_options(enable_self_stabilization=True):
-    with default_options(enable_self_stabilization=False):
+    with default_options(enable_self_stabilization=True):
+    #with default_options(enable_self_stabilization=False):
         # sub-layers
         Sin = Stabilizer()
         #att_fn = Attention(attention_dim, axis=-2, attention_span=attention_span) # :: (h_enc*, h_dec) -> (h_aug_dec)
@@ -221,10 +221,10 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         D = Dense(label_vocab_dim)
         # layer function
         @Function
-        def decoder(history, input):#,      history_axis): # TODO: get rid of history_axis, does not work for no attention
+        def decode(history, input):#,      history_axis): # TODO: get rid of history_axis, does not work for no attention
             # BUGBUG: Get rid of history axis. Currently needed because broadcast_as() below is a recurrent loop, so we must move
-            #         it hoist out of the loop over decoder(). It can only depend on the axis of history, but not on history.
-            encoder_output = encoder(input)
+            #         it hoist out of the loop over decode(). It can only depend on the axis of history, but not on history.
+            encoder_output = encode(input)
             r = history
             r = embed(r)
             r = Sin(r)
@@ -253,7 +253,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
             r = D(r)
             return r
 
-    return decoder
+    return decode
 
 ########################
 # train action         #
@@ -293,7 +293,7 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
         # BUGBUG: This will fail with sparse input.
         # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder; then add map_state_function
         history_fwd = Placeholder(name='hook')
-        prev_history = delayed_value(history_fwd, initial_state=initial_state)
+        prev_history = Delay(initial_state=initial_state)(history_fwd)
         z = over_function(prev_history, input)#,      out_axis)
         # apply map_state_function
         fb = map_state_function(z)
@@ -312,32 +312,31 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
         return z
     return unfold_from
 
-def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_size):
+def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_size):
 
     from cntk.blocks import Constant, Type
 
     # this is what we train here
-    #decoder.update_signature(Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]),
+    #s2smodel.update_signature(Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]),
     #                         Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
     # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
     #         Maybe also attributable to a parameter-order mix-up?
 
     # note: the labels must not contain the initial <s>
     @Function
-    def model_train(input, labels): # (input, labels) --> (word_sequence)
+    def model_train(input, labels): # (input*, labels*) --> (word_logp*)
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
         # BUGBUG: This will fail with sparse input.
-        decoder_input = delayed_value(labels, initial_state=sentence_start)
-        z = decoder(decoder_input, input)#,       decoder_input)
+        decoder_input = Delay(initial_state=sentence_start)(labels)
+        z = s2smodel(decoder_input, input)#,       decoder_input)
         return z
-    model = model_train
 
     @Function
-    def model_greedy(input): # (input) --> (word_sequence)
+    def model_greedy(input): # (input*) --> (word_sequence*)
 
-        U = UnfoldFrom(decoder,
+        U = UnfoldFrom(s2smodel,
                        map_state_function=hardmax,                                    # feedback goes through hardmax
                        until_predicate=lambda z: hardmax(z)[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                        length_increase=length_increase, initial_state=sentence_start)
@@ -349,19 +348,17 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
-    decoder_output_model = model_greedy
-    # BUGBUG: Update fails with Stabilizer enabled, since scalar dim infects type inference and does not widen.
 
     ## criterion function must drop the <s> from the labels
     ## TODO: use same as in LU with filter
     drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
-    model = model.clone(CloneMethod.share) # note: use separate clone(), otherwise model.arguments[0] below is not the right one
-    model = model.replace_placeholders({model.arguments[0]: drop_start.output})
+    model_train = model_train.clone(CloneMethod.share) # note: use separate clone(), otherwise model_train.arguments[0] below is not the right one
+    model_train = model_train.replace_placeholders({model_train.arguments[0]: drop_start.output})
     # ^^ this is a workaround around the problem described inside criterion()
 
     @Function
     def criterion(input, labels):
-        model1 = model
+        #model1 = model_train
         #drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
         #model1 = model1.clone(CloneMethod.share) # note: use separate clone(), otherwise model1.arguments[0] below is not the right one
         #model1 = model1.replace_placeholders({model1.arguments[0]: drop_start.output})
@@ -369,7 +366,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
         #z = model1(input, postprocessed_labels)
         # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
         #         A mix-up of parameter order?
-        z = model1(input, labels)
+        z = model_train(input, labels)
         postprocessed_labels = find_by_name(z, 'postprocessed_labels')
         ce = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error(z, postprocessed_labels)
@@ -386,7 +383,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
-    learner = momentum_sgd(model.parameters,
+    learner = momentum_sgd(model_train.parameters,
                            lr_per_sample, momentum_time_constant,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
@@ -398,7 +395,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
     sample_freq = 100
 
     # print out some useful training information
-    log_number_of_parameters(model) ; print()
+    log_number_of_parameters(model_train) ; print()
     progress_printer = ProgressPrinter(freq=30, tag='Training')
 
     # dummy for printing the input sequence below
@@ -414,8 +411,8 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
         while i < (epoch+1) * epoch_size:
             # get next minibatch of training data
             mb_train = train_reader.next_minibatch(minibatch_size)
-            #trainer.train_minibatch({find_arg_by_name('raw_input' , model) : mb_train[train_reader.streams.features], 
-            #                         find_arg_by_name('raw_labels', model) : mb_train[train_reader.streams.labels]})
+            #trainer.train_minibatch({find_arg_by_name('raw_input' , model_train) : mb_train[train_reader.streams.features], 
+            #                         find_arg_by_name('raw_labels', model_train) : mb_train[train_reader.streams.labels]})
             trainer.train_minibatch(mb_train[train_reader.streams.features], mb_train[train_reader.streams.labels])
 
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
@@ -429,11 +426,11 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
                 print(end=" -> ")
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                #e = decoder_output_model(mb_valid[valid_reader.streams.features])
-                #print_sequences(e, i2w)
+                e = model_greedy(mb_valid[valid_reader.streams.features])
+                print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
-                debug_attention(decoder_output_model, mb_valid, valid_reader)                
+                debug_attention(model_greedy, mb_valid, valid_reader)                
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
@@ -448,7 +445,7 @@ def train(train_reader, valid_reader, vocab, i2w, decoder, max_epochs, epoch_siz
         # cases it would be better to save the model without the decoder to make it easier to wire-in a 
         # different decoder such as a beam search decoder. For now we save this one though so it's easy to 
         # load up and start using.
-        decoder_output_model.save_model(model_filename)
+        model_greedy.save_model(model_filename)
         print("Saved model to '%s'" % model_filename)
 
 ########################

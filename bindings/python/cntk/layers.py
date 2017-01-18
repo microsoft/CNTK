@@ -335,12 +335,12 @@ def _get_initial_state_or_default(initial_state):
         return initial_state # already in good shape: return as is
 
 # helper that subsumes past_value() and future_value() into one
-def delayed_value(x, initial_state=None, time_step=1, dynamic_axes_like=None, name=''):
+def delay(x, initial_state=None, time_step=1, dynamic_axes_like=None, name=''):
     if name:
-        UntestedBranchError("delayed_value with name")
+        UntestedBranchError("delay with name")
     # if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
     if dynamic_axes_like:
-        r = delayed_value(x, initial_state=initial_state, time_step=time_step, dynamic_axes_like=None, name='')
+        r = delay(x, initial_state=initial_state, time_step=time_step, dynamic_axes_like=None, name='')
         from .utils import sanitize_input, typemap
         from _cntk_py import reconcile_dynamic_axis
         r = typemap(reconcile_dynamic_axis)(sanitize_input(r), sanitize_input(dynamic_axes_like))
@@ -364,10 +364,10 @@ def Delay(T=1, initial_state=default_override_or(0)):
 
     # expression
     @Function
-    def delay(x):
-        return delayed_value(x, initial_state=initial_state, time_step=T)
+    def delay_f(x):
+        return delay(x, initial_state=initial_state, time_step=T)
 
-    return Block(delay, 'Delay')
+    return Block(delay_f, 'Delay')
 
 # RecurrenceFrom() -- run a block recurrently over a time sequence, with initial state
 # This form is meant for use in sequence-to-sequence scenarios.
@@ -397,7 +397,7 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
         # previous function; that is, past or future_value with initial_state baked in
         #prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
         # BUGBUG: This fails ^^ due to current as_block() bugs; can only use Python function for now:
-        prev_out_vars = [delayed_value(out_var, initial_state=init, time_step=-1 if go_backwards else +1) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
+        prev_out_vars = [delay(out_var, initial_state=init, time_step=-1 if go_backwards else +1) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
 
         # apply the recurrent block ('over_function')
         out = over_function(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
