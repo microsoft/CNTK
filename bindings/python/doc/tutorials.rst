@@ -26,6 +26,10 @@ Tutorials
 
 #.  CNTK 205: `Artistic Style Transfer`_
 
+#.  CNTK 206: Time Series with LSTMs
+
+    * Part A: `Basic LSTMs using simulated data`_
+
 For our Japanese users, you can find some of the `tutorials in Japanese`_.
 
 .. _`Logistic Regression`: https://github.com/Microsoft/CNTK/tree/v2.0.beta8.0/Tutorials/CNTK_101_LogisticRegression.ipynb
@@ -41,5 +45,6 @@ For our Japanese users, you can find some of the `tutorials in Japanese`_.
 .. _`Reinforcement learning basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta8.0/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb
 .. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta8.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
 .. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta8.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
+.. _`Basic LSTMs using simulated data`: https://github.com/Microsoft/CNTK/blob/v2.0.beta8.0/Tutorials/CNTK_206A_IOT_Example_with_LSTM.ipynb
 
 .. _`tutorials in Japanese`: https://notebooks.azure.com/library/cntkbeta2_ja
