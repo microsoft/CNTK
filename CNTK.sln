@@ -1453,6 +1453,19 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerformanceProfilerDll", "S
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryCSEvalExamplesTest", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest\CNTKLibraryCSEvalExamplesTest.csproj", "{3500A847-E024-4E7D-92DD-CC587C17460B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GoogLeNet", "GoogLeNet", "{789B4AB8-40F1-4A37-823A-BC20D80C8BF1}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\README.md = Examples\Image\Classification\GoogLeNet\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript", "{95AE4F8A-7618-4B6F-8411-31576062AA63}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\BrainScript\InceptionBlocks.bs = Examples\Image\Classification\GoogLeNet\BrainScript\InceptionBlocks.bs
+		Examples\Image\Classification\GoogLeNet\BrainScript\InceptionV3.bs = Examples\Image\Classification\GoogLeNet\BrainScript\InceptionV3.bs
+		Examples\Image\Classification\GoogLeNet\BrainScript\InceptionV3.cntk = Examples\Image\Classification\GoogLeNet\BrainScript\InceptionV3.cntk
+		Examples\Image\Classification\GoogLeNet\BrainScript\README.md = Examples\Image\Classification\GoogLeNet\BrainScript\README.md
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -2107,5 +2120,7 @@ Global
 		{CB4566F1-6C8F-4270-83EE-F6AED84EBB2B} = {39C3C8CA-9A8A-4733-ADBB-3E19D0F52528}
 		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{3500A847-E024-4E7D-92DD-CC587C17460B} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
+		{789B4AB8-40F1-4A37-823A-BC20D80C8BF1} = {151202CF-C2E4-47A6-A31C-CE039D698519}
+		{95AE4F8A-7618-4B6F-8411-31576062AA63} = {789B4AB8-40F1-4A37-823A-BC20D80C8BF1}
 	EndGlobalSection
 EndGlobal

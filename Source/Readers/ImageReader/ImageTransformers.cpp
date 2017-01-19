@@ -211,7 +211,7 @@ cv::Rect CropTransformer::GetCropRectCenter(int crow, int ccol, std::mt19937 &rn
         else if (m_useAreaRatio)
         {
             double areaRatio = ApplyRatioJitter(m_areaRatioMin, m_areaRatioMax, rng); 
-            assert(areaRatio >= m_areaRatioMin && areaRatio <= m_sideRatioMax); 
+            assert(areaRatio >= m_areaRatioMin && areaRatio <= m_areaRatioMax);
             cropSizeX = cropSizeY = (int)std::round(std::sqrt(crow * ccol * areaRatio));    // we always crop square shape unless aspectRatio is not 1.0
         }
 
