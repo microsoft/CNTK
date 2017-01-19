@@ -205,7 +205,7 @@
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb",
         "description":  "Timeseries modeling with LSTMs using simulated data.",
         "language":  ["Python"],
-        "type":  ["Tutorial"]
+        "type":  ["Tutorial", "Recipe"]
     },
     {
         "category": ["Numeric"],
