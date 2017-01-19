@@ -16,7 +16,7 @@ def test_cntk_103_mnist_feedforwardnetwork_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedEvalErrorByDeviceId = { -1: 1.90, 0: 1.85 }
+expectedEvalErrorByDeviceId = { -1: 1.67, 0: 1.71 }
 
 def test_cntk_103_mnist_feedforwardnetwork_evalCorrect(nb, device_id):
     testCell = [cell for cell in nb.cells

@@ -9,15 +9,13 @@ import os
 import numpy as np
 import pytest
 
-from cntk.io import _is_tensor, sequence_to_cntk_text_format
+from cntk.io import *
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
 AA = np.asarray
 
 def test_text_format(tmpdir):
-    from cntk.io import CTFDeserializer, MinibatchSource, StreamDef, StreamDefs
-
     mbdata = r'''0	|x 560:1	|y 1 0 0 0 0
 0	|x 0:1
 0	|x 0:1
@@ -48,6 +46,9 @@ def test_text_format(tmpdir):
     features = mb[features_si]
     # 2 samples, max seq len 4, 1000 dim
     assert features.shape == (2, 4, input_dim)
+    assert features.end_of_sweep
+    assert features.num_sequences == 2
+    assert features.num_samples == 7
     assert features.is_sparse
     # TODO features is sparse and cannot be accessed right now:
     # *** RuntimeError: DataBuffer/WritableDataBuffer methods can only be called for NDArrayiew objects with dense storage format
@@ -58,6 +59,9 @@ def test_text_format(tmpdir):
     labels = mb[labels_si]
     # 2 samples, max seq len 1, 5 dim
     assert labels.shape == (2, 1, num_output_classes)
+    assert labels.end_of_sweep
+    assert labels.num_sequences == 2
+    assert labels.num_samples == 2
     assert not labels.is_sparse
 
     label_data = np.asarray(labels)
@@ -67,8 +71,16 @@ def test_text_format(tmpdir):
                 [[ 0.,  1.,  0.,  0.,  0.]]
                 ]))
 
+    mb = mb_source.next_minibatch(1)
+    features = mb[features_si]
+    labels = mb[labels_si]
+
+    assert not features.end_of_sweep
+    assert not labels.end_of_sweep
+    assert features.num_samples < 7
+    assert labels.num_samples == 1
+
 def test_image():
-    from cntk.io import ReaderConfig, ImageDeserializer
     map_file = "input.txt"
     mean_file = "mean.txt"
     epoch_size = 150
@@ -153,7 +165,7 @@ def test_image():
     assert set(sis.keys()) == { feature_name, label_name }
     '''
 
-def test_minibatch(tmpdir):
+def test_full_sweep_minibatch(tmpdir):
 
     mbdata = r'''0	|S0 0   |S1 0
 0	|S0 1 	|S1 1 
@@ -168,10 +180,10 @@ def test_minibatch(tmpdir):
     with open(tmpfile, 'w') as f:
         f.write(mbdata)
 
-    from cntk.io import CTFDeserializer, MinibatchSource, StreamDef, StreamDefs
     mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
         features  = StreamDef(field='S0', shape=1),
-        labels    = StreamDef(field='S1', shape=1))))
+        labels    = StreamDef(field='S1', shape=1))),
+        randomize=False, epoch_size=FULL_DATA_SWEEP)
      
     features_si = mb_source.stream_info('features')
     labels_si = mb_source.stream_info('labels')
@@ -181,6 +193,7 @@ def test_minibatch(tmpdir):
     assert mb[labels_si].num_sequences == 2
 
     features = mb[features_si]
+    assert features.end_of_sweep
     assert len(features.value) == 2
     expected_features = \
             [
@@ -196,6 +209,7 @@ def test_minibatch(tmpdir):
              [2, 1, 1, 0]])
 
     labels = mb[labels_si]
+    assert labels.end_of_sweep
     assert len(labels.value) == 2
     expected_labels = \
             [
@@ -208,6 +222,46 @@ def test_minibatch(tmpdir):
     assert np.allclose(labels.mask, 
             [[2, 1, 1],
              [2, 1, 0]])
+
+def test_large_minibatch(tmpdir):
+
+    mbdata = r'''0  |S0 0   |S1 0
+0   |S0 1   |S1 1 
+0   |S0 2   
+0   |S0 3   |S1 3 
+0   |S0 4   
+0   |S0 5   |S1 1
+0   |S0 6   |S1 2 
+'''
+
+    tmpfile = str(tmpdir/'mbtest.txt')
+    with open(tmpfile, 'w') as f:
+        f.write(mbdata)
+
+    mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
+        features  = StreamDef(field='S0', shape=1),
+        labels    = StreamDef(field='S1', shape=1))),
+        randomize=False)
+     
+    features_si = mb_source.stream_info('features')
+    labels_si = mb_source.stream_info('labels')
+
+    mb = mb_source.next_minibatch(1000)
+    features = mb[features_si]
+    labels = mb[labels_si]
+
+    # Actually, the minibatch spans over multiple sweeps,
+    # not sure if this is an artificial situation, but 
+    # maybe instead of a boolean flag we should indicate
+    # the largest sweep index the data was taken from.
+    assert features.end_of_sweep
+    assert labels.end_of_sweep
+
+    assert features.num_samples == 1000 - 1000 % 7
+    assert labels.num_samples == 5 * (1000 // 7)
+
+    assert mb[features_si].num_sequences == (1000 // 7)
+    assert mb[labels_si].num_sequences == (1000 // 7)
 
 
 @pytest.mark.parametrize("idx, alias_tensor_map, expected", [
@@ -250,4 +304,5 @@ def test_sequence_conversion_dense(idx, alias_tensor_map, expected):
     ([AA([1, 2]), AA([])], False),
 ])
 def test_is_tensor(data, expected):
+    from cntk.io import _is_tensor
     assert _is_tensor(data) == expected

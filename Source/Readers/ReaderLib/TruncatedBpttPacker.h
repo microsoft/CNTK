@@ -30,8 +30,13 @@ public:
     virtual void SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders) override;
 
 private:
+    // Iterates over all (m_parallelNumberOfSequences) slots,
+    // pulling in and filling out those slots with new sequence data,
+    // for which AvailableNumberOfSamples (= current size in samples) < m_truncationSize.
+    void FillOutAvailableSlots();
+
     // Reads sequences to slot with the specified index.
-    // Number of slots = m_parallelNumberOfSequences
+    // Number of slots = m_parallelNumberOfSequences.
     void ReadSequencesToSlot(size_t slotIndex);
 
     // Packs a slot into the data buffer.
@@ -39,7 +44,9 @@ private:
     // For each new input, sequence id is reset to 0, and incremented each time
     // a sequence is added to the layout. This allows layouts corresponding to different
     // inputs to have consistent sequence ids.
-    void PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId);
+    // Returns a boolean indicating if a packed data contains a sequence 
+    // (i.e., sequence tail) that was read last in a data sweep.
+    bool PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId);
 
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch)
     {

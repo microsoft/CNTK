@@ -121,6 +121,7 @@ namespace CNTK
     struct MinibatchInfo
     {
         bool atEndOfData;
+        bool atEndOfSweep;
         size_t numberOfSamples;
         NDArrayViewPtr trainingLossValue;
         NDArrayViewPtr evalCriterionValue;
@@ -3275,7 +3276,7 @@ namespace CNTK
         ///
         /// A special value that can be used for the epochSize to indicate that the schedule is sweep-based.
         ///
-        static const size_t EntireSweep = 0;
+        static const size_t FullDataSweep = 0;
 
         ///
         /// Create a schedule with a constant parameter value.
@@ -3287,7 +3288,7 @@ namespace CNTK
         /// schedule[0] is used for the first 'epochSize' samples, schedule[1] -- for the second,
         /// and so on. The last value is then used repeatedly until the end of training.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, UnitType unit, size_t epochSize = 1);
+        CNTK_API TrainingParameterSchedule(const std::vector<T>& schedule, UnitType unit, size_t epochSize = FullDataSweep);
 
         ///
         /// Create a schedule using the list of key-value pairs, where the key specifies 
@@ -3298,7 +3299,7 @@ namespace CNTK
         /// the first 100 samples, then '0.1' is used for the second 200 samples, 
         /// after which the values is switched to '0.005'.
         ///
-        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, UnitType unit, size_t epochSize = 1);
+        CNTK_API TrainingParameterSchedule(const std::vector<std::pair<size_t, T>>& schedule, UnitType unit, size_t epochSize = FullDataSweep);
 
         ///
         /// Returns a value corresponding to the absolute sample (or sweep) 
@@ -3313,7 +3314,7 @@ namespace CNTK
         ///
         UnitType Unit() const { return m_unit; }
 
-        bool IsSweepBased() const { return m_epochSize == EntireSweep; }
+        bool IsSweepBased() const { return m_epochSize == FullDataSweep; }
 
         CNTK_API virtual ~TrainingParameterSchedule();
 
@@ -3348,12 +3349,15 @@ namespace CNTK
         TrainingParameterPerUnitSchedule(T value)
             : TrainingParameterSchedule<T>::TrainingParameterSchedule(value, U)
         { }
-        
-        TrainingParameterPerUnitSchedule(const std::vector<T>& schedule, size_t epochSize = 1) 
+
+        TrainingParameterPerUnitSchedule(const std::vector<T>& schedule, 
+                                         size_t epochSize = TrainingParameterSchedule<T>::FullDataSweep)
             : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
-        
-        TrainingParameterPerUnitSchedule(const std::vector<std::pair<size_t, T>>& schedule, size_t epochSize = 1) 
+
+
+        TrainingParameterPerUnitSchedule(const std::vector<std::pair<size_t, T>>& schedule, 
+                                         size_t epochSize = TrainingParameterSchedule<T>::FullDataSweep)
             : TrainingParameterSchedule<T>::TrainingParameterSchedule(schedule, U, epochSize)
         { }
 
@@ -3401,13 +3405,13 @@ namespace CNTK
             ConvertToPerSampleValues();
         }
         
-        MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epochSize = 1) 
+        MomentumAsTimeConstantSchedule(const std::vector<double>& schedule, size_t epochSize = FullDataSweep) 
             : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, UnitType::Sample, epochSize) 
         { 
             ConvertToPerSampleValues();
         }
         
-        MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = 1) 
+        MomentumAsTimeConstantSchedule(const std::vector<std::pair<size_t, double>>& schedule, size_t epochSize = FullDataSweep) 
             : TrainingParameterSchedule<double>::TrainingParameterSchedule(schedule, UnitType::Sample, epochSize)
         { 
             ConvertToPerSampleValues();
@@ -3424,9 +3428,10 @@ namespace CNTK
         CNTK_API void ConvertToPerSampleValues();
     };
 
-
+    ///
     /// A collection of additional options that affect parameter updates and 
     /// are applicable for all standard learners 
+    ///
     struct AdditionalLearningOptions
     {
         double l1RegularizationWeight = 0.0;
@@ -3452,7 +3457,7 @@ namespace CNTK
         // Method to update the parameters associated with this learner. By returning false, this method indicates that
         // learning has stopped for all of the parameters associated with this learner
         //
-        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) = 0;
+        virtual bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd = false) = 0;
 
         ///
         /// Returns the set of parameters associated with this learner.
@@ -3610,9 +3615,9 @@ namespace CNTK
             return m_communicator;
         }
 
-        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t minibatchSampleCount) override
+        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t minibatchSampleCount, bool sweepEnd = false) override
         {
-            MinibatchInfo info{ false, minibatchSampleCount };
+            MinibatchInfo info{ false, sweepEnd, minibatchSampleCount };
             return Update(gradientValues, info);
         }
 
@@ -3726,6 +3731,11 @@ namespace CNTK
         /// Optimize model parameters using the specified 'arguments' minibatch of training samples.
         /// Returns false if all parameter learners indicate end of learning (through their Update method's return value).
         ///
+        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+        
+        ///
+        /// An overload of the TrainMinibatch above that takes a map of variables and their values (as its first argument).
+        ///
         CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
@@ -3735,11 +3745,21 @@ namespace CNTK
         /// for the 'outputs' for which the ValuePtr mapping was left null by the caller.
         /// Returns false if all parameter learners indicate end of learning (through their Update method's return value).
         ///
+        CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// An overload of the TrainMinibatch above that takes a map of variables and their values (as its first argument).
+        ///
         CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Test the model on the specified batch of samples using the evaluation Function specified during construction of the Trainer
         /// Returns the average evaluation criterion value per sample for the tested minibatch of samples
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// An overload of the TestMinibatch above that takes a map of variables and their values (as its first argument).
         ///
         CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
@@ -3806,8 +3826,8 @@ namespace CNTK
             const DeviceDescriptor& computeDevice,
             std::unordered_map<Variable, ValuePtr>& parameterGradients);
 
-        bool TrainLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice);
-        bool TrainDistributedMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice);
+        bool TrainLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice);
+        bool TrainDistributedMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice);
 
         void Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState);
 
@@ -3854,11 +3874,34 @@ namespace std {
 
 namespace CNTK
 {
+    ///
+    /// A struct that combines the minibatch meta-data with the actual minibatch data.
+    /// The former includes the number of sequences and samples in the minibatch,
+    /// as well as the sweep-end flag, which is set to true to indicate that the minibatch 
+    /// concludes a data sweep (i.e, it's the last minibatch at the end of the sweep).
+    ///
     struct MinibatchData
     {
-        size_t m_numSequences;
-        size_t m_numSamples;
-        ValuePtr m_data;
+        MinibatchData() : MinibatchData(nullptr)
+        {}
+
+        // a convenience constructor to allow passing ValuePtr arguments in place 
+        // of MinibatchData parameter (e.g., in Trainer::TrainMinibatch)
+        MinibatchData(ValuePtr value) : MinibatchData(value, 0)
+        {}
+
+        MinibatchData(ValuePtr value, size_t numSamples, bool sweepEnd = false) 
+            : MinibatchData(value, numSamples, numSamples, sweepEnd)
+        {}
+
+        MinibatchData(ValuePtr value, size_t numSequences, size_t numSamples, bool sweepEnd) 
+            : data(value), numberOfSequences(numSequences), numberOfSamples(numSamples), sweepEnd(sweepEnd) 
+        {}
+
+        ValuePtr data;
+        size_t numberOfSequences;
+        size_t numberOfSamples;
+        bool sweepEnd; 
     };
 
     ///

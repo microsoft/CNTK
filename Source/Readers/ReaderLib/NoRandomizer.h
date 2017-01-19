@@ -88,7 +88,7 @@ private:
     size_t m_globalSequencePosition;
 
     // Total number of samples in the sweep.
-    size_t m_totalNumberOfSamples;
+    size_t m_sweepSizeInSamples;
 
     // Temp buffer to avoid allocations.
     std::vector<SequenceDescription> m_sequenceBuffer;

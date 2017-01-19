@@ -116,6 +116,29 @@ namespace CNTK
         return (numSamplesInDataArrayView - numMaskedSamples);
     }
 
+    static std::unordered_map<Variable, ValuePtr> GetInputs(const std::unordered_map<Variable, MinibatchData>& arguments)
+    {
+        std::unordered_map<Variable, ValuePtr> inputs(arguments.size());
+        for (const auto& kv : arguments)
+        {
+            inputs[kv.first] = kv.second.data;
+        }
+        return inputs;
+    }
+
+    static bool IsAtSweepEnd(const std::unordered_map<Variable, MinibatchData>& arguments)
+    {
+        return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const Variable, MinibatchData>& kv)
+        {
+            return kv.second.sweepEnd;
+        });
+    }
+
+    double Trainer::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        return TestMinibatch(GetInputs(arguments), computeDevice);
+    }
+
     double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         if (!m_aggregatedEvaluationFunction)
@@ -123,10 +146,24 @@ namespace CNTK
 
         // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
         std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
+
         m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
 
         auto sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
         return (GetScalarValue(outputs[m_aggregatedEvaluationFunction]) / sampleCount);
+    }
+
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
+        return TrainMinibatch(arguments, outputsToFetch, computeDevice);
+    }
+
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        if (!m_distributed)
+            return TrainLocalMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice);
+        return TrainDistributedMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice);
     }
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
@@ -138,11 +175,11 @@ namespace CNTK
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         if (!m_distributed)
-            return TrainLocalMinibatch(arguments, outputsToFetch, computeDevice);
-        return TrainDistributedMinibatch(arguments, outputsToFetch, computeDevice);
+            return TrainLocalMinibatch(arguments, outputsToFetch, false, computeDevice);
+        return TrainDistributedMinibatch(arguments, outputsToFetch, false, computeDevice);
     }
 
-    bool Trainer::TrainLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    bool Trainer::TrainLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         bool emptyMinibatch = arguments.empty() || (arguments.begin()->second == nullptr);
         if (emptyMinibatch) // Nothing to train with.
@@ -154,10 +191,10 @@ namespace CNTK
         std::unordered_map<Parameter, NDArrayViewPtr> gradients;
         for (const auto& parameter : m_combinedTrainingFunction->Parameters())
             gradients[parameter] = parameterGradients[parameter]->Data();
-        return m_parameterLearners->Update(gradients, m_prevMinibatchNumSamples);
+        return m_parameterLearners->Update(gradients, m_prevMinibatchNumSamples, sweepEnd);
     }
 
-    bool Trainer::TrainDistributedMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    bool Trainer::TrainDistributedMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         std::unordered_map<Parameter, NDArrayViewPtr> gradients;
         auto modelParameters = m_combinedTrainingFunction->Parameters();
@@ -184,7 +221,7 @@ namespace CNTK
             evalCriterion = m_prevMinibatchAggregateEvalCriterionValue->Data();
         }
 
-        MinibatchInfo info { arguments.empty(), m_prevMinibatchNumSamples, trainingLoss, evalCriterion };
+        MinibatchInfo info{ arguments.empty(), sweepEnd, m_prevMinibatchNumSamples, trainingLoss, evalCriterion };
         bool updated = m_parameterLearners->Update(gradients, info);
         m_prevMinibatchNumSamples = info.numberOfSamples;
 

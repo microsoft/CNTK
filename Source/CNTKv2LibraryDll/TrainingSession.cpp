@@ -93,7 +93,7 @@ namespace CNTK
             if (!minibatchData.empty())
             {
                 for (auto v : m_modelInputToMinibatchSourceStream)
-                    minibatch.insert({ v.first, minibatchData[v.second].m_data });
+                    minibatch.insert({ v.first, minibatchData[v.second].data });
             }
 
             OnMinibatchStart();
