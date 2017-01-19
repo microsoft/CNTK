@@ -24,7 +24,7 @@ def create_reader(path, is_training, input_dim, label_dim):
 
 
 # Trains and tests a simple auto encoder for MNIST images using deconvolution
-def deconv_mnist(debug_output=False):
+def deconv_mnist(max_epochs=3):
     image_height = 28
     image_width  = 28
     num_channels = 1
@@ -36,7 +36,7 @@ def deconv_mnist(debug_output=False):
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
 
     # Define the auto encoder model
-    cMap = 3
+    cMap = 1
     conv1   = cntk.layers.Convolution  ((5,5), cMap, pad=True, activation=cntk.ops.relu)(scaled_input)
     pool1   = cntk.layers.MaxPooling   ((4,4), (4,4))(conv1)
     unpool1 = cntk.layers.MaxUnpooling ((4,4), (4,4))(pool1, conv1)
@@ -73,7 +73,6 @@ def deconv_mnist(debug_output=False):
     progress_printer = cntk.utils.ProgressPrinter(tag='Training')
 
     # Get minibatches of images to train with and perform model training
-    max_epochs = 3
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch

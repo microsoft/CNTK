@@ -132,7 +132,6 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 bias=bias_default_or_True,
                 init_bias=init_bias_default_or_0,
                 reduction_rank=1, # (must be 1 currently)
-                transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0):
     #UntestedBranchError("Convolution")
     activation = _resolve_activation(activation)
@@ -141,8 +140,6 @@ def Convolution(filter_shape,        # e.g. (3,3)
     # TODO: there must be a Python trick to do this as a function call on locals or so
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
-    if transpose:
-        NotImplementedError("Convolution: please use Deconvolution layer directly")
     if not sharing:
         NotImplementedError("Convolution: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
@@ -165,7 +162,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
                            sharing=_as_tuple(sharing),
                            auto_padding=_as_tuple(pad),
                            # TODO: can we rename auto_padding to pad?
-                           transpose=transpose,
+                           transpose=False,
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
     if bias:
         apply_x = apply_x + b
