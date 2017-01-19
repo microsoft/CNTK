@@ -16,6 +16,9 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
+ // TODO: do this for all math tests!
+ // BOOST_GLOBAL_FIXTURE(DeterministicCPUAlgorithmsFixture);
+
 BOOST_AUTO_TEST_SUITE(MatrixUnitTests)
 
 BOOST_FIXTURE_TEST_CASE(MatrixConstructors, RandomSeedFixture)
@@ -1207,7 +1210,9 @@ BOOST_FIXTURE_TEST_CASE(MatrixScale, RandomSeedFixture)
         if (deviceId != CPUDEVICE)
             continue;
         
-        BOOST_CHECK(a1.IsEqualTo(a2));
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        // BOOST_CHECK(a1.IsEqualTo(a2));
+        BOOST_CHECK(a1.IsEqualTo(a2, c_epsilonFloatE5));
     }
 }
 
@@ -1241,13 +1246,15 @@ BOOST_FIXTURE_TEST_CASE(MatrixSGDUpdate, RandomSeedFixture)
             p1.SGDUpdate(g1, lr);
             p2.MomentumSGDUpdate(g2, sg2, lr, 0.0);
 
-            BOOST_CHECK(p1.IsEqualTo(p2));
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
 
             if (deviceId != CPUDEVICE)
                 continue;
             
-             // GPU version of SGDUpdate scales gradient by the learning rate, this check will fail.
-             BOOST_CHECK(g1.IsEqualTo(g2));
+            // GPU version of SGDUpdate scales gradient by the learning rate, this check will fail.
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(g1.IsEqualTo(g2, c_epsilonFloatE5));
         }
 
         lr = std::pow(lr, lr);
@@ -1277,22 +1284,26 @@ BOOST_FIXTURE_TEST_CASE(MatrixMomentumSGDUpdate_WithAndWithout_UnitGain, RandomS
         {
             p1.MomentumSGDUpdate(g1, sg1, lr, 0.0, true);
             p2.MomentumSGDUpdate(g2, sg2, lr, 0.0, false);
-            BOOST_CHECK(p1.IsEqualTo(p2));
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
 
         for (lr = 1.0; lr > 0.03; lr = lr / 2)
         {
             p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, true);
             p2.MomentumSGDUpdate(g2, sg2, lr/2, 0.5, false);
-            BOOST_CHECK(p1.IsEqualTo(p2));
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
 
-        BOOST_CHECK(g1.IsEqualTo(g2));
-        BOOST_CHECK(sg1.IsEqualTo(sg2));
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        BOOST_CHECK(g1.IsEqualTo(g2, c_epsilonFloatE5));
+        BOOST_CHECK(sg1.IsEqualTo(sg2, c_epsilonFloatE5));
 
         p1.MomentumSGDUpdate(g1, sg1, lr, 0.5, true);
         p2.MomentumSGDUpdate(g2, sg2, lr, 0.5, false);
-        BOOST_CHECK(!p1.IsEqualTo(p2));
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        BOOST_CHECK(!p1.IsEqualTo(p2, c_epsilonFloatE5));
 
         lr = std::pow(lr, lr);
     }
@@ -1321,22 +1332,27 @@ BOOST_FIXTURE_TEST_CASE(MatrixNesterovAcceleratedMomentumSGDUpdate_WithAndWithou
         {
             p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.0, true);
             p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.0, false);
-            BOOST_CHECK(p1.IsEqualTo(p2));
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
 
         for (lr = 1.0; lr > 0.03; lr = lr / 2)
         {
             p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, true);
             p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr/2, 0.5, false);
-            BOOST_CHECK(p1.IsEqualTo(p2));
+            // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+            BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
 
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
         BOOST_CHECK(g1.IsEqualTo(g2));
         BOOST_CHECK(sg1.IsEqualTo(sg2));
 
         p1.NesterovAcceleratedMomentumSGDUpdate(g1, sg1, lr, 0.5, true);
         p2.NesterovAcceleratedMomentumSGDUpdate(g2, sg2, lr, 0.5, false);
-        BOOST_CHECK(!p1.IsEqualTo(p2));
+
+        // TODO: enable DeterministicCPUAlgorithmsFixture and use strict equality.
+        BOOST_CHECK(!p1.IsEqualTo(p2, c_epsilonFloatE5));
 
         lr = std::pow(lr, lr);
     }
@@ -1371,7 +1387,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSee
             sg1.FSAdagradUpdate(mbSize, g1, p1, smoothedCount, lr, targetAdagradAvDenom, 0.0, varMomentum, true);
             sg2.FSAdagradUpdate(mbSize, g2, p2, smoothedCount, lr, targetAdagradAvDenom, 0.0, varMomentum, true /*false*/);
             // BUGBUG: at the moment this fails even with identical arguments.
-            // BOOST_CHECK(p1.IsEqualTo(p2));
+            // BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
 
         sg2.SetValue(sg1);
@@ -1387,7 +1403,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixFSAdagradUpdate_WithAndWithout_UnitGain, RandomSee
             sg1.FSAdagradUpdate(mbSize, g1, p1, smoothedCount, lr, targetAdagradAvDenom, 0.5, varMomentum, true);
             sg2.FSAdagradUpdate(mbSize, g2, p2, smoothedCount, lr /*lr/2*/, targetAdagradAvDenom, 0.5, varMomentum, true /*false*/);
             // BUGBUG: at the moment this fails even with identical arguments.
-            // BOOST_CHECK(p1.IsEqualTo(p2));
+            // BOOST_CHECK(p1.IsEqualTo(p2, c_epsilonFloatE5));
         }
 
         lr = std::pow(lr, lr);
