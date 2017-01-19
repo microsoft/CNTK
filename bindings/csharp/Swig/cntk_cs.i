@@ -456,6 +456,7 @@
     { 
         SWIG_exception(SWIG_RuntimeError,e.what()); 
     }
+    // TODO: print call stack trace info when it is available.
     catch (std::runtime_error &e)
     {
         SWIG_exception(SWIG_RuntimeError,e.what()); 
