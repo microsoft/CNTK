@@ -139,10 +139,10 @@ RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh &&
     bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
-RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/install/linux/conda-linux-cntk-py34-environment.yml -O /tmp/conda-linux-cntk-py34-environment.yml && \
-    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py34/ --file /tmp/conda-linux-cntk-py34-environment.yml
+RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O /tmp/conda-linux-cntk-py35-environment.yml && \
+    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35/ --file /tmp/conda-linux-cntk-py35-environment.yml
 
-ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
+ENV PATH /root/anaconda3/envs/cntk-py35/bin:$PATH
 
 WORKDIR /cntk
 
@@ -150,7 +150,7 @@ WORKDIR /cntk
 RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
     CONFIGURE_OPTS="\
       --with-kaldi=${KALDI_PATH} \
-      --with-py34-path=/root/anaconda3/envs/cntk-py34" && \
+      --with-py35-path=/root/anaconda3/envs/cntk-py35" && \
     git submodule update --init Source/Multiverso && \
     mkdir -p build/cpu/release && \
     cd build/cpu/release && \
