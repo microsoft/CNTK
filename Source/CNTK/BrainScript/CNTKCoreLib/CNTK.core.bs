@@ -99,12 +99,15 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     }.res
 }.apply
 
-# DeconvLayer -- create a deconvolution layer
+# DeconvLayer -- create a deconvolution layer with optional non-linearity
 DeconvLayer {numOutputChannels,
              filterShape,         # e.g. (3:3)
              numInputChannels,
-             init = 'uniform',
-             initValueScale = 0.1,
+             bias = true,
+             activation = (x=>x),
+             init = 'glorotUniform',
+             initValueScale = 0.001,
+             initBias = 0,
              stride = 1, 
              sharing = true,
              autoPadding = false,
@@ -112,10 +115,15 @@ DeconvLayer {numOutputChannels,
              upperPad = 0,
              maxTempMemSizeInSamples = 0} =
 {
-    kernelShape = _ConcatArrays (filterShape, _AsArray (numOutputChannels)) 
+    outputChannelsShape = _AsArray (numOutputChannels)
+    kernelShape = _ConcatArrays (filterShape, outputChannelsShape) 
     paramShape = _ConcatArrays (kernelShape, _AsArray (numInputChannels)) 
-    W        = ParameterTensor{paramShape, init=init, initValueScale=initValueScale, initOnCPUOnly=true}
-    apply(x) = Convolution(W, x, kernelShape, mapDims=numInputChannels, stride=stride, sharing=sharing, autoPadding=autoPadding, lowerPad=lowerPad, upperPad=upperPad, deconv=true)
+    W = ParameterTensor{paramShape, init=init, initValueScale=initValueScale, initOnCPUOnly=true}
+    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)
+    apply (x) = {
+        c = Convolution(W, x, kernelShape, mapDims=numInputChannels, stride=stride, sharing=sharing, autoPadding=autoPadding, lowerPad=lowerPad, upperPad=upperPad, deconv=true, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        res = activation (if bias then c + b else c)
+    }.res
 }.apply
 
 # MaxPoolingLayer, AveragePoolingLayer -- create a max- or average-pooling layer
