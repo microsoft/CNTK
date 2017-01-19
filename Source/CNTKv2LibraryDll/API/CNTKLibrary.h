@@ -2379,6 +2379,7 @@ namespace CNTK
         friend class Trainer;
 
     public:
+
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values corresponding
         /// to each leaf variable of the Function of VariableKind 'Input'.
@@ -2410,11 +2411,15 @@ namespace CNTK
         CNTK_API virtual void Backward(const BackPropStatePtr& state,
                                        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
-
         ///
         /// Returns the name of the operation that this Function denotes
         ///
-        virtual const std::wstring& OpName() const = 0;
+        virtual const std::wstring& OpName() const 
+#ifdef SWIG 
+        { NOT_IMPLEMENTED; }
+#else
+        = 0;
+#endif
 
     protected:
         ///
@@ -2470,6 +2475,11 @@ namespace CNTK
         /// user-defined op-codes with custom functionality.
         ///
         CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// This method needs to be explicitly overriden in subclasses.
+        ///
+        size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
     public:
         ///
@@ -2694,8 +2704,10 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
-    private:
+    public:
+        CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
+    private:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
 
         std::vector<Variable> m_inputs;

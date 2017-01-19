@@ -8,6 +8,7 @@ __version__ = '2.0'
 import os
 import numpy as np
 
+from .core import *
 from . import ops
 from . import cntk_py
 
