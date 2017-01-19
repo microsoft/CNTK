@@ -38,10 +38,10 @@ def convnet_mnist(debug_output=False):
     # Instantiate the feedforward classification model
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
 
-    with cntk.layers.default_options(activation=cntk.ops.relu, pad=False): 
-        conv1 = cntk.layers.Convolution((5,5), 1, pad=True)(scaled_input)
-        pool1 = cntk.layers.MaxPooling((4,4), (4,4))(conv1)
-        z     = cntk.layers.MaxUnpooling((4,4), (4,4))(pool1, conv1)
+    conv1   = cntk.layers.Convolution((5,5), 1, pad=True, activation=cntk.ops.relu)(scaled_input)
+    pool1   = cntk.layers.MaxPooling((4,4), (4,4))(conv1)
+    unpool1 = cntk.layers.MaxUnpooling((4,4), (4,4))(pool1, conv1)
+    z = cntk.layers.Deconvolution((5,5), 1, 1, lower_pad=(0,2,2), upper_pad=(0,2,2), bias=False, init=cntk.glorot_uniform(0.001))(unpool1)
 
     # err = cntk.ops.minus(z, scaled_input)
     f2 = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)

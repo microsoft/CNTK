@@ -142,7 +142,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
     if transpose:
-        NotImplementedError("Convolution: transpose option currently not supported")
+        NotImplementedError("Convolution: please use Deconvolution layer directly")
     if not sharing:
         NotImplementedError("Convolution: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
@@ -171,6 +171,55 @@ def Convolution(filter_shape,        # e.g. (3,3)
         apply_x = apply_x + b
     apply_x = apply_x >> activation
     return Block(apply_x, 'Convolution', Record(W=W, b=b))
+
+# Deconvolution -- create a deconvolution layer with optional non-linearity
+def Deconvolution(filter_shape,        # e.g. (3,3)
+                num_filters,
+                num_input_filters,
+                activation=activation_default_or_None,
+                init=init_default_or_glorot_uniform,
+                pad=pad_default_or_False,
+                strides=1,
+                sharing=True,     # (must be True currently)
+                lower_pad=(0,),
+                upper_pad=(0,),
+                bias=bias_default_or_True,
+                init_bias=init_bias_default_or_0,
+                reduction_rank=1, # (must be 1 currently)
+                max_temp_mem_size_in_samples=0):
+    #UntestedBranchError("Convolution")
+    activation = _resolve_activation(activation)
+    pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
+    bias = bias if _is_given(bias) else _get_current_default_options().bias
+    # TODO: there must be a Python trick to do this as a function call on locals or so
+    if reduction_rank != 1:
+        NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
+    if not sharing:
+        NotImplementedError("Convolution: sharing option currently must be True")
+    output_channels_shape = _as_tuple(num_filters)
+    input_channels_shape = _as_tuple(num_input_filters)
+    kernel_shape = output_channels_shape + filter_shape
+    param_shape = input_channels_shape + kernel_shape
+
+    filter_rank = len(filter_shape)
+    init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
+    W = Parameter(param_shape, init=init_kernel, name='W')
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias, name='b') if bias else None
+
+    # expression
+    x = Placeholder(name='deconvolution_arg')
+    apply_x = convolution (W, x,
+                           strides=_as_tuple(strides),
+                           sharing=_as_tuple(sharing),
+                           auto_padding=_as_tuple(pad),
+                           lower_pad=lower_pad,
+                           upper_pad=upper_pad,
+                           transpose=True,
+                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    if bias:
+        apply_x = apply_x + b
+    apply_x = apply_x >> activation
+    return Block(apply_x, 'Deconvolution', Record(W=W, b=b))
 
 # Create a Pooling layer with one of following types:
 #
