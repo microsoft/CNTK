@@ -56,6 +56,7 @@ def For(range, constructor):
 def LayerStack(N, constructor):
     return For(range(N), constructor)
 
+# TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False):
     '''
     Runs a function recurrently over a time sequence, with initial state.
@@ -83,6 +84,8 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
         # TODO: move this entire placeholder business to Function.__call__
         out_vars_fwd = [Placeholder() for state_var in prev_state_args] # create list of placeholders for the state variables
 
+        # ... out_vars_fwd = ... ForwardDeclaration
+
         # previous function; that is, past or future_value with initial_state baked in
         #prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
         # BUGBUG: This fails ^^ due to current as_block() bugs; can only use Python function for now:
@@ -94,6 +97,8 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
         # connect the recurrent dependency
         replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
         out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
+
+        # var_fwd.resolve_as(var)  -->  var.owner.replace_placeholders({var_fwd: var})
 
         if not return_full_state:
             out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?

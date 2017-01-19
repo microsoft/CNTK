@@ -579,6 +579,16 @@ if __name__ == '__main__':
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
 
+    # test for multi-input plus()
+    from cntk.ops import plus, element_times, max, min, log_add_exp
+    for op in (log_add_exp, max, min, plus, element_times):
+        s4 = op(Placeholder(name='a'), Placeholder(3, name='b'), Placeholder(4, name='c'), Placeholder(5, name='d'), name='s4')
+        s4.dump('s4')
+    sequence_reduce_max = Fold(max)
+    #sequence_reduce_max.dump('sequence_reduce_max')
+    # TODO: create proper test case for this
+
+
     #L = Dense(500)
     #L1 = L.clone(CloneMethod.clone)
     #x = placeholder_variable()

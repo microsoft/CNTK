@@ -3206,7 +3206,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise choice operation using a condition tensor for specified tensor operands.
     ///
-    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& thenOperand, const Variable& elseOperand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in splice operation to splice together all the specified tensor operands into a single output tensor

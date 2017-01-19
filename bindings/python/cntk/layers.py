@@ -22,6 +22,7 @@ from .blocks import *
 from .higher_order_layers import *
 
 
+# TODO: add a name parameter, which becomes a combine()
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
           input_rank=None, map_rank=None,
           bias=default_override_or(True), init_bias=default_override_or(0)):
@@ -130,14 +131,17 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     return Block(embed, 'Embedding', Record(E=E))
 
 # helper to expand a sequence into a window, splicing them along the given axis (which must already exist)
-def _window(x, axis, begin, end, initial_state=None):
+def _window(x, axis, begin, end, step, stride, initial_state=None):
     shifted = [
         past_value(x, initial_state=initial_state, time_step=-t) if t < 0 else
         x                                                        if t == 0 else
         future_value(x, initial_state=initial_state, time_step=t)
-        for t in range(begin, end)
+        for t in range(begin, end, step)
     ]
-    return splice(*shifted, axis=axis)
+    r = splice(*shifted, axis=axis)
+    if stride != 1:
+        raise NotImplementedError('windowed convolution with stride not yet implemented')
+    return r
 
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape)  )
@@ -149,9 +153,10 @@ def _window(x, axis, begin, end, initial_state=None):
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
+# TODO: stride not supported for sequential
 def Convolution(rf_shape,         # e.g. (3,3)
                 num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
-                sequential=False, # time convolution if True (rf_shape[0] is dynamic axis)
+                sequential=False, # time convolution if True (rf_shape[0] corresponds to dynamic axis)
                 activation=default_override_or(identity),
                 init=default_override_or(glorot_uniform()),
                 pad=default_override_or(False),
@@ -172,6 +177,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
     # tuplify all tuple inputs that can also be given as scalars if rank 1
     rf_shape    = _as_tuple(rf_shape)
     num_filters = _as_tuple(num_filters or ())
+    rf_rank = len(rf_shape)
     # expand options that can be specified as a single value
     def _pad_to_shape(param):
         param = _as_tuple(param)
@@ -209,8 +215,6 @@ def Convolution(rf_shape,         # e.g. (3,3)
 
     kernel_shape = actual_reduction_shape + actual_rf_shape # kernel := filter plus reductionDims
 
-    rf_rank = len(rf_shape)
-
     # init can be an np.array, which must have the correct dimensions subject to faking depth
     # Once we no longer fake depth at this outer level, we can remove this.
     from cntk import cntk_py
@@ -243,7 +247,8 @@ def Convolution(rf_shape,         # e.g. (3,3)
         # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
         if sequential:
             lpad = (rf_shape[0]-1) // 2  # even frames: take from right; odd frames: symmetric
-            x = _window(x, axis=-rf_rank, begin=-lpad, end=-lpad+rf_shape[0], initial_state=None)
+            # TODO: change ^^ [0] to -rf_rank for consistency after I have a test case, and factor into a variable seq_rf
+            x = _window(x, axis=-rf_rank, begin=-lpad, end=-lpad+rf_shape[0], step=1, stride=strides[-rf_rank], initial_state=None)
         # actual convolution
         # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
         r = convolution (W, x,
@@ -280,9 +285,9 @@ def Convolution(rf_shape,         # e.g. (3,3)
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def _Pooling(op,       # PoolingType_Max or _Average
              rf_shape, # e.g. (3,3)
-             sequential=False, # pooling in time if True (rf_shape[0] is dynamic axis)
-            strides=1,
-            pad=False):
+             sequential=False, # pooling in time if True (rf_shape[0] corresponds to dynamic axis)
+             strides=1,
+             pad=False):
 
     if sequential:
         raise NotImplementedError("Pooling: sequential option not implemented yet")
@@ -314,6 +319,7 @@ def AveragePooling(rf_shape,  # e.g. (3,3)
     return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad)
 
 # GlobalMaxPooling
+# Is this the same as reduce_max()?
 def GlobalMaxPooling():
     return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
 
@@ -354,7 +360,7 @@ def Dropout(prob):
     return Block(dropout, 'Dropout')
 
 # BatchNormalization -- create a batch-normalization layer
-# TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
+# TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C++ change.
 def BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=default_override_or(5000), blend_time_constant=0,

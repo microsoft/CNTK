@@ -684,9 +684,9 @@ def less_equal(left, right, name=''):
 
 
 @typemap
-def plus(left, right, name=''):
+def plus(left, right, *more, name=''):
     '''
-    The output of this operation is the sum of the two input tensors. It supports broadcasting.
+    The output of this operation is the sum of the two or more input tensors. It supports broadcasting.
 
     Example:
         >>> C.plus([1, 2, 3], [4, 5, 6]).eval()
@@ -698,15 +698,18 @@ def plus(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
+        *more: additional summands
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import plus
+    if more: # if additional operands then recurse
+        return plus(plus(left, right, *more[:-1], name=''), more[-1], name=name)
+    from cntk.cntk_py import plus as cntk_py_plus
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
-    return plus(left, right, name)
+    return cntk_py_plus(left, right, name)
 
 
 @typemap
@@ -738,9 +741,9 @@ def minus(left, right, name=''):
 
 
 @typemap
-def element_times(left, right, name=''):
+def element_times(left, right, *more, name=''):
     '''
-    The output of this operation is the element-wise product of the two input
+    The output of this operation is the element-wise product of the two or more input
     tensors. It supports broadcasting.
 
     Example:
@@ -753,15 +756,58 @@ def element_times(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
+        *more: additional factors
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import element_times
+    if more: # if additional operands then recurse
+        return element_times(element_times(left, right, *more[:-1], name=''), more[-1], name=name)
+    from cntk.cntk_py import element_times as cntk_py_element_times
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
-    return element_times(left, right, name)
+    return cntk_py_element_times(left, right, name)
+
+
+@typemap
+def max(left, right, *more, name=''):
+    '''
+    The output of this operation is the element-wise max of the two or more input
+    tensors. It supports broadcasting.
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        *more: additional inputs
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    if more: # if additional operands then recurse
+        return max(max(left, right, *more[:-1], name=''), more[-1], name=name)
+    gt = greater(left, right)
+    return element_select(gt, left, right, name)
+
+
+@typemap
+def min(left, right, *more, name=''):
+    '''
+    The output of this operation is the element-wise min of the two or more input
+    tensors. It supports broadcasting.
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        *more: additional inputs
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    if more: # if additional operands then recurse
+        return min(min(left, right, *more[:-1], name=''), more[-1], name=name)
+    lt = less(left, right)
+    return element_select(lt, left, right, name)
 
 
 @typemap
@@ -790,11 +836,12 @@ def element_divide(left, right, name=''):
     right = sanitize_input(right, dtype)
     return element_divide(left, right, name)
 
+
 @typemap
-def log_add_exp(left, right, name=''):
+def log_add_exp(left, right, *more, name=''):
     '''
     Calculates the log of the sum of the exponentials
-    of the two input tensors. It supports broadcasting.
+    of the two or more input tensors. It supports broadcasting.
 
     Example:
         >>> a = np.arange(3,dtype=np.float32)
@@ -806,15 +853,18 @@ def log_add_exp(left, right, name=''):
     Args:
         left: left side tensor
         right: right side tensor
+        *more: additional summands
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import log_add_exp
+    if more: # if additional operands then recurse
+        return log_add_exp(log_add_exp(left, right, *more[:-1], name=''), more[-1], name=name)
+    from cntk.cntk_py import log_add_exp as cntk_py_log_add_exp
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
     right = sanitize_input(right, dtype)
-    return log_add_exp(left, right, name)
+    return cntk_py_log_add_exp(left, right, name)
 
 
 @typemap
@@ -1876,7 +1926,7 @@ def reduce_sum(x, axis=None, name=''):
 
 
 @typemap
-def reduce_log_sum(x, axis=None, name=''):
+def reduce_log_add_exp(x, axis=None, name=''):
     '''
     Computes the log of the sum of the exponentiations of the input tensor's
     elements across the specified axis.
@@ -1898,6 +1948,7 @@ def reduce_log_sum(x, axis=None, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    # TODO: rename V2 API function as well from reduce_log_sum() to reduce_log_add_exp()
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
     axis = sanitize_axis(axis)

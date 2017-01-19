@@ -58,8 +58,14 @@ class Function(cntk_py.Function):
             # get the parameter list, and also the function name, through inspection
             from inspect import signature, Parameter
             params = signature(f).parameters
-            f_name = f.__name__
-            arg_names = [name for name, param in params.items() if param.default == Parameter.empty] # only non-optional params become Placeholders
+            f_name = f.__name__ # (for now only used for debugging)
+            def is_optional(param): # helper to determine if a parameter is optional
+                return (param.default != Parameter.empty # has a default value
+                        or param.kind == Parameter.VAR_POSITIONAL  # *args
+                        or param.kind == Parameter.VAR_KEYWORD)    # **kwargs
+            # only use non-optional params (assume any optional param is not specified)
+            # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
+            arg_names = [name for name, param in params.items() if not is_optional(param)]
             # execute the lambda with placeholders as inputs, which creates a piece of graph
             # During execution, the Placeholders of this function are hidden from signatures of any
             # further Functions that may be defined inside this invocation.
@@ -312,13 +318,16 @@ class Function(cntk_py.Function):
         is_symbolic = any(isinstance(arg, (cntk_py.Function, cntk_py.Variable)) for arg in arg_map.values())
 
         # symbolic: return a cloned Function
+        # applying the function means to inline its piece of graph
         if is_symbolic:
             s = self.signature
             s_names = [arg.name for arg in s]
             a1 = self.arguments
             a1_names = [arg.name for arg in a1]
             sn = self.name
+
             out = self.clone(CloneMethod.share, arg_map)
+
             on = out.name
             if sn == 'hidden_representation':
                 ic = out.is_composite
@@ -381,10 +390,29 @@ class Function(cntk_py.Function):
         Access a member inside this object.
         '''
         # We get here for any member that is not a direct member of the class.
+        # E.g. lay = Dense(500, name='d')
+        #      lay.W
+        # will find the parameter named 'W' that is closest
+        #      y = lay(x)
+        #      y.d
+        # will find the root combine() of the Dense op
+        #      y.d.W
+        # will find the closest 'W' from there.
+        # Although ideally, it will only find what's inside Dense(). Not possible since it's a composite.
+        # Unless we insert a special "stop" combine() for all input args that we don't traverse through. Brittle.
+        #      lstm = LSTM(500, name='cell')
+        #      y = Recurrence(lstm, name='r')(x)
+        #      y.cell
+        #      y.r.cell
+        # will both find the LSTM cell, which is a combine([h, c])
+        #      y.r.cell.outputs.h
+        # The 'closest' is a stop-gap until BlockFunctions or similar work.
 
         # We do not get here for:
         #  - actual members of the class, such as f.outputs
+        #    i.e. actual class members override parameter names
         #  - members that were added to the class, like f.W = W; f.W
+        #    which we should not do
 
         # a direct class member
         # BUGBUG: Do we ever get here?
