@@ -1909,6 +1909,13 @@ private:
             : Constant(shape, dataType, ConstantInitializer(initValue), device, name)
         {}
 
+    public:
+        ///
+        /// Some commonly used Constant scalars
+        ///
+        CNTK_API static const Constant FP32ScalarZero;
+        CNTK_API static const Constant FP32ScalarOne;
+
         ///
         /// Create a scalar constant. The specified value is cast to the specified DataType
         ///
@@ -3278,8 +3285,7 @@ namespace CNTK
     ///
     inline FunctionPtr PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        static const auto defaultInitialState = Constant::Scalar(0.0f);
-        return PastValue(operand, defaultInitialState, offset, name);
+        return PastValue(operand, Constant::FP32ScalarZero, offset, name);
     }
 
     ///
@@ -3295,8 +3301,7 @@ namespace CNTK
     ///
     inline FunctionPtr FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"")
     {
-        static const auto defaultInitialState = Constant::Scalar(0.0f);
-        return FutureValue(operand, defaultInitialState, offset, name);
+        return FutureValue(operand, Constant::FP32ScalarZero, offset, name);
     }
 
     ///

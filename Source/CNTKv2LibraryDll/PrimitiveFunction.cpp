@@ -670,8 +670,6 @@ namespace CNTK
                         assert(m_inputs.size() == 2);
                         auto operand = m_inputs[0];
                         auto layout = m_inputs[1];
-                        if (operand.DynamicAxes().empty())
-                            InvalidArgument("ReconcileDynamicAxis: input must have at least one dynamic axis");
                         if (layout.DynamicAxes().empty())
                             InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
                         outputShape = operand.Shape();
@@ -700,7 +698,7 @@ namespace CNTK
         dict[attributesKey] = Attributes();
         dict[uidKey] = Uid();
         if (!Name().empty())
-            dict[nameKey] = Name();
+        dict[nameKey] = Name();
         
         auto inputs = Inputs();
         vector<DictionaryValue> inputUids;
@@ -826,7 +824,7 @@ namespace CNTK
             inputs.push_back(runCount);
         }
         
-        return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
-                                                  [](PrimitiveFunction* ptr) { delete ptr; });
+            return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
+                                                      [](PrimitiveFunction* ptr) { delete ptr; });
     }
 }

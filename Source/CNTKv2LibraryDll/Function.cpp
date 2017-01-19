@@ -1056,14 +1056,14 @@ namespace CNTK
 
             FunctionPtr classificationErrorComposite;
             if (axis == Axis(0))
-                classificationErrorComposite = Minus(Constant::Scalar(1.0f), TransposeTimes(labelPlaceholder, Hardmax(predictionPlaceholder)));
+                classificationErrorComposite = Minus(Constant::FP32ScalarOne, TransposeTimes(labelPlaceholder, Hardmax(predictionPlaceholder)));
             else
             {
                 auto axMax = ReduceMax(predictionPlaceholder, axis);
                 auto pred = Equal(predictionPlaceholder, axMax);
                 auto wrongPred = NotEqual(labelPlaceholder, pred);
                 auto axErr = ReduceSum(wrongPred, axis);
-                auto capErr = GreaterEqual(axErr, Constant::Scalar(1.0f));
+                auto capErr = GreaterEqual(axErr, Constant::FP32ScalarOne);
                 classificationErrorComposite = ReduceMean(capErr, Axis::AllStaticAxes());
             }
 
@@ -1343,11 +1343,11 @@ namespace CNTK
             auto operandPlaceholder = PlaceholderVariable(L"operand");
 
             auto beginFlagsLambda = [beginIndex, operandPlaceholder]() {
-                return (beginIndex > 0) ? Minus(Constant::Scalar(1.0f), Internal::IsWithin(operandPlaceholder, beginIndex)) : Internal::IsWithin(operandPlaceholder, beginIndex);
+                return (beginIndex > 0) ? Minus(Constant::FP32ScalarOne, Internal::IsWithin(operandPlaceholder, beginIndex)) : Internal::IsWithin(operandPlaceholder, beginIndex);
             };
 
             auto endFlagsLambda = [endIndex, operandPlaceholder]() {
-                return (endIndex > 0) ? Internal::IsWithin(operandPlaceholder, endIndex) : Minus(Constant::Scalar(1.0f), Internal::IsWithin(operandPlaceholder, endIndex));
+                return (endIndex > 0) ? Internal::IsWithin(operandPlaceholder, endIndex) : Minus(Constant::FP32ScalarOne, Internal::IsWithin(operandPlaceholder, endIndex));
             };
 
             FunctionPtr flags;
@@ -1456,9 +1456,9 @@ namespace CNTK
                 InvalidArgument("CNTK::Sequence::IsWithin: The offset must be positive");
 
             if (offset > 0)
-                return PastValue(Internal::ZeroesWithDynamicAxesLike(operand), Constant::Scalar(1.0f), offset, name);
+                return PastValue(Internal::ZeroesWithDynamicAxesLike(operand), Constant::FP32ScalarOne, offset, name);
             else
-                return FutureValue(Internal::ZeroesWithDynamicAxesLike(operand), Constant::Scalar(1.0f), -offset, name);
+                return FutureValue(Internal::ZeroesWithDynamicAxesLike(operand), Constant::FP32ScalarOne, -offset, name);
         }
 
         FunctionPtr PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name)
@@ -1479,20 +1479,7 @@ namespace CNTK
 
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)
         {
-            if (operand.IsSparse())
-            {
-                if (operand.Shape().Rank() > 1)
-                    LogicError("Internal::ZeroesWithDynamicAxesLike: Currently only 1D sparse inputs are supported!");
-
-                // TODO: A matrix multiplication is too expensive for something like this
-                // Replace this with a cheaper operation.
-                return Times(Constant({ 1, operand.Shape()[0] }, operand.GetDataType(), 0.0), operand);
-            }
-            else
-            {
-                auto reduceAllStaticAxesFunc = Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes());
-                return Minus(reduceAllStaticAxesFunc, reduceAllStaticAxesFunc);
-            }
+            return Internal::ReconcileDynamicAxes(Constant::FP32ScalarZero, operand);
         }
 
         FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
@@ -1547,6 +1534,11 @@ namespace CNTK
                 LogicError("Reduction is currently unsupported along the batch axis only");
 
             LogicError("CNTK::ReduceElements: Invalid axis argument provided. To reduce a sequence along its ordered dynamic axis use Sequence::ReduceElements.");
+        }
+
+        FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name)
+        {
+            return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
         }
    }
 }

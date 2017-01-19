@@ -490,4 +490,8 @@ namespace CNTK
     {
         m_dataFields->SetValueInitialization(initializer, device);
     }
+
+    /*static*/ const Constant Constant::FP32ScalarZero = Constant::Scalar(0.0f);
+    /*static*/ const Constant Constant::FP32ScalarOne = Constant::Scalar(1.0f);
+
 }
