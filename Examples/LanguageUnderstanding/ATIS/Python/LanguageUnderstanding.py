@@ -83,7 +83,6 @@ def train(reader, model, max_epochs):
     lr_per_sample = learning_rate_schedule(lr_schedule, UnitType.sample, epoch_size)
     learner = adam_sgd(z.parameters,
                        lr=lr_per_sample, momentum=momentum_time_constant,
-                       unit_gain=True,
                        low_memory=True,
                        gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 

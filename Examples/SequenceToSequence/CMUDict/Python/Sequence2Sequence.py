@@ -158,7 +158,6 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     gradient_clipping_with_truncation = True
     learner = momentum_sgd(z.parameters, 
                            lr_per_minibatch, momentum_time_constant,
-                           unit_gain=True,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     trainer = Trainer(z, ce, errs, learner)

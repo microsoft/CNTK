@@ -3435,6 +3435,16 @@ namespace CNTK
         bool gradientClippingWithTruncation = true;
     };
 
+    ///  
+    /// Returns true if by default momentum is applied in the unit-gain fashion.
+    ///
+    CNTK_API bool DefaultUnitGainValue();
+
+    ///  
+    /// Sets globally default unit-gain flag value.
+    ///
+    CNTK_API void SetDefaultUnitGainValue(bool value);
+
     ///
     /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values
     /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
@@ -3545,7 +3555,7 @@ namespace CNTK
     CNTK_API LearnerPtr MomentumSGDLearner(const std::vector<Parameter>& parameters,
                                            const LearningRateSchedule& learningRateSchedule,
                                            const MomentumSchedule& momentumSchedule,
-                                           bool unitGain,
+                                           bool unitGain = DefaultUnitGainValue(),
                                            AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
@@ -3554,7 +3564,7 @@ namespace CNTK
     CNTK_API LearnerPtr NesterovLearner(const std::vector<Parameter>& parameters,
                                         const LearningRateSchedule& learningRateSchedule,
                                         const MomentumSchedule& momentumSchedule,
-                                        bool unitGain,
+                                        bool unitGain = DefaultUnitGainValue(),
                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     static MomentumSchedule DefaultVarianceMomentum = MomentumAsTimeConstantSchedule(2 * 3600 * 100);
@@ -3565,7 +3575,7 @@ namespace CNTK
     CNTK_API LearnerPtr AdamLearner(const std::vector<Parameter>& parameters,
                                     const LearningRateSchedule& learningRateSchedule,
                                     const MomentumSchedule& momentumSchedule,
-                                    bool unitGain,
+                                    bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
                                     bool lowMemory = true,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());

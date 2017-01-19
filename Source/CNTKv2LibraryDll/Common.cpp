@@ -528,4 +528,16 @@ namespace CNTK
     {
         return Microsoft::MSR::CNTK::CPUMatrix<float>::GetMaxNumThreads();
     }
+
+    static std::atomic<bool> s_defaultUnitGainValue(true);
+
+    bool DefaultUnitGainValue() 
+    {
+        return s_defaultUnitGainValue;
+    }
+
+    void SetDefaultUnitGainValue(bool value) 
+    {
+        s_defaultUnitGainValue.store(value);
+    }
 }
