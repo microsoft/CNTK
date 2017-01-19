@@ -10,6 +10,7 @@
 %include <windows.i>
 %include <attribute.i>
 %include <arrays_csharp.i>
+#include <exception.i>
 
 // include the unordered_map.i.
 %include "std_unordered_map.i"
@@ -446,6 +447,32 @@
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }
 %apply double INPUT[]  { double *dataBuffer }
+
+%exception {
+    try {
+        $action
+    }
+    catch (Swig::DirectorException &e) 
+    { 
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::runtime_error &e)
+    {
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (std::invalid_argument &e) 
+    { 
+        SWIG_exception(SWIG_ValueError,e.what()); 
+    }
+    catch (std::logic_error &e) 
+    { 
+        SWIG_exception(SWIG_RuntimeError,e.what()); 
+    }
+    catch (...) 
+    { 
+        SWIG_exception(SWIG_UnknownError,"Unknown runtime exception"); 
+    }
+}
 
 %rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
 %rename (GetBestDevice) CNTK::DeviceDescriptor::BestDevice;
