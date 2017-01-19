@@ -3,6 +3,10 @@
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2016-01-19.* V 2.0 Beta 8 Release available at Docker Hub**  
+CNTK V 2.0 Beta 8 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
+See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
+
 ***2016-01-16.* V 2.0 Beta 8 Release**  
 Highlights of this Release:
 * Support of Python v. 2.7, 3.4, and 3.5. See [binary and source setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine) instructions to find out about how to select Python version.
@@ -46,18 +50,6 @@ Highlights of this Release:
 * Stability Improvements and bug fixes.
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_6_Release_Notes)
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
-
-***2016-11-25.* V 2.0 Beta 5 Release**
-Highlights of this Release:
-
-* The Windows binary packages are now created using the NVIDIA CUDA 8 toolkit, see the [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_5_Release_Notes) for details. The CNTK-Linux binary packages are still built with CUDA 7.5. The Linux support for Cuda8 will follow shortly!
-* Performance enhancements for evaluation of bitmap images through the new `EvaluateRgbImage` function in the [managed Eval API](https://github.com/Microsoft/CNTK/wiki/Managed-EvalDLL-API).
-* A new version of the [CNTK Nuget package](https://github.com/Microsoft/CNTK/wiki/NuGet-Package) is available.
-* Stability Improvements and bug fixes, i.e. decreased memory footprint in CNTK Text Format deserializer.
-* We continue to improve documentation and tutorials on an ongoing basis, in this release we added a [Sequence-to-Sequence tutorial](https://github.com/Microsoft/CNTK/blob/v2.0.beta5.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb).
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_5_Release_Notes)
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).

@@ -1,0 +1,5 @@
+#!/bin/bash
+
+. $TEST_DIR/../run-test-common
+
+cntkrun 07_Deconvolution.cntk "forceDeterministicAlgorithms=true stderr=-"

@@ -6,7 +6,7 @@
 # for full license information.
 # ==============================================================================
 
-PY_VERSION=34
+PY_VERSION=35
 
 while [ $# -gt 0 ]; do
   case "$1" in

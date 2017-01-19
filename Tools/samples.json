@@ -25,6 +25,14 @@
     },
     {
         "category": ["Image"],
+        "name":  "Image auto encoder",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#07_deconvolution",
+        "description":  "A simple image auto encoder using deconvolution and unpooling.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "Feature Extraction",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/FeatureExtraction",
         "description":  "Evaluate and write out different layers of a trained model using Python.",
@@ -65,8 +73,16 @@
     },
     {
         "category": ["Image"],
+        "name":  "GoogLeNet (BN-Inception)",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/BN-Inception#cntk-examples-imageclassificationgooglenetbn-inception",
+        "description":  "GoogLeNet (BN-Inception) network for image classification.",
+        "language":  ["BrainScript"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "GoogLeNet (Inception V3)",
-        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet#cntk-examples-imageclassificationgooglenet",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/InceptionV3#cntk-examples-imageclassificationgooglenetinceptionv3",
         "description":  "GoogLeNet (Inception V3) network for image classification.",
         "language":  ["BrainScript"],
         "type":  ["Recipe"]
