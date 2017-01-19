@@ -25,7 +25,7 @@ def print_all_node_names(model_file, is_BrainScript=True):
     loaded_model = load_model(model_file)
     if is_BrainScript:
         loaded_model = combine([loaded_model.outputs[0]])
-    node_list = graph.depth_first_search(loaded_model, lambda x: True) #, lambda x: x.is_output)
+    node_list = graph.depth_first_search(loaded_model, lambda x: x.is_output)
     print("printing node information in the format")
     print("node name (tensor shape)")
     for node in node_list:
@@ -50,19 +50,31 @@ def save_as_png(val_array, img_file_name, dim=28):
 
 
 if __name__ == '__main__':
+    use_brain_script_model = True
     num_objects_to_eval = 5
-    enc_node_name = "Pooling27"
-    input_node_name = "scaled_input"
-    output_node_name = "Unpooling39"
+
+    if (use_brain_script_model):
+        model_file_name = "07_Deconvolution_BS.model"
+        encoder_output_file_name = "encoder_output_BS.txt"
+        decoder_output_file_name = "decoder_output_BS.txt"
+        enc_node_name = "z.pool1"
+        input_node_name = "f2"
+        output_node_name = "z"
+    else:
+        model_file_name = "07_Deconvolution_PY.model"
+        encoder_output_file_name = "encoder_output_PY.txt"
+        decoder_output_file_name = "decoder_output_PY.txt"
+        enc_node_name = "Pooling27"
+        input_node_name = "ElementTimes4"
+        output_node_name = "Convolution53"
 
     # define location of output, model and data and check existence
     output_path = os.path.join(abs_path, "Output")
-    #model_file = os.path.join(model_path, "07_Deconvolution.model")
-    model_file = os.path.join(model_path, "Deconv_py_2.dnn")
+    model_file = os.path.join(model_path, model_file_name)
     data_file = os.path.join(data_path, "Test-28x28_cntk_text.txt")
     if not (os.path.exists(model_file) and os.path.exists(data_file)):
         print("Cannot find required data or model. "
-              "Please get the MNIST data set and run 'cntk configFile=07_Deconvolution.cntk' to create the model.")
+              "Please get the MNIST data set and run 'cntk configFile=07_Deconvolution_BS.cntk' or 'python 07_Deconvolution_PY.py' to create the model.")
         exit(0)
 
     # create minibatch source
@@ -72,14 +84,10 @@ if __name__ == '__main__':
     )), randomize=False, epoch_size = FULL_DATA_SWEEP)
 
     # use this to print all node names in the model
-    print_all_node_names(model_file, False)
+    # print_all_node_names(model_file, use_brain_script_model)
 
     # load model and pick desired nodes as output
     loaded_model = load_model(model_file)
-    #n1 = loaded_model.find_by_name(input_node_name).owner
-    n2 = loaded_model.find_by_name(enc_node_name).owner
-    n3 = loaded_model.find_by_name("Plus11").owner
-
     output_nodes = combine(
         [loaded_model.find_by_name(input_node_name).owner,
          loaded_model.find_by_name(enc_node_name).owner,
@@ -87,8 +95,8 @@ if __name__ == '__main__':
 
     # evaluate model save output
     features_si = minibatch_source['features']
-    with open(os.path.join(output_path, "decoder_output_py.txt"), 'wb') as decoder_text_file:
-        with open(os.path.join(output_path, "encoder_output_py.txt"), 'wb') as encoder_text_file:
+    with open(os.path.join(output_path, decoder_output_file_name), 'wb') as decoder_text_file:
+        with open(os.path.join(output_path, encoder_output_file_name), 'wb') as encoder_text_file:
             for i in range(0, num_objects_to_eval):
                 mb = minibatch_source.next_minibatch(1)
                 raw_dict = output_nodes.eval(mb[features_si])

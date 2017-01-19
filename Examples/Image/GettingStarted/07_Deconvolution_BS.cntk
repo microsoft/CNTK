@@ -11,16 +11,16 @@ precision = "float"; traceLevel = 1 ; deviceId = "auto"
 rootDir = ".." ; dataDir = "$rootDir$/DataSets/MNIST" ;
 outputDir = "./Output" ;
 
-modelPath = "$outputDir$/Models/07_Deconvolution.model"
-#stderr = "$outputDir$/07_Deconvolution_bs_out.txt"
-makemode=false
+modelPath = "$outputDir$/Models/07_Deconvolution_BS.model"
+#stderr = "$outputDir$/07_Deconvolution_BS_out.txt"
+#makemode=false
 
 # TRAINING CONFIG
 trainNetwork = {
     action = "train"
     
     BrainScriptNetworkBuilder = {
-        cMap = 1
+        cMap = 3
         model = inputFeatures => {
             conv1   = ConvolutionalLayer {cMap, (5:5), pad = true, activation=ReLU}(inputFeatures)
             pool1   = MaxPoolingLayer {(4:4), stride=(4:4)}(conv1)

@@ -187,7 +187,6 @@ def Deconvolution(filter_shape,        # e.g. (3,3)
                 init_bias=init_bias_default_or_0,
                 reduction_rank=1, # (must be 1 currently)
                 max_temp_mem_size_in_samples=0):
-    #UntestedBranchError("Convolution")
     activation = _resolve_activation(activation)
     pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
     bias = bias if _is_given(bias) else _get_current_default_options().bias
@@ -272,7 +271,7 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
     x = Placeholder(name='unpool_input')
     y = Placeholder(name='pool_input')
     apply_x = unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
-                         lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad)) #, name='maxunpool'
+                         lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
 
     return Block(apply_x, "MaxUnpooling")
 
