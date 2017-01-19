@@ -14,7 +14,7 @@ from cntk.ops.functions import load_model
 from cntk.blocks import LSTM, Stabilizer
 from cntk.layers import Recurrence, Dense
 from cntk.models import LayerStack, Sequential
-from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.utils import log_number_of_parameters, ProgressTracker
 
 # model hyperparameters
 hidden_dim = 256
@@ -175,7 +175,7 @@ def train_lm(training_file):
     
     # print out some useful training information
     log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(freq=100, tag='Training')    
+    progress_tracker = ProgressTracker(freq=100, tag='Training')
     
     e = 0
     p = 0
@@ -199,7 +199,7 @@ def train_lm(training_file):
         arguments = ({input_sequence : features, label_sequence : labels}, mask)
         trainer.train_minibatch(arguments)
 
-        progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
+        progress_tracker.update_with_trainer(trainer, with_metric=True) # log progress
         
         if i % sample_freq == 0:
             print(sample(z, ix_to_char, vocab_dim, char_to_ix))

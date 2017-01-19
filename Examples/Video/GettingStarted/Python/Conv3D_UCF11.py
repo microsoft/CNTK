@@ -202,7 +202,7 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
     trainer     = Trainer(z, ce, pe, learner)
 
     log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(tag='Training')
+    progress_tracker = ProgressTracker(tag='Training')
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs
@@ -212,8 +212,8 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
             videos, labels, current_minibatch = train_reader.next_minibatch(minibatch_size)
             trainer.train_minibatch({input_var : videos, label_var : labels})
 
-            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
-        progress_printer.epoch_summary(with_metric=True)
+            progress_tracker.update_with_trainer(trainer, with_metric=True) # log progress
+        progress_tracker.epoch_summary(with_metric=True)
     
     # Test data for trained model
     epoch_size     = 332

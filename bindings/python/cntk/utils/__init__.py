@@ -15,7 +15,7 @@ from .. import cntk_py
 from cntk.device import use_default_device, cpu
 from .swig_helper import typemap
 from ..axis import Axis
-from .progress_print import *
+from .progress_tracker import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
@@ -467,7 +467,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
                 if len(seq_starts) != sample_size:
                     raise ValueError('you have %i sequences, but only %i '
-                            'sequence begin markers' % (sample_sizes, len(seq_starts)))
+                            'sequence begin markers' % (sample_size, len(seq_starts)))
 
 
         if isinstance(batch, MinibatchData) and extract_values_from_minibatch_data:

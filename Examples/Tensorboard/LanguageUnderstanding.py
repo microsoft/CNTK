@@ -7,7 +7,6 @@
 from __future__ import print_function
 import os
 import math
-from cntk.blocks import *  # non-layer like building blocks such as LSTM()
 from cntk.layers import *  # layer-like stuff such as Linear()
 from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
 from cntk.utils import *
@@ -20,7 +19,7 @@ from cntk.ops import cross_entropy_with_softmax, classification_error
 # variables and stuff  #
 ########################
 
-cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # data resides in the CNTK folder
+cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../.."  # data resides in the CNTK folder
 data_dir = cntk_dir + "/Examples/LanguageUnderstanding/ATIS/Data"       # under Examples/LanguageUnderstanding/ATIS
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
 
@@ -83,6 +82,7 @@ def train(reader, model, max_epochs):
     lr_per_sample = learning_rate_schedule(lr_schedule, UnitType.sample, epoch_size)
     learner = adam_sgd(z.parameters,
                        lr=lr_per_sample, momentum=momentum_time_constant,
+                       unit_gain=True,
                        low_memory=True,
                        gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
@@ -96,7 +96,8 @@ def train(reader, model, max_epochs):
 
     # process minibatches and perform model training
     log_number_of_parameters(z) ; print()
-    progress_tracker = ProgressTracker(freq=100, first=10, tag='Training') # more detailed logging
+    # more detailed logging
+    progress_tracker = ProgressTracker(freq=100, first=10, tag='Training', tensorboard_log_dir='atis_log', model=z)
     #progress_tracker = ProgressTracker(tag='Training')
 
     t = 0

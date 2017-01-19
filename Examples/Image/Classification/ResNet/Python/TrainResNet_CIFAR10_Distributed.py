@@ -91,7 +91,7 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits):
     return Trainer(network['output'], network['ce'], network['pe'], learner)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size):
+def train_and_test(network, trainer, train_source, test_source, progress_tracker, minibatch_size, epoch_size):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -100,7 +100,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
     }
 
     training_session = cntk.training_session(train_source, trainer,
-        cntk.minibatch_size_schedule(minibatch_size), progress_printer, input_map, "ConvNet_CIFAR10_DataAug_", epoch_size)
+        cntk.minibatch_size_schedule(minibatch_size), progress_tracker, input_map, "ConvNet_CIFAR10_DataAug_", epoch_size)
     training_session.train()
 
     # TODO: Stay tuned for an upcoming simpler EvalSession API for test/validation.
@@ -140,7 +140,7 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, num_quantizat
     # thus leads to higher training error. This is a trade-off of speed and accuracy
     minibatch_size = 128 * (Communicator.num_workers() if scale_up else 1)
 
-    progress_printer = ProgressPrinter(
+    progress_tracker = ProgressTracker(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
@@ -152,7 +152,7 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, num_quantizat
     trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    return train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size)
+    return train_and_test(network, trainer, train_source, test_source, progress_tracker, minibatch_size, epoch_size)
 
 
 if __name__=='__main__':

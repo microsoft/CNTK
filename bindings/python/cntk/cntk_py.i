@@ -7,6 +7,7 @@
 %include <std_map.i>
 %include <std_set.i>
 %include <std_pair.i>
+%include <stdint.i>
 %include <windows.i>
 %include <attribute.i>
 %include <std_shared_ptr.i>
@@ -1092,6 +1093,7 @@ public:
 %shared_ptr(CNTK::DistributedCommunicator)
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
 %shared_ptr(CNTK::DistributedLearner)
+%shared_ptr(CNTK::TensorBoardFileWriter)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

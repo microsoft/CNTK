@@ -111,7 +111,7 @@ def create_trainer(network, epoch_size, num_quantization_bits):
     return cntk.Trainer(network['output'], network['ce'], network['pe'], learner)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, epoch_size):
+def train_and_test(network, trainer, train_source, test_source, progress_tracker, epoch_size):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -120,7 +120,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
     }
 
     training_session = cntk.training_session(train_source, trainer,
-        cntk.minibatch_size_schedule(64), progress_printer, input_map, "ConvNet_CIFAR10_DataAug_", epoch_size)
+        cntk.minibatch_size_schedule(64), progress_tracker, input_map, "ConvNet_CIFAR10_DataAug_", epoch_size)
     training_session.train()
 
     ### TODO: Stay tuned for an upcoming simpler EvalSession API for test/validation.    
@@ -143,7 +143,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
 
     fin_msg = "Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom)
-    progress_printer.end_progress_print(fin_msg)
+    progress_tracker.end_progress_tracking(fin_msg)
 
     print("")
     print(fin_msg)
@@ -156,7 +156,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 def convnet_cifar10_dataaug(train_data, test_data, mean_data, num_quantization_bits=32, epoch_size = 50000, max_epochs=80, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
     _cntk_py.set_computation_network_trace_level(0)
 
-    progress_printer = ProgressPrinter(
+    progress_tracker = ProgressTracker(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
@@ -168,7 +168,7 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, num_quantization_b
     trainer = create_trainer(network, epoch_size, num_quantization_bits)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, epoch_size)
+    train_and_test(network, trainer, train_source, test_source, progress_tracker, epoch_size)
  
 
 if __name__=='__main__':
