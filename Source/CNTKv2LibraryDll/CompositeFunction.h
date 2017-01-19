@@ -95,7 +95,7 @@ namespace CNTK
 
         virtual std::vector<Variable> InferOutputs() override
         {
-            return m_rootFunction->Outputs();
+            return m_rootFunction->InitOutputs();
         }
 
         virtual void Backward(const BackPropStatePtr& state,
@@ -157,7 +157,7 @@ namespace CNTK
         static void PreorderTraverseVariables(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
         {
             visitedFunctions.insert(rootFunction);
-            auto rootFunctionOutputs = rootFunction->Outputs();
+            auto rootFunctionOutputs = rootFunction->InitOutputs();
             for (const auto& rootOutput : rootFunctionOutputs)
                 functor(rootOutput);
 
