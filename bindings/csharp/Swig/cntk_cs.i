@@ -1007,18 +1007,17 @@
     // Create Value object from dense input: batch, sequence or batch of sequences.
     public static Value CreateBatch<T>(NDShape shape, System.Collections.Generic.List<T> batch, DeviceDescriptor device, bool readOnly = false)
     {
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<T>>();
         var shapeSize = shape.TotalSize;
-        int i = 0;
-        System.Collections.Generic.List<T> seq = null;
-        foreach (var element in batch)
+
+        if (batch.Count % shapeSize != 0)
+            throw new System.ArgumentException("The number of elements in the batch must be a multiple of the size of the shape");
+        var count = batch.Count / shapeSize;
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<T>>((int)count);
+        for (int i = 0; i < count; i++)
         {
-            if (i++ % shapeSize == 0)
-            {
-                seq = new System.Collections.Generic.List<T>();
-                input.Add(seq);
-            }
-            seq.Add(element);
+            var seq = new System.Collections.Generic.List<T>();
+            seq.AddRange(batch.GetRange((int)(i * shapeSize), (int)shapeSize));
+            input.Add(seq);
         }
         return Create(shape, input, device, readOnly);
     }
