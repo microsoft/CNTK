@@ -2012,14 +2012,16 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
     cusparseAction_t cpVals = CUSPARSE_ACTION_NUMERIC;
     cusparseIndexBase_t idxBase = CUSPARSE_INDEX_BASE_ZERO;
     cusparseHandle_t cusparseHandle = 0;
+    CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
 
-    if (a.GetFormat() == matrixFormatSparseCSR) // need to put a in ColumnMajor format
+    bool allocTemp = (a.GetFormat() == matrixFormatSparseCSR);
+
+    if (allocTemp) // need to put a in ColumnMajor format
     {
         cscValA = TracingGPUMemoryAllocator::Allocate<ElemType>(a.GetComputeDeviceId(), nnz);
         cscRowIndA = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), nnz);
         cscColPtrA = TracingGPUMemoryAllocator::Allocate<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), (n + 1));
 
-        CUSPARSE_CALL(cusparseCreate(&cusparseHandle));
         SyncGuard syncGuard;
         if (sizeof(ElemType) == sizeof(float))
         {
@@ -2049,8 +2051,11 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
     int blocksPerGrid = (int) ceil(1.0 * M / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
     _getSparseVectorRepresntationForCSCMatrix<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(cscColPtrA, cscRowIndA, vectArray, M, N);
-    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscRowIndA);
-    TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscColPtrA);
+    if (allocTemp)
+    {
+        TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscRowIndA);
+        TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), cscColPtrA);
+    }
     // CUDA_CALL(cudaMemcpy(h_vectArray,vectArray,sizeof(GPUSPARSE_INDEX_TYPE)*a.m_nz,cudaMemcpyDeviceToHost));
 
     // Actual dot product
@@ -2068,7 +2073,10 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUSparseMatrix
                                     reinterpret_cast<double*>(&res), idxBase));
     }
     TracingGPUMemoryAllocator::Free<GPUSPARSE_INDEX_TYPE>(a.GetComputeDeviceId(), vectArray);
-    TracingGPUMemoryAllocator::Free<ElemType>(a.GetComputeDeviceId(), cscValA);
+    if (allocTemp)
+    {
+        TracingGPUMemoryAllocator::Free<ElemType>(a.GetComputeDeviceId(), cscValA);
+    }
     CUSPARSE_CALL(cusparseDestroy(cusparseHandle));
     return res;
 }
