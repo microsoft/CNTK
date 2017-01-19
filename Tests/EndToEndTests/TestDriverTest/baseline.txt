@@ -1,0 +1,13 @@
++ ./TestDriver.py run -s gpu -d gpu -f release TestDriverTest/EmptyTest
+CNTK Test Driver is started
+Running tests:  TestDriverTest/EmptyTest
+Build location: /cygdrive/c/Users/mahilleb/Repos/CNTK2/x64
+Build SKU:      gpu
+Run location:   /tmp/cntk-test-20170118204425.248953
+Flavors:        release
+Devices:        gpu
+
+Running test TestDriverTest/EmptyTest (release gpu) - [OK] 0.10 sec
+1/1 tests passed, 0 failed
++ echo __COMPLETED__
+__COMPLETED__
