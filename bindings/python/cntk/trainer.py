@@ -37,7 +37,7 @@ class Trainer(cntk_py.Trainer):
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
 
-        trainer = cntk_py.create_trainer(model, loss_function, eval_function, parameter_learners)
+        trainer = cntk_py.trainer_impl(model, loss_function, eval_function, parameter_learners)
         # transplant into this class instance
         self.__dict__ = trainer.__dict__
 
