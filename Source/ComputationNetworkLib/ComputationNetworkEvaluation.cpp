@@ -1005,15 +1005,27 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     bool performingBackPropagation = (trainRootNode != nullptr) || (Globals::ShouldEnableHyperCompressMemory());
 
+    // Construct the composite forward prop eval order by enumerating the
+    // nodes corresponding to each of our roots in global eval oder
+    forwardPropRoots = SortByGlobalEvalOrder(forwardPropRoots);
+
     // Create a composite Eval order with the specified nodes as roots
     // For each node determine parents and whether the output of the
     // node is needed during back propagation
     std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
     std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
+    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder;
+    std::unordered_set<ComputationNodeBasePtr> uniqueForwardPropEvalNodes;
     for (auto& rootNode : forwardPropRoots)
     {
         for (const auto& node : GetEvalOrder(rootNode))
         {
+            if (uniqueForwardPropEvalNodes.find(node) == uniqueForwardPropEvalNodes.end())
+            {
+                uniqueForwardPropEvalNodes.insert(node);
+                compositeForwardPropEvalOrder.push_back(node);
+            }
+
             for (int i = 0; i < node->GetNumInputs(); i++)
             {
                 ComputationNodeBasePtr input = node->GetInputs()[i];
@@ -1049,13 +1061,6 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
                 keyValue.first->MarkParentOverwritesGradient();
         }
     }
-
-    // Construct the composite forward prop eval order by enumerating the
-    // nodes corresponding to each of our roots and then arranging them in the
-    // relative order that they appear in the global evaluation order
-
-    std::list<ComputationNodeBasePtr> nodesForForwardPropRoots = ComputationNodeBase::EnumerateNodes(forwardPropRoots);
-    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder = SortByGlobalEvalOrder(nodesForForwardPropRoots);
 
     set<ComputationNodeBasePtr> completedEvaluate;
     for (auto& nodeIter : compositeForwardPropEvalOrder)
