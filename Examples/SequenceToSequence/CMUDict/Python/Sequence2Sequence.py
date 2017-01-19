@@ -164,7 +164,7 @@ def create_model(inputs): # (input_sequence, decoder_history_sequence) --> (word
             return element_select(
             is_first_label, thought_vector_broadcast_c, past_value(operand))
 
-    decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, past_value, past_value, augment_input_hook)    
+    decoder_output_h, decoder_output_c = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
 
     # dense Linear output layer    
     z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
@@ -181,11 +181,8 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     label_sequence = find_by_name(model, 'label_sequence')
     decoder_history_hook = find_by_name(model, 'decoder_history_hook')
 
-    embedding = find_by_name(model, 'embedding')    
-    embed_param = 1
-    if embedding is not None:
-        embed_param = embedding
-
+    embed_param = find_by_name(model, 'embedding')    
+    
     # Criterion nodes
     ce = cross_entropy_with_softmax(model, label_sequence)
     errs = classification_error(model, label_sequence)
@@ -194,7 +191,9 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
     # This does not need to be done in training generally though
     def clone_and_hook():
         # network output for decoder history
-        net_output = times(hardmax(model), embed_param)
+        net_output = hardmax(model)
+        if use_embedding:
+            net_output = times(hardmax(model), embed_param)
 
         # make a clone of the graph where the ground truth is replaced by the network output
         return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
@@ -245,7 +244,8 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
                 print_sequences(e, i2w)
                 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
-                debug_attention(decoder_output_model, mb_valid, valid_reader)                
+                if use_attention:                
+                    debug_attention(decoder_output_model, mb_valid, valid_reader)                
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
