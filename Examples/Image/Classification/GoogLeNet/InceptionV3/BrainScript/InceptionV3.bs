@@ -1,7 +1,10 @@
 
 #
 # Inception V3 model from:
+#
 #    https://arxiv.org/pdf/1512.00567.pdf
+#
+# and in Tensorflow implementation
 #
 InceptionV3(input, labelDim, bnTimeConst) =
 {
@@ -21,14 +24,15 @@ InceptionV3(input, labelDim, bnTimeConst) =
     pool_2 = MaxPoolingLayer{(3:3), stride = (2:2), pad = false}(conv_5)
     # 35 x 35 x 192
 
+    #
     # Inception Blocks
-    # 35 x 35 x 256
+    #
     mixed_1 = InceptionBlock1{64, (48:64), (64:96:96), 32, bnTimeConst}(pool_2)
-    # 35 x 35 x 288
+    # 35 x 35 x 256
     mixed_2 = InceptionBlock1{64, (48:64), (64:96:96), 64, bnTimeConst}(mixed_1)
     # 35 x 35 x 288
     mixed_3 = InceptionBlock1{64, (48:64), (64:96:96), 64, bnTimeConst}(mixed_2)
-    # 17 x 17 x 768
+    # 35 x 35 x 288
     mixed_4 = InceptionBlock2{384, (64:96:96), bnTimeConst}(mixed_3)
     # 17 x 17 x 768
     mixed_5 = InceptionBlock3{192, (128:128:192), (128:128:128:128:192), 192, bnTimeConst}(mixed_4)
@@ -38,28 +42,47 @@ InceptionV3(input, labelDim, bnTimeConst) =
     mixed_7 = InceptionBlock3{192, (160:160:192), (160:160:160:160:192), 192, bnTimeConst}(mixed_6)
     # 17 x 17 x 768
     mixed_8 = InceptionBlock3{192, (192:192:192), (192:192:192:192:192), 192, bnTimeConst}(mixed_7)
-    # 8 x 8 x 1280
+    # 17 x 17 x 768
     mixed_9 = InceptionBlock4{(192:320), (192:192:192:192), bnTimeConst}(mixed_8)
-    # 8 x 8 x 2048
+    # 17 x 17 x 1280
     mixed_10 = InceptionBlock5{320, (384:384:384), (448:384:384:384), 192, bnTimeConst}(mixed_9)
     # 8 x 8 x 2048
     mixed_11 = InceptionBlock5{320, (384:384:384), (448:384:384:384), 192, bnTimeConst}(mixed_10)
     # 8 x 8 x 2048
 
-    # Global average
+    #
+    # Prediction
+    #
     pool_3 = AveragePoolingLayer{(8:8), pad = false}(mixed_11)
     # 1 x 1 x 2048
     drop = Dropout(pool_3)
     # 1 x 1 x 2048
-    z = DenseLayer{labelDim}(drop)
+    z = LinearLayer{labelDim}(drop)
 
+    #
     # Auxiliary
-    # 8 x 8 x 1280
-    aux_pool_1 = AveragePoolingLayer{(5:5), pad = false}(mixed_8)
-    # 3 x 3 x 1280
+    #
+    # 17 x 17 x 768
+    aux_pool_1 = AveragePoolingLayer{(5:5), stride = (3:3), pad = false}(mixed_8)
+    # 5 x 5 x 768
     aux_conv_1 = ConvBNReLULayer{128, (1:1), (1:1), pad=true, bnTimeConst = bnTimeConst}(aux_pool_1)
-    # 3 x 3 x 128
-    aux_conv_2 = ConvBNReLULayer{768, (3:3), (1:1), pad=false, bnTimeConst = bnTimeConst}(aux_conv_1)
-
-    aux = DenseLayer{labelDim}(aux_conv_2)
+    # 5 x 5 x 128
+    aux_conv_2 = ConvBNReLULayer{768, (5:5), (1:1), pad=false, bnTimeConst = bnTimeConst}(aux_conv_1)
+    # 1 x 1 x 768    
+    aux = LinearLayer{labelDim}(aux_conv_2)
 }
+
+#
+# Inception V3 model with normalized input, to use the below function
+# remove "ImageNet1K_mean.xml" from each reader.
+#
+InceptionV3Norm(input, labelDim, bnTimeConst) = 
+{
+    # Normalize inputs to -1 and 1.
+    featMean  = 128
+    featScale = 1/128
+    Normalize{m,f} = x => f .* (x - m)
+            
+    inputNorm = Normalize{featMean, featScale}(input)
+    model     = InceptionV3(inputNorm, labelDim, bnTimeConst)
+}.model
