@@ -485,6 +485,11 @@
 
 %typemap(cscode) CNTK::DeviceDescriptor %{
 
+    // This is a reference to prevent premature garbage collection 
+    // and resulting in dangling access to device.
+    private static DeviceDescriptorVector deviceVector;
+    private static System.Collections.Generic.List<DeviceDescriptor> deviceList;
+
     public uint Id
     {
         get { return GetId(); }
@@ -513,13 +518,17 @@
     public static System.Collections.Generic.List<DeviceDescriptor> AllDevices
     {
         get {
-            var devices = GetAllDevices();
-            var ret = new System.Collections.Generic.List<DeviceDescriptor>(devices.Count);
-            foreach (var d in devices)
+            // TODO: support devices added/removed after creation. 
+            if (deviceVector == null)
             {
-                ret.Add(d);
+                deviceVector = GetAllDevices();
+                deviceList = new System.Collections.Generic.List<DeviceDescriptor>(deviceVector.Count);
+                foreach (var d in deviceVector)
+                {
+                    deviceList.Add(d);
+                }
             }
-            return ret;
+            return deviceList;
         }
     }
 
@@ -700,10 +709,10 @@
 
     // This is a reference to prevent premature garbage collection 
     // and resulting in dangling access to Variable.
-    private VariableVector argumentsVector;
-    private VariableVector outputsVector;
-    private System.Collections.Generic.List<Variable> argumentsList;
-    private System.Collections.Generic.List<Variable> outputsList;
+    private VariableVector argumentVector;
+    private VariableVector outputVector;
+    private System.Collections.Generic.List<Variable> argumentList;
+    private System.Collections.Generic.List<Variable> outputList;
 
     public string Name
     {
@@ -734,16 +743,16 @@
         get 
         {
             // Assuming that outputs of Function can not be changed after creation.
-            if (outputsVector == null)
+            if (outputVector == null)
             {
-                outputsVector = GetOutputs();
-                outputsList = new System.Collections.Generic.List<Variable>(outputsVector.Count);
-                foreach (var v in outputsVector)
+                outputVector = GetOutputs();
+                outputList = new System.Collections.Generic.List<Variable>(outputVector.Count);
+                foreach (var v in outputVector)
                 {
-                    outputsList.Add(v);
+                    outputList.Add(v);
                 }
             }
-            return outputsList;
+            return outputList;
         }
     }
 
@@ -757,16 +766,16 @@
         get
         {
             // Assuming that arguments of Function can not be changed after creation.
-            if (argumentsVector == null)
+            if (argumentVector == null)
             {
-                argumentsVector = GetArguments();
-                argumentsList = new System.Collections.Generic.List<Variable>(argumentsVector.Count);
-                foreach (var v in argumentsVector)
+                argumentVector = GetArguments();
+                argumentList = new System.Collections.Generic.List<Variable>(argumentVector.Count);
+                foreach (var v in argumentVector)
                 {
-                    argumentsList.Add(v);
+                    argumentList.Add(v);
                 }
             }
-            return argumentsList;
+            return argumentList;
         }
     }
 
@@ -1172,22 +1181,20 @@
                                   bool readOnly = false)
     {
         var seqFlags = new BoolVector(sequenceStartFlags);
+        var inputSeqVector = new SizeTVectorVector();
+        var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
+        foreach (var seq in sequences)
+        {
+            var s = new SizeTVector(seq);
+            sizeTVectorRefList.Add(s);
+            inputSeqVector.Add(s);
+        }
         if (typeof(T).Equals(typeof(float)))
         {
-            var inputSeqVector = new SizeTVectorVector();
-            foreach (var seq in sequences)
-            {
-                inputSeqVector.Add(new SizeTVector(seq));
-            }
             return Value.CreateOneHotFloat(dimension, inputSeqVector, seqFlags, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            var inputSeqVector = new SizeTVectorVector();
-            foreach (var seq in sequences)
-            {
-                inputSeqVector.Add(new SizeTVector(seq));
-            }
             return Value.CreateOneHotDouble(dimension, inputSeqVector, seqFlags, device, readOnly);
         }
         else
