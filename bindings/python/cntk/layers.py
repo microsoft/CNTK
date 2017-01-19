@@ -11,7 +11,7 @@
 from __future__ import division
 import numpy as np
 from .ops import parameter, input_variable, placeholder_variable, combine
-from .ops import times, convolution, pooling, batch_normalization, dropout
+from .ops import times, convolution, pooling, batch_normalization, dropout, unpooling
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from .utils import Record, _as_tuple
 from .blocks import *  # TODO: reduce to what we actually use
@@ -213,6 +213,19 @@ def GlobalMaxPooling():
 # GlobalAveragePooling
 def GlobalAveragePooling():
     return Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
+
+# Create a max unpooling layer
+def MaxUnpooling(filter_shape,  # e.g. (3,3)
+                 strides=1,
+                 pad=False,
+                 lower_pad=0,
+                 upper_pad=0):
+    x = Placeholder(name='unpool_input')
+    y = Placeholder(name='pool_input')
+    apply_x = unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
+                         lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad)) #, name='maxunpool'
+
+    return Block(apply_x, "MaxUnpooling")
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):

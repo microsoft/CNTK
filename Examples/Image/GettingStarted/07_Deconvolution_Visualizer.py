@@ -25,7 +25,7 @@ def print_all_node_names(model_file, is_BrainScript=True):
     loaded_model = load_model(model_file)
     if is_BrainScript:
         loaded_model = combine([loaded_model.outputs[0]])
-    node_list = graph.depth_first_search(loaded_model, lambda x: x.is_output)
+    node_list = graph.depth_first_search(loaded_model, lambda x: True) #, lambda x: x.is_output)
     print("printing node information in the format")
     print("node name (tensor shape)")
     for node in node_list:
@@ -51,10 +51,14 @@ def save_as_png(val_array, img_file_name, dim=28):
 
 if __name__ == '__main__':
     num_objects_to_eval = 5
+    enc_node_name = "Pooling27"
+    input_node_name = "scaled_input"
+    output_node_name = "Unpooling39"
 
     # define location of output, model and data and check existence
     output_path = os.path.join(abs_path, "Output")
-    model_file = os.path.join(model_path, "07_Deconvolution.model")
+    #model_file = os.path.join(model_path, "07_Deconvolution.model")
+    model_file = os.path.join(model_path, "Deconv_py_2.dnn")
     data_file = os.path.join(data_path, "Test-28x28_cntk_text.txt")
     if not (os.path.exists(model_file) and os.path.exists(data_file)):
         print("Cannot find required data or model. "
@@ -68,14 +72,18 @@ if __name__ == '__main__':
     )), randomize=False, epoch_size = FULL_DATA_SWEEP)
 
     # use this to print all node names in the model
-    # print_all_node_names(model_file)
+    print_all_node_names(model_file, False)
 
     # load model and pick desired nodes as output
     loaded_model = load_model(model_file)
+    #n1 = loaded_model.find_by_name(input_node_name).owner
+    n2 = loaded_model.find_by_name(enc_node_name).owner
+    n3 = loaded_model.find_by_name("Plus11").owner
+
     output_nodes = combine(
-        [loaded_model.find_by_name('f1').owner,
-         loaded_model.find_by_name('z.p1').owner,
-         loaded_model.find_by_name('z').owner])
+        [loaded_model.find_by_name(input_node_name).owner,
+         loaded_model.find_by_name(enc_node_name).owner,
+         loaded_model.find_by_name(output_node_name).owner])
 
     # evaluate model save output
     features_si = minibatch_source['features']
@@ -87,9 +95,9 @@ if __name__ == '__main__':
                 output_dict = {}
                 for key in raw_dict.keys(): output_dict[key.name] = raw_dict[key]
 
-                encoder_input = output_dict['f1']
-                encoder_output = output_dict['z.p1']
-                decoder_output = output_dict['z']
+                encoder_input = output_dict[input_node_name]
+                encoder_output = output_dict[enc_node_name]
+                decoder_output = output_dict[output_node_name]
                 in_values = (encoder_input[0,0].flatten())[np.newaxis]
                 enc_values = (encoder_output[0,0].flatten())[np.newaxis]
                 out_values = (decoder_output[0,0].flatten())[np.newaxis]
