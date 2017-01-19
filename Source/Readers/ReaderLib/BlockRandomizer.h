@@ -77,8 +77,21 @@ private:
     // Load data for chunks if needed.
     void LoadDataChunks(const ClosedOpenChunkInterval& windowRange);
 
-    // Get next sequence descriptions that do not exceed global and local sample count.
-    bool GetNextSequenceDescriptions(size_t globalSampleCount, size_t localSampleCount, std::vector<RandomizedSequenceDescription>& result, ClosedOpenChunkInterval& windowRange);
+    // Load actual sequence data up to the specified global/local sample count
+    // (or at least one sequence when atLeastOneSequenceNeeded is true),
+    // Returns the total number of global and local samples loaded.
+    std::pair<size_t, size_t> LoadSequenceData(size_t globalSampleCount, size_t localSampleCount, Sequences& sequence, bool atLeastOneSequenceNeeded);
+
+    // Gets the next sequence descriptions with the total number of samples not exceeding 
+    // the sample count, when atLeastOneSequenceNeeded is false. Otherwise (when atLeastOneSequenceNeeded is true), 
+    // returns at least one sequence description even when its length is greater than the required sample count.
+    // Returns a tuple containing "end of sweep", "end of epoch" flags and
+    // the total numbers of global and local samples to be processed.
+    std::tuple<bool, bool, size_t, size_t> GetNextSequenceDescriptions(size_t globalSampleCount, 
+                                                                       size_t localSampleCount, 
+                                                                       std::vector<RandomizedSequenceDescription>& result, 
+                                                                       ClosedOpenChunkInterval& windowRange, 
+                                                                       bool atLeastOneSequenceNeeded);
 
     // Prepares a new sweep if needed.
     void PrepareNewSweepIfNeeded(size_t samplePosition);
@@ -105,7 +118,7 @@ private:
     size_t m_sweep;
 
     // Total number of samples in a sweep.
-    size_t m_sweepTotalNumberOfSamples;
+    size_t m_sweepSizeInSamples;
 
     IDataDeserializerPtr m_deserializer;
 

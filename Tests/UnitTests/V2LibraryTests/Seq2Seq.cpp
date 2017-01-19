@@ -209,7 +209,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         if (minibatchData.empty())
             break;
 
-        trainer->TrainMinibatch({ { rawInput, minibatchData[rawInputStreamInfo].m_data }, { rawLabels, minibatchData[rawLabelsStreamInfo].m_data } }, device);
+        trainer->TrainMinibatch({ { rawInput, minibatchData[rawInputStreamInfo] }, { rawLabels, minibatchData[rawLabelsStreamInfo] } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
 
         if ((i + 1) == numMinibatchesToCheckpointAfter)
@@ -222,7 +222,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         if ((i % decodingFrequency) == 0)
         {
             std::unordered_map<Variable, ValuePtr> outputs = { { decodingFunction, nullptr }};
-            decodingFunction->Forward({ { decodingFunction->Arguments()[0], minibatchData[rawInputStreamInfo].m_data }, { decodingFunction->Arguments()[1], minibatchData[rawLabelsStreamInfo].m_data } },
+            decodingFunction->Forward({ { decodingFunction->Arguments()[0], minibatchData[rawInputStreamInfo].data }, { decodingFunction->Arguments()[1], minibatchData[rawLabelsStreamInfo].data } },
                                       outputs,
                                       device);
         }

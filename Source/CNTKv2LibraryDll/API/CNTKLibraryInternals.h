@@ -160,6 +160,9 @@ namespace CNTK
     enum class PrimitiveOpType : unsigned int;
     enum class DataType : unsigned int;
 
+    struct MinibatchInfo;
+    struct MinibatchData;
+
     class Serializer;
 
     // Similar to make_shared except that it associates a custom deleter with the shared_ptr to ensure

@@ -9,6 +9,7 @@ import re
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_203_Reinforcement_Learning_Basics.ipynb")
+notebook_timeoutSeconds = 450
 
 def test_cntk_203_reinforcement_learning_basics_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell

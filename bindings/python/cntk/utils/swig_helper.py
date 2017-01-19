@@ -4,10 +4,10 @@
 # ==============================================================================
 from .. import cntk_py
 
-__typemap = None
+_typemap = None
 def map_if_possible(obj):
-    global __typemap
-    if __typemap is None:
+    global _typemap
+    if _typemap is None:
         # We can do this only if cntk_py and the cntk classes are already
         # known, which is the case, when map_if_possible is called. 
         from cntk.ops.variables import Variable, Parameter, Constant
@@ -18,8 +18,8 @@ def map_if_possible(obj):
         from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration
         from cntk.axis import Axis
         from cntk.distributed import WorkerDescriptor, Communicator, DistributedLearner
-        from cntk.utils import Value
-        __typemap = { 
+        from cntk import Value
+        _typemap = { 
                 cntk_py.Variable: Variable,
                 cntk_py.Parameter: Parameter,
                 cntk_py.Constant: Constant,
@@ -38,8 +38,8 @@ def map_if_possible(obj):
                 }
 
     # Some types like NumPy arrays don't let to set the __class__
-    if obj.__class__ in __typemap:
-        obj.__class__ = __typemap[obj.__class__]
+    if obj.__class__ in _typemap:
+        obj.__class__ = _typemap[obj.__class__]
     else:
         if isinstance(obj, (tuple, list, set)):
             for o in obj:

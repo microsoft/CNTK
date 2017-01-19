@@ -1266,8 +1266,8 @@ Legacy configuration is used for truncated BPTT mode, please adapt the config to
 Set current path to: C:/repo/cntk_github6/CNTK/Tests/EndToEndTests/UnitTests/ReaderTests
 
 Test module "ReaderTests" has passed with:
-  122 test cases out of 122 passed
-  22235579 assertions out of 22235579 passed
+  127 test cases out of 127 passed
+  22629927 assertions out of 22629927 passed
 
   Test suite "ReaderTestSuite" has passed with:
     92 test cases out of 92 passed
@@ -1566,11 +1566,8 @@ Test module "ReaderTests" has passed with:
       2 assertions out of 2 passed
 
   Test suite "ReaderLibTests" has passed with:
-    18 test cases out of 18 passed
-    2265 assertions out of 2265 passed
-
-    Test case "ReaderLibTests/CheckGetCurrentCursorForRandomizers" has passed with:
-      16 assertions out of 16 passed
+    23 test cases out of 23 passed
+    396613 assertions out of 396613 passed
 
     Test case "ReaderLibTests/CheckSetCurrentCursorForRandomizers" has passed with:
       12 assertions out of 12 passed
@@ -1589,8 +1586,23 @@ Test module "ReaderTests" has passed with:
 
     Test case "ReaderLibTests/BlockRandomizerInstantiate" has passed
 
-    Test case "ReaderLibTests/BlockRandomizerOneEpoch" has passed with:
-      68 assertions out of 68 passed
+    Test case "ReaderLibTests/TestRandomization_FirstEpoch" has passed with:
+      1476 assertions out of 1476 passed
+
+    Test case "ReaderLibTests/TestRandomization_SecondEpoch" has passed with:
+      1476 assertions out of 1476 passed
+
+    Test case "ReaderLibTests/TestRandomization_TwoSweeps" has passed with:
+      3372 assertions out of 3372 passed
+
+    Test case "ReaderLibTests/TestRandomization_TwoSweeps_WithSequences" has passed with:
+      196668 assertions out of 196668 passed
+
+    Test case "ReaderLibTests/TestRandomization_TwoSweeps_AllowToCrossSweepBoundary" has passed with:
+      3204 assertions out of 3204 passed
+
+    Test case "ReaderLibTests/TestRandomization_TwoSweeps_AllowToCrossSweepBoundary_WithSequences" has passed with:
+      189756 assertions out of 189756 passed
 
     Test case "ReaderLibTests/BlockRandomizerOneEpochWithChunks1" has passed with:
       68 assertions out of 68 passed
@@ -1598,14 +1610,17 @@ Test module "ReaderTests" has passed with:
     Test case "ReaderLibTests/BlockRandomizerOneEpochWithChunks2" has passed with:
       128 assertions out of 128 passed
 
-    Test case "ReaderLibTests/BlockRandomizerChaosMonkey" has passed with:
-      1836 assertions out of 1836 passed
+    Test case "ReaderLibTests/RandomizerChaosMonkey" has passed with:
+      300 assertions out of 300 passed
 
     Test case "ReaderLibTests/BlockRandomizerOneEpochLegacyRandomization" has passed with:
       68 assertions out of 68 passed
 
     Test case "ReaderLibTests/NoRandomizerOneEpoch" has passed with:
       35 assertions out of 35 passed
+
+    Test case "ReaderLibTests/CheckGetCurrentCursorForRandomizers" has passed with:
+      16 assertions out of 16 passed
 
     Test case "ReaderLibTests/DefaultCorpusDescriptor" has passed with:
       2 assertions out of 2 passed

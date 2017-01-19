@@ -180,4 +180,3 @@ def test_sequence_data_mismatch():
     with pytest.raises(ValueError):
         y_broadcast_first_result = y_broadcast_first.eval({x:[x0], ones:[o0]})
 
-    

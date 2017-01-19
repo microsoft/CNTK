@@ -194,16 +194,19 @@ namespace CNTK
         NDMaskPtr deviceValueMask = CreateMask(sequenceLengths, sequenceStartFlags, DeviceDescriptor::CPUDevice());
 
         NDArrayViewPtr valueData;
+        NDShape valueDataShape = sampleShape.AppendShape({ maxSequenceLength, numSequences });
         if (numSequences == 1)
         {
             if (createNewCopy)
                 valueData = sequences[0]->DeepClone();
             else
                 valueData = sequences[0];
+
+            // We can use the original buffer directly but need to reshape to the valueDataShape
+            valueData = valueData->AsShape(valueDataShape);
         }
         else
         {
-            NDShape valueDataShape = sampleShape.AppendShape({ maxSequenceLength, numSequences });
             if (isDataSparse)
             {
                 if (storageFormat != StorageFormat::SparseCSC)

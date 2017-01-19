@@ -289,6 +289,33 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
     }
 
+    NDArrayViewPtr NDArrayView::AsShape(const NDShape& newShape) const
+    {
+        if (newShape.TotalSize() != Shape().TotalSize())
+        {
+            InvalidArgument("NDArrayView::AsShape: The size (%d) of 'source' view shape's (%S) must be same as the size (%d) of the newShape (%S)!",
+                (int)Shape().TotalSize(), AsStringForErrorReporting(Shape()).c_str(),
+                (int)newShape.TotalSize(), AsStringForErrorReporting(newShape).c_str());
+        }
+
+        auto newTensorShape = AsTensorShape(newShape);
+        void* tensorView = nullptr;
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            tensorView = new TensorView<float>(*(GetTensorView<float>()), newTensorShape);
+            break;
+        case DataType::Double:
+            tensorView = new TensorView<double>(*(GetTensorView<double>()), newTensorShape);
+            break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), newShape, IsReadOnly(), tensorView);
+    }
+
     // TODO: This could actually be strided?
     template <typename ElementType>
     ElementType* NDArrayView::WritableDataBuffer()

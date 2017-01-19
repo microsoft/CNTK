@@ -84,7 +84,7 @@ namespace CNTK
                 break;
 
             for (auto& currentStreamKV : computedMeanAndInvStdDevs)
-                CompositeFunction::PopulateComputationNodeValue<float>({ streamToDummyInputVariableMap[currentStreamKV.first], minibatchData[currentStreamKV.first].m_data }, streamToInputNodeMap[currentStreamKV.first], layoutsPopulated);
+                CompositeFunction::PopulateComputationNodeValue<float>({ streamToDummyInputVariableMap[currentStreamKV.first], minibatchData[currentStreamKV.first].data }, streamToInputNodeMap[currentStreamKV.first], layoutsPopulated);
 
             ComputationNetwork::BumpEvalTimeStamp(allInputNodes);
 

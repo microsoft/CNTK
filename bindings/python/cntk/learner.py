@@ -4,7 +4,7 @@
 # ==============================================================================
 
 import math
-from . import cntk_py
+from . import cntk_py, NDArrayView
 from .utils import typemap
 from enum import Enum, unique
 import numpy as np
@@ -99,8 +99,7 @@ class Learner(cntk_py.Learner):
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
         '''
-        from .utils import _create_NDArrayView_from_NumPy
-        var_nd_map = { var: _create_NDArrayView_from_NumPy(val) for var, val in
+        var_nd_map = { var: NDArrayView.from_data(val) for var, val in
                 gradient_values.items() }
 
         return super(Learner, self).update(var_nd_map, training_sample_count)
@@ -131,7 +130,7 @@ class Learner(cntk_py.Learner):
         return super(Learner, self).learning_rate()
 
 @typemap
-def training_parameter_schedule(schedule, unit, epoch_size=1):
+def training_parameter_schedule(schedule, unit, epoch_size=None):
     '''
     Create a training parameter schedule containing either per-sample (default)
     or per-minibatch values.
@@ -161,8 +160,13 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
         unit (:class:`UnitType`): one of two
           * ``sample``: the returned schedule contains per-sample values
           * ``minibatch``: the returned schedule contains per-minibatch values.
-        epoch_size (int): number of samples as a scheduling unit. Parameters in
-         the schedule change their values every ``epoch_size`` samples.
+        epoch_size (optional, int): number of samples as a scheduling unit. 
+         Parameters in the schedule change their values every ``epoch_size`` 
+         samples. If no ``epoch_size`` is provided, this parameter is substituted 
+         by the size of the full data sweep, in which case the scheduling unit is
+         the entire data sweep (as indicated by the MinibatchSource) and parameters
+         change their values on the sweep-by-sweep basis specified by the 
+         ``schedule``.
 
     Returns:
         training parameter schedule
@@ -178,7 +182,7 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
             return schedule
 
     if isinstance(schedule, (int, float)):
-        if epoch_size != 1:
+        if epoch_size is not None:
             raise ValueError('when providing the schedule as a number,'
                     ' epoch_size is ignored')
         if UnitType(unit) is UnitType.sample:
@@ -186,16 +190,18 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
         else:
             return cntk_py.training_parameter_per_minibatch_schedule(schedule)
 
+    args = [schedule] if epoch_size is None else [schedule, epoch_size]
+
     if isinstance(schedule, list):
         if UnitType(unit) is UnitType.sample:
-            return cntk_py.training_parameter_per_sample_schedule(schedule, epoch_size)
+            return cntk_py.training_parameter_per_sample_schedule(*args)
         else:
-            return cntk_py.training_parameter_per_minibatch_schedule(schedule, epoch_size)
+            return cntk_py.training_parameter_per_minibatch_schedule(*args)
 
     raise ValueError('schedule must be either a float or a list, not %s'%type(schedule))
 
 @typemap
-def learning_rate_schedule(lr, unit, epoch_size=1):
+def learning_rate_schedule(lr, unit, epoch_size=None):
     '''
     Create a learning rate schedule (using the same semantics as 
     :func:`training_parameter_schedule`).
@@ -217,7 +223,7 @@ def learning_rate_schedule(lr, unit, epoch_size=1):
     return training_parameter_schedule(lr, unit, epoch_size)
 
 @typemap
-def momentum_schedule(momentum, epoch_size=1):
+def momentum_schedule(momentum, epoch_size=None):
     '''
     Create a per-minibatch momentum schedule (using the same semantics as 
     :func:`training_parameter_schedule` with the `unit=UnitType.minibatch`).
@@ -254,7 +260,7 @@ def momentum_schedule(momentum, epoch_size=1):
     return training_parameter_schedule(momentum, UnitType.minibatch, epoch_size)
 
 @typemap
-def momentum_as_time_constant_schedule(momentum, epoch_size=1):
+def momentum_as_time_constant_schedule(momentum, epoch_size=None):
     '''
     Create a momentum schedule in a minibatch-size agnostic way 
     (using the same semantics as :func:`training_parameter_schedule`
@@ -289,9 +295,14 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=1):
         return momentum
 
     if isinstance(momentum, (int, float)):
+        if epoch_size is not None:
+            raise ValueError('when providing the schedule as a number,'
+                ' epoch_size is ignored')
         return cntk_py.momentum_as_time_constant_schedule(momentum)
+
     if isinstance(momentum, list):
-        return cntk_py.momentum_as_time_constant_schedule(momentum, epoch_size)
+        args = [momentum] if epoch_size is None else [momentum, epoch_size]
+        return cntk_py.momentum_as_time_constant_schedule(*args)
 
     raise ValueError('momentum must be either a float or a list, not %s'%type(momentum))
 

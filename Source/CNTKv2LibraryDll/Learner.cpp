@@ -225,7 +225,7 @@ namespace CNTK
         }
     }
 
-    /*virtual*/ bool LearnerBase::Update(unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount) /*override*/
+    /*virtual*/ bool LearnerBase::Update(unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd) /*override*/
     {
         if (LearningRate(trainingSampleCount) == 0.0)
         {
@@ -233,7 +233,10 @@ namespace CNTK
         }
 
         // make sure trainingSampleCount is a valid value
-        assert(trainingSampleCount > 0);
+        if (trainingSampleCount == 0)
+        {
+            InvalidArgument("Learner::Update(): cannot perform an update with an empty minibatch.");
+        }
 
         for (const auto& parameter : Parameters())
         {
@@ -273,7 +276,11 @@ namespace CNTK
         }
         m_sampleCount += trainingSampleCount;
         m_minibatchCount++;
-        // TODO: sweep count also needs to be updated.
+        if (sweepEnd)
+        {
+            m_sweepCount++;
+        }
+
         return true;
     }
 
