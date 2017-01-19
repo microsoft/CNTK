@@ -159,6 +159,18 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
         print("new " + _node_description(p))
     return p
 
+def ForwardDeclaration(name='forward_declaration'):
+    '''
+    Helper for recurrent network declarations.
+    Returns a Placeholder variable with an added method resolve_to() to be called
+    at the end to close the loop.
+    '''
+    var_fwd = Placeholder(name=name)
+    def resolve_to(var):
+        var.owner.replace_placeholders({var_fwd: var})  # resolves var_fwd := var
+    var_fwd.resolve_to = resolve_to
+    return var_fwd
+
 # there is only one identity function
 # TODO: This should become a C++-side Function, e.g. like sigmoid
 @Function

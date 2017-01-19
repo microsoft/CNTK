@@ -72,49 +72,56 @@ class Function(cntk_py.Function):
             from cntk import placeholder_variable, combine, alias, as_block
             args = [placeholder_variable(name=name) for name in arg_names]
 
-            try:
-                # hide Placeholders of this function from .signature() of any function defined inside
-                for arg in args:
-                    Function._placeholders_under_construction.add(arg)
-                # force them in order by wrapping them into a as_block(combine())
-                fun_args = args
-                if len(args) > 1     and False:  # currently does not work
-                    block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
-                    combined_block_args = combine(block_args)                              # the content of the BlockFunction
-                    arg_map = list(zip(block_args, args))                                  # after wrapping, the block_args map to args
-                    combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
-                    fun_args = combined_args.outputs       # the Python function is called with these instead
-                # now invoke the Python function
-                out = f(*fun_args)
-            finally:
-                # unhide Placeholders of this function again
-                for arg in args:
-                    Function._placeholders_under_construction.remove(arg)
+            # helpers
+            ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
+            def force_order_args(fun_args):
+                block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+                combined_block_args = combine(block_args)                               # the content of the BlockFunction
+                arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
+                combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
+                ref_keeper = combined_args    # BUGBUG workaround
+                return combined_args # BUGBUG .outputs  # the Python function is called with these instead
+            def invoke(fun_args):
+                try:
+                    # hide Placeholders of this function from .signature() of any function defined inside
+                    for arg in args:
+                        Function._placeholders_under_construction.add(arg)
+                    out = f(*fun_args)
+                finally:
+                    # unhide Placeholders of this function again
+                    for arg in args:
+                        Function._placeholders_under_construction.remove(arg)
+                # resolve tuples and NamedOutputs  --check for duplicates
+                def resolve_named(output):
+                    if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                        output = combine([output.arg], name=output.name)
+                    elif isinstance(output, cntk_py.Variable):
+                        output = combine([output]) # workaround: wrap in another combine() call
+                    return output
+                if isinstance(out, tuple): # multi-valued function, returned as a tuple
+                    out = [resolve_named(output) for output in out]
+                    out = combine(out)  # --> turn into a combine()
+                else:
+                    out = resolve_named(out)
+                return out
+            # ensure parameter ordering   --BUGBUG: currently does not work, causes unattributable downstream errors
+            fun_args = args
+            #if len(fun_args) > 1:
+            #    fun_args = force_order_args(fun_args)
+            # ^^ BUGBUG: due to instability of as_block(), for now only do if needed
+            # now invoke the Python function
+            out = invoke(fun_args)
+            # BUGBUG workaround: fix it after the fact
+            out_arg_names = [arg.name for arg in out.signature]
+            if out_arg_names != arg_names:  # order came out wrong
+                print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
+                fun_args = force_order_args(fun_args)
+                out = invoke(fun_args.outputs) # BUGBUG: move .outputs back up
 
             # verify that we got the parameter order right
             out_arg_names = [arg.name for arg in out.signature]
             assert out_arg_names == arg_names
 
-            # resolve NamedOutputs
-            # TODO: check for duplicates
-            def resolve_named(output):
-                if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                    output = combine([output.arg], name=output.name)
-                    #output = alias(output.arg, name=output.name)
-                    #output = plus(output.arg, 0, name=output.name)
-                    # BUGBUG: Fails with "ValueError: Variable(ElementTimes64_output) with unknown shape detected when compiling the Function graph!"
-                    #  TODO: verify that this is still the case. Either way, alias() is slow.
-                    # BUGBUG: Without alias, the names are not propagated into outputs.
-                    # BUGBUG: Forgetting [] in combine will hang combine().
-                # BUGBUG: as_block() only accepts Functions, not Variables
-                elif isinstance(output, cntk_py.Variable):
-                    output = combine([output]) # workaround: wrap in another combine() call
-                return output
-            if isinstance(out, tuple): # multi-valued function, returned as a tuple
-                out = [resolve_named(output) for output in out]
-                out = combine(out)
-            else:
-                out = resolve_named(out)
             # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
             if len(out.signature) != len(args):
                 unfulfilled_args = set(out.signature) - set(args)

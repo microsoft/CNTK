@@ -105,6 +105,7 @@ def create_model_function():
         #Dense(num_intents)
     ])
 
+
 ########################
 # define the criteria  #
 ########################

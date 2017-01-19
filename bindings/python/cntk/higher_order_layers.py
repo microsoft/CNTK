@@ -82,9 +82,7 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
     def _recurrence_from_n(x, *initial_state):
 
         # TODO: move this entire placeholder business to Function.__call__
-        out_vars_fwd = [Placeholder() for state_var in prev_state_args] # create list of placeholders for the state variables
-
-        # ... out_vars_fwd = ... ForwardDeclaration
+        out_vars_fwd = [ForwardDeclaration(name=state_var.name) for state_var in prev_state_args] # create list of placeholders for the state variables
 
         # previous function; that is, past or future_value with initial_state baked in
         #prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
@@ -95,8 +93,11 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
         out = over_function(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
 
         # connect the recurrent dependency
-        replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
-        out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
+        for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)):
+            #var.owner.replace_placeholders({var_fwd: var})  # resolves out_vars_fwd := state_vars
+            var_fwd.resolve_to(var)
+        #replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
+        #out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
 
         # var_fwd.resolve_as(var)  -->  var.owner.replace_placeholders({var_fwd: var})
 
@@ -204,7 +205,8 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
         until_predicate = Function(until_predicate)
 
     @Function
-    def unfold_from(input, dynamic_axes_like):
+    #def unfold_from(input, dynamic_axes_like):
+    def unfold_from(dynamic_axes_like, input):  # BUGBUG: forcing parameter order fails
         # create a new axis
         out_axis = dynamic_axes_like
         if length_increase != 1:

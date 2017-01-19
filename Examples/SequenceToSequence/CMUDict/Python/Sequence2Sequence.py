@@ -271,7 +271,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
     # note: the labels must not contain the initial <s>
     @Function
-    def model_train(input, labels): # (input*, labels*) --> (word_logp*)
+    #def model_train(input, labels): # (input*, labels*) --> (word_logp*)
+    def model_train(labels, input): # (input*, labels*) --> (word_logp*)    # BUGBUG: parameter ordering not working
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
@@ -300,7 +301,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     ## TODO: use same as in LU with filter
     drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
     model_train = model_train.clone(CloneMethod.share) # note: use separate clone(), otherwise model_train.arguments[0] below is not the right one
-    model_train = model_train.replace_placeholders({model_train.arguments[0]: drop_start.output})
+    #model_train = model_train.replace_placeholders({model_train.arguments[0]: drop_start.output})
+    model_train = model_train.replace_placeholders({model_train.arguments[1]: drop_start.output})
     # ^^ this is a workaround around the problem described inside criterion()
 
     @Function
@@ -313,7 +315,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         #z = model1(input, postprocessed_labels)
         # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
         #         A mix-up of parameter order?
-        z = model_train(input, labels)
+        #z = model_train(input, labels)
+        z = model_train(labels, input)  # BUGBUG: parameter ordering broken
         postprocessed_labels = find_by_name(z, 'postprocessed_labels')
         ce = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error(z, postprocessed_labels)
@@ -580,11 +583,11 @@ if __name__ == '__main__':
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
 
     # test for multi-input plus()
-    from cntk.ops import plus, element_times, max, min, log_add_exp
-    for op in (log_add_exp, max, min, plus, element_times):
-        s4 = op(Placeholder(name='a'), Placeholder(3, name='b'), Placeholder(4, name='c'), Placeholder(5, name='d'), name='s4')
-        s4.dump('s4')
-    sequence_reduce_max = Fold(max)
+    #from cntk.ops import plus, element_times, max, min, log_add_exp
+    #for op in (log_add_exp, max, min, plus, element_times):
+    #    s4 = op(Placeholder(name='a'), Placeholder(3, name='b'), Placeholder(4, name='c'), Placeholder(5, name='d'), name='s4')
+    #    s4.dump('s4')
+    #sequence_reduce_max = Fold(max)
     #sequence_reduce_max.dump('sequence_reduce_max')
     # TODO: create proper test case for this
 
