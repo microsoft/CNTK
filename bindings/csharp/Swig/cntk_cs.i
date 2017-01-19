@@ -489,6 +489,7 @@
     // and resulting in dangling access to device.
     private static DeviceDescriptorVector deviceVector;
     private static System.Collections.Generic.List<DeviceDescriptor> deviceList;
+    private static System.Object deviceVectorInitLock = new System.Object();
 
     public uint Id
     {
@@ -515,9 +516,10 @@
         get { return GetBestDevice(); }
     }
 
-    public static System.Collections.Generic.List<DeviceDescriptor> AllDevices
+    public static System.Collections.Generic.List<DeviceDescriptor> AllDevices()
     {
-        get {
+        lock (deviceVectorInitLock)
+        {
             // TODO: support devices added/removed after creation. 
             if (deviceVector == null)
             {
@@ -528,8 +530,8 @@
                     deviceList.Add(d);
                 }
             }
-            return deviceList;
         }
+        return deviceList;
     }
 
     public override bool Equals(System.Object obj)
@@ -713,6 +715,7 @@
     private VariableVector outputVector;
     private System.Collections.Generic.List<Variable> argumentList;
     private System.Collections.Generic.List<Variable> outputList;
+    private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
 
     public string Name
     {
@@ -788,6 +791,29 @@
             varVect.Add(v);
         }
         return CNTKLib.Combine(varVect);
+    }
+
+    public void Evaluate(System.Collections.Generic.Dictionary<Variable, Value> arguments, System.Collections.Generic.Dictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
+    {
+        // Evaluate the rootFunction.
+        var argMap = new UnorderedMapVariableValuePtr();
+        foreach (var p in arguments)
+        {
+            argMap.Add(p.Key, p.Value);
+        }
+
+        outMap.Clear();
+        foreach (var p in outputs)
+        {
+            outMap.Add(p.Key, p.Value);
+        }
+
+        Evaluate(argMap, outMap, computeDevice);
+
+        foreach (var p in outMap)
+        {
+            outputs[p.Key] = p.Value;
+        }
     }
 %}
 
@@ -1209,6 +1235,87 @@
                                   bool readOnly = false)
     {
         return Create<T>(dimension, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+    }
+
+    //
+    // Copy the data of the Value object into the buffer provided by 'sequences'.
+    // The 'sequences' is a list of sequences with variable length. 
+    // The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
+    // Each element of the outer list represents a sequence.
+    // Each sequence, represented by List<T>, contains a variable number of samples. 
+    // Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
+    // The number of samples = the count of elements in List<T> / the count of elements of the sample
+    // The shape of the variable should match the shape of the Value object.
+    //
+    public void CopyVariableValueTo<T>(Variable sampleVariable, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences)
+    {
+        if (typeof(T).Equals(typeof(float)))
+        {
+            if (GetDataType() != DataType.Float)
+            {
+                throw new System.ArgumentException("The value type does not match the list type.");
+            }
+
+            var seqVec = new FloatVectorVector();
+            CopyVariableValueToFloat(sampleVariable, seqVec);
+            sequences.Clear();
+            foreach (var seq in seqVec)
+            {
+                var seqList = seq as System.Collections.Generic.IEnumerable<T>;
+                if (seqList == null)
+                    throw new System.TypeAccessException("Cannot convert to the value type.");
+                sequences.Add(new System.Collections.Generic.List<T>(seqList));
+            }
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            if (GetDataType() != DataType.Double)
+            {
+                throw new System.ArgumentException("The value type does not match the list type.");
+            }
+
+            var seqVec = new DoubleVectorVector();
+            CopyVariableValueToDouble(sampleVariable, seqVec);
+            sequences.Clear();
+            foreach (var seq in seqVec)
+            {
+                var seqList = seq as System.Collections.Generic.IEnumerable<T>;
+                if (seqList == null)
+                    throw new System.TypeAccessException("Cannot convert to the value type.");
+                sequences.Add(new System.Collections.Generic.List<T>(seqList));
+            }
+        }
+        else
+        {
+            throw new System.ArgumentException("The value type does not match the list type.");
+        }
+    }
+
+    //
+    // Copy the data of the Value object into the buffer provided by 'sequences'.
+    // The 'sequences' is a list of sequences with variable length.
+    // The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
+    // Each element of the outer list represents a sequence.
+    // Each sequence, represented by List<uint>, contains a variable number of samples. 
+    // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable. 
+    // The number of samples = the count of elements in List<uint>.
+    //
+    public void CopyVariableValueTo(Variable sampleVariable, System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences)
+    {
+        if (sampleVariable.Shape[0] != sampleVariable.Shape.TotalSize)
+        {
+            throw new System.ArgumentException("The sample variable's leading axis dimensionality must equal to the total size of the shape for sparse data");
+        }
+
+        var seqVec = new SizeTVectorVector();
+        CopyVariableValueTo(sampleVariable, seqVec);
+
+        sequences.Clear();
+        foreach(var seq in seqVec)
+        {
+            sequences.Add(new System.Collections.Generic.List<uint>(seq));
+        }
+        return;
     }
 %}
 
