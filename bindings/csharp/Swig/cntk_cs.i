@@ -698,6 +698,13 @@
 
 %typemap(cscode) CNTK::Function %{
 
+    // This is a reference to prevent premature garbage collection 
+    // and resulting in dangling access to Variable.
+    private VariableVector argumentsVector;
+    private VariableVector outputsVector;
+    private System.Collections.Generic.List<Variable> argumentsList;
+    private System.Collections.Generic.List<Variable> outputsList;
+
     public string Name
     {
         get 
@@ -726,13 +733,17 @@
     {
         get 
         {
-            var vars = GetOutputs();
-            var ret = new System.Collections.Generic.List<Variable>(vars.Count);
-            foreach (var v in vars)
+            // Assuming that outputs of Function can not be changed after creation.
+            if (outputsVector == null)
             {
-                ret.Add(v);
+                outputsVector = GetOutputs();
+                outputsList = new System.Collections.Generic.List<Variable>(outputsVector.Count);
+                foreach (var v in outputsVector)
+                {
+                    outputsList.Add(v);
+                }
             }
-            return ret;
+            return outputsList;
         }
     }
 
@@ -743,15 +754,19 @@
 
     public System.Collections.Generic.List<Variable> Arguments
     {
-        get 
+        get
         {
-            var vars = GetArguments();
-            var ret = new System.Collections.Generic.List<Variable>(vars.Count);
-            foreach (var v in vars)
+            // Assuming that arguments of Function can not be changed after creation.
+            if (argumentsVector == null)
             {
-                ret.Add(v);
+                argumentsVector = GetArguments();
+                argumentsList = new System.Collections.Generic.List<Variable>(argumentsVector.Count);
+                foreach (var v in argumentsVector)
+                {
+                    argumentsList.Add(v);
+                }
             }
-            return ret;
+            return argumentsList;
         }
     }
 
@@ -1115,18 +1130,24 @@
         if (typeof(T).Equals(typeof(float)))
         {
             var inputSeqVector = new FloatVectorVector();
+            var floatVectorRefList = new System.Collections.Generic.List<FloatVector>();
             foreach (var seq in sequences)
             {
-                inputSeqVector.Add(new FloatVector(seq));
+                var seqFloatVector = new FloatVector(seq);
+                floatVectorRefList.Add(seqFloatVector);
+                inputSeqVector.Add(seqFloatVector);
             }
             return Value.CreateDenseFloat(sampleShape, inputSeqVector, seqFlags, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
             var inputSeqVector = new DoubleVectorVector();
+            var doubleVectorRefList = new System.Collections.Generic.List<DoubleVector>();
             foreach (var seq in sequences)
             {
-                inputSeqVector.Add(new DoubleVector(seq));
+                var seqDoubleVector = new DoubleVector(seq);
+                doubleVectorRefList.Add(seqDoubleVector);
+                inputSeqVector.Add(seqDoubleVector);
             }
             return Value.CreateDenseDouble(sampleShape, inputSeqVector, seqFlags, device, readOnly);
         }
