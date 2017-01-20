@@ -100,7 +100,7 @@ def create_model_function():
         #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),
         #Stabilizer(),
         Label('hidden_representation'),
-        Dense(num_labels)
+        Dense(num_labels, name='out_projection')
         #last,
         #Dense(num_intents)
     ])
@@ -260,6 +260,9 @@ if __name__=='__main__':
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()
 
+    x = placeholder_variable(name='a')
+    print(x.name)
+
     # repro for Amit
     #from cntk import as_block
     #from cntk.ops.functions import CloneMethod
@@ -283,6 +286,14 @@ if __name__=='__main__':
 
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
     model = create_model_function()
+
+    ## naming test --TODO: make a proper test case
+    #op = model.find_by_name('out_projection')
+    #op = model.out_projection
+    #w = op.W
+    #print(w.shape)
+    #xx = model.hidden_representation
+    #print(xx.shape)
 
     # train
     train(reader, model, max_epochs=8)

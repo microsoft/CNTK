@@ -115,6 +115,7 @@ class Function(cntk_py.Function):
             out_arg_names = [arg.name for arg in out.signature]
             if out_arg_names != arg_names:  # order came out wrong
                 print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
+                raise NotImplementedError('Please resort to trickery to force the order in your expression definition.')
                 fun_args = force_order_args(fun_args)
                 out = invoke(fun_args.outputs) # BUGBUG: move .outputs back up
 
@@ -427,11 +428,18 @@ class Function(cntk_py.Function):
         if name in self.__dict__:
             return self.__dict__[name]
 
-        # parameter lookup
-        # Functions are like classes that derive from a base class.
-        # If a Function object has a named parameter, then that is treated like a class member,
-        # which overrides any member of the same name of the base class.
-        # The base is the 'output' if a single output, otherwise none.
+        # lookup of a named object inside the graph
+        # In case of multiple matches, return the one closest to the root.
+        # BUGBUG: This is brittle--e.g. if we have two Dense() on top of each opther,
+        # retrieving 'W' on the outer one will return the right thing.
+        # However, retrieving 'b' if the outer has no bias would unexpectedly
+        # return the 'b' of the inner, instead of throwing an error.
+        # This look up is meant as a lookup into a single Function object.
+        # Once as_block() is reliable, we may be able to solve it that way.
+        from ..graph import try_find_closest_by_name
+        item = try_find_closest_by_name(self, name)
+        if item:
+            return item
 
         # access an API member of 'output', such as .shape()
         if len(self.outputs) == 1:

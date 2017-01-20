@@ -127,6 +127,12 @@ def Block(f, op_name, members={}):
         f.__dict__[key] = members[key]
     return f
 
+# call this at the end of any layer or block that takes an optional name argument
+def _inject_name(f, name):
+    if name:
+        f = combine(f.outputs, name=name)
+    return f
+
 # TODO: Move this into the lower layer where these are defined.
 # some mappings--these currently exist only so that I can name the nodes for debugging
 def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):

@@ -770,6 +770,7 @@ def element_times(left, right, *more, name=''):
     return cntk_py_element_times(left, right, name)
 
 
+# TODO: bad name. max and min are Python built-ins. element_max()?
 @typemap
 def max(left, right, *more, name=''):
     '''

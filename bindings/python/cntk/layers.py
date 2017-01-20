@@ -15,7 +15,7 @@ from .ops.variables import Variable
 from .ops import parameter, input_variable, placeholder_variable, combine
 from .ops import times, convolution, pooling, batch_normalization, dropout, splice, sequence, delay
 from .utils import Record, _as_tuple
-from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # init helpers
+from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name # helpers
 
 # import the other pieces of the Layers lib so that users can just use import layers to get the entire Layers lib
 from .blocks import *
@@ -25,7 +25,8 @@ from .higher_order_layers import *
 # TODO: add a name parameter, which becomes a combine()
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
           input_rank=None, map_rank=None,
-          bias=default_override_or(True), init_bias=default_override_or(0)):
+          bias=default_override_or(True), init_bias=default_override_or(0),
+          name=''):
     '''
     Create a fully-connected linear projection layer with optional non-linear activation.
     Note: shape may describe a tensor as well.
@@ -85,6 +86,8 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
         return r
     # BUGBUG: the 'out = combine(out, name=f_name)' in Function() messes up the parameter order. Need to fix that first.
     #dense = dense(Placeholder(name='x')) # same as Function() without the combine()
+
+    dense = _inject_name(dense, name)
 
     return Block(dense, 'Dense', Record(W=W, b=b))
 
