@@ -828,6 +828,24 @@ $(SPARSEPCREADER): $(SPARSEPCREADER_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
 
 ########################################
+# CSparseDensePCReader plugin
+########################################
+
+CSPARSEDENSEPCREADER_SRC =\
+	$(SOURCEDIR)/Readers/CSparseDensePCReader/Exports.cpp \
+	$(SOURCEDIR)/Readers/CSparseDensePCReader/CSparseDensePCReader.cpp \
+
+CSPARSEDENSEPCREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CSPARSEDENSEPCREADER_SRC))
+
+CSPARSEDENSEPCREADER:=$(LIBDIR)/CSparseDensePCReader.so
+ALL_LIBS += $(CSPARSEDENSEPCREADER)
+SRC+=$(CSPARSEDENSEPCREADER_SRC)
+
+$(CSPARSEDENSEPCREADER): $(CSPARSEDENSEPCREADER_OBJ) | $(CNTKMATH_LIB)
+	@echo $(SEPARATOR)
+	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
+
+########################################
 # CNTKBinaryReader plugin
 ########################################
 
@@ -846,7 +864,6 @@ SRC+=$(CNTKBINARYREADER_SRC)
 $(CNTKBINARYREADER): $(CNTKBINARYREADER_OBJ) | $(CNTKMATH_LIB)
 	@echo $(SEPARATOR)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
-
 
 ########################################
 # CNTKTextFormatReader plugin
