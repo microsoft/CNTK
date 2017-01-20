@@ -485,11 +485,12 @@
 
 %typemap(cscode) CNTK::DeviceDescriptor %{
 
+    // Remove this for now, will be added back after we find a good solution here:
     // This is a reference to prevent premature garbage collection 
     // and resulting in dangling access to device.
-    private static DeviceDescriptorVector deviceVector;
-    private static System.Collections.Generic.List<DeviceDescriptor> deviceList;
-    private static System.Object deviceVectorInitLock = new System.Object();
+    // private static DeviceDescriptorVector deviceVector;
+    // private static System.Collections.Generic.List<DeviceDescriptor> deviceList;
+    // private static System.Object deviceVectorInitLock = new System.Object();
 
     public uint Id
     {
@@ -516,23 +517,23 @@
         get { return GetBestDevice(); }
     }
 
-    public static System.Collections.Generic.List<DeviceDescriptor> AllDevices()
-    {
-        lock (deviceVectorInitLock)
-        {
-            // TODO: support devices added/removed after creation. 
-            if (deviceVector == null)
-            {
-                deviceVector = GetAllDevices();
-                deviceList = new System.Collections.Generic.List<DeviceDescriptor>(deviceVector.Count);
-                foreach (var d in deviceVector)
-                {
-                    deviceList.Add(d);
-                }
-            }
-        }
-        return deviceList;
-    }
+    //public static System.Collections.Generic.List<DeviceDescriptor> AllDevices()
+    //{
+    //    lock (deviceVectorInitLock)
+    //    {
+    //        // TODO: support devices added/removed after creation. 
+    //        if (deviceVector == null)
+    //        {
+    //            deviceVector = GetAllDevices();
+    //            deviceList = new System.Collections.Generic.List<DeviceDescriptor>(deviceVector.Count);
+    //            foreach (var d in deviceVector)
+    //            {
+    //                deviceList.Add(d);
+    //            }
+    //        }
+    //    }
+    //    return deviceList;
+    //}
 
     public override bool Equals(System.Object obj)
     {
