@@ -256,7 +256,7 @@ public:
         std::vector<size_t> &uids, 
         size_t numChannels,
         std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
-        std::vector<size_t> &extrauttmap, 
+        std::vector<size_t> &extraUttMap, 
         int delayConstraint = -1)
     {
         std::vector<size_t> validframes;
@@ -293,10 +293,10 @@ public:
         size_t maxSizeT = 65535;
         int maxPhoneNum = 0;
 
-        for (size_t i = 0; i < extrauttmap.size(); i++)
+        for (size_t i = 0; i < extraUttMap.size(); i++)
         {
             //get frame number for each utterance
-            mapi = extrauttmap[i];
+            mapi = extraUttMap[i];
 
             // scan MBLayout for end of utterance
             for (size_t j = validframes[mapi]; j < mbsize; j++)
@@ -345,8 +345,8 @@ public:
 
             ts += numframes;
         }
-        matrixphoneseqs.Resize(maxPhoneNum, extrauttmap.size());
-        for (size_t i = 0; i < extrauttmap.size(); i++)
+        matrixphoneseqs.Resize(maxPhoneNum, extraUttMap.size());
+        for (size_t i = 0; i < extraUttMap.size(); i++)
         {
             for (size_t j = 0; j < alluttphoneseqs[i].size(); j++)
             {
@@ -355,8 +355,8 @@ public:
         }
         matrixphoneseqs.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
 
-        matrixphonebounds.Resize(maxPhoneNum, extrauttmap.size());
-        for (size_t i = 0; i < extrauttmap.size(); i++)
+        matrixphonebounds.Resize(maxPhoneNum, extraUttMap.size());
+        for (size_t i = 0; i < extraUttMap.size(); i++)
         {
             for (size_t j = 0; j < alluttphoneseqs[i].size(); j++)
             {
@@ -365,7 +365,7 @@ public:
         }
         matrixphonebounds.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
 
-        functionValues.AssignCTCScore_m(prob, alpha, beta, matrixphoneseqs, matrixphonebounds, finalscore, extrauttmap, uttBeginFrame,
+        functionValues.AssignCTCScore_m(prob, alpha, beta, matrixphoneseqs, matrixphonebounds, finalscore, extraUttMap, uttBeginFrame,
             uttFrameNum, uttPhoneNum, numChannels, mbsize, delayConstraint, true);
         
         rowsum.Resize(1, numChannels*mbsize);

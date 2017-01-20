@@ -381,9 +381,9 @@ public:
     Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType& threshhold);
     Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
 
-    Matrix<ElemType>& AssignCTCScore_m(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& phoneseq, Matrix<ElemType>& phonebound, ElemType &totalscore,
-        std::vector<size_t> & extrauttmap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum, std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep,
-        size_t & mbsize, int& delayConstraint, const bool isColWise);
+    Matrix<ElemType>& AssignCTCScore_m(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& phoneSeq, Matrix<ElemType>& phoneBound, ElemType &totalScore,
+        std::vector<size_t> & extraUttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum, std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep,
+        size_t & mbSize, int& delayConstraint, const bool isColWise);
 
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);

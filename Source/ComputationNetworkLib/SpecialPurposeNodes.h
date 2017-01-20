@@ -766,28 +766,30 @@ template class DummyCriterionNode<float>;
 template class DummyCriterionNode<double>;
 
 template<class ElemType>
-class CTCwithSoftmaxNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+class CTCWithSoftmaxNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
-        return L"CTCwithSoftmax";
+        return L"CTCWithSoftmax";
     }
 public:
-    DeclareConstructorFromConfigWithNumInputs(CTCwithSoftmaxNode);
-    CTCwithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-        Base(deviceId, name)
+    DeclareConstructorFromConfigWithNumInputs(CTCWithSoftmaxNode);
+    CTCWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankNum=1, int delayConstraint=-1) :
+        Base(deviceId, name), m_blankNum(blankNum), m_delayConstraint(delayConstraint)
     {
-
     }
 
-    /**
-    compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
-    */
+    //CTCWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
+    //    Base(deviceId, name)
+    //{
+    //}
+
+    // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        //left Node must be a scalar
+        // Left node must be a scalar
         if (inputIndex == 0)  //left derivative
         {
             BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->Gradient(), Gradient());
@@ -799,22 +801,22 @@ public:
             Input(inputIndex)->MaskMissingGradientColumnsToZero(frameRange);
         }
         else
-            throw std::runtime_error("CTCwithSoftmaxNode criterion expects only two inputs: labels and network output.");
+            throw std::runtime_error("CTCWithSoftmaxNode criterion expects only two inputs: labels and network output.");
     }
 
     void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
         const Matrix<ElemType>& gradientValues)
     {
 #if DUMPOUTPUT
-        logSoftmaxOfRight.Print("CTCwithSoftmaxNode Partial-logSoftmaxOfRight");
-        gradientValues.Print("CTCwithSoftmaxNode Partial-gradientValues");
-        inputGradientValues.Print("CTCwithSoftmaxNode Partial-Left-in");
+        logSoftmaxOfRight.Print("CTCWithSoftmaxNode Partial-logSoftmaxOfRight");
+        gradientValues.Print("CTCWithSoftmaxNode Partial-gradientValues");
+        inputGradientValues.Print("CTCWithSoftmaxNode Partial-Left-in");
 #endif
 
         Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
 
 #if DUMPOUTPUT
-        inputGradientValues.Print("CTCwithSoftmaxNode Partial-Left-out");
+        inputGradientValues.Print("CTCWithSoftmaxNode Partial-Left-out");
 #endif
 
     }
@@ -823,15 +825,15 @@ public:
         const Matrix<ElemType> &CTCposterior)
     {
 #if DUMPOUTPUT
-        softmaxOfRight.Print("CTCwithSoftmaxNode Partial-softmaxOfRight");
-        inputFunctionValues.Print("CTCwithSoftmaxNode Partial-inputFunctionValues");
-        gradientValues.Print("CTCwithSoftmaxNode Partial-gradientValues");
-        inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right-in");
+        softmaxOfRight.Print("CTCWithSoftmaxNode Partial-softmaxOfRight");
+        inputFunctionValues.Print("CTCWithSoftmaxNode Partial-inputFunctionValues");
+        gradientValues.Print("CTCWithSoftmaxNode Partial-gradientValues");
+        inputGradientValues.Print("CTCWithSoftmaxNode Partial-Right-in");
 #endif  
         Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues);
 
 #if DUMPOUTPUT
-        inputGradientValues.Print("CTCwithSoftmaxNode Partial-Right");
+        inputGradientValues.Print("CTCWithSoftmaxNode Partial-Right");
 #endif
     }
     virtual bool OutputUsedInComputingInputNodesGradients() const override
@@ -848,13 +850,13 @@ public:
         m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
 
-        m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extrauttmap, m_delayConstraint);
+        m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extraUttMap, m_delayConstraint);
 
 #if NANCHECK
-        functionValues.HasNan("CTCwithSoftmaxNode");
+        functionValues.HasNan("CTCWithSoftmaxNode");
 #endif
 #if DUMPOUTPUT
-        functionValues.Print("CTCwithSoftmaxNode");
+        functionValues.Print("CTCWithSoftmaxNode");
 #endif
     }
 
@@ -864,19 +866,17 @@ public:
         m_pMBLayout = nullptr; // no layout
 
         if (Input(0)->OperationName() != L"InputValue" && Input(0)->OperationName() != L"SparseInputValue")
-            LogicError("CTCwithSoftmaxNode criterion requires the first input to be the label.");
+            LogicError("CTCWithSoftmaxNode criterion requires the first input to be the label.");
 
         if (isFinalValidationPass)
             if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match size                  
                 Input(0)->HasMBLayout() &&
                 Input(0)->GetMBLayout() == Input(1)->GetMBLayout()))
             {
-                LogicError("The Matrix dimension in the CTCwithSoftmaxNode operation does not match.");
+                LogicError("The Matrix dimension in the CTCWithSoftmaxNode operation does not match.");
             }
 
         SetDims(TensorShape(1), false);
-        m_gammatime = 0;
-        m_partialtime = 0;
     }
 
     virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
@@ -884,12 +884,12 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<CTCwithSoftmaxNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<CTCWithSoftmaxNode<ElemType>>(nodeP);
 
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
             node->m_CTCposterior->SetValue(*m_CTCposterior);
-            node->m_blanknum = m_blanknum;
+            node->m_blankNum = m_blankNum;
             node->m_delayConstraint = m_delayConstraint;
         }
     }
@@ -911,54 +911,30 @@ public:
         ReleaseMatrixToPool(m_CTCposterior, matrixPool);
     }
 
-    std::vector<size_t> * getboundaryprt()
+    std::vector<size_t> * GetBoundary()
     {
         return &m_boundaries;
     }
-    std::vector<size_t> * getextrauttmap()
+    std::vector<size_t> * GetExtraUttMap()
     {
-        return &m_extrauttmap;
-    }
-    msra::asr::simplesenonehmm *gethmm()
-    {
-        return &m_hmm;
+        return &m_extraUttMap;
     }
 
-    void SetBlankNum(const size_t blanknum)
-    {
-        m_blanknum = blanknum;
-    }
-    void SetDelayConstraint(const size_t delayConstraint)
-    {
-        m_delayConstraint = delayConstraint;
-    }
-    void gettime(unsigned long long &gammatime, unsigned long long &partialtime)
-    {
-        gammatime = m_gammatime;
-        partialtime = m_partialtime;
-    }
 protected:
     virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
-protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_CTCposterior;
 
-
-    msra::asr::simplesenonehmm m_hmm;
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
     //std::vector<size_t> m_uids;
     std::vector<size_t> m_boundaries;
-    std::vector<size_t> m_extrauttmap;
-    size_t m_blanknum = 1;
-    int m_delayConstraint = -1;
-    unsigned long long m_gammatime;
-    unsigned long long m_partialtime;
-
-
+    std::vector<size_t> m_extraUttMap;
+    size_t m_blankNum;
+    int m_delayConstraint;
 };
 
-template class CTCwithSoftmaxNode<float>;
-template class CTCwithSoftmaxNode<double>;
+template class CTCWithSoftmaxNode<float>;
+template class CTCWithSoftmaxNode<double>;
 
 } } }

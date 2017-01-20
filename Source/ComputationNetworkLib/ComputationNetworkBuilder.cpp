@@ -49,6 +49,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateStandardNode(const std::wstri
     else if (nodeType == OperationNameOf(CropNode))                             return New<CropNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CrossEntropyNode))                     return New<CrossEntropyNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(CrossEntropyWithSoftmaxNode))          return New<CrossEntropyWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(CTCWithSoftmaxNode))                   return New<CTCWithSoftmaxNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DiagonalNode))                         return New<DiagonalNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DiagTimesNode))                        return New<DiagTimesNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(DropoutNode))                          return New<DropoutNode<ElemType>>(forward<_Types>(_Args)...);
@@ -496,6 +497,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::SequenceWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const ComputationNodePtr loglikelihood, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<SequenceWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName), { label, prediction, loglikelihood });
+}
+
+template <class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CTCWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, size_t blankNum, int delayConstraint, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<CTCWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName, blankNum, delayConstraint), { label, prediction });
 }
 
 template <class ElemType>

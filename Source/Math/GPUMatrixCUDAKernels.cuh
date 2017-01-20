@@ -5133,7 +5133,6 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
     }
 }
 
-<<<<<<< e4d4266ce784a783e6da3dff5d8926a8b23a71c4
 template <class ElemType>
 __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
     ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
@@ -5200,100 +5199,100 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
 template<class ElemType>
 __global__ void _assignAlphaScore_m(
     const ElemType *prob,
-    ElemType *Alphascore,
-    ElemType *phoneseq,
-    ElemType *phonebound,
+    ElemType *alphaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
     const size_t *uttToChanInd,
-    const size_t *uttframenum,
-    const size_t *uttbeginframe,
-    const size_t *uttphonenum,
+    const size_t *uttFrameNum,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
     size_t numChannels,
     const size_t uttNum,
     const size_t  t,
-    const size_t maxphonenum,
-    const size_t totalphonenum,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum,
     const int delayConstraint)
 {
-    LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
     // Index of the label in the sequence
-    LONG64 phoneseqid = blockDim.y * blockIdx.y + threadIdx.y;
+    LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
 
     // Number of phones and frames in this sequence
-    LONG64 phonenum = uttphonenum[uttid]; 
-    LONG64 framenum = uttframenum[uttid];
+    LONG64 phoneNum = uttPhoneNum[uttId]; 
+    LONG64 frameNum = uttFrameNum[uttId];
 
-    if (uttid >= uttNum || phoneseqid >= phonenum - 1 || t >= framenum || phoneseqid == 0) return;
+    if (uttId >= uttNum || phoneSeqId >= phoneNum - 1 || t >= frameNum || phoneSeqId == 0) return;
 
-    // Current and previous phone indices in phoneseq matrix
-    LONG64 labelid = uttid*maxphonenum + phoneseqid;
+    // Current and previous phone indices in phoneSeq matrix
+    LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
     LONG64 labelid_2 = labelid - 2;
     LONG64 labelid_r = labelid + 2;
 
     // Actual current phone label
-    LONG64 phoneid = (LONG64)(phoneseq[labelid]);
-    LONG64 phoneboundid_r = (LONG64)(phonebound[labelid_r]);
+    LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
+    LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_r]);
 
     // Index of the current frame in minibatch
-    LONG64 timeid = (t + uttbeginframe[uttid])*numChannels + uttToChanInd[uttid];
+    LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
 
-    // Index of probability of observing phoneid at frame timeid
-    LONG64 probid = timeid*totalphonenum + phoneid;
+    // Index of probability of observing phoneId at frame timeId
+    LONG64 probId = timeId*totalPhoneNum + phoneId;
 
-    LONG64 alphaid = maxphonenum* timeid + phoneseqid; // alpha_t(s)
+    LONG64 alphaId = maxPhoneNum* timeId + phoneSeqId; // alpha_t(s)
     // Previous time frame
-    LONG64 timeid_1 = timeid - numChannels; // Index corresponding to (t-1)
-    LONG64 alphaid_0 = maxphonenum* timeid_1 + phoneseqid; // alpha_{t-1}(s)
-    LONG64 alphaid_1 = alphaid_0 - 1; // alpha_{t-1}(s-1)
-    LONG64 alphaid_2 = alphaid_0 - 2; // alpha_{t-1}(s-2)
+    LONG64 timeId_1 = timeId - numChannels; // Index corresponding to (t-1)
+    LONG64 alphaId_0 = maxPhoneNum* timeId_1 + phoneSeqId; // alpha_{t-1}(s)
+    LONG64 alphaId_1 = alphaId_0 - 1; // alpha_{t-1}(s-1)
+    LONG64 alphaId_2 = alphaId_0 - 2; // alpha_{t-1}(s-2)
 
     if (t == 0)
     {
         // Initialize recursion
-        if (phoneseqid == 1 || phoneseqid == 2)
+        if (phoneSeqId == 1 || phoneSeqId == 2)
         {
-            Alphascore[alphaid] = prob[probid];
+            alphaScore[alphaId] = prob[probId];
         }
     }
     else
     {
-        if (phoneseqid >= 1)
+        if (phoneSeqId >= 1)
         {
             ElemType x = LZERO;
 
             ElemType ascore;
-            if (phoneseqid > 2)
+            if (phoneSeqId > 2)
             {
                 // if current label is not blank and not equal prev non-blank label
-                if ((LONG64)(phoneseq[labelid]) != totalphonenum - 1 && phoneid != (LONG64)(phoneseq[labelid_2]))
+                if ((LONG64)(phoneSeq[labelid]) != totalPhoneNum - 1 && phoneId != (LONG64)(phoneSeq[labelid_2]))
                 {
-                    x = logaddk(x, Alphascore[alphaid_2]);
+                    x = logaddk(x, alphaScore[alphaId_2]);
                 }
             }
 
-            if (phoneseqid > 1)
+            if (phoneSeqId > 1)
             {
-                x = logaddk(x, Alphascore[alphaid_1]);
+                x = logaddk(x, alphaScore[alphaId_1]);
             }
 
-            x = logaddk(x, Alphascore[alphaid_0]);
+            x = logaddk(x, alphaScore[alphaId_0]);
 
-            if (phoneid != 65535)
-                ascore = prob[probid]; // Probability of observing given label at given time
+            if (phoneId != 65535)
+                ascore = prob[probId]; // Probability of observing given label at given time
             else
                 ascore = 0;
-            Alphascore[alphaid] = (ElemType)x + ascore;
+            alphaScore[alphaId] = (ElemType)x + ascore;
             if (delayConstraint != -1)
             {
-                if (phoneid == totalphonenum - 1)
+                if (phoneId == totalPhoneNum - 1)
                 {
                     //only constraint right side
-                    if (t > phoneboundid_r + delayConstraint - 1)
-                        Alphascore[alphaid] = LZERO;
+                    if (t > phoneBoundId_r + delayConstraint - 1)
+                        alphaScore[alphaId] = LZERO;
                 }
-                else if (phoneid != totalphonenum - 1)
+                else if (phoneId != totalPhoneNum - 1)
                 {
-                    if (t > phoneboundid_r + delayConstraint)
-                        Alphascore[alphaid] = LZERO;
+                    if (t > phoneBoundId_r + delayConstraint)
+                        alphaScore[alphaId] = LZERO;
                 }
             }
         }
@@ -5304,85 +5303,85 @@ __global__ void _assignAlphaScore_m(
 template<class ElemType>
 __global__ void _assignBetaScore_m(
     const ElemType *prob,
-    ElemType *Betascore,
-    ElemType *phoneseq,
-    ElemType *phonebound,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
     const size_t *uttToChanInd,
-    const size_t *uttframenum,
-    const size_t *uttbeginframe,
-    const size_t *uttphonenum,
+    const size_t *uttFrameNum,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
     const size_t numChannels,
     const size_t uttNum,
     const size_t  t,
-    const size_t maxphonenum,
-    const size_t totalphonenum,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum,
     const int delayConstraint)
 {
-    LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
     // Index of the label in the sequence
-    LONG64 phoneseqid = blockDim.y * blockIdx.y + threadIdx.y;
-    LONG64 phonenum = uttphonenum[uttid];
-    LONG64 framenum = uttframenum[uttid];
+    LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
+    LONG64 phoneNum = uttPhoneNum[uttId];
+    LONG64 frameNum = uttFrameNum[uttId];
 
-    if (uttid >= uttNum || phoneseqid >= phonenum - 1 || t >= framenum || phoneseqid == 0) return;
+    if (uttId >= uttNum || phoneSeqId >= phoneNum - 1 || t >= frameNum || phoneSeqId == 0) return;
 
-    LONG64 labelid = uttid*maxphonenum + phoneseqid;
+    LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
     LONG64 labelid_2 = labelid + 2;
-    LONG64 phoneid = (LONG64)(phoneseq[labelid]);
-    LONG64 phoneboundid_r = (LONG64)(phonebound[labelid_2]);
-    LONG64 timeid = (t + uttbeginframe[uttid])*numChannels + uttToChanInd[uttid];
-    LONG64 probid = timeid*totalphonenum + phoneid;
-    LONG64 betaid = maxphonenum* timeid + phoneseqid;
+    LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
+    LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
+    LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+    LONG64 probId = timeId*totalPhoneNum + phoneId;
+    LONG64 betaid = maxPhoneNum* timeId + phoneSeqId;
 
-    LONG64 timeid_1 = timeid + numChannels;
-    LONG64 betaid_0 = maxphonenum* timeid_1 + phoneseqid;
+    LONG64 timeId_1 = timeId + numChannels;
+    LONG64 betaid_0 = maxPhoneNum* timeId_1 + phoneSeqId;
     LONG64 betaid_1 = betaid_0 + 1;
     LONG64 betaid_2 = betaid_0 + 2;
 
-    if (t == framenum - 1)
+    if (t == frameNum - 1)
     {
-        if (phoneseqid == phonenum - 3 || phoneseqid == phonenum - 2)
+        if (phoneSeqId == phoneNum - 3 || phoneSeqId == phoneNum - 2)
         {
-            Betascore[betaid] = prob[probid];
+            betaScore[betaid] = prob[probId];
         }
     }
     else
     {
-        if (phoneseqid >= 1)
+        if (phoneSeqId >= 1)
         {
             ElemType x = LZERO;
             ElemType ascore;
-            if (phoneseqid < phonenum - 3)
+            if (phoneSeqId < phoneNum - 3)
             {
-                if (phoneseq[labelid] != totalphonenum - 1 && phoneid != phoneseq[labelid_2])
+                if (phoneSeq[labelid] != totalPhoneNum - 1 && phoneId != phoneSeq[labelid_2])
                 {
-                    x = logaddk(x, Betascore[betaid_2]);
+                    x = logaddk(x, betaScore[betaid_2]);
                 }
             }
 
-            if (phoneseqid < phonenum - 2)
+            if (phoneSeqId < phoneNum - 2)
             {
-                x = logaddk(x, Betascore[betaid_1]);
+                x = logaddk(x, betaScore[betaid_1]);
             }
 
-            x = logaddk(x, Betascore[betaid_0]);
+            x = logaddk(x, betaScore[betaid_0]);
 
-            if (phoneid != 65535)
-                ascore = prob[probid];
+            if (phoneId != 65535)
+                ascore = prob[probId];
             else
                 ascore = 0;
-            Betascore[betaid] = (ElemType)x + ascore;
+            betaScore[betaid] = (ElemType)x + ascore;
             if (delayConstraint != -1)
             {
-                if (phoneid == totalphonenum - 1)
+                if (phoneId == totalPhoneNum - 1)
                 {
-                    if (t > phoneboundid_r + delayConstraint - 1)
-                        Betascore[betaid] = LZERO;
+                    if (t > phoneBoundId_r + delayConstraint - 1)
+                        betaScore[betaid] = LZERO;
                 }
-                else if (phoneid != totalphonenum - 1)
+                else if (phoneId != totalPhoneNum - 1)
                 {
-                    if (t > phoneboundid_r + delayConstraint)
-                        Betascore[betaid] = LZERO;
+                    if (t > phoneBoundId_r + delayConstraint)
+                        betaScore[betaid] = LZERO;
                 }
             }
         }
@@ -5394,49 +5393,49 @@ template<class ElemType>
 __global__ void _assignCTCScore_m(
     ElemType *CTCscore,
     ElemType *prob,
-    ElemType *Alphascore,
-    ElemType *Betascore,
-    ElemType *phoneseq,
+    ElemType *alphaScore,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
     const size_t uttNum,
     const size_t *uttToChanInd,
-    const size_t *uttbeginframe,
-    const size_t *uttphonenum,
-    const size_t *uttframenum,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
+    const size_t *uttFrameNum,
     const long numChannels,
-    const long maxphonenum,
-    const long totalphonenum)
+    const long maxPhoneNum,
+    const long totalPhoneNum)
 {
-    LONG64 uttid = blockDim.x * blockIdx.x + threadIdx.x;
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
     LONG64 t = blockDim.y * blockIdx.y + threadIdx.y;
 
-    if (uttid < uttNum && t < uttframenum[uttid])
+    if (uttId < uttNum && t < uttFrameNum[uttId])
     {
-        LONG64 phonenum = uttphonenum[uttid];
-        LONG64 alphaid_0 = (uttbeginframe[uttid] * numChannels + uttToChanInd[uttid]) * maxphonenum;
-        LONG64 timeid = (t + uttbeginframe[uttid])*numChannels + uttToChanInd[uttid];
-        ElemType P_lx = Betascore[alphaid_0];
+        LONG64 phoneNum = uttPhoneNum[uttId];
+        LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+        LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+        ElemType P_lx = betaScore[alphaId_0];
 
-        for (int s = 1; s < phonenum - 1; s++)
+        for (int s = 1; s < phoneNum - 1; s++)
         {
-            long phoneid = phoneseq[uttid*maxphonenum + s];
-            LONG64 alphaid = maxphonenum* timeid + s;
-            LONG64 probid = timeid*totalphonenum + phoneid;
+            long phoneId = phoneSeq[uttId*maxPhoneNum + s];
+            LONG64 alphaId = maxPhoneNum* timeId + s;
+            LONG64 probId = timeId*totalPhoneNum + phoneId;
 
-            if (phoneid != 65535)
+            if (phoneId != 65535)
             {
-                ElemType logoccu = Alphascore[alphaid] + Betascore[alphaid] - prob[probid] - (ElemType)P_lx;
-                CTCscore[probid] = logaddk(CTCscore[probid], logoccu);
+                ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
+                CTCscore[probId] = logaddk(CTCscore[probId], logoccu);
             }
         }
 
-        for (int s = 0; s < totalphonenum; s++)
+        for (int s = 0; s < totalPhoneNum; s++)
         {
-            LONG64 probid = timeid*totalphonenum + s;
-            ElemType logoccu = CTCscore[probid];
+            LONG64 probId = timeId*totalPhoneNum + s;
+            ElemType logoccu = CTCscore[probId];
             if (logoccu < LZERO)
-                CTCscore[probid] = 0.0f;
+                CTCscore[probId] = 0.0f;
             else
-                CTCscore[probid] = exp(logoccu);
+                CTCscore[probId] = exp(logoccu);
         }
     }
 }

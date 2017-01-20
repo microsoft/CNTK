@@ -234,8 +234,6 @@ public:
     CPUMatrix<ElemType>& InplaceSqrt();
     CPUMatrix<ElemType>& AssignSqrtOf(const CPUMatrix<ElemType>& a);
 
-    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const std::vector<size_t> phoneseq, const std::vector<size_t> phonebound, ElemType &totalscore, const size_t framenum, size_t blanknum, const bool isColWise);
-
     CPUMatrix<ElemType>& InplaceExp();
     CPUMatrix<ElemType>& AssignExpOf(const CPUMatrix<ElemType>& a);
 
