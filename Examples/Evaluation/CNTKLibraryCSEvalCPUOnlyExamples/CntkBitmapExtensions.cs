@@ -9,12 +9,11 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 
-namespace CNTK
+namespace CNTKLibraryCSEvalExamples
 {
-    public static class BitmapExtensions
+    public static class CntkBitmapExtensions
     {
         /// <summary>
         /// Resizes an image
