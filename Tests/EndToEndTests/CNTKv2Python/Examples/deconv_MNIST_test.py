@@ -12,7 +12,7 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "GettingStarted"))
 autoEncoder = __import__("07_Deconvolution_PY")
 
-TOLERANCE_ABSOLUTE = 2E-2
+TOLERANCE_ABSOLUTE = 5E-1
 
 def test_simple_mnist_error(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
@@ -23,4 +23,3 @@ def test_simple_mnist_error(device_id):
 
     assert np.allclose(test_rmse, expected_test_rmse,
                        atol=TOLERANCE_ABSOLUTE)
-
