@@ -1,7 +1,8 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
 from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
-        sanitize_dtype_cntk, value_to_seq
+        sanitize_dtype_cntk, value_to_seq, sanitize_var_substitution_map, \
+        sanitize_substitution_var
 from cntk.utils.swig_helper import map_if_possible
 from enum import Enum, unique
 import numpy as np
@@ -151,8 +152,7 @@ class Function(cntk_py.Function):
         '''
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
-        if substitutions is None:
-            substitutions = {}
+        substitutions = sanitize_var_substitution_map(substitutions)
         return super(Function, self).clone(method, substitutions)
 
     @property
@@ -522,6 +522,7 @@ class Function(cntk_py.Function):
         Returns:
             :class:`Function`: itself
         '''
+        substitutions = sanitize_var_substitution_map(substitutions)
         return super(Function, self).replace_placeholders(substitutions)
 
     @typemap
@@ -539,6 +540,7 @@ class Function(cntk_py.Function):
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
+        substitution = sanitize_substitution_var(substitution)
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap

@@ -314,6 +314,33 @@ def sanitize_function(arg):
 
     return arg
 
+def sanitize_substitution_var(var):
+    if isinstance(var, cntk_py.Function):
+        var = var.output
+
+    return var
+
+def sanitize_var_substitution_map(substitutions):
+    '''
+    Sanitizes a dictionary of Variable to Variable mapping by converting
+    any Function objects in the dictionary to Variable objects corresponding to 
+    the lone output of th Function. If there are any Function objects in the dictionary
+    that have multiple outputs, it will result in an exception
+    '''
+
+    if substitutions is None:
+        return {}
+
+    if not isinstance(substitutions, dict):
+        raise TypeError("Variable substitution map must be a dictionary")
+    
+    converted_substitutions = dict()
+    for key, value in substitutions.items():
+        key = sanitize_substitution_var(key)
+        value = sanitize_substitution_var(value)
+        converted_substitutions[key] = value
+    
+    return converted_substitutions
 
 def sanitize_var_map(op_arguments, arguments, precision=None,
                      device=None, extract_values_from_minibatch_data=True):

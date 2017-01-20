@@ -180,3 +180,15 @@ def test_sequence_data_mismatch():
     with pytest.raises(ValueError):
         y_broadcast_first_result = y_broadcast_first.eval({x:[x0], ones:[o0]})
 
+def test_clone_with_function_in_substitution_map():
+    input_dim = 1
+    proj_dim = 2
+    x = input_variable((input_dim,))
+    w = parameter((input_dim, proj_dim))
+    t = times(x, w)
+    b = parameter((proj_dim))
+    t_plus_b = t + b
+    
+    p = placeholder_variable()
+    just_b = t_plus_b.clone('clone', {t : p})
+    t_plus_b_clone = just_b.clone('share', {p : t})
