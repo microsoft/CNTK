@@ -192,7 +192,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # Right now assumes shared embedding and shared vocab size.
     embed = Embedding(embedding_dim) if use_embedding else identity
 
-    # Encoder: (embedded_input*) --> (h0, c0)
+    # Encoder: (input*) --> (h0, c0)
     # Create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
     # This is the plain s2s encoder. The attention encoder will keep the entire sequence instead.
@@ -207,7 +207,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
             last_layer(LSTM(hidden_dim), return_full_state=True)
         ])
 
-    # Decoder: (history*, input) --> z*
+    # Decoder: (history*, input*) --> z*
     # where history is one of these, delayed by 1 step and <s> prepended:
     #  - training: labels
     #  - testing:  its own output hardmax(z)
@@ -269,10 +269,10 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
     #         Maybe also attributable to a parameter-order mix-up?
 
+    # model used in training (history is known from labels)
     # note: the labels must not contain the initial <s>
     @Function
-    #def model_train(input, labels): # (input*, labels*) --> (word_logp*)
-    def model_train(labels, input): # (input*, labels*) --> (word_logp*)    # BUGBUG: parameter ordering not working
+    def model_train(input, labels): # (input*, labels*) --> (word_logp*)
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
@@ -281,14 +281,16 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         z = s2smodel(decoder_input, input)#,       decoder_input)
         return z
 
+    # model used in (greedy) decoding (history is decoder's own output)
     @Function
     def model_greedy(input): # (input*) --> (word_sequence*)
 
-        U = UnfoldFrom(s2smodel,
+        # TODO: move hardmax into model argument itself, s2smodel >> hardmax, since in greedy decoding we don't need the probs
+        unfold = UnfoldFrom(s2smodel,
                        map_state_function=hardmax,                                    # feedback goes through hardmax
                        until_predicate=lambda z: hardmax(z)[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                        length_increase=length_increase, initial_state=sentence_start)
-        z = U(input=input, dynamic_axes_like=input)
+        z = unfold(input=input, dynamic_axes_like=input)
         # BUGBUG: parameter-order mix-up requires to pass parameters with keywords
 
         return z
@@ -299,10 +301,10 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
     ## criterion function must drop the <s> from the labels
     ## TODO: use same as in LU with filter
-    drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
-    model_train = model_train.clone(CloneMethod.share) # note: use separate clone(), otherwise model_train.arguments[0] below is not the right one
-    #model_train = model_train.replace_placeholders({model_train.arguments[0]: drop_start.output})
-    model_train = model_train.replace_placeholders({model_train.arguments[1]: drop_start.output})
+    #drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
+    #model_train = model_train.clone(CloneMethod.share) # note: use separate clone(), otherwise model_train.arguments[0] below is not the right one
+    #model_train = model_train.replace_placeholders({model_train.arguments[0]: drop_start.output}) # labels
+    #model_train = model_train.replace_placeholders({model_train.arguments[1]: drop_start.output})
     # ^^ this is a workaround around the problem described inside criterion()
 
     @Function
@@ -316,14 +318,16 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
         #         A mix-up of parameter order?
         #z = model_train(input, labels)
-        z = model_train(labels, input)  # BUGBUG: parameter ordering broken
-        postprocessed_labels = find_by_name(z, 'postprocessed_labels')
-        ce = cross_entropy_with_softmax(z, postprocessed_labels)
-        errs = classification_error(z, postprocessed_labels)
+        postprocessed_labels = sequence.slice(labels, 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
+        #z = model_train(input=input, labels=postprocessed_labels)  # BUGBUG: parameter ordering unreliable
+        z = model_train(input, postprocessed_labels)
+        ce   = cross_entropy_with_softmax(z, postprocessed_labels)
+        errs = classification_error      (z, postprocessed_labels)
         return (ce, errs)
     try:
-      criterion.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                               Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+      criterion.dump()
+      criterion.update_signature(input=Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+                               labels=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
     except:
       criterion.dump()
       raise

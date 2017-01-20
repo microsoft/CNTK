@@ -75,12 +75,20 @@ class Function(cntk_py.Function):
             # helpers
             ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
             def force_order_args(fun_args):
-                block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
-                combined_block_args = combine(block_args)                               # the content of the BlockFunction
-                arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
-                combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
-                ref_keeper = combined_args    # BUGBUG workaround
-                return combined_args # BUGBUG .outputs  # the Python function is called with these instead
+                from .. import plus, reduce_sum
+                zero_in_right_order = plus(*(reduce_sum(arg, all_axes=True) for arg in fun_args)) * 0
+                # BUGBUG: ^^ fails with "At least one of the placeholders specified for replacement was not found in the function"
+                #         clone() seems to clone placeholders more than once that are directly consumed more than once.
+                # As a workaround, consume the placeholder once, and apply square_error() on top.
+                #zero_in_right_order = plus(*(red(arg*0) for arg in fun_args))
+                fun_args = tuple(zero_in_right_order + arg for arg in fun_args)
+                return fun_args
+                #block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+                #combined_block_args = combine(block_args)                               # the content of the BlockFunction
+                #arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
+                #combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
+                #ref_keeper = combined_args    # BUGBUG workaround
+                #return combined_args # BUGBUG .outputs  # the Python function is called with these instead
             def invoke(fun_args):
                 try:
                     # hide Placeholders of this function from .signature() of any function defined inside
@@ -91,7 +99,7 @@ class Function(cntk_py.Function):
                     # unhide Placeholders of this function again
                     for arg in args:
                         Function._placeholders_under_construction.remove(arg)
-                # resolve tuples and NamedOutputs  --check for duplicates
+                # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
                     if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
                         output = combine([output.arg], name=output.name)
@@ -108,16 +116,16 @@ class Function(cntk_py.Function):
             fun_args = args
             #if len(fun_args) > 1:
             #    fun_args = force_order_args(fun_args)
-            # ^^ BUGBUG: due to instability of as_block(), for now only do if needed
+            # ^^ BUGBUG: due to instability of as_block() and inefficiency of the above solution, for now only do if needed
             # now invoke the Python function
             out = invoke(fun_args)
             # BUGBUG workaround: fix it after the fact
             out_arg_names = [arg.name for arg in out.signature]
             if out_arg_names != arg_names:  # order came out wrong
                 print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
-                raise NotImplementedError('Please resort to trickery to force the order in your expression definition.')
+                #raise NotImplementedError('Please resort to trickery to force the order in your expression definition.')
                 fun_args = force_order_args(fun_args)
-                out = invoke(fun_args.outputs) # BUGBUG: move .outputs back up
+                out = invoke(fun_args)   #.outputs) # BUGBUG: move .outputs back up
 
             # verify that we got the parameter order right
             out_arg_names = [arg.name for arg in out.signature]
@@ -133,38 +141,6 @@ class Function(cntk_py.Function):
                     unused_args = set(args) - set(out.signature)
                     unused_arg_names = [arg.name for arg in unused_args]
                     raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
-
-            # BEGIN WORKAROUND
-            # force parameter order
-            # BUGBUG: as_block() on the entire function is not really working, it looses names of its contents.
-            #         As a workaround, wrap the args themselves into alias(), combine(), as_block().
-            out_arg_names = [arg.name for arg in out.signature]
-            #if out_arg_names != arg_names:
-            #    print(13)
-            assert out_arg_names == arg_names
-            #if len(arg_names) > 1:
-            # BUGBUG: ^^ causes random errors, use conservatively
-            if out_arg_names != arg_names     and False: # if order changed then force the order
-                # we only encapsulate the combine() function as to force the order,
-                # but not the actual function, as to not hide names inside
-                args1 = [placeholder_variable(name=name) for name in arg_names]
-                combined_args = combine([alias(arg, arg.name) for arg in args1])
-                args2 = [placeholder_variable(name=name) for name in arg_names]
-                arg_map = list(zip(args1,args2))
-                combined_args = as_block(combined_args, arg_map, f_name + '_parameter_ordering')
-                # this now is a BlockFunction that maps all args to themselves, with forced ordering
-                combined_args.replace_placeholders(dict(zip(args2,args)))
-                args = combined_args.outputs
-                # and try it again
-                out = f(*args)
-                if isinstance(out, tuple): # multi-value function, returned as a tuple
-                    out = [resolve_named(output) for output in out]
-                    out = combine(out)
-                else:
-                    out = resolve_named(out)
-                out_arg_names = [arg.name for arg in out.signature]
-                assert out_arg_names == arg_names
-            # END WORKAROUND
 
             # wrap into a block as to ensure ordering of parameters
             # BUGBUG: This looses names. So avoid as_block() entirely unless needed; hoping it will not be used for where it matters
@@ -227,6 +203,10 @@ class Function(cntk_py.Function):
                 if param in arg_map:
                     raise SyntaxError("got multiple values for argument '%s'" % name)
                 arg_map[param] = arg # add kw argument to dict
+                param_uid = param.uid
+                if isinstance(arg, (cntk_py.Variable, cntk_py.Function)): # for viewing in debugger
+                    arg_uid = arg.uid
+                    arg_name = arg.name
         assert len(arg_map) == len(params)
 
         return arg_map
@@ -318,9 +298,9 @@ class Function(cntk_py.Function):
 
         # if placeholders were excluded due to being under construction,
         # we must include them in the argmap, otherwise they will be cloned
-        for ph in self.arguments:
-            if ph not in arg_map:
-                arg_map[ph] = ph
+        for arg in self.arguments:
+            if arg not in arg_map:
+                arg_map[arg] = arg
 
         # determine whether this is eval() or clone()
         is_symbolic = any(isinstance(arg, (cntk_py.Function, cntk_py.Variable)) for arg in arg_map.values())
@@ -330,9 +310,13 @@ class Function(cntk_py.Function):
         if is_symbolic:
             s = self.signature
             s_names = [arg.name for arg in s]
+            s_uids = [arg.uid for arg in s]
             a1 = self.arguments
             a1_names = [arg.name for arg in a1]
+            a1_uids = [arg.uid for arg in a1]
             sn = self.name
+
+            arg_map_uids = {frm.uid: too.uid for frm, too in arg_map.items()}
 
             out = self.clone(CloneMethod.share, arg_map)
 
@@ -455,12 +439,10 @@ class Function(cntk_py.Function):
         return self.output.__getitem__(arg)
 
     def dump_signature(self, tag=None):
+        '''
+        Debug helper that prints the signature of a Function.
+        '''
         f_name = self.name if self.name else tag if tag else 'Function'
-        #if f_name == '':
-        #    f_name = tag
-        #if f_name == '':
-        #    f_name = 'Function'
-        #f_name = tag if self.name != '' else self.name
         args = self.signature
         arg_names = [param.name for param in args]
         print(f_name + '(' + ", ".join(arg_names) + ')')
@@ -469,37 +451,58 @@ class Function(cntk_py.Function):
         from ..graph import depth_first_search
         graph = depth_first_search(self.root_function, lambda x: not isinstance(x, cntk_py.Variable) or not x.is_output)
         names = dict()
+        def make_name(n): # come up with a letter sequence
+            if n < 26:
+                return chr(n + 97)
+            else:
+                return make_name(n // 26) + make_name(n % 26)
         def name_it(item):
             if item.name != '':
                 return item.name
             if item in names:
                 name = names[item]
             else:
-                def make_name(n): # come up with a letter sequence
-                    if n < 26:
-                        return chr(n + 97)
-                    else:
-                        return make_name(n // 26) + make_name(n % 26)
                 name = make_name(len(names))
                 names[item] = name
-            #if item.name != '':
-            #    name = name + '{' + item.name + '}'
             return name
+        axis_names = dict()
+        def name_axis(axis):
+            actual_name = axis.name
+            if actual_name in axis_names:
+                return axis_names[actual_name]
+            if axis.name == "staticAxis_2147483645":  # TODO: what is the correct way of testing this?
+                name = "?"
+            elif axis.name == "defaultBatchAxis":
+                name = "b*"
+            else:
+                name = make_name(len(axis_names)+12) + "*"
+                print("  Axis", actual_name, "==", name)
+            axis_names[actual_name] = name
+            return name
+        def type_spec(var):
+            s = ":{}".format(var.shape)
+            axes = var.dynamic_axes
+            if axes:
+                s = s + "[" + ",".join([name_axis(axis) for axis in axes]) + "]"
+            return s
         def print_item(item):
             name = name_it(item)
             if isinstance(item, cntk_py.Function):
                 op_name = item.op_name
                 #shape = list(output.shape for output in item.outputs)
-                shape = '(' +  ', '.join([name_it(output) + ':' + "{}".format(output.shape) for output in item.root_function.outputs]) + ')'
-                inputs = '(' +  ', '.join([name_it(input) + ':' + "{}".format(input.shape) for input in item.root_function.inputs]) + ')'
+                shape = '(' +  ', '.join([name_it(output) + type_spec(output) for output in item.root_function.outputs]) + ')'
+                inputs = '(' +  ', '.join([name_it(input) + type_spec( input) for input in item.root_function.inputs]) + ')'
+                sep = '-> '
             elif isinstance(item, cntk_py.Constant):
                 op_name = "Constant"
-                shape = item.shape
+                shape = type_spec(item)
                 inputs = ''
+                sep = ''
             elif isinstance(item, cntk_py.Parameter):
                 op_name = "Parameter"
-                shape = item.shape
+                shape = type_spec(item)
                 inputs = ''
+                sep = ''
             elif isinstance(item, cntk_py.Variable):
                 if item.is_parameter:
                     op_name = "Parameter"
@@ -511,10 +514,11 @@ class Function(cntk_py.Function):
                     op_name = "Constant"
                 else:
                     op_name = "Variable"
-                shape = item.shape
+                shape = type_spec(item)
                 name = name + " " + item.uid
+                sep = ''
                 inputs = ''
-            print('  {:20} {:30} {} : {}'.format(op_name, name, inputs, shape))
+            print('  {:20} {:30} {} {}{}'.format(op_name, name, inputs, sep, shape))
             pass
         self.dump_signature(tag)
         for item in graph:

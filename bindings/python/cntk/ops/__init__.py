@@ -1877,10 +1877,10 @@ def splice(*inputs, axis=-1, name=''):
 
 
 @typemap
-def reduce_sum(x, axis=None, name=''):
+def reduce_sum(x, axis=None, all_axes=False, name=''):
     '''
-    Computes the sum of the input tensor's elements across one axis. If the axis parameter
-    is not specified then the sum will be computed over all axes, that is, the output is a scalar,
+    Computes the sum of the input tensor's elements across one axis. If the ``all_axes``
+    is specified then the sum will be computed over all axes, that is, the output is a scalar,
     which is the sum of tensor's elements.
 
     Examples:
@@ -1909,12 +1909,13 @@ def reduce_sum(x, axis=None, name=''):
         array([[  90.,  120.]], dtype=float32)
 
         >>> # reduce over the all axes
-        >>> C.reduce_sum(data).eval()
+        >>> C.reduce_sum(data, all_axes=True).eval()
         array(210.0, dtype=float32)
 
     Args:
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        all_axes: if ``True`` then reduce over all static and dynamic axes, yielding a scalar. Mutually exclusive with ``axis``.
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -1922,6 +1923,10 @@ def reduce_sum(x, axis=None, name=''):
     '''
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
+    if all_axes:
+        if axis:
+            raise ValueError('axis and all_axes=True cannot be specified at the same time')
+        return reduce_sum(x, name)
     axis = sanitize_axis(axis)
     return reduce_sum(x, axis, name)
 

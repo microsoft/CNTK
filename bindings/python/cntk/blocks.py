@@ -128,6 +128,8 @@ def Block(f, op_name, members={}):
     return f
 
 # call this at the end of any layer or block that takes an optional name argument
+# BUGBUG: This will name the Function, but not its output, which is required at places.
+#         To fix this, change to alias() once it works with sparse and is zero-cost.
 def _inject_name(f, name):
     if name:
         f = combine(f.outputs, name=name)
