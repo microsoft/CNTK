@@ -51,6 +51,18 @@ the following learning algorithms:
 +------------------------+
 '''
 
+def default_unit_gain_value():
+    '''
+    Returns true if by default momentum is applied in the unit-gain fashion.
+    '''
+    return cntk_py.default_unit_gain_value()
+
+def set_default_unit_gain_value(value):
+    '''
+    Sets globally default unit-gain flag value.
+    '''
+    cntk_py.set_default_unit_gain_value(value)
+
 # an internal method to verify that the learning rate schedule 
 # has a proper (per-sample or per-MB schedule) type and raise 
 # an exception otherwise
@@ -354,7 +366,7 @@ def sgd(parameters, lr,
     return cntk_py.sgd_learner(parameters, lr, additional_options)
 
 @typemap
-def momentum_sgd(parameters, lr, momentum, unit_gain,
+def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
@@ -369,7 +381,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
-        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+         to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
@@ -401,7 +414,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain,
             additional_options)
 
 @typemap
-def nesterov(parameters, lr, momentum, unit_gain,
+def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
@@ -418,7 +431,8 @@ def nesterov(parameters, lr, momentum, unit_gain,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
-        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+         to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
@@ -508,7 +522,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
 
 # TODO: unCamelCase and integrate upcoming CR
 @typemap
-def adam_sgd(parameters, lr, momentum, unit_gain,
+def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         variance_momentum = momentum_as_time_constant_schedule(720000),
         low_memory=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
@@ -526,7 +540,8 @@ def adam_sgd(parameters, lr, momentum, unit_gain,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
-        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+         to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (output of :func:`momentum_schedule` or
          :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
          to ``momentum_as_time_constant_schedule(720000)``.

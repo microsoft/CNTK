@@ -310,18 +310,18 @@
 %ignore CNTK::MomentumSGDLearner(const std::vector<Parameter>& parameters, 
                                  const LearningRateSchedule& learningRateSchedule, 
                                  const MomentumSchedule& momentumSchedule,
-                                 bool unitGain,
+                                 bool unitGain = DefaultUnitGainValue(),
                                  AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 %ignore CNTK::NesterovLearner(const std::vector<Parameter>& parameters, 
                               const LearningRateSchedule& learningRateSchedule, 
                               const MomentumSchedule& momentumSchedule,
-                              bool unitGain,
+                              bool unitGain = DefaultUnitGainValue(),
                               AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 %ignore CNTK::DefaultVarianceMomentum;
 %ignore CNTK::AdamLearner(const std::vector<Parameter>& parameters, 
                           const LearningRateSchedule& learningRateSchedule, 
                           const MomentumSchedule& momentumSchedule,
-                          bool unitGain,
+                          bool unitGain = DefaultUnitGainValue(),
                           const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum, 
                           bool lowMemory = true, 
                           AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
@@ -456,7 +456,9 @@
     { 
         SWIG_exception(SWIG_RuntimeError,e.what()); 
     }
-    // TODO: print call stack trace info when it is available.
+
+    // TODO: print out C++ call stack trace info.
+    // It is currently not available as a part of exception message.
     catch (std::runtime_error &e)
     {
         SWIG_exception(SWIG_RuntimeError,e.what()); 
@@ -476,8 +478,6 @@
 }
 
 %rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
-%rename (GetBestDevice) CNTK::DeviceDescriptor::BestDevice;
-%rename (GetDefaultDevice) CNTK::DeviceDescriptor::DefaultDevice;
 %rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
 %rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
 %rename (GetId) CNTK::DeviceDescriptor::Id;
@@ -505,16 +505,6 @@
     public static DeviceDescriptor CPUDevice
     {
         get { return GetCPUDevice(); }
-    }
-
-    public static DeviceDescriptor DefaultDevice
-    {
-        get { return GetDefaultDevice(); }
-    }
-
-    public static DeviceDescriptor BestDevice
-    {
-        get { return GetBestDevice(); }
     }
 
     //public static System.Collections.Generic.List<DeviceDescriptor> AllDevices()
@@ -707,6 +697,10 @@
 %rename (GetOutput) CNTK::Function::Output;
 %rename (GetOutputs) CNTK::Function::Outputs;
 %rename (GetArguments) CNTK::Function::Arguments;
+%rename (GetOpName) CNTK::Function::OpName;
+%rename (_IsComposite) CNTK::Function::IsComposite;
+%rename (_IsPrimitive) CNTK::Function::IsPrimitive;
+%rename (_IsBlock) CNTK::Function::IsBlock;
 
 %typemap(cscode) CNTK::Function %{
 
@@ -765,6 +759,26 @@
         get { return GetOutput(); }
     }
 
+    public string OpName
+    {
+        get { return GetOpName(); }
+    }
+
+    public bool IsComposite
+    {
+        get { return _IsComposite(); }
+    }
+
+    public bool IsPrimitive
+    {
+        get { return _IsPrimitive(); }
+    }
+
+    public bool IsBlock
+    {
+        get { return _IsBlock(); }
+    }
+
     public System.Collections.Generic.List<Variable> Arguments
     {
         get
@@ -820,6 +834,15 @@
 
 %rename (GetShape) CNTK::Variable::Shape;
 %rename (GetName) CNTK::Variable::Name;
+%rename (GetVariableKind) CNTK::Variable::Kind;
+%rename (GetDynamicAxes) CNTK::Variable::DynamicAxes;
+%rename (_IsSparse) CNTK::Variable::IsSparse;
+%rename (_IsInput) CNTK::Variable::IsInput;
+%rename (_IsOutput) CNTK::Variable::IsOutput;
+%rename (_IsParameter) CNTK::Variable::IsParameter;
+%rename (_IsConstant) CNTK::Variable::IsConstant;
+%rename (_IsPlaceholder) CNTK::Variable::IsPlaceholder;
+%rename (GetOwner) CNTK::Variable::Owner;
 %rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
 
 %typemap(cscode) CNTK::Variable %{
@@ -832,6 +855,63 @@
     public string Name
     {
         get { return GetName(); }
+    }
+
+    public VariableKind Kind
+    {
+        get { return GetVariableKind(); }
+    }
+
+    public DataType DataType
+    {
+        get { return GetDataType(); }
+    }
+
+    public System.Collections.Generic.List<Axis> DynamicAxes
+    {
+        get {
+            var axes = new System.Collections.Generic.List<Axis>();
+            foreach (var axis in GetDynamicAxes())
+            {
+                axes.Add(axis);
+            }
+            return axes;
+        }
+    }
+
+    public bool IsSparse
+    {
+        get { return _IsSparse(); }
+    }
+
+    public bool IsInput
+    {
+        get { return _IsInput(); }
+    }
+
+    public bool IsOutput
+    {
+        get { return _IsOutput(); }
+    }
+
+    public bool IsParameter
+    {
+        get { return _IsParameter(); }
+    }
+
+    public bool IsConstant
+    {
+        get { return _IsConstant(); }
+    }
+
+    public bool IsPlaceholder
+    {
+        get { return _IsPlaceholder(); }
+    }
+
+    public Function Owner
+    {
+        get { return GetOwner(); }
     }
 
     public override bool Equals(System.Object obj)
@@ -899,6 +979,8 @@
 %rename (GetRank) CNTK::NDShape::Rank;
 %rename (GetTotalSize) CNTK::NDShape::TotalSize;
 %rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
+%rename (_IsUnknown) CNTK::NDShape::IsUnknown;
+%rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
 
 %typemap(cscode) CNTK::NDShape %{
     public uint Rank
@@ -917,6 +999,16 @@
             }
             return ret;
         }
+    }
+
+    public bool IsUnknown 
+    {
+        get { return _IsUnknown(); }
+    }
+
+    public bool HasInferredDimension
+    {
+        get { return _HasInferredDimension(); }
     }
 
     public uint TotalSize
@@ -1047,11 +1139,11 @@
         }
     }
 
-    public int MaskedCount
+    public uint MaskedCount
     {
         get
         {
-            return (int)_MaskedCount();
+            return _MaskedCount();
         }
     }
 
@@ -1070,7 +1162,8 @@
             seq.AddRange(batch.GetRange((int)(i * shapeSize), (int)shapeSize));
             input.Add(seq);
         }
-        return Create(shape, input, device, readOnly);
+        // Pass the empty seqStartFlags means all sequences have the start flag with true.
+        return Create<T>(shape, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
      public static Value CreateSequence<T>(NDShape shape,
@@ -1093,6 +1186,14 @@
 
     public static Value CreateBatchOfSequences<T>(NDShape shape,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
+                                                  DeviceDescriptor device,
+                                                  bool readOnly = false)
+    {
+        return Create(shape, batchOfSequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+    }
+
+    public static Value CreateBatchOfSequences<T>(NDShape shape,
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
                                                   System.Collections.Generic.List<bool> seqStartFlags,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
@@ -1100,63 +1201,7 @@
         return Create(shape, batchOfSequences, seqStartFlags, device, readOnly);
     }
 
-    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
-    public static Value CreateBatch<T>(uint dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
-    {
-        // Is CreateBatch for OneHot really useful? 
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
-        batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
- 
-        return Create<T>(dimension, input, device, readOnly);
-    }
-
-    public static Value CreateSequence<T>(uint dimension,
-                                          System.Collections.Generic.List<uint> sequence,
-                                          DeviceDescriptor device,
-                                          bool readOnly = false)
-    {
-        return CreateSequence<T>(dimension, sequence, true, device, readOnly);
-    }
-
-    public static Value CreateSequence<T>(uint dimension,
-                                          System.Collections.Generic.List<uint> sequence,
-                                          bool seqStartFlag,
-                                          DeviceDescriptor device,
-                                          bool readOnly = false)
-    {
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>(1) {sequence};
-        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
-    }
-
-    public static Value CreateBatchOfSequences<T>(uint dimension, 
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
-                                                  System.Collections.Generic.List<bool> seqStartFlags,
-                                                  DeviceDescriptor device,
-                                                  bool readOnly = false)
-    {
-        return Create<T>(dimension, batchOfSequences, seqStartFlags, device, readOnly);
-    }
-
-    public static Value Create(NDShape sampleShape,
-                               System.Collections.Generic.List<NDArrayView> sequences,
-                               System.Collections.Generic.List<bool> sequenceStartFlags,
-                               DeviceDescriptor device,
-                               bool readOnly = false)
-    {
-        var seqVector = new NDArrayViewVector(sequences);
-        var startVector = new BoolVector(sequenceStartFlags);
-        return Create(sampleShape, seqVector, startVector, device, false);
-    }
-
-    public static Value Create(NDShape sampleShape,
-                               System.Collections.Generic.List<NDArrayView> sequences,
-                               DeviceDescriptor device,
-                               bool readOnly = false)
-    {
-        return Create(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
-    }
-
-    public static Value Create<T>(NDShape sampleShape,
+    private static Value Create<T>(NDShape sampleShape,
                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
@@ -1193,15 +1238,52 @@
         }
     }
 
-    public static Value Create<T>(NDShape sampleShape,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
-                                  DeviceDescriptor device,
-                                  bool readOnly = false)
+    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
+    public static Value CreateBatch<T>(uint dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
     {
-        return Create<T>(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+        // Is CreateBatch for OneHot really useful? 
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
+        batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
+        
+        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
-    public static Value Create<T>(uint dimension,
+    public static Value CreateSequence<T>(uint dimension,
+                                          System.Collections.Generic.List<uint> sequence,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        return CreateSequence<T>(dimension, sequence, true, device, readOnly);
+    }
+
+    public static Value CreateSequence<T>(uint dimension,
+                                          System.Collections.Generic.List<uint> sequence,
+                                          bool seqStartFlag,
+                                          DeviceDescriptor device,
+                                          bool readOnly = false)
+    {
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>(1) {sequence};
+        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {seqStartFlag}, device, readOnly);
+    }
+
+    public static Value CreateBatchOfSequences<T>(uint dimension,
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
+                                                  DeviceDescriptor device,
+                                                  bool readOnly = false)
+    {
+        return Create<T>(dimension, batchOfSequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+    }
+
+    public static Value CreateBatchOfSequences<T>(uint dimension, 
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
+                                                  System.Collections.Generic.List<bool> seqStartFlags,
+                                                  DeviceDescriptor device,
+                                                  bool readOnly = false)
+    {
+        return Create<T>(dimension, batchOfSequences, seqStartFlags, device, readOnly);
+    }
+
+    private static Value Create<T>(uint dimension,
                                   System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
@@ -1230,12 +1312,24 @@
         }
     }
 
-    public static Value Create<T>(uint dimension,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
-                                  DeviceDescriptor device,
-                                  bool readOnly = false)
+    // Create value object from NDArrayView
+    public static Value Create(NDShape sampleShape,
+                               System.Collections.Generic.List<NDArrayView> sequences,
+                               DeviceDescriptor device,
+                               bool readOnly = false)
     {
-        return Create<T>(dimension, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+        return Create(sampleShape, sequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
+    }
+
+    public static Value Create(NDShape sampleShape,
+                               System.Collections.Generic.List<NDArrayView> sequences,
+                               System.Collections.Generic.List<bool> sequenceStartFlags,
+                               DeviceDescriptor device,
+                               bool readOnly = false)
+    {
+        var seqVector = new NDArrayViewVector(sequences);
+        var startVector = new BoolVector(sequenceStartFlags);
+        return Create(sampleShape, seqVector, startVector, device, false);
     }
 
     //
@@ -1318,6 +1412,9 @@
         }
         return;
     }
+
+
+
 %}
 
 %extend CNTK::Value {

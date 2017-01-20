@@ -76,6 +76,9 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCSEvalCPUOnlyExamples\CntkBitmapExtensions.cs">
+      <Link>CntkBitmapExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCSEvalCPUOnlyExamples\CNTKLibraryCSEvalExamples.cs">
       <Link>CNTKLibraryCSEvalExamples.cs</Link>
     </Compile>

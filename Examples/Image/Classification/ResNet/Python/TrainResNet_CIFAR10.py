@@ -53,7 +53,7 @@ def create_reader(map_file, mean_file, train):
 
 
 # Train and evaluate the network.
-def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
+def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs):
 
     set_computation_network_trace_level(0)
 
@@ -76,7 +76,6 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
     pe = classification_error(z, label_var)
 
     # shared training parameters 
-    epoch_size = 50000                    # for now we manually specify epoch size
     minibatch_size = 128
     momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
@@ -88,7 +87,6 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
     
     # trainer object
     learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
-                               unit_gain = True,
                                l2_regularization_weight = l2_reg_weight)
     trainer     = Trainer(z, ce, pe, learner)
 
@@ -113,7 +111,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
         z.save_model(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
     
     # Evaluation parameters
-    epoch_size     = 10000
+    test_epoch_size     = 10000
     minibatch_size = 16
 
     # process minibatches and evaluate the model
@@ -122,8 +120,8 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
     sample_count    = 0
     minibatch_index = 0
 
-    while sample_count < epoch_size:
-        current_minibatch = min(minibatch_size, epoch_size - sample_count)
+    while sample_count < test_epoch_size:
+        current_minibatch = min(minibatch_size, test_epoch_size - sample_count)
         # Fetch next test min batch.
         data = reader_test.next_minibatch(current_minibatch, input_map=input_map)
         # minibatch data to be trained with
@@ -151,4 +149,5 @@ if __name__=='__main__':
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
-    train_and_evaluate(reader_train, reader_test, network_name, epochs)
+    epoch_size = 50000
+    train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs)

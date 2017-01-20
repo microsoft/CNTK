@@ -103,7 +103,7 @@ def create_trainer(network, epoch_size, num_quantization_bits):
     
     # Create learner
     learner = data_parallel_distributed_learner(
-        cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=True, l2_regularization_weight=l2_reg_weight),
+        cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight),
         num_quantization_bits=num_quantization_bits,
         distributed_after=0)
 
@@ -153,10 +153,8 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaug(train_data, test_data, mean_data, num_quantization_bits=32, max_epochs=2, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
+def convnet_cifar10_dataaug(train_data, test_data, mean_data, num_quantization_bits=32, epoch_size = 50000, max_epochs=80, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
     _cntk_py.set_computation_network_trace_level(0)
-
-    epoch_size = 50000
 
     progress_printer = ProgressPrinter(
         freq=num_mbs_per_log,

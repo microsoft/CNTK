@@ -26,3 +26,14 @@ unsigned long RandomSeedFixture::IncrementCounter()
 {
     return ++s_counter;
 }
+
+// If this is not done, some math test fail (for instance,
+// ScaleAndAdd(a,b,c); produces different results from
+// Scale(a,b); c+=b;)
+// Please, note that the setting is not limited by the lifespan 
+// of the fixure, but once set, it will remain in place for all 
+// following tests that will be executed by the same process.
+DeterministicCPUAlgorithmsFixture::DeterministicCPUAlgorithmsFixture()
+{
+    CPUMatrix<float /*any type will do*/>::SetCompatibleMode();
+}

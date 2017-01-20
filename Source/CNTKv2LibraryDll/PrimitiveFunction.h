@@ -709,6 +709,6 @@ namespace CNTK
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
-        static const size_t s_serializationVersion = 2;
+        static const size_t s_serializationVersion = 3;
     };
 }

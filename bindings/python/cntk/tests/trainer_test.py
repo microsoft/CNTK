@@ -8,7 +8,7 @@ import os
 import math
 import numpy as np
 from .. import Function
-from ..ops import times, sequence
+from ..ops import times, sequence, as_block
 from ..ops.tests.ops_test_utils import cntk_device
 from ..utils import one_hot
 from ..trainer import *
@@ -220,3 +220,23 @@ def test_model_not_criterion_subset():
     model1_label_data = np.asarray([1., 0., 0.], np.float32)
     model2_label_data = np.asarray([[0., 1., 0., 0.], [0., 0., 0., 1.]], np.float32)
     trainer_multitask.train_minibatch({x : [x_data], model1_label : [model1_label_data], model2_label : [model2_label_data]})
+
+# Tests the creation of a trainer when the model passed to teh Trainer is 
+# one of the outputs of a multi-output Function
+def test_model_one_output_of_multi_output_function():
+    input_dim = 2
+    proj_dim = 11
+    x = input_variable((input_dim,))
+
+    x_placeholder = placeholder_variable()
+    w = parameter((input_dim, proj_dim))
+    b = parameter((proj_dim,))
+    proj = times(x_placeholder, w)
+    proj_plus_bias = proj + b
+    combined_model = as_block(combine([proj, proj_plus_bias]), [(x_placeholder, x)], 'dense_op')
+
+    labels = input_variable((proj_dim,))
+    lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
+    ce = cross_entropy_with_softmax(combined_model.outputs[0], labels)
+    pe = classification_error(combined_model.outputs[0], labels)
+    trainer_multitask = Trainer(combined_model.outputs[0], ce, pe, sgd(ce.parameters, lr=lr_schedule))

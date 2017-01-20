@@ -71,18 +71,35 @@ def test_learner_init():
     param = learner_parameter[0]
     assert isinstance(param, Parameter)
 
+    unit_gain_value = default_unit_gain_value()
+    assert unit_gain_value
+
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, True)
+    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant)
+    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    momentum_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain=unit_gain_value)
+
+    set_default_unit_gain_value(False)
+    unit_gain_value = default_unit_gain_value()
+    assert not unit_gain_value
 
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample)
-    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=False)
+    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    nesterov(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    nesterov(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
     lr_per_sample = learning_rate_schedule([0.1]*3 +[0.2]*2 +[0.3], UnitType.sample)
     adagrad(res.parameters, lr=lr_per_sample, need_ave_multiplier=True)
 
+    set_default_unit_gain_value(True)
+    unit_gain_value = default_unit_gain_value()
+    assert unit_gain_value
+
     lr_per_sample = learning_rate_schedule([(3,0.1), (2, 0.2), (1, 0.3)], UnitType.sample)
-    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=True)
+    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    adam_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
     gamma, inc, dec, max, min = [0.1]*5
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)

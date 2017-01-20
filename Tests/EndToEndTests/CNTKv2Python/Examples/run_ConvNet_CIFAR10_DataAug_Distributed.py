@@ -40,7 +40,7 @@ def run_cifar_convnet_distributed():
     test_data = os.path.join(base_path, 'test_map.txt')
 
     num_quantization_bits = 32
-    return convnet_cifar10_dataaug(train_data, test_data, mean_data, num_quantization_bits, max_epochs=2, num_mbs_per_log=1)
+    return convnet_cifar10_dataaug(train_data, test_data, mean_data, num_quantization_bits, epoch_size=512, max_epochs=2)
 
 if __name__=='__main__':
     assert distributed.Communicator.rank() < distributed.Communicator.num_workers()
