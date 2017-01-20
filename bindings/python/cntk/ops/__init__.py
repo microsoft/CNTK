@@ -1879,9 +1879,13 @@ def splice(*inputs, axis=-1, name=''):
 @typemap
 def reduce_sum(x, axis=None, all_axes=False, name=''):
     '''
-    Computes the sum of the input tensor's elements across one axis. If the ``all_axes``
-    is specified then the sum will be computed over all axes, that is, the output is a scalar,
-    which is the sum of tensor's elements.
+    Computes the sum of the input tensor's elements across one axis. If the axis parameter
+    is not specified then the sum will be computed over all axes of each tensor, that is, the output is a scalar
+    that is the sum of the respective tensor's elements.
+
+    If the ``all_axes`` is specified as True then the sum will be computed over all static and dynamic axes including
+    the batch axis. That is, the output is a scalar sum of all tensors in the minibatch and all their elements.
+    This form is sometimes used for training criteria.
 
     Examples:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
@@ -1908,8 +1912,8 @@ def reduce_sum(x, axis=None, all_axes=False, name=''):
         >>> C.reduce_sum(data, -2).eval()
         array([[  90.,  120.]], dtype=float32)
 
-        >>> # reduce over the all axes
-        >>> C.reduce_sum(data, all_axes=True).eval()
+        >>> # reduce over all axes of the matrix
+        >>> C.reduce_sum(data).eval()
         array(210.0, dtype=float32)
 
     Args:
@@ -1924,7 +1928,7 @@ def reduce_sum(x, axis=None, all_axes=False, name=''):
     from cntk.cntk_py import reduce_sum
     x = sanitize_input(x)
     if all_axes:
-        if axis:
+        if axis is not None:
             raise ValueError('axis and all_axes=True cannot be specified at the same time')
         return reduce_sum(x, name)
     axis = sanitize_axis(axis)
