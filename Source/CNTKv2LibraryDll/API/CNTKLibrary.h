@@ -3964,7 +3964,7 @@ namespace CNTK
 
     public:
         ///
-        /// Gets the description of the stream with given name. 
+t        /// Gets the description of the stream with given name. 
         /// Throws an exception of there are none or multiple streams with this same name.
         ///
         CNTK_API const StreamInformation& StreamInfo(const std::wstring& streamName);
@@ -3974,7 +3974,7 @@ namespace CNTK
         /// Throws an exception if there are none or multiple streams matching the Variable's attributes
         ///
         CNTK_API const StreamInformation& StreamInfo(const Variable& variableToMatch);
-
+x
         ///
         /// Reads a minibatch that contains data for all input streams.
         /// The minibatch size is specified terms of #samples for the primary input stream.
@@ -4007,7 +4007,7 @@ namespace CNTK
     };
 
     /// 
-    /// Instantiate the CNTK built-in test format minibatch source
+    /// Instantiate the CNTK built-in text format minibatch source
     ///
     inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true)
     {
