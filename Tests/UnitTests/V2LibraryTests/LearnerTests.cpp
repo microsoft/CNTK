@@ -224,6 +224,16 @@ void TestTrainingParametersSchedule()
     assert(schedule16[99999] == exp(-1.0 / 3.0));
 }
 
+void TestDefaultUnitGainGetterAndSetter()
+{
+    assert(DefaultUnitGainValue());
+
+    SetDefaultUnitGainValue(false);
+    assert(!DefaultUnitGainValue());
+
+    SetDefaultUnitGainValue(true);
+    assert(DefaultUnitGainValue());
+}
 
 void TestSweepBasedSchedule()
 {
@@ -292,6 +302,8 @@ void TestSweepBasedSchedule()
 void LearnerTests()
 {
     fprintf(stderr, "\nLearnerTests..\n");
+
+    TestDefaultUnitGainGetterAndSetter();
 
     TestTrainingParametersSchedule();
     TestSweepBasedSchedule();

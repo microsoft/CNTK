@@ -73,8 +73,7 @@ def convnet_cifar10(debug_output=False):
     l2_reg_weight          = 0.002
 
     # Instantiate the trainer object to drive the model training
-    learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, 
-                                        unit_gain = True, 
+    learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                                         l2_regularization_weight = l2_reg_weight)
     trainer = cntk.Trainer(z, ce, pe, learner)
 

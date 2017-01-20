@@ -103,7 +103,7 @@ def create_trainer(network, epoch_size, num_quantization_bits):
     
     # Create learner
     learner = data_parallel_distributed_learner(
-        cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=True, l2_regularization_weight=l2_reg_weight),
+        cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight),
         num_quantization_bits=num_quantization_bits,
         distributed_after=0)
 
