@@ -11,7 +11,6 @@
 %include <attribute.i>
 %include <std_shared_ptr.i>
 
-%rename(_output) CNTK::Function::Output;
 %rename(_forward) CNTK::Function::Forward;
 %rename(_backward) CNTK::Function::Backward;
 %rename(sgd_learner) CNTK::SGDLearner;
@@ -1302,9 +1301,11 @@ namespace CNTK {
     public:
         UserBackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, PyObject* userData)
             : BackPropState(function, computeDevice), m_userData(userData)
-        { }
+        {
+            Py_INCREF(m_userData);
+        }
 
-        const PyObject* Data()
+        const PyObject* Data() const
         {
             return m_userData;
         }
@@ -1318,6 +1319,10 @@ namespace CNTK {
             return user_state->Data();
         }
 
+        virtual ~UserBackPropState()
+        {
+            Py_DECREF(m_userData);
+        }
 
     private:
         const PyObject* m_userData;
@@ -1382,13 +1387,6 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 }
 
 %pythoncode %{
-# in case of multiple outputs return the function, not the variable
-def get_output_and_keep_reference(self):
-    variable = self._output()
-    variable.__owner = self
-    return variable
-Function.output = lambda self:get_output_and_keep_reference(self)
-
 from .tensor import _add_tensor_ops, _add_array_interface
 for klass in [Function, Variable]:
     _add_tensor_ops(klass)
