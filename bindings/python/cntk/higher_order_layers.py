@@ -14,9 +14,9 @@
 from .utils import Record
 from .ops import combine, delay, sequence
 from .blocks import *
-from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # init helpers
+from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name
 
-def Sequential(layers):
+def Sequential(layers, name=''):
     '''
     Composite that applies a sequence of layers (or any functions) onto an input.
     Sequential ([F, G, H]) === F >> G >> H
@@ -27,10 +27,13 @@ def Sequential(layers):
     from functools import reduce
     layers = [Sequential(layer) for layer in layers] # expand all layers recursively
     composed_function = reduce(lambda f, g: f >> g, layers, identity)
+
+    composed_function = _inject_name(composed_function, name)
+
     # TODO: wrap this in a BlockFunction as to enforce inputs = inputs of first function
     return Block(composed_function, 'Sequential', Record(layers=layers))
 
-def For(range, constructor):
+def For(range, constructor, name=''):
     '''
     Composite that applies a sequence of layers constructed with a constructor lambda(layer).
     E.g.
@@ -49,15 +52,18 @@ def For(range, constructor):
         else:
             return constructor()   # takes no arg: call without, that's fine too
     layers = [call(i) for i in range]
-    apply_x = Sequential(layers)
-    return Block(apply_x, 'For', Record(layers=layers))
+    sequential = Sequential(layers)
+
+    sequential = _inject_name(sequential, name)
+
+    return Block(sequential, 'For', Record(layers=layers))
 
 # legacy name--remove
 def LayerStack(N, constructor):
     return For(range(N), constructor)
 
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
-def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False):
+def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
     Runs a function recurrently over a time sequence, with initial state.
     This form is meant for use in sequence-to-sequence scenarios.
@@ -123,9 +129,11 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
     # this creates the CNTK Function
     recurrence_from = Function(recurrence_from_functions[num_state_args-1])
 
+    recurrence_from = _inject_name(recurrence_from, name)
+
     return Block(recurrence_from, 'RecurrenceFrom', Record(over_function=over_function))
 
-def Recurrence(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
+def Recurrence(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
     Runs a function recurrently over a time sequence.
     This form is meant for use in regular recurrent-model scenarios.
@@ -162,9 +170,11 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
     def recurrence(x):
         return recurrence_from(x, *initial_state)
 
+    recurrence = _inject_name(recurrence, name)
+
     return Block(recurrence, 'Recurrence', Record(over_function=over_function))
 
-def Fold(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False):
+def Fold(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
     Like ``Recurrence()`` but returns only the final state.
     '''
@@ -179,9 +189,11 @@ def Fold(over_function, go_backwards=default_override_or(False), initial_state=d
     select = sequence.first if go_backwards else sequence.last
     fold = recurrence >> tuple(select for output in recurrence.outputs)
 
+    fold = _inject_name(fold, name)
+
     return Block(fold, 'Fold', Record(over_function=over_function))
 
-def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None):
+def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
     '''
     Implements an unfold() operation. It creates a function that, starting with a seed input,
     applies 'over_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
@@ -233,4 +245,7 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
             z = gather(z, valid_frames)
 
         return z
+
+    unfold_from = _inject_name(unfold_from, name)
+
     return Block(unfold_from, 'UnfoldFrom', Record(over_function=over_function))

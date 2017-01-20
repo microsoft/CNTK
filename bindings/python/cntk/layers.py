@@ -94,7 +94,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 # Embedding -- create a linear embedding layer
 # To create an embedding from a file, use this:
 #  Embedding(weights=np.load('PATH'))
-def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None):
+def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name=''):
 
     if not is_default_override(init) and weights is not None:
         raise ValueError('Embedding: init and weights options are mutually exclusive')
@@ -129,8 +129,9 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     @Function
     def embed(x):
         return times(x,E)
-    #x = Placeholder(name='embedding_arg')
-    #apply_x = times(x, E)
+
+    embed = _inject_name(embed, name)
+
     return Block(embed, 'Embedding', Record(E=E))
 
 # helper to expand a sequence into a window, splicing them along the given axis (which must already exist)
@@ -169,7 +170,8 @@ def Convolution(rf_shape,         # e.g. (3,3)
                 init_bias=default_override_or(0),
                 reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
                 transpose=False,  # (must be False currently)
-                max_temp_mem_size_in_samples=0):
+                max_temp_mem_size_in_samples=0,
+                name=''):
 
     activation = get_default_override(Convolution, activation=activation)
     init       = get_default_override(Convolution, init=init)
@@ -276,6 +278,8 @@ def Convolution(rf_shape,         # e.g. (3,3)
             r = activation(r)
         return r
 
+    convolve = _inject_name(convolve, name)
+
     return Block(convolve, 'Convolution', Record(W=W, b=b))
 
 # Create a Pooling layer with one of following types:
@@ -290,7 +294,8 @@ def _Pooling(op,       # PoolingType_Max or _Average
              rf_shape, # e.g. (3,3)
              sequential=False, # pooling in time if True (rf_shape[0] corresponds to dynamic axis)
              strides=1,
-             pad=False):
+             pad=False,
+             name=''):
 
     if sequential:
         raise NotImplementedError("Pooling: sequential option not implemented yet")
@@ -305,32 +310,37 @@ def _Pooling(op,       # PoolingType_Max or _Average
         op_name = 'MaxPooling'
     else:
         raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
+
+    pool = _inject_name(pool, name)
+
     return Block(pool, op_name)
 
 # MaxPooling
 def MaxPooling(rf_shape,  # e.g. (3,3)
                strides=1,
-               pad=default_override_or(False)):
+               pad=default_override_or(False),
+               name=''):
     pad = get_default_override(MaxPooling, pad=pad)
-    return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad)
+    return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad, name=name)
 
 # AveragePooling
 def AveragePooling(rf_shape,  # e.g. (3,3)
                    strides=1,
-                   pad=default_override_or(False)):
+                   pad=default_override_or(False),
+                   name=''):
     pad = get_default_override(AveragePooling, pad=pad)
-    return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad)
+    return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad, name=name)
 
 # GlobalMaxPooling
 # Is this the same as reduce_max()?
-def GlobalMaxPooling():
-    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
+def GlobalMaxPooling(name=''):
+    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, name=name)
 
 # GlobalAveragePooling
-def GlobalAveragePooling():
-    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
+def GlobalAveragePooling(name=''):
+    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, name=name)
 
-def Delay(T=1, initial_state=default_override_or(0)):
+def Delay(T=1, initial_state=default_override_or(0), name=''):
     '''
     Delays input the input by a given number of time steps. Negative means future.
     This is provided as a layer instead of a function so that it can easily be used in a Sequential() expression.
@@ -352,14 +362,17 @@ def Delay(T=1, initial_state=default_override_or(0)):
         ## regular case
         return delay(x, initial_state=initial_state, time_step=T)
 
+    delay_f = _inject_name(delay_f, name)
+
     return Block(delay_f, 'Delay')
 
 # Dropout -- create a drop-out layer
-def Dropout(prob):
+def Dropout(prob, name=''):
     @Function
     def dropout(x):
         from cntk.ops import dropout # avoid scope mixup
         return dropout(x, dropout_rate=prob)
+    dropout = _inject_name(dropout, name)
     return Block(dropout, 'Dropout')
 
 # BatchNormalization -- create a batch-normalization layer
@@ -367,7 +380,8 @@ def Dropout(prob):
 def BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=default_override_or(5000), blend_time_constant=0,
-                       epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(False)):
+                       epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(False),
+                       name=''):
 
     map_rank                    = get_default_override(BatchNormalization, map_rank=map_rank)
     normalization_time_constant = get_default_override(BatchNormalization, normalization_time_constant=normalization_time_constant)
@@ -390,11 +404,14 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
         #x = Placeholder(name='batch_normalization_arg')
         return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   use_cudnn_engine=not use_cntk_engine)
+
+    batch_normalize = _inject_name(batch_normalize, name)
+
     return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer
 # TODO: add an epsilon [CR comment by Nikos]
-def LayerNormalization(initial_scale=1, initial_bias=0):
+def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     UntestedBranchError("LayerNormalization")
 
     # parameters bound to this Function
@@ -410,6 +427,8 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
         #x_hat = element_divide (x0, std)
         x_hat = x0 / std
         return x_hat * scale + bias    # denormalize with learned parameters
+
+    layer_normalize = _inject_name(layer_normalize, name)
 
     return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))
 

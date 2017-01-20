@@ -182,10 +182,9 @@ def ForwardDeclaration(name='forward_declaration'):
 @Function
 def identity(keep):
     return combine([keep])
-    #return alias(keep)
 
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
-def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True)):
+def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True), name=''):
 
     enable_self_stabilization = get_default_override(Stabilizer, enable_self_stabilization=enable_self_stabilization)
 
@@ -195,21 +194,25 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True))
     # parameters bound to this Function
     param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
     # TODO: compute this strange value directly in Python
+    # TODO: implement softplus non-linearity in C++ for stability
+    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
+    # this behaves linear for weights around 1, yet guarantees positiveness
     beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething   --TODO: change in Python
 
     # expression
     @Function
     def stabilize(x):
-    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
-    # this behaves linear for weights around 1, yet guarantees positiveness
-    # TODO: risk of confusion; can these functions be namespaced?
         return beta * x
+
+    stabilize = _inject_name(stabilize, name)
+
     return Block(stabilize, 'Stabilizer', Record(beta=beta))
 
 # recurrent block of type 'LSTM', 'GRU', or RNNUnit
 def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
                     init, init_bias,
-                    enable_self_stabilization):
+                    enable_self_stabilization,
+                    name=''):
 
     has_projection = cell_shape is not None
     has_aux = False # TODO: implement this differently; LSTM must have a unique signature
@@ -367,24 +370,13 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         return Function.NamedOutput(h=h)
 
     # return the corresponding lambda as a CNTK Function
-    #lstm.dump('lstm')
     function = Block({
         'RNNUnit': rnn,
         'GRU':     gru,
         'LSTM':    lstm
     }[type], type)
-    #function.dump('recurrent block')
 
-    # we already know our state input's shapes, so implant the shape there
-    # This is part of the contract with Recurrence(), which relies on this.
-    # BUGBUG: If V2 type inference could handle unknown shapes here, we would not need this.
-    # BUGBUG: This fails if recurrent cells are composed, since we won't know the true feedback dimension. V2 inference should just handle this.
-    # Ha! LU.py still works after removing this. Good start.
-    #function.replace_placeholders({ function.placeholders[index] : Placeholder(shape=shape) for index, shape in {
-    #    'RNNUnit': { 1: shape },
-    #    'GRU':     { 1: shape },
-    #    'LSTM':    { 1: shape, 2: cell_shape }
-    #}[type].items() })
+    function = _inject_name(function, name)
 
     return function
 
@@ -392,7 +384,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 # returns a function (input, prev_h, prev_c -> h, c)
 def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peepholes=default_override_or(False),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         enable_self_stabilization=default_override_or(False)):
+         enable_self_stabilization=default_override_or(False),
+         name=''):
 
     activation                = get_default_override(RNNUnit, activation=activation)
     use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
@@ -402,7 +395,7 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
 
     return _RecurrentBlock ('LSTM', shape, cell_shape, activation=activation, use_peepholes=use_peepholes,
                             init=init, init_bias=init_bias,
-                            enable_self_stabilization=enable_self_stabilization)
+                            enable_self_stabilization=enable_self_stabilization, name=name)
 
 # RNN block
 # returns a function (input, prev_h) -> h)
@@ -410,7 +403,8 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
 # TODO: needs better name
 def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         enable_self_stabilization=default_override_or(False)): # (x, prev_h) -> (h)
+         enable_self_stabilization=default_override_or(False),
+         name=''): # (x, prev_h) -> (h)
 
     activation                = get_default_override(RNNUnit, activation=activation)
     init                      = get_default_override(RNNUnit, init=init)
@@ -419,12 +413,13 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
 
     return _RecurrentBlock ('RNNUnit', shape, cell_shape, activation=activation, use_peepholes=False,
                             init=init, init_bias=init_bias,
-                            enable_self_stabilization=enable_self_stabilization)
+                            enable_self_stabilization=enable_self_stabilization, name=name)
 
 # GRU block
 def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         enable_self_stabilization=default_override_or(False)): # (x, prev_h) -> (h)
+         enable_self_stabilization=default_override_or(False),
+         name=''): # (x, prev_h) -> (h)
 
     activation                = get_default_override(GRU, activation=activation)
     init                      = get_default_override(GRU, init=init)
@@ -433,11 +428,7 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
 
     return _RecurrentBlock ('GRU', shape, cell_shape, activation=activation, use_peepholes=False,
                             init=init, init_bias=init_bias,
-                            enable_self_stabilization=enable_self_stabilization)
-
-# TODO:
-#  - get last() to work
+                            enable_self_stabilization=enable_self_stabilization, name=name)
 
 # TODO in C++ code after next update:
-#  - seq2seq: support initial_state with batch dimension, as a V2-V1 compilation step
 #  - elementwise: sequence broadcasting for all elementwise operations, as a V2-V1 compilation step
