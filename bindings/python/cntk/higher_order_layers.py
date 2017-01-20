@@ -217,17 +217,16 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
         until_predicate = Function(until_predicate)
 
     @Function
-    #def unfold_from(input, dynamic_axes_like):
-    def unfold_from(dynamic_axes_like, input):  # BUGBUG: forcing parameter order fails
-        # create a new axis
+    def unfold_from(input, dynamic_axes_like):
+        # create a new axis if needed
         out_axis = dynamic_axes_like
         if length_increase != 1:
             factors = sequence.constant_with_dynamic_axes_like(length_increase, out_axis) # repeat each frame 'length_increase' times, on average
             out_axis = sequence.where(factors)  # note: values are irrelevant; only the newly created axis matters
 
         # BUGBUG: This will fail with sparse input.
-        # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder; then add map_state_function
-        history_fwd = Placeholder(name='hook')
+        # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder
+        history_fwd = Placeholder(name='hook')  # TODO: change to ForwardDeclaration()
         prev_history = delay(history_fwd, initial_state=initial_state)
         z = over_function(prev_history, input)#,      out_axis)
         # apply map_state_function

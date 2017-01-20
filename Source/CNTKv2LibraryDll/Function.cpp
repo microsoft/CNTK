@@ -1321,13 +1321,25 @@ namespace CNTK
 
         FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name)
         {
+#if 0       // BUGBUG: This version cannot run inside loops since Scatter() uses a temp dynamic axis that is inside the loop
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
-
+            // BUGBUG: duplicate IsFirst(broadcastAs)
             auto dataPadded = Internal::Scatter(operandPlaceholder, Sequence::IsFirst(broadcastAsPlaceholder), std::make_pair<size_t, int>(0, 1));
             auto placeHolderOutput = PlaceholderVariable(operand.Shape(), broadcastAs.DynamicAxes());
             auto output = ElementSelect(Sequence::IsFirst(broadcastAsPlaceholder), dataPadded, PastValue(placeHolderOutput));
             return AsBlock(output->ReplacePlaceholders({ { placeHolderOutput, output } }), { { operandPlaceholder, operand }, { broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+#else
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
+            // We broadcast using a PastValue() operation that is normally outside of a loop,
+            // although it works inside the loop as well.
+            // The PastValue() uses an "infinite" delay such that every single time step reaches outside
+            // and gets the initial value, which is the value we want to broadcast.
+            // PastValue() also requires a data input, which is a dummy since it will never ever be used.
+            auto output = PastValue(Internal::ZeroesWithDynamicAxesLike(broadcastAsPlaceholder), /*initialState=*/ operandPlaceholder, /*offset=*/ INT_MAX);
+            return AsBlock(std::move(output), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+#endif
         }
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)

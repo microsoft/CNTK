@@ -440,7 +440,9 @@ template<class ElemType, int direction>
 
     // move the target matrix to the target device, since below it is accessed as slices which cannot move
     // TODO: change below accesses to TensorView, then this is no longer needed. This is now the case, but need to test it.
-    InputRef(0).Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+    // TODO: we seem to already use TensorView, so this thing may no longer be needed. Too scary to remove.
+    if (InputRef(0).NeedsGradient()) // (if not needs gradient then gradient matrix does not exist and therefore cannot be moved)
+        InputRef(0).Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
 
     // special case: DelayedValueNodes may be used outside of loops
     // TODO: this should be a bulk operation; this implementation is a quick hack

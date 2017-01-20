@@ -37,7 +37,7 @@ hidden_dim = 128
 num_layers = 2
 attention_dim = 128
 attention_span = 20
-use_attention = False  #True  --BUGBUG (layers): not working for now due to has_aux
+use_attention = True  #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -198,13 +198,13 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # This is the plain s2s encoder. The attention encoder will keep the entire sequence instead.
     # Note: We go_backwards.
     with default_options(enable_self_stabilization=True, go_backwards=True):
-        last_layer = Fold if not use_attention else Recurrence
+        LastRecurrence = Fold if not use_attention else Recurrence
         encode = Sequential([
             embed,
             Stabilizer(),
             For(range(num_layers-1), lambda:
                 Recurrence(LSTM(hidden_dim))),
-            last_layer(LSTM(hidden_dim), return_full_state=True)
+            LastRecurrence(LSTM(hidden_dim), return_full_state=True)
         ])
 
     # Decoder: (history*, input*) --> z*
@@ -224,7 +224,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         def decode(history, input):#,      history_axis): # TODO: get rid of history_axis, does not work for no attention
             # BUGBUG: Get rid of history axis. Currently needed because broadcast_as() below is a recurrent loop, so we must move
             #         it hoist out of the loop over decode(). It can only depend on the axis of history, but not on history.
-            encoder_output = encode(input)
+            encoded_input = encode(input)
             r = history
             r = embed(r)
             r = Sin(r)
@@ -240,15 +240,15 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                         return br
                     @Function
                     def lstm_with_attention(x, dh, dc):
-                        #atth = ([sequence.broadcast_as(sequence.first(output), history_axis) for output in encoder_output.outputs])
-                        atth = ([br_as(sequence.first(output), x) for output in encoder_output.outputs])
+                        atth = ([sequence.broadcast_as(sequence.first(state, name='first_of_state'), history) for state in encoded_input.outputs])
+                        #atth = ([br_as(sequence.first(output), history) for output in encoded_input.outputs])
                         x = splice(x, *atth)
                         r = rec_block(x, dh, dc)
                         (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
                         return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
                     r = Recurrence(lstm_with_attention)(r)
                 else:
-                    r = RecurrenceFrom(rec_block)(r, *encoder_output.outputs) # :: r, h0, c0 -> h
+                    r = RecurrenceFrom(rec_block)(r, *encoded_input.outputs) # :: r, h0, c0 -> h
             r = Sout(r)
             r = D(r)
             return r
@@ -277,8 +277,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
         # BUGBUG: This will fail with sparse input.
-        decoder_input = Delay(initial_state=sentence_start)(labels)
-        z = s2smodel(decoder_input, input)#,       decoder_input)
+        past_labels = Delay(initial_state=sentence_start)(labels)
+        z = s2smodel(past_labels, input)#,       past_labels)
         return z
 
     # model used in (greedy) decoding (history is decoder's own output)
@@ -291,13 +291,13 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                        until_predicate=lambda z: hardmax(z)[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                        length_increase=length_increase, initial_state=sentence_start)
         z = unfold(input=input, dynamic_axes_like=input)
-        # BUGBUG: parameter-order mix-up requires to pass parameters with keywords
 
         return z
 
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
                                   #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
+    model_greedy.dump()
 
     ## criterion function must drop the <s> from the labels
     ## TODO: use same as in LU with filter
@@ -325,13 +325,13 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         errs = classification_error      (z, postprocessed_labels)
         return (ce, errs)
     try:
-      criterion.dump()
+      #criterion.dump()
       criterion.update_signature(input=Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
                                labels=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
     except:
-      criterion.dump()
+      #criterion.dump()
       raise
-    criterion.dump()
+    #criterion.dump()
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
