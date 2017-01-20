@@ -3,7 +3,7 @@
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
-***2016-01-16.* V 2.0 Beta 9 Release**  
+***2017-01-20.* V 2.0 Beta 9 Release**  
 Highlights of this Release:
 * Default Python version is now 3.5 (relates to default parameters in client installations as well as [Runtime Images at Docker Hub](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers)).
 * New and updated core and Python API features.
@@ -16,11 +16,11 @@ Highlights of this Release:
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_9_Release_Notes).  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
-***2016-01-19.* V 2.0 Beta 8 Release available at Docker Hub**  
+***2017-01-19.* V 2.0 Beta 8 Release available at Docker Hub**  
 CNTK V 2.0 Beta 8 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
 
-***2016-01-16.* V 2.0 Beta 8 Release**  
+***2017-01-16.* V 2.0 Beta 8 Release**  
 Highlights of this Release:
 * Support of Python v. 2.7, 3.4, and 3.5. See [binary and source setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine) instructions to find out about how to select Python version.
 * New Python API features.
