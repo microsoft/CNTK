@@ -287,13 +287,16 @@ namespace CNTK
                     case PrimitiveOpType::Softmax:
                     case PrimitiveOpType::Hardmax:
                     case PrimitiveOpType::Dropout:
-                    case PrimitiveOpType::Where:
                     case PrimitiveOpType::LogSoftmax:
                     case PrimitiveOpType::Sin:
                     case PrimitiveOpType::Cos:
                     case PrimitiveOpType::Pass:
                         assert(inputs.size() == 1);
                         outputShape = UnaryElementwiseOpOutputShape(inputs[0].Shape());
+                        break;
+                    case PrimitiveOpType::Where:
+                        assert(inputs.size() == 1);
+                        outputShape = NDShape{}; // scalar
                         break;
                     case PrimitiveOpType::PackedIndex:
                         assert(inputs.size() == 2);
