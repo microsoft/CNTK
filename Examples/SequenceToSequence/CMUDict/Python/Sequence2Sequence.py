@@ -37,7 +37,7 @@ hidden_dim = 128
 num_layers = 2
 attention_dim = 128
 attention_span = 20
-use_attention = True  #True  --BUGBUG (layers): not working for now due to has_aux
+use_attention = False  #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -212,36 +212,25 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     #  - training: labels
     #  - testing:  its own output hardmax(z)
     with default_options(enable_self_stabilization=True):
-    #with default_options(enable_self_stabilization=False):
         # sub-layers
-        Sin = Stabilizer()
+        stab_in = Stabilizer()
         #att_fn = Attention(attention_dim, axis=-2, attention_span=attention_span) # :: (h_enc*, h_dec) -> (h_aug_dec)
         rec_blocks = [LSTM(hidden_dim) for i in range(num_layers)]
-        Sout = Stabilizer()
-        D = Dense(label_vocab_dim)
+        stab_out = Stabilizer()
+        proj_out = Dense(label_vocab_dim)
         # layer function
         @Function
-        def decode(history, input):#,      history_axis): # TODO: get rid of history_axis, does not work for no attention
-            # BUGBUG: Get rid of history axis. Currently needed because broadcast_as() below is a recurrent loop, so we must move
-            #         it hoist out of the loop over decode(). It can only depend on the axis of history, but not on history.
+        def decode(history, input):
             encoded_input = encode(input)
             r = history
             r = embed(r)
-            r = Sin(r)
+            r = stab_in(r)
             for i in range(num_layers):
-                rec_block = rec_blocks[i]   #LSTM(hidden_dim)  # :: (x, dh, dc) -> (h, c)
+                rec_block = rec_blocks[i]   # LSTM(hidden_dim)  # :: (x, dh, dc) -> (h, c)
                 if use_attention:
-                    #@Function
-                    def br_as(operand, broadcast_as_operand):
-                        # use operand as initial_state for a past_value over a dummy input with right axes
-                        #dummy = sequence.constant_with_dynamic_axes_like(Constant(0, hidden_dim), broadcast_as_operand)
-                        dummy = sequence.constant_with_dynamic_axes_like(0, broadcast_as_operand)
-                        br = past_value(dummy, initial_state=operand, time_step=1000000)
-                        return br
                     @Function
                     def lstm_with_attention(x, dh, dc):
                         atth = ([sequence.broadcast_as(sequence.first(state, name='first_of_state'), history) for state in encoded_input.outputs])
-                        #atth = ([br_as(sequence.first(output), history) for output in encoded_input.outputs])
                         x = splice(x, *atth)
                         r = rec_block(x, dh, dc)
                         (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
@@ -249,8 +238,8 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                     r = Recurrence(lstm_with_attention)(r)
                 else:
                     r = RecurrenceFrom(rec_block)(r, *encoded_input.outputs) # :: r, h0, c0 -> h
-            r = Sout(r)
-            r = D(r)
+            r = stab_out(r)
+            r = proj_out(r)
             return r
 
     return decode
@@ -278,48 +267,26 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
         # BUGBUG: This will fail with sparse input.
         past_labels = Delay(initial_state=sentence_start)(labels)
-        z = s2smodel(past_labels, input)#,       past_labels)
-        return z
+        return s2smodel(past_labels, input)
 
     # model used in (greedy) decoding (history is decoder's own output)
     @Function
     def model_greedy(input): # (input*) --> (word_sequence*)
 
-        # TODO: move hardmax into model argument itself, s2smodel >> hardmax, since in greedy decoding we don't need the probs
-        unfold = UnfoldFrom(s2smodel,
-                       map_state_function=hardmax,                                    # feedback goes through hardmax
-                       until_predicate=lambda z: hardmax(z)[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
-                       length_increase=length_increase, initial_state=sentence_start)
-        z = unfold(input=input, dynamic_axes_like=input)
+        # Decoding is an unfold() operation starting from sentence_start.
+        # The actual input is passed as an input to the s2smodel, which encodes it inside.
+        unfold = UnfoldFrom(s2smodel >> hardmax,
+                            until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
+                            length_increase=length_increase, initial_state=sentence_start)
+        return unfold(input, dynamic_axes_like=input)
 
-        return z
-
-    model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))#, 
-                                  #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
-                                  #Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis')]))
+    model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
     model_greedy.dump()
-
-    ## criterion function must drop the <s> from the labels
-    ## TODO: use same as in LU with filter
-    #drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
-    #model_train = model_train.clone(CloneMethod.share) # note: use separate clone(), otherwise model_train.arguments[0] below is not the right one
-    #model_train = model_train.replace_placeholders({model_train.arguments[0]: drop_start.output}) # labels
-    #model_train = model_train.replace_placeholders({model_train.arguments[1]: drop_start.output})
-    # ^^ this is a workaround around the problem described inside criterion()
 
     @Function
     def criterion(input, labels):
-        #model1 = model_train
-        #drop_start = sequence.slice(Placeholder(name='labels'), 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
-        #model1 = model1.clone(CloneMethod.share) # note: use separate clone(), otherwise model1.arguments[0] below is not the right one
-        #model1 = model1.replace_placeholders({model1.arguments[0]: drop_start.output})
-        #postprocessed_labels = sequence.slice(labels, 1, 0, 'postprocessed_labels')
-        #z = model1(input, postprocessed_labels)
-        # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
-        #         A mix-up of parameter order?
-        #z = model_train(input, labels)
-        postprocessed_labels = sequence.slice(labels, 1, 0, 'postprocessed_labels') # <s> A B C </s> --> A B C </s>
-        #z = model_train(input=input, labels=postprocessed_labels)  # BUGBUG: parameter ordering unreliable
+        # criterion function must drop the <s> from the labels
+        postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
         z = model_train(input, postprocessed_labels)
         ce   = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error      (z, postprocessed_labels)
