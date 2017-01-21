@@ -174,7 +174,7 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
 
     return Block(recurrence, 'Recurrence', Record(over_function=over_function))
 
-def Fold(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
+def Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
     Like ``Recurrence()`` but returns only the final state.
     '''
@@ -183,7 +183,7 @@ def Fold(over_function, go_backwards=default_override_or(False), initial_state=d
     initial_state = get_default_override(Fold, initial_state=initial_state)
 
     # get the scan function
-    recurrence = Recurrence(over_function, go_backwards=go_backwards, initial_state=initial_state, return_full_state=return_full_state)
+    recurrence = Recurrence(folder_function, go_backwards=go_backwards, initial_state=initial_state, return_full_state=return_full_state)
 
     # now take the last or first
     select = sequence.first if go_backwards else sequence.last
@@ -191,18 +191,18 @@ def Fold(over_function, go_backwards=default_override_or(False), initial_state=d
 
     fold = _inject_name(fold, name)
 
-    return Block(fold, 'Fold', Record(over_function=over_function))
+    return Block(fold, 'Fold', Record(folder_function=folder_function))
 
 # TODO: This is still a bit messy. The unfold_from() function should take the encoding instead of 'input'.
-def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
+def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
     '''
     Implements an unfold() operation. It creates a function that, starting with a seed input,
-    applies 'over_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
+    applies 'generator_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
     it may have this form:
        `result = f(... f(f([g(input), initial_state])) ... )`
     or this form:
        `result = f(g(input), ... f(g(input), f(g(input), initial_state)) ... )`
-    where `f` is `over_function`.
+    where `f` is `generator_function`.
     An example use of this is sequence-to-sequence decoding, where `g(input)` is the sequence encoder,
     `initial_state` is the sentence-start symbol, and `f` is the decoder. The first
     of the two forms above is a plain sequence-to-sequence model where encoder output
@@ -229,7 +229,7 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
         # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder
         history_fwd = ForwardDeclaration()
         prev_history = delay(history_fwd, initial_state=initial_state)
-        z = over_function(prev_history, input)
+        z = generator_function(prev_history, input)
         # apply map_state_function if given
         fb = map_state_function(z)
         # implant the dynamic axis (from dynamic_axes_like)
@@ -248,4 +248,4 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
 
     unfold_from = _inject_name(unfold_from, name)
 
-    return Block(unfold_from, 'UnfoldFrom', Record(over_function=over_function))
+    return Block(unfold_from, 'UnfoldFrom', Record(generator_function=generator_function))

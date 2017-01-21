@@ -478,6 +478,9 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False)):
 
     return past_value_window
 
+
+# TODO: move this to models.py, which contains more specific models
+
 # AttentionModel block
 def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
                    init=default_override_or(glorot_uniform()),

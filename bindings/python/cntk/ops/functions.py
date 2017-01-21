@@ -73,7 +73,7 @@ class Function(cntk_py.Function):
             args = [placeholder_variable(name=name) for name in arg_names]
 
             # helpers
-            ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
+            #ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
             def force_order_args(fun_args):
                 from .. import plus, reduce_sum
                 zero_in_right_order = plus(*(reduce_sum(arg, all_axes=True) for arg in fun_args)) * 0
@@ -108,6 +108,15 @@ class Function(cntk_py.Function):
                     return output
                 if isinstance(out, tuple): # multi-valued function, returned as a tuple
                     out = [resolve_named(output) for output in out]
+                    # BUGBUG: combine() does not allow duplicates, so we wrap them in alias()
+                    out_seen = set()
+                    for i in range(len(out)):
+                        out_i = out[i]
+                        if out_i in out_seen:
+                            out[i] = alias(out_i)
+                            print('alias-wrapping duplicate arg in', f_name)
+                        else:
+                            out_seen.add(out_i)
                     out = combine(out)  # --> turn into a combine()
                 else:
                     out = resolve_named(out)
@@ -131,6 +140,7 @@ class Function(cntk_py.Function):
             assert out_arg_names == arg_names
 
             # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
+            # TODO: solve by consuming that arg somewhere, with the zero-out trick.
             if len(out.signature) != len(args):
                 unfulfilled_args = set(out.signature) - set(args)
                 if unfulfilled_args:
