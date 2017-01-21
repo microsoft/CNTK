@@ -179,7 +179,7 @@ function OpNVidiaCudnn5180(
     $envValue = join-path $targetPath "cuda"
     $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v5.1"
     $downloadSizeWin7 = 0
-    $downloadSizeWin10 = 54440432
+    $downloadSizeWin10 = 0
 
     @( @{ShortName = "CUDNN5180"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
