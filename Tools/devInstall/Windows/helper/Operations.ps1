@@ -22,26 +22,27 @@ function OpAnaconda3411(
      } )
 }
 
-function OpAnacondaEnv34(
+function OpAnacondaEnv(
     [parameter(Mandatory=$true)][string] $AnacondaBasePath,
     [parameter(Mandatory=$true)][string] $repoDir,
-    [parameter(Mandatory=$true)][string] $reponame)
+    [parameter(Mandatory=$true)][string] $reponame,
+    [parameter(Mandatory=$true)][string] $pyVersion)
 {
-    $prodName = "Python 3.4 Environment"
+    $prodName = "Python $pyVersion Environment"
     $targetFolder = Split-Path $AnacondaBasePath -Parent
     $prodSubDir = Split-Path $AnacondaBasePath -Leaf
     $targetPath = join-path $targetFolder $prodSubDir
-    $envName = "cntkdev-py34"
+    $envName = "cntkdev-py$pyVersion"
     $envDir = "envs\$envName"
-    $envVar = "CNTK_PY34_PATH";
+    $envVar = "CNTK_PY$($pyVersion)_PATH";
     $envValue = join-path $targetPath $envDir
 
     $ymlDirectory = join-path $repoDir $repoName
     $ymlDirectory = join-path $ymlDirectory "scripts\install\windows"
 
-    @{ ShortName = "PYENV34"; Name = $prodName;  VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Creating $prodName";
+    @{ ShortName = "PYENV"; Name = $prodName;  VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Creating $prodName";
       Verification  = @( @{Function = "VerifyRunAlways" } );
-      Action = @( @{Function = "InstallYml"; BasePath = $targetPath; Env = $envName; ymlFile= "$ymlDirectory\conda-windows-cntk-py34-environment.yml" },
+      Action = @( @{Function = "InstallYml"; BasePath = $targetPath; Env = $envName; ymlFile= "$ymlDirectory\conda-windows-cntk-py$($pyVersion)-environment.yml" },
                   @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } )
      }
 }
