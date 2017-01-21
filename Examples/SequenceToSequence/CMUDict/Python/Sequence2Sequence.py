@@ -17,7 +17,6 @@ from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from cntk.graph import find_by_name
 from cntk.layers import *
-#from attention import create_attention_augment_hook
 
 ########################
 # variables and stuff  #
@@ -37,7 +36,8 @@ hidden_dim = 128
 num_layers = 2
 attention_dim = 128
 attention_span = 20
-use_attention = True  #True  --BUGBUG (layers): not working for now due to has_aux
+attention_axis = -3
+use_attention = True
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -88,72 +88,6 @@ def testit(r, with_labels=True):
     #input("hit enter")
     exit()
 
-# the function that gets passed to the LSTM function as the augment_input_hook parameter
-def Attention(attention_dim, axis=None, attention_span=None): # :: (h_enc*, h_dec) -> (h_aug_dec)
-
-    if axis is None:
-        raise ValueError('Attention() currently reqiures a static axis')
-    if attention_span is None:
-        raise ValueError('Attention() currently reqiures a maximum attention span')
-
-    from cntk.blocks import _INFERRED # init helpers
-    W_dec = Parameter(shape=_INFERRED + (attention_dim,), init=glorot_uniform())
-    W_enc = Parameter(shape=_INFERRED + (attention_dim,), init=glorot_uniform())
-    # TODO: use Dense
-    v = Parameter((attention_dim, 1), init=0) # 0... really? Not flat?
-    # TODO: use Dense
-    pstab = Stabilizer()
-    ustab = Stabilizer()
-    wstab = Stabilizer()
-    ones = Constant(value=1, shape=(attention_span)) # TODO: eliminate
-
-    # setup the projection of the attention window to go into the tanh()
-    def projected_attention_window_broadcast():
-
-        # We need to set up these 'broadcasted' versions so that these static-axis values can be properly 
-        # broadcast to all of the steps along the dynamic axis that the decoder uses when we're calculating
-        # the attention weights in the augment_input_hook function below
-        projected_value = broadcast_as(times(Stabilizer()(element_times(aw_value, aw_valid)), W_enc), 
-                                                          decoder_dynamic_axis)
-        value           = broadcast_as(aw_value, decoder_dynamic_axis)
-        valid           = broadcast_as(aw_valid, decoder_dynamic_axis)
-
-        # should be shape=(attention_span, attention_dim)
-        return projected_value, value, valid
-
-    @Function
-    def attention(h_enc, prev_state): # :: (h_enc*, h_dec) -> (h_aug_dec)
-
-        # get projected values
-        projected_value, value, valid = projected_attention_window_broadcast()
-
-        #output_dim = prev_state.shape[0]  # UGH
-
-        projectedH = times(pstab(prev_state), W_dec, output_rank=1)        
-
-        tanh_out = tanh(projectedH + projected_value)  # (attention_span, attention_dim)
-    
-        # u = v * tanh(W1h + W2d)
-        u = times(ustab(element_times(tanh_out, valid)), v) # (attention_span, 1)
-        u_valid = u + (valid - 1) * 50                      # zero-out the unused elements
-
-        # we do two reshapes (20,1)->(20) and then (20)->(20,1) so that we can use the built-in softmax()
-        # TODO: we have to do the above because softmax() does not support "axis=" --> make sure this gets added
-        attention_weights = softmax(reshape(u_valid, shape=(attention_span)), name='attention_weights')
-    
-        # the window should be shape=(attention_span, output_dim)
-        weighted_attention_window = element_times(value, 
-                                                  reshape(attention_weights, shape=(attention_span, 1)), 
-                                                  name='weighted_attention_window')
-
-        # weighted_attention_avg should be shape=(output_dim)
-        weighted_attention_avg = times(ones, wstab(weighted_attention_window), output_rank=1, 
-                                       name='weighted_attention_avg')
-        # TODO: is this a reduction?
-
-        return weighted_attention_avg
-    return attention
-
 # create the s2s model
 def create_model(): # :: (history*, input*) -> logP(w)*
     # Embedding: (input*) --> (embedded_input*)
@@ -164,7 +98,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # Create multiple layers of LSTMs by passing the output of the i-th layer
     # to the (i+1)th layer as its input
     # This is the plain s2s encoder. The attention encoder will keep the entire sequence instead.
-    # Note: We go_backwards.
+    # Note: We go_backwards for the plain model, but forward for the attention model.
     with default_options(enable_self_stabilization=True, go_backwards=not use_attention):
         LastRecurrence = Fold if not use_attention else Recurrence
         encode = Sequential([
@@ -187,14 +121,12 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         proj_out = Dense(label_vocab_dim)
         # attention model
         if use_attention:
-            attention_axis=-3
             attention_model = AttentionModel(attention_dim, attention_span, attention_axis) # :: (h_enc*, h_dec) -> (h_aug_dec)
         # layer function
         @Function
         def decode(history, input):
             history_axis = history  # we use history_axis wherever we pass this only for the sake of passing its axis
             encoded_input = encode(input)
-            #att_fn(encoded_input.outputs[0]) # xxx
             r = history
             r = embed(r)
             r = stab_in(r)
@@ -205,18 +137,6 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                         @Function
                         def lstm_with_attention(x, dh, dc):
                             h_att = attention_model(encoded_input.outputs[0], dh)
-                            #from cntk.ops import tanh, softmax, reduce_sum, element_times
-                            ## project decoder hidden state
-                            #h_dec_proj = attn_proj_dec(dh)
-                            ## u = v * tanh(W1h + W2d)
-                            #tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
-                            #u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
-                            #u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
-                            #attention_weights = softmax(u_masked, axis=attention_axis, name='attention_weights')
-                            ## now take weighted sum over the encoder state vectors
-                            #h_att = reduce_sum(element_times(h_enc_proj, attention_weights), axis=attention_axis, name='h_att')
-                            #h_att = attn_final_stab(h_att)
-                            # the attention window is actually fed as an augmented input, not a hidden state
                             x = splice(x, h_att)
                             r = rec_block(x, dh, dc)
                             (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
@@ -242,9 +162,10 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
     # this is what we train here
     #s2smodel.update_signature(Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]),
-    #                         Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+    #                          Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
     # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
     #         Maybe also attributable to a parameter-order mix-up?
+    # Need to think whether this makes sense. The axes are different for training and testing.
 
     # model used in training (history is known from labels)
     # note: the labels must not contain the initial <s>
@@ -629,80 +550,3 @@ if __name__ == '__main__':
     #model_filename = "model_epoch0.cmf"
     #model = load_model(model_filename)
     #interactive_session(model, vocab, i2w, show_attention=True)
-
-# -----------------------------------------------
-
-def old_code():
-        # OLD CODE which I may still need later:
-        # Parameters to the decoder stack depend on the model type (use attention or not)
-        if use_attention:
-            label_embedded = embed(label_sequence)
-            augment_input_hook = create_attention_augment_hook(attention_dim, attention_span, 
-                                                               label_embedded, encoder_output_h)
-            recurrence_hook_h = past_value
-            recurrence_hook_c = past_value
-            decoder_output_h, _ = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
-        else:
-          if False:
-            # William's original
-            thought_vector_h, thought_vector_c = encoder_output.outputs
-            # Here we broadcast the single-time-step thought vector along the dynamic axis of the decoder
-            label_embedded = embed(label_sequence)
-            thought_vector_broadcast_h = sequence.broadcast_as(thought_vector_h, label_embedded)
-            thought_vector_broadcast_c = sequence.broadcast_as(thought_vector_c, label_embedded)
-            augment_input_hook = None
-            is_first_label = sequence.is_first(label_sequence)  # 1 0 0 0 ...
-            def recurrence_hook_h(operand):
-                return element_select(is_first_label, thought_vector_broadcast_h, past_value(operand))
-            def recurrence_hook_c(operand):
-                return element_select(is_first_label, thought_vector_broadcast_c, past_value(operand))
-            decoder_output_h, _ = LSTM_stack(decoder_input, num_layers, hidden_dim, recurrence_hook_h, recurrence_hook_c, augment_input_hook)    
-            z = Dense(label_vocab_dim) (Stabilizer()(decoder_output_h))    
-          else:
-            z = decoder(decoder_input, *encoder_output.outputs)
-
-        return z
-
-def LSTM_layer(input, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None, create_aux=False):
-    aux_input = None
-    has_aux   = False
-    if augment_input_hook != None:
-        has_aux = True
-        if create_aux:
-            aux_input = augment_input_hook(dh)
-        else:
-            aux_input = augment_input_hook
-
-    dh = placeholder_variable()
-    dc = placeholder_variable()
-    LSTM_cell = LSTM(output_dim, enable_self_stabilization=True)
-    if has_aux:    
-        f_x_h_c = LSTM_cell(splice(input, aux_input), dh, dc)
-    else:
-        f_x_h_c = LSTM_cell(input, dh, dc)
-    h_c = f_x_h_c.outputs
-
-    h = recurrence_hook_h(h_c[0])
-    c = recurrence_hook_c(h_c[1])
-
-    replacements = { dh: h.output, dc: c.output }
-    f_x_h_c.replace_placeholders(replacements)
-
-    h = f_x_h_c.outputs[0]
-    c = f_x_h_c.outputs[1]
-
-    return combine([h]), combine([c]), aux_input
-
-# Stabilizer >> num_layers * LSTM_layer
-def LSTM_stack(input, num_layers, output_dim, recurrence_hook_h=past_value, recurrence_hook_c=past_value, augment_input_hook=None):
-
-    create_aux = augment_input_hook != None
-
-    # only the first layer should create an auxiliary input (the attention weights are shared amongs the layers)
-    input = Stabilizer()(input)
-    output_h, output_c, aux = LSTM_layer(input, output_dim, 
-                                         recurrence_hook_h, recurrence_hook_c, augment_input_hook, create_aux)
-    for layer_index in range(1, num_layers):
-        (output_h, output_c, aux) = LSTM_layer(output_h.output, output_dim, recurrence_hook_h, recurrence_hook_c, aux, False)
-
-    return (output_h, output_c)
