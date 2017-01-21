@@ -17,7 +17,7 @@ from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from cntk.graph import find_by_name
 from cntk.layers import *
-from cntk.layers.models import *
+from cntk.models.attention import *
 
 ########################
 # variables and stuff  #

@@ -65,6 +65,7 @@
     <None Include="cntk\layers\__init__.py" />
     <None Include="cntk\learner.py" />
     <None Include="cntk\higher_order_layers.py" />
+    <None Include="cntk\models\attention.py" />
     <None Include="cntk\persist.py" />
     <None Include="cntk\pytest.ini" />
     <None Include="cntk\tensor.py" />

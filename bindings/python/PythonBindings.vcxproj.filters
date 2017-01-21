@@ -22,6 +22,9 @@
     <Filter Include="cntk\layers">
       <UniqueIdentifier>{841d2680-ba22-4a73-9297-34248a404bdd}</UniqueIdentifier>
     </Filter>
+    <Filter Include="cntk\models">
+      <UniqueIdentifier>{5405fbf1-16b8-4e1a-9d93-cb704108cbca}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cntk\__init__.py">
@@ -135,6 +138,9 @@
     </None>
     <None Include="cntk\layers\models.py">
       <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\models\attention.py">
+      <Filter>cntk\models</Filter>
     </None>
   </ItemGroup>
 </Project>

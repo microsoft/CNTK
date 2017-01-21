@@ -4,13 +4,13 @@
 # for full license information.
 # ==============================================================================
 
-# models -- standard neural network models go here
+# attention -- standard attention model
 
 from __future__ import division
-from . import *
+from ..layers import *
+from ..layers.blocks import _inject_name # helpers
 from ..ops.functions import Function
 from ..ops import sequence
-from .blocks import _inject_name # helpers
 
 
 # AttentionModel block
