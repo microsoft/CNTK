@@ -37,7 +37,7 @@ hidden_dim = 128
 num_layers = 2
 attention_dim = 128
 attention_span = 20
-use_attention = False  #True  --BUGBUG (layers): not working for now due to has_aux
+use_attention = True  #True  --BUGBUG (layers): not working for now due to has_aux
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -89,33 +89,47 @@ def testit(r, with_labels=True):
     exit()
 
 # Create a function which returns a static, maskable view for N past steps over a sequence along the given 'axis'.
-# It returns two records: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
-def past_value_window(N, x, axis=0):
- 
+# It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
+#@Function
+def past_value_window(x, N, axis=-2):
+
     # this is to create 1's along the same dynamic axis as `x`
-    ones_like_input = times(x, constant(0, shape=(x.shape[0],1))) + 1
-    #ones_like_input = constant_with_dynamic_axes_like(1, x)
-    # TODO: enable this
-        
-    last_value = []
-    last_valid = []
-    value = None
-    valid = None
+    #ones_like_input = times(x, constant(0, shape=(x.shape[0],1))) + 1
 
+    #@Function
+    def nth_from_back(input, t):
+        return sequence.last(Delay(t)(input))
+
+    last_values = []
+    last_valids = []
+
+    from cntk.ops import sequence
+    ones_like_input = sequence.constant_with_dynamic_axes_like(1, x)
+    # TODO: use Python list comprehension
     for t in range(N):
-        if t == 0:
-            value = x
-            valid = ones_like_input
-        else:
-            value = past_value(x, time_step=t)
-            valid = past_value(ones_like_input, time_step=t)            
-        
-        last_value.append(last(value))
-        last_valid.append(last(valid))
+        # TODO: express using Delay() layer
+        #if t == 0:
+        #    value = x
+        #    valid = ones_like_input
+        #else:
+        #    value = past_value(x, time_step=t)
+        #    valid = past_value(ones_like_input, time_step=t)
 
-    # stack rows 'beside' each other, so axis=axis-2 (create a new static axis that doesn't exist)
-    value = splice(*last_value, axis=axis-2, name='value')
-    valid = splice(*last_valid, axis=axis-2, name='valid')
+        value = nth_from_back(x,               t)
+        valid = nth_from_back(ones_like_input, t)
+
+        #value = Delay(t)(x)
+        #valid = Delay(t)(ones_like_input)
+        #
+        #value = sequence.last(value)
+        #valid = sequence.last(valid)
+
+        last_values.append(value)
+        last_valids.append(valid)
+
+    # stack rows 'beside' each other in a new static axis (create a new static axis that doesn't exist)
+    value = splice(*last_values, axis=axis, name='value')
+    valid = splice(*last_valids, axis=axis, name='valid')
 
     # value[t] = value of t steps in the past; valid[t] = true if there was a value t steps in the past
     return (value, valid)
@@ -197,7 +211,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # to the (i+1)th layer as its input
     # This is the plain s2s encoder. The attention encoder will keep the entire sequence instead.
     # Note: We go_backwards.
-    with default_options(enable_self_stabilization=True, go_backwards=True):
+    with default_options(enable_self_stabilization=True, go_backwards=not use_attention):
         LastRecurrence = Fold if not use_attention else Recurrence
         encode = Sequential([
             embed,
@@ -214,6 +228,11 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     with default_options(enable_self_stabilization=True):
         # sub-layers
         stab_in = Stabilizer()
+        with default_options(bias=False):
+            attn_proj_enc  = Stabilizer() >> Dense(attention_dim)               # projects input hidden state
+            attn_proj_dec  = Stabilizer() >> Dense(attention_dim, input_rank=1) # projects decoder hidden state, but keeping encoder and beam-search axes intact
+            attn_proj_tanh = Stabilizer() >> Dense(1,             input_rank=1) # projects tanh output, keeping encoder and beam-search axes intact
+            attn_final_stab = Stabilizer()
         #att_fn = Attention(attention_dim, axis=-2, attention_span=attention_span) # :: (h_enc*, h_dec) -> (h_aug_dec)
         rec_blocks = [LSTM(hidden_dim) for i in range(num_layers)]
         stab_out = Stabilizer()
@@ -221,21 +240,54 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         # layer function
         @Function
         def decode(history, input):
+            history_axis = history  # we use history_axis wherever we pass this only for the sake of passing its axis
             encoded_input = encode(input)
+            # attention
+            if use_attention:
+                attention_axis=-3
+                (h_enc, h_enc_valid) = past_value_window(encoded_input.outputs[0], attention_span, axis=attention_axis)
+                h_enc_proj = attn_proj_enc(h_enc)  #times(stab_attn(element_times(aw_value, aw_valid)), W_enc)
+                # window must be broadcast to every decoder time step
+                h_enc_proj  = sequence.broadcast_as(h_enc_proj,  history_axis)
+                h_enc_valid = sequence.broadcast_as(h_enc_valid, history_axis)
+            #att_fn(encoded_input.outputs[0]) # xxx
             r = history
             r = embed(r)
             r = stab_in(r)
             for i in range(num_layers):
                 rec_block = rec_blocks[i]   # LSTM(hidden_dim)  # :: (x, dh, dc) -> (h, c)
                 if use_attention:
-                    @Function
-                    def lstm_with_attention(x, dh, dc):
-                        atth = ([sequence.broadcast_as(sequence.first(state, name='first_of_state'), history) for state in encoded_input.outputs])
-                        x = splice(x, *atth)
-                        r = rec_block(x, dh, dc)
-                        (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
-                        return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
-                    r = Recurrence(lstm_with_attention)(r)
+                    if i == 0:
+                        @Function
+                        def lstm_with_attention(x, dh, dc):
+                            from cntk.ops import tanh, softmax, reduce_sum, element_times
+                            # project decoder hidden state
+                            h_dec_proj = attn_proj_dec(dh)
+                            #projectedH = times(pstab(prev_state), W_dec, output_rank=1)
+                            # u = v * tanh(W1h + W2d)
+                            tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
+                            u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
+                            #u = times(ustab(tanh_out_masked), v) # (attention_span, 1)
+                            u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
+                            #attention_weights = softmax(reshape(u_masked, shape=(attention_span)), name='attention_weights')
+                            attention_weights = softmax(u_masked, axis=attention_axis, name='attention_weights')
+                            # now take weighted sum over the encoder state vectors
+                            #weighted_attention_window = element_times(value, 
+                            #                                          reshape(attention_weights, shape=(attention_span, 1)), 
+                            #                                          name='weighted_attention_window')
+                            #weighted_attention_avg = times(ones, wstab(weighted_attention_window), output_rank=1, 
+                            #                               name='weighted_attention_avg')
+                            h_att = reduce_sum(element_times(h_enc_proj, attention_weights), axis=attention_axis, name='h_att')
+                            h_att = attn_final_stab(h_att)
+                            #h_att = ([sequence.broadcast_as(sequence.first(state, name='first_of_state'), history_axis) for state in encoded_input.outputs])
+                            # the attention window is actually fed as an input, not a hidden state
+                            x = splice(x, h_att)
+                            r = rec_block(x, dh, dc)
+                            (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
+                            return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
+                        r = Recurrence(lstm_with_attention)(r)
+                    else:
+                        r = Recurrence(rec_block)(r)
                 else:
                     r = RecurrenceFrom(rec_block)(r, *encoded_input.outputs) # :: r, h0, c0 -> h
             r = stab_out(r)
@@ -355,7 +407,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
-                debug_attention(model_greedy, mb_valid, valid_reader)                
+                #debug_attention(model_greedy, mb_valid, valid_reader)                
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1

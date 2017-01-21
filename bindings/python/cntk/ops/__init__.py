@@ -1262,7 +1262,7 @@ def cos(x, name=''):
 
 
 @typemap
-def softmax(x, name=''):
+def softmax(x, axis=None, name=''):
     r'''
     Computes the gradient of :math:`f(z)=\log\sum_i\exp(z_i)` at z=``x``. Concretely,
 
@@ -1275,6 +1275,8 @@ def softmax(x, name=''):
     therefore be interpreted as probabilities for mutually exclusive outcomes
     as in the case of multiclass classification.
 
+    If ``axis`` is given, the softmax will be computed along that axis.
+
     Example:
         >>> C.softmax([[1, 1, 2, 3]]).eval()
         array([[ 0.082595,  0.082595,  0.224515,  0.610296]], dtype=float32)
@@ -1284,12 +1286,21 @@ def softmax(x, name=''):
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the softmax operation will be performed
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
+    # softmax over a specific axis: implemented explicitly
+    if axis is not None:
+        from cntk.cntk_py import reduce_log_sum, exp, minus
+        axis = sanitize_axis(axis)
+        Z = reduce_log_sum(x, axis)  # log denominator
+        exponent = minus(x, Z.output())
+        return exp(exponent.output(), name) # this is the softmax
+    # softmax over all elements
     return softmax(x, name)
 
 
@@ -1944,7 +1955,7 @@ def reduce_log_add_exp(x, axis=None, name=''):
     Examples:
         >>> x = C.input_variable(shape=(3,2))
         >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
-        >>> lse = C.reduce_log_sum(x)
+        >>> lse = C.reduce_log_add_exp(x)
         >>> lse.eval({x:[val]})
         array([[ 5.456193]], dtype=float32)
         >>> np.log(np.sum(np.exp(val)))

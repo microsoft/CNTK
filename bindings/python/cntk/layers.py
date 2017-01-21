@@ -62,7 +62,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     input_shape = _INFERRED * (input_rank if input_rank is not None else 1)
 
     if input_rank is not None:
-        UntestedBranchError("Dense, input_rank option not implemented")
+        #UntestedBranchError("Dense, input_rank option not implemented")
         infer_input_rank_to_map = -1 # means map_rank is not specified; input_rank rules
     elif map_rank is None:
         infer_input_rank_to_map = 0  # neither given: default to 'infer W to use all input dims'
