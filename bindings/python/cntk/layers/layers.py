@@ -10,16 +10,13 @@
 # TODO: clean up the dependencies
 from __future__ import division
 import numpy as np
-from .ops.functions import Function
-from .ops.variables import Variable
-from .ops import parameter, input_variable, placeholder_variable, combine
-from .ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, sequence, delay, softmax, tanh, reduce_sum
-from .utils import Record, _as_tuple
-from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name # helpers
-
-# import the other pieces of the Layers lib so that users can just use import layers to get the entire Layers lib
+from ..ops.functions import Function
+from ..ops.variables import Variable
+from ..ops import parameter, input_variable, placeholder_variable, combine
+from ..ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, sequence, delay, softmax, tanh, reduce_sum
+from ..utils import Record, _as_tuple
 from .blocks import *
-from .higher_order_layers import *
+from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name # helpers
 
 
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
@@ -220,7 +217,6 @@ def Convolution(rf_shape,         # e.g. (3,3)
 
     # init can be an np.array, which must have the correct dimensions subject to faking depth
     # Once we no longer fake depth at this outer level, we can remove this.
-    from cntk import cntk_py
     if isinstance(init, np.ndarray):
         if reduction_rank != 0:
             raise ValueError("a constant initializer can currently only used without reduction dimension")

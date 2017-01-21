@@ -19,6 +19,9 @@
     <Filter Include="cntk\utils\debughelpers">
       <UniqueIdentifier>{8203febc-a583-407c-a9d7-b6147b7f14c9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="cntk\layers">
+      <UniqueIdentifier>{841d2680-ba22-4a73-9297-34248a404bdd}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cntk\__init__.py">
@@ -117,6 +120,21 @@
     <None Include="cntk\blocks.py" />
     <None Include="cntk\higher_order_layers.py">
       <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\layers\__init__.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\layers\blocks.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\layers\higher_order_layers.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\layers\layers.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\layers\models.py">
+      <Filter>cntk\layers</Filter>
     </None>
   </ItemGroup>
 </Project>

@@ -6,13 +6,8 @@
 
 # higher_order_functions -- higher-order functions, like Sequential() and Recurrence()
 
-#import numpy as np
-#import sys
-#import os
-#import time
-
-from .utils import Record
-from .ops import combine, delay, sequence
+from ..utils import Record
+from ..ops import combine, delay, sequence
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name
 
@@ -237,16 +232,15 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         # apply map_state_function if given
         new_state = map_state_function(new_state)
         # implant the dynamic axis (from dynamic_axes_like)
-        from .utils import sanitize_input, typemap
-        from _cntk_py import reconcile_dynamic_axis
+        from ..utils import sanitize_input, typemap
+        from ..cntk_py import reconcile_dynamic_axis
         new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
         state_fwd.resolve_to(new_state)
 
         # apply until_predicate if given
         if until_predicate is not None:
-            from cntk.ops.sequence import gather
             valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(until_predicate(output))
-            output = gather(output, valid_frames)
+            output = sequence.gather(output, valid_frames)
 
         return output
 

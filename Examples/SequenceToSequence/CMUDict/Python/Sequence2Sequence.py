@@ -66,7 +66,7 @@ inputAxis=Axis('inputAxis')
 labelAxis=Axis('labelAxis')
 
 def testit(r, with_labels=True):
-    from cntk.blocks import Constant, Type
+    #from cntk.blocks import Constant, Type
     if True:
     #try:
         r.dump()
@@ -159,7 +159,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
 
 def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_size):
 
-    from cntk.blocks import Constant, Type
+    #from cntk.blocks import Constant, Type
 
     # this is what we train here
     #s2smodel.update_signature(Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]),
