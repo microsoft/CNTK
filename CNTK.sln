@@ -1458,12 +1458,29 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GoogLeNet", "GoogLeNet", "{
 		Examples\Image\Classification\GoogLeNet\README.md = Examples\Image\Classification\GoogLeNet\README.md
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript", "{95AE4F8A-7618-4B6F-8411-31576062AA63}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BN-Inception", "BN-Inception", "{CE223840-1DEE-4849-B530-F06BEE05BAA8}"
 	ProjectSection(SolutionItems) = preProject
-		Examples\Image\Classification\GoogLeNet\BrainScript\InceptionBlocks.bs = Examples\Image\Classification\GoogLeNet\BrainScript\InceptionBlocks.bs
-		Examples\Image\Classification\GoogLeNet\BrainScript\InceptionV3.bs = Examples\Image\Classification\GoogLeNet\BrainScript\InceptionV3.bs
-		Examples\Image\Classification\GoogLeNet\BrainScript\InceptionV3.cntk = Examples\Image\Classification\GoogLeNet\BrainScript\InceptionV3.cntk
-		Examples\Image\Classification\GoogLeNet\BrainScript\README.md = Examples\Image\Classification\GoogLeNet\BrainScript\README.md
+		Examples\Image\Classification\GoogLeNet\BN-Inception\README.md = Examples\Image\Classification\GoogLeNet\BN-Inception\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "InceptionV3", "InceptionV3", "{824766FA-759A-4466-9C39-13200D2D3159}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\InceptionV3\README.md = Examples\Image\Classification\GoogLeNet\InceptionV3\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript", "{BD07C9F3-B10C-4C21-82BC-4F249B65DDFE}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionBlocks.bs = Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionBlocks.bs
+		Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionV3.bs = Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionV3.bs
+		Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionV3.cntk = Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionV3.cntk
+		Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\README.md = Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript", "{5CC403B9-2405-4FFB-A73B-DAE0DC986C76}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\BN-Inception.bs = Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\BN-Inception.bs
+		Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\BN-Inception.cntk = Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\BN-Inception.cntk
+		Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\InceptionLayers.bs = Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\InceptionLayers.bs
 	EndProjectSection
 EndProject
 Global
@@ -2121,6 +2138,9 @@ Global
 		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{3500A847-E024-4E7D-92DD-CC587C17460B} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
 		{789B4AB8-40F1-4A37-823A-BC20D80C8BF1} = {151202CF-C2E4-47A6-A31C-CE039D698519}
-		{95AE4F8A-7618-4B6F-8411-31576062AA63} = {789B4AB8-40F1-4A37-823A-BC20D80C8BF1}
+		{CE223840-1DEE-4849-B530-F06BEE05BAA8} = {789B4AB8-40F1-4A37-823A-BC20D80C8BF1}
+		{824766FA-759A-4466-9C39-13200D2D3159} = {789B4AB8-40F1-4A37-823A-BC20D80C8BF1}
+		{BD07C9F3-B10C-4C21-82BC-4F249B65DDFE} = {824766FA-759A-4466-9C39-13200D2D3159}
+		{5CC403B9-2405-4FFB-A73B-DAE0DC986C76} = {CE223840-1DEE-4849-B530-F06BEE05BAA8}
 	EndGlobalSection
 EndGlobal
