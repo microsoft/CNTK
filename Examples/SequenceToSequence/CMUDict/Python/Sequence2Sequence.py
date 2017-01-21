@@ -200,7 +200,11 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         def generator(history):  # fun state -> (output, new_state)
             z = s2smodel(history, input)
             w = hardmax(z)
-            return (w, w)   # or (alias(w), w) if needed
+            return w #(w, w)   # or (alias(w), w) if needed
+        unfold = UnfoldFrom1(generator,
+                            until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
+                            length_increase=length_increase, initial_state=sentence_start)
+        return unfold(dynamic_axes_like=input)
 
         # Is there value in passing the dynamic_axis here? Or can it be baked into to the generator function?
         # Unfold needs at least one piece of information on the output dynamic axis.

@@ -249,3 +249,60 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
     unfold_from = _inject_name(unfold_from, name)
 
     return Block(unfold_from, 'UnfoldFrom', Record(generator_function=generator_function))
+
+# TODO: This is still a bit messy. The unfold_from() function should take the encoding instead of 'input'.
+def UnfoldFrom1(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
+    '''
+    Implements an unfold() operation. It creates a function that, starting with a seed input,
+    applies 'generator_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
+    it may have this form:
+       `result = f(... f(f([g(input), initial_state])) ... )`
+    or this form:
+       `result = f(g(input), ... f(g(input), f(g(input), initial_state)) ... )`
+    where `f` is `generator_function`.
+    An example use of this is sequence-to-sequence decoding, where `g(input)` is the sequence encoder,
+    `initial_state` is the sentence-start symbol, and `f` is the decoder. The first
+    of the two forms above is a plain sequence-to-sequence model where encoder output
+    is the start state for the output recursion.
+    The second form is an attention-based decoder, where the encoded input affects every application
+    of `f` differently.
+    '''
+
+    import types
+    if isinstance(map_state_function, types.FunctionType):
+        map_state_function = Function(map_state_function)
+    if isinstance(until_predicate, types.FunctionType):
+        until_predicate = Function(until_predicate)
+
+    @Function
+    def unfold_from(dynamic_axes_like):
+        # create a new dynamic axis if a length increase is specified
+        out_axis = dynamic_axes_like
+        if length_increase != 1:
+            factors = sequence.constant_with_dynamic_axes_like(length_increase, out_axis) # repeat each frame 'length_increase' times, on average
+            out_axis = sequence.where(factors)  # note: values are irrelevant; only the newly created axis matters
+
+        # BUGBUG: This will fail with sparse input.
+        # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder
+        history_fwd = ForwardDeclaration()
+        prev_history = delay(history_fwd, initial_state=initial_state)
+        z = generator_function(prev_history)
+        # apply map_state_function if given
+        fb = map_state_function(z)
+        # implant the dynamic axis (from dynamic_axes_like)
+        from .utils import sanitize_input, typemap
+        from _cntk_py import reconcile_dynamic_axis
+        fb = typemap(reconcile_dynamic_axis)(sanitize_input(fb), sanitize_input(out_axis))
+        history_fwd.resolve_to(fb.output)
+
+        # apply until_predicate if given
+        if until_predicate is not None:
+            from cntk.ops.sequence import gather
+            valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(until_predicate(z))
+            z = gather(z, valid_frames)
+
+        return z
+
+    unfold_from = _inject_name(unfold_from, name)
+
+    return Block(unfold_from, 'UnfoldFrom', Record(generator_function=generator_function))
