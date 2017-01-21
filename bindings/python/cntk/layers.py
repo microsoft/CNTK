@@ -498,9 +498,9 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
 
     # model parameters
     with default_options(bias=False): # all the projections have no bias
-        attn_proj_enc   = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(attention_dim, init=init              ) # projects input hidden state
-        attn_proj_dec   = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(attention_dim, init=init, input_rank=1) # projects decoder hidden state, but keeping encoder and beam-search axes intact
-        attn_proj_tanh  = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(1            , init=init, input_rank=1) # projects tanh output, keeping encoder and beam-search axes intact
+        attn_proj_enc   = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(attention_dim, init=init, input_rank=1) # projects input hidden state, keeping span axes intact
+        attn_proj_dec   = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(attention_dim, init=init, input_rank=1) # projects decoder hidden state, but keeping span and beam-search axes intact
+        attn_proj_tanh  = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(1            , init=init, input_rank=1) # projects tanh output, keeping span and beam-search axes intact
     attn_final_stab = Stabilizer(enable_self_stabilization=enable_self_stabilization)
 
     # attention function
@@ -520,7 +520,9 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
         h_dec_proj = attn_proj_dec(h_dec)
         # u = v * tanh(W1h + W2d)
         tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
+        #tanh_out = Label('tanh_out')(tanh_out)
         u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
+        #u = Label('u')(u)
         u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
         attention_weights = softmax(u_masked, axis=attention_axis) #, name='attention_weights')
         attention_weights = Label('attention_weights')(attention_weights)

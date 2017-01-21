@@ -195,6 +195,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     # parameters bound to this Function
     param = Parameter((1), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
+    # BUGBUG: dimension ^^ should be (), a scalar
     # TODO: compute this strange value directly in Python
     # TODO: implement softplus non-linearity in C++ for stability
     # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})

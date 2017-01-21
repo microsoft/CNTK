@@ -442,12 +442,12 @@ def find_arg_by_name(name, expression):
 
 # to help debug the attention window
 def debug_attention(model, input):
-    attention_model = model.attention_model
-    attention_weights = attention_model.attention_weights
-    q = combine([model, attention_weights])
+    value_to_trace = model.attention_model.attention_weights
+    q = combine([model, value_to_trace])
     words, att_values = q(input)
-    att_seq = att_values[0,:,:,0,0] # (batch, len, attention_span, 1, 1)
-    print(att_seq)
+    len = words.shape[attention_axis-1]
+    att_seq = np.squeeze(att_values[0,:len,:7,0,:]) # (batch, len, attention_span, 1, vector_dim); test sentence is 7 tokens long
+    print(att_seq.shape, att_seq)
 
 #############################
 # main function boilerplate #
@@ -501,21 +501,21 @@ if __name__ == '__main__':
     #res = out.eval([[3.0]])
 
     # repro for name loss
-    from cntk import plus, as_block
-    from _cntk_py import InferredDimension
-    arg = placeholder_variable()
-    x = times(arg, parameter((InferredDimension,3), init=glorot_uniform()), name='x')
-    x = sequence.first(x)
-    sqr = x*x
-    x1 = sqr.find_by_name('x')
-    sqr2 = as_block(sqr, [(sqr.placeholders[0], placeholder_variable())], 'sqr')
-    sqr2 = combine([sqr2])
-    x2 = sqr2.find_by_name('x')
+    #from cntk import plus, as_block
+    #from _cntk_py import InferredDimension
+    #arg = placeholder_variable()
+    #x = times(arg, parameter((InferredDimension,3), init=glorot_uniform()), name='x')
+    #x = sequence.first(x)
+    #sqr = x*x
+    #x1 = sqr.find_by_name('x')
+    #sqr2 = as_block(sqr, [(sqr.placeholders[0], placeholder_variable())], 'sqr')
+    #sqr2 = combine([sqr2])
+    #x2 = sqr2.find_by_name('x')
 
-    stest = sqr2
-    #stest.dump()
-    stest = stest.replace_placeholders({stest.arguments[0]: input_variable(13)})
-    #stest.dump()
+    #stest = sqr2
+    ##stest.dump()
+    #stest = stest.replace_placeholders({stest.arguments[0]: input_variable(13)})
+    ##stest.dump()
 
     # hook up data
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
