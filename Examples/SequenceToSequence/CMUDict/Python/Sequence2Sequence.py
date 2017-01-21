@@ -228,28 +228,52 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     with default_options(enable_self_stabilization=True):
         # sub-layers
         stab_in = Stabilizer()
-        with default_options(bias=False):
-            attn_proj_enc  = Stabilizer() >> Dense(attention_dim)               # projects input hidden state
-            attn_proj_dec  = Stabilizer() >> Dense(attention_dim, input_rank=1) # projects decoder hidden state, but keeping encoder and beam-search axes intact
-            attn_proj_tanh = Stabilizer() >> Dense(1,             input_rank=1) # projects tanh output, keeping encoder and beam-search axes intact
-            attn_final_stab = Stabilizer()
-        #att_fn = Attention(attention_dim, axis=-2, attention_span=attention_span) # :: (h_enc*, h_dec) -> (h_aug_dec)
+        def AttentionModel(attention_dim, attention_span=None, attention_axis=None):
+            # until CNTK can handle multiple nested dynamic loops, we require fixed windows and fake it
+            if attention_span is None or attention_axis is None:
+                raise NotImplementedError('AttentionModel currently requires a fixed attention_span and a static attention_axis to be specified')
+            # model parameters
+            with default_options(bias=False):
+                attn_proj_enc  = Stabilizer() >> Dense(attention_dim)               # projects input hidden state
+                attn_proj_dec  = Stabilizer() >> Dense(attention_dim, input_rank=1) # projects decoder hidden state, but keeping encoder and beam-search axes intact
+                attn_proj_tanh = Stabilizer() >> Dense(1,             input_rank=1) # projects tanh output, keeping encoder and beam-search axes intact
+                attn_final_stab = Stabilizer()
+            # attention function
+            def attention(h_enc, h_dec):
+                history_axis = h_dec # we use history_axis wherever we pass this only for the sake of passing its axis
+                # TODO: pull this apart so that we can compute the encoder window only once and apply it to multiple decoders
+                # --- encoder state window
+                (h_enc, h_enc_valid) = past_value_window(h_enc, attention_span, axis=attention_axis)
+                h_enc_proj = attn_proj_enc(h_enc)  #times(stab_attn(element_times(aw_value, aw_valid)), W_enc)
+                # window must be broadcast to every decoder time step
+                h_enc_proj  = sequence.broadcast_as(h_enc_proj,  history_axis)
+                h_enc_valid = sequence.broadcast_as(h_enc_valid, history_axis)
+                # --- decoder state
+                from cntk.ops import tanh, softmax, reduce_sum, element_times
+                # project decoder hidden state
+                h_dec_proj = attn_proj_dec(h_dec)
+                # u = v * tanh(W1h + W2d)
+                tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
+                u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
+                u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
+                attention_weights = softmax(u_masked, axis=attention_axis, name='attention_weights')
+                # now take weighted sum over the encoder state vectors
+                h_att = reduce_sum(element_times(h_enc_proj, attention_weights), axis=attention_axis, name='h_att')
+                h_att = attn_final_stab(h_att)
+                return h_att
+            return attention
         rec_blocks = [LSTM(hidden_dim) for i in range(num_layers)]
         stab_out = Stabilizer()
         proj_out = Dense(label_vocab_dim)
+        # attention model
+        if use_attention:
+            attention_axis=-3
+            attention_model = AttentionModel(attention_dim, attention_span, attention_axis) # :: (h_enc*, h_dec) -> (h_aug_dec)
         # layer function
         @Function
         def decode(history, input):
             history_axis = history  # we use history_axis wherever we pass this only for the sake of passing its axis
             encoded_input = encode(input)
-            # attention
-            if use_attention:
-                attention_axis=-3
-                (h_enc, h_enc_valid) = past_value_window(encoded_input.outputs[0], attention_span, axis=attention_axis)
-                h_enc_proj = attn_proj_enc(h_enc)  #times(stab_attn(element_times(aw_value, aw_valid)), W_enc)
-                # window must be broadcast to every decoder time step
-                h_enc_proj  = sequence.broadcast_as(h_enc_proj,  history_axis)
-                h_enc_valid = sequence.broadcast_as(h_enc_valid, history_axis)
             #att_fn(encoded_input.outputs[0]) # xxx
             r = history
             r = embed(r)
@@ -260,27 +284,19 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                     if i == 0:
                         @Function
                         def lstm_with_attention(x, dh, dc):
-                            from cntk.ops import tanh, softmax, reduce_sum, element_times
-                            # project decoder hidden state
-                            h_dec_proj = attn_proj_dec(dh)
-                            #projectedH = times(pstab(prev_state), W_dec, output_rank=1)
-                            # u = v * tanh(W1h + W2d)
-                            tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
-                            u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
-                            #u = times(ustab(tanh_out_masked), v) # (attention_span, 1)
-                            u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
-                            #attention_weights = softmax(reshape(u_masked, shape=(attention_span)), name='attention_weights')
-                            attention_weights = softmax(u_masked, axis=attention_axis, name='attention_weights')
-                            # now take weighted sum over the encoder state vectors
-                            #weighted_attention_window = element_times(value, 
-                            #                                          reshape(attention_weights, shape=(attention_span, 1)), 
-                            #                                          name='weighted_attention_window')
-                            #weighted_attention_avg = times(ones, wstab(weighted_attention_window), output_rank=1, 
-                            #                               name='weighted_attention_avg')
-                            h_att = reduce_sum(element_times(h_enc_proj, attention_weights), axis=attention_axis, name='h_att')
-                            h_att = attn_final_stab(h_att)
-                            #h_att = ([sequence.broadcast_as(sequence.first(state, name='first_of_state'), history_axis) for state in encoded_input.outputs])
-                            # the attention window is actually fed as an input, not a hidden state
+                            h_att = attention_model(encoded_input.outputs[0], dh)
+                            #from cntk.ops import tanh, softmax, reduce_sum, element_times
+                            ## project decoder hidden state
+                            #h_dec_proj = attn_proj_dec(dh)
+                            ## u = v * tanh(W1h + W2d)
+                            #tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
+                            #u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
+                            #u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
+                            #attention_weights = softmax(u_masked, axis=attention_axis, name='attention_weights')
+                            ## now take weighted sum over the encoder state vectors
+                            #h_att = reduce_sum(element_times(h_enc_proj, attention_weights), axis=attention_axis, name='h_att')
+                            #h_att = attn_final_stab(h_att)
+                            # the attention window is actually fed as an augmented input, not a hidden state
                             x = splice(x, h_att)
                             r = rec_block(x, dh, dc)
                             (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
@@ -403,8 +419,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 print(end=" -> ")
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                e = model_greedy(mb_valid[valid_reader.streams.features])
-                print_sequences(e, i2w)
+                #e = model_greedy(mb_valid[valid_reader.streams.features])
+                #print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 #debug_attention(model_greedy, mb_valid, valid_reader)                
