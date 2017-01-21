@@ -642,7 +642,7 @@ class UserFunction(Function):
     will relay to its only output.
 
     '''
-    def __init__(self, inputs, outputs, name=''):
+    def __init__(self, inputs, name=''):
         var_inputs = []
         # TODO: this should be done in Swig
         for i in inputs:
@@ -653,7 +653,7 @@ class UserFunction(Function):
             else:
                 raise ValueError('expected Variable, but got "%s"'%type(i))
 
-        super(Function, self).__init__(var_inputs, outputs, name)
+        super(Function, self).__init__(var_inputs, name)
 
     def _forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         '''

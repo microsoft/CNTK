@@ -38,7 +38,8 @@ namespace CNTK
         dict[versionKey] = CurrentVersion();
         dict[typeKey] = s_compositeFunctionTypeValue;
         dict[rootKey] = RootFunction()->Uid();
-        dict[nameKey] = Name();
+        if (!Name().empty())
+            dict[nameKey] = Name();
         dict[uidKey] = Uid();
 
         return dict;
@@ -159,11 +160,13 @@ namespace CNTK
                                                                         const std::unordered_map<Variable, Variable>& allPlaceholderReplacements,
                                                                         const CNTK::DeviceDescriptor& device)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, rootKey, nameKey, uidKey };
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, rootKey, uidKey };
         ValidateDictionary<CompositeFunction>(dict, s_requiredDictionaryKeys, s_compositeFunctionTypeValue, s_serializationVersion);
 
         const auto& rootUid = dict[rootKey].Value<std::wstring>();
-        const auto& name = dict[nameKey].Value<std::wstring>();
+        std::wstring name = L"";
+        if (dict.Contains(nameKey))
+            name = dict[nameKey].Value<std::wstring>();
         const auto& uid = dict[uidKey].Value<std::wstring>();
 
         FunctionPtr root = *std::find_if(allPrimitiveFunctions.begin(), allPrimitiveFunctions.end(), [&rootUid](const FunctionPtr& func) {

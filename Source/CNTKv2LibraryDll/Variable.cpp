@@ -379,7 +379,8 @@ namespace CNTK
 
         dict[dynamicAxisKey] = dictionaryValueVector;
         dict[isSparseKey] = IsSparse();
-        dict[nameKey] = Name();
+        if (!Name().empty())
+            dict[nameKey] = Name();
         dict[needsGradientKey] = NeedsGradient();
         dict[shapeKey] = Shape();
         if (IsParameter() || IsConstant())
@@ -399,7 +400,7 @@ namespace CNTK
 
     /*static*/ Variable Variable::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, kindKey, dataTypeKey, dynamicAxisKey, isSparseKey, nameKey, needsGradientKey, shapeKey };
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, kindKey, dataTypeKey, dynamicAxisKey, isSparseKey, needsGradientKey, shapeKey };
 
         size_t version = ValidateDictionary<Variable>(dict, s_requiredDictionaryKeys, s_variableTypeValue, s_serializationVersion);
 
@@ -437,7 +438,9 @@ namespace CNTK
         }
 
         bool isSparse = dict[isSparseKey].Value<bool>();
-        const auto& name = dict[nameKey].Value<std::wstring>();
+        std::wstring name = L"";
+        if (dict.Contains(nameKey))
+            name = dict[nameKey].Value<std::wstring>();
         bool needsGradient = dict[needsGradientKey].Value<bool>();
         const auto& shape = dict[shapeKey].Value<NDShape>();
 
