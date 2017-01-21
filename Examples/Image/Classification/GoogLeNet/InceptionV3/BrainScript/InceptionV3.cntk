@@ -91,8 +91,8 @@ Train = {
             input = {
                 features = { transforms = (
                     { type = "Crop" ; cropType = "randomArea" ; areaRatio = 0.08:1.0 ; jitterType = "uniRatio" ; aspectRatio = 0.75:1.0 } :
-                    { type = "Color" ; brightnessRadius = 0.2 ; contrastRadius = 0.2 ; saturationRadius = 0.4 } :
                     { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
+                    { type = "Color" ; brightnessRadius = 0.2 ; contrastRadius = 0.2 ; saturationRadius = 0.4 } :
                     { type = "Transpose" }
                 )}
                 labels = { labelDim = $NumLabels$ }
@@ -107,6 +107,7 @@ Train = {
             file = "$DataDir$/val_map.txt"
             input = {
                 features = { transforms = (
+                   { type = "Crop" ; cropType = "Center" ; sideRatio = 0.875 } :
                    { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
                    { type = "Transpose" }
                 )}
@@ -130,6 +131,7 @@ Eval = {
             file = "$DataDir$/val_map.txt"
             input = {
                 features = { transforms = (
+                   { type = "Crop" ; cropType = "Center" ; sideRatio = 0.875 } :
                    { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
                    { type = "Transpose" }
                 )}
