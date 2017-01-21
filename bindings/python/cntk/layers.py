@@ -445,57 +445,52 @@ def Label(name):
 
 # Create a function which returns a static, maskable view for N past steps over a sequence along the given 'axis'.
 # It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
-#@Function
-def past_value_window(x, N, axis=-2):
+def PastValueWindow(window_size, axis, go_backwards=default_override_or(False)):
 
-    # this is to create 1's along the same dynamic axis as `x`
-    #ones_like_input = times(x, constant(0, shape=(x.shape[0],1))) + 1
+    go_backwards = get_default_override(PastValueWindow, go_backwards=go_backwards)
 
-    #@Function
-    def nth_from_back(input, t):
-        return sequence.last(Delay(t)(input))
+    # helper to get the nth element
+    def nth(input, offset):
+        if go_backwards:
+            final_f = sequence.first
+            offset = -offset
+        else:
+            final_f = sequence.last
+        return final_f(Delay(offset)(input))
 
-    last_values = []
-    last_valids = []
+    @Function
+    def past_value_window(x):
+    
+        ones_like_input = sequence.constant_with_dynamic_axes_like(1, x)
 
-    ones_like_input = sequence.constant_with_dynamic_axes_like(1, x)
-    # TODO: use Python list comprehension
-    for t in range(N):
-        # TODO: express using Delay() layer
-        #if t == 0:
-        #    value = x
-        #    valid = ones_like_input
-        #else:
-        #    value = past_value(x, time_step=t)
-        #    valid = past_value(ones_like_input, time_step=t)
+        # get the respective n-th element from the end
+        last_values = [nth(x, t)               for t in range(window_size)]
+        last_valids = [nth(ones_like_input, t) for t in range(window_size)]
+    
+        # stack rows 'beside' each other in a new static axis (create a new static axis that doesn't exist)
+        value = splice(*last_values, axis=axis, name='value')
+        valid = splice(*last_valids, axis=axis, name='valid')
+    
+        # value[t] = value of t steps back; valid[t] = true if there was a value t steps back
+        return (value, valid)
 
-        value = nth_from_back(x,               t)
-        valid = nth_from_back(ones_like_input, t)
+    # BUGBUG: name does not work for tuple-valued functions
+    #past_value_window = _inject_name(past_value_window, name)
 
-        #value = Delay(t)(x)
-        #valid = Delay(t)(ones_like_input)
-        #
-        #value = sequence.last(value)
-        #valid = sequence.last(valid)
-
-        last_values.append(value)
-        last_valids.append(valid)
-
-    # stack rows 'beside' each other in a new static axis (create a new static axis that doesn't exist)
-    value = splice(*last_values, axis=axis, name='value')
-    valid = splice(*last_valids, axis=axis, name='valid')
-
-    # value[t] = value of t steps in the past; valid[t] = true if there was a value t steps in the past
-    return (value, valid)
+    return past_value_window
 
 # AttentionModel block
-def AttentionModel(attention_dim, attention_span=None, attention_axis=None, init=default_override_or(glorot_uniform()), enable_self_stabilization=default_override_or(True), name=''):
+def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
+                   init=default_override_or(glorot_uniform()),
+                   go_backwards=default_override_or(False),
+                   enable_self_stabilization=default_override_or(True), name=''):
     '''
     Creates a Function object that implements an attention model.
     '''
 
+    init                      = get_default_override(AttentionModel, init=init)
+    go_backwards              = get_default_override(AttentionModel, go_backwards=go_backwards)
     enable_self_stabilization = get_default_override(AttentionModel, enable_self_stabilization=enable_self_stabilization)
-    init                      = get_default_override(Dense, init=init)
 
     # until CNTK can handle multiple nested dynamic loops, we require fixed windows and fake it
     if attention_span is None or attention_axis is None:
@@ -503,17 +498,19 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None, init
 
     # model parameters
     with default_options(bias=False): # all the projections have no bias
-        attn_proj_enc   = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(attention_dim, init=init              )               # projects input hidden state
+        attn_proj_enc   = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(attention_dim, init=init              ) # projects input hidden state
         attn_proj_dec   = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(attention_dim, init=init, input_rank=1) # projects decoder hidden state, but keeping encoder and beam-search axes intact
         attn_proj_tanh  = Stabilizer(enable_self_stabilization=enable_self_stabilization) >> Dense(1            , init=init, input_rank=1) # projects tanh output, keeping encoder and beam-search axes intact
     attn_final_stab = Stabilizer(enable_self_stabilization=enable_self_stabilization)
 
     # attention function
+    @Function
     def attention(h_enc, h_dec):
         history_axis = h_dec # we use history_axis wherever we pass this only for the sake of passing its axis
         # TODO: pull this apart so that we can compute the encoder window only once and apply it to multiple decoders
         # --- encoder state window
-        (h_enc, h_enc_valid) = past_value_window(h_enc, attention_span, axis=attention_axis)
+        h_enc_f = PastValueWindow(attention_span, axis=attention_axis, go_backwards=go_backwards)(h_enc) # BUGBUG: need to keep the Function due to ref-count bug
+        (h_enc, h_enc_valid) = h_enc_f.outputs
         h_enc_proj = attn_proj_enc(h_enc)
         # window must be broadcast to every decoder time step
         h_enc_proj  = sequence.broadcast_as(h_enc_proj,  history_axis)
@@ -525,7 +522,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None, init
         tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
         u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
         u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
-        attention_weights = softmax(u_masked, axis=attention_axis, name='attention_weights')
+        attention_weights = softmax(u_masked, axis=attention_axis) #, name='attention_weights')
+        attention_weights = Label('attention_weights')(attention_weights)
         # now take weighted sum over the encoder state vectors
         h_att = reduce_sum(element_times(h_enc_proj, attention_weights), axis=attention_axis)
         h_att = attn_final_stab(h_att)

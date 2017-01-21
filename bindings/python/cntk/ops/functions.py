@@ -112,18 +112,17 @@ class Function(cntk_py.Function):
                 else:
                     out = resolve_named(out)
                 return out
-            # ensure parameter ordering   --BUGBUG: currently does not work, causes unattributable downstream errors
+            # ensure parameter ordering
             fun_args = args
             #if len(fun_args) > 1:
             #    fun_args = force_order_args(fun_args)
             # ^^ BUGBUG: due to instability of as_block() and inefficiency of the above solution, for now only do if needed
             # now invoke the Python function
             out = invoke(fun_args)
-            # BUGBUG workaround: fix it after the fact
+            # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
             out_arg_names = [arg.name for arg in out.signature]
             if out_arg_names != arg_names:  # order came out wrong
-                print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
-                #raise NotImplementedError('Please resort to trickery to force the order in your expression definition.')
+                #print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
                 fun_args = force_order_args(fun_args)
                 out = invoke(fun_args)   #.outputs) # BUGBUG: move .outputs back up
 

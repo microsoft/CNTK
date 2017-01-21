@@ -121,8 +121,9 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         proj_out = Dense(label_vocab_dim)
         # attention model
         if use_attention:
-            attention_model = AttentionModel(attention_dim, attention_span, attention_axis) # :: (h_enc*, h_dec) -> (h_aug_dec)
+            attention_model = AttentionModel(attention_dim, attention_span, attention_axis, name='attention_model') # :: (h_enc*, h_dec) -> (h_aug_dec)
         # layer function
+        # TODO: refactor such that it takes encoded_input (to be produced by model_train and model_greedy)
         @Function
         def decode(history, input):
             history_axis = history  # we use history_axis wherever we pass this only for the sake of passing its axis
@@ -190,7 +191,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         return unfold(input, dynamic_axes_like=input)
 
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
-    model_greedy.dump()
+    #model_greedy.dump()
 
     @Function
     def criterion(input, labels):
@@ -264,7 +265,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
-                #debug_attention(model_greedy, mb_valid, valid_reader)                
+                if use_attention:
+                    debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
@@ -439,19 +441,13 @@ def find_arg_by_name(name, expression):
     return vars[0]
 
 # to help debug the attention window
-def debug_attention(model, mb, reader):
-    att = find_by_name(model, 'attention_weights')
-    if att:
-        q = combine([model, att])
-        output = q.forward({find_arg_by_name('raw_input' , model) : 
-                             mb[reader.streams.features], 
-                             find_arg_by_name('raw_labels', model) : 
-                             mb[reader.streams.labels]},
-                             att.outputs)
-
-        att_key = list(output[1].keys())[0]
-        att_value = output[1][att_key]
-        print(att_value[0,0,:])
+def debug_attention(model, input):
+    attention_model = model.attention_model
+    attention_weights = attention_model.attention_weights
+    q = combine([model, attention_weights])
+    words, att_values = q(input)
+    att_seq = att_values[0,:,:,0,0] # (batch, len, attention_span, 1, 1)
+    print(att_seq)
 
 #############################
 # main function boilerplate #

@@ -367,7 +367,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         'LSTM':    lstm
     }[type], type)
 
-    function = _inject_name(function, name)
+    # BUGBUG: This cannot work for the tuple-valued LSTM Function
+    #function = _inject_name(function, name)
 
     return function
 

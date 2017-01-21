@@ -193,6 +193,7 @@ def Fold(over_function, go_backwards=default_override_or(False), initial_state=d
 
     return Block(fold, 'Fold', Record(over_function=over_function))
 
+# TODO: This is still a bit messy. The unfold_from() function should take the encoding instead of 'input'.
 def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
     '''
     Implements an unfold() operation. It creates a function that, starting with a seed input,
