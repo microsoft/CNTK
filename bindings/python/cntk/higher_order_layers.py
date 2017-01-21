@@ -218,7 +218,7 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
 
     @Function
     def unfold_from(input, dynamic_axes_like):
-        # create a new axis if needed
+        # create a new dynamic axis if a length increase is specified
         out_axis = dynamic_axes_like
         if length_increase != 1:
             factors = sequence.constant_with_dynamic_axes_like(length_increase, out_axis) # repeat each frame 'length_increase' times, on average
@@ -226,16 +226,16 @@ def UnfoldFrom(over_function, map_state_function=identity, until_predicate=None,
 
         # BUGBUG: This will fail with sparse input.
         # nearly the same as RecurrenceFrom(); need to swap parameter order for either LSTM or decoder
-        history_fwd = Placeholder(name='hook')  # TODO: change to ForwardDeclaration()
+        history_fwd = ForwardDeclaration()
         prev_history = delay(history_fwd, initial_state=initial_state)
-        z = over_function(prev_history, input)#,      out_axis)
-        # apply map_state_function
+        z = over_function(prev_history, input)
+        # apply map_state_function if given
         fb = map_state_function(z)
-        # apply dynamic_axes_like
+        # implant the dynamic axis (from dynamic_axes_like)
         from .utils import sanitize_input, typemap
         from _cntk_py import reconcile_dynamic_axis
         fb = typemap(reconcile_dynamic_axis)(sanitize_input(fb), sanitize_input(out_axis))
-        z.replace_placeholders({history_fwd : fb.output})
+        history_fwd.resolve_to(fb.output)
 
         # apply until_predicate if given
         if until_predicate is not None:

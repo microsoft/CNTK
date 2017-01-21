@@ -88,52 +88,6 @@ def testit(r, with_labels=True):
     #input("hit enter")
     exit()
 
-# Create a function which returns a static, maskable view for N past steps over a sequence along the given 'axis'.
-# It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
-#@Function
-def past_value_window(x, N, axis=-2):
-
-    # this is to create 1's along the same dynamic axis as `x`
-    #ones_like_input = times(x, constant(0, shape=(x.shape[0],1))) + 1
-
-    #@Function
-    def nth_from_back(input, t):
-        return sequence.last(Delay(t)(input))
-
-    last_values = []
-    last_valids = []
-
-    from cntk.ops import sequence
-    ones_like_input = sequence.constant_with_dynamic_axes_like(1, x)
-    # TODO: use Python list comprehension
-    for t in range(N):
-        # TODO: express using Delay() layer
-        #if t == 0:
-        #    value = x
-        #    valid = ones_like_input
-        #else:
-        #    value = past_value(x, time_step=t)
-        #    valid = past_value(ones_like_input, time_step=t)
-
-        value = nth_from_back(x,               t)
-        valid = nth_from_back(ones_like_input, t)
-
-        #value = Delay(t)(x)
-        #valid = Delay(t)(ones_like_input)
-        #
-        #value = sequence.last(value)
-        #valid = sequence.last(valid)
-
-        last_values.append(value)
-        last_valids.append(valid)
-
-    # stack rows 'beside' each other in a new static axis (create a new static axis that doesn't exist)
-    value = splice(*last_values, axis=axis, name='value')
-    valid = splice(*last_valids, axis=axis, name='valid')
-
-    # value[t] = value of t steps in the past; valid[t] = true if there was a value t steps in the past
-    return (value, valid)
-
 # the function that gets passed to the LSTM function as the augment_input_hook parameter
 def Attention(attention_dim, axis=None, attention_span=None): # :: (h_enc*, h_dec) -> (h_aug_dec)
 
@@ -228,40 +182,6 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     with default_options(enable_self_stabilization=True):
         # sub-layers
         stab_in = Stabilizer()
-        def AttentionModel(attention_dim, attention_span=None, attention_axis=None):
-            # until CNTK can handle multiple nested dynamic loops, we require fixed windows and fake it
-            if attention_span is None or attention_axis is None:
-                raise NotImplementedError('AttentionModel currently requires a fixed attention_span and a static attention_axis to be specified')
-            # model parameters
-            with default_options(bias=False):
-                attn_proj_enc  = Stabilizer() >> Dense(attention_dim)               # projects input hidden state
-                attn_proj_dec  = Stabilizer() >> Dense(attention_dim, input_rank=1) # projects decoder hidden state, but keeping encoder and beam-search axes intact
-                attn_proj_tanh = Stabilizer() >> Dense(1,             input_rank=1) # projects tanh output, keeping encoder and beam-search axes intact
-                attn_final_stab = Stabilizer()
-            # attention function
-            def attention(h_enc, h_dec):
-                history_axis = h_dec # we use history_axis wherever we pass this only for the sake of passing its axis
-                # TODO: pull this apart so that we can compute the encoder window only once and apply it to multiple decoders
-                # --- encoder state window
-                (h_enc, h_enc_valid) = past_value_window(h_enc, attention_span, axis=attention_axis)
-                h_enc_proj = attn_proj_enc(h_enc)  #times(stab_attn(element_times(aw_value, aw_valid)), W_enc)
-                # window must be broadcast to every decoder time step
-                h_enc_proj  = sequence.broadcast_as(h_enc_proj,  history_axis)
-                h_enc_valid = sequence.broadcast_as(h_enc_valid, history_axis)
-                # --- decoder state
-                from cntk.ops import tanh, softmax, reduce_sum, element_times
-                # project decoder hidden state
-                h_dec_proj = attn_proj_dec(h_dec)
-                # u = v * tanh(W1h + W2d)
-                tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
-                u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
-                u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
-                attention_weights = softmax(u_masked, axis=attention_axis, name='attention_weights')
-                # now take weighted sum over the encoder state vectors
-                h_att = reduce_sum(element_times(h_enc_proj, attention_weights), axis=attention_axis, name='h_att')
-                h_att = attn_final_stab(h_att)
-                return h_att
-            return attention
         rec_blocks = [LSTM(hidden_dim) for i in range(num_layers)]
         stab_out = Stabilizer()
         proj_out = Dense(label_vocab_dim)
@@ -585,8 +505,8 @@ def get_vocab(path):
 
 # Given a vocab and tensor, print the output
 def print_sequences(sequences, i2w):
-    for s in sequences:
-        print([[np.max(w)] for w in s], sep=" ")
+    #for s in sequences:
+    #    print([[np.max(w)] for w in s], sep=" ")
     for s in sequences:
         print([i2w[np.argmax(w)] for w in s], sep=" ")
 

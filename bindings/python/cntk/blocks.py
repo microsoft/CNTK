@@ -11,7 +11,7 @@
 # TODO: further clean up the dependencies
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
+from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, sequence
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
@@ -217,7 +217,6 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
                     name=''):
 
     has_projection = cell_shape is not None
-    has_aux = False # TODO: implement this differently; LSTM must have a unique signature
 
     shape = _as_tuple(shape)
 
@@ -246,8 +245,6 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # parameters
     b  = Parameter(            cell_shape_stacked,   init=init_bias, name='b')                              # bias
     W  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='W')                              # input
-    #combine([W]).dump('W')
-    A  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='A') if has_aux else None         # aux input (optional)  --TODO: remove
     H  = Parameter(shape     + cell_shape_stacked_H, init=init,      name='H')                              # hidden-to-hidden
     H1 = Parameter(shape     + cell_shape,           init=init,      name='H') if type == 'GRU' else None   # hidden-to-hidden
     Ci = Parameter(            cell_shape,           init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
@@ -257,12 +254,10 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     Wmr = Parameter(cell_shape + shape, init=init) if has_projection else None  # final projection
 
     # each use of a stabilizer layer must get its own instance
-    Sdh = Stabilizer() if enable_self_stabilization else identity
-    Sdc = Stabilizer() if enable_self_stabilization else identity
-    Sct = Stabilizer() if enable_self_stabilization else identity
-    Sht = Stabilizer() if enable_self_stabilization else identity
-
-    #from collections import OrderedDict
+    Sdh = Stabilizer(enable_self_stabilization=enable_self_stabilization)
+    Sdc = Stabilizer(enable_self_stabilization=enable_self_stabilization)
+    Sct = Stabilizer(enable_self_stabilization=enable_self_stabilization)
+    Sht = Stabilizer(enable_self_stabilization=enable_self_stabilization)
 
     # define the model function itself
     # general interface for Recurrence():
@@ -284,17 +279,12 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # note: input does not get a stabilizer here, user is meant to do that outside
 
         # projected contribution from input(s), hidden, and bias
-        proj4 = b + times(x, W) + times(dhs, H) + times(aux, A) if has_aux else \
-                b + times(x, W) + times(dhs, H)
+        proj4 = b + times(x, W) + times(dhs, H)
 
         it_proj  = slice (proj4, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
         bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
         ft_proj  = slice (proj4, stack_axis, 2*stacked_dim, 3*stacked_dim)
         ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
-        #it_proj.dump('it_proj')
-        #bit_proj.dump('bit_proj')
-        #ft_proj.dump('ft_proj')
-        #ot_proj.dump('ot_proj')
 
         # helper to inject peephole connection if requested
         def peep(x, c, C):
@@ -334,8 +324,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # note: input does not get a stabilizer here, user is meant to do that outside
 
         # projected contribution from input(s), hidden, and bias
-        projx3 = b + times(x, W) + times(aux, A) if has_aux else \
-                 b + times(x, W)
+        projx3 = b + times(x, W)
         projh2  = times(dhs, H)
 
         zt_proj = slice (projx3, stack_axis, 0*stacked_dim, 1*stacked_dim) + slice (projh2, stack_axis, 0*stacked_dim, 1*stacked_dim)
