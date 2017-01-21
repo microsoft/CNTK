@@ -171,6 +171,9 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
 
 def Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
+    Implements the fold() catamorphism.
+    ``go_backwards=False`` selects a fold-left, while ``True`` a fold-right,
+    but note that the ``folder_function`` signature is always the one of fold-left.
     Like ``Recurrence()`` but returns only the final state.
     '''
 
@@ -191,7 +194,7 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
 # TODO: This is still a bit messy. The returned unfold_from() function should take the encoding instead of 'input'.
 def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
     '''
-    Implements an unfold() operation. It creates a function that, starting with a seed input,
+    Implements the unfold() anamorphism. It creates a function that, starting with a seed input,
     applies 'generator_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
     it may have this form:
        `result = f(... f(f([g(input), initial_state])) ... )`
@@ -216,6 +219,8 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
     if len(generator_function.signature) != 1 or len(generator_function.outputs) < 1 or len(generator_function.outputs) > 2:
         raise TypeError('generator_function should take 1 positional argument (state) and return a single output or a tuple (output, new state)')
 
+    # TODO: having to pass the dynamic axis is suboptimal. Any better way?
+    # BUGBUG: The name _from indicates that the start state should be passed.
     @Function
     def unfold_from(dynamic_axes_like):
         # create a new dynamic axis if a length increase is specified
