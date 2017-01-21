@@ -442,12 +442,17 @@ def find_arg_by_name(name, expression):
 
 # to help debug the attention window
 def debug_attention(model, input):
-    value_to_trace = model.attention_model.attention_weights
-    q = combine([model, value_to_trace])
-    words, att_values = q(input)
+    #q = combine([model, model.attention_model.attention_weights, model.attention_model.u_masked, model.attention_model.h_enc_valid])
+    #words, p, u, v = q(input)
+    q = combine([model, model.attention_model.attention_weights])
+    words, p = q(input)
     len = words.shape[attention_axis-1]
-    att_seq = np.squeeze(att_values[0,:len,:7,0,:]) # (batch, len, attention_span, 1, vector_dim); test sentence is 7 tokens long
-    print(att_seq.shape, att_seq)
+    span = 7 #attention_span  #7 # test sentence is 7 tokens long
+    p_sq = np.squeeze(p[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
+    #u_sq = np.squeeze(u[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
+    #v_sq = np.squeeze(v[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
+    #print(p_sq.shape, p_sq, u_sq, v_sq)
+    print(p_sq.shape, p_sq)
 
 #############################
 # main function boilerplate #

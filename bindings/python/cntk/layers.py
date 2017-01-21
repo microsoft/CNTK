@@ -61,7 +61,6 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     input_shape = _INFERRED * (input_rank if input_rank is not None else 1)
 
     if input_rank is not None:
-        #UntestedBranchError("Dense, input_rank option not implemented")
         infer_input_rank_to_map = -1 # means map_rank is not specified; input_rank rules
     elif map_rank is None:
         infer_input_rank_to_map = 0  # neither given: default to 'infer W to use all input dims'
@@ -523,7 +522,9 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
         #tanh_out = Label('tanh_out')(tanh_out)
         u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
         #u = Label('u')(u)
+        #h_enc_valid = Label('h_enc_valid')(h_enc_valid)
         u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
+        #u_masked = Label('u_masked')(u_masked)
         attention_weights = softmax(u_masked, axis=attention_axis) #, name='attention_weights')
         attention_weights = Label('attention_weights')(attention_weights)
         # now take weighted sum over the encoder state vectors
