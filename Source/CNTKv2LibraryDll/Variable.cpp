@@ -93,7 +93,7 @@ namespace CNTK
     {
         auto varOwner = Owner();
         if (varOwner)
-            return CompositeFunction::Create(varOwner, varOwner->Name());
+            return AsComposite(varOwner, varOwner->Name());
         else
             return Combine({ *this });
     }

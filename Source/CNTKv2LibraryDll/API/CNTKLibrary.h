@@ -3227,6 +3227,13 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
 
+    ///
+    /// Creates a composite Function that has the specified rootFunction as its root.
+    /// The composite denotes a higher-level Function encapsulating the entire graph
+    /// of Functions underlying the specified rootFunction.
+    ///
+    CNTK_API FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name = L"");
+
     namespace Sequence
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");

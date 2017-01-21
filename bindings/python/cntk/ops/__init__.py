@@ -85,6 +85,23 @@ def as_block(composite, block_arguments_map, block_op_name, block_instance_name=
     return as_block(composite, block_arguments_map, block_op_name, block_instance_name)
 
 @typemap
+def as_composite(root_function, name=''):
+    '''
+     Creates a composite Function that has the specified root_function as its root.
+     The composite denotes a higher-level Function encapsulating the entire graph
+     of Functions underlying the specified rootFunction.
+
+    Args:
+        root_function: Root Function, the graph underlying which, the newly created composite encapsulates
+        name (str, optional): the name of the Alias Function in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import as_composite
+    return as_composite(root_function, name)
+
+@typemap
 def alias(x, name=''):
     '''
      Create a new Function instance which just aliases the specified 'x' Function/Variable

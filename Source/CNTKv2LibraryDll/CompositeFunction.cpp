@@ -1256,7 +1256,7 @@ namespace CNTK
         if (iter != m_perOutputVarArgumentDependencies.end())
             return iter->second;
 
-        auto wrappedComposite = CompositeFunction::Create(output.Owner());
+        auto wrappedComposite = AsComposite(output.Owner());
         m_perOutputVarArgumentDependencies[output] = wrappedComposite->Arguments();
 
         return m_perOutputVarArgumentDependencies[output];
