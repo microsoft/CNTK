@@ -184,35 +184,12 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     def model_greedy(input): # (input*) --> (word_sequence*)
 
         # Decoding is an unfold() operation starting from sentence_start.
-        # The actual input is passed as an input to the s2smodel, which encodes it inside.
-
-        # ... can we instead pass a function that takes state and produces (output, state)
-        # unfold(generator, initial_state, until_predicate)  -->  returns fun (void) -> sequence
-        # with generator: fun state -> (output, new_state)
-
-        # s2smodel is currently fun history, input -> logp   (already matching scan-left order)
-        # follows scanl folder_function
-
-        # Function._ = property return Placeholder()
-        # wrap model as: generator /*(history)*/ = s2smodel(_, input) >> hardmax >> broadcast_to_tuple(2)
-
-        @Function
-        def generator(history):  # fun state -> (output, new_state)
-            z = s2smodel(history, input)
-            w = hardmax(z)
-            return w #(w, w)   # or (alias(w), w) if needed
-        unfold = UnfoldFrom1(generator,
+        # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
+        # which holds 'input' in its closure.
+        unfold = UnfoldFrom(s2smodel(..., input) >> hardmax,
                             until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                             length_increase=length_increase, initial_state=sentence_start)
         return unfold(dynamic_axes_like=input)
-
-        # Is there value in passing the dynamic_axis here? Or can it be baked into to the generator function?
-        # Unfold needs at least one piece of information on the output dynamic axis.
-
-        unfold = UnfoldFrom(s2smodel >> hardmax,
-                            until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
-                            length_increase=length_increase, initial_state=sentence_start)
-        return unfold(input, dynamic_axes_like=input)
 
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
     #model_greedy.dump()

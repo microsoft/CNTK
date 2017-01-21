@@ -175,6 +175,9 @@ def ForwardDeclaration(name='forward_declaration'):
     '''
     var_fwd = Placeholder(name=name)
     def resolve_to(var):
+        from cntk import cntk_py
+        if isinstance(var, cntk_py.Function):
+            var = var.output # replace_placeholders expects Variables
         var.owner.replace_placeholders({var_fwd: var})  # resolves var_fwd := var
     var_fwd.resolve_to = resolve_to
     return var_fwd

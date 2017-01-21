@@ -191,6 +191,7 @@ class Function(cntk_py.Function):
     def argument_map(self, *args, **kwargs):
         '''
         determine the {placeholder: variable} map for use with various call operations
+        Returns a dictionary from this function's placeholders to whatever arguments are passed.
         Accepted are both positional and keyword arguments.
         This mimics Python's argument interpretation, except that keyword arguments are not optional.
         This does not require the arguments to be Variables or Functions. It is also called by train_minibatch().
@@ -296,6 +297,7 @@ class Function(cntk_py.Function):
 
         Args:
             *args, **kwargs: The arguments to pass to the Function.
+             Ellipsis (...) will create a new Placeholder. E.g. plus(...,3) creates a new lambda that adds 3.
 
         Returns:
              In case of symbolic inputs, returns another CNTK Function object with inputs bound to the arguments.
@@ -304,6 +306,14 @@ class Function(cntk_py.Function):
 
         # parse argument list and map to the function's input
         arg_map = self.argument_map(*args, **kwargs)
+
+        # Ellipsis is used to create lambdas on the fly.
+        # An ... simply generates a new placeholder.
+        # Multiple Ellipses will turn into Function args in order of occurence, since the underlying
+        # Function is already guaranteed to traverse its arguments in the same order.
+        # This is non-standard Python, so suggestions for alternative syntaxes are welcome.
+        from cntk import placeholder_variable, combine, alias, as_block
+        arg_map = { param: arg if arg is not Ellipsis else placeholder_variable() for param, arg in arg_map.items() }
 
         # if placeholders were excluded due to being under construction,
         # we must include them in the argmap, otherwise they will be cloned
