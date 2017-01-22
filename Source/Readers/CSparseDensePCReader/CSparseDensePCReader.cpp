@@ -516,7 +516,7 @@ void CSparseDensePCReader<ElemType>::ReadData()
         m_currOffset += sizeof(int32_t);
         if (verificationCode != this->m_verificationCode)
         {
-            RuntimeError("Verification code did not match (expected %d) - error in reading data", m_verificationCode);
+            RuntimeError("Verification code %d did not match (expected %d) - error in reading data",verificationCode, m_verificationCode);
             return;
         }
         //Reading one End
