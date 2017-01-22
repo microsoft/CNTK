@@ -126,7 +126,8 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         # layer function
         # TODO: refactor such that it takes encoded_input (to be produced by model_train and model_greedy)
         @Function
-        def decode(history, input):
+        def decode(history, x_last):
+            input = x_last
             history_axis = history  # we use history_axis wherever we pass this only for the sake of passing its axis
             encoded_input = encode(input)
             r = history
@@ -137,10 +138,11 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                 if use_attention:
                     if i == 0:
                         @Function
-                        def lstm_with_attention(dh, dc, x):
+                        # TODO: undo x_last hack
+                        def lstm_with_attention(dh, dc, x_last):
                             h_att = attention_model(encoded_input.outputs[0], dh)
-                            x = splice(x, h_att)
-                            r = rec_block(dh, dc, x)
+                            x_last = splice(x_last, h_att)
+                            r = rec_block(dh, dc, x_last)
                             (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
                             return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
                         r = Recurrence(lstm_with_attention)(r)
@@ -172,7 +174,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # model used in training (history is known from labels)
     # note: the labels must not contain the initial <s>
     @Function
-    def model_train(input, labels): # (input*, labels*) --> (word_logp*)
+    def model_train(input, x_last): # (input*, labels*) --> (word_logp*)
+        labels = x_last
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).

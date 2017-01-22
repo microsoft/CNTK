@@ -140,6 +140,7 @@ def BlockFunction(f):
     '''
     #return Function(f, make_block=True)
     # TODO: bring this ^^ back after as_block works, and then undo the x_last hack
+    # BUGBUG: Assumed only be used by recurrent cells to fix their ordering, which fails.
     return Function(f)  # BUGBUG: causes random axis inference errors
 
 

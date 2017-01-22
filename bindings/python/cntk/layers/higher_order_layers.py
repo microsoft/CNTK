@@ -105,12 +105,13 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
 
     # functions that this layer represents
     # The @Function pattern only supports fixed signatures, so we need one for each #states we support.
-    def recurrence_from_1(h, x):
-        return _recurrence_from_n(h, x)
-    def recurrence_from_2(h, c, x):
-        return _recurrence_from_n(h, c, x)
-    def recurrence_from_3(h, c, a, x):
-        return _recurrence_from_n(h, c, a, x)
+    # TODO: undo x_last hack
+    def recurrence_from_1(h, x_last):
+        return _recurrence_from_n(h, x_last)
+    def recurrence_from_2(h, c, x_last):
+        return _recurrence_from_n(h, c, x_last)
+    def recurrence_from_3(h, c, a, x_last):
+        return _recurrence_from_n(h, c, a, x_last)
 
     recurrence_from_functions = [recurrence_from_1, recurrence_from_2, recurrence_from_3]
     num_state_args = len(prev_state_args)

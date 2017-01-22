@@ -203,7 +203,6 @@ class Function(cntk_py.Function):
         #         which we report in last position (lying).
         sig = [arg for arg in self.arguments if arg not in Function._placeholders_under_construction]
         if sig[0].name == 'x_last':
-            print(13)
             sig = sig[1:] + [sig[0]]
         return tuple(sig)
 
