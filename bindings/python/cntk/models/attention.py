@@ -19,7 +19,7 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
                    go_backwards=default_override_or(False),
                    enable_self_stabilization=default_override_or(True), name=''):
     '''
-    Creates a Function object that implements an attention model.
+    Layer factory function to create a function object that implements an attention model.
     '''
 
     init                      = get_default_override(AttentionModel, init=init)

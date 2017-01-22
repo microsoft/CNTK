@@ -51,7 +51,7 @@ class Function(cntk_py.Function):
     # Use this as a decorator, e.g.:
     #   @Function
     #   def f(x): return x * x
-    def __new__(cls, f, members = {}):
+    def __new__(cls, f, members = {}, make_block=False):
         # Parameter() creation inside code of a Function def is forbidden
         from ..default_options import default_options
         with default_options(pure=True):
@@ -82,6 +82,7 @@ class Function(cntk_py.Function):
                 # As a workaround, consume the placeholder once, and apply square_error() on top.
                 #zero_in_right_order = plus(*(red(arg*0) for arg in fun_args))
                 fun_args = tuple(zero_in_right_order + arg for arg in fun_args)
+                # BUGBUG: fails inside a recurrent loop
                 return fun_args
                 #block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
                 #combined_block_args = combine(block_args)                               # the content of the BlockFunction
@@ -122,18 +123,30 @@ class Function(cntk_py.Function):
                     out = resolve_named(out)
                 return out
             # ensure parameter ordering
-            fun_args = args
+            if make_block: # if we make a block then run off a separate set
+                fun_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
+            else:
+                fun_args = args
             #if len(fun_args) > 1:
             #    fun_args = force_order_args(fun_args)
             # ^^ BUGBUG: due to instability of as_block() and inefficiency of the above solution, for now only do if needed
             # now invoke the Python function
             out = invoke(fun_args)
-            # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
-            out_arg_names = [arg.name for arg in out.signature]
-            if out_arg_names != arg_names:  # order came out wrong
-                #print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
-                fun_args = force_order_args(fun_args)
-                out = invoke(fun_args)   #.outputs) # BUGBUG: move .outputs back up
+            # if BlockFunction the wrap into a block
+            if make_block:
+                block_arg_map = list(zip(fun_args, args))
+                out = as_block(composite=out, block_arguments_map=block_arg_map, block_op_name=f_name)
+                #block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+                #combined_block_args = combine(block_args)                               # the content of the BlockFunction
+                #arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
+                #combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
+            else:
+                # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
+                out_arg_names = [arg.name for arg in out.signature]
+                if out_arg_names != arg_names:  # order came out wrong
+                    print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
+                    fun_args = force_order_args(fun_args)
+                    out = invoke(fun_args)   #.outputs) # BUGBUG: move .outputs back up
 
             # verify that we got the parameter order right
             out_arg_names = [arg.name for arg in out.signature]
@@ -167,7 +180,7 @@ class Function(cntk_py.Function):
                 out.__dict__[key] = members[key]
             return out
 
-    def __init__(self, f, members = {}):
+    def __init__(self, f, members = {}, make_block=False):
         # don't call the base class, since Function is abstract in C++
         pass
 

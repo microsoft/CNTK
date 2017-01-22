@@ -11,9 +11,10 @@ from ..ops import combine, delay, sequence
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name
 
+
 def Sequential(layers, name=''):
     '''
-    Composite that applies a sequence of layers (or any functions) onto an input.
+    Layer factory function to create a composite that applies a sequence of layers (or any functions) onto an input.
     Sequential ([F, G, H]) === F >> G >> H
     '''
     if not isinstance(layers, list): # to support nested lists, run every item recursively through Sequential()
@@ -28,12 +29,13 @@ def Sequential(layers, name=''):
     # TODO: wrap this in a BlockFunction as to enforce inputs = inputs of first function
     return Block(composed_function, 'Sequential', Record(layers=layers))
 
+
 def For(range, constructor, name=''):
     '''
-    Composite that applies a sequence of layers constructed with a constructor lambda(layer).
+    Layer factory function to create a composite that applies a sequence of layers constructed with a constructor lambda(layer).
     E.g.
-    For(range(3), lambda i: Dense(2000))
-    For(range(3), lambda: Dense(2000))
+     For(range(3), lambda i: Dense(2000))
+     For(range(3), lambda: Dense(2000))
     '''
     #from inspect import signature
     #takes_arg = len(signature(constructor).parameters) > 0
@@ -60,7 +62,7 @@ def LayerStack(N, constructor):
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
-    Runs a function recurrently over a time sequence, with initial state.
+    Layer factory function to create a function that runs a cell function recurrently over a time sequence, with initial state.
     This form is meant for use in sequence-to-sequence scenarios.
     The difference to Recurrence() is that this returns a function that accepts the initial state as data argument(s).
     Initial state consists of N arguments, matching 'over'.
@@ -74,47 +76,41 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
         over_function = Function(over_function)
 
     # get signature of cell
-    _, *prev_state_args = over_function.signature
+    *prev_state_args, _ = over_function.signature
 
     if len(over_function.outputs) != len(prev_state_args):
+        # TODO: better say right here what the requirement is!
         raise TypeError('RecurrenceFrom: number of state variables inconsistent between create_placeholder() and recurrent block')
 
     # function that this layer represents
-    def _recurrence_from_n(x, *initial_state):
+    def _recurrence_from_n(*args):
+        *initial_state, x = args
 
-        # TODO: move this entire placeholder business to Function.__call__
         out_vars_fwd = [ForwardDeclaration(name=state_var.name) for state_var in prev_state_args] # create list of placeholders for the state variables
 
         # previous function; that is, past or future_value with initial_state baked in
-        #prev_out_vars = [Delay(T = -1 if go_backwards else +1, initial_state=init)(out_var) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
-        # BUGBUG: This fails ^^ due to current as_block() bugs; can only use Python function for now:
         prev_out_vars = [delay(out_var, initial_state=init, time_step=-1 if go_backwards else +1) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
 
         # apply the recurrent block ('over_function')
-        out = over_function(x, *prev_out_vars)  # this returns a Function (x, previous outputs...) -> (state vars...)
+        out = over_function(*(prev_out_vars + [x]))  # over_function is a Function (previous outputs..., x) -> (state vars...)
 
         # connect the recurrent dependency
         for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)):
-            #var.owner.replace_placeholders({var_fwd: var})  # resolves out_vars_fwd := state_vars
             var_fwd.resolve_to(var)
-        #replacements = { var_fwd: var for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)) }
-        #out.replace_placeholders(replacements)  # resolves out_vars_fwd := state_vars
-
-        # var_fwd.resolve_as(var)  -->  var.owner.replace_placeholders({var_fwd: var})
 
         if not return_full_state:
-            out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". TODO: fix this inside Function(lambda)?
+            out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". Likely the known ref-counting bug. TODO: fix this inside Function(lambda)?
 
         return out
 
     # functions that this layer represents
     # The @Function pattern only supports fixed signatures, so we need one for each #states we support.
-    def recurrence_from_1(x, h):
-        return _recurrence_from_n(x, h)
-    def recurrence_from_2(x, h, c):
-        return _recurrence_from_n(x, h, c)
-    def recurrence_from_3(x, h, c, a):
-        return _recurrence_from_n(x, h, c, a)
+    def recurrence_from_1(h, x):
+        return _recurrence_from_n(h, x)
+    def recurrence_from_2(h, c, x):
+        return _recurrence_from_n(h, c, x)
+    def recurrence_from_3(h, c, a, x):
+        return _recurrence_from_n(h, c, a, x)
 
     recurrence_from_functions = [recurrence_from_1, recurrence_from_2, recurrence_from_3]
     num_state_args = len(prev_state_args)
@@ -128,9 +124,10 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
 
     return Block(recurrence_from, 'RecurrenceFrom', Record(over_function=over_function))
 
+
 def Recurrence(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
-    Runs a function recurrently over a time sequence.
+    Layer factory function to create a function that runs a cell function recurrently over a time sequence.
     This form is meant for use in regular recurrent-model scenarios.
     ``initial_state`` must be a constant (or at least have known shape). To pass initial_state as a data input, use RecurrenceFrom() instead.
     TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
@@ -145,7 +142,7 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
         over_function = Function(over_function)
 
     # get signature of cell
-    _, *prev_state_args = over_function.signature
+    *prev_state_args, _ = over_function.signature
 
     if len(over_function.outputs) != len(prev_state_args):
         raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
@@ -163,15 +160,16 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
     # function that this layer represents
     @Function
     def recurrence(x):
-        return recurrence_from(x, *initial_state)
+        return recurrence_from(*(initial_state + (x,)))
 
     recurrence = _inject_name(recurrence, name)
 
     return Block(recurrence, 'Recurrence', Record(over_function=over_function))
 
+
 def Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
-    Implements the fold() catamorphism.
+    Layer factory function to create a function that implements the fold() catamorphism.
     ``go_backwards=False`` selects a fold-left, while ``True`` a fold-right,
     but note that the ``folder_function`` signature is always the one of fold-left.
     Like ``Recurrence()`` but returns only the final state.
@@ -184,17 +182,18 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
     recurrence = Recurrence(folder_function, go_backwards=go_backwards, initial_state=initial_state, return_full_state=return_full_state)
 
     # now take the last or first
-    select = sequence.first if go_backwards else sequence.last
-    fold = recurrence >> tuple(select for output in recurrence.outputs)
+    get_final = sequence.first if go_backwards else sequence.last
+    fold = recurrence >> tuple(get_final for output in recurrence.outputs)
 
     fold = _inject_name(fold, name)
 
     return Block(fold, 'Fold', Record(folder_function=folder_function))
 
+
 # TODO: This is still a bit messy. The returned unfold_from() function should take the encoding instead of 'input'.
 def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
     '''
-    Implements the unfold() anamorphism. It creates a function that, starting with a seed input,
+    Layer factory function to create a function that implements the unfold() anamorphism. It creates a function that, starting with a seed input,
     applies 'generator_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
     it may have this form:
        `result = f(... f(f([g(input), initial_state])) ... )`

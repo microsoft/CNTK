@@ -88,10 +88,13 @@ def _get_initial_state_or_default(initial_state):
     else:
         return initial_state # already in good shape: return as is
 
-# create a type specifier; that is, all arguments to instantiate a Placeholder or Input
-# All are optional, meaning unspecified.
-# TODO: move to class Value?
+# TODO: move to class Value, or Function.ArgType?
 def Type(shape=None, dtype=None, is_sparse=None, dynamic_axes=None):
+    '''
+    Create a type specifier; that is, all arguments to instantiate a Placeholder or Input.
+    These are meant to be passed to update_signature.
+    All are optional, meaning unspecified.
+    '''
     r = dict()
     if shape is not None:
         r['shape'] = shape
@@ -111,6 +114,9 @@ def Type(shape=None, dtype=None, is_sparse=None, dynamic_axes=None):
 # BUGBUG: using combine causes an error ater, so the name actually does not get changed
 # BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
 def Block(f, op_name, members={}):
+    '''
+    Experimental code. Don't assume it does anything.
+    '''
 
     #from inspect import isfunction
     #if isfunction(f):
@@ -127,17 +133,31 @@ def Block(f, op_name, members={}):
         f.__dict__[key] = members[key]
     return f
 
-# call this at the end of any layer or block that takes an optional name argument
+
+def BlockFunction(f):
+    '''
+    Same as @Function, but wrap the content into an as_block().
+    '''
+    return Function(f, make_block=True)
+
+
 def _inject_name(f, name):
+    '''
+    Call this at the end of any layer or block that takes an optional name argument.
+    '''
     if name:
         #f = combine(f.outputs, name=name)
         # BUGBUG: will not work for sparse data, and not for tuple-valued Functions
         f = alias(f, name=name)
     return f
 
+
 # TODO: Move this into the lower layer where these are defined.
 # some mappings--these currently exist only so that I can name the nodes for debugging
 def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
+    '''
+    Constructs a Parameter variable.
+    '''
     pure = get_default_override(None, pure=default_override_or(False))
     if pure:
         raise TypeError('parameters cannot be created inside a @Function def')
@@ -147,6 +167,9 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
     return _name_node(p, 'parameter')   # these are factory methods for things with state
 
 def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
+    '''
+    Constructs a Variable object that is constant.
+    '''
     dtype = get_default_override(Constant, dtype=dtype)
     p = constant(value, shape=shape, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
     return _name_node(p, 'constant')   # these are factory methods for things with state
@@ -154,11 +177,17 @@ def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
 # TODO: this function should not be necessary anymore
 def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,
           dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
+    '''
+    Constructs an Input variable.
+    '''
     dtype = get_default_override(Input, dtype=dtype)
     return _name_node(input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
                                      dynamic_axes=dynamic_axes, name=name), 'input')
 
 def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder'):
+    '''
+    Constructs a Placeholder variable.
+    '''
     #p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
     # BUGBUG: placeholder does not know is_sparse
     p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
@@ -182,14 +211,21 @@ def ForwardDeclaration(name='forward_declaration'):
     var_fwd.resolve_to = resolve_to
     return var_fwd
 
-# there is only one identity function
 # TODO: This should become a C++-side Function, e.g. like sigmoid
 @Function
 def identity(keep):
+    '''
+    Identity function.
+    There is no factory for it because there is only one identity function.
+    '''
     return combine([keep])
 
-# This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
+
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True), name=''):
+    '''
+    Layer factory function to create a Droppo stabilizer.
+    This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
+    '''
 
     enable_self_stabilization = get_default_override(Stabilizer, enable_self_stabilization=enable_self_stabilization)
 
@@ -214,11 +250,14 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     return Block(stabilize, 'Stabilizer', Record(beta=beta))
 
-# recurrent block of type 'LSTM', 'GRU', or RNNUnit
+
 def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
                     init, init_bias,
                     enable_self_stabilization,
                     name=''):
+    '''
+    Helper to create a recurrent block of type 'LSTM', 'GRU', or RNNUnit.
+    '''
 
     has_projection = cell_shape is not None
 
@@ -229,7 +268,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         raise ValueError("LSTM: shape and cell_shape must be vectors (rank-1 tensors)")
         # otherwise we'd need to fix slicing and Param initializers
 
-    stack_axis = -1  # stacking along the fastest-changing one, to match BS
+    stack_axis = -1  # for efficient computation, we stack multiple variables (along the fastest-changing one, to match BS)
     # determine stacking dimensions
     cell_shape_list = list(cell_shape)
     stacked_dim = cell_shape_list[stack_axis]
@@ -250,7 +289,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     b  = Parameter(            cell_shape_stacked,   init=init_bias, name='b')                              # bias
     W  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='W')                              # input
     H  = Parameter(shape     + cell_shape_stacked_H, init=init,      name='H')                              # hidden-to-hidden
-    H1 = Parameter(shape     + cell_shape,           init=init,      name='H') if type == 'GRU' else None   # hidden-to-hidden
+    H1 = Parameter(shape     + cell_shape,           init=init,      name='H')  if type == 'GRU' else None  # hidden-to-hidden
     Ci = Parameter(            cell_shape,           init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
     Cf = Parameter(            cell_shape,           init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
     Co = Parameter(            cell_shape,           init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
@@ -265,7 +304,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     # define the model function itself
     # general interface for Recurrence():
-    #   (x, all previous outputs delayed) --> (outputs and state)
+    #   (all previous outputs delayed, input) --> (outputs and state)
     # where
     #  - the first output is the main output, e.g. 'h' for LSTM
     #  - the remaining outputs, if any, are additional state
@@ -273,10 +312,9 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     # LSTM model function
     # in this case:
-    #   (x, dh, dc) --> (h, c)
-    # Note: TF uses this: output, state = lstm(current_batch_of_words, state)
-    @Function
-    def lstm(x, dh, dc):
+    #   (dh, dc, x) --> (h, c)
+    @BlockFunction
+    def lstm(dh, dc, x):
 
         dhs = Sdh(dh)  # previous values, stabilized
         dcs = Sdc(dc)
@@ -316,13 +354,13 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     # GRU model function
     # in this case:
-    #   (x, dh) --> (h)
+    #   (dh, x) --> (h)
     # e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     # TODO: Is this the same definition as NVidia's? Should we enable multiple definitions of this?
     # BUGBUG: gru(x,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
     #          This may have changed with as_block(), which cannot handle unused inputs. TODO: test this.
-    @Function
-    def gru(x, dh):
+    @BlockFunction
+    def gru(dh, x):
 
         dhs = Sdh(dh)  # previous value, stabilized
         # note: input does not get a stabilizer here, user is meant to do that outside
@@ -356,8 +394,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # returns the new state as a tuple with names but order matters
         return Function.NamedOutput(h=h)
 
-    @Function
-    def rnn(x, dh):
+    @BlockFunction
+    def rnn(dh, x):
         dhs = Sdh(dh)  # previous value, stabilized
         ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
@@ -376,12 +414,15 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     return function
 
-# LSTM block
-# returns a function (input, prev_h, prev_c -> h, c)
+
 def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peepholes=default_override_or(False),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
          enable_self_stabilization=default_override_or(False),
          name=''):
+    '''
+    Layer factory function to create an LSTM block for use inside a recurrence.
+    Returns a function (prev_h, prev_c, input) -> h).
+    '''
 
     activation                = get_default_override(RNNUnit, activation=activation)
     use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
@@ -393,14 +434,17 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
                             init=init, init_bias=init_bias,
                             enable_self_stabilization=enable_self_stabilization, name=name)
 
-# RNN block
-# returns a function (input, prev_h) -> h)
-#   h = activation (W * input + R * prev_h + b)
+
 # TODO: needs better name
 def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
          enable_self_stabilization=default_override_or(False),
-         name=''): # (x, prev_h) -> (h)
+         name=''): # (prev_h, x) -> (h)
+    '''
+    Layer factory function to create a plain RNN block for use inside a recurrence.
+    Returns a function (prev_h, input) -> h):
+     h = activation (W * input + R * prev_h + b)
+    '''
 
     activation                = get_default_override(RNNUnit, activation=activation)
     init                      = get_default_override(RNNUnit, init=init)
@@ -411,11 +455,15 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
                             init=init, init_bias=init_bias,
                             enable_self_stabilization=enable_self_stabilization, name=name)
 
-# GRU block
+
 def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
          init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
          enable_self_stabilization=default_override_or(False),
-         name=''): # (x, prev_h) -> (h)
+         name=''): # (prev_h, x) -> (h)
+    '''
+    Layer factory function to create a GRU block for use inside a recurrence.
+    Returns a function (prev_h, input) -> h).
+    '''
 
     activation                = get_default_override(GRU, activation=activation)
     init                      = get_default_override(GRU, init=init)

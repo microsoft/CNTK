@@ -137,10 +137,10 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                 if use_attention:
                     if i == 0:
                         @Function
-                        def lstm_with_attention(x, dh, dc):
+                        def lstm_with_attention(dh, dc, x):
                             h_att = attention_model(encoded_input.outputs[0], dh)
                             x = splice(x, h_att)
-                            r = rec_block(x, dh, dc)
+                            r = rec_block(dh, dc, x)
                             (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
                             return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
                         r = Recurrence(lstm_with_attention)(r)

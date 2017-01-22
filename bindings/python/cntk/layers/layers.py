@@ -23,7 +23,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
           bias=default_override_or(True), init_bias=default_override_or(0),
           name=''):
     '''
-    Create a fully-connected linear projection layer with optional non-linear activation.
+    Layer factory function to create a fully-connected linear projection layer with optional non-linear activation.
     Note: shape may describe a tensor as well.
     input_rank given: number of inferred axes to add to W (map_rank must not be given)
     map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
@@ -85,10 +85,13 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
     return Block(dense, 'Dense', Record(W=W, b=b))
 
-# Embedding -- create a linear embedding layer
-# To create an embedding from a file, use this:
-#  Embedding(weights=np.load('PATH'))
 def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name=''):
+    '''
+    Layer factory function to create a linear embedding layer.
+    To create an embedding from a file, use this:
+     Embedding(weights=np.load('PATH'))
+    TODO: test this
+    '''
 
     if not is_default_override(init) and weights is not None:
         raise ValueError('Embedding: init and weights options are mutually exclusive')
@@ -128,8 +131,11 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
 
     return Block(embed, 'Embedding', Record(E=E))
 
-# helper to expand a sequence into a window, splicing them along the given axis (which must already exist)
+
 def _window(x, axis, begin, end, step, stride, initial_state=None):
+    '''
+    helper to expand a sequence into a window, splicing them along the given axis (which must already exist)
+    '''
     shifted = [
         past_value(x, initial_state=initial_state, time_step=-t) if t < 0 else
         x                                                        if t == 0 else
@@ -140,6 +146,7 @@ def _window(x, axis, begin, end, step, stride, initial_state=None):
     if stride != 1:
         raise NotImplementedError('windowed convolution with stride not yet implemented')
     return r
+
 
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape)  )
@@ -166,6 +173,9 @@ def Convolution(rf_shape,         # e.g. (3,3)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0,
                 name=''):
+    '''
+    Layer factory function to create a convolution layer.
+    '''
 
     activation = get_default_override(Convolution, activation=activation)
     init       = get_default_override(Convolution, init=init)
@@ -275,12 +285,6 @@ def Convolution(rf_shape,         # e.g. (3,3)
 
     return Block(convolve, 'Convolution', Record(W=W, b=b))
 
-# Create a Pooling layer with one of following types:
-#
-#   MaxPooling and GlobalMaxPooling
-#   AveragePooling and GlobalAveragePooling
-#
-# Setting the filter_shape to None, mean global pooling.
 # TODO: add sequential mode like Convolution()
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def _Pooling(op,       # PoolingType_Max or _Average
@@ -289,6 +293,10 @@ def _Pooling(op,       # PoolingType_Max or _Average
              strides=1,
              pad=False,
              name=''):
+    '''
+    Shared part of the various pooling layers.
+    Set the filter_shape to None to denote global pooling.
+    '''
 
     if sequential:
         raise NotImplementedError("Pooling: sequential option not implemented yet")
@@ -308,34 +316,47 @@ def _Pooling(op,       # PoolingType_Max or _Average
 
     return Block(pool, op_name)
 
-# MaxPooling
+
 def MaxPooling(rf_shape,  # e.g. (3,3)
                strides=1,
                pad=default_override_or(False),
                name=''):
+    '''
+    Layer factory function to create a max-pooling layer.
+    '''
     pad = get_default_override(MaxPooling, pad=pad)
     return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad, name=name)
 
-# AveragePooling
+
 def AveragePooling(rf_shape,  # e.g. (3,3)
                    strides=1,
                    pad=default_override_or(False),
                    name=''):
+    '''
+    Layer factory function to create an average-pooling layer.
+    '''
     pad = get_default_override(AveragePooling, pad=pad)
     return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad, name=name)
 
-# GlobalMaxPooling
-# Is this the same as reduce_max()?
+
+# TODO: Is this the same as reduce_max()?
 def GlobalMaxPooling(name=''):
+    '''
+    Layer factory function to create a global max-pooling layer.
+    '''
     return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, name=name)
 
-# GlobalAveragePooling
+
 def GlobalAveragePooling(name=''):
+    '''
+    Layer factory function to create a global average-pooling layer.
+    '''
     return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, name=name)
+
 
 def Delay(T=1, initial_state=default_override_or(0), name=''):
     '''
-    Delays input the input by a given number of time steps. Negative means future.
+    Layer factory function to create a layer that delays input the input by a given number of time steps. Negative means future.
     This is provided as a layer instead of a function so that it can easily be used in a Sequential() expression.
     '''
     initial_state = get_default_override(Delay, initial_state=initial_state)
@@ -359,8 +380,11 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
 
     return Block(delay_f, 'Delay')
 
-# Dropout -- create a drop-out layer
+
 def Dropout(prob, name=''):
+    '''
+    Layer factory function to create a drop-out layer.
+    '''
     @Function
     def dropout(x):
         from cntk.ops import dropout # avoid scope mixup
@@ -368,13 +392,16 @@ def Dropout(prob, name=''):
     dropout = _inject_name(dropout, name)
     return Block(dropout, 'Dropout')
 
-# BatchNormalization -- create a batch-normalization layer
+
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C++ change.
 def BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=default_override_or(5000), blend_time_constant=0,
                        epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(False),
                        name=''):
+    '''
+    Layer factory function to create a batch-normalization layer.
+    '''
 
     map_rank                    = get_default_override(BatchNormalization, map_rank=map_rank)
     normalization_time_constant = get_default_override(BatchNormalization, normalization_time_constant=normalization_time_constant)
@@ -402,9 +429,11 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
 
     return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
-# LayerNormalization -- create a layer-normalization layer
 # TODO: add an epsilon [CR comment by Nikos]
 def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
+    '''
+    Layer factory function to create a function that implements layer normalization.
+    '''
     UntestedBranchError("LayerNormalization")
 
     # parameters bound to this Function
@@ -426,9 +455,11 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))
 
 
-# assign a label string to an intermediate Function
-# Dense(...) >> Label('hidden') >> Dense(...)
 def Label(name):
+    '''
+    Layer factory function to create a function that assigns a label string to an intermediate Function
+    Dense(...) >> Label('hidden') >> Dense(...)
+    '''
     @Function
     def label(x):
         return alias(x, name=name)
@@ -436,10 +467,11 @@ def Label(name):
     return label
 
 
-
-# Create a function which returns a static, maskable view for N past steps over a sequence along the given 'axis'.
-# It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
 def PastValueWindow(window_size, axis, go_backwards=default_override_or(False)):
+    '''
+    Layer factory function to create a function that returns a static, maskable view for N past steps over a sequence along the given 'axis'.
+    It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
+    '''
 
     go_backwards = get_default_override(PastValueWindow, go_backwards=go_backwards)
 
