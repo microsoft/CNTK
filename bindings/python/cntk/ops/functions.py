@@ -123,24 +123,19 @@ class Function(cntk_py.Function):
                     out = resolve_named(out)
                 return out
             # ensure parameter ordering
+            # if called from BlockFunction() then wrap into a block
             if make_block: # if we make a block then run off a separate set
-                fun_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
+                block_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
+                out = invoke(block_args)
+                out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=f_name)
+            # not a block
             else:
                 fun_args = args
-            #if len(fun_args) > 1:
-            #    fun_args = force_order_args(fun_args)
-            # ^^ BUGBUG: due to instability of as_block() and inefficiency of the above solution, for now only do if needed
-            # now invoke the Python function
-            out = invoke(fun_args)
-            # if BlockFunction the wrap into a block
-            if make_block:
-                block_arg_map = list(zip(fun_args, args))
-                out = as_block(composite=out, block_arguments_map=block_arg_map, block_op_name=f_name)
-                #block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
-                #combined_block_args = combine(block_args)                               # the content of the BlockFunction
-                #arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
-                #combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
-            else:
+                #if len(fun_args) > 1:
+                #    fun_args = force_order_args(fun_args)
+                # ^^ BUGBUG: due to instability of as_block() and inefficiency of the above solution, for now only do if needed
+                # now invoke the Python function
+                out = invoke(fun_args)
                 # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
                 out_arg_names = [arg.name for arg in out.signature]
                 if out_arg_names != arg_names:  # order came out wrong
@@ -163,13 +158,6 @@ class Function(cntk_py.Function):
                     unused_args = set(args) - set(out.signature)
                     unused_arg_names = [arg.name for arg in unused_args]
                     raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
-
-            # wrap into a block as to ensure ordering of parameters
-            # BUGBUG: This looses names. So avoid as_block() entirely unless needed; hoping it will not be used for where it matters
-            #args2 = [placeholder_variable(name=name) for name in arg_names]
-            #arg_map = list(zip(args,args2))
-            #out = as_block(out, arg_map, f_name)
-            # BUGBUG: Latest loses arguments. When each item in a Sequential() is a Block, then suddenly there are no args anymore.
 
             # for debugging
             out.f_name = f_name  # keep in Python wrapper for debugging
