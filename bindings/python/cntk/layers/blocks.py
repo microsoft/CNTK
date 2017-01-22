@@ -138,7 +138,9 @@ def BlockFunction(f):
     '''
     Same as @Function, but wrap the content into an as_block().
     '''
-    return Function(f, make_block=True)
+    #return Function(f, make_block=True)
+    # TODO: bring this ^^ back after as_block works, and then undo the x_last hack
+    return Function(f)  # BUGBUG: causes random axis inference errors
 
 
 def _inject_name(f, name):
@@ -310,18 +312,19 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     #  - the remaining outputs, if any, are additional state
     #  - if for some reason output != state, then output is still fed back and should just be ignored by the recurrent block
 
+    # TODO: rename all x_last back to x once parameter ordering works
     # LSTM model function
     # in this case:
-    #   (dh, dc, x) --> (h, c)
+    #   (dh, dc, x_last) --> (h, c)
     @BlockFunction
-    def lstm(dh, dc, x):
+    def lstm(dh, dc, x_last):
 
         dhs = Sdh(dh)  # previous values, stabilized
         dcs = Sdc(dc)
         # note: input does not get a stabilizer here, user is meant to do that outside
 
         # projected contribution from input(s), hidden, and bias
-        proj4 = b + times(x, W) + times(dhs, H)
+        proj4 = b + times(x_last, W) + times(dhs, H)
 
         it_proj  = slice (proj4, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
         bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
@@ -329,8 +332,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
 
         # helper to inject peephole connection if requested
-        def peep(x, c, C):
-            return x + C * c if use_peepholes else x
+        def peep(x_last, c, C):
+            return x_last + C * c if use_peepholes else x_last
 
         it = sigmoid (peep (it_proj, dcs, Ci))        # input gate(t)
         # TODO: should both activations be replaced?
@@ -354,19 +357,19 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     # GRU model function
     # in this case:
-    #   (dh, x) --> (h)
+    #   (dh, x_last) --> (h)
     # e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
     # TODO: Is this the same definition as NVidia's? Should we enable multiple definitions of this?
-    # BUGBUG: gru(x,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
+    # BUGBUG: gru(x_last,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
     #          This may have changed with as_block(), which cannot handle unused inputs. TODO: test this.
     @BlockFunction
-    def gru(dh, x):
+    def gru(dh, x_last):
 
         dhs = Sdh(dh)  # previous value, stabilized
         # note: input does not get a stabilizer here, user is meant to do that outside
 
         # projected contribution from input(s), hidden, and bias
-        projx3 = b + times(x, W)
+        projx3 = b + times(x_last, W)
         projh2  = times(dhs, H)
 
         zt_proj = slice (projx3, stack_axis, 0*stacked_dim, 1*stacked_dim) + slice (projh2, stack_axis, 0*stacked_dim, 1*stacked_dim)
@@ -383,9 +386,9 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         ht = (1 - zt) * ct + zt * dhs # hidden state ht / output
 
         # for comparison: CUDNN_GRU
-        # i(t) = sigmoid(W_i x(t) +          R_i h(t-1)  + b_Wi + b_Ru)
-        # r(t) = sigmoid(W_r x(t) +          R_r h(t-1)  + b_Wr + b_Rr)   --same up to here
-        # h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
+        # i(t) = sigmoid(W_i x_last(t) +          R_i h(t-1)  + b_Wi + b_Ru)
+        # r(t) = sigmoid(W_r x_last(t) +          R_r h(t-1)  + b_Wr + b_Rr)   --same up to here
+        # h'(t) =   tanh(W_h x_last(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
         # h(t) = (1 - i(t) .* h'(t)) + i(t) .* h(t-1)                     --wrong bracketing??
 
         h = times(Sht(ht), Wmr) if has_projection else \
@@ -395,9 +398,9 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         return Function.NamedOutput(h=h)
 
     @BlockFunction
-    def rnn(dh, x):
+    def rnn(dh, x_last):
         dhs = Sdh(dh)  # previous value, stabilized
-        ht = activation (times(x, W) + times(dhs, H) + b)
+        ht = activation (times(x_last, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
         return Function.NamedOutput(h=h)

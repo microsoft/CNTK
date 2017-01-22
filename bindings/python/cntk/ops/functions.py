@@ -90,6 +90,15 @@ class Function(cntk_py.Function):
                 #combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
                 #ref_keeper = combined_args    # BUGBUG workaround
                 #return combined_args # BUGBUG .outputs  # the Python function is called with these instead
+            def force_order_args_rec(fun_args): # use this inside recurrent loop, requires all args to share the same axes
+                from .. import plus, sequence, element_select, splice, slice
+                zero_in_right_order = plus(*(sequence.constant_with_dynamic_axes_like(0, arg) for arg in fun_args))
+                def patch_arg(arg):
+                    return zero_in_right_order + arg
+                    #return element_select(zero_in_right_order, arg, arg)
+                    #return slice(splice(zero_in_right_order, arg, axis=-1), axis=-1, begin_index=1, end_index=0)
+                fun_args = tuple(patch_arg(arg) for arg in fun_args)
+                return fun_args
             def invoke(fun_args):
                 try:
                     # hide Placeholders of this function from .signature() of any function defined inside
@@ -128,6 +137,7 @@ class Function(cntk_py.Function):
                 block_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
                 out = invoke(block_args)
                 out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=f_name)
+                # BUGBUG: This ^^ causes random errors of mismatching axes. Fixed by x_last hack.
             # not a block
             else:
                 fun_args = args
@@ -187,7 +197,15 @@ class Function(cntk_py.Function):
         #    for uc in Function._placeholders_under_construction:
         #        if arg == uc:
         #            print(uc.name)
-        return tuple(arg for arg in self.arguments if arg not in Function._placeholders_under_construction)
+        #return tuple(arg for arg in self.arguments if arg not in Function._placeholders_under_construction)
+        # BUGBUG: none of the methods for parameter ordering seem to work for recurrence;
+        #         so we fix it after the fact by detecting a very specific parameter name 'x_last'
+        #         which we report in last position (lying).
+        sig = [arg for arg in self.arguments if arg not in Function._placeholders_under_construction]
+        if sig[0].name == 'x_last':
+            print(13)
+            sig = sig[1:] + [sig[0]]
+        return tuple(sig)
 
     def argument_map(self, *args, **kwargs):
         '''
