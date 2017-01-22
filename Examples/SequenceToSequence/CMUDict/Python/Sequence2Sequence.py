@@ -14,7 +14,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
                      element_select, alias, hardmax, placeholder_variable, combine, parameter, times
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.initializer import glorot_uniform
-from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.utils import log_number_of_parameters, ProgressPrinter, debughelpers
 from cntk.graph import find_by_name
 from cntk.layers import *
 from cntk.models.attention import *
@@ -202,7 +202,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         z = model_train(input, postprocessed_labels)
         ce   = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error      (z, postprocessed_labels)
-        return (ce, errs)
+        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
     try:
       #criterion.dump()
       criterion.update_signature(input=Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
@@ -210,7 +210,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     except:
       #criterion.dump()
       raise
-    #criterion.dump()
+    debughelpers.dump_signature(criterion)
+    #debughelpers.dump_function(criterion)
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though

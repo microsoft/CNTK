@@ -102,7 +102,7 @@ class Function(cntk_py.Function):
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
                     if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                        output = combine([output.arg], name=output.name)
+                        output = alias(output.arg, name=output.name)
                     elif isinstance(output, cntk_py.Variable):
                         output = combine([output]) # workaround: wrap in another combine() call
                     return output
@@ -456,92 +456,6 @@ class Function(cntk_py.Function):
         Slicing of a Function result.
         '''
         return self.output.__getitem__(arg)
-
-    def dump_signature(self, tag=None):
-        '''
-        Debug helper that prints the signature of a Function.
-        '''
-        f_name = self.name if self.name else tag if tag else 'Function'
-        args = self.signature
-        arg_names = [param.name for param in args]
-        print(f_name + '(' + ", ".join(arg_names) + ')')
-
-    def dump(self, tag=None):
-        from ..graph import depth_first_search
-        graph = depth_first_search(self.root_function, lambda x: not isinstance(x, cntk_py.Variable) or not x.is_output)
-        names = dict()
-        def make_name(n): # come up with a letter sequence
-            if n < 26:
-                return chr(n + 97)
-            else:
-                return make_name(n // 26) + make_name(n % 26)
-        def name_it(item):
-            if item.name != '':
-                return item.name
-            if item in names:
-                name = names[item]
-            else:
-                name = make_name(len(names))
-                names[item] = name
-            return name
-        axis_names = dict()
-        def name_axis(axis):
-            actual_name = axis.name
-            if actual_name in axis_names:
-                return axis_names[actual_name]
-            if axis.name == "staticAxis_2147483645":  # TODO: what is the correct way of testing this?
-                name = "?"
-            elif axis.name == "defaultBatchAxis":
-                name = "b*"
-            else:
-                name = make_name(len(axis_names)+12) + "*"
-                print("  Axis", actual_name, "==", name)
-            axis_names[actual_name] = name
-            return name
-        def type_spec(var):
-            s = ":{}".format(var.shape)
-            axes = var.dynamic_axes
-            if axes:
-                s = s + "[" + ",".join([name_axis(axis) for axis in axes]) + "]"
-            return s
-        def print_item(item):
-            name = name_it(item)
-            if isinstance(item, cntk_py.Function):
-                op_name = item.op_name
-                #shape = list(output.shape for output in item.outputs)
-                shape = '(' +  ', '.join([name_it(output) + type_spec(output) for output in item.root_function.outputs]) + ')'
-                inputs = '(' +  ', '.join([name_it(input) + type_spec( input) for input in item.root_function.inputs]) + ')'
-                sep = '-> '
-            elif isinstance(item, cntk_py.Constant):
-                op_name = "Constant"
-                shape = type_spec(item)
-                inputs = ''
-                sep = ''
-            elif isinstance(item, cntk_py.Parameter):
-                op_name = "Parameter"
-                shape = type_spec(item)
-                inputs = ''
-                sep = ''
-            elif isinstance(item, cntk_py.Variable):
-                if item.is_parameter:
-                    op_name = "Parameter"
-                elif item.is_placeholder:
-                    op_name = "Placeholder"
-                elif item.is_input:
-                    op_name = "Input"
-                elif item.is_constant:
-                    op_name = "Constant"
-                else:
-                    op_name = "Variable"
-                shape = type_spec(item)
-                name = name + " " + item.uid
-                sep = ''
-                inputs = ''
-            print('  {:20} {:30} {} {}{}'.format(op_name, name, inputs, sep, shape))
-            pass
-        self.dump_signature(tag)
-        for item in graph:
-            print_item(item)
 
     @property
     @typemap
