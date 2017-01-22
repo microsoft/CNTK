@@ -264,12 +264,12 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 print(end=" -> ")
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                e = model_greedy(mb_valid[valid_reader.streams.features])
-                print_sequences(e, i2w)
+                #e = model_greedy(mb_valid[valid_reader.streams.features])
+                #print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
-                if use_attention:
-                    debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
+                #if use_attention:
+                #    debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
