@@ -190,10 +190,10 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # Decoding is an unfold() operation starting from sentence_start.
         # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
         # which holds 'input' in its closure.
-        @Function
-        def generator(history):
-            return hardmax(s2smodel(history, input))
-        unfold = UnfoldFrom(generator,   # s2smodel(..., input) >> hardmax,
+        #@Function
+        #def generator(history):
+        #    return hardmax(s2smodel(history, input))
+        unfold = UnfoldFrom(s2smodel(..., input) >> hardmax,
                             #until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                             length_increase=length_increase, initial_state=sentence_start)
         return unfold(dynamic_axes_like=input)
@@ -477,12 +477,21 @@ if __name__ == '__main__':
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
 
+    #x = placeholder_variable('x')   # Function argument in definition
+    #s = x * x                       # Function
+    #debughelpers.dump_function(s)
+    #arg = placeholder_variable('arg') # apply Function to another placeholder
+    #y = s.clone(CloneMethod.share, {x: arg})
+    #debughelpers.dump_function(y)
+    #print(13)
+
+
     #x = placeholder_variable('x') # Function argument
     #h_f = placeholder_variable('h_f') # recurrent forward reference
-    #h = sigmoid(x + h_f)
+    #h = sigmoid(2 * h_f + 2 * x)
     #h.replace_placeholders({h_f: h}) # end of Function definition
     #h.replace_placeholders({x: input_variable(300)}) # Function application
-    #debughelpers.dump_signature(h)
+    #debughelpers.dump_function(h)
     #print(13)
 
     # test for multi-input plus()
