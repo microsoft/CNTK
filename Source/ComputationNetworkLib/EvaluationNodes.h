@@ -481,13 +481,13 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // samplesToIgnore - list of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen, float delPen, float insPen, bool squashInputs, vector<int> samplesToIgnore)
-        : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, float subPen, float delPen, float insPen, bool squashInputs, std::vector<int> samplesToIgnore, const wstring & name)
+        : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
     {
     }
 
     EditDistanceErrorNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : EditDistanceErrorNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), configp->Get(L"samplesToIgnore"))
+        : EditDistanceErrorNode(configp->Get(L"deviceId"), configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), configp->Get(L"samplesToIgnore"), L"<placeholder>")
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -515,7 +515,7 @@ public:
 
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_SamplesToIgnore);
+        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_SamplesToIgnore);
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -544,10 +544,10 @@ public:
             node->m_maxIndexes0 = m_maxIndexes0;
             node->m_maxIndexes1 = m_maxIndexes1;
             node->m_maxValues = m_maxValues;
-            node->m_SquashInputs = m_SquashInputs;
-            node->m_SubPen = m_SubPen;
-            node->m_DelPen = m_DelPen;
-            node->m_InsPen = m_InsPen;
+            node->m_squashInputs = m_squashInputs;
+            node->m_subPen = m_subPen;
+            node->m_delPen = m_delPen;
+            node->m_insPen = m_insPen;
             node->m_SamplesToIgnore = m_SamplesToIgnore;
         }
     }
@@ -690,13 +690,19 @@ public:
         return (ElemType)(wrongSampleNum * totalframeNum / totalSampleNum);
     }
 
+    float SubstitutionPenalty() const { return m_subPen; }
+    float DeletionPenalty() const { return m_delPen; }
+    float InsertionPenalty() const { return m_insPen; }
+    bool SquashInputs() const { return m_squashInputs; }
+    std::vector<int> SamplesToIgnore() const { return m_SamplesToIgnore; }
+
 private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    bool m_SquashInputs;
-    float m_SubPen;
-    float m_DelPen;
-    float m_InsPen;
+    bool m_squashInputs;
+    float m_subPen;
+    float m_delPen;
+    float m_insPen;
     std::vector<int> m_SamplesToIgnore;
 
     // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.

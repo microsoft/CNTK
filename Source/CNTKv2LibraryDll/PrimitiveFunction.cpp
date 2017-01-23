@@ -72,6 +72,11 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngSeed = L"rngSeed";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngOffset = L"rngOffset";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUnpoolingWindowShape = L"unpoolingWindowShape";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSubstitutionPenalty = L"SubstitutionPenalty";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDeletionPenalty = L"DeletionPenalty";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameInsertionPenalty = L"InsertionPenalty";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSquashInputs = L"SquashInputs";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSamplesToIgnore = L"SamplesToIgnore";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -515,6 +520,7 @@ namespace CNTK
                         break;
                     }
                     case PrimitiveOpType::CosDistance:
+                    case PrimitiveOpType::EditDistanceError:
                     case PrimitiveOpType::Logistic:
                     case PrimitiveOpType::SquaredError:
                     case PrimitiveOpType::CrossEntropyWithSoftmax:

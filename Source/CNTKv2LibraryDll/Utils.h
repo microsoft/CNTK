@@ -251,6 +251,7 @@ namespace CNTK
                       std::is_same<T, float>::value ||
                       std::is_same<T, double>::value ||
                       std::is_same<T, Axis>::value ||
+                      std::is_same<T, int>::value ||
                       std::is_same<T, std::wstring>::value,
                       "Unsupported ValueType");
 
@@ -269,6 +270,7 @@ namespace CNTK
                       std::is_same<T, float>::value ||
                       std::is_same<T, double>::value ||
                       std::is_same<T, Axis>::value ||
+                      std::is_same<T, int>::value ||
                       std::is_same<T, std::wstring>::value,
                       "Unsupported ValueType");
 

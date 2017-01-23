@@ -3018,6 +3018,11 @@ namespace CNTK
     CNTK_API FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in operation for computing the edit distance error for specified operands.
+    ///
+    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, std::vector<int> samplesToIgnore, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
     ///
     inline FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const std::wstring& name = L"")
