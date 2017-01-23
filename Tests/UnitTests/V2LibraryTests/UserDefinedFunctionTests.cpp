@@ -110,9 +110,11 @@ public:
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
 private:
-    static std::vector<Variable> GetOutputVariables(const Variable& leftOperand, const Variable& rightOperand, bool isTimes)
+    std::vector<Variable> InferOutputs() override
     {
-        auto tempFunc = isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
+        auto leftOperand = Inputs()[0];
+        auto rightOperand = Inputs()[1];
+        auto tempFunc = m_isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
         auto tempFuncOutputs = tempFunc->Outputs();
 
         std::vector<Variable> outputs;
@@ -123,7 +125,7 @@ private:
     }
 
     UserDefinedTimesOrPlusFunction(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name)
-        : Function({ leftOperand, rightOperand }, GetOutputVariables(leftOperand, rightOperand, isTimes), Dictionary(), name)
+        : Function({ leftOperand, rightOperand }, Dictionary(), name), m_isTimes(isTimes)
     {
         auto createTimesOperandVar = [this](const Variable& operand, const std::wstring& operandName) {
             Variable var;
@@ -145,6 +147,7 @@ private:
     }
 
 private:
+    bool m_isTimes;
     FunctionPtr m_timesOrPlusFunc;
     std::unordered_map<Variable, Variable> m_timesOrPlusFuncArgumentMap;
 };
