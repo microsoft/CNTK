@@ -41,7 +41,7 @@ public:
                     return i;
             }
 
-            std::runtime_error("GetInputIndex: Specified variable is not an input of this Function");
+            throw std::runtime_error("GetInputIndex: Specified variable is not an input of this Function");
             return 0;
         };
 
@@ -129,11 +129,14 @@ private:
     {
         auto createTimesOperandVar = [this](const Variable& operand, const std::wstring& operandName) {
             Variable var;
-            if (Combine({ operand })->Parameters().empty())
-                std::runtime_error("Cannot determine device to place Parameter on!");
 
             if (operand.DynamicAxes().empty())
+            {
+                if (Combine({ operand })->Parameters().empty())
+                    throw std::runtime_error("Cannot determine device to place Parameter on!");
+
                 var = Parameter(operand.Shape(), operand.GetDataType(), 0, Combine({ operand })->Parameters()[0].Value()->Device());
+            }
             else
                 var = InputVariable(operand.Shape(), operand.IsSparse(), operand.GetDataType(), operand.NeedsGradient(), operandName, operand.DynamicAxes());
 
