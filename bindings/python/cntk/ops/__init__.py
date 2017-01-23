@@ -411,7 +411,7 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
     return classification_error(output_vector, target_vector, topN, axis, name)
 
 @typemap
-def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashInputs=[False], samplesToIgnore=[], name=''):
+def edit_distance_error(input_a, input_b, subPen, delPen, insPen, squashInputs, samplesToIgnore, name=''):
     '''
     Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
     Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
@@ -444,7 +444,6 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
     dtype = get_data_type(input_a, input_b)
     input_a = sanitize_input(input_a, dtype)
     input_b = sanitize_input(input_b, dtype)
-    axis = sanitize_axis(axis)
     return edit_distance_error(input_a, input_b, subPen, delPen, insPen, squashInputs, samplesToIgnore, name)
 
 ##########################################################################

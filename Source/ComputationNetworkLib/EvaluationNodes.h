@@ -481,7 +481,7 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // samplesToIgnore - list of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, float subPen, float delPen, float insPen, bool squashInputs, std::vector<int> samplesToIgnore, const wstring & name)
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, float subPen, float delPen, float insPen, bool squashInputs, std::vector<size_t> samplesToIgnore, const wstring & name)
         : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
     {
     }
@@ -580,7 +580,7 @@ public:
     // squashInputs - whether to merge sequences of identical samples.
     // samplesToIgnore - list of samples to ignore during edit distance evaluation
     static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
-        float subPen, float delPen, float insPen, bool squashInputs, const vector<int>& samplesToIgnore)
+        float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& samplesToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
 
@@ -694,7 +694,7 @@ public:
     float DeletionPenalty() const { return m_delPen; }
     float InsertionPenalty() const { return m_insPen; }
     bool SquashInputs() const { return m_squashInputs; }
-    std::vector<int> SamplesToIgnore() const { return m_SamplesToIgnore; }
+    std::vector<size_t> SamplesToIgnore() const { return m_SamplesToIgnore; }
 
 private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
@@ -703,10 +703,10 @@ private:
     float m_subPen;
     float m_delPen;
     float m_insPen;
-    std::vector<int> m_SamplesToIgnore;
+    std::vector<size_t> m_SamplesToIgnore;
 
     // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
-    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<int>& samplesToIgnore, std::vector<int>& out_SampleSeqVec)
+    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<size_t>& samplesToIgnore, std::vector<int>& out_SampleSeqVec)
     {
         out_SampleSeqVec.clear();
 

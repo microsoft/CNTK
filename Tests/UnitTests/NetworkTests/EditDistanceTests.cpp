@@ -14,7 +14,7 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceErrorTest)
 {
     Matrix<float> firstSeq(CPUDEVICE);
     Matrix<float> secondSeq(CPUDEVICE);
-    vector<int> samplesToIgnore;
+    vector<size_t> samplesToIgnore;
     size_t seqSize = 10;
     firstSeq.Resize(1, seqSize);
     secondSeq.Resize(1, seqSize);
