@@ -147,42 +147,44 @@ def try_find_closest_by_name(node, node_name, max_depth=None):
     return result[0]
 
 # TODO: This seems to have lots of overlap with depth_first_search() above
-def output_function_graph(node, dot_file_path=None, png_file_path=None):
+def output_function_graph(node, dot_file_path=None, png_file_path=None, pdf_file_path=None, svg_file_path=None, scale=1):
     '''
     Walks through every node of the graph starting at ``node``,
-    creates a network graph, and saves it as a string. If dot_file_name or 
-    png_file_name specified corresponding files will be saved.
+    creates a network graph, and saves it as a string. If dot_file_name, 
+    png_file_name, pdf_file_name, or svg_file_name specified corresponding files will be saved.
     
     Requirements:
 
      * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
-     * for PNG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
+     * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
        and `graphviz <http://graphviz.org>`_
 
     Args:
         node (graph node): the node to start the journey from
         dot_file_path (`str`, optional): DOT file path
         png_file_path (`str`, optional): PNG file path
+        pdf_file_path (`str`, optional): PDF file path
+        svg_file_path (`str`, optional): PDF file path
+        scale: a factor on the font sizes, if it comes out too small to read
 
     Returns:
         `str` containing all nodes and edges
     '''
 
-    dot = (dot_file_path != None)
-    png = (png_file_path != None)
-
-    if (dot or png):
+    # TODO: a better interface would just derive the format from the filename extension of a format parameter
+    write_to_file = (dot_file_path != None) or (png_file_path != None) or (pdf_file_path != None) or (svg_file_path != None)
+    if (write_to_file):
 
         try:
             import pydot_ng as pydot
         except ImportError:
-            raise ImportError("PNG and DOT format requires pydot_ng package. Unable to import pydot_ng.")
+            raise ImportError("SVG, PDF, PNG, and DOT format requires pydot_ng package. Unable to import pydot_ng.")
 
         # initialize a dot object to store vertices and edges
         dot_object = pydot.Dot(graph_name="network_graph",rankdir='TB')
         dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
-                                 height=.85, width=.85, fontsize=12)
-        dot_object.set_edge_defaults(fontsize=10)
+                                 height=.85, width=.85, fontsize=12 * scale)
+        dot_object.set_edge_defaults(fontsize=10 * scale)
     
     # string to store model 
     model = ''
@@ -206,8 +208,8 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
 
             # add current node
             model += node.op_name + '('
-            if (dot or png):
-                cur_node = pydot.Node(node.op_name+' '+node.uid,label=node.op_name,shape='circle',
+            if (write_to_file):
+                cur_node = pydot.Node(node.op_name + ' '+node.uid, label='"' + node.op_name + '"', shape='circle',
                                         fixedsize='true', height=1, width=1)
                 dot_object.add_node(cur_node)
 
@@ -219,7 +221,7 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
                 if (i != len(node.inputs) - 1):
                     model += ", "
 
-                if (dot or png):
+                if (write_to_file):
                     child_node = pydot.Node(child.uid)
                     dot_object.add_node(child_node)
                     dot_object.add_edge(pydot.Edge(child_node, cur_node,label=str(child.shape)))
@@ -227,7 +229,7 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
             # ad node's output
             model += ") -> " + node.outputs[0].uid +'\n'
 
-            if (dot or png):
+            if (write_to_file):
                 out_node = pydot.Node(node.outputs[0].uid)
                 dot_object.add_node(out_node)
                 dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(node.outputs[0].shape)))
@@ -240,12 +242,18 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
             except AttributeError:
                 pass
 
-    if visitor(node):
-        accum.append(node)
+        if visitor(node):
+            accum.append(node)
 
-    if (png):
+        visited.add(node)
+
+    if (svg_file_path):
+        dot_object.write_svg(svg_file_path, prog='dot')
+    if (pdf_file_path):
+        dot_object.write_pdf(pdf_file_path, prog='dot')
+    if (png_file_path):
         dot_object.write_png(png_file_path, prog='dot')
-    if (dot):
+    if (dot_file_path):
         dot_object.write_raw(dot_file_path)
 
     # return lines in reversed order

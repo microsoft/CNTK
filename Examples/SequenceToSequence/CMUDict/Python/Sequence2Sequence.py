@@ -11,7 +11,7 @@ from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
-                     element_select, alias, hardmax, placeholder_variable, combine, parameter, times
+                     element_select, alias, hardmax, placeholder_variable, combine, parameter, times, plus
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter, debughelpers
@@ -200,6 +200,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
     model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
     #model_greedy.dump()
+    from cntk.graph import output_function_graph
+    output_function_graph(model_greedy, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
 
     @Function
     def criterion(input, x_last):
@@ -472,10 +474,257 @@ def debug_attention(model, input):
 # main function boilerplate #
 #############################
 
+### BEGIN UNRELATED TEST
+# a test I did for porting a Keras model for Xinying Song
+
+# Configurations
+
+#def merge_helper(mode, layer_list):
+#    """
+#    # Args:
+#        mode (str):
+#        layer_list (list[layer]): OK to have None layers
+#    # Returns:
+#        layer or None (if layer_list is empty)
+#    """
+#    layer_list = [item for item in layer_list if item is not None]
+#    if len(layer_list) >= 2:
+#        return Merge(mode=mode)(layer_list)
+#    elif len(layer_list) == 1:
+#        return layer_list[0]
+#    else:
+#        return None
+#def create_regularizer():
+#    if reg_l1 > 1e-7 and reg_l2 > 1e-7:
+#        return regularizers.WeightRegularizer(l1=reg_l1, l2=reg_l2)
+#    if reg_l1 > 1e-7:
+#        return regularizers.WeightRegularizer(l1=reg_l1)
+#    if reg_l2 > 1e-7:
+#        return regularizers.WeightRegularizer(l2=reg_l2)
+#    return None
+
+def build_model_xy(model_save_path=None):
+
+    rnn_type = 'LSTM'
+    #rnn_type = 'GRU'
+    dnn_hid_size_list = [32,32,32,32,32]
+    rnn_hid_size_list = [128, 128]
+    batch_size = 128
+    reg_l1 = 0
+    reg_l2 = 0
+    dropout = 0
+    batch_normalization = True
+    residual_dnn = False
+    skip_connection = True
+    batch_size_predict = 1024
+    # in cross-validation, we test up to this number and see the upper bound of RNN capability
+    # then in train/test, we use the best epoch number obtained by cross-validation
+    nb_epoch = 30
+    patience = 5 # no use now because we don't do early stopping for now
+    if rnn_type == 'GRU':
+        rnn_cell = GRU
+    elif rnn_type == "LSTM":
+        rnn_cell = LSTM
+    else:
+       assert False
+
+    # fake some environment
+    rnn_dataset_dict=Record(train=Record(multiple_input=Record(
+        rnn = Record(shape=(100,-123,250)),   # (batch, max_len, dim)   max_len not needed/used by CNTK
+        dnn = Record(shape=(100,300))         # (batch, dim)
+    )))
+    model_flags = Record(  # True if input is to be included
+        rnn=True,
+        dnn=True
+    )
+    logger = Record(
+        info = lambda *args: print(*args)
+    )
+
+    # Build model
+    multiple_input = rnn_dataset_dict['train'].multiple_input
+    for key in multiple_input.keys():
+        logger.info((key, model_flags[key], multiple_input[key].shape))
+    # construct inputs
+    rnn_inputs_dict_by_length = {} # a map from length to rnn_inputs
+    rnn_input_total_dim_by_length = {}
+    rnn_inputs = [] # for feeding graph input only
+    
+    dnn_inputs = []
+    dnn_input_total_dim = 0
+    for key in multiple_input.keys():
+        if not key in model_flags or not model_flags[key]:
+            logger.info("Skipping input {0}".format(key))
+            continue
+        logger.info("Created input {0}".format(key))
+        flds = key.split('-')
+        #inp = Input(shape=multiple_input[key].shape[1:], name=key)
+        if flds[0] == 'rnn':
+            inp = Input(shape=multiple_input[key].shape[2:], name=key) # no explicit length dimension in CNTK
+            rnn_inputs.append(inp) # for graph input only
+            timesteps = multiple_input[key].shape[1]
+            if timesteps not in rnn_inputs_dict_by_length:
+                rnn_inputs_dict_by_length[timesteps] = ([], [])
+            rnn_inputs_dict_by_length[timesteps][0].append(inp)
+            if timesteps not in rnn_input_total_dim_by_length:
+                rnn_input_total_dim_by_length[timesteps] = 0
+            rnn_input_total_dim_by_length[timesteps] += multiple_input[key].shape[-1] 
+        elif flds[0] == 'dnn':
+            #inp = Input(shape=multiple_input[key].shape[1:], name=key)
+            inp = Input(shape=multiple_input[key].shape[1:], name=key, dynamic_axes=[Axis.default_batch_axis()]) # dnn input has no sequence dimension
+            dnn_input_total_dim += multiple_input[key].shape[-1]
+            dnn_inputs.append(inp)
+    
+    # construct RNN layers
+    rnn_hid_list = []
+    # notes: rnn_inputs_dict_by_length.keys() currently has only one element
+    for timesteps in rnn_inputs_dict_by_length.keys():
+        #rnn_final_input = merge_helper('concat', 
+        rnn_final_input = splice(*
+                rnn_inputs_dict_by_length[timesteps][0])
+        if rnn_final_input is not None:
+            #rnn_hid = Masking(mask_value=0.)(rnn_final_input)
+            rnn_hid = rnn_final_input
+            rnn_output_dim = rnn_hid_size_list[-1]
+            rnn_skip_connections = []
+            prev_output_dim = rnn_input_total_dim_by_length[timesteps]
+            if skip_connection:
+                #tmp_out = ZeroMaskedEntries()(rnn_hid)
+                tmp_out = rnn_hid
+                #tmp_out = Lambda(lambda x: x[:,-1,:], output_shape=lambda input_shape: (input_shape[0], input_shape[2]))(tmp_out)
+                tmp_out = sequence.last(tmp_out)
+                if prev_output_dim != rnn_output_dim:
+                    tmp_out = Dense(rnn_output_dim #,
+                                            #W_regularizer=create_regularizer(),  # CNTK regularizers work differently
+                                            #b_regularizer=create_regularizer(),
+                                           )(tmp_out)
+                rnn_skip_connections.append(tmp_out)
+            for (depth, hid_size) in enumerate(rnn_hid_size_list):
+                #rnn_hid = rnn_cell(hid_size,
+                Recurrence_f = Recurrence if depth < len(rnn_hid_size_list)-1 else Fold # CNKT uses two different functions for return_sequences
+                cell = rnn_cell(hid_size) # rnn_cell is the layer factory; create the layer so that we can know len(cell.outputs)
+                rnn_hid = Recurrence_f(cell >> (Dropout(dropout),) * len(cell.outputs) # apply Dropout to all outputs
+                                   #return_sequences=(True if depth < len(rnn_hid_size_list)-1 else False),
+                                   #W_regularizer=create_regularizer(), # CNTK regularizers work differently
+                                   #U_regularizer=create_regularizer(),
+                                   #b_regularizer=create_regularizer(),
+                                   #dropout_W=dropout,
+                                   #dropout_U=dropout
+                         )(rnn_hid)
+                pre_output_dim = hid_size
+                if skip_connection:
+                    if depth == len(rnn_hid_size_list)-1:
+                        tmp_out = rnn_hid
+                    else:
+                        #tmp_out = ZeroMaskedEntries()(rnn_hid)
+                        tmp_out = rnn_hid
+                        #tmp_out = Lambda(lambda x: x[:,-1,:], output_shape=lambda input_shape: (input_shape[0], input_shape[2]))(tmp_out)
+                        tmp_out = sequence.last(tmp_out)
+                    if prev_output_dim != rnn_output_dim:
+                        tmp_out = Dense(rnn_output_dim #,
+                                                #W_regularizer=create_regularizer(),  # CNTK regularizers work differently
+                                                #b_regularizer=create_regularizer(),
+                                               )(tmp_out)
+                    rnn_skip_connections.append(tmp_out)
+            if skip_connection:
+                #rnn_hid = merge_helper('sum', rnn_skip_connections)
+                rnn_hid = plus(*rnn_skip_connections)
+            else:
+                pass
+        else:
+            rnn_hid = None
+        rnn_hid_list.append(rnn_hid)
+    # construct DNN layers
+    #dnn_final_input = merge_helper('concat', dnn_inputs)
+    dnn_final_input = splice(*dnn_inputs)
+    if dnn_final_input is not None:
+        dnn_output_dim = dnn_hid_size_list[-1]
+        dnn_hid = dnn_final_input
+        dnn_skip_connections = []
+        if dropout > 1e-7:
+            dnn_hid = Dropout(dropout)(dnn_hid)
+        prev_output_dim = dnn_input_total_dim
+        if skip_connection:
+            tmp_out = dnn_hid
+            if prev_output_dim != dnn_output_dim:
+                tmp_out = Dense(dnn_output_dim #,
+                                        #W_regularizer=create_regularizer(),
+                                        #b_regularizer=create_regularizer(),
+                                       )(tmp_out)
+            dnn_skip_connections.append(tmp_out)
+        for (depth, hid_size) in enumerate(dnn_hid_size_list):
+            layer_input = dnn_hid
+            dnn_hid = Dense(hid_size #, 
+                            #W_regularizer=create_regularizer(),
+                            #b_regularizer=create_regularizer(),
+                           )(dnn_hid)
+            if batch_normalization:
+                dnn_hid = BatchNormalization()(dnn_hid)
+            #dnn_hid = Activation('tanh')(dnn_hid)
+            dnn_hid = tanh(dnn_hid)
+            if dropout > 1e-7:
+                dnn_hid = Dropout(dropout)(dnn_hid)
+            if residual_dnn:
+                if prev_output_dim != hid_size:
+                    layer_input = Dense(hid_size #,
+                                        #W_regularizer=create_regularizer(),
+                                        #b_regularizer=create_regularizer(),
+                                       )(layer_input)
+                #dnn_hid = Merge(mode='sum')([dnn_hid, layer_input])
+                dnn_hid = dnn_hid + layer_input
+            prev_output_dim = hid_size
+            if skip_connection:
+                tmp_out = dnn_hid
+                if prev_output_dim != dnn_output_dim:
+                    tmp_out = Dense(dnn_output_dim #,
+                                            #W_regularizer=create_regularizer(),
+                                            #b_regularizer=create_regularizer(),
+                                           )(tmp_out)
+                dnn_skip_connections.append(tmp_out)
+        if skip_connection:
+            #dnn_hid = merge_helper('sum', dnn_skip_connections)
+            dnn_hid = plus(*dnn_skip_connections)
+        else:
+            pass
+    else:
+        dnn_hid = None
+    
+    # merge RNN with DNN and project to final
+    #rnn_dnn_merged = merge_helper('concat', rnn_hid_list + [dnn_hid])
+    rnn_dnn_merged = splice(*rnn_hid_list, dnn_hid)
+    #assert rnn_dnn_merged is not None, "Error! no inputs found!"
+    #output = Dense(1, W_regularizer=create_regularizer(),
+    #                  b_regularizer=create_regularizer(),)(rnn_dnn_merged)
+    output = Dense(1)(rnn_dnn_merged)
+    if batch_normalization:
+        output = BatchNormalization()(output)
+    #output = Activation('sigmoid')(output)
+    output = sigmoid(output)
+    
+    # final specify model
+    #model = Model(input=rnn_inputs + dnn_inputs, output=output)
+    model = output  # Model(input=rnn_inputs + dnn_inputs, output=output)
+    debughelpers.dump_function(model, "model")
+    #logger.info(model.get_config())
+    logger.info("build model completed")
+    if model_save_path:
+        #plot(model, to_file=model_save_path + '.png')
+        from cntk.graph import output_function_graph
+        output_function_graph(model, pdf_file_path=model_save_path + '.pdf', scale=2)
+        #output_function_graph(model, svg_file_path=model_save_path + '.svg', scale=2)
+        logger.info('model graph saved to ' + model_save_path + '.png')        
+    return model
+
+### END UNRELATED TEST
+
+
+
 if __name__ == '__main__':
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
+
+    #build_model_xy('c:/me/xinying_graph')
 
     #x = placeholder_variable('x')   # Function argument in definition
     #s = x * x                       # Function

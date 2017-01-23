@@ -1973,6 +1973,10 @@ def splice(*inputs, axis=-1, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    # short-circuit if nothing to splice
+    if len(inputs) == 1:
+        return combine([inputs[0]]) # (but make it into a Function)
+
     from cntk.cntk_py import splice
     #if type(inputs) not in (list, tuple):
     #    raise ValueError('inputs has to be an iterable')
