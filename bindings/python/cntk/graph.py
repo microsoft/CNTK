@@ -4,12 +4,13 @@
 # for full license information.
 # ==============================================================================
 
+
 def depth_first_search(node, visitor):
     '''
     Generic function that walks through the graph starting at ``node`` and
     uses function ``visitor`` on each node to check whether it should be
     returned.
- 
+
     Args:
         node (graph node): the node to start the journey from
         visitor (Python function or lambda): function that takes a node as
@@ -46,6 +47,7 @@ def depth_first_search(node, visitor):
 
     return accum
 
+
 def find_all_with_name(node, node_name):
     '''
     Finds functions in the graph starting from ``node`` and doing a depth-first
@@ -63,6 +65,7 @@ def find_all_with_name(node, node_name):
         :class:`~cntk.ops.functions.Function`.
     '''
     return depth_first_search(node, lambda x: x.name == node_name)
+
 
 def find_by_name(node, node_name):
     '''
@@ -83,25 +86,26 @@ def find_by_name(node, node_name):
     '''
     if not isinstance(node_name, str):
         raise ValueError('node name has to be a string. You gave '
-                'a %s'%type(node_name))
+                         'a %s' % type(node_name))
 
     result = depth_first_search(node, lambda x: x.name == node_name)
 
-    if len(result)>1:
+    if len(result) > 1:
         raise ValueError('found multiple functions matching "%s". '
-                'If that was expected call find_all_with_name'%node_name)
+                         'If that was expected call find_all_with_name' % node_name)
 
     if not result:
         return None
 
     return result[0]
 
-def output_function_graph(node,dot_file_path=None,png_file_path=None):
+
+def output_function_graph(node, dot_file_path=None, png_file_path=None):
     '''
     Walks through every node of the graph starting at ``node``,
     creates a network graph, and saves it as a string. If dot_file_name or 
     png_file_name specified corresponding files will be saved.
-    
+
     Requirements:
 
      * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
@@ -125,15 +129,16 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
         try:
             import pydot_ng as pydot
         except ImportError:
-            raise ImportError("PNG and DOT format requires pydot_ng package. Unable to import pydot_ng.")
+            raise ImportError(
+                "PNG and DOT format requires pydot_ng package. Unable to import pydot_ng.")
 
         # initialize a dot object to store vertices and edges
-        dot_object = pydot.Dot(graph_name="network_graph",rankdir='TB')
+        dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
         dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
-                                 height=.85, width=.85, fontsize=12)
+                                     height=.85, width=.85, fontsize=12)
         dot_object.set_edge_defaults(fontsize=10)
-    
-    # string to store model 
+
+    # string to store model
     model = ''
 
     # walk every node of the graph iteratively
@@ -144,7 +149,7 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
 
     while stack:
         node = stack.pop()
-        
+
         if node in visited:
             continue
 
@@ -156,14 +161,14 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
             # add current node
             model += node.op_name + '('
             if (dot or png):
-                cur_node = pydot.Node(node.op_name+' '+node.uid,label=node.op_name,shape='circle',
-                                        fixedsize='true', height=1, width=1)
+                cur_node = pydot.Node(node.op_name + ' ' + node.uid, label=node.op_name, shape='circle',
+                                      fixedsize='true', height=1, width=1)
                 dot_object.add_node(cur_node)
 
             # add node's inputs
             for i in range(len(node.inputs)):
                 child = node.inputs[i]
-                
+
                 model += child.uid
                 if (i != len(node.inputs) - 1):
                     model += ", "
@@ -171,15 +176,17 @@ def output_function_graph(node,dot_file_path=None,png_file_path=None):
                 if (dot or png):
                     child_node = pydot.Node(child.uid)
                     dot_object.add_node(child_node)
-                    dot_object.add_edge(pydot.Edge(child_node, cur_node,label=str(child.shape)))
+                    dot_object.add_edge(pydot.Edge(
+                        child_node, cur_node, label=str(child.shape)))
 
             # ad node's output
-            model += ") -> " + node.outputs[0].uid +'\n'
+            model += ") -> " + node.outputs[0].uid + '\n'
 
             if (dot or png):
                 out_node = pydot.Node(node.outputs[0].uid)
                 dot_object.add_node(out_node)
-                dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(node.outputs[0].shape)))
+                dot_object.add_edge(pydot.Edge(
+                    cur_node, out_node, label=str(node.outputs[0].shape)))
 
         except AttributeError:
             # OutputVariable node

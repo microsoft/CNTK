@@ -8,6 +8,7 @@ from ..graph import *
 from ..ops import *
 from ..axis import Axis
 
+
 def _graph_dict():
     # This function creates a graph that has no real meaning other than
     # providing something to traverse.
@@ -17,11 +18,12 @@ def _graph_dict():
     input_seq_axis = Axis('ia')
     input_dynamic_axes = [batch_axis, input_seq_axis]
 
-    d['i1'] = input_variable(shape=(2,3), dynamic_axes=input_dynamic_axes, name='i1')
-    d['i2'] = input_variable(shape=(2,3), dynamic_axes=input_dynamic_axes, name='i2')
+    d['i1'] = input_variable(
+        shape=(2, 3), dynamic_axes=input_dynamic_axes, name='i1')
+    d['i2'] = input_variable(
+        shape=(2, 3), dynamic_axes=input_dynamic_axes, name='i2')
 
-    d['p1'] = parameter(shape=(3,2), name='p1')
-
+    d['p1'] = parameter(shape=(3, 2), name='p1')
 
     d['op1'] = plus(d['i1'], d['i2'], name='op1')
     d['op2'] = times(d['op1'], d['p1'], name='op2')
@@ -30,7 +32,7 @@ def _graph_dict():
     #label_sentence_start = sequence.first(raw_labels)
 
     # no name
-    d['p2'] = parameter(shape=(2,2))
+    d['p2'] = parameter(shape=(2, 2))
 
     # duplicate names
     d['op3a'] = plus(d['op2'], d['p2'], name='op3')
@@ -42,12 +44,13 @@ def _graph_dict():
 
     return d
 
+
 def _simple_dict():
     d = {}
 
-    d['i1'] = input_variable(shape=(2,3), name='i1')
-    d['i2'] = input_variable(shape=(2,3), name='i2')
-    d['p1'] = parameter(shape=(3,2), name='p1')
+    d['i1'] = input_variable(shape=(2, 3), name='i1')
+    d['i2'] = input_variable(shape=(2, 3), name='i2')
+    d['p1'] = parameter(shape=(3, 2), name='p1')
     d['op1'] = plus(d['i1'], d['i2'], name='op1')
     d['op2'] = times(d['op1'], d['p1'], name='op2')
     d['root'] = d['op2']
