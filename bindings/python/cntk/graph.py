@@ -4,6 +4,8 @@
 # for full license information.
 # ==============================================================================
 
+import os
+
 
 def depth_first_search(node, visitor):
     '''
@@ -100,11 +102,10 @@ def find_by_name(node, node_name):
     return result[0]
 
 
-def output_function_graph(node, dot_file_path=None, png_file_path=None):
+def plot(node, to_file):
     '''
     Walks through every node of the graph starting at ``node``,
-    creates a network graph, and saves it as a string. If dot_file_name or 
-    png_file_name specified corresponding files will be saved.
+    creates a network graph, and outputs a DOT or PNG file.
 
     Requirements:
 
@@ -114,38 +115,49 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
 
     Args:
         node (graph node): the node to start the journey from
-        dot_file_path (`str`, optional): DOT file path
-        png_file_path (`str`, optional): PNG file path
+        to_file (`str`): file with either 'dot' or 'png' as suffix to denote
+         what format should be written
 
     Returns:
         `str` containing all nodes and edges
     '''
 
-    dot = (dot_file_path != None)
-    png = (png_file_path != None)
+    suffix = os.path.splitext(to_file)[1].lower()
+    if suffix not in ('.png', '.dot'):
+        raise ValueError('only suffix ".png" and ".dot" are supported')
 
-    if (dot or png):
+    try:
+        import pydot_ng as pydot
+    except ImportError:
+        raise ImportError(
+            "PNG and DOT format requires pydot_ng package. Unable to import pydot_ng.")
 
-        try:
-            import pydot_ng as pydot
-        except ImportError:
-            raise ImportError(
-                "PNG and DOT format requires pydot_ng package. Unable to import pydot_ng.")
-
-        # initialize a dot object to store vertices and edges
-        dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
-        dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
-                                     height=.85, width=.85, fontsize=12)
-        dot_object.set_edge_defaults(fontsize=10)
+    # initialize a dot object to store vertices and edges
+    dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
+    dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
+                                 style='filled',
+                                 height=.85, width=.85, fontsize=12)
+    dot_object.set_edge_defaults(fontsize=10)
 
     # string to store model
-    model = ''
+    model = []
 
     # walk every node of the graph iteratively
     visitor = lambda x: True
-    stack = [node]
+    stack = [node.root_function]
     accum = []
     visited = set()
+
+    def node_desc(node):
+        name = "<font point-size=\"10\" face=\"sans\">'%s'</font> <br/>"%node.name
+        try:
+            name += "<b><font point-size=\"14\" face=\"sans\">%s</font></b> <br/>"%node.op_name
+        except AttributeError:
+            pass
+
+        name += "<font point-size=\"8\" face=\"sans\">%s</font>"%node.uid
+
+        return '<' + name + '>'
 
     while stack:
         node = stack.pop()
@@ -159,34 +171,51 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
             stack.extend(node.inputs)
 
             # add current node
-            model += node.op_name + '('
-            if (dot or png):
-                cur_node = pydot.Node(node.op_name + ' ' + node.uid, label=node.op_name, shape='circle',
-                                      fixedsize='true', height=1, width=1)
-                dot_object.add_node(cur_node)
+            line = [node.op_name]
+            line.append('(')
+
+            cur_node = pydot.Node(node.uid, label=node_desc(node),
+                    shape='circle')
+            dot_object.add_node(cur_node)
 
             # add node's inputs
             for i in range(len(node.inputs)):
                 child = node.inputs[i]
 
-                model += child.uid
-                if (i != len(node.inputs) - 1):
-                    model += ", "
+                line.append(child.uid)
+                if i != len(node.inputs) - 1:
+                    line.append(', ')
 
-                if (dot or png):
-                    child_node = pydot.Node(child.uid)
-                    dot_object.add_node(child_node)
-                    dot_object.add_edge(pydot.Edge(
-                        child_node, cur_node, label=str(child.shape)))
+                if child.is_input:
+                    shape = 'invhouse'
+                    color = 'yellow'
+                elif child.is_parameter:
+                    shape = 'diamond'
+                    color = 'green'
+                elif child.is_constant:
+                    shape = 'rectangle'
+                    color = 'lightblue'
+                else:
+                    shape = 'invhouse'
+                    color = 'grey'
 
-            # ad node's output
-            model += ") -> " + node.outputs[0].uid + '\n'
+                child_node = pydot.Node(child.uid, label=node_desc(child),
+                        shape=shape, color=color)
+                dot_object.add_node(child_node)
+                dot_object.add_edge(pydot.Edge(
+                    child_node, cur_node, label=str(child.shape)))
 
-            if (dot or png):
-                out_node = pydot.Node(node.outputs[0].uid)
+            # add node's output
+            line.append(') -> ')
+            line = ''.join(line)
+
+            for n in node.outputs:
+                model.append(line + n.uid + ';\n')
+
+                out_node = pydot.Node(n.uid, label=node_desc(n))
                 dot_object.add_node(out_node)
                 dot_object.add_edge(pydot.Edge(
-                    cur_node, out_node, label=str(node.outputs[0].shape)))
+                    cur_node, out_node, label=str(n.shape)))
 
         except AttributeError:
             # OutputVariable node
@@ -196,13 +225,16 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
             except AttributeError:
                 pass
 
+    visited.add(node)
+
     if visitor(node):
         accum.append(node)
 
-    if (png):
-        dot_object.write_png(png_file_path, prog='dot')
-    if (dot):
-        dot_object.write_raw(dot_file_path)
+    if suffix == '.png':
+        dot_object.write_png(to_file, prog='dot')
+    else:
+        dot_object.write_raw(to_file)
 
-    # return lines in reversed order
-    return "\n".join(model.split("\n")[::-1])
+    model = "\n".join(reversed(model))
+
+    return model
