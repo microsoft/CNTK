@@ -105,10 +105,17 @@ class Function(cntk_py.Function):
                     for arg in args:
                         Function._placeholders_under_construction.add(arg)
                     out = f(*fun_args)
+                    if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                        print('trying to print out for', f_name)
+                        print('out = f(), args:', [arg.name for arg in out.arguments])
                 finally:
                     # unhide Placeholders of this function again
                     for arg in args:
                         Function._placeholders_under_construction.remove(arg)
+                if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                    print([arg.name for arg in Function._placeholders_under_construction])
+                    print('out = f(), args:', [arg.name for arg in out.arguments])
+                    print('out = f(), sig: ', [arg.name for arg in out.signature])
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
                     if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
@@ -202,7 +209,9 @@ class Function(cntk_py.Function):
         #         so we fix it after the fact by detecting a very specific parameter name 'x_last'
         #         which we report in last position (lying).
         sig = [arg for arg in self.arguments if arg not in Function._placeholders_under_construction]
-        if sig[0].name == 'x_last':
+        if len(sig) == 0:
+            print(13)
+        if len(sig) > 0 and sig[0].name == 'x_last':
             sig = sig[1:] + [sig[0]]
         return tuple(sig)
 
@@ -337,6 +346,7 @@ class Function(cntk_py.Function):
         # we must include them in the argmap, otherwise they will be cloned
         for arg in self.arguments:
             if arg not in arg_map:
+                print('excluded placeholder detected:', arg.name)
                 arg_map[arg] = arg
 
         # determine whether this is eval() or clone()

@@ -190,26 +190,33 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # Decoding is an unfold() operation starting from sentence_start.
         # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
         # which holds 'input' in its closure.
-        unfold = UnfoldFrom(s2smodel(..., input) >> hardmax,
-                            until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
+        @Function
+        def generator(history):
+            return hardmax(s2smodel(history, input))
+        unfold = UnfoldFrom(generator,   # s2smodel(..., input) >> hardmax,
+                            #until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                             length_increase=length_increase, initial_state=sentence_start)
         return unfold(dynamic_axes_like=input)
 
-    model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+    #model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
     #model_greedy.dump()
 
     @Function
-    def criterion(input, labels):
+    def criterion(input, x_last):
+        labels = x_last
         # criterion function must drop the <s> from the labels
         postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
         z = model_train(input, postprocessed_labels)
         ce   = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error      (z, postprocessed_labels)
-        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
+        #return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
+        # BUGBUG: ^^ fails with RuntimeError, likely the ref-count issue
+        return (ce, errs)
     try:
       #criterion.dump()
       criterion.update_signature(input=Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                               labels=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+                               x_last=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+      #                         labels=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
     except:
       #criterion.dump()
       raise
@@ -267,8 +274,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 print(end=" -> ")
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                #e = model_greedy(mb_valid[valid_reader.streams.features])
-                #print_sequences(e, i2w)
+                e = model_greedy(mb_valid[valid_reader.streams.features])
+                print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 #if use_attention:

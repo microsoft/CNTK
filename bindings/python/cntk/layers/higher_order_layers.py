@@ -232,21 +232,32 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         state_fwd = ForwardDeclaration()
         prev_state = delay(state_fwd, initial_state=initial_state)
         z = generator_function(prev_state) # returns either (output) or (output, new state)
-        output = z.outputs[0]
-        new_state = z.outputs[1] if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
+        #output = combine([z.outputs[0]])   # BUGBUG: ref-count issue
+        #new_state = combine([z.outputs[1]]) if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
+        output = z
+        new_state = z
         # apply map_state_function if given
         new_state = map_state_function(new_state)
         # implant the dynamic axis (from dynamic_axes_like)
         from ..utils import sanitize_input, typemap
         from ..cntk_py import reconcile_dynamic_axis
         new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
+        print('new_state sig:', [arg.name for arg in new_state.signature])
+        print('new_state args:', [arg.name for arg in new_state.arguments])
         state_fwd.resolve_to(new_state)
+        # BUGBUG: Could it be this?
+        #new_state.output.owner.replace_placeholders({state_fwd: new_state.output})
+        #new_state.replace_placeholders({state_fwd: new_state.output})
+        print('state_fwd after resolve:', [arg.name for arg in new_state.signature])
+        print('state_fwd after resolve, args:', [arg.name for arg in new_state.arguments])
 
         # apply until_predicate if given
         if until_predicate is not None:
             valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(until_predicate(output))
             output = sequence.gather(output, valid_frames)
 
+        print('output:', [arg.name for arg in output.signature])
+        print('output, args:', [arg.name for arg in output.arguments])
         return output
 
     unfold_from = _inject_name(unfold_from, name)
