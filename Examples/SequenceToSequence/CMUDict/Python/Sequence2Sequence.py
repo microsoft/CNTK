@@ -198,7 +198,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                             length_increase=length_increase, initial_state=sentence_start)
         return unfold(dynamic_axes_like=input)
 
-    #model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+    model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
     #model_greedy.dump()
 
     @Function
@@ -274,12 +274,13 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 print(end=" -> ")
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
-                #e = model_greedy(mb_valid[valid_reader.streams.features])
-                #print_sequences(e, i2w)
+                e = model_greedy(mb_valid[valid_reader.streams.features])
+                print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 #if use_attention:
                 #    debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
+                # BUGBUG: name lookup led to infinite recursion
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
@@ -475,6 +476,14 @@ if __name__ == '__main__':
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
+
+    #x = placeholder_variable('x') # Function argument
+    #h_f = placeholder_variable('h_f') # recurrent forward reference
+    #h = sigmoid(x + h_f)
+    #h.replace_placeholders({h_f: h}) # end of Function definition
+    #h.replace_placeholders({x: input_variable(300)}) # Function application
+    #debughelpers.dump_signature(h)
+    #print(13)
 
     # test for multi-input plus()
     #from cntk.ops import plus, element_times, max, min, log_add_exp

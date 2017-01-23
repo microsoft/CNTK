@@ -230,34 +230,54 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
             out_axis = sequence.where(factors)  # note: values are irrelevant; only the newly created axis matters
 
         state_fwd = ForwardDeclaration()
+        #state_fwd = placeholder_variable(name='ph')   #ForwardDeclaration()
         prev_state = delay(state_fwd, initial_state=initial_state)
+        #prev_state = past_value(state_fwd, initial_state=initial_state)
+        #print('gen args:', [arg.name for arg in generator_function.arguments])
         z = generator_function(prev_state) # returns either (output) or (output, new state)
+        #from cntk.ops.functions import CloneMethod
+        #z = generator_function.clone(CloneMethod.share, {generator_function.arguments[0]: prev_state,
+        #                                                 generator_function.arguments[1]: generator_function.arguments[1]}) # returns either (output) or (output, new state)
+        #print('z args:', [arg.name for arg in z.arguments])
+        output = z.outputs[0]
+        new_state = z.outputs[1] if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
         #output = combine([z.outputs[0]])   # BUGBUG: ref-count issue
         #new_state = combine([z.outputs[1]]) if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
-        output = z
-        new_state = z
         # apply map_state_function if given
         new_state = map_state_function(new_state)
         # implant the dynamic axis (from dynamic_axes_like)
         from ..utils import sanitize_input, typemap
         from ..cntk_py import reconcile_dynamic_axis
         new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
-        print('new_state sig:', [arg.name for arg in new_state.signature])
-        print('new_state args:', [arg.name for arg in new_state.arguments])
+        #new_state = combine([new_state])
         state_fwd.resolve_to(new_state)
         # BUGBUG: Could it be this?
         #new_state.output.owner.replace_placeholders({state_fwd: new_state.output})
         #new_state.replace_placeholders({state_fwd: new_state.output})
-        print('state_fwd after resolve:', [arg.name for arg in new_state.signature])
-        print('state_fwd after resolve, args:', [arg.name for arg in new_state.arguments])
+        #print('state_fwd after resolve:', [arg.name for arg in new_state.signature])
+        #print('state_fwd after resolve, args:', [arg.name for arg in new_state.arguments])
+
+        output = combine([output]) # BUGBUG: without this, it crashes with bad weak ptr
+        # BUGBUG: MUST do this after resolving the recurrence, otherwise also crashes
+
+        #print('output args 1:', [arg.name for arg in output.arguments])
+        #state_fwd = None
+        #print('output args 2:', [arg.name for arg in output.arguments])
+        #prev_state = None
+        #print('output args 3:', [arg.name for arg in output.arguments])
+        #z = None
+        #print('output args 4:', [arg.name for arg in output.arguments])
+        #new_state = None
+        #print('output args 5:', [arg.name for arg in output.arguments])
 
         # apply until_predicate if given
         if until_predicate is not None:
             valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(until_predicate(output))
             output = sequence.gather(output, valid_frames)
+        # BUGBUG: used to work, but now fails with "Node '__v2libuid__Slice28080__v2libname__Slice22511' (Slice operation): DataFor: FrameRange's dynamic axis is inconsistent with matrix: {numTimeSteps:1, numParallelSequences:1, sequences:[{seqId:0, s:0, begin:0, end:1}]} vs. {numTimeSteps:11, numParallelSequences:1, sequences:[{seqId:0, s:0, begin:0, end:11}]}"
 
-        print('output:', [arg.name for arg in output.signature])
-        print('output, args:', [arg.name for arg in output.arguments])
+        #print('output:', [arg.name for arg in output.signature])
+        #print('output args:', [arg.name for arg in output.arguments])
         return output
 
     unfold_from = _inject_name(unfold_from, name)

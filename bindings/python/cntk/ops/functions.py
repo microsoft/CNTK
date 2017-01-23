@@ -108,8 +108,8 @@ class Function(cntk_py.Function):
                         Function._placeholders_under_construction.add(arg)
                     out = f(*fun_args)
                     if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                        print('trying to print out for', f_name)
-                        print('out = f(), args:', [arg.name for arg in out.arguments])
+                        print('trying to print args for', f_name)
+                        print('out args:', [arg.name for arg in out.arguments])
                 finally:
                     # unhide Placeholders of this function again
                     for arg in args:
@@ -118,6 +118,8 @@ class Function(cntk_py.Function):
                     print([arg.name for arg in Function._placeholders_under_construction])
                     print('out = f(), args:', [arg.name for arg in out.arguments])
                     print('out = f(), sig: ', [arg.name for arg in out.signature])
+                    print([arg.uid for arg in Function._placeholders_under_construction])
+                    print('out = f(), sig: ', [arg.uid for arg in out.signature])
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
                     if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
@@ -157,7 +159,7 @@ class Function(cntk_py.Function):
                 out = invoke(fun_args)
                 # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
                 out_arg_names = [arg.name for arg in out.signature]
-                if out_arg_names != arg_names:  # order came out wrong
+                if set(out_arg_names) == set(arg_names) and out_arg_names != arg_names:  # order came out wrong
                     print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
                     fun_args = force_order_args(fun_args)
                     out = invoke(fun_args)   #.outputs) # BUGBUG: move .outputs back up
