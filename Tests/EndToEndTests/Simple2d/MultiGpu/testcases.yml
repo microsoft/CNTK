@@ -1,9 +1,7 @@
 dataDir: ../Data
 
 tags:
-    # running on every BVT job in 'E' (Examples) leg, requires 1BitSGD
-    - bvt-e (build_sku == '1bitsgd') and ((flavor=='debug') ^ (device=='cpu')) 
-    # running every Nightly job in 'E' (Examples) leg, requires 1BitSGD
+    - bvt-e (build_sku == '1bitsgd') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
     - nightly-e (build_sku == '1bitsgd')
 
 testCases:

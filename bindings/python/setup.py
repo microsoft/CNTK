@@ -160,7 +160,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta7.0",
+      version="2.0.beta9.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

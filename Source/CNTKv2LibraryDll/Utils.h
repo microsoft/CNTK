@@ -501,7 +501,7 @@ namespace CNTK
     public:
         explicit Learners(const std::vector<LearnerPtr>& learners);
 
-        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount);
+        bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t trainingSampleCount, bool sweepEnd);
         bool Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatchInfo);
 
         std::vector<DictionaryValue> CreateCheckpoint();

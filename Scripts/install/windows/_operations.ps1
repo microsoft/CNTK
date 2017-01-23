@@ -10,15 +10,10 @@ $operations = @(
     @{Name = "Verifying Installation contents"; ShortName = "INSTCONTENT"; Info = "Verifying Installation contents";
       Verification = @( @{Function = "VerifyInstallationContent"; Path = "$cntkRootDir" } )
      },
-    @{Name = "Installation VS2012 Runtime"; ShortName = "VS2012"; Info = "Install VS2012 Runtime";
-      Verification = @( @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2012 x64 Additional Runtime" },
-                        @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2012 x64 Minimum Runtime" } );
-      Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2012\vcredist_x64.exe"; Param = "/install /passive /norestart"; Message="Installing VS2012 Runtime...." } )
-     },
-    @{Name = "Installation VS2013 Runtime"; ShortName = "VS2013"; Info = "Install VS2013 Runtime";
-      Verification = @( @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2013 x64 Additional Runtime" },
-                        @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2013 x64 Minimum Runtime" } );
-      Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2013\vcredist_x64.EXE"; Param = "/install /passive /norestart"; Message="Installing VS2013 Runtime...." } )
+    @{Name = "Installation VS2015 Runtime"; ShortName = "VS2015"; Info = "Install VS2015 Runtime";
+      Verification = @( @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 201(5|7) x64 Additional Runtime" },
+                        @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 201(5|7) x64 Minimum Runtime" } );
+      Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2015\vc_redist.x64.exe"; Param = "/install /passive /norestart"; Message="Installing VS2015 Runtime...." } )
      },
     @{Name = "MSMPI Installation"; ShortName = "CNTK"; Info = "Install MSMPI";
       Verification = @( @{Function = "VerifyWin32ProductVersion"; Match = "^Microsoft MPI \(\d+\."; Version = "7.0.12437.6" } );
@@ -29,16 +24,16 @@ $operations = @(
       Download = @( @{Function = "Download"; Source = "https://repo.continuum.io/archive/Anaconda3-4.1.1-Windows-x86_64.exe"; Destination = "$localCache\Anaconda3-4.1.1-Windows-x86_64.exe" } );
       Action = @( @{Function = "InstallExe"; Command = "$localCache\Anaconda3-4.1.1-Windows-x86_64.exe"; Param = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$AnacondaBasePath"; runAs=$false; Message="Installing Anaconda3-4.1.1. This will take several minutes. Please be patient ...."} );
      },
-    @{Name = "CNTK Python Environment 3.4"; ShortName = "CNTKPY34"; Info = "Setup CNTK PythonEnvironment 3.4";
+    @{Name = "CNTK Python Environment"; ShortName = "CNTKPY"; Info = "Setup CNTK PythonEnvironment $PyVersion";
       Verification  = @( @{Function = "VerifyRunAlways"  } );
-      Action = @( @{Function = "InstallYml"; BasePath = $AnacondaBasePath; Env = "cntk-py34"; ymlFile= "$MyDir\conda-windows-cntk-py34-environment.yml" } )
+      Action = @( @{Function = "InstallYml"; BasePath = $AnacondaBasePath; Env = "cntk-py$PyVersion"; ymlFile= "$MyDir\conda-windows-cntk-py$PyVersion-environment.yml"; PyVersion = $PyVersion } )
      },
-    @{Name = "CNTK WHL Install"; ShortName = "CNTKWHL34"; Info = "Setup/Update CNTK Wheel";
+    @{Name = "CNTK WHL Install"; ShortName = "CNTKWHL"; Info = "Setup/Update CNTK Wheel $PyVersion";
       Verification  = @( @{Function = "VerifyRunAlways" } );
-      Action = @( @{Function = "InstallWheel"; BasePath = "$AnacondaBasePath"; EnvName = "cntk-py34"; WheelDirectory="$AnacondaBasePath\envs\cntk-py34\Lib\site-packages\cntk"; Message="Setup/Update of CNTK Wheel environment. Please be patient...." } )
+      Action = @( @{Function = "InstallWheel"; BasePath = "$AnacondaBasePath"; EnvName = "cntk-py$PyVersion"; WheelDirectory="$AnacondaBasePath\envs\cntk-py$PyVersion\Lib\site-packages\cntk"; PyVersion = $PyVersion; Message="Setup/Update of CNTK Wheel $PyVersion environment. Please be patient...." } )
      },
-    @{Name = "Create CNTKPY34 batch file"; ShortName = "BATCH34"; Info = "Create CNTKPY34 batch file";
-      Verification  = @( @{Function = "VerifyFile"; Path = "$cntkRootDir\scripts\cntkpy34.bat" } );
-      Action = @( @{Function = "CreateBatch"; Filename = "$cntkRootDir\scripts\cntkpy34.bat" } )
+    @{Name = "Create CNTKPY batch file"; ShortName = "BATCH"; Info = "Create CNTKPY batch file";
+      Verification  = @( @{Function = "VerifyFile"; Path = "$cntkRootDir\scripts\cntkpy$PyVersion.bat"; PyVersion = $PyVersion } );
+      Action = @( @{Function = "CreateBatch"; Filename = "$cntkRootDir\scripts\cntkpy$PyVersion.bat"; PyVersion = $PyVersion } )
      }
 )

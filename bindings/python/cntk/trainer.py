@@ -7,7 +7,7 @@
 from . import cntk_py
 from .device import use_default_device
 from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
-from .io import _py_dict_to_cntk_dict
+from .io import _py_dict_to_cntk_dict, MinibatchData
 
 __doc__= '''\
 A trainer encapsulates the overall training process and employs one or more
@@ -55,7 +55,10 @@ class Trainer(cntk_py.Trainer):
             model = sanitize_function(model)
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
-        super(Trainer, self).__init__(model, loss_function, eval_function, parameter_learners)
+
+        trainer = cntk_py.trainer_impl(model, loss_function, eval_function, parameter_learners)
+        # transplant into this class instance
+        self.__dict__ = trainer.__dict__
 
     def _train_test_mb_map_args(self, *args, **kwargs):
         '''helper function for mimicking Python calling convention in train/test_minibatch()'''
@@ -119,18 +122,36 @@ class Trainer(cntk_py.Trainer):
                 all_args |= set(self.model.arguments)
             if self.evaluation_function:
                 all_args |= set(self.evaluation_function.arguments)
-            arguments = sanitize_var_map(tuple(all_args), arguments)
+            arguments = sanitize_var_map(tuple(all_args) arguments,
+                extract_values_from_minibatch_data = False)
+
+        contains_minibatch_data = False
+        if (len(arguments) > 0):
+            value = next(iter(arguments.values()))
+            contains_minibatch_data = isinstance(value, MinibatchData)
 
         if outputs:
             output_map = {v: None for v in outputs}
-            updated = super(Trainer, self).train_minibatch(arguments,
+            
+            if contains_minibatch_data:
+                updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
+                    arguments, output_map, device)
+            else:    
+                updated = super(Trainer, self).train_minibatch(arguments,
                     output_map, device)
+
             for k,v in output_map.items():
                 output_map[k] = value_to_seq(v)
 
             return updated, output_map
         else:
-            updated = super(Trainer, self).train_minibatch(arguments, device)
+
+            if contains_minibatch_data:
+                updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
+                    arguments, device)
+            else:    
+                updated = super(Trainer, self).train_minibatch(arguments,
+                    device)
 
         return updated
 
@@ -260,22 +281,6 @@ class Trainer(cntk_py.Trainer):
         The number of samples seen globally between all workers from the beginning of training.
         '''
         return super(Trainer, self).total_number_of_samples_seen()
-
-
-    ## TODO: anything below are attempts, and will likely not survive this way.
-    ## BUGBUG: Should not need to take 'criterion', Trainer should know.
-    #def train_minibatch_from_data(self, criterion, *stream_values):
-    #    def get_args(crit, stream_values):
-    #        return { criterion.arguments[i]: stream_values[i] for i in range(len(stream_values)) }
-    #    args = get_args(self.loss_function, stream_values)
-    #    return self.train_minibatch(args)
-    #
-    ## BUGBUG: Should not need to take 'criterion', Trainer should know.
-    #def test_minibatch_from_data(self, criterion, *stream_values):
-    #    def get_args(crit, stream_values):
-    #        return { criterion.arguments[i]: stream_values[i] for i in range(len(stream_values)) }
-    #    args = get_args(self.loss_function, stream_values)
-    #    return self.test_minibatch(args)
 
 def Evaluator(model, criterion):
     '''

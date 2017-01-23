@@ -86,8 +86,10 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
-        {PrimitiveOpType::Block, L"Block"},
-        {PrimitiveOpType::Unpooling, L"Unpooling"},
+        { PrimitiveOpType::Block, L"Block" },
+        { PrimitiveOpType::Unpooling, L"Unpooling" },
+        { PrimitiveOpType::LambdaRank, L"LambdaRank" },
+        { PrimitiveOpType::NDCG, L"NDCG" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -118,6 +120,10 @@ namespace CNTK
             if (numFunctionInputs > 2)
                 indexMap.insert({ 2, 2 });
         }
+        else if (op == PrimitiveOpType::LambdaRank)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 }, { 2, 2 } });
+        else if (op == PrimitiveOpType::NDCG)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 },{ 1, 0 },{ 2, 2 } });
         else if (op == PrimitiveOpType::CrossEntropyWithSoftmax)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else if (op == PrimitiveOpType::GatherPacked)
@@ -711,6 +717,6 @@ namespace CNTK
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
-        static const size_t s_serializationVersion = 2;
+        static const size_t s_serializationVersion = 3;
     };
 }

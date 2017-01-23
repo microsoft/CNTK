@@ -138,6 +138,7 @@
     <ClCompile Include="GPUMatrixCudaBlasTests.cpp" />
     <ClCompile Include="GPUMatrixTests.cpp" />
     <ClCompile Include="GPUSparseMatrixTests.cpp" />
+    <ClCompile Include="MatrixLearnerTests.cpp" />
     <ClCompile Include="MatrixBlasTests.cpp" />
     <ClCompile Include="MatrixDataSynchronizationTests.cpp" />
     <ClCompile Include="MatrixFileWriteReadTests.cpp" />

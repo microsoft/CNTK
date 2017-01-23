@@ -2,7 +2,7 @@
 .. some aliases
 .. _CNTK: http://cntk.ai/
 
-Python API for CNTK (2.0.beta7.0)
+Python API for CNTK (2.0.beta9.0)
 ===============================
 
 CNTK_, the Microsoft Cognitive Toolkit, is a system for describing, training,
@@ -10,10 +10,10 @@ and executing computational networks. It is also a framework for describing
 arbitrary learning machines such as deep neural networks (DNNs). CNTK is an
 implementation of computational networks that supports both CPU and GPU.
  
-This page describes the Python API for CNTK_ version 2.0.beta7.0. This is an ongoing effort
+This page describes the Python API for CNTK_ version 2.0.beta9.0. This is an ongoing effort
 to expose such an API to the CNTK system, thus enabling the use of higher-level
 tools such as IDEs to facilitate the definition of computational networks, to execute
-them on sample data in real time.
+them on sample data in real time. Please give feedback through these `channels`_.
 
 .. toctree::
    :maxdepth: 2
@@ -34,3 +34,4 @@ Indices and tables
 * :ref:`modindex`
 * :ref:`search`
 
+.. _`channels`: https://github.com/Microsoft/CNTK/wiki/Feedback-Channels

@@ -32,11 +32,11 @@ The script will analyse your machine and will determine which components are req
 The required components will be downloaded in [$localCache]
 Repeated operation of this script will reuse already downloaded components.
 
- - If required VS2012 Runtime and VS2013 Runtime will be installed
+ - If required VS2015 Runtime will be installed
  - If required MSMPI will be installed
  - Anaconda3 will be installed into [$AnacondaBasePath]
- - A CNTK-PY34 environment will be created or updated in [$AnacondaBasePath\envs]
- - CNTK will be installed or updated in the CNTK-PY34 environment
+ - A CNTK-PY$PyVersion environment will be created or updated in [$AnacondaBasePath\envs]
+ - CNTK will be installed or updated in the CNTK-PY$PyVersion environment
 "
 }
 
@@ -108,7 +108,7 @@ function DisplayStart()
     CheckOSVersion
 
     if (-not $Execute) {
-        Write-Host $(DisplayWarningNoExecuteMessage)
+        Write-Warning $(DisplayWarningNoExecuteMessage)
     }
     
     Write-Host $(DisplayStartContinueMessage)
@@ -131,7 +131,7 @@ Write-Host "
 CNTK v2 Python install complete.
 
 To activate the CNTK Python environment and set the PATH to include CNTK, start a command shell and run
-   $cntkRootDir\scripts\cntkpy34.bat
+   $cntkRootDir\scripts\cntkpy$PyVersion.bat
 
 Please checkout tutorials and examples here:
    $cntkRootDir\Tutorials

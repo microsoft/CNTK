@@ -180,7 +180,8 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
     AdditionalLearningOptions additionalOptions;
     additionalOptions.gradientClippingThresholdPerSample = 2.3;
     additionalOptions.gradientClippingWithTruncation = true;
-    Trainer trainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumTimeConstant, additionalOptions) });
+
+    auto trainer = CreateTrainer(z, ce, errs, { MomentumSGDLearner(z->Parameters(), learningRatePerSample, momentumTimeConstant, /*unitGainMomentum = */true, additionalOptions) });
 
     size_t outputFrequencyInMinibatches = 1;
     size_t minibatchSize1 = 72;
@@ -197,7 +198,7 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         if (!restorationDone && (i == numMinibatchesToRestoreFromCheckpointAfter))
         {
             printf("Trainer restoring from checkpoint at path %S\n", modelFile);
-            trainer.RestoreFromCheckpoint(modelFile);
+            trainer->RestoreFromCheckpoint(modelFile);
             minibatchSource->RestoreFromCheckpoint(minibatchSourceCheckpoint);
             i = numMinibatchesToCheckpointAfter;
             restorationDone = true;
@@ -208,20 +209,20 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
         if (minibatchData.empty())
             break;
 
-        trainer.TrainMinibatch({ { rawInput, minibatchData[rawInputStreamInfo].m_data }, { rawLabels, minibatchData[rawLabelsStreamInfo].m_data } }, device);
+        trainer->TrainMinibatch({ { rawInput, minibatchData[rawInputStreamInfo] }, { rawLabels, minibatchData[rawLabelsStreamInfo] } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
 
         if ((i + 1) == numMinibatchesToCheckpointAfter)
         {
             printf("Trainer checkpointing to path %S\n", modelFile);
-            trainer.SaveCheckpoint(modelFile);
+            trainer->SaveCheckpoint(modelFile);
             minibatchSourceCheckpoint = minibatchSource->GetCheckpointState();
         }
 
         if ((i % decodingFrequency) == 0)
         {
             std::unordered_map<Variable, ValuePtr> outputs = { { decodingFunction, nullptr }};
-            decodingFunction->Forward({ { decodingFunction->Arguments()[0], minibatchData[rawInputStreamInfo].m_data }, { decodingFunction->Arguments()[1], minibatchData[rawLabelsStreamInfo].m_data } },
+            decodingFunction->Forward({ { decodingFunction->Arguments()[0], minibatchData[rawInputStreamInfo].data }, { decodingFunction->Arguments()[1], minibatchData[rawLabelsStreamInfo].data } },
                                       outputs,
                                       device);
         }

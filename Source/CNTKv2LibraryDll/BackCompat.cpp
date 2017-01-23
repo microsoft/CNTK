@@ -284,6 +284,10 @@ namespace CNTK
                     opType = PrimitiveOpType::CrossEntropyWithSoftmax;
                 else if (node->OperationName() == OperationNameOf(ClassificationErrorNode))
                     opType = PrimitiveOpType::ClassificationError;
+                else if (node->OperationName() == OperationNameOf(LambdaRankNode))
+                    opType = PrimitiveOpType::LambdaRank;
+                else if (node->OperationName() == OperationNameOf(NDCG1EvalNode))
+                    opType = PrimitiveOpType::NDCG;
                 else if (node->OperationName() == OperationNameOf(ReduceElementsNode))
                 {
                     auto reduceElementsNode = node->As<ReduceElementsNode<ElementType>>();

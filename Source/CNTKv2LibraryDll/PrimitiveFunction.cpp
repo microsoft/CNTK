@@ -130,7 +130,9 @@ namespace CNTK
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::Logistic) ||
-            (op == PrimitiveOpType::CosDistance))
+            (op == PrimitiveOpType::CosDistance) || 
+            (op == PrimitiveOpType::LambdaRank) ||
+            (op == PrimitiveOpType::NDCG))
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
@@ -527,9 +529,13 @@ namespace CNTK
                     case PrimitiveOpType::SquaredError:
                     case PrimitiveOpType::CrossEntropyWithSoftmax:
                     case PrimitiveOpType::ClassificationError:
+                    case PrimitiveOpType::LambdaRank:
+                    case PrimitiveOpType::NDCG:
                     {
                         if ((op == PrimitiveOpType::ClassificationError) || (op == PrimitiveOpType::Logistic))
                             assert(inputs.size() >= 2);
+                        else if ((op == PrimitiveOpType::LambdaRank) || (op == PrimitiveOpType::NDCG))
+                            assert(inputs.size() == 3);
                         else
                             assert(inputs.size() == 2);
 
@@ -708,7 +714,8 @@ namespace CNTK
 
         if (m_op == PrimitiveOpType::Block)
         {
-            auto blockCompositeFunc = dynamic_cast<const CompositeFunction*>(BlockComposite().get());
+            auto blockFunction = dynamic_cast<const BlockFunction*>(this);
+            auto blockCompositeFunc = dynamic_cast<const CompositeFunction*>(blockFunction->Composite().get());
             dict[blockFunctionCompositeKey] = blockCompositeFunc->SerializeBlockComposite();
             dict[blockFunctionOpNameKey] = OpName();
 
@@ -742,7 +749,7 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list, after Combine.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::Unpooling)
+        if (op > PrimitiveOpType::NDCG)
         {
             CNTK::LogicError("Unexpected op '%ls':'%u' (%s).", 
                              opKey.c_str(), 
