@@ -122,7 +122,7 @@ class Trainer(cntk_py.Trainer):
                 all_args |= set(self.model.arguments)
             if self.evaluation_function:
                 all_args |= set(self.evaluation_function.arguments)
-            arguments = sanitize_var_map(tuple(all_args) arguments,
+            arguments = sanitize_var_map(tuple(all_args), arguments,
                 extract_values_from_minibatch_data = False)
 
         contains_minibatch_data = False
