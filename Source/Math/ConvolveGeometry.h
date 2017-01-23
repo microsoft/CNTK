@@ -131,7 +131,7 @@ public:
                 {
                     m_start[i] -= lo;
                     assert(m_start[i] >= 0); 
-                    assert(m_start[i] + cells + (int)m_kernelShape[i] - 1 == m_inputShape[i] + hi);
+                    assert(m_start[i] + cells + (int)m_kernelShape[i] - 1 == m_inputShape[i] + hi + lo);
                 }
             }
 

@@ -45,15 +45,20 @@ public:
     // If the offset points in the middle of last sequence, the end of the sweep is returned.
     size_t Seek(size_t sweepSampleOffset, size_t sweep);
 
-    // Gets the next randomized sequence descriptions not exceeding the global and local sample count.
+    // Gets the next randomized sequence descriptions not exceeding the global and local sample count,
+    // when atLeastOneSequenceNeeded is false. Otherwise (when atLeastOneSequenceNeeded is true), 
+    // returns at least one sequence description even when its length is greater than the required sample count.
     // Whether a sequence is considered local is defined by the isLocalSequence predicate.
-    // The return value is how many global samples have been read.
-    size_t GetNextSequenceDescriptions(
+    // Returns a pair whose first element indicates the number of global samples read,
+    // and second -- the number of local samples read (== sum of number of sample over all elements in the 
+    // 'sequences' vector).
+    std::pair<size_t, size_t> GetNextSequenceDescriptions(
         size_t globalSampleCount,
         size_t localSampleCount,
         const std::function<bool(const RandomizedSequenceDescription*)>& isLocalSequence,
         ClosedOpenChunkInterval& requiredChunks,
-        std::vector<RandomizedSequenceDescription>& sequences);
+        std::vector<RandomizedSequenceDescription>& sequences,
+        bool atLeastOneSequenceNeeded = true);
 
 private:
     DISABLE_COPY_AND_MOVE(SequenceRandomizer);

@@ -92,7 +92,10 @@ public:
     CPUMatrix<ElemType> Diagonal() const;
 
     ElemType Adagrad(CPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
-    void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul);
+    
+    void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, 
+                   ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+    
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
                      ElemType RMS_WGT_INC,

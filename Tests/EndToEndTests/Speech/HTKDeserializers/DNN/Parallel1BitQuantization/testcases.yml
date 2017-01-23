@@ -1,8 +1,6 @@
 dataDir: ../../../Data
 tags:
-     # running for 1bitsgd build SKU on every BVT job in 'S' (Speech) leg in Debug-GPU and Release-CPU configurations:
-     # - bvt-s  (build_sku == '1bitsgd') and ((flavor=='debug') ^ (device=='cpu'))
-     # running for 1bitsgd build SKU  on every Nightly job in 'S' leg
+     # - bvt-s (build_sku == '1bitsgd') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
      - nightly-s (build_sku == '1bitsgd')
 
 testCases:

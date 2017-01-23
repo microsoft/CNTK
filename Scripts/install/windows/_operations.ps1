@@ -11,8 +11,8 @@ $operations = @(
       Verification = @( @{Function = "VerifyInstallationContent"; Path = "$cntkRootDir" } )
      },
     @{Name = "Installation VS2015 Runtime"; ShortName = "VS2015"; Info = "Install VS2015 Runtime";
-      Verification = @( @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2015 x64 Additional Runtime" },
-                        @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 2015 x64 Minimum Runtime" } );
+      Verification = @( @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 201(5|7) x64 Additional Runtime" },
+                        @{Function = "VerifyWin32ProductExists"; Match = "^Microsoft Visual C\+\+ 201(5|7) x64 Minimum Runtime" } );
       Action = @( @{Function = "InstallExe"; Command  = "$cntkRootDir\prerequisites\VS2015\vc_redist.x64.exe"; Param = "/install /passive /norestart"; Message="Installing VS2015 Runtime...." } )
      },
     @{Name = "MSMPI Installation"; ShortName = "CNTK"; Info = "Install MSMPI";

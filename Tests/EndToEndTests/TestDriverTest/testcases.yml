@@ -1,0 +1,12 @@
+isPythonTest: True
+
+dataDir: ..
+
+tags:
+    - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release')
+    - nightly-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release')
+
+testCases:
+  PyTest run must finish with error code 0 (outputs __COMPLETED__ in that case):
+    patterns:
+      - __COMPLETED__

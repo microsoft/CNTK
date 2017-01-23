@@ -187,7 +187,6 @@ void ValueCreationWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
     NDShape sampleShape(dims);
     size_t numberOfSequences; 
     size_t maxAllowedSeqLen = 128;
-    size_t maxSeqLen;
     std::vector<std::vector<ElementType>> data;
     std::vector<size_t> seqLenList;
 
@@ -200,12 +199,18 @@ void ValueCreationWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
     {
         numberOfSequences = distribution(generator);
         seqLenList = GenerateSequenceLengths(numberOfSequences, maxAllowedSeqLen);
-        maxSeqLen = *std::max_element(seqLenList.begin(), seqLenList.end());
         data = GenerateSequences<ElementType>(seqLenList, sampleShape);
 
         ValuePtr testValue = Value::Create(sampleShape, data, device, readOnly);
         CheckValue(testValue, sampleShape, data, seqLenList);
     }
+
+    // Test with only 1 sequence with a sequenceStartFlag=false to ensure a mask
+    seqLenList = GenerateSequenceLengths(1, maxAllowedSeqLen);
+    data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+
+    ValuePtr testValue = Value::Create(sampleShape, data, {false}, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList);
 }
 
 template <typename ElementType>

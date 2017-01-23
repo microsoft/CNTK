@@ -1,7 +1,7 @@
 dataDir: ../../Data
 tags:
-     - bvt-s  (build_sku=='1bitsgd') and (flavor=='release') and (device=='gpu')
-     - nightly-s (build_sku=='1bitsgd') and (device=='gpu')
+     - bvt-s (build_sku == '1bitsgd') and (device == 'gpu') and (flavor == 'release')
+     - nightly-s (build_sku == '1bitsgd') and (device == 'gpu')
 
 testCases:
 

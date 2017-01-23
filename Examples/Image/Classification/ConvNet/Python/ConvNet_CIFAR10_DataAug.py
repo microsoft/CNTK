@@ -23,16 +23,16 @@ num_channels = 3  # RGB
 num_classes  = 10
 
 # Define the reader for both training and evaluation action.
-def create_reader(map_file, mean_file, train):
+def create_reader(map_file, mean_file, is_training):
     if not os.path.exists(map_file) or not os.path.exists(mean_file):
         raise RuntimeError("File '%s' or '%s' does not exist. Please run install_cifar10.py from DataSets/CIFAR-10 to fetch them" %
                            (map_file, mean_file))
 
     # transformation pipeline for the features has jitter/crop only when training
     transforms = []
-    if train:
+    if is_training:
         transforms += [
-            cntk.io.ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
+            cntk.io.ImageDeserializer.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
         ]
     transforms += [
         cntk.io.ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
@@ -41,10 +41,11 @@ def create_reader(map_file, mean_file, train):
     # deserializer
     return cntk.io.MinibatchSource(cntk.io.ImageDeserializer(map_file, cntk.io.StreamDefs(
         features = cntk.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
-        labels   = cntk.io.StreamDef(field='label', shape=num_classes))))   # and second as 'label'
+        labels   = cntk.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        randomize=is_training)
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaug(reader_train, reader_test, max_epochs = 80):
+def convnet_cifar10_dataaug(reader_train, reader_test, epoch_size = 50000, max_epochs = 80):
     _cntk_py.set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
@@ -73,7 +74,6 @@ def convnet_cifar10_dataaug(reader_train, reader_test, max_epochs = 80):
     pe = cntk.ops.classification_error(z, label_var)
 
     # training config
-    epoch_size = 50000                    # for now we manually specify epoch size
     minibatch_size = 64
 
     # Set learning parameters

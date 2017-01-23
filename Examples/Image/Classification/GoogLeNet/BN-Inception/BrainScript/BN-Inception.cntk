@@ -1,0 +1,153 @@
+#
+# BN-Inception network
+# Details are in https://arxiv.org/pdf/1502.03167v3.pdf
+#
+
+RootDir = "."
+ParentDir = ".."
+
+ConfigDir = "$RootDir$"
+DataDir = "$ParentDir$/Data"
+OutputDir = "$ParentDir$/Output"
+ModelDir = "$OutputDir$/Models"
+MeanDir = "$ConfigDir$"
+
+stderr = "$OutputDir$/BN-Inception"
+
+precision = "float"
+deviceId = "Auto"
+
+command = Train:Eval
+
+parallelTrain = "true"
+
+traceLevel = 1
+numMBsToShowResult = 100
+
+###################
+# TRAINING CONFIG #
+###################
+
+Train = [
+    action = "train"
+    modelPath = "$ModelDir$/BN-Inception"
+    
+    BrainScriptNetworkBuilder = {
+        include "InceptionLayers.bs"
+        include "BN-Inception.bs"
+        
+        imageShape  = 224:224:3                 # image dimensions
+        labelDim    = 1000                      # number of distinct labels
+        bnScale     = 1
+        bnTimeConst = 4096
+        
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+        
+        # apply model to features
+        model = BN_Inception(features, labelDim, bnScale, bnTimeConst)
+        z     = model.z
+        
+        # connect to system
+        ce       = CrossEntropyWithSoftmax (labels, z)
+        errs     = ClassificationError     (labels, z)
+        top5Errs = ClassificationError     (labels, z, topN = 5)
+
+        # define special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs : top5Errs)
+        outputNodes     = (z)
+        
+    }
+
+    SGD = [
+        epochSize = 0
+        minibatchSize = 256 # 8 GPUs
+        learningRatesPerMB = 3.6*2:3.384
+        momentumPerMB = 0.9
+        maxEpochs = 300
+        gradUpdateType = "None"
+        L2RegWeight = 0.0001
+        numMBsToShowResult = 100
+        
+        autoAdjust = [
+            autoAdjustLR = "adjustAfterEpoch"
+            reduceLearnRateIfImproveLessThan = 1000
+            learnRateAdjustInterval = 2
+            learnRateDecreaseFactor = 0.94
+            loadBestModel = false
+        ]
+
+        ParallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 1
+            DataParallelSGD = [
+                gradientBits = 32
+            ]
+        ]
+    ]
+    
+    reader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/train_map.txt"
+        randomize = "Auto"
+        features = [
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Random"
+            cropRatio = 0.46666:0.875
+            jitterType = "UniRatio"
+            meanFile = "$MeanDir$/ImageNet1K_mean.xml"
+        ]
+        labels = [
+            labelDim = 1000
+        ]
+    ]
+
+
+    cvreader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/val_map.txt"
+        randomize = "None"
+        features = [
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Center"
+            cropRatio = 0.875
+            meanFile = "$MeanDir$/ImageNet1K_mean.xml"
+        ]
+        labels = [
+            labelDim = 1000
+        ]
+    ]        
+]
+
+Eval = [
+    action = "test"
+    modelPath = "$ModelDir$/BN-Inception"
+    evalNodeNames = errs:top5Errs  # also test top-5 error rate
+    minibatchSize = 256
+
+    reader = [
+        readerType = "ImageReader"
+        file = "$DataDir$/val_map.txt"
+        randomize = "None"
+        features = [
+            width = 224
+            height = 224
+            channels = 3
+            cropType = "Center"
+            cropRatio = 0.875
+            meanFile = "$MeanDir$/ImageNet1K_mean.xml"
+        ]
+        labels = [
+            labelDim = 1000
+        ]
+    ]    
+]

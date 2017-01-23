@@ -114,7 +114,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Examples\Evaluation\CPPEvalV2Client\EvalMultithreads.cpp" />
+    <ClCompile Include="..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalExamples\EvalMultithreads.cpp" />
     <ClCompile Include="BlockTests.cpp" />
     <ClCompile Include="CifarResNet.cpp" />
     <ClCompile Include="Common.cpp" />

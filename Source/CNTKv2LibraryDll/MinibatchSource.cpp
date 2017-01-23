@@ -23,6 +23,11 @@ namespace CNTK
         return GetNextMinibatch(0, minibatchSizeInSamples, device);
     }
 
+    const std::unordered_map<StreamInformation, MinibatchData>& MinibatchSource::GetNextMinibatch(size_t minibatchSizeInSequences, size_t minibatchSizeInSamples, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        return GetNextMinibatch(minibatchSizeInSequences, minibatchSizeInSamples, 1, 0, device);
+    }
+
     const StreamInformation& MinibatchSource::StreamInfo(const std::wstring& streamName)
     {
         std::unordered_set<const StreamInformation*> matchingStreamInfos;
@@ -68,18 +73,15 @@ namespace CNTK
     }
 
     /*static*/ const std::wstring CompositeMinibatchSource::PositionAttributeName = L"minibatchSourcePosition";
-    /*static*/ const std::wstring CompositeMinibatchSource::DistributedAfterSampleCountAttributeName = L"minibatchDistributedAfterSampleCount";
 
     CompositeMinibatchSource::CompositeMinibatchSource(const Dictionary& configuration)
         : m_epochEndReached(false),
           m_prevMinibatchSize(0),
-          m_epochSize(MinibatchSource::InfinitelyRepeat),
+          m_maxNumSamplesToRead(MinibatchSource::InfinitelyRepeat),
           m_randomizedWindow(MinibatchSource::DefaultRandomizationWindow),
           m_truncationLength(0),
           m_numWorkers(1),
-          m_workerRank(0),
-          m_distributed(false),
-          m_distributedAfterSampleCount(MinibatchSource::InfiniteSamples)
+          m_workerRank(0)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
@@ -134,13 +136,7 @@ namespace CNTK
 
         const wchar_t* epochSizeConfigurationKey = L"epochSize";
         if (augmentedConfiguration.Contains(epochSizeConfigurationKey))
-            m_epochSize = augmentedConfiguration[epochSizeConfigurationKey].Value<size_t>();
-
-        if (m_epochSize == MinibatchSource::FullDataSweep)
-            m_epochSize = Microsoft::MSR::CNTK::requestDataSize;
-        // Setting big value, but not the max in order to aviod bit overflow.
-        else if (m_epochSize == MinibatchSource::InfinitelyRepeat)
-            m_epochSize = std::numeric_limits<size_t>::max() / 2;
+            m_maxNumSamplesToRead = augmentedConfiguration[epochSizeConfigurationKey].Value<size_t>();
 
         const wchar_t* randomizedWindowConfigurationKey = L"randomizationWindow";
         if (augmentedConfiguration.Contains(randomizedWindowConfigurationKey))
@@ -157,11 +153,6 @@ namespace CNTK
         {
             m_truncationLength = augmentedConfiguration[truncationLengthConfigurationKey].Value<size_t>();
         }
-
-        // TODO: change all the dictionary names to string constants
-        const wchar_t* distributedAfterSampleCountConfigurationKey = L"distributedAfterSampleCount";
-        if (augmentedConfiguration.Contains(distributedAfterSampleCountConfigurationKey))
-            m_distributedAfterSampleCount = augmentedConfiguration[distributedAfterSampleCountConfigurationKey].Value<size_t>();
 
         typedef Reader*(*CreateCompositeDataReaderProc)(const ConfigParameters* parameters);
         CreateCompositeDataReaderProc createReaderProc = (CreateCompositeDataReaderProc)Plugin().Load(L"CompositeDataReader", "CreateCompositeDataReader");
@@ -194,6 +185,8 @@ namespace CNTK
     /*virtual*/ const std::unordered_map<StreamInformation, MinibatchData>&
     CompositeMinibatchSource::GetNextMinibatch(size_t minibatchSizeInSequences,
                                                size_t minibatchSizeInSamples,
+                                               size_t numberOfWorkers,
+                                               size_t workerRank,
                                                const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/) /*override*/
     {
         m_minibatchData.clear();
@@ -206,35 +199,31 @@ namespace CNTK
             if (minibatchSizeInSamples == 0)
                 InvalidArgument("GetNextMinibatch: Requested minibatch sizes must be > 0");
 
-            // For the first number of m_distributedAfterSampleCount samples, minibatch source won't run distributed.
-            bool wasDistributed = m_distributed;
-            if (!m_distributed && IsDistributed())
-            {
-                m_distributed = true;
-
-                if (m_numWorkers == 1)
-                {
-                    MPIWrapperPtr mpi = MPIWrapper::GetInstance();
-                    if (mpi == nullptr)
-                    {
-                        // create mpi instance if intended to be distributed
-                        mpi = MPIWrapper::GetInstance(true);
-                    }
-                    m_numWorkers = mpi->NumNodesInUse();
-                    m_workerRank = mpi->CurrentNodeRank();
-                }
-            }
-
             if (m_prevMinibatchSize == 0)
             {
                 EpochConfiguration epochConfig;
-                epochConfig.m_numberOfWorkers = m_distributed ? m_numWorkers : 1;
-                epochConfig.m_workerRank = m_distributed ? m_workerRank : 0;
+                epochConfig.m_numberOfWorkers = numberOfWorkers;
+                epochConfig.m_workerRank = workerRank;
                 epochConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 epochConfig.m_truncationSize = m_truncationLength;
+                epochConfig.m_allowMinibatchesToCrossSweepBoundaries = true;
 
-                epochConfig.m_totalEpochSizeInSamples = m_epochSize;
+                if (m_maxNumSamplesToRead == MinibatchSource::FullDataSweep)
+                {
+                    epochConfig.m_totalEpochSizeInSamples = Microsoft::MSR::CNTK::requestDataSize;
+                }
+                else if (m_maxNumSamplesToRead == MinibatchSource::InfinitelyRepeat)
+                {
+                    // Setting big value, but not the max in order to aviod bit overflow.
+                    epochConfig.m_totalEpochSizeInSamples = std::numeric_limits<size_t>::max() / 2;
+                }
+                else 
+                {
+                    epochConfig.m_totalEpochSizeInSamples = m_maxNumSamplesToRead;
+                }
+
                 epochConfig.m_epochIndex = 0;
+
                 m_matrices.clear();
 
                 std::unordered_set<InputStreamDescription> inputs;
@@ -262,30 +251,37 @@ namespace CNTK
 
                 m_shim->StartEpoch(epochConfig, inputs);
                 m_prevMinibatchSize = minibatchSizeInSamples;
-                wasDistributed = m_distributed;
+                m_workerRank = workerRank;
+                m_numWorkers = numberOfWorkers;
             }
 
-            if (minibatchSizeInSamples != m_prevMinibatchSize || wasDistributed != m_distributed)
+            if (minibatchSizeInSamples != m_prevMinibatchSize || m_workerRank != workerRank || m_numWorkers != numberOfWorkers)
             {
                 std::map<std::wstring, int> inputDescriptions;
                 for (const auto& s : m_streamInfos)
                     inputDescriptions[s.m_name] = AsCNTKImplDeviceId(device);
 
                 ReaderConfiguration newConfig;
-                newConfig.m_numberOfWorkers = m_distributed ? m_numWorkers : 1;
-                newConfig.m_workerRank = m_distributed ? m_workerRank : 0;
+                newConfig.m_numberOfWorkers = numberOfWorkers;
+                newConfig.m_workerRank = workerRank;
                 newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 newConfig.m_truncationSize = m_truncationLength;
+                newConfig.m_allowMinibatchesToCrossSweepBoundaries = true;
 
                 m_shim->SetConfiguration(newConfig, inputDescriptions);
 
                 m_prevMinibatchSize = minibatchSizeInSamples;
+                m_workerRank = workerRank;
+                m_numWorkers = numberOfWorkers;
             }
 
             auto hasData = m_shim->GetMinibatch(m_matrices);
             m_epochEndReached = m_shim->IsEndOfEpoch();
+
             if (m_epochEndReached && !hasData)
                 return m_minibatchData;
+
+            bool hasReachedSweepEnd = m_shim->IsEndOfSweep();
 
             for (const auto& s: m_streamInfos)
             {
@@ -310,7 +306,7 @@ namespace CNTK
                     size_t numSamples = input.pMBLayout->GetActualNumSamples();
                     size_t numSequences = input.pMBLayout->GetNumSequences();
 
-                    m_minibatchData[currentStreamInfo] = { numSequences, numSamples, minibatchValuePtr };
+                    m_minibatchData[currentStreamInfo] = { minibatchValuePtr, numSequences, numSamples, hasReachedSweepEnd };
                 }
                 else
                     LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
@@ -324,7 +320,6 @@ namespace CNTK
     {
         Dictionary checkpointState;
         checkpointState[PositionAttributeName] = m_shim->GetCurrentSamplePosition();
-        checkpointState[DistributedAfterSampleCountAttributeName] = m_distributedAfterSampleCount;
         return checkpointState;
     }
 
@@ -332,6 +327,5 @@ namespace CNTK
     {
         auto checkpointedMinibatchSourcePosition = checkpoint[PositionAttributeName].Value<size_t>();
         m_shim->SetCurrentSamplePosition(checkpointedMinibatchSourcePosition);
-        m_distributedAfterSampleCount = checkpoint[DistributedAfterSampleCountAttributeName].Value<size_t>();
     }
 }

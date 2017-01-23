@@ -16,7 +16,7 @@ def test_cntk_103_mnist_feedforwardnetwork_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedEvalErrorByDeviceId = { -1: 1.90, 0: 1.85 }
+expectedEvalErrorByDeviceId = { -1: 1.67, 0: 1.71 }
 
 def test_cntk_103_mnist_feedforwardnetwork_evalCorrect(nb, device_id):
     testCell = [cell for cell in nb.cells
@@ -24,4 +24,4 @@ def test_cntk_103_mnist_feedforwardnetwork_evalCorrect(nb, device_id):
     assert len(testCell) == 1
     m = re.match(r"Average test error: (?P<actualEvalError>\d+\.\d+)%\r?$", testCell[0].outputs[0]['text'])
     # TODO tighten tolerances
-    assert np.isclose(float(m.group('actualEvalError')), expectedEvalErrorByDeviceId[device_id], atol=0.15)
+    assert np.isclose(float(m.group('actualEvalError')), expectedEvalErrorByDeviceId[device_id], atol=0.2)

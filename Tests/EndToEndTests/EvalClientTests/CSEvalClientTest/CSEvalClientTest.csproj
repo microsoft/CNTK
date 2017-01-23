@@ -67,7 +67,9 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\..\..\..\Examples\Evaluation\CSEvalClient\CntkBitmapExtensions.cs" />
+    <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCSEvalCPUOnlyExamples\CntkBitmapExtensions.cs">
+      <Link>CntkBitmapExtensions.cs</Link>
+    </Compile>
     <Compile Include="..\..\..\..\Examples\Evaluation\CSEvalClient\ModelEvaluator.cs" />
     <Compile Include="..\..\..\..\Examples\Evaluation\CSEvalClient\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

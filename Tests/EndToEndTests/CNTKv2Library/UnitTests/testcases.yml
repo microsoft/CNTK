@@ -1,8 +1,10 @@
 dataDir: .
 
 tags:
-    - bvt-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((flavor=='debug') ^ (device=='cpu'))
-    - nightly-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((device=='gpu') or (flavor== 'release'))
+    # TODO consider enabling for more Debug on Windows once this is split
+    - bvt-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+    # Not running Debug CPU
+    - nightly-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((device == 'gpu') or (flavor == 'release'))
 
 testCases:
   Test run must be completed:
