@@ -234,7 +234,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
 
             # every N MBs evaluate on a test sequence to visually show how we're doing
             if mbs % sample_freq == 0:
-                mb_valid = valid_reader.next_minibatch(minibatch_size)
+                mb_valid = valid_reader.next_minibatch(1)
                 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
                 e = decoder_output_model.eval({find_arg_by_name('raw_input' , decoder_output_model) : 
@@ -399,7 +399,7 @@ def get_vocab(path):
     return (vocab, i2w)
 
 # Given a vocab and tensor, print the output
-def print_sequences(sequences, i2w):
+def print_sequences(sequences, i2w):    
     for s in sequences:
         print([i2w[np.argmax(w)] for w in s], sep=" ")
 
