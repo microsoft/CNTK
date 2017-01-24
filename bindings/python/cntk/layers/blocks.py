@@ -138,10 +138,10 @@ def BlockFunction(f):
     '''
     Same as @Function, but wrap the content into an as_block().
     '''
-    #return Function(f, make_block=True)
+    return Function(f, make_block=True)
     # TODO: bring this ^^ back after as_block works, and then undo the x_last hack
     # BUGBUG: Assumed only be used by recurrent cells to fix their ordering, which fails.
-    return Function(f)  # BUGBUG: causes random axis inference errors
+    #return Function(f)  # BUGBUG: causes random axis inference errors
 
 
 def _inject_name(f, name):
@@ -246,7 +246,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
     beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething   --TODO: change in Python
 
     # expression
-    @Function
+    @BlockFunction
     def stabilize(x):
         return beta * x
 
@@ -319,14 +319,17 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # in this case:
     #   (dh, dc, x_last) --> (h, c)
     @BlockFunction
-    def lstm(dh, dc, x_last):
+    #def lstm(dh, dc, x_last):
+    #    x = x_last
+    def lstm(dh, dc, x):
+    # BUGBUG: now fails with Python crashing, likely the ref-count issue
 
         dhs = Sdh(dh)  # previous values, stabilized
         dcs = Sdc(dc)
         # note: input does not get a stabilizer here, user is meant to do that outside
 
         # projected contribution from input(s), hidden, and bias
-        proj4 = b + times(x_last, W) + times(dhs, H)
+        proj4 = b + times(x, W) + times(dhs, H)
 
         it_proj  = slice (proj4, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
         bit_proj = slice (proj4, stack_axis, 1*stacked_dim, 2*stacked_dim)
@@ -334,8 +337,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         ot_proj  = slice (proj4, stack_axis, 3*stacked_dim, 4*stacked_dim)
 
         # helper to inject peephole connection if requested
-        def peep(x_last, c, C):
-            return x_last + C * c if use_peepholes else x_last
+        def peep(x, c, C):
+            return x + C * c if use_peepholes else x
 
         it = sigmoid (peep (it_proj, dcs, Ci))        # input gate(t)
         # TODO: should both activations be replaced?
@@ -366,12 +369,13 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     #          This may have changed with as_block(), which cannot handle unused inputs. TODO: test this.
     @BlockFunction
     def gru(dh, x_last):
+        x = x_last
 
         dhs = Sdh(dh)  # previous value, stabilized
         # note: input does not get a stabilizer here, user is meant to do that outside
 
         # projected contribution from input(s), hidden, and bias
-        projx3 = b + times(x_last, W)
+        projx3 = b + times(x, W)
         projh2  = times(dhs, H)
 
         zt_proj = slice (projx3, stack_axis, 0*stacked_dim, 1*stacked_dim) + slice (projh2, stack_axis, 0*stacked_dim, 1*stacked_dim)
@@ -388,9 +392,9 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         ht = (1 - zt) * ct + zt * dhs # hidden state ht / output
 
         # for comparison: CUDNN_GRU
-        # i(t) = sigmoid(W_i x_last(t) +          R_i h(t-1)  + b_Wi + b_Ru)
-        # r(t) = sigmoid(W_r x_last(t) +          R_r h(t-1)  + b_Wr + b_Rr)   --same up to here
-        # h'(t) =   tanh(W_h x_last(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
+        # i(t) = sigmoid(W_i x(t) +          R_i h(t-1)  + b_Wi + b_Ru)
+        # r(t) = sigmoid(W_r x(t) +          R_r h(t-1)  + b_Wr + b_Rr)   --same up to here
+        # h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
         # h(t) = (1 - i(t) .* h'(t)) + i(t) .* h(t-1)                     --wrong bracketing??
 
         h = times(Sht(ht), Wmr) if has_projection else \
@@ -401,8 +405,9 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     @BlockFunction
     def rnn(dh, x_last):
+        x = x_last
         dhs = Sdh(dh)  # previous value, stabilized
-        ht = activation (times(x_last, W) + times(dhs, H) + b)
+        ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
         return Function.NamedOutput(h=h)

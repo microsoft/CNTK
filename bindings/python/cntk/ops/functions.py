@@ -75,23 +75,24 @@ class Function(cntk_py.Function):
             args = [placeholder_variable(name=name) for name in arg_names]
 
             # helpers
-            #ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
+            ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
             def force_order_args(fun_args):
                 from .. import plus, reduce_sum
-                zero_in_right_order = plus(*(reduce_sum(arg, all_axes=True) for arg in fun_args)) * 0
-                # BUGBUG: ^^ fails with "At least one of the placeholders specified for replacement was not found in the function"
-                #         clone() seems to clone placeholders more than once that are directly consumed more than once.
-                # As a workaround, consume the placeholder once, and apply square_error() on top.
-                #zero_in_right_order = plus(*(red(arg*0) for arg in fun_args))
-                fun_args = tuple(zero_in_right_order + arg for arg in fun_args)
-                # BUGBUG: fails inside a recurrent loop
-                return fun_args
-                #block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
-                #combined_block_args = combine(block_args)                               # the content of the BlockFunction
-                #arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
-                #combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
-                #ref_keeper = combined_args    # BUGBUG workaround
-                #return combined_args # BUGBUG .outputs  # the Python function is called with these instead
+                #zero_in_right_order = plus(*(reduce_sum(arg, all_axes=True) for arg in fun_args)) * 0
+                ## BUGBUG: ^^ fails with "At least one of the placeholders specified for replacement was not found in the function"
+                ##         clone() seems to clone placeholders more than once that are directly consumed more than once.
+                ## As a workaround, consume the placeholder once, and apply square_error() on top.
+                ##zero_in_right_order = plus(*(red(arg*0) for arg in fun_args))
+                #fun_args = tuple(zero_in_right_order + arg for arg in fun_args)
+                ## BUGBUG: fails inside a recurrent loop
+                #return fun_args
+                block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+                combined_block_args = combine(block_args)                               # the content of the BlockFunction
+                arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
+                combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=f_name + '_parameter_pack')
+                global ref_keeper
+                ref_keeper = combined_args    # BUGBUG workaround the ref-counting problem
+                return combined_args.outputs
             def force_order_args_rec(fun_args): # use this inside recurrent loop, requires all args to share the same axes
                 from .. import plus, sequence, element_select, splice, slice
                 zero_in_right_order = plus(*(sequence.constant_with_dynamic_axes_like(0, arg) for arg in fun_args))
@@ -148,7 +149,9 @@ class Function(cntk_py.Function):
                 block_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
                 out = invoke(block_args)
                 out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=f_name)
+                print('made block out of', f_name)
                 # BUGBUG: This ^^ causes random errors of mismatching axes. Fixed by x_last hack.
+                #         Seems to work now after latest merge?
             # not a block
             else:
                 fun_args = args
