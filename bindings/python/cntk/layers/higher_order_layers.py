@@ -70,6 +70,12 @@ def _sanitize_function(f):
     return f
 
 
+# TODO: move these into layers/sequence.py
+# import layers.sequence
+# sequence.Recurrence(), sequence.Convolution()
+# from layers import *  will import sequence.Recurrence()
+# from layers.sequence import * will also import sequence.reduce(), but override non-seq Convolution.
+
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
