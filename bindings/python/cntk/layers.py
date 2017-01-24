@@ -75,7 +75,7 @@ def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_defa
     if b:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Dense', name, Record(W=W, b=b), True)
+    return Block(apply_x, 'Dense', name, Record(W=W, b=b), make_block=True)
 
 # Embedding -- create a linear embedding layer
 # To create an embedding from a file, use this:
@@ -111,7 +111,7 @@ def Embedding(shape=None, init=None, weights=None, name=''):
     # expression
     x = Placeholder(name='embedding_arg')
     apply_x = times(x, E)
-    return Block(apply_x, 'Embedding', name, Record(E=E), True)
+    return Block(apply_x, 'Embedding', name, Record(E=E), make_block=True)
 
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
@@ -169,7 +169,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Convolution', name, Record(W=W, b=b), True)
+    return Block(apply_x, 'Convolution', name, Record(W=W, b=b), make_block=True)
 
 # Deconvolution -- create a deconvolution layer with optional non-linearity
 def Deconvolution(filter_shape,        # e.g. (3,3)
@@ -231,15 +231,19 @@ def Pooling(op,      # PoolingType_Max or _Average
             strides=1,
             pad=False, 
             name=''):
-    x = Placeholder(name='pooling_arg')
-    apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
-
     if op == PoolingType_Average:
         op_name = 'AveragePooling'
+        if filter_shape == NDShape.unknown.dimensions(): 
+            op_name = 'GlobalAveragePooling' 
     elif op == PoolingType_Max:
         op_name = 'MaxPooling'
+        if filter_shape == NDShape.unknown.dimensions(): 
+            op_name = 'GlobalMaxPooling'
     else:
         raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
+
+    x = Placeholder(name='pooling_arg')
+    apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
     return Block(apply_x, op_name, name, make_block=True)
 
 # MaxPooling
@@ -352,7 +356,7 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   #use_cntk_engine=use_cntk_engine)
                                   use_cudnn_engine=not use_cntk_engine)
-    return Block(apply_x, 'BatchNormalization', name, Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance), True)
+    return Block(apply_x, 'BatchNormalization', name, Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance), make_block=True)
 
 # LayerNormalization -- create a layer-normalization layer
 def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
@@ -370,4 +374,4 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     #x_hat = element_divide (x0, std)
     x_hat = x0 / std
     apply_x = x_hat * scale + bias    # denormalize with learned parameters
-    return Block(apply_x, 'LayerNormalization', name, Record(scale=scale, bias=bias), True)
+    return Block(apply_x, 'LayerNormalization', name, Record(scale=scale, bias=bias), make_block=True)
