@@ -282,6 +282,16 @@ inline CNTK::FunctionPtr SimpleRecurrentLayer(const  CNTK::Variable& input, cons
     return output->ReplacePlaceholders({ { dh, output } });
 }
 
+inline std::vector<bool> GenerateSequenceStartFlags(size_t numSequences)
+{
+    std::vector<bool> sequenceStartFlags(numSequences);
+    for (size_t i = 0; i < numSequences; ++i)
+    {
+        sequenceStartFlags[i] = static_cast<int>(rand()) % 2 == 0 ? true : false;
+    }
+    return sequenceStartFlags;
+}
+
 inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t maxAllowedSequenceLength)
 {
     std::vector<size_t> sequenceLengths(numSequences);
