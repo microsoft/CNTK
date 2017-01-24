@@ -190,13 +190,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # Decoding is an unfold() operation starting from sentence_start.
         # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
         # which holds 'input' in its closure.
-        #@Function
-        #def generator(history):
-        #    return hardmax(s2smodel(history, input))
-        # TODO: use a Python lambda
-        #unfold = UnfoldFrom(s2smodel(..., input) >> hardmax,
         unfold = UnfoldFrom(lambda history: s2smodel(history, input) >> hardmax,
                             #until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
+                            # BUGBUG: causes some strange MBLayout error
                             length_increase=length_increase, initial_state=sentence_start)
         return unfold(dynamic_axes_like=input)
 

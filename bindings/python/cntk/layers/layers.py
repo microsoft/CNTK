@@ -70,7 +70,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
 
     # expression of this function
-    @Function
+    @BlockFunction
     def dense(x):
         r = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
         if b:
@@ -123,7 +123,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
         E = Constant(weights, name='E')
 
     # expression
-    @Function
+    @BlockFunction
     def embed(x):
         return times(x,E)
 
@@ -243,7 +243,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
     b = Parameter(actual_output_channels_shape + (1,) * len(actual_rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
-    @Function
+    @BlockFunction
     def convolve(x):
         # insert additional axes for various purposes
         sequential_rank = 1 if sequential else 0

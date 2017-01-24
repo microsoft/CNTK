@@ -110,19 +110,19 @@ class Function(cntk_py.Function):
                     for arg in args:
                         Function._placeholders_under_construction.add(arg)
                     out = f(*fun_args)
-                    if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                        print('trying to print args for', f_name)
-                        print('out args:', [arg.name for arg in out.arguments])
+                    #if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                    #    print('trying to print args for', f_name)
+                    #    print('out args:', [arg.name for arg in out.arguments])
                 finally:
                     # unhide Placeholders of this function again
                     for arg in args:
                         Function._placeholders_under_construction.remove(arg)
-                if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                    print([arg.name for arg in Function._placeholders_under_construction])
-                    print('out = f(), args:', [arg.name for arg in out.arguments])
-                    print('out = f(), sig: ', [arg.name for arg in out.signature])
-                    print([arg.uid for arg in Function._placeholders_under_construction])
-                    print('out = f(), sig: ', [arg.uid for arg in out.signature])
+                #if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                #    print([arg.name for arg in Function._placeholders_under_construction])
+                #    print('out = f(), args:', [arg.name for arg in out.arguments])
+                #    print('out = f(), sig: ', [arg.name for arg in out.signature])
+                #    print([arg.uid for arg in Function._placeholders_under_construction])
+                #    print('out = f(), sig: ', [arg.uid for arg in out.signature])
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
                     if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
