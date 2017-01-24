@@ -86,6 +86,8 @@ class Function(cntk_py.Function):
                 #fun_args = tuple(zero_in_right_order + arg for arg in fun_args)
                 ## BUGBUG: fails inside a recurrent loop
                 #return fun_args
+                # The above seems no longer necessary, the below works just fine if only used when needed
+                # BUGBUG: There still is a Python interpreter crash if I use that always.
                 block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
@@ -218,8 +220,8 @@ class Function(cntk_py.Function):
         sig = [arg for arg in self.arguments if arg not in Function._placeholders_under_construction]
         if len(sig) == 0:
             print(13)
-        if len(sig) > 0 and sig[0].name == 'x_last':
-            sig = sig[1:] + [sig[0]]
+        #if len(sig) > 0 and sig[0].name == 'x_last':
+        #    sig = sig[1:] + [sig[0]]
         return tuple(sig)
 
     def argument_map(self, *args, **kwargs):
