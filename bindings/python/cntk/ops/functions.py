@@ -489,9 +489,9 @@ class Function(cntk_py.Function):
         # This look up is meant as a lookup into a single Function object.
         # Once as_block() is reliable, we may be able to solve it that way.
         from ..graph import try_find_closest_by_name
-        #item = try_find_closest_by_name(self, name)
-        #if item:
-        #    return item
+        item = try_find_closest_by_name(self, name)
+        if item:
+            return item
         # BUGBUG: causes a stack overflow since beta9
 
         # access an API member of 'output', such as .shape()

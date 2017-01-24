@@ -38,7 +38,7 @@ num_layers = 2
 attention_dim = 128
 attention_span = 20
 attention_axis = -3
-use_attention = False
+use_attention = True
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -286,8 +286,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
-                #if use_attention:
-                #    debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
+                if use_attention:
+                    debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
                 # BUGBUG: name lookup led to infinite recursion
 
             i += mb_train[train_reader.streams.labels].num_samples
