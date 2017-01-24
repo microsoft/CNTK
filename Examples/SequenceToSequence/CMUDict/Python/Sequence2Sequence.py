@@ -262,6 +262,9 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
         # load up and start using.
         decoder_output_model.save_model(model_filename)
         print("Saved model to '%s'" % model_filename)
+        
+        # also save a 'base model' without the decoder wired-in
+        model.save_model(model_filename + ".b")
 
 ########################
 # write action         #
