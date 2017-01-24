@@ -15,7 +15,7 @@ from ..ops import parameter, input_variable, placeholder_variable, combine
 from ..ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, sequence, delay, softmax, tanh, reduce_sum
 from ..utils import Record, _as_tuple
 from .blocks import *
-from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name # helpers
+from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
 
 
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
@@ -70,7 +70,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     b = Parameter(              output_shape, init=init_bias,    name='b') if bias else None
 
     # expression of this function
-    @BlockFunction
+    @BlockFunction('Dense', name)
     def dense(x):
         r = times(x, W, output_rank=output_rank, infer_input_rank_to_map=infer_input_rank_to_map)
         if b:
@@ -81,7 +81,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     # BUGBUG: the 'out = combine(out, name=f_name)' in Function() messes up the parameter order. Need to fix that first.
     #dense = dense(Placeholder(name='x')) # same as Function() without the combine()
 
-    dense = _inject_name(dense, name)
+    #dense = _inject_name(dense, name)
 
     return Block(dense, 'Dense', Record(W=W, b=b))
 
@@ -123,11 +123,11 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
         E = Constant(weights, name='E')
 
     # expression
-    @BlockFunction
+    @BlockFunction('Embedding', name)
     def embed(x):
         return times(x,E)
 
-    embed = _inject_name(embed, name)
+    #embed = _inject_name(embed, name)
 
     return Block(embed, 'Embedding', Record(E=E))
 
@@ -243,7 +243,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
     b = Parameter(actual_output_channels_shape + (1,) * len(actual_rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
     # expression
-    @BlockFunction
+    @BlockFunction('Convolution', name)
     def convolve(x):
         # insert additional axes for various purposes
         sequential_rank = 1 if sequential else 0
@@ -281,7 +281,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
             r = activation(r)
         return r
 
-    convolve = _inject_name(convolve, name)
+    #convolve = _inject_name(convolve, name)
 
     return Block(convolve, 'Convolution', Record(W=W, b=b))
 
@@ -292,6 +292,7 @@ def _Pooling(op,       # PoolingType_Max or _Average
              sequential=False, # pooling in time if True (rf_shape[0] corresponds to dynamic axis)
              strides=1,
              pad=False,
+             op_name=None,
              name=''):
     '''
     Shared part of the various pooling layers.
@@ -301,18 +302,11 @@ def _Pooling(op,       # PoolingType_Max or _Average
     if sequential:
         raise NotImplementedError("Pooling: sequential option not implemented yet")
 
-    @BlockFunction
+    @BlockFunction(op_name, name)
     def pool(x):
         return pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
-    if op == PoolingType_Average:
-        op_name = 'AveragePooling'
-    elif op == PoolingType_Max:
-        op_name = 'MaxPooling'
-    else:
-        raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
-
-    pool = _inject_name(pool, name)
+    #pool = _inject_name(pool, name)
 
     return Block(pool, op_name)
 
@@ -325,7 +319,7 @@ def MaxPooling(rf_shape,  # e.g. (3,3)
     Layer factory function to create a max-pooling layer.
     '''
     pad = get_default_override(MaxPooling, pad=pad)
-    return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad, name=name)
+    return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad, op_name='MaxPooling', name=name)
 
 
 def AveragePooling(rf_shape,  # e.g. (3,3)
@@ -336,7 +330,7 @@ def AveragePooling(rf_shape,  # e.g. (3,3)
     Layer factory function to create an average-pooling layer.
     '''
     pad = get_default_override(AveragePooling, pad=pad)
-    return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad, name=name)
+    return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad, op_name='AveragePooling', name=name)
 
 
 # TODO: Is this the same as reduce_max()?
@@ -344,14 +338,14 @@ def GlobalMaxPooling(name=''):
     '''
     Layer factory function to create a global max-pooling layer.
     '''
-    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, name=name)
+    return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
 
 
 def GlobalAveragePooling(name=''):
     '''
     Layer factory function to create a global average-pooling layer.
     '''
-    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, name=name)
+    return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
 
 
 def Delay(T=1, initial_state=default_override_or(0), name=''):
@@ -363,7 +357,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
     initial_state = _get_initial_state_or_default(initial_state)
 
     # expression
-    @BlockFunction
+    @BlockFunction('Delay', name)
     def delay_f(x):
         # TODO: reenable this
         ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
@@ -376,7 +370,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         ## regular case
         return delay(x, initial_state=initial_state, time_step=T)
 
-    delay_f = _inject_name(delay_f, name)
+    #delay_f = _inject_name(delay_f, name)
 
     return Block(delay_f, 'Delay')
 
@@ -385,11 +379,11 @@ def Dropout(prob, name=''):
     '''
     Layer factory function to create a drop-out layer.
     '''
-    @BlockFunction
+    @BlockFunction('Dropout', name)
     def dropout(x):
         from cntk.ops import dropout # avoid scope mixup
         return dropout(x, dropout_rate=prob)
-    dropout = _inject_name(dropout, name)
+    #dropout = _inject_name(dropout, name)
     return Block(dropout, 'Dropout')
 
 
@@ -419,13 +413,13 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     run_count    = Constant(0, shape=(1,))
 
     # expression
-    @BlockFunction
+    @BlockFunction('BatchNormalization', name)
     def batch_normalize(x):
         #x = Placeholder(name='batch_normalization_arg')
         return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   use_cudnn_engine=not use_cntk_engine)
 
-    batch_normalize = _inject_name(batch_normalize, name)
+    #batch_normalize = _inject_name(batch_normalize, name)
 
     return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
@@ -441,7 +435,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     bias  = Parameter((1), init=initial_bias)
 
     # expression
-    @BlockFunction
+    @BlockFunction('LayerNormalization', name)
     def layer_normalize(x):
         mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
         x0 = x - mean;
@@ -450,7 +444,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
         x_hat = x0 / std
         return x_hat * scale + bias    # denormalize with learned parameters
 
-    layer_normalize = _inject_name(layer_normalize, name)
+    #layer_normalize = _inject_name(layer_normalize, name)
 
     return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))
 
@@ -467,7 +461,7 @@ def Label(name):
     return label
 
 
-def PastValueWindow(window_size, axis, go_backwards=default_override_or(False)):
+def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name=''):
     '''
     Layer factory function to create a function that returns a static, maskable view for N past steps over a sequence along the given 'axis'.
     It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
@@ -484,7 +478,7 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False)):
             final_f = sequence.last
         return final_f(Delay(offset)(input))
 
-    @BlockFunction
+    @BlockFunction('PastValueWindow', name)
     def past_value_window(x):
     
         ones_like_input = sequence.constant_with_dynamic_axes_like(1, x)

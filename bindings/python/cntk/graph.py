@@ -19,7 +19,9 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
-    stack = [(root,0,0)] # node, distance, Block depth
+    #stack = [(root,0,0)] # node, distance, Block depth
+    # was changed to:
+    stack = [(root.root_function,0,0)] # node, distance, Block depth
     accum = []         # final result (all unique nodes in a list) (node, distance)
     visited = set()    # [node]
 

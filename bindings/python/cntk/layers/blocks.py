@@ -134,11 +134,11 @@ def Block(f, op_name, members={}):
     return f
 
 
-def BlockFunction(f):
+def BlockFunction(op_name, name):
     '''
     Same as @Function, but wrap the content into an as_block().
     '''
-    return Function(f, make_block=True)
+    return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
     # TODO: bring this ^^ back after as_block works, and then undo the x_last hack
     # BUGBUG: Assumed only be used by recurrent cells to fix their ordering, which fails.
     #return Function(f)  # BUGBUG: causes random axis inference errors
@@ -246,11 +246,11 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
     beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething   --TODO: change in Python
 
     # expression
-    @BlockFunction
+    @BlockFunction('Stabilizer', name)
     def stabilize(x):
         return beta * x
 
-    stabilize = _inject_name(stabilize, name)
+    #stabilize = _inject_name(stabilize, name)
 
     return Block(stabilize, 'Stabilizer', Record(beta=beta))
 
@@ -318,7 +318,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # LSTM model function
     # in this case:
     #   (dh, dc, x_last) --> (h, c)
-    @BlockFunction
+    #@BlockFunction(type, name)
     #def lstm(dh, dc, x_last):
     #    x = x_last
     def lstm(dh, dc, x):
@@ -367,7 +367,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # TODO: Is this the same definition as NVidia's? Should we enable multiple definitions of this?
     # BUGBUG: gru(x_last,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
     #          This may have changed with as_block(), which cannot handle unused inputs. TODO: test this.
-    @BlockFunction
+    #@BlockFunction(type, name)
     def gru(dh, x_last):
         x = x_last
 
@@ -403,7 +403,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # returns the new state as a tuple with names but order matters
         return Function.NamedOutput(h=h)
 
-    @BlockFunction
+    #@BlockFunction(type, name)
     def rnn(dh, x_last):
         x = x_last
         dhs = Sdh(dh)  # previous value, stabilized
@@ -412,17 +412,21 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
         return Function.NamedOutput(h=h)
 
-    # return the corresponding lambda as a CNTK Function
-    function = Block({
+    function = {
         'RNNUnit': rnn,
         'GRU':     gru,
         'LSTM':    lstm
-    }[type], type)
+    }[type]
+
+    # return the corresponding lambda as a CNTK Function
+    function = BlockFunction(type, name)(function)
+
+    # return the corresponding lambda as a CNTK Function
 
     # BUGBUG: This cannot work for the tuple-valued LSTM Function
     #function = _inject_name(function, name)
 
-    return function
+    return Block(function, type)
 
 
 def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peepholes=default_override_or(False),

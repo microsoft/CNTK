@@ -53,7 +53,7 @@ class Function(cntk_py.Function):
     # Use this as a decorator, e.g.:
     #   @Function
     #   def f(x): return x * x
-    def __new__(cls, f, members = {}, make_block=False):
+    def __new__(cls, f, members = {}, make_block=False, op_name=None, name=None):
         # Parameter() creation inside code of a Function def is forbidden
         from ..default_options import default_options
         with default_options(pure=True):
@@ -150,10 +150,8 @@ class Function(cntk_py.Function):
             if make_block: # if we make a block then run off a separate set
                 block_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
                 out = invoke(block_args)
-                out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=f_name)
-                print('made block out of', f_name)
-                # BUGBUG: This ^^ causes random errors of mismatching axes. Fixed by x_last hack.
-                #         Seems to work now after latest merge?
+                out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=op_name, block_instance_name=name)
+                print('made block out of', f_name, op_name, name)
             # not a block
             else:
                 fun_args = args
@@ -195,7 +193,7 @@ class Function(cntk_py.Function):
                 out.__dict__[key] = members[key]
             return out
 
-    def __init__(self, f, members = {}, make_block=False):
+    def __init__(self, f, members = {}, make_block=False, op_name=None, name=None):
         # don't call the base class, since Function is abstract in C++
         pass
 
