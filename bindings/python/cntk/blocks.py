@@ -161,14 +161,12 @@ def _initializer_for(init, rank_params=None):
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # All layers functions call this at the end. 
-# BUGBUG: does not actually exist yet, faking it
-# BUGBUG: should create a new object, but does it in-place instead. Works for current usage, but should be fixed.
-# BUGBUG: using combine causes an error ater, so the name actually does not get changed
-# BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
-def Block(f, op_name, members={}):
-    #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
-    #_name_node(f, op_name) ; _extend_Function(f)  # debugging
-    for key in members:   # self.__dict__.update(args_dict)
+def Block(f, op_name, instance_name='', members={}, make_block=False): 
+    if make_block: 
+        inner_args = f.arguments
+        args_map = [(arg, Placeholder(name=arg.name)) for arg in inner_args]
+        f = as_block(f, args_map, op_name, instance_name)
+    for key in members:
         f.__dict__[key] = members[key]
     return f
 
@@ -230,8 +228,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
     # TODO: risk of confusion; can these functions be namespaced?
     beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
     apply_x = beta * x
-    apply_x = as_block(apply_x, [(x, Placeholder(name='stabilizer_arg'))], 'Stabilizer', name)
-    return Block(apply_x, 'Stabilizer', Record(beta=beta))
+    return Block(apply_x, 'Stabilizer', name, Record(beta=beta), True)
 
 def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
          init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
