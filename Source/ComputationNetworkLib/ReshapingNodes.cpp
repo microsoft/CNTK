@@ -61,10 +61,18 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
+    if (m_reduceAll && m_mean)
+    {
+        //for mean reduction and all axes we need to carefully compute the scaling factor
+        auto mbLayout = InputRef(0).GetMBLayout();
+        auto actual_samples = mbLayout != nullptr ? mbLayout->GetActualNumSamples() : 1;
+        m_scale = ElemType((1.0 / GetInputSampleLayout(0).GetNumElements()) / actual_samples);
+    }
+
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
-    auto result =             ValueTensorFor(rank, fr);
-    auto input  = InputRef(0).ValueTensorFor(rank, fr);
+    auto input  = InputRef(0).   ValueTensorFor(rank, fr);
+    auto result = !m_reduceAll ? ValueTensorFor(rank, fr) : TensorView<ElemType>(ValuePtr(), TensorShape(1));
 
     // the actual operation is a Copy with reduction, where the magic is in the reduction op
     // For "Mean", m_scale is 1/#elements, and 1 otherwise.
@@ -78,8 +86,8 @@ template <class ElemType>
 
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
-    auto sliceOutputGrad =             GradientTensorFor(rank, fr); // propagate from this one...
-    auto sliceInputGrad  = InputRef(0).GradientTensorFor(rank, fr); // ...to this one
+    auto sliceOutputGrad = !m_reduceAll ? GradientTensorFor(rank, fr) : TensorView<ElemType>(GradientPtr(), TensorShape(1)); // propagate from this one...
+    auto sliceInputGrad  = InputRef(0).   GradientTensorFor(rank, fr); // ...to this one
 
     // gradients are not as simple as passing an op-code, unfortunately
     switch (m_reductionOp)
@@ -174,35 +182,42 @@ void ReduceElementsNode<ElemType>::ValidateOp()
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Validate(bool isFinalValidationPass) /*override*/
 {
-    Base::Validate(isFinalValidationPass);
-    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-
-    // validate the opcode (in case we got instantiated empty and never updated)
-    ValidateOp();
-
-    let shape = Input(0)->GetSampleLayout();
-    auto dims = shape.GetDims();
-    size_t reducedDim = 0; // (init to keep compiler happy)
-    if (m_axis == 0)
-    {
-        reducedDim = shape.GetNumElements();
-        dims = { 1 };                       // entire sample is reduced to a scalar
-    }
-    else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
-    {
-        reducedDim = dims[m_axis - 1];
-        dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
-    }
-    else if (isFinalValidationPass)
-        InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
-
-    // for "Mean", we must divide by #elements
-    if (isFinalValidationPass && m_operation == L"Mean")
-        m_scale = (ElemType)(1.0 / reducedDim);
+    if (m_operation == L"Mean")
+        m_mean = true;
+    m_scale = (ElemType)1;
+    if (m_reduceAll)
+        Base::ValidateUnaryReduce(isFinalValidationPass);
     else
-        m_scale = (ElemType)1;
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-    SetDims(TensorShape(dims), Input(0)->HasMBLayout());
+        // validate the opcode (in case we got instantiated empty and never updated)
+        ValidateOp();
+
+        let shape = Input(0)->GetSampleLayout();
+        auto dims = shape.GetDims();
+        size_t reducedDim = 0; // (init to keep compiler happy)
+        if (m_axis == 0)
+        {
+            reducedDim = shape.GetNumElements();
+            dims = { 1 };                       // entire sample is reduced to a scalar
+        }
+        else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
+        {
+            reducedDim = dims[m_axis - 1];
+            dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
+        }
+        else if (isFinalValidationPass)
+            InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
+
+        // for "Mean", we must divide by #elements
+        if (isFinalValidationPass && m_mean)
+            m_scale = (ElemType)(1.0 / reducedDim);
+
+        SetDimsq(TensorShape(dims), Input(0)->HasMBLayout());
+    }
+
 }
 
 template class ReduceElementsNode<float>;

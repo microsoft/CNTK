@@ -812,6 +812,7 @@ namespace CNTK
         CNTK_API static const int SentinelStaticAxisIndexValueForAllStaticAxes;
         CNTK_API static const int SentinelStaticAxisIndexValueForUnknownAxes;
         CNTK_API static const int SentinelEndStaticAxisIndexValue;
+        CNTK_API static const int SentinelStaticAxisIndexValueForAllAxes;
 
         class UniqueDynamicAxesNames
         {
@@ -883,7 +884,8 @@ namespace CNTK
         {
             return ((m_staticAxisIdx != SentinelStaticAxisIndexValueForDynamicAxes) &&
                     (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllStaticAxes) &&
-                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForUnknownAxes));
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForUnknownAxes) &&
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllAxes));
         }
 
         ///
@@ -924,6 +926,11 @@ namespace CNTK
         /// Axis object representing all the static axes of an operand
         ///
         CNTK_API static const Axis& AllStaticAxes();
+
+        ///
+        /// Axis object representing all the axes of an operand
+        ///
+        CNTK_API static const Axis& AllAxes();
 
         ///
         /// Returns a new unique Dynamic axis

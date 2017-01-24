@@ -102,6 +102,17 @@ class Axis(cntk_py.Axis):
 
     @staticmethod
     @typemap
+    def all_axes():
+        '''
+        Axis object representing all the axes of an operand.
+
+        Returns:
+            :class:`Axis`: all axes
+        '''
+        return cntk_py.Axis.all_axes()
+
+    @staticmethod
+    @typemap
     def default_input_variable_dynamic_axes():
         '''
         Default dynamic axes of the input variable

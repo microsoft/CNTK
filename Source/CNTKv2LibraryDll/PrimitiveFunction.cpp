@@ -126,6 +126,7 @@ namespace CNTK
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||
+            (op == PrimitiveOpType::ReduceElements && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>() == Axis::AllAxes()) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::ClassificationError) ||
@@ -552,7 +553,7 @@ namespace CNTK
                     {
                         assert(inputs.size() == 1);
                         auto reductionAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0].Shape());
-                        if (reductionAxis == Axis::AllStaticAxes())
+                        if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                             outputShape = {};
                         else
                         {
