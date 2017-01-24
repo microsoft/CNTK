@@ -318,10 +318,90 @@ def test(reader, model, num_minibatches=None):
     return total_error/i
 
 ########################
+# beam search          #
+########################
+def beam_search(model, features, labels, vocab_dim, max_label_length, beam_depth=3):
+    
+    import heapq
+    
+    # setup the hyp_lbl which is each of the hypotheses so far
+    hyp_lbl = np.zeros((beam_depth, max_label_length, vocab_dim)) # the first axis is the hypotheses
+    hyp_lbl[0:beam_depth, 0, :] = labels[0,:]   # <s>
+
+    # global probabilities = (beam_depth)^2
+    global_probs = np.zeros((beam_depth*beam_depth))
+    
+    # the (beam_depth)^2 word indices for each of the current prediction's hypotheses
+    cur_words = np.zeros((beam_depth * beam_depth), dtype=np.int)
+
+    # only take the first bit of the label --> we always ignore the LAST word in the label
+    lbls = labels[0:2,:].reshape(2, vocab_dim) # 2 because we cut off the '<s>' in the label
+    
+    # get initial predictions
+    pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
+                       find_arg_by_name('raw_labels', model) : [lbls]})
+
+    arr = pred[0,0,:]
+    hyp_ind = heapq.nlargest(beam_depth, range(len(arr)), arr.take)
+    
+    # beam_depth-best probs so far...    
+    probs = arr[hyp_ind]
+
+    # setup the hypotheses labels so far
+    for i in range(beam_depth):
+        hyp_lbl[i, 1, hyp_ind[i]] = 1
+
+    # for now go max_label_length (eventually stop at '</s>')
+    for j in range(max_label_length - 2):
+
+        # consider each of the hypotheses    
+        for i in range(beam_depth):        
+            lbls = hyp_lbl[i, 0:j+3, :].reshape(j+3, vocab_dim)  # 3 because now we care about the 2nd label on the first pass
+            pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
+                               find_arg_by_name('raw_labels', model) : [lbls]})
+            arr = pred[0, j+1, :]
+            hyp_ind = heapq.nlargest(beam_depth, range(len(arr)), arr.take)
+            local_probs = arr[hyp_ind]        
+        
+            cur_words[i*beam_depth : i*beam_depth + beam_depth] = hyp_ind
+        
+            # now get top 'beam_depth' probabilities
+            prod_probs = probs[i] * local_probs
+            global_probs[i*beam_depth : i*beam_depth + beam_depth] = prod_probs
+        
+        # choose the 'beam_depth'-best hypotheses and update the probs
+        hyp_ind = heapq.nlargest(beam_depth, range(len(global_probs)), global_probs.take)
+        probs = global_probs[hyp_ind]        
+      
+        # and update the hypotheses labels
+        for i in range(beam_depth):
+            # first set the correct previous word
+            prev_word = np.argmax(hyp_lbl[hyp_ind[i] // beam_depth, j+1, :]) # get the word index
+            hyp_lbl[i, j+1, np.argmax(hyp_lbl[i, j+1, :])] = 0 # reset to 0
+            hyp_lbl[i, j+1, prev_word] = 1                     # set to new current best word            
+            hyp_lbl[i, j+2, cur_words[hyp_ind[i]]] = 1         # now set the correct current word
+
+    # choose the best path and setup the prediction
+    return np.argmax(hyp_lbl, axis=2)[np.argmax(global_probs) // beam_depth, 1:] # start at 1 because we cut out the '<s>'
+
+########################
 # interactive session  #
 ########################
 
-def translate_string(input_string, model, vocab, i2w, show_attention=False, max_label_length=20):
+def clone_and_hook(model):
+    
+    decoder_history_hook = find_by_name(model, 'decoder_history_hook')
+    embed_param = find_by_name(model, 'embedding')       
+    
+    # network output for decoder history
+    net_output = hardmax(model)
+    if use_embedding:
+        net_output = times(hardmax(model), embed_param)
+
+    # make a clone of the graph where the ground truth is replaced by the network output
+    return model.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
+
+def translate_string(input_string, base_model, vocab, i2w, show_attention=False, use_beam_search=False, beam_depth=3, max_label_length=20):
 
     vdict = {vocab[i]:i for i in range(len(vocab))}
     w = [vdict["<s>"]] + [vdict[w] for w in input_string] + [vdict["</s>"]]
@@ -335,12 +415,17 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
     for t in range(len(l)):
         labels[t,l[t]] = 1
     
-    pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
-                       find_arg_by_name('raw_labels', model) : [labels]})
-    
+    # if not using beam search we clone in the hardmax, otherwise we do it piece-by-piece...
+    if use_beam_search:
+        prediction = beam_search(base_model, features, labels, len(vdict), max_label_length=max_label_length, beam_depth=beam_depth)
+    else:
+        model = clone_and_hook(base_model)
+        pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
+                           find_arg_by_name('raw_labels', model) : [labels]})
+        prediction = np.argmax(pred, axis=2)[0]
+        
     # print out translation and stop at the sequence-end tag
     tlen = 1 # length of the output sequence
-    prediction = np.argmax(pred, axis=2)[0]
     for i in prediction:
         phoneme = i2w[i]
         if phoneme == "</s>": break
@@ -376,15 +461,15 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         sns.heatmap(dframe)
         plt.show()
 
-def interactive_session(model, vocab, i2w, show_attention=False):
+def interactive_session(model, vocab, i2w, show_attention=False, use_beam_search=False, beam_depth=3):
 
-    import sys
+    import sys        
 
     while True:
         user_input = input("> ").upper()
         if user_input == "QUIT":
             break
-        translate_string(user_input, model, vocab, i2w, show_attention=True)
+        translate_string(user_input, model, vocab, i2w, show_attention=show_attention, use_beam_search=use_beam_search, beam_depth=beam_depth)
         sys.stdout.flush()
 
 ########################
@@ -449,16 +534,16 @@ def create_inputs():
 if __name__ == '__main__':
 
     # hook up data
-    train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
-    valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
+    #train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
+    #valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
-    inputs = create_inputs()
-    model = create_model(inputs)
+    #inputs = create_inputs()
+    #model = create_model(inputs)
     
     # train
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     # write
     #model = load_model("model_epoch0.cmf")
@@ -471,6 +556,6 @@ if __name__ == '__main__':
     
     # test the model out in an interactive session
     print('loading model...')
-    model_filename = "model_epoch4.cmf"
+    model_filename = "model_epoch4.cmf.b"
     model = load_model(model_filename)
-    interactive_session(model, vocab, i2w, show_attention=True)
+    interactive_session(model, vocab, i2w, show_attention=False, use_beam_search=True, beam_depth=3)
