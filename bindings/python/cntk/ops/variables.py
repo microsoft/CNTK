@@ -1,5 +1,6 @@
 import numpy as np
 from cntk import cntk_py, NDArrayView
+from cntk.device import DeviceDescriptor
 from ..tensor import TensorOpsMixin
 from ..utils import typemap, sanitize_precision, sanitize_value, \
         sanitize_shape, sanitize_dtype_cntk
@@ -212,8 +213,12 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
             else:
                 dtype = np.float32
 
+        if device is None:
+            device = DeviceDescriptor.use_default_device()
+
         if np.isscalar(value):
-            super(Constant, self).__init__(sanitize_shape(shape), sanitize_dtype_cntk(dtype), value)
+            super(Constant, self).__init__(sanitize_shape(shape),
+                    sanitize_dtype_cntk(dtype), value, device, name)
         else:
             ndav = sanitize_value(shape, value, dtype, device)
             super(Constant, self).__init__(ndav, name)
