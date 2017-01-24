@@ -161,7 +161,13 @@ def _initializer_for(init, rank_params=None):
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # All layers functions call this at the end. 
+# BUGBUG: does not actually exist yet, faking it
+# BUGBUG: should create a new object, but does it in-place instead. Works for current usage, but should be fixed.
+# BUGBUG: using combine causes an error ater, so the name actually does not get changed
+# BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
 def Block(f, op_name, members={}):
+    #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
+    #_name_node(f, op_name) ; _extend_Function(f)  # debugging
     for key in members:   # self.__dict__.update(args_dict)
         f.__dict__[key] = members[key]
     return f
