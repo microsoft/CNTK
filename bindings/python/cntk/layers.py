@@ -185,7 +185,8 @@ def Deconvolution(filter_shape,        # e.g. (3,3)
                 bias=bias_default_or_True,
                 init_bias=init_bias_default_or_0,
                 reduction_rank=1, # (must be 1 currently)
-                max_temp_mem_size_in_samples=0):
+                max_temp_mem_size_in_samples=0, 
+                name=''):
     activation = _resolve_activation(activation)
     pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
     bias = bias if _is_given(bias) else _get_current_default_options().bias
@@ -217,7 +218,7 @@ def Deconvolution(filter_shape,        # e.g. (3,3)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Deconvolution', Record(W=W, b=b))
+    return Block(apply_x, 'Deconvolution', name, Record(W=W, b=b), make_block=True)
 
 # Create a Pooling layer with one of following types:
 #
@@ -273,13 +274,13 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
                  strides=1,
                  pad=False,
                  lower_pad=0,
-                 upper_pad=0):
-    x = Placeholder(name='unpool_input')
-    y = Placeholder(name='pool_input')
+                 upper_pad=0, 
+                 name=''):
+    x = Placeholder(name='unpool_arg')
+    y = Placeholder(name='pool_arg')
     apply_x = unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
                          lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
-
-    return Block(apply_x, "MaxUnpooling")
+    return Block(apply_x, 'MaxUnpooling', name, make_block=True)
 
 # Recurrence() -- run a block recurrently over a time sequence
 def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None, name=''):
