@@ -17,7 +17,7 @@ from .utils.debughelpers import _name_node, _node_name, _node_description, _log_
 #from cntk.layers import *
 from .utils import Record
 from cntk import combine
-from .blocks import identity, Block_dumb
+from .blocks import identity, Block
 
 # Sequential -- composite that applies a sequence of layers (or any functions) onto an input
 # Sequential ([F, G, H]) === F >> G >> H

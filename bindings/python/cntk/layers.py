@@ -240,7 +240,6 @@ def Pooling(op,      # PoolingType_Max or _Average
         op_name = 'MaxPooling'
     else:
         raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
-    apply_x = as_block(apply_x, [(x, Placeholder(name='pooling_arg'))], op_name, name)
     return Block(apply_x, op_name, name, make_block=True)
 
 # MaxPooling
