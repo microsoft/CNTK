@@ -301,7 +301,7 @@ def _Pooling(op,       # PoolingType_Max or _Average
     if sequential:
         raise NotImplementedError("Pooling: sequential option not implemented yet")
 
-    @Function
+    @BlockFunction
     def pool(x):
         return pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
@@ -363,7 +363,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
     initial_state = _get_initial_state_or_default(initial_state)
 
     # expression
-    @Function
+    @BlockFunction
     def delay_f(x):
         # TODO: reenable this
         ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
@@ -385,7 +385,7 @@ def Dropout(prob, name=''):
     '''
     Layer factory function to create a drop-out layer.
     '''
-    @Function
+    @BlockFunction
     def dropout(x):
         from cntk.ops import dropout # avoid scope mixup
         return dropout(x, dropout_rate=prob)
@@ -419,7 +419,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     run_count    = Constant(0, shape=(1,))
 
     # expression
-    @Function
+    @BlockFunction
     def batch_normalize(x):
         #x = Placeholder(name='batch_normalization_arg')
         return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
@@ -441,7 +441,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     bias  = Parameter((1), init=initial_bias)
 
     # expression
-    @Function
+    @BlockFunction
     def layer_normalize(x):
         mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
         x0 = x - mean;
@@ -460,7 +460,7 @@ def Label(name):
     Layer factory function to create a function that assigns a label string to an intermediate Function
     Dense(...) >> Label('hidden') >> Dense(...)
     '''
-    @Function
+    @Function  # cannot be a BlockFunction since that would hide the label
     def label(x):
         return alias(x, name=name)
     # BUGBUG: Fails for sparse, since PassNode cannot pass on sparse data presently. Shallow fix would be to add an 'if' inside PassNode.
@@ -484,7 +484,7 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False)):
             final_f = sequence.last
         return final_f(Delay(offset)(input))
 
-    @Function
+    @BlockFunction
     def past_value_window(x):
     
         ones_like_input = sequence.constant_with_dynamic_axes_like(1, x)
