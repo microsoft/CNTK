@@ -343,8 +343,9 @@ class Function(cntk_py.Function):
         # Multiple Ellipses will turn into Function args in order of occurence, since the underlying
         # Function is already guaranteed to traverse its arguments in the same order.
         # This is non-standard Python, so suggestions for alternative syntaxes are welcome.
-        from cntk import placeholder_variable, combine, alias, as_block
-        arg_map = { param: arg if arg is not Ellipsis else placeholder_variable() for param, arg in arg_map.items() }
+        # TODO: remove this again, and just let users use Python lambdas instead
+        from cntk import placeholder_variable
+        #arg_map = { param: arg if arg is not Ellipsis else placeholder_variable() for param, arg in arg_map.items() }
 
         # if placeholders were excluded due to being under construction,
         # we must include them in the argmap, otherwise they will be cloned

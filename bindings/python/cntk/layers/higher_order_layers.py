@@ -59,6 +59,17 @@ def For(range, constructor, name=''):
 def LayerStack(N, constructor):
     return For(range(N), constructor)
 
+
+def _sanitize_function(f):
+    '''
+    Helper to type-cast a Python function into a CNTK Function if not yet.
+    '''
+    import types
+    if isinstance(f, types.FunctionType):
+        f = Function(f)
+    return f
+
+
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
@@ -70,10 +81,7 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
 
-    import types
-    if isinstance(over_function, types.FunctionType):
-        UntestedBranchError("RecurrenceFrom() over a Python function")
-        over_function = Function(over_function)
+    over_function = _sanitize_function(over_function)
 
     # get signature of cell
     *prev_state_args, _ = over_function.signature
@@ -138,9 +146,7 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
-    import types
-    if isinstance(over_function, types.FunctionType):
-        over_function = Function(over_function)
+    over_function = _sanitize_function(over_function)
 
     # get signature of cell
     *prev_state_args, _ = over_function.signature
@@ -209,11 +215,9 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
     of `f` differently.
     '''
 
-    import types
-    if isinstance(map_state_function, types.FunctionType):
-        map_state_function = Function(map_state_function)
-    if isinstance(until_predicate, types.FunctionType):
-        until_predicate = Function(until_predicate)
+    generator_function = _sanitize_function(generator_function)
+    map_state_function = _sanitize_function(map_state_function)
+    until_predicate    = _sanitize_function(until_predicate)
 
     # check the signature of the passed function
     if len(generator_function.signature) != 1 or len(generator_function.outputs) < 1 or len(generator_function.outputs) > 2:
