@@ -30,7 +30,7 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
         if max_depth is None or depth < max_depth:
             try:
                 # TODO: This is still broken, needs to be cleaned up after debugging/desperate trying-around.
-                composite = node.block_composite
+                composite = node.block_root
                 # BlockFunction node
                 mapping = node.block_arguments_mapping
                 # redirect the composite's inputs to the true inputs
