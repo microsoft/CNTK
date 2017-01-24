@@ -733,6 +733,9 @@ class UserFunction(Function):
 
             variables[k] = sanitize_batch(k, v, None, state.device())
 
+    def op_name(self):
+        return 'UserFunction'
+
 @typemap
 def load_model(filename, device=None):
     '''
