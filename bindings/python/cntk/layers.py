@@ -233,13 +233,6 @@ def Pooling(op,      # PoolingType_Max or _Average
             name=''):
     x = Placeholder(name='pooling_arg')
     apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
-
-    if op == PoolingType_Average:
-        op_name = 'AveragePooling'
-    elif op == PoolingType_Max:
-        op_name = 'MaxPooling'
-    else:
-        raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
     return Block(apply_x, [(x, Placeholder())], name)
 
 # MaxPooling
@@ -278,7 +271,7 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
     return Block(apply_x, "MaxUnpooling")
 
 # Recurrence() -- run a block recurrently over a time sequence
-def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
+def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None, name=''):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
     initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
@@ -305,7 +298,7 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
         _log_node(combine([h.owner]))
     apply_x = combine([h])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
-    return Block_dumb(apply_x, 'Recurrence', Record(over=over))
+    return Block_dumb(apply_x, name, Record(over=over))
 
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
