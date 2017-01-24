@@ -159,6 +159,7 @@ class Function(cntk_py.Function):
                 fun_args = args
                 #if len(fun_args) > 1:
                 #    fun_args = force_order_args(fun_args)
+                # BUGBUG: Python interpreter crash if enabling this
                 # ^^ BUGBUG: due to instability of as_block() and inefficiency of the above solution, for now only do if needed
                 # now invoke the Python function
                 out = invoke(fun_args)

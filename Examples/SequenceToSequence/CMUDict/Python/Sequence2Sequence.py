@@ -38,7 +38,7 @@ num_layers = 2
 attention_dim = 128
 attention_span = 20
 attention_axis = -3
-use_attention = True
+use_attention = False
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -149,7 +149,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                     else:
                         r = Recurrence(rec_block)(r)
                 else:
-                    r = RecurrenceFrom(rec_block)(r, *encoded_input.outputs) # :: r, h0, c0 -> h
+                    r = RecurrenceFrom(rec_block)(*encoded_input.outputs, r) # :: h0, c0, r -> h
             r = stab_out(r)
             r = proj_out(r)
             return r
@@ -200,7 +200,11 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                             length_increase=length_increase, initial_state=sentence_start)
         return unfold(dynamic_axes_like=input)
 
-    model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+    try:
+      model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+    except:
+      debughelpers.dump_function(model_greedy, 'model_greedy')
+      raise
     #model_greedy.dump()
     from cntk.graph import output_function_graph
     output_function_graph(model_greedy, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
