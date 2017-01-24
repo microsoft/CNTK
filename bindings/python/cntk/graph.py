@@ -20,7 +20,7 @@ def depth_first_search(node, visitor):
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
-    stack = [node]
+    stack = [node.root_function]
     accum = []
     visited = set()
 

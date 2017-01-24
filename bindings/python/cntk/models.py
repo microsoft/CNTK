@@ -17,7 +17,7 @@ from .utils.debughelpers import _name_node, _node_name, _node_description, _log_
 #from cntk.layers import *
 from .utils import Record
 from cntk import combine
-from .blocks import identity, Block
+from .blocks import identity, Block_dumb
 
 # Sequential -- composite that applies a sequence of layers (or any functions) onto an input
 # Sequential ([F, G, H]) === F >> G >> H
@@ -41,7 +41,7 @@ def Sequential(layers):
     from functools import reduce
     apply_x = reduce(lambda f, g: f >> Sequential(g), layers, identity)
     attrs = Record(layers=layers)
-    return Block(apply_x, 'Sequential', attrs)
+    return Block_dumb(apply_x, 'Sequential', attrs)
 
 # LayerStack(3, lambda i: Dense(3))
 # LayerStack(3, lambda: Dense(3))
@@ -56,4 +56,4 @@ def LayerStack(N, constructor):
             return constructor()   # takes no arg: call without, that's fine too
     layers = [call(i) for i in range(N)]
     apply_x = Sequential(layers)
-    return Block(apply_x, 'LayerStack', Record(layers=layers))
+    return Block_dumb(apply_x, 'LayerStack', Record(layers=layers))
