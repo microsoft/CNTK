@@ -2318,6 +2318,51 @@ __global__ void _innerProduct(
 }
 
 template <class ElemType>
+__global__ void _innerProduct4SparseCSC(
+    ElemType* c,
+    const ElemType* a,
+    const GPUSPARSE_INDEX_TYPE* aRowIndex,
+    const GPUSPARSE_INDEX_TYPE* aColCSCIndex,
+    const ElemType* b,
+    const CUDA_LONG M, // a.GetNumRows();
+    const CUDA_LONG N, // a.GetNumCols();
+    const bool isColWise)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if ((isColWise && id >= N) || (!isColWise && id >= M))
+        return;
+
+    ElemType sum = 0;
+    CUDA_LONG index;
+
+    if (isColWise)
+    {
+        for (CUDA_LONG i = aColCSCIndex[id]; i < aColCSCIndex[id+1]; i++)
+        {
+            index = IDX2C(aRowIndex[i], id, M);
+            sum += a[i] * b[index];
+        }
+    }
+    else
+    {
+        for (CUDA_LONG j = 0; j < N; ++j)
+        {
+            for (CUDA_LONG i = aColCSCIndex[j]; i < aColCSCIndex[j+1]; i++)
+            {
+                if (aRowIndex[i] == id)
+                {
+                    index = IDX2C(id, j, M);
+                    sum += a[i] * b[index];
+                    break;
+                }
+            }
+        }
+    }
+
+    c[id] = sum;
+}
+
+template <class ElemType>
 __global__ void _assignSignOf(
     ElemType* a,
     const ElemType* b,
