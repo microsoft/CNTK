@@ -75,7 +75,7 @@ def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_defa
     if b:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, [(x, Placeholder())], name, Record(W=W, b=b))
+    return Block(apply_x, [(x, Placeholder(name='dense_arg'))], 'Dense', name, Record(W=W, b=b))
 
 # Embedding -- create a linear embedding layer
 # To create an embedding from a file, use this:
@@ -111,7 +111,7 @@ def Embedding(shape=None, init=None, weights=None, name=''):
     # expression
     x = Placeholder(name='embedding_arg')
     apply_x = times(x, E)
-    return Block(apply_x, [(x, Placeholder())], name, Record(E=E))
+    return Block(apply_x, [(x, Placeholder(name='embedding_arg'))], 'Embedding', name, Record(E=E))
 
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
@@ -169,7 +169,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, [(x, Placeholder())], name, Record(W=W, b=b))
+    return Block(apply_x, [(x, Placeholder(name='convolution_arg'))], 'Convolution', name, Record(W=W, b=b))
 
 # Deconvolution -- create a deconvolution layer with optional non-linearity
 def Deconvolution(filter_shape,        # e.g. (3,3)
@@ -233,7 +233,14 @@ def Pooling(op,      # PoolingType_Max or _Average
             name=''):
     x = Placeholder(name='pooling_arg')
     apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
-    return Block(apply_x, [(x, Placeholder())], name)
+
+    if op == PoolingType_Average:
+        op_name = 'AveragePooling'
+    elif op == PoolingType_Max:
+        op_name = 'MaxPooling'
+    else:
+        raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
+    return Block(apply_x, [(x, Placeholder(name='pooling_arg'))], op_name, name)
 
 # MaxPooling
 def MaxPooling(filter_shape,  # e.g. (3,3)
@@ -313,14 +320,14 @@ def Delay(T=1, initial_state=None, name=''):
         apply_x = future_value(x, time_step=-T, initial_state=initial_state)
     else:
         apply_x = x
-    return Block(apply_x, [(x, Placeholder())], name)
+    return Block(apply_x, [(x, Placeholder(name='delay_arg'))], 'Delay', name)
 
 # Dropout -- create a drop-out layer
 def Dropout(prob,name=''):
     # expression
     x = Placeholder(name='dropout_arg')
     apply_x = dropout(x, dropout_rate=prob)
-    return Block(apply_x, [(x, Placeholder())], name)
+    return Block(apply_x, [(x, Placeholder(name='dropout_arg'))], 'Dropout', name)
 
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
@@ -345,7 +352,8 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   #use_cntk_engine=use_cntk_engine)
                                   use_cudnn_engine=not use_cntk_engine)
-    return Block(apply_x, [(x, Placeholder())], name, Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
+    return Block(apply_x, [(x, Placeholder(name='batch_normalization_arg'))], 'BatchNormalization', 
+                 name, Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
 # LayerNormalization -- create a layer-normalization layer
 def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
@@ -363,4 +371,4 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     #x_hat = element_divide (x0, std)
     x_hat = x0 / std
     apply_x = x_hat * scale + bias    # denormalize with learned parameters
-    return Block(apply_x, [(x, Placeholder())], name, Record(scale=scale, bias=bias))
+    return Block(apply_x, [(x, Placeholder(name='layer_normalization_arg'))], 'LayerNormalization', name, Record(scale=scale, bias=bias))

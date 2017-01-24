@@ -161,8 +161,8 @@ def _initializer_for(init, rank_params=None):
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # All layers functions call this at the end. 
-def Block(f, block_arguments_map, block_name, members={}): 
-    f = as_block(f, block_arguments_map, block_name, block_instance_name=block_name)
+def Block(f, block_arguments_map, block_op_name, block_instance_name, members={}): 
+    f = as_block(f, block_arguments_map, block_op_name, block_instance_name)
     for key in members:
         f.__dict__[key] = members[key]
     return f
@@ -232,7 +232,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
     # TODO: risk of confusion; can these functions be namespaced?
     beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
     apply_x = beta * x
-    return Block(apply_x, [(x, Placeholder())], name, Record(beta=beta))
+    return Block(apply_x, [(x, Placeholder(name='stabilizer_arg'))], 'Stabilizer', name, Record(beta=beta))
 
 def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
          init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
