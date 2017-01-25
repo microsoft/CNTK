@@ -339,7 +339,7 @@ def Activation(activation=activation_default_or_None, name=''):
     # expression 
     activation = _resolve_activation(activation)
     x = Placeholder(name='activation_arg') 
-    apply_x = x >> activation 
+    apply_x = activation(x) 
     return Block(apply_x, 'Activation', name, make_block=True) 
 
 # BatchNormalization -- create a batch-normalization layer
