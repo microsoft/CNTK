@@ -120,7 +120,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         stab_in = Stabilizer()
         rec_blocks = [LSTM(hidden_dim) for i in range(num_layers)]
         stab_out = Stabilizer()
-        proj_out = Dense(label_vocab_dim)
+        proj_out = Dense(label_vocab_dim, name='out_proj')
         # attention model
         if use_attention:
             attention_model = AttentionModel(attention_dim, attention_span, attention_axis, name='attention_model') # :: (h_enc*, h_dec) -> (h_aug_dec)
@@ -154,6 +154,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                     r = RecurrenceFrom(rec_block)(*encoded_input.outputs, r) # :: h0, c0, r -> h
             r = stab_out(r)
             r = proj_out(r)
+            r = Label('out_proj_out')(r)
             return r
 
     return decode
@@ -209,8 +210,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     #output_function_graph(model_train, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
 
     @Function
-    def criterion(input, x_last):
-        labels = x_last
+    def criterion(input, labels):
+        #labels = x_last
         # criterion function must drop the <s> from the labels
         postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
         z = model_train(input, postprocessed_labels)
@@ -220,8 +221,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     try:
       #criterion.dump()
       criterion.update_signature(input=Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                               x_last=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
-      #                         labels=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+                               #x_last=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+                               labels=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
     except:
       #criterion.dump()
       raise
@@ -252,35 +253,30 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     log_number_of_parameters(model_train) ; print()
     progress_printer = ProgressPrinter(freq=30, tag='Training')
 
-    # dummy for printing the input sequence below
-    #from cntk import Function
+    # dummy for printing the input sequence below. Currently needed because input is sparse.
     I = Constant(np.eye(input_vocab_dim))
     @Function
-    def noop(input):
+    def no_op(input):
         return times(input, I)
-    noop.update_signature(Type(input_vocab_dim, is_sparse=True))
+    no_op.update_signature(Type(input_vocab_dim, is_sparse=True))
 
     for epoch in range(max_epochs):
 
         while i < (epoch+1) * epoch_size:
             # get next minibatch of training data
             mb_train = train_reader.next_minibatch(minibatch_size)
-            #trainer.train_minibatch({find_arg_by_name('raw_input' , model_train) : mb_train[train_reader.streams.features], 
-            #                         find_arg_by_name('raw_labels', model_train) : mb_train[train_reader.streams.labels]})
             trainer.train_minibatch(mb_train[train_reader.streams.features], mb_train[train_reader.streams.labels])
 
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
             # every N MBs evaluate on a test sequence to visually show how we're doing
             if mbs % sample_freq == 0:
-                mb_valid = valid_reader.next_minibatch(minibatch_size)
-                
-                q = noop(mb_valid[valid_reader.streams.features])
-                print_sequences(q, i2w)
-                print(end=" -> ")
+                mb_valid = valid_reader.next_minibatch(1)
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
                 e = model_greedy(mb_valid[valid_reader.streams.features])
+                print_sequences(no_op(mb_valid[valid_reader.streams.features]), i2w)
+                print("->")
                 print_sequences(e, i2w)
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
@@ -447,8 +443,6 @@ def get_vocab(path):
 
 # Given a vocab and tensor, print the output
 def print_sequences(sequences, i2w):
-    #for s in sequences:
-    #    print([[np.max(w)] for w in s], sep=" ")
     for s in sequences:
         print([i2w[np.argmax(w)] for w in s], sep=" ")
 
@@ -463,6 +457,10 @@ def find_arg_by_name(name, expression):
 def debug_attention(model, input):
     #q = combine([model, model.attention_model.attention_weights, model.attention_model.u_masked, model.attention_model.h_enc_valid])
     #words, p, u, v = q(input)
+    #W = model.out_proj.W
+    #print(W.is_parameter)
+    #Wv = W.value   # BUGBUG: fails. is_parameter, but is not Parameter
+    #print(model.out_proj_out.W)
     q = combine([model, model.attention_model.attention_weights])
     words, p = q(input)
     len = words.shape[attention_axis-1]
@@ -471,7 +469,10 @@ def debug_attention(model, input):
     #u_sq = np.squeeze(u[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
     #v_sq = np.squeeze(v[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
     #print(p_sq.shape, p_sq, u_sq, v_sq)
-    print(p_sq.shape, p_sq)
+    opts = np.get_printoptions()
+    np.set_printoptions(precision=5)
+    print(p_sq)
+    np.set_printoptions(**opts)
 
 #############################
 # main function boilerplate #

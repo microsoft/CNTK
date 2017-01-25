@@ -70,6 +70,7 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
 
     return [node for node, distance in accum]
 
+# BUGBUG: Doesn't this require @typemap, so ?
 def find_all_with_name(node, node_name, max_depth=None):
     '''
     Finds functions in the graph starting from ``node`` and doing a depth-first

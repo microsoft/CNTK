@@ -138,7 +138,7 @@ class Function(cntk_py.Function):
                         out_i = out[i]
                         if out_i in out_seen:
                             out[i] = alias(out_i)
-                            print('alias-wrapping duplicate arg in', f_name)
+                            #print('alias-wrapping duplicate arg in', f_name)
                         else:
                             out_seen.add(out_i)
                     out = combine(out)  # --> turn into a combine()
@@ -151,7 +151,7 @@ class Function(cntk_py.Function):
                 block_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
                 out = invoke(block_args)
                 out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=op_name, block_instance_name=name)
-                print('made block out of', f_name, op_name, name)
+                #print('made block out of', f_name, op_name, name)
             # not a block
             else:
                 fun_args = args
@@ -164,7 +164,7 @@ class Function(cntk_py.Function):
                 # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
                 out_arg_names = [arg.name for arg in out.signature]
                 if set(out_arg_names) == set(arg_names) and out_arg_names != arg_names:  # order came out wrong
-                    print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
+                    #print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
                     fun_args = force_order_args(fun_args)
                     out = invoke(fun_args)   #.outputs) # BUGBUG: move .outputs back up
 
@@ -355,7 +355,7 @@ class Function(cntk_py.Function):
         # we must include them in the argmap, otherwise they will be cloned
         for arg in self.arguments:
             if arg not in arg_map:
-                print('excluded placeholder detected:', arg.name)
+                #print('excluded placeholder detected:', arg.name)
                 arg_map[arg] = arg
 
         # determine whether this is eval() or clone()
@@ -479,18 +479,16 @@ class Function(cntk_py.Function):
                 raise
 
         # lookup of a named object inside the graph
-        # In case of multiple matches, return the one closest to the root.
-        # BUGBUG: This is brittle--e.g. if we have two Dense() on top of each opther,
-        # retrieving 'W' on the outer one will return the right thing.
-        # However, retrieving 'b' if the outer has no bias would unexpectedly
-        # return the 'b' of the inner, instead of throwing an error.
-        # This look up is meant as a lookup into a single Function object.
-        # Once as_block() is reliable, we may be able to solve it that way.
-        from ..graph import try_find_closest_by_name
-        item = try_find_closest_by_name(self, name)
+        # When 'self' is a BlockFunction (e.g. a named layer), then we only search in there,
+        # while when 'self' is a regular node (e.g. a named output using Label),
+        # we search the composite, which may return multiple hits with the same name.
+        # In case of multiple matches, we fail.
+        # BUGBUG: That is a problem if, e.g., someone used a layer (=BlockFunction) twice
+        # and then looks it up by name, as that will fail although both instances are identical.
+        from ..graph import find_by_name
+        item = typemap(find_by_name)(self.block_root if self.is_block else self, name)
         if item:
             return item
-        # BUGBUG: causes a stack overflow since beta9
 
         # access an API member of 'output', such as .shape()
         if len(self.outputs) == 1:
