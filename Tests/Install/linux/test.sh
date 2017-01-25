@@ -5,7 +5,7 @@ USAGE="Usage: $0 [--py-version [27|34|35]] -- <drops-to-test>"
 
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
-PY_VERSION=34
+PY_VERSION=35
 
 while [ $# -gt 0 ]; do
   case "$1" in

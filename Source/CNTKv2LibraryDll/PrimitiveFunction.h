@@ -228,12 +228,12 @@ namespace CNTK
         static const std::wstring AttributeNameUnpoolingWindowShape;
 
     protected:
-        PrimitiveFunction(const std::vector<Variable>& blockInputs, const std::vector<Variable>& blockOutputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(blockInputs, blockOutputs, std::move(functionConfig), functionName, uid), m_op(PrimitiveOpType::Block)
+        PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
+            : Function(inputs, std::move(functionConfig), functionName, uid), m_op(op)
         {}
 
     public:
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
+        PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
         {}
 
@@ -275,10 +275,6 @@ namespace CNTK
         }
 
     private:
-
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(inputs, GetOutputVariables(op, inputs, functionConfig, true, (functionName != L"" ? functionName : uid)), std::move(functionConfig), functionName, uid), m_op(op)
-        {}
 
         // The following helper functions are used to determine the output shape for different 
         // types of primitive operations accounting for broadcasting and reductions where applicable.
@@ -692,23 +688,18 @@ namespace CNTK
             return UnaryElementwiseOpOutputShape(mainOperandShape);
         }
 
-        virtual std::vector<Variable> GetOutputVariables(bool inferDimensions);
-
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
         static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
         static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig);
-        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
-                                                        std::vector<Variable>& inputs,
-                                                        Dictionary& functionConfig,
-                                                        bool inferDimensions,
-                                                        const std::wstring& functionName);
+
+        virtual std::vector<Variable> InferOutputs() override;
 
     private:
         PrimitiveOpType m_op;
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
-        static const size_t s_serializationVersion = 2;
+        static const size_t s_serializationVersion = 3;
     };
 }

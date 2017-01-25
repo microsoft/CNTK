@@ -249,6 +249,7 @@ Examples/Image/DataSets/grocery/testImages/
 Examples/Image/DataSets/grocery/*.txt
 Examples/Image/PretrainedModels/*.model
 Examples/Image/FeatureExtraction/*.txt
+Examples/Image/GettingStarted/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/

@@ -1,0 +1,33 @@
+dataDir: ../../../../../../Examples/Image/DataSets/MNIST
+
+tags:
+    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    - nightly-e (build_sku=='gpu') and (((device=='gpu') and (flavor=='release')) or (os=='linux' and ((flavor=='debug') ^ (device=='cpu'))))
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - __COMPLETED__
+
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - momentum = {{float}}
+
+  Epochs must be finished with expected results:
+    patterns:
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - rmse = {{float,tolerance=1%}} * {{integer}}
+      - totalSamplesSeen = {{integer}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}
+
+  Per-minibatch training results must match:
+    patterns:
+      - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
+      - rmse = {{float,tolerance=10%}} * {{integer}}
+
+  Final test results must match:
+    patterns:
+      - "Final Results: Minibatch[{{integer}}-{{integer}}]"
+      - rmse = {{float,tolerance=10%}} * {{integer}}

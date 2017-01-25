@@ -1,9 +1,7 @@
 dataDir: ../Data
 tags:
-     # running on every BVT job in 'I' (Image) leg:
-     - bvt-i  (build_sku == 'gpu') and device=='gpu'
-     # running every Nightly job in 'I' leg
-     - nightly-i (build_sku == 'gpu') and device=='gpu'
+     - bvt-i (build_sku == 'gpu') and (device == 'gpu')
+     - nightly-i (build_sku == 'gpu') and (device == 'gpu')
 
 testCases:
   CNTK Run must be completed:

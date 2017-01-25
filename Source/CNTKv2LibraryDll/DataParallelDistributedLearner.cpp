@@ -147,6 +147,6 @@ namespace CNTK
         if (info.IsEmpty())
             return false;
 
-        return m_learner->Update(gradientValues, info.numberOfSamples);
+        return m_learner->Update(gradientValues, info.numberOfSamples, info.atEndOfSweep);
     }
 }

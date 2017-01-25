@@ -88,14 +88,14 @@ class Communicator(cntk_py.DistributedCommunicator):
         '''
         Returns information about all MPI workers.
         '''
-        return len(cntk_py.mpicommunicator().workers())
+        return cntk_py.number_of_workers()
 
     @staticmethod
     def rank():
         '''
         Returns rank of current process.
         '''
-        return cntk_py.mpicommunicator().current_worker().m_global_rank
+        return cntk_py.worker_global_rank()
 
 class DistributedLearner(cntk_py.DistributedLearner):
     '''

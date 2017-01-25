@@ -41,7 +41,7 @@ def Sequential(layers):
     from functools import reduce
     apply_x = reduce(lambda f, g: f >> Sequential(g), layers, identity)
     attrs = Record(layers=layers)
-    return Block(apply_x, 'Sequential', attrs)
+    return Block(apply_x, 'Sequential', members=attrs)
 
 # LayerStack(3, lambda i: Dense(3))
 # LayerStack(3, lambda: Dense(3))
@@ -56,4 +56,4 @@ def LayerStack(N, constructor):
             return constructor()   # takes no arg: call without, that's fine too
     layers = [call(i) for i in range(N)]
     apply_x = Sequential(layers)
-    return Block(apply_x, 'LayerStack', Record(layers=layers))
+    return Block(apply_x, 'LayerStack', members=Record(layers=layers))

@@ -64,12 +64,9 @@
     <Reference Include="System.Drawing" />
   </ItemGroup>
   <ItemGroup Condition="Exists('$(SWIG_PATH)\swig.exe')">
-    <Compile Include="FunctionExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ValueExtensions.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="CntkBitmapExtensions.cs" />
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />
     <Compile Include="SwigProxyClasses\BoolVector.cs" />

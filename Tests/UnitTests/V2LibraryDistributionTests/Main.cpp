@@ -24,8 +24,6 @@ int main(int argc, char* argv[])
     }
 #endif
 
-    std::this_thread::sleep_for(std::chrono::seconds(15));
-
     if (argc != 2)
     {
         fprintf(stderr, "Expecting a log file parameter.\n");

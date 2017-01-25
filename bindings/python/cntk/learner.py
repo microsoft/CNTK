@@ -4,7 +4,7 @@
 # ==============================================================================
 
 import math
-from . import cntk_py
+from . import cntk_py, NDArrayView
 from .utils import typemap
 from enum import Enum, unique
 import numpy as np
@@ -50,6 +50,18 @@ the following learning algorithms:
 | SGD                    |
 +------------------------+
 '''
+
+def default_unit_gain_value():
+    '''
+    Returns true if by default momentum is applied in the unit-gain fashion.
+    '''
+    return cntk_py.default_unit_gain_value()
+
+def set_default_unit_gain_value(value):
+    '''
+    Sets globally default unit-gain flag value.
+    '''
+    cntk_py.set_default_unit_gain_value(value)
 
 # an internal method to verify that the learning rate schedule 
 # has a proper (per-sample or per-MB schedule) type and raise 
@@ -99,8 +111,7 @@ class Learner(cntk_py.Learner):
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
         '''
-        from .utils import _create_NDArrayView_from_NumPy
-        var_nd_map = { var: _create_NDArrayView_from_NumPy(val) for var, val in
+        var_nd_map = { var: NDArrayView.from_data(val) for var, val in
                 gradient_values.items() }
 
         return super(Learner, self).update(var_nd_map, training_sample_count)
@@ -131,7 +142,7 @@ class Learner(cntk_py.Learner):
         return super(Learner, self).learning_rate()
 
 @typemap
-def training_parameter_schedule(schedule, unit, epoch_size=1):
+def training_parameter_schedule(schedule, unit, epoch_size=None):
     '''
     Create a training parameter schedule containing either per-sample (default)
     or per-minibatch values.
@@ -161,8 +172,13 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
         unit (:class:`UnitType`): one of two
           * ``sample``: the returned schedule contains per-sample values
           * ``minibatch``: the returned schedule contains per-minibatch values.
-        epoch_size (int): number of samples as a scheduling unit. Parameters in
-         the schedule change their values every ``epoch_size`` samples.
+        epoch_size (optional, int): number of samples as a scheduling unit. 
+         Parameters in the schedule change their values every ``epoch_size`` 
+         samples. If no ``epoch_size`` is provided, this parameter is substituted 
+         by the size of the full data sweep, in which case the scheduling unit is
+         the entire data sweep (as indicated by the MinibatchSource) and parameters
+         change their values on the sweep-by-sweep basis specified by the 
+         ``schedule``.
 
     Returns:
         training parameter schedule
@@ -178,7 +194,7 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
             return schedule
 
     if isinstance(schedule, (int, float)):
-        if epoch_size != 1:
+        if epoch_size is not None:
             raise ValueError('when providing the schedule as a number,'
                     ' epoch_size is ignored')
         if UnitType(unit) is UnitType.sample:
@@ -186,16 +202,18 @@ def training_parameter_schedule(schedule, unit, epoch_size=1):
         else:
             return cntk_py.training_parameter_per_minibatch_schedule(schedule)
 
+    args = [schedule] if epoch_size is None else [schedule, epoch_size]
+
     if isinstance(schedule, list):
         if UnitType(unit) is UnitType.sample:
-            return cntk_py.training_parameter_per_sample_schedule(schedule, epoch_size)
+            return cntk_py.training_parameter_per_sample_schedule(*args)
         else:
-            return cntk_py.training_parameter_per_minibatch_schedule(schedule, epoch_size)
+            return cntk_py.training_parameter_per_minibatch_schedule(*args)
 
     raise ValueError('schedule must be either a float or a list, not %s'%type(schedule))
 
 @typemap
-def learning_rate_schedule(lr, unit, epoch_size=1):
+def learning_rate_schedule(lr, unit, epoch_size=None):
     '''
     Create a learning rate schedule (using the same semantics as 
     :func:`training_parameter_schedule`).
@@ -217,7 +235,7 @@ def learning_rate_schedule(lr, unit, epoch_size=1):
     return training_parameter_schedule(lr, unit, epoch_size)
 
 @typemap
-def momentum_schedule(momentum, epoch_size=1):
+def momentum_schedule(momentum, epoch_size=None):
     '''
     Create a per-minibatch momentum schedule (using the same semantics as 
     :func:`training_parameter_schedule` with the `unit=UnitType.minibatch`).
@@ -254,7 +272,7 @@ def momentum_schedule(momentum, epoch_size=1):
     return training_parameter_schedule(momentum, UnitType.minibatch, epoch_size)
 
 @typemap
-def momentum_as_time_constant_schedule(momentum, epoch_size=1):
+def momentum_as_time_constant_schedule(momentum, epoch_size=None):
     '''
     Create a momentum schedule in a minibatch-size agnostic way 
     (using the same semantics as :func:`training_parameter_schedule`
@@ -289,9 +307,14 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=1):
         return momentum
 
     if isinstance(momentum, (int, float)):
+        if epoch_size is not None:
+            raise ValueError('when providing the schedule as a number,'
+                ' epoch_size is ignored')
         return cntk_py.momentum_as_time_constant_schedule(momentum)
+
     if isinstance(momentum, list):
-        return cntk_py.momentum_as_time_constant_schedule(momentum, epoch_size)
+        args = [momentum] if epoch_size is None else [momentum, epoch_size]
+        return cntk_py.momentum_as_time_constant_schedule(*args)
 
     raise ValueError('momentum must be either a float or a list, not %s'%type(momentum))
 
@@ -343,7 +366,7 @@ def sgd(parameters, lr,
     return cntk_py.sgd_learner(parameters, lr, additional_options)
 
 @typemap
-def momentum_sgd(parameters, lr, momentum,
+def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
@@ -358,6 +381,8 @@ def momentum_sgd(parameters, lr, momentum,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+         to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
@@ -385,11 +410,11 @@ def momentum_sgd(parameters, lr, momentum,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.momentum_sgd_learner(parameters, lr, momentum,
+    return cntk_py.momentum_sgd_learner(parameters, lr, momentum, unit_gain,
             additional_options)
 
 @typemap
-def nesterov(parameters, lr, momentum,
+def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
@@ -406,6 +431,8 @@ def nesterov(parameters, lr, momentum,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+         to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
         l2_regularization_weight (float, optional): the L2 regularization weight per sample,
@@ -442,7 +469,7 @@ def nesterov(parameters, lr, momentum,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.nesterov_learner(parameters, lr, momentum,
+    return cntk_py.nesterov_learner(parameters, lr, momentum, unit_gain,
             additional_options)
 
 @typemap
@@ -495,7 +522,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
 
 # TODO: unCamelCase and integrate upcoming CR
 @typemap
-def adam_sgd(parameters, lr, momentum,
+def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         variance_momentum = momentum_as_time_constant_schedule(720000),
         low_memory=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
@@ -513,6 +540,8 @@ def adam_sgd(parameters, lr, momentum,
          :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+         to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (output of :func:`momentum_schedule` or
          :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
          to ``momentum_as_time_constant_schedule(720000)``.
@@ -551,7 +580,7 @@ def adam_sgd(parameters, lr, momentum,
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
-    return cntk_py.adam_learner(parameters, lr, momentum,
+    return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
             variance_momentum, low_memory, additional_options)
 
 @typemap

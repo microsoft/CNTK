@@ -8,6 +8,7 @@ __version__ = '2.0'
 import os
 import numpy as np
 
+from .core import *
 from . import ops
 from . import cntk_py
 
@@ -22,6 +23,7 @@ from .device import *
 from .layers import *
 from .models import *
 from .distributed import *
+from .training_session import *
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension
