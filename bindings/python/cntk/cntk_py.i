@@ -1093,7 +1093,7 @@ public:
 %shared_ptr(CNTK::DistributedCommunicator)
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
 %shared_ptr(CNTK::DistributedLearner)
-%shared_ptr(CNTK::TensorBoardFileWriter)
+%shared_ptr(CNTK::Internal::TensorBoardFileWriter)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

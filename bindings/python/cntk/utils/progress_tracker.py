@@ -294,6 +294,8 @@ class ProgressTracker(object):
         if self.tensorboard_writer is not None:
             self.tensorboard_writer.write_value(str(name), float(value), int(step))
 
+# Alias ProgressTracker as ProgressPrinter not to break older scripts.
+ProgressPrinter = ProgressTracker
 
 # print the total number of parameters to log
 def log_number_of_parameters(model, trace_level=0):

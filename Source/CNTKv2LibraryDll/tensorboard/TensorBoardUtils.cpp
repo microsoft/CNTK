@@ -103,7 +103,7 @@ namespace CNTK
         }
 
         // Forward-declaration.
-        tensorflow::NodeDef* CreateFunctionNode(
+        static tensorflow::NodeDef* CreateFunctionNode(
             const FunctionPtr& src,
             tensorflow::GraphDef& dst,
             std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
@@ -112,7 +112,7 @@ namespace CNTK
             std::unordered_map<Variable, VariableWithScope>& placeholderInputs,
             const std::wstring& scope);
 
-        tensorflow::NodeDef* CreateVariableNode(
+        static tensorflow::NodeDef* CreateVariableNode(
             const Variable& src,
             tensorflow::GraphDef& dst,
             std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
@@ -131,7 +131,7 @@ namespace CNTK
             if (src.IsOutput())
             {
                 result = CreateFunctionNode(src.Owner(), dst, functionNodes, variableNodes, placeholders,
-                                            placeholderInputs, scope);
+                    placeholderInputs, scope);
             }
             else
             {
@@ -143,7 +143,7 @@ namespace CNTK
             return result;
         }
 
-        tensorflow::NodeDef* CreateFunctionNode(
+        static tensorflow::NodeDef* CreateFunctionNode(
             const FunctionPtr& src,
             tensorflow::GraphDef& dst,
             std::unordered_map<FunctionPtr, tensorflow::NodeDef*>& functionNodes,
@@ -164,7 +164,7 @@ namespace CNTK
             {
                 std::wstring newScope = Internal::GetScopedName(scope, src);
                 functionNode = CreateFunctionNode(src->BlockRoot(), dst, functionNodes,
-                                                  variableNodes, placeholders, placeholderInputs, newScope);
+                    variableNodes, placeholders, placeholderInputs, newScope);
             }
             else
             {
@@ -185,7 +185,7 @@ namespace CNTK
                     // We don't create placeholders immediately, just register them so we can later trace the actual
                     // input.
                     inputNode = CreateVariableNode(input, dst, functionNodes, variableNodes, placeholders,
-                                                   placeholderInputs, scope);
+                        placeholderInputs, scope);
                 }
 
                 if (!src->IsBlock())
@@ -213,46 +213,48 @@ namespace CNTK
 
             return functionNode;
         }
-    }
 
-    namespace TensorBoardUtils
-    {
-        void CreateGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
+        namespace TensorBoardUtils
         {
-            // For each function/variable visited, contains a matching tensorflow node.
-            std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;
-            std::unordered_map<Variable, tensorflow::NodeDef*> variableNodes;
-
-            // For each (function, placeholder input) found, contains (tensorflow_node, (placeholder, scope)).
-            std::unordered_multimap<tensorflow::NodeDef*, Internal::VariableWithScope> placeholders;
-            // For each placeholder found, contains a (placeholder, (replacement variable, scope)).
-            std::unordered_map<Variable, Internal::VariableWithScope> placeholderInputs;
-            
-            // Create all nodes in the graph, except placeholders.
-            Internal::CreateFunctionNode(src, dst, functionNodes, variableNodes, placeholders, placeholderInputs, L"");
-
-            // For each function that had a placeholder as its input, add a link to the actual input if it was found.
-            for (auto placeholder : placeholders)
+            void CreateGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
             {
-                // Follow the placeholder chain until the end.
-                Internal::VariableWithScope* finalValue = &placeholder.second;
-                
-                do
+                // For each function/variable visited, contains a matching tensorflow node.
+                std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;
+                std::unordered_map<Variable, tensorflow::NodeDef*> variableNodes;
+
+                // For each (function, placeholder input) found, contains (tensorflow_node, (placeholder, scope)).
+                std::unordered_multimap<tensorflow::NodeDef*, Internal::VariableWithScope> placeholders;
+                // For each placeholder found, contains a (placeholder, (replacement variable, scope)).
+                std::unordered_map<Variable, Internal::VariableWithScope> placeholderInputs;
+
+                // Create all nodes in the graph, except placeholders.
+                Internal::CreateFunctionNode(src, dst, functionNodes, variableNodes,
+                                             placeholders, placeholderInputs, L"");
+
+                // For each function that had a placeholder as its input, add a link to the actual input if it was
+                // found.
+                for (auto placeholder : placeholders)
                 {
-                    auto nextInput = placeholderInputs.find(finalValue->first);
-                    if (nextInput == placeholderInputs.end())
+                    // Follow the placeholder chain until the end.
+                    Internal::VariableWithScope* finalValue = &placeholder.second;
+
+                    do
                     {
-                        break;
-                    }
+                        auto nextInput = placeholderInputs.find(finalValue->first);
+                        if (nextInput == placeholderInputs.end())
+                        {
+                            break;
+                        }
 
-                    finalValue = &nextInput->second;
-                } while (true);
+                        finalValue = &nextInput->second;
+                    } while (true);
 
-                // Create a node for the finalValue and add it as an input of the function.
-                tensorflow::NodeDef* inputNode = Internal::CreateVariableNode(
-                    finalValue->first, dst, functionNodes, variableNodes, placeholders, placeholderInputs,
-                    finalValue->second);
-                placeholder.first->add_input(inputNode->name());
+                    // Create a node for the finalValue and add it as an input of the function.
+                    tensorflow::NodeDef* inputNode = Internal::CreateVariableNode(
+                        finalValue->first, dst, functionNodes, variableNodes, placeholders, placeholderInputs,
+                        finalValue->second);
+                    placeholder.first->add_input(inputNode->name());
+                }
             }
         }
     }
