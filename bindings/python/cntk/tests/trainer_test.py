@@ -19,13 +19,17 @@ from .. import cross_entropy_with_softmax, classification_error, parameter, \
 import pytest
 from scipy.sparse import csr_matrix as csr
 
-def test_trainer(tmpdir):
+@pytest.mark.parametrize("no_eval_function", [True, False])
+def test_trainer(tmpdir, no_eval_function):
     in1 = input_variable(shape=(1,))
     labels = input_variable(shape=(1,))
     p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
-    errs = classification_error(z, labels)
+    if no_eval_function:
+        errs = None
+    else:
+        errs = classification_error(z, labels)
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
@@ -240,3 +244,37 @@ def test_model_one_output_of_multi_output_function():
     ce = cross_entropy_with_softmax(combined_model.outputs[0], labels)
     pe = classification_error(combined_model.outputs[0], labels)
     trainer_multitask = Trainer(combined_model.outputs[0], ce, pe, sgd(ce.parameters, lr=lr_schedule))
+
+
+def test_trainer_with_some_params_not_learned():
+    input_dim = 2
+    proj_dim = 2
+    x = input_variable(shape=(input_dim,))
+    W = parameter(shape=(input_dim, proj_dim), init=glorot_uniform())
+    B = parameter(shape=(proj_dim,), init=glorot_uniform())
+    t = times(x, W)
+    z = t + B
+
+    W_orig_value = W.value
+    B_orig_value = B.value
+
+    labels = input_variable(shape=(proj_dim,))
+    ce = cross_entropy_with_softmax(z, labels)
+    pe = classification_error(z, labels)
+
+    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
+    trainer = Trainer(z, ce, pe, sgd([W], lr_per_sample))
+
+    x_value = [[1, 1],[2, 2]]
+    label_value = [[0, 1], [1, 0]]
+    arguments = {x: x_value, labels: label_value}
+
+    num_iters = 3
+    for i in range(num_iters):
+        trainer.train_minibatch(arguments)
+
+        assert np.array_equal(B.value, B_orig_value)
+        assert not np.array_equal(W.value, W_orig_value)
+        W_orig_value = W.value
+
+    trainer.test_minibatch(arguments)

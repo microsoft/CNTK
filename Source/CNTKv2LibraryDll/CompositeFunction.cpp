@@ -351,7 +351,8 @@ namespace CNTK
                                                                  Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                  ComputationNetworkBuilder<ElementType>& builder,
                                                                  std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
-                                                                 std::unordered_map<Variable, bool>& isVariableRootMap)
+                                                                 std::unordered_map<Variable, bool>& isVariableRootMap,
+                                                                 const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
     {
         auto iter = variableToNodeMap.find(variable);
         if (iter != variableToNodeMap.end())
@@ -382,7 +383,7 @@ namespace CNTK
             auto internalNodeName = CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name());
             computationNodePtr = builder.CreateLearnableParameter(internalNodeName, AsTensorShape(variable.Shape()));
             network->InitLearnableParameters(computationNodePtr, L"fixedValue", 0); // must call this to follow protocol; can overwrite later
-            if (!variable.NeedsGradient())
+            if (!variable.NeedsGradient() || (inputsToExcludeGradientsFor.find(variable) != inputsToExcludeGradientsFor.end()))
                 computationNodePtr->SetLearningRateMultiplier(0.0);
 
             NDArrayViewPtr value = variable.IsConstant() ? Constant(variable).Value() : Parameter(variable).Value();
@@ -425,7 +426,7 @@ namespace CNTK
             else
                 computationNodePtr = builder.CreateInputNode(internalNodeName, AsTensorShape(variable.Shape()), internalDynamicAxisName);
 
-            if (variable.NeedsGradient())
+            if (variable.NeedsGradient() && (inputsToExcludeGradientsFor.find(variable) == inputsToExcludeGradientsFor.end()))
             {
                 // Set a dummy learning rate multiplier to force gradient computation for the input computation node since by default
                 // gradients are not computed for Input nodes
@@ -435,7 +436,7 @@ namespace CNTK
         else
         {
             assert(variable.IsOutput());
-            computationNodePtr = GetOutputVariableNode(variable, network, builder, variableToNodeMap, isVariableRootMap)->template As<ComputationNode<ElementType>>()->shared_from_this();
+            computationNodePtr = GetOutputVariableNode(variable, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor)->template As<ComputationNode<ElementType>>()->shared_from_this();
         }
 
         variableToNodeMap[variable] = computationNodePtr;
@@ -812,7 +813,8 @@ namespace CNTK
                                                                                Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                                ComputationNetworkBuilder<ElementType>& builder,
                                                                                std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap,
-                                                                               std::unordered_map<Variable, bool>& isVariableRootMap)
+                                                                               std::unordered_map<Variable, bool>& isVariableRootMap,
+                                                                               const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
     {
         assert(variable.IsOutput());
 
@@ -843,7 +845,7 @@ namespace CNTK
                 inputVar = Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), inputVar.Name());
             }
 
-            auto baseNodePtr = GetNode(inputVar, network, builder, variableToNodeMap, isVariableRootMap);
+            auto baseNodePtr = GetNode(inputVar, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
             inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr);
         }
 
@@ -857,7 +859,7 @@ namespace CNTK
             for (auto compositeArgument : compositeArguments)
                 variableToNodeMap[compositeArgument] = variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
 
-            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, variableToNodeMap, isVariableRootMap);
+            return GetNode(variable.BlockFunctionVariableMapping(), network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
         }
         else
             computationNodePtr = CreateComputationNode(variable, function, inputNodes, network, variableToNodeMap);
@@ -873,7 +875,11 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device, const std::unordered_set<Variable>& backpropRoots, const std::unordered_set<Variable>& outputs, bool allocateNetworkMatrices)
+    ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device,
+                                                                   const std::unordered_set<Variable>& backpropRoots,
+                                                                   const std::unordered_set<Variable>& outputs,
+                                                                   const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
+                                                                   bool allocateNetworkMatrices)
     {
         if (m_computationNetwork != nullptr)
         {
@@ -886,10 +892,23 @@ namespace CNTK
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
             if (AsDeviceDescriptor(m_computationNetwork->GetDeviceId()) != device)
                 LogicError("Changing device across different Forward calls on a CNTK composite Function is currently unsupported");
+
+            if (!backpropRoots.empty() && (inputsToExcludeGradientsFor != m_inputsExcludedFromGradientComputation))
+                LogicError("Changing the set of inputs to exclude from gradient computation, across different Forward calls on a CNTK composite Function, is currently unsupported");
         }
         else
         {
             m_computationNetwork = std::make_shared<ComputationNetwork>(AsCNTKImplDeviceId(device));
+
+            auto networkInputs = this->Inputs();
+            for (auto inputExcluded : inputsToExcludeGradientsFor)
+            {
+                // Only inputs of the network can be excluded from gradient computation
+                if (std::find(networkInputs.begin(), networkInputs.end(), inputExcluded) == networkInputs.end())
+                    InvalidArgument("Function::Forward: Only inputs of a Function can be excluded from gradient computation");
+            }
+
+            m_inputsExcludedFromGradientComputation = inputsToExcludeGradientsFor;
 
             ComputationNetworkBuilder<ElementType> builder(*m_computationNetwork);
 
@@ -905,7 +924,7 @@ namespace CNTK
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->Outputs();
             for (auto rootOutput : rootFunctionOutputs)
-                GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap);
+                GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap, m_inputsExcludedFromGradientComputation);
 
             // We need to patch the Computation node mappings for the arguments of block functions 
             // since for recurrent inputs, the mappings are not fully established the first time
@@ -1011,7 +1030,6 @@ namespace CNTK
             for (auto parameter : functionParameters)
                 m_lastRecordedParameterValueTimeStamps.insert({ parameter, parameter.CurrentValueTimeStamp() });
         }
-
 
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
         {
@@ -1239,8 +1257,8 @@ namespace CNTK
                 InvalidArgument("Backpropagated gradient values can only be obtained for inputs of a Function");
 
             // Gradients can only be obtained for parameter variables or input variables that NeedsGradient
-            if (!gradientVarValuePair.first.NeedsGradient())
-                InvalidArgument("Gradient value incorrectly requested for an Output or Constant Variable, or an Input Variable with NeedsGradient setting of false");
+            if (!gradientVarValuePair.first.NeedsGradient() || (m_inputsExcludedFromGradientComputation.find(gradientVarValuePair.first) != m_inputsExcludedFromGradientComputation.end()))
+                InvalidArgument("Gradient value incorrectly requested for an Output or Constant Variable, an Input Variable with NeedsGradient setting of false, or an input for which gradient computation was explicitly excluded");
 
             auto computationNodePtr = m_variableToNodeMap.at(gradientVarValuePair.first);
 
@@ -1279,7 +1297,8 @@ namespace CNTK
     /*virtual*/ BackPropStatePtr CompositeFunction::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                                             std::unordered_map<Variable, ValuePtr>& outputs,
                                                             const DeviceDescriptor& computeDevice,
-                                                            const std::unordered_set<Variable>& outputsToRetainBackwardStateFor)
+                                                            const std::unordered_set<Variable>& outputsToRetainBackwardStateFor,
+                                                            const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
     {
         // Validate arguments and outputs
         if (outputs.empty())
@@ -1310,9 +1329,9 @@ namespace CNTK
             requestedOutputVariables.insert(output.first);
 
         if (dataType == DataType::Float)
-            GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, true);
+            GetComputationNetwork<float>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
         else if (dataType == DataType::Double)
-            GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, true);
+            GetComputationNetwork<double>(computeDevice, outputsToRetainBackwardStateFor, requestedOutputVariables, inputsToExcludeGradientsFor, true);
         else
             InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
 

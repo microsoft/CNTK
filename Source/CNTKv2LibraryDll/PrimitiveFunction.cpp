@@ -529,12 +529,14 @@ namespace CNTK
                         else
                             assert(m_inputs.size() == 2);
 
-                        if ((m_inputs[0].Shape().Rank() > 2) || ((m_inputs[0].Shape().Rank() > 1) && (m_inputs[0].Shape()[1] != 1)))
+                        if (((m_inputs[0].Shape().Rank() > 2) || ((m_inputs[0].Shape().Rank() > 1) && (m_inputs[0].Shape()[1] != 1))) ||
+                            ((m_inputs[1].Shape().Rank() > 2) || ((m_inputs[1].Shape().Rank() > 1) && (m_inputs[1].Shape()[1] != 1))))
                             InvalidArgument("The shape of input operands for the %S operation should have at most one axis", PrimitiveOpTypeName(m_op).c_str());
 
                         auto predictionShape = m_inputs[0].Shape();
                         auto labelsShape = m_inputs[1].Shape();
-                        if (predictionShape != labelsShape)
+                        auto numLeadingAxesToCompare = std::min(predictionShape.Rank(), labelsShape.Rank());
+                        if (predictionShape.SubShape(0, numLeadingAxesToCompare) != labelsShape.SubShape(0, numLeadingAxesToCompare))
                             RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(m_op).c_str());
 
                         std::vector<int> reductionAxes;

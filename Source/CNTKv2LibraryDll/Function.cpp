@@ -82,11 +82,12 @@ namespace CNTK
     BackPropStatePtr Function::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                        std::unordered_map<Variable, ValuePtr>& outputs,
                                        const DeviceDescriptor& computeDevice,
-                                       const std::unordered_set<Variable>& outputsToRetainBackwardStateFor)
+                                       const std::unordered_set<Variable>& outputsToRetainBackwardStateFor,
+                                       const std::unordered_set<Variable>& inputsToExcludeGradientsFor)
     {
         auto compositeFunction = dynamic_cast<CompositeFunction*>(this);
         if (compositeFunction)
-            return compositeFunction->Forward(arguments, outputs, computeDevice, outputsToRetainBackwardStateFor);
+            return compositeFunction->Forward(arguments, outputs, computeDevice, outputsToRetainBackwardStateFor, inputsToExcludeGradientsFor);
 
         std::vector<ValuePtr> inputValues;
         auto functionInputs = Inputs();
