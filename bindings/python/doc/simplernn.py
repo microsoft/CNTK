@@ -6,7 +6,7 @@ from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs,\
 from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, \
         classification_error, sequence
-from cntk.utils import ProgressTracker
+from cntk.utils import ProgressPrinter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "Examples", "common"))
@@ -71,11 +71,11 @@ def train_sequence_classifier(debug_output=False):
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200
 
-    pt = ProgressTracker(0)
+    pp = ProgressPrinter(0)
     for i in range(255):
         mb = reader.next_minibatch(minibatch_size, input_map=input_map)
         trainer.train_minibatch(mb)
-        pt.update_with_trainer(trainer, True)
+        pp.update_with_trainer(trainer, True)
 
     evaluation_average = float(trainer.previous_minibatch_evaluation_average)
     loss_average = float(trainer.previous_minibatch_loss_average)

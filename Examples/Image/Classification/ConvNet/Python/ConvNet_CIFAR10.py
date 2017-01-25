@@ -84,7 +84,7 @@ def convnet_cifar10(debug_output=False):
     }
 
     cntk.utils.log_number_of_parameters(z) ; print()
-    progress_tracker = cntk.utils.ProgressTracker(tag='Training')
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training')
 
     # Get minibatches of images to train with and perform model training
     max_epochs = 30
@@ -94,9 +94,9 @@ def convnet_cifar10(debug_output=False):
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
-            progress_tracker.update_with_trainer(trainer, with_metric=True) # log progress
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
-        progress_tracker.epoch_summary(with_metric=True)
+        progress_printer.epoch_summary(with_metric=True)
         z.save_model(os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))
     
     # Load test data

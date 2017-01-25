@@ -11,7 +11,7 @@ from cntk.cntk_py import TensorBoardFileWriter
 
 
 # TODO: Let's switch to import logging in the future instead of print. [ebarsoum]
-class ProgressTracker(object):
+class ProgressPrinter(object):
     '''
     Allows tracking various training time statistics (e.g. loss and metric)
     and output them as training progresses.
@@ -99,7 +99,7 @@ class ProgressTracker(object):
             self.___logprint('    loss       last     metric       last              ')
             self.___logprint(' ------------------------------------------------------')
 
-    def end_progress_tracking(self, msg=""):
+    def end_progress_print(self, msg=""):
         self.___logprint('CNTKCommandTrainEnd: train')
         if msg != "" and self.log_to_file is not None:
             self.___logprint(msg)
@@ -294,8 +294,6 @@ class ProgressTracker(object):
         if self.tensorboard_writer is not None:
             self.tensorboard_writer.write_value(str(name), float(value), int(step))
 
-# Alias ProgressTracker as ProgressPrinter not to break older scripts.
-ProgressPrinter = ProgressTracker
 
 # print the total number of parameters to log
 def log_number_of_parameters(model, trace_level=0):

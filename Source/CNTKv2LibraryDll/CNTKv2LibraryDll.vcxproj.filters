@@ -81,7 +81,7 @@
     <Proto Include="proto\CNTK.proto">
       <Filter>proto</Filter>
     </Proto>
-    <Proto Include="tensorboard\CNTK.proto">
+    <Proto Include="tensorboard\tensorboard.proto">
       <Filter>tensorboard</Filter>
     </Proto>
   </ItemGroup>

@@ -18,9 +18,9 @@ class TrainingSession(cntk_py.TrainingSession):
     a minibatch source and a :doc:`trainer <cntk.trainer>` and takes care of checkpointing.
     '''
     def __init__(self, training_minibatch_source, trainer, mb_size_schedule,
-                 progress_tracker, model_inputs_to_mb_source_mapping,
+                 progress_printer, model_inputs_to_mb_source_mapping, 
                  checkpoint_frequency, checkpoint_filename):
-        self.progress_tracker = progress_tracker
+        self.progress_printer = progress_printer
         self.trainer=trainer
         super(TrainingSession, self).__init__ (training_minibatch_source, trainer, model_inputs_to_mb_source_mapping, mb_size_schedule, checkpoint_frequency, checkpoint_filename)
 
@@ -36,12 +36,12 @@ class TrainingSession(cntk_py.TrainingSession):
         super(TrainingSession, self).train(device)
 
     def on_minibatch_end(self):
-        if self.progress_tracker and self.trainer.total_number_of_samples_seen != 0:
-            self.progress_tracker.update_with_trainer(self.trainer, with_metric=True)
+        if self.progress_printer and self.trainer.total_number_of_samples_seen != 0:
+            self.progress_printer.update_with_trainer(self.trainer, with_metric=True)
 
     def on_checkpoint_end(self):
-        if self.progress_tracker:
-            self.progress_tracker.epoch_summary(with_metric=True)
+        if self.progress_printer:
+            self.progress_printer.epoch_summary(with_metric=True)
 
 @typemap
 def minibatch_size_schedule(schedule, epoch_size=1):
@@ -88,7 +88,7 @@ def minibatch_size_schedule(schedule, epoch_size=1):
 @typemap
 def training_session(training_minibatch_source,
                      trainer, mb_size_schedule,
-                     progress_tracker=None,
+                     progress_printer=None,
                      model_inputs_to_mb_source_mapping={},
                      checkpoint_filename=None,
                      checkpoint_frequency=0):
@@ -99,7 +99,7 @@ def training_session(training_minibatch_source,
         training_minibatch_source: a minibatch source that will be used for training.
         trainer: a Trainer.
         mb_size_schedule: a minibatch size schedule returned from :func:`minibatch_size_schedule`
-        progress_tracker: a progress tracker instance
+        progress_printer: a progress printer instance
         model_inputs_to_mb_source_mapping: mapping between the input node names of the model and the stream 
          names provided from the minibatch source. By default all streams are taken with their respective names.
         checkpoint_filename: a file name of the checkpoint file, if None, the checkpointing is disabled.
@@ -120,7 +120,7 @@ def training_session(training_minibatch_source,
         checkpoint_filename=""
 
     return TrainingSession(training_minibatch_source, trainer, 
-                           mb_size_schedule, progress_tracker,
+                           mb_size_schedule, progress_printer, 
                            model_inputs_to_mb_source_mapping, 
                            checkpoint_frequency,
                            checkpoint_filename)

@@ -20,7 +20,7 @@ namespace CNTK
         namespace TensorBoardUtils
         {
             ///
-            /// Poplulates the given TensorFlow GraphDef with the graph of the given CNTK function.
+            /// Populates the given TensorFlow GraphDef with the graph of the given CNTK function.
             ///
             void CreateGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
         }

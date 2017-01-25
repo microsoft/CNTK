@@ -11,7 +11,7 @@ from cntk.device import cpu, set_default_device
 from cntk import Trainer
 from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sigmoid
-from cntk.utils import ProgressTracker
+from cntk.utils import ProgressPrinter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "Examples", "common"))
@@ -59,15 +59,15 @@ def ffnet():
     # Get minibatches of training data and perform model training
     minibatch_size = 25
 
-    pt = ProgressTracker(128)
+    pp = ProgressPrinter(128)
     for i in range(1024):
         features, labels = generate_random_data(
             minibatch_size, input_dim, num_output_classes)
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
         trainer.train_minibatch({input: features, label: labels})
-        pt.update_with_trainer(trainer)
-    pt.epoch_summary()
+        pp.update_with_trainer(trainer)
+    pp.epoch_summary()
     test_features, test_labels = generate_random_data(
         minibatch_size, input_dim, num_output_classes)
     avg_error = trainer.test_minibatch(

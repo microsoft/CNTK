@@ -73,8 +73,8 @@ namespace CNTK
             return record;
         }
 
-        TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const FunctionPtr& model)
-            : m_model(model),
+        TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const FunctionPtr& modelToVisualize)
+            : m_model(modelToVisualize),
             m_dir(dir),
             m_file(NULL),
             m_fileName()
@@ -208,7 +208,7 @@ namespace CNTK
             if (fclose(m_file))
             {
                 fprintf(stderr,
-                        "TensorBoardFileWriter: Error closing previous the event file (%ls).", m_fileName.c_str());
+                        "TensorBoardFileWriter: Error closing the previous event file (%ls).", m_fileName.c_str());
                 success = false;
             }
 

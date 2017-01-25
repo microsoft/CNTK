@@ -11,7 +11,7 @@ from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INF
 from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant, \
                      reduce_max, reduce_mean, reduce_min
-from cntk.utils import ProgressTracker
+from cntk.utils import ProgressPrinter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -72,9 +72,9 @@ def simple_mnist():
     # Instantiate the trainer object to drive the model training
     trainer = Trainer(netout, ce, pe, sgd(netout.parameters, lr=lr_per_minibatch))
 
-    # Instantiate a ProgressTracker.
+    # Instantiate a ProgressPrinter.
     logdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mnist_log") 
-    progress_tracker = ProgressTracker(tag='Training', freq=1, tensorboard_log_dir=logdir, model=netout)
+    progress_printer = ProgressPrinter(tag='Training', freq=1, tensorboard_log_dir=logdir, model=netout)
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 64
@@ -86,15 +86,15 @@ def simple_mnist():
         trainer.train_minibatch(reader_train.next_minibatch(minibatch_size, input_map=input_map))
 
         # Take snapshot of loss and eval criterion for the previous minibatch.
-        progress_tracker.update_with_trainer(trainer, with_metric=True)
+        progress_printer.update_with_trainer(trainer, with_metric=True)
 
         # Log max/min/mean of each parameter tensor, so that we can confirm that the parameters change indeed.
         # Don't want to do that very often though, otherwise will spend too much time computing min/max/mean.
         if minibatch_idx % 10 == 9:
             for p in netout.parameters:
-                progress_tracker.update_value("mb_" + p.uid + "_max", reduce_max(p).eval(), minibatch_idx)
-                progress_tracker.update_value("mb_" + p.uid + "_min", reduce_min(p).eval(), minibatch_idx)
-                progress_tracker.update_value("mb_" + p.uid + "_mean", reduce_mean(p).eval(), minibatch_idx)
+                progress_printer.update_value("mb_" + p.uid + "_max", reduce_max(p).eval(), minibatch_idx)
+                progress_printer.update_value("mb_" + p.uid + "_min", reduce_min(p).eval(), minibatch_idx)
+                progress_printer.update_value("mb_" + p.uid + "_mean", reduce_mean(p).eval(), minibatch_idx)
 
     # Load test data
     try:

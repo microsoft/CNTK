@@ -2,7 +2,7 @@ from __future__ import print_function
 import numpy as np
 import cntk as C
 from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.utils import ProgressTracker
+from cntk.utils import ProgressPrinter
 from cntk.layers import Dense
 from cntk.models import Sequential
 
@@ -46,14 +46,14 @@ def ffnet():
     minibatch_size = 25
     num_minibatches_to_train = 1024
 
-    pt = ProgressTracker(0)
+    pp = ProgressPrinter(0)
     for i in range(num_minibatches_to_train):
         train_features, labels = generate_random_data(minibatch_size, inputs, outputs)
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         trainer.train_minibatch({features : train_features, label : labels})
-        pt.update_with_trainer(trainer)
+        pp.update_with_trainer(trainer)
 
-    last_avg_error = pt.avg_loss_since_start()
+    last_avg_error = pp.avg_loss_since_start()
 
     test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
     avg_error = trainer.test_minibatch({features : test_features, label : test_labels})
