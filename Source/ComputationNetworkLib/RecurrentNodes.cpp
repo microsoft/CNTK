@@ -428,7 +428,7 @@ template<class ElemType, int direction>
         {
             // In this case, we really only back-prop values we have.
             // Non-determinism note:
-            // If timeStep > 1 and initial state sequences are not broadcasting, we will have a reduction.
+            // If timeStep > 1 and initial state sequences are broadcasting, we will have a reduction.
             // That reduction may be non-deterministic.
             // In the regular case (timeStep = 1), there will be no non-determinism.
             let&  idx  =                 DataFor(*m_packedIndexMatrix, fr); // column indices that guide the copy operation

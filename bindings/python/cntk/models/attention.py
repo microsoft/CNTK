@@ -7,10 +7,9 @@
 # attention -- standard attention model
 
 from __future__ import division
-from ..layers import *
-from ..layers.blocks import _inject_name # helpers
 from ..ops.functions import Function
-from ..ops import sequence
+from ..layers.blocks import _inject_name # helpers
+from ..layers import *
 
 
 # AttentionModel block

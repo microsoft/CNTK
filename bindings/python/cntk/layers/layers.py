@@ -12,7 +12,7 @@ import numpy as np
 from ..ops.functions import Function
 from ..ops.variables import Variable
 from ..ops import parameter, input_variable, placeholder_variable, combine
-from ..ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, sequence, delay, softmax, tanh, reduce_sum
+from ..ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, sequence, softmax, tanh, reduce_sum
 from ..utils import Record, _as_tuple
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
@@ -424,33 +424,6 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
     return Block(maxunpooling, 'MaxUnpooling')
 
 
-def Delay(T=1, initial_state=default_override_or(0), name=''):
-    '''
-    Layer factory function to create a layer that delays input the input by a given number of time steps. Negative means future.
-    This is provided as a layer instead of a function so that it can easily be used in a Sequential() expression.
-    '''
-    initial_state = get_default_override(Delay, initial_state=initial_state)
-    initial_state = _get_initial_state_or_default(initial_state)
-
-    # expression
-    @BlockFunction('Delay', name)
-    def delay_f(x):
-        # TODO: reenable this
-        ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
-        #if dynamic_axes_like:
-        #    r = delay(x, initial_state=initial_state, time_step=time_step, name='')
-        #    from .utils import sanitize_input, typemap
-        #    from _cntk_py import reconcile_dynamic_axis
-        #    r = typemap(reconcile_dynamic_axis)(sanitize_input(r), sanitize_input(dynamic_axes_like), name=name)
-        #    return r;
-        ## regular case
-        return delay(x, initial_state=initial_state, time_step=T)
-
-    #delay_f = _inject_name(delay_f, name)
-
-    return Block(delay_f, 'Delay')
-
-
 def Dropout(prob, name=''):
     '''
     Layer factory function to create a drop-out layer.
@@ -549,42 +522,3 @@ def Label(name):
         return alias(x, name=name)
     # BUGBUG: Fails for sparse, since PassNode cannot pass on sparse data presently. Shallow fix would be to add an 'if' inside PassNode.
     return label
-
-
-def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name=''):
-    '''
-    Layer factory function to create a function that returns a static, maskable view for N past steps over a sequence along the given 'axis'.
-    It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
-    '''
-
-    go_backwards = get_default_override(PastValueWindow, go_backwards=go_backwards)
-
-    # helper to get the nth element
-    def nth(input, offset):
-        if go_backwards:
-            final_f = sequence.first
-            offset = -offset
-        else:
-            final_f = sequence.last
-        return final_f(Delay(offset)(input))
-
-    @BlockFunction('PastValueWindow', name)
-    def past_value_window(x):
-    
-        ones_like_input = sequence.constant_with_dynamic_axes_like(1, x)
-
-        # get the respective n-th element from the end
-        last_values = [nth(x, t)               for t in range(window_size)]
-        last_valids = [nth(ones_like_input, t) for t in range(window_size)]
-    
-        # stack rows 'beside' each other in a new static axis (create a new static axis that doesn't exist)
-        value = splice(*last_values, axis=axis, name='value')
-        valid = splice(*last_valids, axis=axis, name='valid')
-    
-        # value[t] = value of t steps back; valid[t] = true if there was a value t steps back
-        return (value, valid)
-
-    # BUGBUG: name does not work for tuple-valued functions
-    #past_value_window = _inject_name(past_value_window, name)
-
-    return past_value_window

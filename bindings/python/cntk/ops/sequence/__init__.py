@@ -9,6 +9,27 @@ from ...utils import sanitize_input, get_data_type, typemap
 # sequence ops
 ##########################################################################
 
+def delay(x, initial_state=None, time_step=1, name=''):
+    '''
+    This function combines ``past_value`` and ``future_value`` into a single function.
+
+    Args:
+        x: the tensor (or its name) from which the past value is obtained
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
+        time_step (int): the number of time steps to look into the past, where negative values mean to look into the future, and 0 means a no-op (default 1).
+        name (str, optional): the name of the Function instance in the network
+    '''
+    from ...ops import alias, past_value, future_value
+    if time_step > 0:
+        return past_value  (x, time_step= time_step, initial_state=initial_state, name=name)
+    elif time_step < 0:
+        return future_value(x, time_step=-time_step, initial_state=initial_state, name=name)
+    else:
+        if name:
+            return alias(x, name)
+        else:
+            return x
+
 
 @typemap
 def is_first(seq, name=''):
@@ -61,6 +82,7 @@ def is_last(seq, name=''):
     seq = sanitize_input(seq, get_data_type(seq))
     return is_last(seq, name)
 
+
 @typemap
 def slice(seq, begin_index, end_index, name=''):
     '''
@@ -83,6 +105,7 @@ def slice(seq, begin_index, end_index, name=''):
     from cntk.cntk_py import sequence_slice
     seq = sanitize_input(seq, get_data_type(seq))
     return sequence_slice(seq, begin_index, end_index, name)
+
 
 @typemap
 def first(seq, name=''):
@@ -168,6 +191,7 @@ def where(condition, name=''):
     from cntk.cntk_py import where
     condition = sanitize_input(condition, get_data_type(condition))
     return where(condition, name)
+
 
 @typemap
 def gather(seq, condition, name=''):
@@ -303,6 +327,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
     return broadcast_as(operand, broadcast_as_operand, name)
 
 
+# TODO: rename to batch.broadcast_as()
 @typemap
 def constant_with_dynamic_axes_like(operand, broadcast_as_operand, name=''):
     '''
