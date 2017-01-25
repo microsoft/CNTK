@@ -174,11 +174,9 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
         `str` containing all nodes and edges
     '''
 
-    # TODO: known issues:
-    #  - Combine() shows with loops
-    #  - duplicate connections into a BlockFunction should be unique'd
-    #  - singleton dots should be short-circuited
-    #  - scalar Constants should be shown as such
+    from cntk import cntk_py
+
+    # TODO: scalar Constants should be shown as such. Do once .value works again on Constant objects
 
     # TODO: a better interface would just derive the format from the filename extension of a format parameter
     write_to_file = (dot_file_path != None) or (png_file_path != None) or (pdf_file_path != None) or (svg_file_path != None)
@@ -231,19 +229,19 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
 
             # add current Function node
             def lazy_create_node(node):
-                if node.uid in function_nodes:
+                if node.uid in function_nodes: # dot node already exists
                     return function_nodes[node.uid]
                 if node.is_primitive and not node.is_block and len(node.outputs) == 1 and node.output.name == node.name:     # skip the node name if redundant
                     op_name = map_primitive_op(node.op_name)
                     render_as_primitive = len(op_name) <= 4
                     size = 0.4 if render_as_primitive else 0.6
-                    cur_node = pydot.Node(node.op_name + ' ' + node.uid, label='"' + op_name + '"',
+                    cur_node = pydot.Node(node.uid, label='"' + op_name + '"',
                                           shape='ellipse'  if render_as_primitive else 'box',
                                           fixedsize='true' if render_as_primitive else 'false', height=size, width=size,
                                           fontsize=20 * scale if render_as_primitive and len(op_name) == 1 else 12 * scale,
                                           penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
                 else:
-                    cur_node = pydot.Node(node.op_name + ' ' + node.uid, label='"' + node.op_name + '\n' + node.name + '()"',
+                    cur_node = pydot.Node(node.uid, label='"' + node.op_name + '\n' + node.name + '()"',
                                           fixedsize='true', height=1, width=1.3,
                                           penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
                 dot_object.add_node(cur_node)
@@ -260,7 +258,6 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
 
                 # Suppress Constants inside BlockFunctions, since those are really private to the BlockFunction.
                 # Still show Parameters, so users know what parameters it learns, e.g. a layer.
-                from cntk import cntk_py
                 if node.is_block and isinstance (input, cntk_py.Variable) and input.is_constant:
                     continue
 
@@ -277,11 +274,11 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
                             else:
                                 name = name + '\n' + input.name
                         name += '\n' + str(input.shape)
-                        if input.is_input or input.is_placeholder:
+                        if input.is_input or input.is_placeholder: # graph inputs are eggs (since dot has no oval)
                             input_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
-                        else:
+                        else:                                      # parameters and constants are boxes
                             input_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
-                    else: # output variable
+                    else: # output variables never get drawn except the final output
                         assert(isinstance (input, cntk_py.Variable))
                         #input_node = pydot.Node(input.uid, shape='point', height=0.1, width=0.1, label='') # draw a dot
                         input_node = lazy_create_node(input.owner)  # connect to where the output comes from directly, no need to draw it
