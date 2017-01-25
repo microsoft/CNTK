@@ -1,4 +1,4 @@
-FROM nvidia/cuda:7.5-runtime
+FROM nvidia/cuda:8.0-runtime-ubuntu14.04
 # use nvidia-docker to run!
 
 ARG PY_VERSION

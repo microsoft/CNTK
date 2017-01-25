@@ -13,7 +13,7 @@ import pytest
 from ..functions import *
 from ...trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value, sequence
+from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value, sequence, as_composite
 from ... import InferredDimension
 from .ops_test_utils import compare_lists_of_np_arrays
 
@@ -192,3 +192,19 @@ def test_clone_with_function_in_substitution_map():
     p = placeholder_variable()
     just_b = t_plus_b.clone('clone', {t : p})
     t_plus_b_clone = just_b.clone('share', {p : t})
+
+def test_as_composite():
+    input_dim = 1
+    proj_dim = 2
+    x = input_variable((input_dim,))
+    b = parameter((proj_dim))
+    w = parameter((input_dim, proj_dim))
+    func_name = 't_plus_b'
+    t_plus_b = plus(times(x, w), b, name=func_name)
+    assert(t_plus_b.root_function.name == func_name)
+    composite = as_composite(t_plus_b.root_function)
+    assert(composite.root_function.name == func_name)
+    composite = as_composite(composite)
+    assert(composite.root_function.name == func_name)
+    composite = as_composite(t_plus_b)
+    assert(composite.root_function.name == func_name)

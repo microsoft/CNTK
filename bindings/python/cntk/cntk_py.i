@@ -83,7 +83,7 @@
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 
-%ignore CNTK::Function::Function(const std::vector<Variable>& inputs, const std::vector<Variable>& outputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+%ignore CNTK::Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
 %{
 #define SWIG_FILE_WITH_INIT
@@ -181,6 +181,48 @@ def dynamic_axes(self):
         }
 
         return ndarray;
+    }
+}
+
+%fragment("pydict_insert", "header")
+{
+     template<typename T> bool pydict_insert(PyObject* dictionary, const T& key, swig_type_info *swig_type, PyObject* item) {
+        /* FIXME We would love to do the following, but the hashing does not
+         * correctly work here, which is why we never find the keys. Instead,
+         * we will for now loop over the dictionary and use C++ comparison.
+         * Although not beautiful, there should not be a lot of overhead since
+         * the dictionary usually contains only a handful of variables as keys.
+        if (PyDict_Contains($input, returned_var))
+        {
+            SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
+        }
+         */
+
+        PyObject *py_key, *py_value;
+        Py_ssize_t pos = 0;
+
+        while (PyDict_Next(dictionary, &pos, &py_key, &py_value)) {
+            void *cntk_key = 0 ;
+            int res = SWIG_ConvertPtr(py_key, &cntk_key, swig_type,  0);
+            if (!SWIG_IsOK(res)) {
+                std::string s("cannot convert key of dictionary to ");
+                s+=typeid(T).name();
+                SWIG_exception_fail(SWIG_ArgError(res), s.c_str());
+            }
+            if (!cntk_key) {
+                std::string s("invalid null reference when converting key of dictionary to ");
+                s+=typeid(T).name();
+                SWIG_exception_fail(SWIG_ValueError, s.c_str());
+            }
+
+            T* cntk_var = reinterpret_cast<T*>(cntk_key);
+            if (*cntk_var == key)
+            {
+                PyDict_SetItem(dictionary, py_key, item);
+                return true;
+            }
+        }
+fail:   return false;
     }
 }
 
@@ -436,6 +478,7 @@ public:
 
 %feature("director:except") {
     if ($error != NULL) {
+		PyErr_Print();
         throw Swig::DirectorMethodException();
     }
 }
@@ -581,7 +624,7 @@ public:
 // modified values and put them back into the dictionary. This is used, when
 // e.g. the user puts a variable into the dictionary, hoping that it will
 // afterwards point to the proper value.
-%typemap(argout)
+%typemap(argout, fragment="pydict_insert")
     // Swig would create this conversion for the 'const' variants as well, which
     // we do not want. Therefor, we have to explicitly tell it for which ones it should do it.
     std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToFetch,
@@ -600,44 +643,9 @@ public:
 
         // Find the corresponding Variable instance in the Python dictionary
         // and set its value to the new ValuePtr
-
-        /* FIXME We would love to do the following, but the hashing does not
-         * correctly work here, which is why we never find the keys. Instead,
-         * we will for now loop over the dictionary and use C++ comparison.
-         * Although not beautiful, there should not be a lot of overhead since
-         * the dictionary usually contains only a handful of variables as keys.
-        if (PyDict_Contains($input, returned_var))
-        {
-            SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
-        }
-         */
-
-        PyObject *py_key, *py_value;
-        Py_ssize_t pos = 0;
-        bool found = false;
-
-        while (PyDict_Next($input, &pos, &py_key, &py_value)) {
-            void *cpp_key = 0 ;
-            int res = SWIG_ConvertPtr(py_key, &cpp_key, SWIGTYPE_p_CNTK__Variable,  0);
-            if (!SWIG_IsOK(res)) {
-                SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::Variable");
-            }
-            if (!cpp_key) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::Variable");
-            }
-
-            CNTK::Variable* cntk_var = reinterpret_cast<CNTK::Variable*>(cpp_key);
-            if (*cntk_var == it.first)
-            {
-                found = true;
-                PyDict_SetItem($input, py_key, returned_val);
-                break;
-            }
-        }
+        bool found = pydict_insert<CNTK::Variable>($input, it.first, SWIGTYPE_p_CNTK__Variable, returned_val);
         if (!found)
-        {
             RuntimeError("could not convert dictionary");
-        }
         Py_DECREF(returned_val);
     }
 }
@@ -822,13 +830,15 @@ public:
      }
 }
 
-%typemap(argout) std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>& {
-     if (!PyDict_Check($input)) {
-         SWIG_exception(SWIG_TypeError, "dictionary expected");
-     }
+%typemap(argout, fragment="pydict_insert") 
+std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr>>& 
+{
+    if (!PyDict_Check($input)) {
+        SWIG_exception(SWIG_TypeError, "dictionary expected");
+    }
 
-     for (auto it: *$1)
-     {
+    for (auto it: *$1)
+    {
         // Push onto the heap so that it survives
 
         std::shared_ptr<CNTK::NDArrayView> *smartresult1 = it.second.first ? new std::shared_ptr<CNTK::NDArrayView>(it.second.first) : 0;
@@ -836,47 +846,13 @@ public:
 
         std::shared_ptr<CNTK::NDArrayView> *smartresult2 = it.second.second ? new std::shared_ptr<CNTK::NDArrayView>(it.second.second) : 0;
         PyObject *returned_val2 = SWIG_NewPointerObj(SWIG_as_voidptr(smartresult2), SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView_t, SWIG_POINTER_OWN);
+        PyObject *item = PyTuple_Pack(2, returned_val1, returned_val2);
 
         // Find the corresponding Variable instance in the Python dictionary
         // and set its value to the new MinibatchData
-
-        /* FIXME We would love to do the following, but the hashing does not
-         * correctly work here, which is why we never find the keys. Instead,
-         * we will for now loop over the dictionary and use C++ comparison.
-         * Although not beautiful, there should not be a lot of overhead since
-         * the dictionary usually contains only a handful of variables as keys.
-        if (PyDict_Contains($input, returned_var))
-        {
-            SWIG_exception_fail(SWIG_ValueError, "returned output map contains unknown key");
-        }
-         */
-
-        PyObject *py_key, *py_value;
-        Py_ssize_t pos = 0;
-        bool found = false;
-
-        while (PyDict_Next($input, &pos, &py_key, &py_value)) {
-            void *cpp_key = 0 ;
-            int res = SWIG_ConvertPtr(py_key, &cpp_key, SWIGTYPE_p_CNTK__StreamInformation,  0);
-            if (!SWIG_IsOK(res)) {
-                SWIG_exception_fail(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInformation");
-            }
-            if (!cpp_key) {
-                SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInformation");
-            }
-
-            CNTK::StreamInformation* cntk_var = reinterpret_cast<CNTK::StreamInformation*>(cpp_key);
-            if (*cntk_var == it.first)
-            {
-                found = true;
-                PyDict_SetItem($input, py_key, PyTuple_Pack(2, returned_val1, returned_val2));
-                break;
-            }
-        }
+        bool found = pydict_insert<CNTK::StreamInformation>($input, it.first, SWIGTYPE_p_CNTK__StreamInformation, item);
         if (!found)
-        {
             RuntimeError("could not convert dictionary");
-        }
         Py_DECREF(returned_val1);
         Py_DECREF(returned_val2);
     }

@@ -153,7 +153,7 @@ function OpNvidiaCub141(
     $targetPath = join-path $targetFolder $prodSubDir
     $envVar = "CUB_PATH";
     $envValue = $targetPath
-    $downloadSource = "https://codeload.github.com/NVlabs/cub/zip/1.4.1";
+    $downloadSource = "https://github.com/NVlabs/cub/archive/1.4.1.zip";
     $downloadSize = 51376046
 
     @( @{ShortName = "CUB141"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";

@@ -358,6 +358,11 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUMatrix<ElemT
 }
 
 template <class ElemType>
+void GPUSparseMatrix<ElemType>::InnerProduct(const GPUSparseMatrix<ElemType>&, const GPUMatrix<ElemType>&, GPUMatrix<ElemType>&, const bool)
+{
+}
+
+template <class ElemType>
 bool GPUSparseMatrix<ElemType>::AreEqual(const GPUSparseMatrix<ElemType>& a, const GPUSparseMatrix<ElemType>& /*b*/,
                                          const ElemType threshold)
 {

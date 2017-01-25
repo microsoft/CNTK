@@ -11,7 +11,7 @@
 from __future__ import division
 import numpy as np
 from .ops import parameter, input_variable, placeholder_variable, combine
-from .ops import times, convolution, pooling, batch_normalization, dropout
+from .ops import times, convolution, pooling, batch_normalization, dropout, unpooling
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from .utils import Record, _as_tuple
 from .blocks import *  # TODO: reduce to what we actually use
@@ -30,7 +30,8 @@ from .blocks import _get_current_default_options, _is_given, _initializer_for, _
 # none       given: expand W to all (same as map_rank=0)
 def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_default_or_None,
           input_rank=None, map_rank=None,
-          bias=bias_default_or_True, init_bias=init_bias_default_or_0):
+          bias=bias_default_or_True, init_bias=init_bias_default_or_0, 
+          name=''):
     activation = _resolve_activation(activation)
     bias       = bias if _is_given(bias) else _get_current_default_options().bias
     output_shape = _as_tuple(shape)
@@ -74,12 +75,12 @@ def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_defa
     if b:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Dense', Record(W=W, b=b))
+    return Block(apply_x, 'Dense', name, Record(W=W, b=b), make_block=True)
 
 # Embedding -- create a linear embedding layer
 # To create an embedding from a file, use this:
 #  Embedding(weights=np.load('PATH'))
-def Embedding(shape=None, init=None, weights=None):
+def Embedding(shape=None, init=None, weights=None, name=''):
     if init is not None or weights is not None:
         raise ValueError('Embedding: init and weights options are mutually exclusive')
 
@@ -110,7 +111,7 @@ def Embedding(shape=None, init=None, weights=None):
     # expression
     x = Placeholder(name='embedding_arg')
     apply_x = times(x, E)
-    return Block(apply_x, 'Embedding', Record(E=E))
+    return Block(apply_x, 'Embedding', name, Record(E=E), make_block=True)
 
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape) )
@@ -132,8 +133,8 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 bias=bias_default_or_True,
                 init_bias=init_bias_default_or_0,
                 reduction_rank=1, # (must be 1 currently)
-                transpose=False,  # (must be False currently)
-                max_temp_mem_size_in_samples=0):
+                max_temp_mem_size_in_samples=0, 
+                name=''):
     #UntestedBranchError("Convolution")
     activation = _resolve_activation(activation)
     pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
@@ -141,8 +142,6 @@ def Convolution(filter_shape,        # e.g. (3,3)
     # TODO: there must be a Python trick to do this as a function call on locals or so
     if reduction_rank != 1:
         NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
-    if transpose:
-        NotImplementedError("Convolution: transpose option currently not supported")
     if not sharing:
         NotImplementedError("Convolution: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
@@ -165,12 +164,61 @@ def Convolution(filter_shape,        # e.g. (3,3)
                            sharing=_as_tuple(sharing),
                            auto_padding=_as_tuple(pad),
                            # TODO: can we rename auto_padding to pad?
-                           transpose=transpose,
+                           transpose=False,
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Convolution', Record(W=W, b=b))
+    return Block(apply_x, 'Convolution', name, Record(W=W, b=b), make_block=True)
+
+# Deconvolution -- create a deconvolution layer with optional non-linearity
+def Deconvolution(filter_shape,        # e.g. (3,3)
+                num_filters,
+                num_input_filters,
+                activation=activation_default_or_None,
+                init=init_default_or_glorot_uniform,
+                pad=pad_default_or_False,
+                strides=1,
+                sharing=True,     # (must be True currently)
+                lower_pad=(0,),
+                upper_pad=(0,),
+                bias=bias_default_or_True,
+                init_bias=init_bias_default_or_0,
+                reduction_rank=1, # (must be 1 currently)
+                max_temp_mem_size_in_samples=0, 
+                name=''):
+    activation = _resolve_activation(activation)
+    pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
+    bias = bias if _is_given(bias) else _get_current_default_options().bias
+    # TODO: there must be a Python trick to do this as a function call on locals or so
+    if reduction_rank != 1:
+        NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
+    if not sharing:
+        NotImplementedError("Convolution: sharing option currently must be True")
+    output_channels_shape = _as_tuple(num_filters)
+    input_channels_shape = _as_tuple(num_input_filters)
+    kernel_shape = output_channels_shape + filter_shape
+    param_shape = input_channels_shape + kernel_shape
+
+    filter_rank = len(filter_shape)
+    init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
+    W = Parameter(param_shape, init=init_kernel, name='W')
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias, name='b') if bias else None
+
+    # expression
+    x = Placeholder(name='deconvolution_arg')
+    apply_x = convolution (W, x,
+                           strides=_as_tuple(strides),
+                           sharing=_as_tuple(sharing),
+                           auto_padding=_as_tuple(pad),
+                           lower_pad=lower_pad,
+                           upper_pad=upper_pad,
+                           transpose=True,
+                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    if bias:
+        apply_x = apply_x + b
+    apply_x = apply_x >> activation
+    return Block(apply_x, 'Deconvolution', name, Record(W=W, b=b), make_block=True)
 
 # Create a Pooling layer with one of following types:
 #
@@ -182,40 +230,60 @@ from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def Pooling(op,      # PoolingType_Max or _Average
             filter_shape,  # e.g. (3,3)
             strides=1,
-            pad=False):
-    x = Placeholder(name='pooling_arg')
-    apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
-
+            pad=False, 
+            name=''):
     if op == PoolingType_Average:
         op_name = 'AveragePooling'
+        if filter_shape == NDShape.unknown.dimensions(): 
+            op_name = 'GlobalAveragePooling' 
     elif op == PoolingType_Max:
         op_name = 'MaxPooling'
+        if filter_shape == NDShape.unknown.dimensions(): 
+            op_name = 'GlobalMaxPooling'
     else:
         raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
-    return Block(apply_x, op_name)
+
+    x = Placeholder(name='pooling_arg')
+    apply_x = pooling (x, op, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
+    return Block(apply_x, op_name, name, make_block=True)
 
 # MaxPooling
 def MaxPooling(filter_shape,  # e.g. (3,3)
                strides=1,
-               pad=False):
-    return Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad)
+               pad=False, 
+               name=''):
+    return Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad, name=name)
 
 # AveragePooling
 def AveragePooling(filter_shape,  # e.g. (3,3)
                    strides=1,
-                   pad=False):
-    return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad)
+                   pad=False, 
+                   name=''):
+    return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad, name=name)
 
 # GlobalMaxPooling
-def GlobalMaxPooling():
-    return Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False)
+def GlobalMaxPooling(name=''):
+    return Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, name=name)
 
 # GlobalAveragePooling
-def GlobalAveragePooling():
-    return Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False)
+def GlobalAveragePooling(name=''):
+    return Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, name=name)
+
+# Create a max unpooling layer
+def MaxUnpooling(filter_shape,  # e.g. (3,3)
+                 strides=1,
+                 pad=False,
+                 lower_pad=0,
+                 upper_pad=0, 
+                 name=''):
+    x = Placeholder(name='unpool_arg')
+    y = Placeholder(name='pool_arg')
+    apply_x = unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
+                         lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
+    return Block(apply_x, 'MaxUnpooling', name, make_block=True)
 
 # Recurrence() -- run a block recurrently over a time sequence
-def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None):
+def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None, name=''):
     # helper to compute previous value
     # can take a single Variable/Function or a tuple
     initial_state = initial_state if _is_given(initial_state) else _get_current_default_options().initial_state
@@ -242,11 +310,11 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
         _log_node(combine([h.owner]))
     apply_x = combine([h])     # the Function that yielded 'h', so we get to know its inputs
     # apply_x is a Function x -> h
-    return Block(apply_x, 'Recurrence', Record(over=over))
+    return Block(apply_x, 'Recurrence', name, Record(over=over))
 
 # Delay -- delay input
 # TODO: This does not really have bound parameters. Should it still be a layer?
-def Delay(T=1, initial_state=None):
+def Delay(T=1, initial_state=None, name=''):
     UntestedBranchError("Delay")
 
     # expression
@@ -257,21 +325,22 @@ def Delay(T=1, initial_state=None):
         apply_x = future_value(x, time_step=-T, initial_state=initial_state)
     else:
         apply_x = x
-    return Block(apply_x, 'Delay')
+    return Block(apply_x, 'Delay', name, make_block=True)
 
 # Dropout -- create a drop-out layer
-def Dropout(prob):
+def Dropout(prob,name=''):
     # expression
     x = Placeholder(name='dropout_arg')
     apply_x = dropout(x, dropout_rate=prob)
-    return Block(apply_x, 'Dropout')
+    return Block(apply_x, 'Dropout', name, make_block=True)
 
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
 def BatchNormalization(map_rank=None,  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
-                       epsilon=0.00001, use_cntk_engine=False):
+                       epsilon=0.00001, use_cntk_engine=False, 
+                       name=''):
     # TODO: make map_rank a default option, once per-layer type defaults are implemented
 
     # parameters bound to this Function
@@ -288,10 +357,10 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   #use_cntk_engine=use_cntk_engine)
                                   use_cudnn_engine=not use_cntk_engine)
-    return Block(apply_x, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
+    return Block(apply_x, 'BatchNormalization', name, Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance), make_block=True)
 
 # LayerNormalization -- create a layer-normalization layer
-def LayerNormalization(initial_scale=1, initial_bias=0):
+def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     UntestedBranchError("LayerNormalization")
 
     # parameters bound to this Function
@@ -306,4 +375,4 @@ def LayerNormalization(initial_scale=1, initial_bias=0):
     #x_hat = element_divide (x0, std)
     x_hat = x0 / std
     apply_x = x_hat * scale + bias    # denormalize with learned parameters
-    return Block(apply_x, 'LayerNormalization', Record(scale=scale, bias=bias))
+    return Block(apply_x, 'LayerNormalization', name, Record(scale=scale, bias=bias), make_block=True)

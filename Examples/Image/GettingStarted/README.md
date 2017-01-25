@@ -111,12 +111,16 @@ You can change the parallelizationMethod to other three options. To see more det
 
 ### 07_Deconvolution.cntk
 
-Example number seven shows how to use Deconvolution and Unpooling to generate a simple image auto encoder. It uses the MNIST dataset, which has a resolution of 28x28x1, encodes it into a 7x7x1 representation using convolution and pooling and decodes to the original resolution. The training criterion is root-mean-square error (RMSE). To run this example, use the following command:
+Example number seven shows how to use Deconvolution and Unpooling to generate a simple image auto encoder. It uses the MNIST dataset, which has a resolution of 28x28x1, encodes it into a 7x7x1 representation using convolution and pooling and decodes to the original resolution. The training criterion is root-mean-square error (RMSE). To run this example, use the following command for BrainScript:
 
-`cntk configFile=07_Deconvolution.cntk`
+`cntk configFile=07_Deconvolution_BS.cntk`
+
+or this one for Python:
+
+`python 07_Deconvolution_PY.py`
 
 The rmse values for training and testing are 0.225 and 0.223 respectively. To visualize the encoded and decoded images run the following command (from a Python CNTK environment):
 
 `python 07_Deconvolution_Visualizer.py`
 
-The visualizations will be stored in the `Output` folder together with a text representation of the encoder and the decoder output.
+The script uses by default the BrainScript model, set `use_brain_script_model=False` to use the Python model for visualization. The visualizations will be stored in the `Output` folder together with a text representation of the encoder and the decoder output.

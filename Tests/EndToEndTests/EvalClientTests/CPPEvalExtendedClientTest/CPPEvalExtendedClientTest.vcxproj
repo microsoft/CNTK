@@ -54,8 +54,6 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup>
-    <!-- TODO intentional for all? -->
-    <LinkIncremental>false</LinkIncremental>
     <TargetName>CPPEvalExtendedClientTest</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>

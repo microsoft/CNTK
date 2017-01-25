@@ -1404,7 +1404,7 @@ void Matrix<ElemType>::SetDiagonalValue(const Matrix<ElemType>& vector)
                                 SetDiagonalValue(vector.m_GPUMatrix->Get00Element()) // BUGBUG: efficiency
                                 );
     }
-    else if (vector.GetNumRows() != GetNumRows())
+    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
@@ -5132,17 +5132,17 @@ void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<Elem
 
     DecideAndMoveToRightDevice(a, b, c);
 
-    if (a.GetMatrixType() != b.GetMatrixType())
+    if (b.GetMatrixType() != DENSE) // only support a being sparse/dense. Both b and c should be dense
         NOT_IMPLEMENTED;
 
-    c.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), false);
+    c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
 
-    DISPATCH_MATRIX_ON_FLAG(&c,
-                            &c,
+    DISPATCH_MATRIX_ON_FLAG(&a,
+                            &a,
                             CPUMatrix<ElemType>::InnerProduct(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
                             GPUMatrix<ElemType>::InnerProduct(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, isColWise),
-                            NOT_IMPLEMENTED,
-                            NOT_IMPLEMENTED);
+                            CPUSparseMatrix<ElemType>::InnerProduct(*a.m_CPUSparseMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, isColWise),
+                            GPUSparseMatrix<ElemType>::InnerProduct(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, isColWise));
 }
 
 template <class ElemType>

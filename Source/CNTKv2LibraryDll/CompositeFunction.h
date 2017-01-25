@@ -64,14 +64,19 @@ namespace CNTK
         }
 
     public:
-        static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"", const std::wstring& uid = L"")
+        static CompositeFunctionPtr Create(const FunctionPtr& rootFunction, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
         {
             std::unordered_set<FunctionPtr> visitedFunctions;
 
             // Call Collect to get the set of all functions in the graph
             Collect(rootFunction, visitedFunctions);
 
-            return MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name, uid);
+            auto composite = MakeSharedObject<CompositeFunction>(rootFunction, std::move(visitedFunctions), name, uid);
+
+            // Initialize the outputs
+            composite->InitOutputs();
+
+            return composite;
         }
 
         BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
@@ -82,9 +87,14 @@ namespace CNTK
         virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
                                          const DeviceDescriptor& /*computeDevice*/,
-                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/)
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
         {
             NOT_IMPLEMENTED;
+        }
+
+        virtual std::vector<Variable> InferOutputs() override
+        {
+            return m_rootFunction->Outputs();
         }
 
         virtual void Backward(const BackPropStatePtr& state,
@@ -186,7 +196,7 @@ namespace CNTK
         }
 
         CompositeFunction(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>&& allPrimitiveFunctions, const std::wstring& name, const std::wstring& uid = Internal::GenerateUid(L"CompositeFunction"))
-            : Function({}, rootFunction->Outputs(), Dictionary(), rootFunction, name, uid),
+            : Function({}, Dictionary(), rootFunction, name, uid),
             m_allPrimitiveFunctions(std::move(allPrimitiveFunctions)), m_networkMatricesAllocated(false)
         {}
 
