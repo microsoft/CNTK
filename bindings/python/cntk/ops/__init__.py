@@ -1896,7 +1896,7 @@ def splice(inputs, axis=-1, name=''):
                 [ 50.,  60.]]], dtype=float32)
 
     Args:
-        inputs (list): tuple of input tensors
+        inputs (iterable): a list or tuple of input tensors
         axis (int or :class:`~cntk.axis.Axis`): axis along which the
          concatenation will be performed
         name (str, optional): the name of the Function instance in the network
