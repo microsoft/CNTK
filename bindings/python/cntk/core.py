@@ -111,11 +111,9 @@ class NDArrayView(cntk_py.NDArrayView):
         '''
         if isinstance(data, cntk_py.NDArrayView):
             return data
-        
+
         if isinstance(data, np.number):
-            print('before', data)
             data = np.asarray(data)
-            print('after', data, data.shape, data.ndim)
 
         if isinstance(data, np.ndarray):
             ndav = NDArrayView.from_dense(data, device)
