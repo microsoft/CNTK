@@ -215,7 +215,7 @@ template <class ElemType>
         if (isFinalValidationPass && m_mean)
             m_scale = (ElemType)(1.0 / reducedDim);
 
-        SetDimsq(TensorShape(dims), Input(0)->HasMBLayout());
+        SetDims(TensorShape(dims), Input(0)->HasMBLayout());
     }
 
 }

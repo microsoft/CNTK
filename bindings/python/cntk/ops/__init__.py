@@ -1905,37 +1905,52 @@ def splice(inputs, axis=-1, name=''):
 def reduce_sum(x, axis=None, name=''):
     '''
     Computes the sum of the input tensor's elements across one axis. If the axis parameter
-    is not specified then the sum will be computed over all axes, that is, the output is a scalar,
-    which is the sum of tensor's elements.
+    is not specified then the sum will be computed over all static axes, which is 
+    equivalent with specifying ``axis=Axis.all_static_axes()``. If 
+    ``axis=Axis.all_axes()``, the output is a scalar which is the sum of all the 
+    elements in the minibatch.
 
     Example:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
-
-        >>> # reduce over the first axis
-        >>> C.reduce_sum(data, 0).eval()
-        array([[  90.,  120.]], dtype=float32)
-
-        >>> # reduce over the second axis
-        >>> C.reduce_sum(data, 1).eval()
-        array([[  30.],
-               [  70.],
-               [ 110.]], dtype=float32)
-
-        >>> # Negative axis is counted from last to first. So -1 retrieves same
-        >>> # result as 1 on a matrix of rank 2.
-        >>> C.reduce_sum(data, -1).eval()
-        array([[  30.],
-               [  70.],
-               [ 110.]], dtype=float32)
-
-        >>> # And -2 retrieves the same result as 0 on a matrix of rank 2.
-        >>> C.reduce_sum(data, -2).eval()
-        array([[  90.,  120.]], dtype=float32)
-
-        >>> # reduce over the all axes
-        >>> C.reduce_sum(data).eval()
-        array(210.0, dtype=float32)
+        >>> x = C.input_variable((2,2))
+        >>> # create a batch of 2 sequences each containing 2 2x2 matrices 
+        >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
+        >>> # reduce over all static axes
+        >>> C.reduce_mean(x).eval({x:x0})
+        array([[  1.5,   5.5],
+               [  9.5,  13.5]], dtype=float32)
+        >>> # reduce over specified axes
+        >>> C.reduce_mean(x,axis=0).eval({x:x0})
+        array([[[[  1.,   2.]],
+        <BLANKLINE>
+                [[  5.,   6.]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[  9.,  10.]],
+        <BLANKLINE>
+                [[ 13.,  14.]]]], dtype=float32)
+        >>> C.reduce_mean(x,axis=1).eval({x:x0})
+        array([[[[  0.5],
+                 [  2.5]],
+        <BLANKLINE>
+                [[  4.5],
+                 [  6.5]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[  8.5],
+                 [ 10.5]],
+        <BLANKLINE>
+                [[ 12.5],
+                 [ 14.5]]]], dtype=float32)
+        >>> # reduce over all axes
+        >>> np.round(C.reduce_mean(x, axis=C.Axis.all_axes()).eval({x:x0}),5)
+        7.5
+        >>> # reduce over all axes when the batch has sequences of different length
+        >>> x1 = np.arange(4,dtype=np.float32).reshape(1,2,2)
+        >>> x2 = np.arange(12,dtype=np.float32).reshape(3,2,2)
+        >>> np.round(C.reduce_mean(x, axis=C.Axis.all_axes()).eval({x:[x1,x2]}),5)
+        4.5
+        >>> (np.sum(x1)+np.sum(x2))/(x1.size+x2.size)
+        4.5
 
     Args:
         x: input tensor
@@ -1971,6 +1986,9 @@ def reduce_log_sum(x, axis=None, name=''):
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
 
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
+
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -2001,6 +2019,9 @@ def reduce_mean(x, axis=None, name=''):
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str, optional): the name of the Function instance in the network
+
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -2033,6 +2054,9 @@ def reduce_max(x, axis=None, name=''):
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
 
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
+
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -2063,6 +2087,9 @@ def reduce_min(x, axis=None, name=''):
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
+
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
