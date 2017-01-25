@@ -26,23 +26,30 @@ function OpAnacondaEnv(
     [parameter(Mandatory=$true)][string] $AnacondaBasePath,
     [parameter(Mandatory=$true)][string] $repoDir,
     [parameter(Mandatory=$true)][string] $reponame,
+    [string] $environmentName = "",
     [parameter(Mandatory=$true)][string] $pyVersion)
 {
     $prodName = "Python $pyVersion Environment"
     $targetFolder = Split-Path $AnacondaBasePath -Parent
     $prodSubDir = Split-Path $AnacondaBasePath -Leaf
-    $targetPath = join-path $targetFolder $prodSubDir
-    $envName = "cntkdev-py$pyVersion"
-    $envDir = "envs\$envName"
+    $targetPath = Join-Path $targetFolder $prodSubDir
+    if ($environmentName) {
+        $envName = $environmentName
+    }
+    else {
+        $envName = "cntkdev-py$pyVersion"
+    }
+    $envDir = Join-Path envs $envName
     $envVar = "CNTK_PY$($pyVersion)_PATH";
-    $envValue = join-path $targetPath $envDir
+    $envValue = Join-Path $targetPath $envDir
 
-    $ymlDirectory = join-path $repoDir $repoName
-    $ymlDirectory = join-path $ymlDirectory "scripts\install\windows"
+    $ymlDirectory = Join-Path $repoDir $repoName
+    $ymlDirectory = Join-Path $ymlDirectory scripts\install\windows
+    $ymlFile = Join-Path $ymlDirectory "conda-windows-cntk-py$($pyVersion)-environment.yml"
 
     @{ ShortName = "PYENV"; Name = $prodName;  VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Creating $prodName";
       Verification  = @( @{Function = "VerifyRunAlways" } );
-      Action = @( @{Function = "InstallYml"; BasePath = $targetPath; Env = $envName; ymlFile= "$ymlDirectory\conda-windows-cntk-py$($pyVersion)-environment.yml" },
+      Action = @( @{Function = "InstallYml"; BasePath = $targetPath; Env = $envName; ymlFile= $ymlFile },
                   @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } )
      }
 }
@@ -384,6 +391,5 @@ function OpZlibVS15Prebuild(
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue }  );
         } )
 }
-
 
 # vim:set expandtab shiftwidth=2 tabstop=2:

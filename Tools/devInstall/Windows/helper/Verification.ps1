@@ -91,10 +91,6 @@ function VerifyWinProductVersion(
     $matchExact = GetTableDefaultBool -table $table -entryName "MatchExact" -defaultValue $false
     $noInstallRequired = $true
 
-    if ($matchExact -eq $null) {
-        $matchExact = $false
-    }
-
     $allProducts = LoadWinProduct
     $productList = @($allProducts | Where-Object { $_.Name -match $match } )
 
@@ -339,6 +335,5 @@ function LoadWinProduct
     }
     return $Script:WinProduct
 }
-
 
 # vim:set expandtab shiftwidth=2 tabstop=2:
