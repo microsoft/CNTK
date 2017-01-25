@@ -149,9 +149,9 @@ def try_find_closest_by_name(node, node_name, max_depth=None):
     return result[0]
 
 # TODO: This seems to have lots of overlap with depth_first_search() above
-def output_function_graph(node, dot_file_path=None, png_file_path=None, pdf_file_path=None, svg_file_path=None, scale=1):
+def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file_path=None, svg_file_path=None, scale=1):
     '''
-    Walks through every node of the graph starting at ``node``,
+    Walks through every node of the graph starting at ``root``,
     creates a network graph, and saves it as a string. If dot_file_name, 
     png_file_name, pdf_file_name, or svg_file_name specified corresponding files will be saved.
     
@@ -162,7 +162,7 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None, pdf_file
        and `graphviz <http://graphviz.org>`_
 
     Args:
-        node (graph node): the node to start the journey from
+        root (graph node): the root to start the journey from
         dot_file_path (`str`, optional): DOT file path
         png_file_path (`str`, optional): PNG file path
         pdf_file_path (`str`, optional): PDF file path
@@ -172,6 +172,12 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None, pdf_file
     Returns:
         `str` containing all nodes and edges
     '''
+
+    # TODO: known issues:
+    #  - Combine() shows with loops
+    #  - duplicate connections into a BlockFunction should be unique'd
+    #  - singleton dots should be short-circuited
+    #  - scalar Constants should be shown as such
 
     # TODO: a better interface would just derive the format from the filename extension of a format parameter
     write_to_file = (dot_file_path != None) or (png_file_path != None) or (pdf_file_path != None) or (svg_file_path != None)
@@ -193,7 +199,7 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None, pdf_file
 
     # walk every node of the graph iteratively
     visitor = lambda x: True
-    stack = [node]
+    stack = [root]
     accum = []
     visited = set()
 
@@ -205,36 +211,67 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None, pdf_file
 
         try:
             # Function node
+            is_root = node is root
             node = node.root_function
+
             stack.extend(node.inputs)
 
-            # add current node
+            # add current Function node
             model += node.op_name + '('
             if (write_to_file):
-                cur_node = pydot.Node(node.op_name + ' '+node.uid, label='"' + node.op_name + '"', shape='circle',
-                                        fixedsize='true', height=1, width=1)
+                cur_node = pydot.Node(node.op_name + ' ' + node.uid, label='"' + node.op_name + '\n' + node.name + '()"',
+                                      fixedsize='true', height=1, width=1.3,
+                                      penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
                 dot_object.add_node(cur_node)
 
             # add node's inputs
             for i in range(len(node.inputs)):
-                child = node.inputs[i]
-                
-                model += child.uid
+                input = node.inputs[i]
+
+                from cntk import cntk_py
+                if node.is_block and isinstance (input, cntk_py.Variable) and input.is_constant:
+                    continue
+
+                model += input.uid
                 if (i != len(node.inputs) - 1):
                     model += ", "
 
                 if (write_to_file):
-                    child_node = pydot.Node(child.uid)
+                    if isinstance (input, cntk_py.Variable) and not input.is_output:
+                        name = 'Parameter' if input.is_parameter else 'Constant' if input.is_constant else 'Input' if input.is_input else 'Placeholder'
+                        if input.name:
+                            if name == 'Parameter':  # don't say Parameter for parameters, it's clear from the box
+                                    name = input.name
+                            else:
+                                name = name + '\n' + input.name
+                        name += '\n' + str(input.shape)
+                        if input.is_input or input.is_placeholder:
+                            child_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
+                        else:
+                            child_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
+                    else:
+                        #child_node = pydot.Node(input.uid, shape='ellipse')
+                        child_node = pydot.Node(input.uid, shape='point', height=0.1, width=0.1, label='')
                     dot_object.add_node(child_node)
-                    dot_object.add_edge(pydot.Edge(child_node, cur_node,label=str(child.shape)))
+                    label = str(input.shape)
+                    if input.name != '':
+                        label = input.name + '\n' +  label
+                    dot_object.add_edge(pydot.Edge(child_node, cur_node, label=label))
 
-            # ad node's output
+            # add node's output
+            # BUGBUG: multiple outputs not handled correctly in returned text string
             model += ") -> " + node.outputs[0].uid +'\n'
 
             if (write_to_file):
-                out_node = pydot.Node(node.outputs[0].uid)
-                dot_object.add_node(out_node)
-                dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(node.outputs[0].shape)))
+                for output in node.outputs:
+                    out_node = pydot.Node(output.uid)
+                    dot_object.add_node(out_node)
+                    dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(output.shape)))
+                    if is_root: # network outputs are drawn like an egg instead
+                        final_node = pydot.Node(output.uid + "_final", shape='egg', label=output.name + '\n' + str(output.shape),
+                                                fixedsize='true', height=1, width=1.3, penwidth=4)
+                        dot_object.add_node(final_node)
+                        dot_object.add_edge(pydot.Edge(out_node, final_node, label=str(output.shape)))
 
         except AttributeError:
             # OutputVariable node

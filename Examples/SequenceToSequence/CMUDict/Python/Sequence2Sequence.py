@@ -93,7 +93,7 @@ def testit(r, with_labels=True):
 def create_model(): # :: (history*, input*) -> logP(w)*
     # Embedding: (input*) --> (embedded_input*)
     # Right now assumes shared embedding and shared vocab size.
-    embed = Embedding(embedding_dim) if use_embedding else identity
+    embed = Embedding(embedding_dim, name='embed') if use_embedding else identity
 
     # Encoder: (input*) --> (h0, c0)
     # Create multiple layers of LSTMs by passing the output of the i-th layer
@@ -107,7 +107,8 @@ def create_model(): # :: (history*, input*) -> logP(w)*
             Stabilizer(),
             For(range(num_layers-1), lambda:
                 Recurrence(LSTM(hidden_dim))),
-            LastRecurrence(LSTM(hidden_dim), return_full_state=True)
+            LastRecurrence(LSTM(hidden_dim), return_full_state=True),
+            (Label('encoded_h'), Label('encoded_c')),
         ])
 
     # Decoder: (history*, input*) --> z*
@@ -126,8 +127,9 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         # layer function
         # TODO: refactor such that it takes encoded_input (to be produced by model_train and model_greedy)
         @Function
-        def decode(history, x_last):
-            input = x_last
+        #def decode(history, x_last):
+        #    input = x_last
+        def decode(history, input):
             history_axis = history  # we use history_axis wherever we pass this only for the sake of passing its axis
             encoded_input = encode(input)
             r = history
@@ -139,10 +141,10 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                     if i == 0:
                         @Function
                         # TODO: undo x_last hack
-                        def lstm_with_attention(dh, dc, x_last):
+                        def lstm_with_attention(dh, dc, x):
                             h_att = attention_model(encoded_input.outputs[0], dh)
-                            x_last = splice(x_last, h_att)
-                            r = rec_block(dh, dc, x_last)
+                            x = splice(x, h_att)
+                            r = rec_block(dh, dc, x)
                             (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
                             return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
                         r = Recurrence(lstm_with_attention)(r)
@@ -174,8 +176,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # model used in training (history is known from labels)
     # note: the labels must not contain the initial <s>
     @Function
-    def model_train(input, x_last): # (input*, labels*) --> (word_logp*)
-        labels = x_last
+    #def model_train(input, x_last): # (input*, labels*) --> (word_logp*)
+    #    labels = x_last
+    def model_train(input, labels): # (input*, labels*) --> (word_logp*)
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
@@ -203,7 +206,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
       raise
     #model_greedy.dump()
     from cntk.graph import output_function_graph
-    output_function_graph(model_greedy, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
+    #output_function_graph(model_train, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
 
     @Function
     def criterion(input, x_last):
@@ -213,9 +216,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         z = model_train(input, postprocessed_labels)
         ce   = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error      (z, postprocessed_labels)
-        #return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
-        # BUGBUG: ^^ fails with RuntimeError, likely the ref-count issue
-        return (ce, errs)
+        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
     try:
       #criterion.dump()
       criterion.update_signature(input=Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
@@ -226,6 +227,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
       raise
     debughelpers.dump_signature(criterion)
     #debughelpers.dump_function(criterion)
+    output_function_graph(criterion, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
@@ -284,7 +286,6 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 if use_attention:
                     debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
-                # BUGBUG: name lookup led to infinite recursion
 
             i += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
