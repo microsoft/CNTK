@@ -214,6 +214,7 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
         if op_name in primitive_op_map:
             op_name = primitive_op_map[op_name]
         return op_name
+    function_nodes = {}  # [uid] -> dot node
 
     while stack:
         node = stack.pop()
@@ -229,8 +230,9 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
             stack.extend(node.inputs)
 
             # add current Function node
-            model += node.op_name + '('
-            if (write_to_file):
+            def lazy_create_node(node):
+                if node.uid in function_nodes:
+                    return function_nodes[node.uid]
                 if node.is_primitive and not node.is_block and len(node.outputs) == 1 and node.output.name == node.name:     # skip the node name if redundant
                     op_name = map_primitive_op(node.op_name)
                     render_as_primitive = len(op_name) <= 4
@@ -245,6 +247,12 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
                                           fixedsize='true', height=1, width=1.3,
                                           penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
                 dot_object.add_node(cur_node)
+                function_nodes[node.uid] = cur_node
+                return cur_node
+
+            model += node.op_name + '('
+            if (write_to_file):
+                cur_node = lazy_create_node(node)
 
             # add node's inputs
             for i in range(len(node.inputs)):
@@ -273,9 +281,10 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
                             input_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
                         else:
                             input_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
-                    else:
-                        #input_node = pydot.Node(input.uid, shape='ellipse')
-                        input_node = pydot.Node(input.uid, shape='point', height=0.1, width=0.1, label='')
+                    else: # output variable
+                        assert(isinstance (input, cntk_py.Variable))
+                        #input_node = pydot.Node(input.uid, shape='point', height=0.1, width=0.1, label='') # draw a dot
+                        input_node = lazy_create_node(input.owner)  # connect to where the output comes from directly, no need to draw it
                     dot_object.add_node(input_node)
                     label = str(input.shape)
                     if input.name != '':
@@ -287,15 +296,12 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
             model += ") -> " + node.outputs[0].uid +'\n'
 
             if (write_to_file):
-                for output in node.outputs:
-                    out_node = pydot.Node(output.uid)
-                    dot_object.add_node(out_node)
-                    dot_object.add_edge(pydot.Edge(cur_node,out_node,label=str(output.shape)))
-                    if is_root: # network outputs are drawn like an egg instead
-                        final_node = pydot.Node(output.uid + "_final", shape='egg', label=output.name + '\n' + str(output.shape),
+                if is_root: # only final network outputs are drawn
+                    for output in node.outputs:
+                        final_node = pydot.Node(output.uid, shape='egg', label=output.name + '\n' + str(output.shape),
                                                 fixedsize='true', height=1, width=1.3, penwidth=4)
                         dot_object.add_node(final_node)
-                        dot_object.add_edge(pydot.Edge(out_node, final_node, label=str(output.shape)))
+                        dot_object.add_edge(pydot.Edge(cur_node, final_node, label=str(output.shape)))
 
         except AttributeError:
             # OutputVariable node
