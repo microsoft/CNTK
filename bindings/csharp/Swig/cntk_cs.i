@@ -151,7 +151,8 @@
 %ignore CNTK::Function::Forward(const std::unordered_map<Variable, ValuePtr>& arguments, 
                                 std::unordered_map<Variable, ValuePtr>& outputs, 
                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
-                                const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {});
+                                const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {},
+                                const std::unordered_set<Variable>& inputsToExcludeGradientsFor = {});
 %ignore CNTK::Function::Forward(const std::vector<ValuePtr>& inputValues, 
                                 std::unordered_map<Variable, ValuePtr>& outputs, 
                                 const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 

@@ -33,7 +33,8 @@ class Trainer(cntk_py.Trainer):
         # TODO sanitizing should be removed once Swig's typemaps are in place
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
-        eval_function = sanitize_function(eval_function)
+        if eval_function is not None:
+            eval_function = sanitize_function(eval_function)
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
 
