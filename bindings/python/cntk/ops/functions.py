@@ -1038,6 +1038,33 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).restore_model(filename)
 
+    @staticmethod
+    @typemap
+    def load(filename, device=None):
+        '''
+        Load the model in ``filename``, that has been saved using
+        `:func:save_model`.
+
+        Args:
+            filename (str): filename to load the model from
+            device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
+             instance of DeviceDescriptor
+
+        Returns:
+            root node
+        '''
+        if not device:
+            device = DeviceDescriptor.use_default_device()
+        function = cntk_py.Function.load_model(filename, device)
+        return function
+
+@typemap
+def load_model(filename, device=None):
+    '''
+    Alias for `Function.load`.
+    '''
+    return Function.load(filename, device)
+
 
 class UserFunction(Function):
     '''
@@ -1133,30 +1160,3 @@ class UserFunction(Function):
                 raise ValueError('gradients were not provided for all variables')
 
             variables[k] = sanitize_batch(k, v, None, state.device())
-
-    @staticmethod
-    @typemap
-    def load(filename, device=None):
-        '''
-        Load the model in ``filename``, that has been saved using
-        `:func:save_model`.
-
-        Args:
-            filename (str): filename to load the model from
-            device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
-             instance of DeviceDescriptor
-
-        Returns:
-            root node
-        '''
-        if not device:
-            device = DeviceDescriptor.use_default_device()
-        function = cntk_py.Function.load_model(filename, device)
-        return function
-
-@typemap
-def load_model(filename, device=None):
-    '''
-    Alias for `Function.load`.
-    '''
-    return Function.load(filename, device)
