@@ -202,7 +202,7 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
     visitor = lambda x: True
     stack = [root]
     accum = []
-    visited = set()
+    visited = set() # [uid] instead of node object itself, as this gives us duplicate entries for nodes with multiple outputs
 
     primitive_op_map = {
         'Plus': '+',
@@ -218,7 +218,7 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
     while stack:
         node = stack.pop()
         
-        if node in visited:
+        if node.uid in visited:
             continue
 
         try:
@@ -250,6 +250,8 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
             for i in range(len(node.inputs)):
                 input = node.inputs[i]
 
+                # Suppress Constants inside BlockFunctions, since those are really private to the BlockFunction.
+                # Still show Parameters, so users know what parameters it learns, e.g. a layer.
                 from cntk import cntk_py
                 if node.is_block and isinstance (input, cntk_py.Variable) and input.is_constant:
                     continue
@@ -268,17 +270,17 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
                                 name = name + '\n' + input.name
                         name += '\n' + str(input.shape)
                         if input.is_input or input.is_placeholder:
-                            child_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
+                            input_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
                         else:
-                            child_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
+                            input_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
                     else:
-                        #child_node = pydot.Node(input.uid, shape='ellipse')
-                        child_node = pydot.Node(input.uid, shape='point', height=0.1, width=0.1, label='')
-                    dot_object.add_node(child_node)
+                        #input_node = pydot.Node(input.uid, shape='ellipse')
+                        input_node = pydot.Node(input.uid, shape='point', height=0.1, width=0.1, label='')
+                    dot_object.add_node(input_node)
                     label = str(input.shape)
                     if input.name != '':
                         label = input.name + '\n' +  label
-                    dot_object.add_edge(pydot.Edge(child_node, cur_node, label=label))
+                    dot_object.add_edge(pydot.Edge(input_node, cur_node, label=label))
 
             # add node's output
             # BUGBUG: multiple outputs not handled correctly in returned text string
@@ -306,7 +308,7 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
         if visitor(node):
             accum.append(node)
 
-        visited.add(node)
+        visited.add(node.uid)
 
     if (svg_file_path):
         dot_object.write_svg(svg_file_path, prog='dot')
