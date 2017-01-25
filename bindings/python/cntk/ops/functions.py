@@ -100,7 +100,7 @@ class Function(cntk_py.Function):
             # If name is a member of self's single output, then we relay to
             # that.
             if name in ['outputs', 'output', 'this']:
-                # 'outputs' and 'output' are required to fetch the attribute for 
+                # 'outputs' and 'output' are required to fetch the attribute for
                 # in the Variable.
                 # 'this' is required for Swig and needs to be thrown if the
                 # object is created the first time.
@@ -359,7 +359,7 @@ class Function(cntk_py.Function):
             at (dict) : mapping of the Function's arguments to values
             wrt (list optional): list of Variables with respect to which the
              gradient will be computed. If omitted, the gradients with
-             respect to all arguments will be computed. If a variable
+             respect to all arguments that need gradient will be computed. If a variable
              is repeated in this list, the gradient will be repeated
              in the output as a shallow copy.
 
@@ -373,7 +373,7 @@ class Function(cntk_py.Function):
             raise InvalidArgumentException('function must return a single tensor')
 
         if wrt is None:
-            wrt = self.arguments
+            wrt = [arg for arg self.arguments if arg.needs_gradient]
 
         unique_wrt = set(wrt)
         output = [self.output]
