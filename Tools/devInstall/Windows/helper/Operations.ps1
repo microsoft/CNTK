@@ -12,11 +12,11 @@ function OpAnaconda3411(
     $prodFile = "Anaconda3-4.1.1-Windows-x86_64.exe"
     $targetPath = join-path $targetFolder $prodSubDir
     $downloadSource = "https://repo.continuum.io/archive/Anaconda3-4.1.1-Windows-x86_64.exe"
-    $downloadSize = 370055720
+    $expectedHash = "B4889513DC574F9D6F96DB089315D69D293F8B17635DA4D2E6EEE118DC105F38"
 
     @( @{ShortName = "ANA3-411"; Name = $prodName;  VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath; } );
-         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
          # command line parameters for Anaconda installer: /D=$targetPath must be the last parameter and can not be surrounded by quotes
          Action = @( @{Function = "InstallExe"; Command = "$cache\$prodFile"; Param = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$targetPath"; runAs=$false; Message = ".... This will take some time. Please be patient ...." } );
      } )
@@ -59,13 +59,13 @@ function OpBoost160VS15(
     $envVar = "BOOST_INCLUDE_PATH"
     $envVarLib = "BOOST_LIB_PATH"
     $envContentLib = "$targetPath\lib64-msvc-14.0"
-    $downloadSize = 0
+    $expectedHash = "DBC37E8A33895FF67489ABFDC3DA7FF175A4900F2E4124AFF3E359C8F3014D2E"
 
     @( @{Name = $prodName; ShortName = "BOOST160VS15"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                         @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $targetPath },
                         @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVarLib; Content  = $envContentLib } );
-        Download = @( @{Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+        Download = @( @{Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
         Action = @( @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content = $targetPath },
                     @{Function = "SetEnvironmentVariable"; EnvVar = $envVarLib; Content  = $envContentLib },
                     @{Function = "InstallExe"; Command = "$cache\$prodFile"; Param = "/dir=`"$targetPath`" /SP- /SILENT /NORESTART"; runAs=$false } );
@@ -79,11 +79,11 @@ function OpCMake362(
     $targetPath = join-path $env:ProgramFiles "cmake\bin"
     $cmakeName = "cmake-3.6.2-win64-x64.msi"
     $downloadSource = "https://cmake.org/files/v3.6/cmake-3.6.2-win64-x64.msi"
-    $downloadSize = 15771063
+    $expectedHash = "5EB7C09C23B13742161076401BB2F4EDABD75ECAFE8916C7A401532BC3794DD5"
     
     @( @{ShortName = "CMake362"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
         Verification = @( @{Function = "VerifyWinProductExists"; Match = "^CMake$"; Version = "3.6.2" }  );
-        Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$cmakeName"; ExpectedSize = $downloadSize } );
+        Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$cmakeName"; ExpectedHash = $expectedHash } );
         Action = @( @{Function = "InstallMsi"; MsiName =  "$cmakeName" ; MsiDir   = "$cache" }  ,
                     @{Function = "AddToPath"; Dir = "$targetPath" } );
         } )
@@ -101,12 +101,12 @@ function OpCNTKMKL3
     $envVar = "CNTK_MKL_PATH";
     $envValue = $targetPath
     $downloadSource = "https://www.cntk.ai/mkl/$prodFile";
-    $downloadSize = 10331909
+    $expectedHash = "BFE38CC72F669AD9468AD18B681718C3F02125DCF24DCC87C4696DD89D0E3CDE"
 
     @(  @{ShortName = "CNTKMKL3"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPathCurrenVersion"; ActionInfo = "Installing $prodName"; 
           Verification = @( @{Function = "VerifyDirectory"; Path = $targetPathCurrenVersion },
                             @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+          Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
           Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; destinationFolder = $prodSubDir },
                       @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
@@ -118,11 +118,11 @@ function OpMSMPI70([parameter(
     $remoteFilename = "MSMpiSetup.exe"
     $localFilename = "MSMpiSetup70.exe"
     $downloadSource = "https://download.microsoft.com/download/D/7/B/D7BBA00F-71B7-436B-80BC-4D22F2EE9862/$remoteFilename";
-    $downloadSize = 5277808
+    $expectedHash = "7DB377051524EE64D0551735A7A9E9A82402068DC529C0D4CF296E2A616C22AF"
 
     @( @{Name = "MSMPI Installation"; ShortName = "CNTK"; VerifyInfo = "Checking for installed MSMPI 70"; ActionInfo = "Installing MSMPI 70";
          Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Microsoft MPI \(\d+\."; Version = "7.0.12437.6"; MatchExact = $false } );
-         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$localFilename"; ExpectedSize = $downloadSize } );
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$localFilename"; ExpectedHash = $expectedHash } );
          Action = @( @{Function = "InstallExe"; Command =  "$cache\$localFilename" ; Param = "/unattend" } )
         } )
 }
@@ -133,12 +133,11 @@ function OpMSMPI70SDK(
     $remoteFilename = "msmpisdk.msi"
     $localFilename = "msmpisdk70.msi"
     $downloadSource = "https://download.microsoft.com/download/D/7/B/D7BBA00F-71B7-436B-80BC-4D22F2EE9862/$remoteFilename";
-    $downloadSize = 2285568  
+    $expectedHash = "C28FB6121FE7A5102ED8B011992708039EE878B9F58A34B84AF41AA3622B8F4D"
 
     @( @{Name = "MSMPI SDK70 Installation"; ShortName = "CNTK"; VerifyInfo = "Checking for installed MSMPI 70 SDK"; ActionInfo = "Installing MSMPI 70 SDK";
          Verification = @( @{Function = "VerifyWinProductVersion"; Match = "^Microsoft MPI SDK \(\d+\."; Version = "7.0.12437.6"; MatchExact = $false } );
-         #Verification = @( @{Function = "VerifyWinProductExists"; Match = "^Microsoft MPI SDK \(\d+\."; Compare = "^Microsoft MPI SDK \(7\.0\.12437\.6\)"; MatchExact = $false } );
-         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$localFilename"; ExpectedSize = $downloadSize } );
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$localFilename"; ExpectedHash = $expectedHash } );
          Action = @( @{Function = "InstallMsi"; MsiName = "$localFilename" ; MsiDir = "$cache" } )
         } )
 }
@@ -154,12 +153,12 @@ function OpNvidiaCub141(
     $envVar = "CUB_PATH";
     $envValue = $targetPath
     $downloadSource = "https://github.com/NVlabs/cub/archive/1.4.1.zip";
-    $downloadSize = 51376046
+    $expectedHash = "F464EDA366E4DFE0C1D9AE2A6BBC22C5804CF131F8A67974C01FAE4AE8213E8B"
 
     @( @{ShortName = "CUB141"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+         Download = @( @{Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = "$targetFolder"; destinationFolder = $prodSubDir; zipSubTree= $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
@@ -178,15 +177,15 @@ function OpNVidiaCudnn5180(
     $envVar = "CUDNN_PATH"
     $envValue = join-path $targetPath "cuda"
     $downloadSource = "http://developer.download.nvidia.com/compute/redist/cudnn/v5.1"
-    $downloadSizeWin7 = 0
-    $downloadSizeWin10 = 0
+    $expectedHashWin7 = ""
+    $expectedHashWin10 = "BE75CA61365BACE03873B47C77930025FFEE7676FBEF0DC03D3E180700AF014B"
 
     @( @{ShortName = "CUDNN5180"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyDirectory"; Path = $envValue },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows 7"; Source = "$downloadSource/$cudnnWin7"; Destination = "$cache\$cudnnWin7"; ExpectedSize = $downloadSizeWin7 },
-                       @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; Source = "$downloadSource/$cudnnWin10"; Destination = "$cache\$cudnnWin10"; ExpectedSize = $downloadSizeWin10 } );
+         Download = @( @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows 7"; Source = "$downloadSource/$cudnnWin7"; Destination = "$cache\$cudnnWin7"; ExpectedHash = $expectedHashWin7 },
+                       @{Function = "DownloadForPlatform"; Method = "WebRequest"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; Source = "$downloadSource/$cudnnWin10"; Destination = "$cache\$cudnnWin10"; ExpectedHash = $expectedHashWin10 } );
          Action = @( @{Function = "ExtractAllFromZipForPlatform"; Platform = "^Microsoft Windows 7"; zipFileName = "$cache\$cudnnWin10"; destination = $targetFolder; destinationFolder = $prodSubDir },
                      @{Function = "ExtractAllFromZipForPlatform"; Platform = "^Microsoft Windows (8|10|Server 2008 R2|Server 2012 R2)"; zipFileName = "$cache\$cudnnWin10"; destination = $targetFolder; destinationFolder = $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue } );
@@ -204,13 +203,13 @@ function OpOpenCV31(
     $envVar = "OPENCV_PATH_V31";
     $envValue = "$targetPath\build"
     $downloadSource = "https://netcologne.dl.sourceforge.net/project/opencvlibrary/opencv-win/3.1.0/opencv-3.1.0.exe"
-    $downloadSize = 0
+    $expectedHash = "0CBB10FAB967111B5B699A44CB224F5D729F8D852D2720CBD5CDB56D8770B7B3"
     $archiveSubTree = "opencv"
 
     @(  @{ShortName = "OPENCV310"; Name = $prodName; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
           Verification = @( @{Function = "VerifyDirectory"; Path = "$targetPath" },
                             @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-          Download = @( @{ Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+          Download = @( @{ Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
           Action = @( @{Function = "Extract7zipSelfExtractingArchive"; archiveName = "$cache\$prodFile"; destination = "$targetFolder"; destinationFolder = $prodSubDir; archiveSubTree= $archiveSubTree },
                       @{Function = "SetEnvironmentVariable"; EnvVar= $envVar; Content = $envValue } );
          } )
@@ -236,11 +235,11 @@ function OpProtoBuf310VS15(
     $scriptDirectory = join-path $targetFolder "script"
     $buildDir = join-path $targetFolder $prodSubDir
     $downloadSource = "https://github.com/google/protobuf/archive/v3.1.0.zip"
-    $downloadSize = 5648581    
+    $expectedHash = "C07629F666312E43A4C2415AF77F6442178605A8658D975299C793CB89999212"
 
     @( @{ShortName = "PROTO310VS15"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath } );
-         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize} );
+         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $protoSourceDir; zipSubTree = $prodSrcSubdir; destinationFolder = $prodSrcSubdir },
                      @{Function = "MakeDirectory"; Path = $scriptDirectory },
                      @{Function = "CreateBuildProtobufBatch"; FileName = "$scriptDirectory\$batchFile"; SourceDir = $targetPath; TargetDir = $buildDir; RepoDirectory = $repoDirectory } );
@@ -259,12 +258,12 @@ function OpProtoBuf310VS15Prebuild(
     $envVar = "PROTOBUF_PATH"
     $envValue = $targetPath
     $downloadSource = "https://cntk.ai/binarydrop/prerequisites/protobuf/protobuf-3.1.0-vs15.zip"
-    $downloadSize = 0    
+    $expectedHash = "1CB09AA38354BA781F43A4152534BC45C55B65A61F38E09A50CD19F503445F25"   
 
     @( @{ShortName = "PROTO310VS15PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize} );
+         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree = $prodSubDir; destinationFolder = $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue }  );
         } )
@@ -288,12 +287,12 @@ function OpSwig3010(
     $envVar = "SWIG_PATH"
     $envValue = $targetPath
     $downloadSource = "http://prdownloads.sourceforge.net/project/swig/swigwin/swigwin-3.0.10/swigwin-3.0.10.zip"
-    $downloadSize = 0
+    $expectedHash = "68A202EBFC62647495074A190A115B629E84C56D74D3017CCB43E56A4B9B83F6"
 
     @( @{ShortName = "SWIG3010"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName";  
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{ Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize } );
+         Download = @( @{ Function = "Download"; Method = "WebClient"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash } );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree =$prodSubDir; destinationFolder =$prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue } );
         } )
@@ -333,12 +332,12 @@ function OpZlibVS15(
     $zlibFilename = "zlib128.zip" 
     # $zlibDownloadSource = "https://netix.dl.sourceforge.net/project/libpng/zlib/1.2.8/zlib128.zip"
     $zlibDownloadSource = "https://cntk.ai/binarydrop/prerequisites/zip/zlib128.zip"
-    $downloadSizeZlib = 0
+    $expectedHashZlib = "879D73D8CD4D155F31C1F04838ECD567D34BEBDA780156F0E82A20721B3973D5"
     
     $libzipProdName = "libzip-1.1.3"
     $libzipFilename = "libzip-1.1.3.tar.gz" 
     $libzipDownloadSource = "https://nih.at/libzip/libzip-1.1.3.tar.gz"
-    $downloadeSizeLibzip = 0
+    $downloadeSizeLibzip = "1FAA5A524DD4A12C43B6344E618EDCE1BF8050DFDB9D0F73F3CC826929A002B0"
     
     $prodSubDir =  "zlib-vs15"
     $batchFile = "buildZlibVS15.cmd"
@@ -353,8 +352,8 @@ function OpZlibVS15(
          Verification = @( @{Function = "VerifyDirectory"; Path = "$sourceCodeDir\$zlibProdName" },
                            @{Function = "VerifyDirectory"; Path = "$sourceCodeDir\$libzipProdName" },
                            @{Function = "VerifyFile"; Path = "$scriptDirectory\$batchFile" } );
-         Download = @( @{ Function = "Download"; Source = $zlibDownloadSource; Destination = "$cache\$zlibFilename"; ExpectedSize = $downloadSizeZlib }, 
-                       @{ Function = "Download"; Source = $libzipDownloadSource; Destination = "$cache\$libzipFilename"; ExpectedSize = $downloadeSizeLibzip } );
+         Download = @( @{ Function = "Download"; Source = $zlibDownloadSource; Destination = "$cache\$zlibFilename"; ExpectedHash = $expectedHashZlib }, 
+                       @{ Function = "Download"; Source = $libzipDownloadSource; Destination = "$cache\$libzipFilename"; ExpectedHash = $downloadeSizeLibzip } );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$zlibFilename"; destination = $sourceCodeDir; zipSubTree =$zlibProdName; destinationFolder =$zlibProdName },
                      @{Function = "ExtractAllFromTarGz"; SourceFile =  "$cache\$libzipFilename"; TargzFileName = "$libzipFilename"; destination = $sourceCodeDir },
                      @{Function = "MakeDirectory"; Path = $scriptDirectory },
@@ -375,12 +374,12 @@ function OpZlibVS15Prebuild(
     $envVar = "ZLIB_PATH"
     $envValue = $targetPath
     $downloadSource = "https://cntk.ai/binarydrop/prerequisites/zip/zlib-vs15.zip"
-    $downloadSize = 0    
+    $expectedHash = "7C6B7D874D970B24D41CC59A332DAA8CD65497D46BB8D0DF05493DC8F6462832"
 
     @( @{ShortName = "ZLIBVS15PRE"; VerifyInfo = "Checking for $prodName in $targetPath"; ActionInfo = "Installing $prodName"; 
          Verification = @( @{Function = "VerifyDirectory"; Path = $targetPath },
                            @{Function = "VerifyEnvironmentAndData"; EnvVar = $envVar; Content = $envValue } );
-         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedSize = $downloadSize} );
+         Download = @( @{ Function = "Download"; Method = "WebRequest"; Source = $downloadSource; Destination = "$cache\$prodFile"; ExpectedHash = $expectedHash} );
          Action = @( @{Function = "ExtractAllFromZip"; zipFileName = "$cache\$prodFile"; destination = $targetFolder; zipSubTree = $prodSubDir; destinationFolder = $prodSubDir },
                      @{Function = "SetEnvironmentVariable"; EnvVar = $envVar; Content  = $envValue }  );
         } )

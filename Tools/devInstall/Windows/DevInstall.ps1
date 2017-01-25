@@ -34,6 +34,9 @@
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
  Supported values for this parameter are 27, 34, or 35. The default values is 35 (for a CNTK Python 35 environment).
 
+  .PARAMETER NoPythonEnvironment
+  If this switch parameter is set, the install script will not create a CNTK Python environment during the installation process
+
  .EXAMPLE
  .\devInstall.ps1
  
@@ -57,9 +60,16 @@ Param(
     [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
     [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
     [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
-    [parameter(Mandatory=$false)] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35")
+    [parameter(Mandatory=$false)] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35", 
+    [parameter(Mandatory=$false)] [switch] $NoCondaEnv)
     
 $roboCopyCmd = "robocopy.exe"
+
+#just make sure the supplied parameter don't end on a backslash
+$localCache = (Join-Path $localCache .) | Split-Path
+$InstallLocation = (Join-Path $InstallLocation .) | Split-Path
+$AnacondaBasePath = (Join-Path $AnacondaBasePath .) | Split-Path
+
 $localDir = $InstallLocation
 
 
@@ -126,7 +136,9 @@ Function main
         $operation += OpZlibVS15Prebuild -cache $localCache -targetFolder $localDir
         $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
         $operation += OpAnaconda3411 -cache $localCache -AnacondaBasePath $AnacondaBasePath
-        $operation += OpAnacondaEnv -AnacondaBasePath $AnacondaBasePath -repoDir $repositoryRootDir -repoName $reponame -pyVersion $PyVersion
+        if (-not $NoPythonEnvironment) {
+            $operation += OpAnacondaEnv -AnacondaBasePath $AnacondaBasePath -repoDir $repositoryRootDir -repoName $reponame -pyVersion $PyVersion
+        }
 
         $operationList = @()
         $operationList += (VerifyOperations $operation)
