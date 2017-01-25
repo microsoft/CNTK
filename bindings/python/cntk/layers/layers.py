@@ -383,8 +383,22 @@ def Dropout(prob, name=''):
     def dropout(x):
         from cntk.ops import dropout # avoid scope mixup
         return dropout(x, dropout_rate=prob)
-    #dropout = _inject_name(dropout, name)
     return Block(dropout, 'Dropout')
+
+
+def Activation(activation=default_override_or(identity), name=''): 
+    '''
+    Layer factory function to create an activation layer.
+    Activation functions can be used directly in CNTK, so there is no difference between
+    ``y = relu(x)`` and ``y = Activation(relu)(x)``.
+    This layer is useful if one wants to configure the activation function
+    with ``default_options``, or when its invocation should be named.
+    '''
+    activation = get_default_override(Activation, activation=activation)
+    @BlockFunction('Activation', name)
+    def activation_f(x):
+        return activation(x) 
+    return Block(activation_f, 'Activation')
 
 
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C++ change.

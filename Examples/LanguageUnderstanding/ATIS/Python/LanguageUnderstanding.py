@@ -101,6 +101,7 @@ def create_model_function():
         #Stabilizer(),
         Label('hidden_representation'),
         Dense(num_labels, name='out_projection')
+        #Activation(relu, name='xcxx')   # (test only; not a good result)
         #last,
         #Dense(num_intents)
     ])
