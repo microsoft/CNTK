@@ -318,6 +318,9 @@ template<typename ReductionType, class ElemType> __device__ void UpdateAggregate
         if (val > aggregate)
             aggregate = val;
         break;
+    case ElementWiseOperator::opElementwiseProduct:
+        aggregate *= val;
+        break;
     }
 };
 

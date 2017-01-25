@@ -2116,6 +2116,39 @@ def reduce_min(x, axis=None, name=''):
     axis = sanitize_axis(axis)
     return reduce_min(x, axis, name)
 
+@typemap
+def reduce_prod(x, axis=None, name=''):
+    '''
+    Computes the min of the input tensor's elements across the specified axis.
+
+    Example:
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]
+
+        >>> C.reduce_min(data, 0).eval()
+        array([[ 10.,  20.]], dtype=float32)
+
+        >>> C.reduce_min(data, 1).eval()
+        array([[ 10.],
+               [ 30.],
+               [ 50.]], dtype=float32)
+
+    Args:
+        x: input tensor
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
+
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import reduce_prod
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return reduce_prod(x, axis, name)
+
 #######################################################################
 # training ops
 #######################################################################

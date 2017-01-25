@@ -183,6 +183,7 @@ namespace CNTK
         static const std::wstring InternalMeanReductionOpName;
         static const std::wstring InternalMaxReductionOpName;
         static const std::wstring InternalMinReductionOpName;
+        static const std::wstring InternalProdReductionOpName;
         static const std::wstring InternalAllReductionOpName;
         static const std::wstring InternalAnyReductionOpName;
 

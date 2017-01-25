@@ -28,6 +28,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::InternalMeanReductionOpName = L"Mean";
     /*static*/ const std::wstring PrimitiveFunction::InternalMaxReductionOpName = L"Max";
     /*static*/ const std::wstring PrimitiveFunction::InternalMinReductionOpName = L"Min";
+    /*static*/ const std::wstring PrimitiveFunction::InternalProdReductionOpName = L"Prod";
     /*static*/ const std::wstring PrimitiveFunction::InternalAllReductionOpName = L"All";
     /*static*/ const std::wstring PrimitiveFunction::InternalAnyReductionOpName = L"Any";
 
@@ -548,7 +549,7 @@ namespace CNTK
                     case PrimitiveOpType::ReduceElements:
                     {
                         assert(inputs.size() == 1);
-                        auto reductionAxis = NormalizeStaticAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0].Shape());
+                        auto reductionAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape());
                         if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                             outputShape = {};
                         else

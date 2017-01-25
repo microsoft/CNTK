@@ -373,7 +373,7 @@ class Function(cntk_py.Function):
             raise InvalidArgumentException('function must return a single tensor')
 
         if wrt is None:
-            wrt = [arg for arg self.arguments if arg.needs_gradient]
+            wrt = [arg for arg in self.arguments if arg.needs_gradient]
 
         unique_wrt = set(wrt)
         output = [self.output]

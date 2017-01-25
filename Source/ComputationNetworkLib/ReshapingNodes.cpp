@@ -112,6 +112,7 @@ template <class ElemType>
 
     case ElementWiseOperator::opMin:
     case ElementWiseOperator::opMax:
+    {
         auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
         auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
@@ -130,7 +131,14 @@ template <class ElemType>
         // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
         sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
         break;
-
+    }
+    case ElementWiseOperator::opElementwiseProduct:
+    {        
+        auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
+        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+        sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, input, output);
+        break;
+    }
         // more coming
     }
 }
@@ -140,10 +148,11 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum:    return false;
-    case ElementWiseOperator::opLogSum: return true;
-    case ElementWiseOperator::opMin:    return true;
-    case ElementWiseOperator::opMax:    return true;
+    case ElementWiseOperator::opSum:                   return false;
+    case ElementWiseOperator::opLogSum:                return true;
+    case ElementWiseOperator::opMin:                   return true;
+    case ElementWiseOperator::opMax:                   return true;
+    case ElementWiseOperator::opElementwiseProduct:    return true;
     }
     LogicError("Should not get here.");
 }
@@ -153,10 +162,11 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum:    return false;
-    case ElementWiseOperator::opLogSum: return true;
-    case ElementWiseOperator::opMin:    return true;
-    case ElementWiseOperator::opMax:    return true;
+    case ElementWiseOperator::opSum:                   return false;
+    case ElementWiseOperator::opLogSum:                return true;
+    case ElementWiseOperator::opMin:                   return true;
+    case ElementWiseOperator::opMax:                   return true;
+    case ElementWiseOperator::opElementwiseProduct:    return true;
     }
     LogicError("Should not get here.");
 }
@@ -174,6 +184,7 @@ void ReduceElementsNode<ElemType>::ValidateOp()
     else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
     else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
     else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
+    else if (m_operation == L"Prod")   m_reductionOp = ElementWiseOperator::opElementwiseProduct;
 
     // more here
     else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min'.", NodeDescription().c_str(), m_operation.c_str());
