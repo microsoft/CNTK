@@ -41,7 +41,7 @@ public:
                     return i;
             }
 
-            std::runtime_error("GetInputIndex: Specified variable is not an input of this Function");
+            throw std::runtime_error("GetInputIndex: Specified variable is not an input of this Function");
             return 0;
         };
 
@@ -110,9 +110,11 @@ public:
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
 private:
-    static std::vector<Variable> GetOutputVariables(const Variable& leftOperand, const Variable& rightOperand, bool isTimes)
+    std::vector<Variable> InferOutputs() override
     {
-        auto tempFunc = isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
+        auto leftOperand = Inputs()[0];
+        auto rightOperand = Inputs()[1];
+        auto tempFunc = m_isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
         auto tempFuncOutputs = tempFunc->Outputs();
 
         std::vector<Variable> outputs;
@@ -123,15 +125,18 @@ private:
     }
 
     UserDefinedTimesOrPlusFunction(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name)
-        : Function({ leftOperand, rightOperand }, GetOutputVariables(leftOperand, rightOperand, isTimes), Dictionary(), name)
+        : Function({ leftOperand, rightOperand }, Dictionary(), name), m_isTimes(isTimes)
     {
         auto createTimesOperandVar = [this](const Variable& operand, const std::wstring& operandName) {
             Variable var;
-            if (Combine({ operand })->Parameters().empty())
-                std::runtime_error("Cannot determine device to place Parameter on!");
 
             if (operand.DynamicAxes().empty())
+            {
+                if (Combine({ operand })->Parameters().empty())
+                    throw std::runtime_error("Cannot determine device to place Parameter on!");
+
                 var = Parameter(operand.Shape(), operand.GetDataType(), 0, Combine({ operand })->Parameters()[0].Value()->Device());
+            }
             else
                 var = InputVariable(operand.Shape(), operand.IsSparse(), operand.GetDataType(), operand.NeedsGradient(), operandName, operand.DynamicAxes());
 
@@ -145,6 +150,7 @@ private:
     }
 
 private:
+    bool m_isTimes;
     FunctionPtr m_timesOrPlusFunc;
     std::unordered_map<Variable, Variable> m_timesOrPlusFuncArgumentMap;
 };

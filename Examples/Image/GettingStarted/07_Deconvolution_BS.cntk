@@ -11,8 +11,8 @@ precision = "float"; traceLevel = 1 ; deviceId = "auto"
 rootDir = ".." ; dataDir = "$rootDir$/DataSets/MNIST" ;
 outputDir = "./Output" ;
 
-modelPath = "$outputDir$/Models/07_Deconvolution.model"
-#stderr = "$outputDir$/07_Deconvolution_bs_out.txt"
+modelPath = "$outputDir$/Models/07_Deconvolution_BS.model"
+#stderr = "$outputDir$/07_Deconvolution_BS_out.txt"
 #makemode=false
 
 # TRAINING CONFIG
@@ -42,7 +42,7 @@ trainNetwork = {
         # rmse loss function
         f2 = Scale{featScale} (features)
         err = z - f2
-        sqErr = err .* err
+        sqErr = ElementTimes(err, err)
         mse = ReduceMean(sqErr)
         rmse = Sqrt(mse)
         

@@ -50,15 +50,31 @@ def save_as_png(val_array, img_file_name, dim=28):
 
 
 if __name__ == '__main__':
+    use_brain_script_model = True
     num_objects_to_eval = 5
+
+    if (use_brain_script_model):
+        model_file_name = "07_Deconvolution_BS.model"
+        encoder_output_file_name = "encoder_output_BS.txt"
+        decoder_output_file_name = "decoder_output_BS.txt"
+        enc_node_name = "z.pool1"
+        input_node_name = "f2"
+        output_node_name = "z"
+    else:
+        model_file_name = "07_Deconvolution_PY.model"
+        encoder_output_file_name = "encoder_output_PY.txt"
+        decoder_output_file_name = "decoder_output_PY.txt"
+        enc_node_name = "Pooling27"
+        input_node_name = "ElementTimes4"
+        output_node_name = "Convolution53"
 
     # define location of output, model and data and check existence
     output_path = os.path.join(abs_path, "Output")
-    model_file = os.path.join(model_path, "07_Deconvolution.model")
+    model_file = os.path.join(model_path, model_file_name)
     data_file = os.path.join(data_path, "Test-28x28_cntk_text.txt")
     if not (os.path.exists(model_file) and os.path.exists(data_file)):
         print("Cannot find required data or model. "
-              "Please get the MNIST data set and run 'cntk configFile=07_Deconvolution.cntk' to create the model.")
+              "Please get the MNIST data set and run 'cntk configFile=07_Deconvolution_BS.cntk' or 'python 07_Deconvolution_PY.py' to create the model.")
         exit(0)
 
     # create minibatch source
@@ -68,28 +84,28 @@ if __name__ == '__main__':
     )), randomize=False, epoch_size = FULL_DATA_SWEEP)
 
     # use this to print all node names in the model
-    # print_all_node_names(model_file)
+    # print_all_node_names(model_file, use_brain_script_model)
 
     # load model and pick desired nodes as output
     loaded_model = load_model(model_file)
     output_nodes = combine(
-        [loaded_model.find_by_name('f1').owner,
-         loaded_model.find_by_name('z.p1').owner,
-         loaded_model.find_by_name('z').owner])
+        [loaded_model.find_by_name(input_node_name).owner,
+         loaded_model.find_by_name(enc_node_name).owner,
+         loaded_model.find_by_name(output_node_name).owner])
 
     # evaluate model save output
     features_si = minibatch_source['features']
-    with open(os.path.join(output_path, "decoder_output_py.txt"), 'wb') as decoder_text_file:
-        with open(os.path.join(output_path, "encoder_output_py.txt"), 'wb') as encoder_text_file:
+    with open(os.path.join(output_path, decoder_output_file_name), 'wb') as decoder_text_file:
+        with open(os.path.join(output_path, encoder_output_file_name), 'wb') as encoder_text_file:
             for i in range(0, num_objects_to_eval):
                 mb = minibatch_source.next_minibatch(1)
                 raw_dict = output_nodes.eval(mb[features_si])
                 output_dict = {}
                 for key in raw_dict.keys(): output_dict[key.name] = raw_dict[key]
 
-                encoder_input = output_dict['f1']
-                encoder_output = output_dict['z.p1']
-                decoder_output = output_dict['z']
+                encoder_input = output_dict[input_node_name]
+                encoder_output = output_dict[enc_node_name]
+                decoder_output = output_dict[output_node_name]
                 in_values = (encoder_input[0,0].flatten())[np.newaxis]
                 enc_values = (encoder_output[0,0].flatten())[np.newaxis]
                 out_values = (decoder_output[0,0].flatten())[np.newaxis]

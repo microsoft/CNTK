@@ -25,9 +25,9 @@ testCases:
   Per-minibatch training results must match:
     patterns:
       - Epoch[{{integer}} of {{integer}}]-Minibatch[{{integer}}-{{integer}}
-      - rmse = {{float,tolerance=1%}} * {{integer}}
+      - rmse = {{float,tolerance=10%}} * {{integer}}
 
   Final test results must match:
     patterns:
       - "Final Results: Minibatch[{{integer}}-{{integer}}]"
-      - rmse = {{float,tolerance=1%}} * {{integer}}
+      - rmse = {{float,tolerance=10%}} * {{integer}}

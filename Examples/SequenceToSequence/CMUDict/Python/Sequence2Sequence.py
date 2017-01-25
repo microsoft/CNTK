@@ -196,7 +196,6 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # which holds 'input' in its closure.
         unfold = UnfoldFrom(lambda history: s2smodel(history, input) >> hardmax,
                             until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
-                            # BUGBUG: causes some strange MBLayout error
                             length_increase=length_increase, initial_state=sentence_start)
         return unfold(dynamic_axes_like=input)
 
@@ -206,8 +205,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
       debughelpers.dump_function(model_greedy, 'model_greedy')
       raise
     #debughelpers.dump_function(model_greedy, 'model_greedy')
-    from cntk.graph import output_function_graph
-    output_function_graph(model_greedy, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
+    from cntk.graph import plot
+    plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
 
     @Function
     def criterion(input, labels):
@@ -230,7 +229,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     #debughelpers.dump_function(criterion)
 
     # render the Function graph to a PDF file
-    #output_function_graph(criterion, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
+    #plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
@@ -715,9 +714,9 @@ def build_model_xy(model_save_path=None):
     logger.info("build model completed")
     if model_save_path:
         #plot(model, to_file=model_save_path + '.png')
-        from cntk.graph import output_function_graph
-        output_function_graph(model, pdf_file_path=model_save_path + '.pdf', scale=2)
-        #output_function_graph(model, svg_file_path=model_save_path + '.svg', scale=2)
+        from cntk.graph import plot
+        plot(model, filename=model_save_path + '.pdf', scale=2)
+        #plot(model, filename=model_save_path + '.svg', scale=2)
         logger.info('model graph saved to ' + model_save_path + '.png')        
     return model
 

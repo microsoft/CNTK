@@ -28,7 +28,7 @@
         "name":  "Image auto encoder",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#07_deconvolution",
         "description":  "A simple image auto encoder using deconvolution and unpooling.",
-        "language":  ["BrainScript"],
+        "language":  ["BrainScript, Python"],
         "type":  ["Recipe"]
     },
     {

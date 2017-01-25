@@ -38,8 +38,6 @@ class Function(cntk_py.Function):
 
     If it has only one output, one can invoke Variable methods on it, which it
     will relay to its only output.
-
-    BUGBUG: This ^^ is not correct. It is also the base of composites and multi-valued functions.
     '''
 
     class NamedOutput:
@@ -546,15 +544,12 @@ class Function(cntk_py.Function):
         if not self.is_composite:
             from cntk import combine
             #return combine([self]).clone(method, substitutions).root_function.arguments[0].owner
-            # BUGBUG: This does not give me the correct .arguments
+            # BUGBUG: This ^^ does not give me the correct .arguments, so we leave the extra combine() in for now.
             return combine([self]).clone(method, substitutions)
 
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         substitutions = sanitize_var_substitution_map(substitutions)
-        #if substitutions is None:
-        #    substitutions = {}
-        #substitutions = { param: sanitize_input(arg) for param, arg in substitutions.items() }
         return super(Function, self).clone(method, substitutions)
 
     @property
@@ -790,7 +785,11 @@ class Function(cntk_py.Function):
         '''
         List of all input variables of this function.
         '''
-        return super(Function, self).inputs()
+        input_nodes = super(Function, self).inputs()
+        if self.root_function.op_name in ['Times', 'TransposeTimes']:
+            input_nodes = tuple(reversed(input_nodes))
+
+        return input_nodes
 
     @property
     def name(self):
@@ -1043,7 +1042,7 @@ class Function(cntk_py.Function):
     def load(filename, device=None):
         '''
         Load the model in ``filename``, that has been saved using
-        `:func:save_model`.
+        :func:`~cntk.ops.functions.Function.save`.
 
         Args:
             filename (str): filename to load the model from
@@ -1074,7 +1073,7 @@ class UserFunction(Function):
     will relay to its only output.
 
     '''
-    def __init__(self, inputs, outputs, name=''):
+    def __init__(self, inputs, name=''):
         var_inputs = []
         # TODO: this should be done in Swig
         for i in inputs:
@@ -1085,7 +1084,7 @@ class UserFunction(Function):
             else:
                 raise ValueError('expected Variable, but got "%s"'%type(i))
 
-        super(Function, self).__init__(var_inputs, outputs, name)
+        super(Function, self).__init__(var_inputs, name)
 
     def _forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         '''
@@ -1160,3 +1159,6 @@ class UserFunction(Function):
                 raise ValueError('gradients were not provided for all variables')
 
             variables[k] = sanitize_batch(k, v, None, state.device())
+
+    def op_name(self):
+        return 'UserFunction'

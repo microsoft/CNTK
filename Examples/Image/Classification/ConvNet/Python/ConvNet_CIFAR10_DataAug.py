@@ -119,8 +119,8 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
     criterion = create_criterion_function(model, normalize=Placeholder() / 256)
     criterion.update_signature((num_channels, image_height, image_width), num_classes)
 
-    from cntk.graph import output_function_graph
-    output_function_graph(criterion, pdf_file_path=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"), scale=1)
+    from cntk.graph import plot
+    plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))
 
     # iteration parameters
     epoch_size     = 50000

@@ -184,8 +184,8 @@ def train(reader, model, max_epochs):
     #         Works in eval though.
     #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
-    from cntk.graph import output_function_graph
-    output_function_graph(criterion, pdf_file_path=data_dir + "/model.pdf", scale=1)
+    from cntk.graph import plot
+    plot(criterion, filename=data_dir + "/model.pdf")
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000

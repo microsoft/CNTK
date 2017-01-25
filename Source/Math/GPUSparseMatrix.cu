@@ -2087,6 +2087,55 @@ ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUMatrix<ElemT
     return GPUSparseMatrix<ElemType>::InnerProductOfMatrices(b, a);
 }
 
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::InnerProduct(const GPUSparseMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const bool isColWise)
+{
+    if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("All matrices must be on the same GPU");
+
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+
+    if (a.GetFormat() != MatrixFormat::matrixFormatSparseCSC)
+    {
+        NOT_IMPLEMENTED;
+    }
+
+    const int m = (int)a.GetNumRows();
+    const int n = (int)a.GetNumCols();
+    const int k = (int)b.GetNumRows();
+    const int l = (int)b.GetNumCols();
+
+    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
+    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
+    if (m != k || n != l)
+        InvalidArgument("Matrices a and b should have same dimension.");
+
+    if (isColWise)
+        c.RequireSize(1, n);
+    else
+        c.RequireSize(m, 1);
+
+    c.PrepareDevice();
+
+    int blocksPerGrid = 0;
+    if (isColWise) // col-wise
+    {
+        blocksPerGrid = (int)ceil(1.0 * n / GridDim::maxThreadsPerBlock);
+    }
+    else
+    {
+        blocksPerGrid = (int)ceil(1.0 * m / GridDim::maxThreadsPerBlock);
+    }
+
+    SyncGuard syncGuard;
+    _innerProduct4SparseCSC<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(
+        c.Data(),
+        a.Data(), a.RowLocation(), a.ColLocation(),
+        b.Data(),
+        m, n, isColWise);
+}
+
 // This is an utility function useful for debugging issues with sparse matrices.
 // It just checks that the CSC format indices are not corrupted / pointing to invalid memory.
 template <class ElemType>

@@ -1,5 +1,5 @@
 FROM nvidia/cuda:8.0-runtime-ubuntu16.04
-# use nvidia-docker to run! (cuda 8.0 != cuda 7.5, but should be good enough to test for now)
+# use nvidia-docker to run!
 
 ARG PY_VERSION
 

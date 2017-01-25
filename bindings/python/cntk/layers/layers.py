@@ -285,6 +285,66 @@ def Convolution(rf_shape,         # e.g. (3,3)
 
     return Block(convolve, 'Convolution', Record(W=W, b=b))
 
+
+# Deconvolution -- create a deconvolution layer with optional non-linearity
+# TODO: need to merge with above. Can it simply be transpose=True?
+def Deconvolution(filter_shape,        # e.g. (3,3)
+                num_filters,
+                num_input_filters,
+                activation=default_override_or(identity),
+                init=default_override_or(glorot_uniform()),
+                pad=default_override_or(False),
+                strides=1,
+                sharing=True,     # (must be True currently)
+                lower_pad=(0,),
+                upper_pad=(0,),
+                bias=default_override_or(True),
+                init_bias=default_override_or(0),
+                reduction_rank=1, # (must be 1 currently)
+                max_temp_mem_size_in_samples=0, 
+                name=''):
+
+    '''
+    Layer factory function to create a deconvolution layer.
+    '''
+    UntestedBranchError("Deconvolution not tested after merge to new Layers lib")
+
+    activation = get_default_override(Deconvolution, activation=activation)
+    init       = get_default_override(Deconvolution, init=init)
+    pad        = get_default_override(Deconvolution, pad=pad)
+    bias       = get_default_override(Deconvolution, bias=bias)
+    init_bias  = get_default_override(Deconvolution, init_bias=init_bias)
+
+    # TODO: there must be a Python trick to do this as a function call on locals or so
+    if reduction_rank != 1:
+        NotImplementedError("Deconvolution: reduction_rank other than 1 currently not supported")
+    if not sharing:
+        NotImplementedError("Deconvolution: sharing option currently must be True")
+    output_channels_shape = _as_tuple(num_filters)
+    input_channels_shape = _as_tuple(num_input_filters)
+    kernel_shape = output_channels_shape + filter_shape
+    param_shape = input_channels_shape + kernel_shape
+
+    filter_rank = len(filter_shape)
+    init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
+    W = Parameter(param_shape, init=init_kernel, name='W')
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias, name='b') if bias else None
+
+    # expression
+    x = Placeholder(name='deconvolution_arg')
+    apply_x = convolution (W, x,
+                           strides=_as_tuple(strides),
+                           sharing=_as_tuple(sharing),
+                           auto_padding=_as_tuple(pad),
+                           lower_pad=lower_pad,
+                           upper_pad=upper_pad,
+                           transpose=True,
+                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    if bias:
+        apply_x = apply_x + b
+    apply_x = apply_x >> activation
+    return Block(apply_x, 'Deconvolution', name, Record(W=W, b=b), make_block=True)
+
 # TODO: add sequential mode like Convolution()
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def _Pooling(op,       # PoolingType_Max or _Average
@@ -346,6 +406,22 @@ def GlobalAveragePooling(name=''):
     Layer factory function to create a global average-pooling layer.
     '''
     return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
+
+
+# Create a max unpooling layer
+# TODO: merge this. Test: Tests\EndToEndTests\CNTKv2Python\Examples\deconv_MNIST_test.py, Tests\EndToEndTests\Examples\Image\GettingStarted\07_Deconvolution
+def MaxUnpooling(filter_shape,  # e.g. (3,3)
+                 strides=1,
+                 pad=False,
+                 lower_pad=0,
+                 upper_pad=0, 
+                 name=''):
+    UntestedBranchError("MaxUnpooling not tested after merge to new Layers lib")
+    @BlockFunction('MaxUnpooling', name)
+    def maxunpooling(x, y):
+        return unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
+                         lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
+    return Block(maxunpooling, 'MaxUnpooling')
 
 
 def Delay(T=1, initial_state=default_override_or(0), name=''):
