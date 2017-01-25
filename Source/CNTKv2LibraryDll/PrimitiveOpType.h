@@ -73,6 +73,6 @@ namespace CNTK
         EditDistanceError = 61
         // New op types should only be appended to the end of this list.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)
-        // and bump up PrimitiveFunction::s_serializationVersion
+        // and bump up PrimitiveFunction::s_serializationVersion and update PrimitiveFunction::Deserialize
     };
 }

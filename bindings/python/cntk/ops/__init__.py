@@ -411,13 +411,19 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
     return classification_error(output_vector, target_vector, topN, axis, name)
 
 @typemap
-def edit_distance_error(input_a, input_b, subPen, delPen, insPen, squashInputs, samplesToIgnore, name=''):
+def edit_distance_error(input_a, input_b, subPen=0, delPen=0, insPen=0, squashInputs=False, samplesToIgnore=[], name=''):
     '''
     Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
     Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
 
+    Each sequence in the inputs is expected to be a matrix. Prior to computation of the edit distance, the operation extracts the indices of maximum element in each column.
+    For example, a sequence matrix
+    1 2 9 1
+    3 0 3 2
+    will be represented as the vector of labels (indices) as [1, 0, 0, 1], on which edit distance will be actually evaluated.
+
     The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and samplesToIgnore contains label '-' then
-    given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
+    given first input sequence as s1="1-12-" and second as s2="-11--122" the edit distance will be computed against s1' = "112" and s2' = "112".
 
     The returned error is computed as: EditDistance(s1,s2) * length(s1') / length(s1)
 
@@ -426,8 +432,11 @@ def edit_distance_error(input_a, input_b, subPen, delPen, insPen, squashInputs, 
     Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 
     Example:
-        >>> C.classification_error([[1., 2., 3., 4.]], [[1., 2., 0., 1.]]).eval()
-        array([[ 0.]], dtype=float32)
+        i1 = cntk.input_variable(shape=(2,))
+        i2 = cntk.input_variable(shape=(2,))
+        arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
+        a = edit_distance_error(i1, i2, 0, 1, 1, True, [1])
+        print(a.eval(arguments))
 
     Args:
         input_a: first input sequence
