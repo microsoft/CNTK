@@ -21,7 +21,6 @@
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
-#include "MPIWrapper.h"
 #include "DataDeserializer.h"
 #include "SequencePacker.h"
 #include "NoRandomizer.h"
