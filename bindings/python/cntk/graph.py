@@ -150,7 +150,7 @@ def try_find_closest_by_name(node, node_name, max_depth=None):
     return result[0]
 
 # TODO: This seems to have lots of overlap with depth_first_search() above
-def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file_path=None, svg_file_path=None, scale=1.5):
+def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file_path=None, svg_file_path=None, scale=1):
     '''
     Walks through every node of the graph starting at ``root``,
     creates a network graph, and saves it as a string. If dot_file_name, 
