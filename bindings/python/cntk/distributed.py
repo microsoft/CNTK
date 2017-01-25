@@ -149,6 +149,10 @@ def block_momentum_distributed_learner(learner, block_size, block_momentum_as_ti
     During training, a random, unprocessed block is randomly taken by the trainer
     and the N partitions of this block are dispatched on the workers.
 
+    Ref: Scalable training of deep learning machines by incremental block training
+         with intra-block parallel optimization and blockwise model-update filtering 
+         (K. Chen and Q. Huo)
+
     Args:
         learner: a local learner (i.e. sgd)
         block_size (int): Number of partition of the dataset (block)
