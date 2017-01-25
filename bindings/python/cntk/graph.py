@@ -150,7 +150,7 @@ def try_find_closest_by_name(node, node_name, max_depth=None):
     return result[0]
 
 # TODO: This seems to have lots of overlap with depth_first_search() above
-def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file_path=None, svg_file_path=None, scale=1):
+def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file_path=None, svg_file_path=None, scale=1.5):
     '''
     Walks through every node of the graph starting at ``root``,
     creates a network graph, and saves it as a string. If dot_file_name, 
@@ -204,6 +204,17 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
     accum = []
     visited = set()
 
+    primitive_op_map = {
+        'Plus': '+',
+        'Minus': '-',
+        'ElementTimes': '*',
+        'Times': '@',
+    }
+    def map_primitive_op(op_name):
+        if op_name in primitive_op_map:
+            op_name = primitive_op_map[op_name]
+        return op_name
+
     while stack:
         node = stack.pop()
         
@@ -220,9 +231,19 @@ def output_function_graph(root, dot_file_path=None, png_file_path=None, pdf_file
             # add current Function node
             model += node.op_name + '('
             if (write_to_file):
-                cur_node = pydot.Node(node.op_name + ' ' + node.uid, label='"' + node.op_name + '\n' + node.name + '()"',
-                                      fixedsize='true', height=1, width=1.3,
-                                      penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
+                if node.is_primitive and not node.is_block and len(node.outputs) == 1 and node.output.name == node.name:     # skip the node name if redundant
+                    op_name = map_primitive_op(node.op_name)
+                    render_as_primitive = len(op_name) <= 4
+                    size = 0.4 if render_as_primitive else 0.6
+                    cur_node = pydot.Node(node.op_name + ' ' + node.uid, label='"' + op_name + '"',
+                                          shape='ellipse'  if render_as_primitive else 'box',
+                                          fixedsize='true' if render_as_primitive else 'false', height=size, width=size,
+                                          fontsize=20 * scale if render_as_primitive and len(op_name) == 1 else 12 * scale,
+                                          penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
+                else:
+                    cur_node = pydot.Node(node.op_name + ' ' + node.uid, label='"' + node.op_name + '\n' + node.name + '()"',
+                                          fixedsize='true', height=1, width=1.3,
+                                          penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
                 dot_object.add_node(cur_node)
 
             # add node's inputs

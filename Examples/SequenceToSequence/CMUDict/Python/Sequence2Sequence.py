@@ -38,7 +38,7 @@ num_layers = 2
 attention_dim = 128
 attention_span = 20
 attention_axis = -3
-use_attention = True
+use_attention = False
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -195,7 +195,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
         # which holds 'input' in its closure.
         unfold = UnfoldFrom(lambda history: s2smodel(history, input) >> hardmax,
-                            #until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
+                            until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                             # BUGBUG: causes some strange MBLayout error
                             length_increase=length_increase, initial_state=sentence_start)
         return unfold(dynamic_axes_like=input)
@@ -205,9 +205,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     except:
       debughelpers.dump_function(model_greedy, 'model_greedy')
       raise
-    #model_greedy.dump()
+    #debughelpers.dump_function(model_greedy, 'model_greedy')
     from cntk.graph import output_function_graph
-    #output_function_graph(model_train, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
+    output_function_graph(model_greedy, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
 
     @Function
     def criterion(input, labels):
@@ -228,7 +228,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
       raise
     debughelpers.dump_signature(criterion)
     #debughelpers.dump_function(criterion)
-    output_function_graph(criterion, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
+
+    # render the Function graph to a PDF file
+    #output_function_graph(criterion, pdf_file_path=os.path.join(MODEL_DIR, "model") + '.pdf', scale=1)
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though

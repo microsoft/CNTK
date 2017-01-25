@@ -239,9 +239,9 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
             factors = sequence.constant_with_dynamic_axes_like(length_increase, out_axis) # repeat each frame 'length_increase' times, on average
             out_axis = sequence.where(factors)  # note: values are irrelevant; only the newly created axis matters
 
-        state_fwd = ForwardDeclaration()
+        state_fwd = ForwardDeclaration(name='unfold_state_fwd')
         #state_fwd = placeholder_variable(name='ph')   #ForwardDeclaration()
-        prev_state = delay(state_fwd, initial_state=initial_state)
+        prev_state = delay(state_fwd, initial_state=initial_state, name='unfold_prev_state')
         #prev_state = past_value(state_fwd, initial_state=initial_state)
         #print('gen args:', [arg.name for arg in generator_function.arguments])
         z = generator_function(prev_state) # returns either (output) or (output, new state)
@@ -260,6 +260,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         from ..cntk_py import reconcile_dynamic_axis
         new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
         #new_state = combine([new_state])
+        new_state = combine([new_state], name='unfold_new_state')
         state_fwd.resolve_to(new_state)
         # BUGBUG: Could it be this?
         #new_state.output.owner.replace_placeholders({state_fwd: new_state.output})
@@ -267,7 +268,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         #print('state_fwd after resolve:', [arg.name for arg in new_state.signature])
         #print('state_fwd after resolve, args:', [arg.name for arg in new_state.arguments])
 
-        output = combine([output]) # BUGBUG: without this, it crashes with bad weak ptr
+        output = combine([output], name='unfold_output') # BUGBUG: without this, it crashes with bad weak ptr
         # BUGBUG: MUST do this after resolving the recurrence, otherwise also crashes
 
         #print('output args 1:', [arg.name for arg in output.arguments])
@@ -282,8 +283,8 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
 
         # apply until_predicate if given
         if until_predicate is not None:
-            valid_frames = Recurrence(lambda x, h: (1-past_value(x)) * h, initial_state=1)(until_predicate(output))
-            output = sequence.gather(output, valid_frames)
+            valid_frames = Recurrence(lambda h, x: (1-past_value(x)) * h, initial_state=1, name='valid_frames')(until_predicate(output))
+            output = sequence.gather(output, valid_frames, name='chopped_output')
         # BUGBUG: used to work, but now fails with "Node '__v2libuid__Slice28080__v2libname__Slice22511' (Slice operation): DataFor: FrameRange's dynamic axis is inconsistent with matrix: {numTimeSteps:1, numParallelSequences:1, sequences:[{seqId:0, s:0, begin:0, end:1}]} vs. {numTimeSteps:11, numParallelSequences:1, sequences:[{seqId:0, s:0, begin:0, end:11}]}"
 
         #print('output:', [arg.name for arg in output.signature])
