@@ -9,10 +9,9 @@
 %include <std_shared_ptr.i>
 %include <windows.i>
 %include <attribute.i>
-/*%include <arrays_csharp.i>*/
+%include <arrays_java.i>
 
 // include the unordered_map.i.
-/*%include "std_unordered_map.i"*/
 %include <std_unordered_map.i>
 
 %{
@@ -437,14 +436,64 @@
 %rename (GetId) CNTK::DeviceDescriptor::Id;
 %rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
 
-%typemap(java) CNTK::DeviceDescriptor %{
+%typemap(javacode) CNTK::DeviceDescriptor %{
+
+    public java.util.ArrayList<DeviceDescriptor> getAllDevices() {
+        DeviceDescriptorVector devices = GetAllDevices();
+        java.util.ArrayList<DeviceDescriptor> ret = new java.util.ArrayList<DeviceDescriptor>((int)devices.size());
+        for (int i = 0; i < devices.size(); ++i){
+            ret.add(devices.get(i));
+        }
+        return ret;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        DeviceDescriptor p = (DeviceDescriptor)o;
+        if (p == null) return false;
+        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+    }
+
+    public boolean equals(DeviceDescriptor p) {
+        if (p == null) return false;
+        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+    }
+
+    @Override
+    public int hashCode() {
+        return GetDeviceType().hashCode();
+    }
 %}
 
 %rename (GetName) CNTK::Axis::Name;
 %rename (IsOrderedAxis) CNTK::Axis::IsOrdered;
 %rename (AreEqualAxis) CNTK::operator==(const Axis& first, const Axis& second);
 
-%typemap(java) CNTK::Axis %{
+%typemap(javacode) CNTK::Axis %{
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Axis p = (Axis)o;
+        if (p == null) return false;
+        return CNTKLib.AreEqualAxis(this, p);
+    }
+
+    public boolean equals(Axis p) {
+        if (p == null) return false;
+        return CNTKLib.AreEqualAxis(this, p);
+    }
+
+    @Override
+    public int hashCode() {
+        if (this.IsDynamicAxis()) {
+            return GetName().hashCode();
+        } else {
+            return this.StaticAxisIndex();
+        }
+    }
 %}
 
 %rename (GetName) CNTK::Function::Name;
@@ -455,14 +504,93 @@
 %rename (GetOutputs) CNTK::Function::Outputs;
 %rename (GetArguments) CNTK::Function::Arguments;
 
-%typemap(java) CNTK::Function %{
+%typemap(javacode) CNTK::Function %{
+
+    private VariableVector argumentVector;
+    private VariableVector outputVector;
+    private java.util.ArrayList<Variable> argumentList;
+    private java.util.ArrayList<Variable> outputList;
+
+    private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
+
+    public java.util.ArrayList<Variable> getOutputs() {
+        if (outputVector == null) {
+            outputVector = GetOutputs();
+            outputList = new java.util.ArrayList<Variable>((int)outputVector.size());
+            for (int i = 0; i < outputVector.size(); ++i){
+                outputList.add(outputVector.get(i));
+            }
+        }
+        return outputList;
+    }
+
+    public java.util.ArrayList<Variable> getArguments() {
+        if (argumentVector == null) {
+            argumentVector = GetArguments();
+            argumentList = new java.util.ArrayList<Variable>((int)argumentVector.size());
+            for (int i = 0; i < argumentVector.size(); ++i){
+                argumentList.add(argumentVector.get(i));
+            }
+        }
+        return argumentList;
+    }
+
+    // Todo: do we have a better place to put this function?
+    public static Function Combine(java.util.ArrayList<Variable> outputVariable) {
+        VariableVector varVect = new VariableVector();
+        for (int i = 0; i < outputVariable.size(); ++i)
+        {
+            varVect.add(varVect.get(i));
+        }
+        return CNTKLib.Combine(varVect);
+    }
+
+    /*public void evaluate(java.util.HashMap<Variable, Value> arguments, java.util.HashMap<Variable, Value> outputs, DeviceDescriptor computeDevice) {*/
+        /*// Evaluate the rootFunction.*/
+        /*UnorderedMapVariableValuePtr argMap = new UnorderedMapVariableValuePtr();*/
+
+        /*for (Variable var : arguments.keySet()) {*/
+            /*argMap.Add(var, arguments.get(var));*/
+        /*}*/
+
+        /*outMap.Clear();*/
+        /*for (Variable var : outputs.keySet()) {*/
+            /*outMap.Add(var, outputs.get(var));*/
+        /*}*/
+
+        /*Evaluate(argMap, outMap, computeDevice);*/
+
+        /*for ( Variable var : outMap.keySet()) {*/
+            /*outputs.put(var, outMap.get(var));*/
+        /*}*/
+    /*}*/
 %}
 
 %rename (GetShape) CNTK::Variable::Shape;
 %rename (GetName) CNTK::Variable::Name;
 %rename (AreEqualVariable) CNTK::operator==(const Variable& first, const Variable& second);
 
-%typemap(java) CNTK::Variable %{
+%typemap(javacode) CNTK::Variable %{
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        Variable p = (Variable)o;
+        if (p == null) return false;
+        return CNTKLib.AreEqualVariable(this, p);
+    }
+
+    public boolean equals(Variable p) {
+        if (p == null) return false;
+        return CNTKLib.AreEqualVariable(this, p);
+    }
+
+    @Override
+    public int hashCode() {
+        return (int)getHashValue();
+    }
+
 %}
 
 %rename (GetDimensions) CNTK::NDShape::Dimensions;
@@ -470,7 +598,35 @@
 %rename (GetTotalSize) CNTK::NDShape::TotalSize;
 %rename (AreEqualShape) CNTK::operator==(const NDShape& first, const NDShape& second);
 
-%typemap(java) CNTK::NDShape %{
+%typemap(javacode) CNTK::NDShape %{
+
+    public java.util.ArrayList<Long> getDimensions(){
+        java.util.ArrayList<Long> ret = new java.util.ArrayList<Long>((int)GetRank());
+        for (int i = 0; i < GetDimensions().size(); ++i ) {
+            ret.add((Long)GetDimensions().get(i));
+        }
+        return ret;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null) return false;
+        NDShape p = (NDShape)o;
+        if (p == null) return false;
+        return CNTKLib.AreEqualShape(this, p);
+    }
+
+    public boolean equals(NDShape p) {
+        if (p == null) return false;
+        return CNTKLib.AreEqualShape(this, p);
+    }
+
+    @Override
+    public int hashCode() {
+        return GetDimensions().hashCode();
+    }
+
 %}
 
 %rename (GetDevice) CNTK::Value::Device;
@@ -479,7 +635,26 @@
 %rename (_IsReadOnly) CNTK::Value::IsReadOnly;
 %rename (_MaskedCount) CNTK::Value::MaskedCount;
 
-%typemap(java) CNTK::Value %{
+%typemap(javacode) CNTK::Value %{
+/*
+ *    public static <T> Value CreateBatch(NDShape shape, java.util.ArrayList<T> batch, DeviceDescriptor device, boolean readOnly = false) {
+ *        long shapeSize = shape.GetTotalSize();
+ *
+ *        if (batch.Count % shapeSize != 0)
+ *            throw new ArgumentException("The number of elements in the batch must be a multiple of the size of the shape");
+ *
+ *        int count = batch.size() / shapeSize;
+ *        var input = new java.util.ArrayList<java.util.ArrayList<T>>(count);
+ *        for (int i = 0; i < count; i++)
+ *        {
+ *            java.util.ArrayList<T> seq = new java.util.ArrayList<T>();
+ *            seq.addAll(batch.subList((int)(i * shapeSize), (int)shapeSize));
+ *            input.Add(seq);
+ *        }
+ *        // Pass the empty seqStartFlags means all sequences have the start flag with true.
+ *        return Create<T>(shape, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
+ *    }
+ */
 %}
 
 %extend CNTK::Value {

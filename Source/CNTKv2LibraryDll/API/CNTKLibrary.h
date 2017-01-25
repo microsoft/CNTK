@@ -277,6 +277,10 @@ namespace CNTK
         
         /// Resets static properties, needed for unit-tests.
         CNTK_API static void Reset();
+#ifdef SWIGJAVA
+    public:
+        DeviceDescriptor() {DefaultDevice();};
+#endif
 
     private:
         unsigned int m_deviceId;
@@ -1796,7 +1800,7 @@ private:
         Variable NonCompositePreservingCopy() const;
 
     private:
-#ifdef SWIGCSHARP
+#ifdef SWIG
     public:
         // TODO: a better way to get hash value?
         size_t GetHashValue()

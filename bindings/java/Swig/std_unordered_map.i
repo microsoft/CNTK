@@ -25,8 +25,9 @@
 
 namespace std {
   template<class K, class T> class unordered_map {
-    %typemap(csinterfaces) std::unordered_map< K, T > "global::System.IDisposable \n    , global::System.Collections.Generic.IDictionary<$typemap(cstype, K), $typemap(cstype, T)>\n";
-    %typemap(java) std::unordered_map<K, T> %{%}
+    %typemap(csinterfaces) std::unordered_map<K,T> "global::System.IDisposable \n    , global::System.Collections.Generic.IDictionary<$typemap(javatype, K), $typemap(javatype, T)>\n";
+    %typemap(java) std::unordered_map<K, T> %{
+    %}
 
         public:
             typedef size_t size_type;

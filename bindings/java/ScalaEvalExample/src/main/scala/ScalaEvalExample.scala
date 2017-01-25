@@ -6,7 +6,7 @@ import java.awt.image._
 import java.awt.Image
 import java.awt.Color
 import java.io.File
-import java.lang.reflect._
+import scala.collection.JavaConversions._
 
 object ScalaEvalExample extends App {
   System.loadLibrary("CNTKLib")
@@ -14,14 +14,14 @@ object ScalaEvalExample extends App {
   val outputName = "Plus2060"
   val dataPath   = "/home/ratan/Downloads/"
   val modelFunc  = Function.LoadModel(dataPath + "z.model")
-  val outputVar  = modelFunc.GetOutputs().get(0)
-  val inputVar   = modelFunc.GetArguments().get(0)
+  val outputVar  = modelFunc.getOutputs.get(0)
+  val inputVar   = modelFunc.getArguments.get(0)
 
-  val inputShape    = inputVar.GetShape()
-  val imageWidth    = inputShape.GetDimensions().get(0).toInt
-  val imageHeight   = inputShape.GetDimensions().get(1).toInt
-  val imageChannels = inputShape.GetDimensions().get(2).toInt
-  val imageSize     = inputShape.GetTotalSize()
+  val inputShape    = inputVar.GetShape
+  val imageWidth    = inputShape.getDimensions.get(0).toInt
+  val imageHeight   = inputShape.getDimensions.get(1).toInt
+  val imageChannels = inputShape.getDimensions.get(2).toInt
+  val imageSize     = inputShape.GetTotalSize
 
   println("Evaluate single image")
 
@@ -31,7 +31,7 @@ object ScalaEvalExample extends App {
   val bImg =
     new BufferedImage(resized.getWidth(null), resized.getHeight(null), BufferedImage.TYPE_INT_RGB)
   // or use any other fitting type
-  bImg.getGraphics().drawImage(resized, 0, 0, null)
+  bImg.getGraphics.drawImage(resized, 0, 0, null)
 
   val resizedCHW = for {
     c <- 0 until 3
@@ -52,7 +52,7 @@ object ScalaEvalExample extends App {
   val floatVecVec = new FloatVectorVector()
   floatVecVec.add(floatVec)
   // Create input data map
-  val inputVal     = Value.CreateDenseFloat(inputShape, floatVecVec, DeviceDescriptor.GetCPUDevice())
+  val inputVal     = Value.CreateDenseFloat(inputShape, floatVecVec, DeviceDescriptor.GetCPUDevice)
   val inputDataMap = new UnorderedMapVariableValuePtr()
   inputDataMap.Add(inputVar, inputVal)
 
@@ -62,7 +62,7 @@ object ScalaEvalExample extends App {
   outputDataMap.Add(outputVar, null)
 
   // Start evaluation on the device
-  modelFunc.Evaluate(inputDataMap, outputDataMap, DeviceDescriptor.GetCPUDevice())
+  modelFunc.Evaluate(inputDataMap, outputDataMap, DeviceDescriptor.GetCPUDevice)
 
   // Get evaluate result as dense output
   val outputBuffer = new FloatVectorVector()
