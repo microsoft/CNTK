@@ -143,9 +143,15 @@ def block_momentum_distributed_learner(learner, block_size, block_momentum_as_ti
     '''
     Creates a block momentum distributed learner
 
+    Block Momentum divides the full dataset into M non-overlapping blocks,
+    and each block is partitioned into N non-overlapping splits.
+
+    During training, a random, unprocessed block is randomly taken by the trainer
+    and the N partitions of this block are dispatched on the workers.
+
     Args:
         learner: a local learner (i.e. sgd)
-        block_size (int): block size
+        block_size (int): Number of partition of the dataset (block)
         block_momentum_as_time_constant (float): block momentum as time constant
         use_nestrov_momentum (bool): use nestrov momentum
         reset_sgd_momentum_after_aggregation (bool): reset SGD momentum after aggregation
