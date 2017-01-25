@@ -334,6 +334,14 @@ def Dropout(prob,name=''):
     apply_x = dropout(x, dropout_rate=prob)
     return Block(apply_x, 'Dropout', name, make_block=True)
 
+# Activation -- create an activation layer 
+def Activation(activation=activation_default_or_None, name=''): 
+    # expression 
+    activation = _resolve_activation(activation)
+    x = Placeholder(name='activation_arg') 
+    apply_x = x >> activation 
+    return Block(apply_x, 'Activation', name, make_block=True) 
+
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
 def BatchNormalization(map_rank=None,  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
