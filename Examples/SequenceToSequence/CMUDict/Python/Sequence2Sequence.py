@@ -71,29 +71,6 @@ def create_reader(path, is_training):
 inputAxis=Axis('inputAxis')
 labelAxis=Axis('labelAxis')
 
-def testit(r, with_labels=True):
-    #from cntk.blocks import Constant, Type
-    if True:
-    #try:
-        r.dump()
-        if with_labels:
-            r.update_signature(Type(3, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                               Type(3, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
-        else:
-            r.update_signature(Type(3, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
-        r.dump()
-        if with_labels:
-            res = r.eval({r.arguments[0]: [[[0.9, 0.7, 0.8]]], r.arguments[1]: [[[0, 1, 0]]]})
-        else:
-            res = r.eval({r.arguments[0]: [[[0.9, 0.7, 0.8]]]})
-        print(res)
-    #except Exception as e:
-        print(e)
-        r.dump()     # maybe some updates were already made?
-        pass
-    #input("hit enter")
-    exit()
-
 # create the s2s model
 def create_model(): # :: (history*, input*) -> logP(w)*
     # Embedding: (input*) --> (embedded_input*)
@@ -232,29 +209,27 @@ def create_criterion_function(model):
 
 def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_size):
 
-    # this is what we train here
-    #s2smodel.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]),
-    #                          Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis1')]))
-    # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
-    #         Maybe also attributable to a parameter-order mix-up?
-    # Because criterion strips the <s> and therefore s2smodel has a different axis
-    # Need to think whether this makes sense. The axes are different for training and testing.
+    # Note: We would like to set the signature of 's2smodel' (s2smodel.update_signature()), but that will cause
+    # an error since the training criterion uses a reduced sequence axis for the labels.
+    # This is because it removes the initial <s> symbol. Hence, we must leave the model
+    # with unspecified input shapes and axes.
 
-    # TODO: test this refactoring
+    # create the training wrapper for the s2smodel, as well as the criterion function
     model_train = create_model_train(s2smodel)
     criterion = create_criterion_function(model_train)
+
+    # also wire in a greedy decoder so that we can properly log progress on a validation example
+    # This is not used for the actual training process.
     model_greedy = create_model_greedy(s2smodel)
 
-    # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
     # Instantiate the trainer object to drive the model training
     minibatch_size = 72
     learner = adam_sgd(model_train.parameters,
-    #learner = momentum_sgd(model_train.parameters, low_memory = True,
-                           lr       = learning_rate_schedule([0.005]*2+[0.0025]*3+[0.00125], UnitType.sample, epoch_size),
-                           momentum = momentum_as_time_constant_schedule(1100),
-                           gradient_clipping_threshold_per_sample=2.3,
-                           gradient_clipping_with_truncation=True)
+                       lr       = learning_rate_schedule([0.005]*2+[0.0025]*3+[0.00125], UnitType.sample, epoch_size),
+                       momentum = momentum_as_time_constant_schedule(1100),
+                       gradient_clipping_threshold_per_sample=2.3,
+                       gradient_clipping_with_truncation=True)
     trainer = Trainer(None, criterion, learner)
 
     # Get minibatches of sequences to train with and perform model training
@@ -264,7 +239,6 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
     # print out some useful training information
     log_number_of_parameters(model_train) ; print()
-    #progress_printer = ProgressPrinter(freq=30, tag='Training')
     progress_printer = ProgressPrinter(freq=30, tag='Training')
     #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=os.path.join(MODEL_DIR, "model_att%d.log" % use_attention))
 
@@ -306,12 +280,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # log a summary of the stats for the epoch
         progress_printer.epoch_summary(with_metric=True)
 
-        # save the model every epoch
-
-        # NOTE: we are saving the model with the greedy decoder wired-in. This is NOT necessary and in some
-        # cases it would be better to save the model without the decoder to make it easier to wire-in a 
-        # different decoder such as a beam search decoder. For now we save this one though so it's easy to 
-        # load up and start using.
+    # done: save the final model
     print("Saving final model to '%s'" % model_path(max_epochs))
     s2smodel.save(model_path(max_epochs))
     print("%d epochs complete." % max_epochs)
@@ -342,33 +311,13 @@ def write(reader, model, vocab, i2w):
 # test action         #
 #######################
 
+# This computes the metric on the test set.
+# Note that this is not decoding; just predicting words using ground-truth history, like in training.
 def test(reader, s2smodel, num_minibatches=None):
 
-    # we use the test_minibatch() function so need to setup a trainer
-    #model_greedy = create_model_greedy(s2smodel)
-    #@Function
-    #def criterion(input, labels):
-    #    #labels = x_last
-    #    # criterion function must drop the <s> from the labels
-    #    postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
-    #    z = model_greedy(input)  #, postprocessed_labels)
-    #    ce   = cross_entropy_with_softmax(z, postprocessed_labels)
-    #    errs = classification_error      (z, postprocessed_labels)
-    #    return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
-    #def lam(input, labels):
-    #    return model_greedy(input)
-    #criterion = create_criterion_function(lambda input, labels: model_greedy(input))
     model_train = create_model_train(s2smodel)
     criterion = create_criterion_function(model_train)
 
-    #label_sequence = sequence.slice(find_arg_by_name('raw_labels', model), 1, 0)
-    #lr = learning_rate_schedule(0.007, UnitType.sample)
-    #momentum = momentum_as_time_constant_schedule(1100) # BUGBUG: use Evaluator
-
-    # BUGBUG: Must do the same as in train(), drop the first token
-    #ce = cross_entropy_with_softmax(model, label_sequence)
-    #errs = classification_error(model, label_sequence)
-    #trainer = Trainer(model, ce, errs, [momentum_sgd(model.parameters, lr, momentum)])
     evaluator = Evaluator(None, criterion)
 
     test_minibatch_size = 1024
@@ -380,10 +329,8 @@ def test(reader, s2smodel, num_minibatches=None):
         mb = reader.next_minibatch(test_minibatch_size)
         if not mb: # finish when end of test set reached
             break
-        mb_error = evaluator.test_minibatch(mb[train_reader.streams.features], mb[train_reader.streams.labels])
-        #mb_error = evaluator.test_minibatch({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
-        #                                   find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
-        num_samples = mb[train_reader.streams.labels].num_samples
+        mb_error = evaluator.test_minibatch(mb[test_reader.streams.features], mb[test_reader.streams.labels])
+        num_samples = mb[test_reader.streams.labels].num_samples
         total_error += mb_error * num_samples
         i += num_samples
 
@@ -393,7 +340,7 @@ def test(reader, s2smodel, num_minibatches=None):
 
     # and return the test error
     rate = total_error/i
-    print("error rate of {}% in {} samples", 100 * rate, i)
+    print("error rate of {:.2f}% in {} samples".format(100 * rate, i))
     return rate
 
 ########################
@@ -407,7 +354,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
         w = [vdict["<s>"]] + [vdict[c] for c in tokens] + [vdict["</s>"]]
     except:
         print('Input contains an unexpected token.')
-        return
+        return []
 
     # convert to one_hot
     # TODO: I think we have a function for this now.
@@ -523,348 +470,32 @@ def debug_attention(model, input):
 # main function boilerplate #
 #############################
 
-### BEGIN UNRELATED TEST
-# a test I did for porting a Keras model for Xinying Song
-
-# Configurations
-
-#def merge_helper(mode, layer_list):
-#    """
-#    # Args:
-#        mode (str):
-#        layer_list (list[layer]): OK to have None layers
-#    # Returns:
-#        layer or None (if layer_list is empty)
-#    """
-#    layer_list = [item for item in layer_list if item is not None]
-#    if len(layer_list) >= 2:
-#        return Merge(mode=mode)(layer_list)
-#    elif len(layer_list) == 1:
-#        return layer_list[0]
-#    else:
-#        return None
-#def create_regularizer():
-#    if reg_l1 > 1e-7 and reg_l2 > 1e-7:
-#        return regularizers.WeightRegularizer(l1=reg_l1, l2=reg_l2)
-#    if reg_l1 > 1e-7:
-#        return regularizers.WeightRegularizer(l1=reg_l1)
-#    if reg_l2 > 1e-7:
-#        return regularizers.WeightRegularizer(l2=reg_l2)
-#    return None
-
-def build_model_xy(model_save_path=None):
-
-    rnn_type = 'LSTM'
-    #rnn_type = 'GRU'
-    dnn_hid_size_list = [32,32,32,32,32]
-    rnn_hid_size_list = [128, 128]
-    batch_size = 128
-    reg_l1 = 0
-    reg_l2 = 0
-    dropout = 0
-    batch_normalization = True
-    residual_dnn = False
-    skip_connection = True
-    batch_size_predict = 1024
-    # in cross-validation, we test up to this number and see the upper bound of RNN capability
-    # then in train/test, we use the best epoch number obtained by cross-validation
-    nb_epoch = 30
-    patience = 5 # no use now because we don't do early stopping for now
-    if rnn_type == 'GRU':
-        rnn_cell = GRU
-    elif rnn_type == "LSTM":
-        rnn_cell = LSTM
-    else:
-       assert False
-
-    # fake some environment
-    rnn_dataset_dict=Record(train=Record(multiple_input=Record(
-        rnn = Record(shape=(100,-123,250)),   # (batch, max_len, dim)   max_len not needed/used by CNTK
-        dnn = Record(shape=(100,300))         # (batch, dim)
-    )))
-    model_flags = Record(  # True if input is to be included
-        rnn=True,
-        dnn=True
-    )
-    logger = Record(
-        info = lambda *args: print(*args)
-    )
-
-    # Build model
-    multiple_input = rnn_dataset_dict['train'].multiple_input
-    for key in multiple_input.keys():
-        logger.info((key, model_flags[key], multiple_input[key].shape))
-    # construct inputs
-    rnn_inputs_dict_by_length = {} # a map from length to rnn_inputs
-    rnn_input_total_dim_by_length = {}
-    rnn_inputs = [] # for feeding graph input only
-    
-    dnn_inputs = []
-    dnn_input_total_dim = 0
-    for key in multiple_input.keys():
-        if not key in model_flags or not model_flags[key]:
-            logger.info("Skipping input {0}".format(key))
-            continue
-        logger.info("Created input {0}".format(key))
-        flds = key.split('-')
-        #inp = Input(shape=multiple_input[key].shape[1:], name=key)
-        if flds[0] == 'rnn':
-            inp = Input(shape=multiple_input[key].shape[2:], name=key) # no explicit length dimension in CNTK
-            rnn_inputs.append(inp) # for graph input only
-            timesteps = multiple_input[key].shape[1]
-            if timesteps not in rnn_inputs_dict_by_length:
-                rnn_inputs_dict_by_length[timesteps] = ([], [])
-            rnn_inputs_dict_by_length[timesteps][0].append(inp)
-            if timesteps not in rnn_input_total_dim_by_length:
-                rnn_input_total_dim_by_length[timesteps] = 0
-            rnn_input_total_dim_by_length[timesteps] += multiple_input[key].shape[-1] 
-        elif flds[0] == 'dnn':
-            #inp = Input(shape=multiple_input[key].shape[1:], name=key)
-            inp = Input(shape=multiple_input[key].shape[1:], name=key, dynamic_axes=[Axis.default_batch_axis()]) # dnn input has no sequence dimension
-            dnn_input_total_dim += multiple_input[key].shape[-1]
-            dnn_inputs.append(inp)
-    
-    # construct RNN layers
-    rnn_hid_list = []
-    # notes: rnn_inputs_dict_by_length.keys() currently has only one element
-    for timesteps in rnn_inputs_dict_by_length.keys():
-        #rnn_final_input = merge_helper('concat', 
-        rnn_final_input = splice(*
-                rnn_inputs_dict_by_length[timesteps][0])
-        if rnn_final_input is not None:
-            #rnn_hid = Masking(mask_value=0.)(rnn_final_input)
-            rnn_hid = rnn_final_input
-            rnn_output_dim = rnn_hid_size_list[-1]
-            rnn_skip_connections = []
-            prev_output_dim = rnn_input_total_dim_by_length[timesteps]
-            if skip_connection:
-                #tmp_out = ZeroMaskedEntries()(rnn_hid)
-                tmp_out = rnn_hid
-                #tmp_out = Lambda(lambda x: x[:,-1,:], output_shape=lambda input_shape: (input_shape[0], input_shape[2]))(tmp_out)
-                tmp_out = sequence.last(tmp_out)
-                if prev_output_dim != rnn_output_dim:
-                    tmp_out = Dense(rnn_output_dim #,
-                                            #W_regularizer=create_regularizer(),  # CNTK regularizers work differently
-                                            #b_regularizer=create_regularizer(),
-                                           )(tmp_out)
-                rnn_skip_connections.append(tmp_out)
-            for (depth, hid_size) in enumerate(rnn_hid_size_list):
-                #rnn_hid = rnn_cell(hid_size,
-                Recurrence_f = Recurrence if depth < len(rnn_hid_size_list)-1 else Fold # CNKT uses two different functions for return_sequences
-                cell = rnn_cell(hid_size) # rnn_cell is the layer factory; create the layer so that we can know len(cell.outputs)
-                rnn_hid = Recurrence_f(cell >> (Dropout(dropout),) * len(cell.outputs) # apply Dropout to all outputs
-                                   #return_sequences=(True if depth < len(rnn_hid_size_list)-1 else False),
-                                   #W_regularizer=create_regularizer(), # CNTK regularizers work differently
-                                   #U_regularizer=create_regularizer(),
-                                   #b_regularizer=create_regularizer(),
-                                   #dropout_W=dropout,
-                                   #dropout_U=dropout
-                         )(rnn_hid)
-                pre_output_dim = hid_size
-                if skip_connection:
-                    if depth == len(rnn_hid_size_list)-1:
-                        tmp_out = rnn_hid
-                    else:
-                        #tmp_out = ZeroMaskedEntries()(rnn_hid)
-                        tmp_out = rnn_hid
-                        #tmp_out = Lambda(lambda x: x[:,-1,:], output_shape=lambda input_shape: (input_shape[0], input_shape[2]))(tmp_out)
-                        tmp_out = sequence.last(tmp_out)
-                    if prev_output_dim != rnn_output_dim:
-                        tmp_out = Dense(rnn_output_dim #,
-                                                #W_regularizer=create_regularizer(),  # CNTK regularizers work differently
-                                                #b_regularizer=create_regularizer(),
-                                               )(tmp_out)
-                    rnn_skip_connections.append(tmp_out)
-            if skip_connection:
-                #rnn_hid = merge_helper('sum', rnn_skip_connections)
-                rnn_hid = plus(*rnn_skip_connections)
-            else:
-                pass
-        else:
-            rnn_hid = None
-        rnn_hid_list.append(rnn_hid)
-    # construct DNN layers
-    #dnn_final_input = merge_helper('concat', dnn_inputs)
-    dnn_final_input = splice(*dnn_inputs)
-    if dnn_final_input is not None:
-        dnn_output_dim = dnn_hid_size_list[-1]
-        dnn_hid = dnn_final_input
-        dnn_skip_connections = []
-        if dropout > 1e-7:
-            dnn_hid = Dropout(dropout)(dnn_hid)
-        prev_output_dim = dnn_input_total_dim
-        if skip_connection:
-            tmp_out = dnn_hid
-            if prev_output_dim != dnn_output_dim:
-                tmp_out = Dense(dnn_output_dim #,
-                                        #W_regularizer=create_regularizer(),
-                                        #b_regularizer=create_regularizer(),
-                                       )(tmp_out)
-            dnn_skip_connections.append(tmp_out)
-        for (depth, hid_size) in enumerate(dnn_hid_size_list):
-            layer_input = dnn_hid
-            dnn_hid = Dense(hid_size #, 
-                            #W_regularizer=create_regularizer(),
-                            #b_regularizer=create_regularizer(),
-                           )(dnn_hid)
-            if batch_normalization:
-                dnn_hid = BatchNormalization()(dnn_hid)
-            #dnn_hid = Activation('tanh')(dnn_hid)
-            dnn_hid = tanh(dnn_hid)
-            if dropout > 1e-7:
-                dnn_hid = Dropout(dropout)(dnn_hid)
-            if residual_dnn:
-                if prev_output_dim != hid_size:
-                    layer_input = Dense(hid_size #,
-                                        #W_regularizer=create_regularizer(),
-                                        #b_regularizer=create_regularizer(),
-                                       )(layer_input)
-                #dnn_hid = Merge(mode='sum')([dnn_hid, layer_input])
-                dnn_hid = dnn_hid + layer_input
-            prev_output_dim = hid_size
-            if skip_connection:
-                tmp_out = dnn_hid
-                if prev_output_dim != dnn_output_dim:
-                    tmp_out = Dense(dnn_output_dim #,
-                                            #W_regularizer=create_regularizer(),
-                                            #b_regularizer=create_regularizer(),
-                                           )(tmp_out)
-                dnn_skip_connections.append(tmp_out)
-        if skip_connection:
-            #dnn_hid = merge_helper('sum', dnn_skip_connections)
-            dnn_hid = plus(*dnn_skip_connections)
-        else:
-            pass
-    else:
-        dnn_hid = None
-    
-    # merge RNN with DNN and project to final
-    #rnn_dnn_merged = merge_helper('concat', rnn_hid_list + [dnn_hid])
-    rnn_dnn_merged = splice(*rnn_hid_list, dnn_hid)
-    #assert rnn_dnn_merged is not None, "Error! no inputs found!"
-    #output = Dense(1, W_regularizer=create_regularizer(),
-    #                  b_regularizer=create_regularizer(),)(rnn_dnn_merged)
-    output = Dense(1)(rnn_dnn_merged)
-    if batch_normalization:
-        output = BatchNormalization()(output)
-    #output = Activation('sigmoid')(output)
-    output = sigmoid(output)
-    
-    # final specify model
-    #model = Model(input=rnn_inputs + dnn_inputs, output=output)
-    model = output  # Model(input=rnn_inputs + dnn_inputs, output=output)
-    debughelpers.dump_function(model, "model")
-    #logger.info(model.get_config())
-    logger.info("build model completed")
-    if model_save_path:
-        #plot(model, to_file=model_save_path + '.png')
-        from cntk.graph import plot
-        plot(model, filename=model_save_path + '.pdf', scale=2)
-        #plot(model, filename=model_save_path + '.svg', scale=2)
-        logger.info('model graph saved to ' + model_save_path + '.png')        
-    return model
-
-### END UNRELATED TEST
-
-
-
 if __name__ == '__main__':
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
 
-    #build_model_xy('c:/me/xinying_graph')
-
-    #W = Parameter((-1,42), init=glorot_uniform())
-    #@Function
-    #def simple_layer(x):
-    #    return sigmoid(x @ W)
-    #simple_layer.update_signature(13)
-    #from cntk.graph import plot
-    #plot(simple_layer, 'c:/work/cntk/simple_layer.pdf')
-    #debughelpers.dump_function(simple_layer)
-
-    #x = placeholder_variable('x')   # Function argument in definition
-    #s = x * x                       # Function
-    #debughelpers.dump_function(s)
-    #arg = placeholder_variable('arg') # apply Function to another placeholder
-    #y = s.clone(CloneMethod.share, {x: arg})
-    #debughelpers.dump_function(y)
-    #print(13)
-
-
-    #x = placeholder_variable('x') # Function argument
-    #h_f = placeholder_variable('h_f') # recurrent forward reference
-    #h = sigmoid(2 * h_f + 2 * x)
-    #h.replace_placeholders({h_f: h}) # end of Function definition
-    #h.replace_placeholders({x: input_variable(300)}) # Function application
-    #debughelpers.dump_function(h)
-    #print(13)
-
-    # test for multi-input plus()
-    #from cntk.ops import plus, element_times, max, min, log_add_exp
-    #for op in (log_add_exp, max, min, plus, element_times):
-    #    s4 = op(Placeholder(name='a'), Placeholder(3, name='b'), Placeholder(4, name='c'), Placeholder(5, name='d'), name='s4')
-    #    s4.dump('s4')
-    #sequence_reduce_max = Fold(max)
-    #sequence_reduce_max.dump('sequence_reduce_max')
-    # TODO: create proper test case for this
-
-
-    #L = Dense(500)
-    #L1 = L.clone(CloneMethod.clone)
-    #x = placeholder_variable()
-    #y = L(x) + L1(x)
-
-    #L = Dense(500)
-    #o = L.outputs
-    #sh = L.shape
-    #W = L.W
-    #w = L.weights
-
-    # repro for as_block
-    from cntk import placeholder_variable, combine, alias, as_block
-    def f(x,y):
-        return y-x
-    arg_names = ['x', 'y']
-    args = [placeholder_variable(name=name) for name in arg_names]
-    block_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
-    combined_block_args = combine(block_args)                           # the content of the BlockFunction
-    arg_map = list(zip(block_args, args))                               # after wrapping, the block_args map to args
-    combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='f_parameter_pack')
-    funargs = combined_args.outputs       # the Python function is called with these instead
-    #combined_args=None
-    out = f(*funargs)
-    out_arg_names = [arg.name for arg in out.arguments]
-    #out = Recurrence(out, initial_state=13.0)
-    #out_arg_names = [arg.name for arg in out.arguments]
-    out = out.clone(CloneMethod.share, {out.arguments[0]: input_variable(1, name='x1'), out.arguments[1]: input_variable(1, name='y1')})
-    out_arg_names = [arg.name for arg in out.arguments]
-    res = out.eval({out.arguments[0]: [[3.0]], out.arguments[1]: [[5.0]]})
-    #res = out.eval([[3.0]])
-
     # hook up data
-    train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
-    valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
     vocab, i2w, w2i = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
-    model = create_model()
-
-    # train
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    #model = create_model()
+    #
+    ## train
+    #train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
+    #valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
+    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     test_epoch = 10
+    model = Function.load(model_path(test_epoch))
 
     # write
     #model = load_model("model_epoch0.cmf")
     #write(valid_reader, model, vocab, i2w)
 
     # test
-    model = Function.load(model_path(test_epoch))
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
     test(test_reader, model)
 
     # try the model out in an interactive session
-    model = Function.load(model_path(test_epoch))
     interactive_session(model, vocab, i2w, show_attention=True)
