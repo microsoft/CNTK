@@ -96,6 +96,15 @@ void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, bool unit
 }
 
 template <typename ElementType>
+void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99), false);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
 void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
@@ -335,6 +344,8 @@ void LearnerTests()
             TestMomentumSGDLearner<float>(numParameters, numMinibatches, unitGain, device);
             TestNesterovLearner<float>(numParameters, numMinibatches, unitGain, device);
             TestFSAdaGradLearner<double>(numParameters, numMinibatches, unitGain, device);
+            TestAdamLearner<float>(numParameters, numMinibatches, unitGain, device);
+            TestAdamLearner<double>(numParameters, numMinibatches, unitGain, device);
         }
     }
 }
