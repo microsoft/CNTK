@@ -41,7 +41,7 @@
 
   .PARAMETER NoPythonEnvironment
  If this switch parameter is set, the install script will not create a CNTK Python environment during the installation process.
- This allows creation of the desired enviroment after the installation.
+ This allows creation of the desired environment after the installation.
 
  .EXAMPLE
  .\devInstall.ps1
@@ -66,9 +66,9 @@ Param(
     [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
     [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
     [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
-    [parameter(Mandatory=$false)] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
-    [parameter(Mandatory=$false)] [string] $PyEnvironmentName = "",
-    [parameter(Mandatory=$false)] [switch] $NoCondaEnv)
+    [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
+    [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [string] $PyEnvironmentName = "",
+    [parameter(Mandatory=$true, ParameterSetName = "PythonNoEnvironment")] [switch] $NoPythonEnvironment)
     
 $roboCopyCmd = "robocopy.exe"
 
@@ -169,7 +169,6 @@ Function main
 }
 
 main
-
 exit 0
 
-# vim:set expandtab shiftwidth=4 tabstop=2:
+# vim:set expandtab shiftwidth=4 tabstop=4:

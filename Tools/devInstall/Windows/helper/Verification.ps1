@@ -1,4 +1,5 @@
-﻿## Copyright (c) Microsoft. All rights reserved.
+﻿#
+# Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
 function VerifyOperations(
@@ -336,4 +337,4 @@ function LoadWinProduct
     return $Script:WinProduct
 }
 
-# vim:set expandtab shiftwidth=2 tabstop=2:
+# vim:set expandtab shiftwidth=4 tabstop=4:

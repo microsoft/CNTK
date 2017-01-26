@@ -43,8 +43,7 @@ We recommend that you execute the script from Powershell Version 4 or later. You
 "
 }
 
-function Display64BitWarningMessage(
-    [string] $version)
+function Display64BitWarningMessage
 {
 "
 A 64bit version of Powershell is required to run this script.
@@ -177,4 +176,4 @@ function DisplayAfterVerify(
     return $false
 }
 
-# vim:set expandtab shiftwidth=2 tabstop=2:
+# vim:set expandtab shiftwidth=4 tabstop=4:

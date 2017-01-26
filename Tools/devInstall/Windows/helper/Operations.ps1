@@ -392,4 +392,4 @@ function OpZlibVS15Prebuild(
         } )
 }
 
-# vim:set expandtab shiftwidth=2 tabstop=2:
+# vim:set expandtab shiftwidth=4 tabstop=4:

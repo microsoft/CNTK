@@ -268,12 +268,11 @@ function PlatformMatching(
     return $isMatching
 }
 
-
 function CheckHash(
     [string] $tempFile,
     [string] $expectedHash)
 {
-    if (($expectedHash) -and (Test-Path $tempFile)) {
+    if ($expectedHash) {
         $fileHash = (Get-FileHash -Path $tempFile -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash
         if ($fileHash -ne $expectedHash) {
               Write-Warning "Hash for downloaded file is not matching expected hash value."
@@ -283,4 +282,4 @@ function CheckHash(
     }
 }
 
-# vim:set expandtab shiftwidth=4 tabstop=2:
+# vim:set expandtab shiftwidth=4 tabstop=4:
