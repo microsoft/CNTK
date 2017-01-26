@@ -132,17 +132,8 @@ namespace CNTK
         OnCheckpointStart();
         Dictionary externalState;
         externalState[s_checkpointIndex] = m_currentCheckpointIndex;
-        externalState[s_trainingMinibatchSource] = m_trainingSource->GetCheckpointState();
-
-        std::wstring tempFileName = m_checkPointFileName + L".tmp";
-        m_trainer->SaveCheckpoint(tempFileName, externalState);
-
-        // Perform the actual renaming only on the main worker.
-        if (m_workerRank == 0)
-        {
-            _wunlink(m_checkPointFileName.c_str());
-            renameOrDie(tempFileName, m_checkPointFileName);
-        }
+        externalState[s_trainingMinibatchSource] = m_trainingSource->GetCheckpointState();        
+        m_trainer->SaveCheckpoint(m_checkPointFileName, externalState);
         OnCheckpointEnd();
     }
 }
