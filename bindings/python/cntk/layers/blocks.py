@@ -293,7 +293,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     b  = Parameter(            cell_shape_stacked,   init=init_bias, name='b')                              # bias
     W  = Parameter(_INFERRED + cell_shape_stacked,   init=init,      name='W')                              # input
     H  = Parameter(shape     + cell_shape_stacked_H, init=init,      name='H')                              # hidden-to-hidden
-    H1 = Parameter(shape     + cell_shape,           init=init,      name='H')  if type == 'GRU' else None  # hidden-to-hidden
+    H1 = Parameter(shape     + cell_shape,           init=init,      name='H1') if type == 'GRU' else None  # hidden-to-hidden
     Ci = Parameter(            cell_shape,           init=init,      name='Ci') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
     Cf = Parameter(            cell_shape,           init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
     Co = Parameter(            cell_shape,           init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
