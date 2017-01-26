@@ -140,6 +140,8 @@ public:
         NOT_IMPLEMENTED;
     }
 
+    static void InnerProduct(const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise);
+
     static void AddScaledDifference(const ElemType /*alpha*/, const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/, CPUMatrix<ElemType>& /*c*/,
                                     bool /*bDefaultZero*/)
     {

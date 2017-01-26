@@ -1126,6 +1126,62 @@ template <class ElemType>
     return result;
 }
 
+template<class ElemType>
+void CPUSparseMatrix<ElemType>::InnerProduct(const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("InnerProduct:  one of the input matrices is empty.");
+
+    const int m = (int)a.GetNumRows();
+    const int n = (int)a.GetNumCols();
+    const int k = (int)b.GetNumRows();
+    const int l = (int)b.GetNumCols();
+
+    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
+    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
+    if (m != k || n != l)
+        InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
+
+    if (isColWise) // col-wise
+    {
+        c.RequireSize(1, n);
+
+#pragma omp parallel for
+        foreach_column(j, c)
+        {
+            ElemType sum = 0;
+            for (CPUSPARSE_INDEX_TYPE iRow = a.ColLocation()[j]; iRow < a.ColLocation()[j+1]; ++iRow)
+            {
+                size_t row = a.RowLocation()[iRow];
+                sum += a.Data()[iRow] * b(row, j);
+            }
+            c(0, j) = sum;
+        }
+    }
+    else
+    {
+        c.RequireSize(m, 1);
+
+#pragma omp parallel for
+        foreach_row(i, c)
+        {
+            ElemType sum = 0;
+            for(CPUSPARSE_INDEX_TYPE j = 0; j < n; ++j)
+            {
+                for (CPUSPARSE_INDEX_TYPE iRow = a.ColLocation()[j]; iRow < a.ColLocation()[j + 1]; ++iRow)
+                {
+                    if (a.RowLocation()[iRow] == i)
+                    {
+                        sum += a.Data()[iRow] * b(i, j);
+                        break;
+                    }
+                }
+            }
+            c(i, 0) = sum;
+        }
+    }
+}
+
 // A helper method used in MomentumSGDUpdate and NesterovAcceleratedMomentumSGDUpdate.
 // Modifies the smoothed gradients "c", as well as the current gradients "this" on which this method is invoked. 
 // Classic momentum (unitGainFactor == 1.0):

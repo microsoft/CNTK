@@ -15,22 +15,9 @@ namespace CNTK
     {
     public:
         BlockFunction(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, Dictionary&& attributes, const std::wstring& blockName = L"", const std::wstring& uid = GenerateUid(PrimitiveOpType::Block))
-            : PrimitiveFunction(DetermineInputs(composite, argumentsMap, blockName), DetermineOutputs(composite, blockName), std::move(attributes), blockName, uid),
+            : PrimitiveFunction(PrimitiveOpType::Block, DetermineInputs(composite, argumentsMap, blockName), std::move(attributes), blockName, uid),
             m_composite(composite), m_blockOpName(blockOpName)
         {
-            auto updatedOutputs = GetOutputVariables(true);
-            auto currentOutputs = Outputs();
-            for (size_t i = 0; i < currentOutputs.size(); ++i)
-            {
-                auto newOutputVar = updatedOutputs[i];
-                auto currentOutputVar = currentOutputs[i];
-                Function::ValidateOrUpdateOutput(currentOutputVar, newOutputVar, true);
-                currentOutputVar.m_dataFields->m_name = newOutputVar.Name();
-            }
-
-            auto compositeOutputs = composite->Outputs();
-            for (size_t i = 0; i < currentOutputs.size(); ++i)
-                currentOutputs[i].m_dataFields->m_blockFunctionVariableMapping = compositeOutputs[i];
         }
 
         virtual const std::wstring& OpName() const override { return m_blockOpName; }
@@ -67,7 +54,7 @@ namespace CNTK
         std::unordered_map<Variable, Variable> CompositeOutputsMap() const
         {
             std::unordered_map<Variable, Variable> outputsMap;
-            auto outputs = Outputs();
+            auto outputs = RawOutputs();
             for (auto output : outputs)
             {
                 if (output.BlockFunctionVariableMapping() == Variable())
@@ -144,7 +131,7 @@ namespace CNTK
             return blockFunctionInputs;
         }
 
-        virtual std::vector<Variable> GetOutputVariables(bool inferDimensions) override
+        virtual std::vector<Variable> InferOutputs() override
         {
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
@@ -161,29 +148,11 @@ namespace CNTK
 
             m_composite->ReplacePlaceholders(replacementMap);
 
-            // Substitute any placeholder replacements in the outputs map
-            auto outputs = Outputs();
-            for (auto output : outputs)
-            {
-                if (replacementMap.find(output.BlockFunctionVariableMapping()) != replacementMap.end())
-                    output.m_dataFields->m_blockFunctionVariableMapping = replacementMap.at(output.BlockFunctionVariableMapping());
-            }
-
             std::vector<Variable> blockFunctionOutputs;
-            auto compositeOutputs = m_composite->Outputs();
-            for (auto compositeOutput : compositeOutputs)
-                blockFunctionOutputs.push_back(OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), Name()));
-
-            return blockFunctionOutputs;
-        }
-
-        static std::vector<Variable> DetermineOutputs(const FunctionPtr& composite, const std::wstring& blockName)
-        {
-            std::vector<Variable> blockFunctionOutputs;
-            auto compositeOutputs = composite->Outputs();
+            auto compositeOutputs = m_composite->RawOutputs();
             for (auto compositeOutput : compositeOutputs)
             {
-                auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), blockName);
+                auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), Name());
                 output.m_dataFields->m_blockFunctionVariableMapping = compositeOutput;
 
                 blockFunctionOutputs.push_back(output);

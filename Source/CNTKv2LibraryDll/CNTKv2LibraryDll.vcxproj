@@ -78,7 +78,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; PerformanceProfilerDll.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -95,7 +95,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll)</DelayLoadDLLs>
+      <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; PerformanceProfilerDll.dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -103,7 +103,7 @@
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>Math.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Math.dll; msmpi.dll; PerformanceProfilerDll.dll </DelayLoadDLLs>
       <OptimizeReferences Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>

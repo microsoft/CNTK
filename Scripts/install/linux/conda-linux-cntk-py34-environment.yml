@@ -7,6 +7,7 @@ dependencies:
 - matplotlib=1.5.3=np111py34_0
 - numpy=1.11.2=py34_0
 - pandas=0.19.1=np111py34_0
+- pandas-datareader=0.2.1=py34_0
 - pillow=3.4.2=py34_0
 - pip=8.1.2=py34_0
 - python=3.4.4=5

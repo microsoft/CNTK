@@ -78,6 +78,15 @@ namespace CNTK
             return nullptr;
     }
 
+    Variable Variable::CompositePreservingCopy() const
+    {
+        // We have to preserve the whole subgraph.
+        Variable result;
+        result.m_outputComposite = (FunctionPtr)(*this);
+        result.m_dataFields = m_dataFields;
+        return result;
+    }
+
     void Variable::SetOwner(Function* ownerFunction)
     {
         if (Kind() != VariableKind::Output)
@@ -93,7 +102,7 @@ namespace CNTK
     {
         auto varOwner = Owner();
         if (varOwner)
-            return CompositeFunction::Create(varOwner, varOwner->Name());
+            return AsComposite(varOwner, varOwner->Name());
         else
             return Combine({ *this });
     }
@@ -379,7 +388,8 @@ namespace CNTK
 
         dict[dynamicAxisKey] = dictionaryValueVector;
         dict[isSparseKey] = IsSparse();
-        dict[nameKey] = Name();
+        if (!Name().empty())
+            dict[nameKey] = Name();
         dict[needsGradientKey] = NeedsGradient();
         dict[shapeKey] = Shape();
         if (IsParameter() || IsConstant())
@@ -399,7 +409,7 @@ namespace CNTK
 
     /*static*/ Variable Variable::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
     {
-        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, kindKey, dataTypeKey, dynamicAxisKey, isSparseKey, nameKey, needsGradientKey, shapeKey };
+        static const vector<std::wstring> s_requiredDictionaryKeys = { typeKey, uidKey, kindKey, dataTypeKey, dynamicAxisKey, isSparseKey, needsGradientKey, shapeKey };
 
         size_t version = ValidateDictionary<Variable>(dict, s_requiredDictionaryKeys, s_variableTypeValue, s_serializationVersion);
 
@@ -437,7 +447,9 @@ namespace CNTK
         }
 
         bool isSparse = dict[isSparseKey].Value<bool>();
-        const auto& name = dict[nameKey].Value<std::wstring>();
+        std::wstring name = L"";
+        if (dict.Contains(nameKey))
+            name = dict[nameKey].Value<std::wstring>();
         bool needsGradient = dict[needsGradientKey].Value<bool>();
         const auto& shape = dict[shapeKey].Value<NDShape>();
 

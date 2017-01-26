@@ -424,6 +424,17 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixInnerProduct, RandomSeedFixture)
     const float x1 = GPUSparseMatrix<float>::InnerProductOfMatrices(matrixOp1CSC, matrixOp2);
 
     BOOST_CHECK(fabsf(x1 - y) < c_epsilonFloatE5);
+
+    for(bool isColWise : {true, false})
+    {
+        GPUMatrix<float> matrixInnerProductDense(c_deviceIdZero);
+        GPUMatrix<float> matrixInnerProductSparse(c_deviceIdZero);
+
+        GPUMatrix<float>::InnerProduct(matrixOp1Dense, matrixOp2, matrixInnerProductDense, isColWise);
+        GPUSparseMatrix<float>::InnerProduct(matrixOp1CSC, matrixOp2, matrixInnerProductSparse, isColWise);
+
+        BOOST_CHECK(matrixInnerProductDense.IsEqualTo(matrixInnerProductSparse, c_epsilonFloatE5));
+    }
 }
 
 BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixColumnSlice, RandomSeedFixture)
