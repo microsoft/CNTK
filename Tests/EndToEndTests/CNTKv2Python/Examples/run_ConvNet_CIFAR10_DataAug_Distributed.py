@@ -8,6 +8,7 @@ import numpy as np
 import os
 import sys
 import platform
+from shutil import copyfile
 from cntk.io import ReaderConfig, ImageDeserializer, FULL_DATA_SWEEP
 from cntk import distributed
 from cntk.device import set_default_device, gpu
@@ -17,17 +18,26 @@ sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Imag
 from ConvNet_CIFAR10_DataAug_Distributed import convnet_cifar10_dataaug
 
 def run_cifar_convnet_distributed():
-    try:
-        base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
-                                *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
-        # N.B. CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY has {train,test}_map.txt
-        #      and CIFAR-10_mean.xml in the base_path.
-    except KeyError:
-        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                *"../../../../Examples/Image/DataSets/CIFAR-10".split("/"))
-
+    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                             *"../../../../Examples/Image/DataSets/CIFAR-10".split("/"))
     base_path = os.path.normpath(base_path)
-    os.chdir(os.path.join(base_path, '..'))
+    
+    # If {train,test}_map.txt don't exist locally, copy to local location
+    if (not(os.path.isfile(os.path.join(base_path, 'train_map.txt')) and os.path.isfile(os.path.join(base_path, 'test_map.txt')))): 
+        # copy from backup location 
+        base_path_bak = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
+                                     *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
+        base_path_bak = os.path.normpath(base_path_bak)
+        
+        copyfile(os.path.join(base_path_bak, 'train_map.txt'), os.path.join(base_path, 'train_map.txt'))
+        copyfile(os.path.join(base_path_bak, 'test_map.txt'), os.path.join(base_path, 'test_map.txt'))
+        if (not(os.path.isdir(os.path.join(base_path, 'cifar-10-batches-py')))): 
+            os.mkdir(os.path.join(base_path, 'cifar-10-batches-py'))
+        copyfile(os.path.join(base_path_bak, 'data.zip'), os.path.join(base_path, 'cifar-10-batches-py', 'data.zip'))
+        copyfile(os.path.join(base_path_bak, 'CIFAR-10_mean.xml'), os.path.join(base_path, 'CIFAR-10_mean.xml'))
+    
+    # change dir to locate data.zip correctly
+    os.chdir(base_path)
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1) 

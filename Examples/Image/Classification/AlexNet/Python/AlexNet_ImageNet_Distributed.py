@@ -155,7 +155,7 @@ def create_trainer(network, epoch_size, num_quantization_bits):
     return cntk.Trainer(network['output'], network['ce'], network['pe'], parameter_learner)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, epoch_size):
+def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -163,13 +163,10 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         network['label']: train_source.streams.labels
     }
 
-    minibatch_size = 256
     training_session = cntk.training_session(train_source, trainer,
         cntk.minibatch_size_schedule(minibatch_size), progress_printer, input_map, os.path.join(model_path, "AlexNet_"), epoch_size)
     training_session.train()
 
-    ### Evaluation action
-    minibatch_size = 16
     # process minibatches and evaluate the model
     metric_numer    = 0
     metric_denom    = 0
@@ -183,7 +180,6 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         metric_denom += local_mb_samples
         minibatch_index += 1
 
-
     fin_msg = "Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom)
     progress_printer.end_progress_print(fin_msg)
 
@@ -195,9 +191,9 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
 
 # Train and evaluate the network.
-def alexnet_train_and_eval(train_data, test_data, num_quantization_bits=32, epoch_size = 1281167, max_epochs=112, 
+def alexnet_train_and_eval(train_data, test_data, num_quantization_bits=32, minibatch_size=256, epoch_size = 1281167, max_epochs=112, 
                            log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
-    _cntk_py.set_computation_network_trace_level(1)
+    _cntk_py.set_computation_network_trace_level(0)
 
     progress_printer = ProgressPrinter(
         freq=num_mbs_per_log,
@@ -211,7 +207,7 @@ def alexnet_train_and_eval(train_data, test_data, num_quantization_bits=32, epoc
     trainer = create_trainer(network, epoch_size, num_quantization_bits)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, epoch_size)
+    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size)
  
 
 if __name__=='__main__':
