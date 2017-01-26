@@ -436,12 +436,18 @@ namespace CNTK
         else
         {
             assert(variable.IsOutput());
-            computationNodePtr = GetOutputVariableNode(variable, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor)->template As<ComputationNode<ElementType>>()->shared_from_this();
+            auto outputVariableNode = GetOutputVariableNode(variable, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
+            // Can be null in case of loops with f.output == f.input.
+            // Such loops cannot be handled, so we leave nullptr as computational node.
+            if (outputVariableNode)
+                computationNodePtr = outputVariableNode->template As<ComputationNode<ElementType>>()->shared_from_this();
+            else
+                computationNodePtr = nullptr;
         }
 
         variableToNodeMap[variable] = computationNodePtr;
         if (isVariableRootMap.find(variable) == isVariableRootMap.end())
-        isVariableRootMap[variable] = variable.IsOutput();
+            isVariableRootMap[variable] = variable.IsOutput();
 
         return computationNodePtr;
     }
