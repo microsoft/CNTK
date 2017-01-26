@@ -30,6 +30,12 @@ Tutorials
 
 #.  CNTK 205: `Artistic Style Transfer`_
 
+#.  CNTK 206: Generative Adversarial Networks (GAN)
+
+    * Part A: `MNIST data preparation`_
+    * Part B: `Basic GAN`_
+
+
 
 For our Japanese users, you can find some of the `tutorials in Japanese`_.
 
@@ -47,5 +53,6 @@ For our Japanese users, you can find some of the `tutorials in Japanese`_.
 .. _`Reinforcement learning basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb
 .. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
 .. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
+.. _`Basic GAN`: https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_206_Basic_GAN.ipynb
 
 .. _`tutorials in Japanese`: https://notebooks.azure.com/library/cntkbeta2_ja

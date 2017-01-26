@@ -129,6 +129,14 @@
     },
     {
         "category": ["Image"],
+        "name":  "Generative Adverserial Networks (GAN)",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_205_Basic_GAN.ipynb",
+        "description":  "This tutorial is a basic implementation of GAN networks. This allows us genreate realistic looking MNIST images.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "One Conv",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#02_oneconvcntk",
         "description":  "Simple network with one convolutional layer.",
