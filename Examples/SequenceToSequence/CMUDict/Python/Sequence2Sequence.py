@@ -7,7 +7,7 @@
 from __future__ import print_function
 import numpy as np
 import os
-from cntk import Trainer, Axis
+from cntk import Trainer, Evaluator, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learner import momentum_sgd, adam_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
@@ -15,7 +15,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.initializer import glorot_uniform
 from cntk.utils import log_number_of_parameters, ProgressPrinter, debughelpers
-from cntk.graph import find_by_name
+from cntk.graph import plot
 from cntk.layers import *
 from cntk.layers.sequence import *
 from cntk.models.attention import *
@@ -42,13 +42,17 @@ attention_axis = -3
 use_attention = False
 use_embedding = True
 embedding_dim = 200
-vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
+vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()]) # all lines of VOCAB_FILE in a list
 length_increase = 1.5
 
 # sentence-start symbol as a constant
 sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
 sentence_end_index = vocab.index('</s>')
 # TODO: move these where they belong
+
+def model_path(epoch):
+    return os.path.join(MODEL_DIR, "model_att_{}.cmf.{}".format(use_attention, epoch))
+
 
 ########################
 # define the reader    #
@@ -163,22 +167,10 @@ def create_model(): # :: (history*, input*) -> logP(w)*
 # train action         #
 ########################
 
-def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_size):
-
-    #from cntk.blocks import Constant, Type
-
-    # this is what we train here
-    #s2smodel.update_signature(Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]),
-    #                          Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
-    # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
-    #         Maybe also attributable to a parameter-order mix-up?
-    # Need to think whether this makes sense. The axes are different for training and testing.
-
+def create_model_train(s2smodel):
     # model used in training (history is known from labels)
     # note: the labels must not contain the initial <s>
     @Function
-    #def model_train(input, x_last): # (input*, labels*) --> (word_logp*)
-    #    labels = x_last
     def model_train(input, labels): # (input*, labels*) --> (word_logp*)
 
         # The input to the decoder always starts with the special label sequence start token.
@@ -186,7 +178,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         # BUGBUG: This will fail with sparse input.
         past_labels = Delay(initial_state=sentence_start)(labels)
         return s2smodel(past_labels, input)
+    return model_train
 
+def create_model_greedy(s2smodel):
     # model used in (greedy) decoding (history is decoder's own output)
     @Function
     def model_greedy(input): # (input*) --> (word_sequence*)
@@ -205,28 +199,28 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
       debughelpers.dump_function(model_greedy, 'model_greedy')
       raise
     #debughelpers.dump_function(model_greedy, 'model_greedy')
-    from cntk.graph import plot
     #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
     #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.svg')
     #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.png')
+    return model_greedy
 
+def create_criterion_function(model):
     @Function
     def criterion(input, labels):
         #labels = x_last
         # criterion function must drop the <s> from the labels
         postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
-        z = model_train(input, postprocessed_labels)
+        z = model(input, postprocessed_labels)
         ce   = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error      (z, postprocessed_labels)
         return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
         #return (Label('loss')(ce), Label('metric')(errs))
     try:
-      #criterion.dump()
-      criterion.update_signature(input=Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                               #x_last=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
-                               labels=Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+      #debughelpers.dump_function(criterion)
+      criterion.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+                               Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
     except:
-      #criterion.dump()
+      debughelpers.dump_function(criterion)
       raise
     plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
     debughelpers.dump_signature(criterion)
@@ -234,6 +228,22 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
     # render the Function graph to a PDF file
     #plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
+    return criterion
+
+def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_size):
+
+    # this is what we train here
+    #s2smodel.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]),
+    #                          Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), Axis('labelAxis1')]))
+    # BUGBUG: fails with "Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands"
+    #         Maybe also attributable to a parameter-order mix-up?
+    # Because criterion strips the <s> and therefore s2smodel has a different axis
+    # Need to think whether this makes sense. The axes are different for training and testing.
+
+    # TODO: test this refactoring
+    model_train = create_model_train(s2smodel)
+    criterion = create_criterion_function(model_train)
+    model_greedy = create_model_greedy(s2smodel)
 
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
@@ -266,6 +276,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     no_op.update_signature(Type(input_vocab_dim, is_sparse=True))
 
     for epoch in range(max_epochs):
+        print("Saving model to '%s'" % model_path(epoch))
+        s2smodel.save(model_path(epoch))
 
         while i < (epoch+1) * epoch_size:
             # get next minibatch of training data
@@ -295,14 +307,14 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         progress_printer.epoch_summary(with_metric=True)
 
         # save the model every epoch
-        model_filename = os.path.join(MODEL_DIR, "model_att{}.cmf.{}".format(use_attention, epoch))
 
         # NOTE: we are saving the model with the greedy decoder wired-in. This is NOT necessary and in some
         # cases it would be better to save the model without the decoder to make it easier to wire-in a 
         # different decoder such as a beam search decoder. For now we save this one though so it's easy to 
         # load up and start using.
-        model_greedy.save_model(model_filename)
-        print("Saved model to '%s'" % model_filename)
+    print("Saving final model to '%s'" % model_path(max_epochs))
+    s2smodel.save(model_path(max_epochs))
+    print("%d epochs complete." % max_epochs)
 
 ########################
 # write action         #
@@ -330,17 +342,34 @@ def write(reader, model, vocab, i2w):
 # test action         #
 #######################
 
-def test(reader, model, num_minibatches=None):
-    
+def test(reader, s2smodel, num_minibatches=None):
+
     # we use the test_minibatch() function so need to setup a trainer
-    label_sequence = sequence.slice(find_arg_by_name('raw_labels', model), 1, 0)
-    lr = learning_rate_schedule(0.007, UnitType.sample)
-    momentum = momentum_as_time_constant_schedule(1100) # BUGBUG: use Evaluator
+    #model_greedy = create_model_greedy(s2smodel)
+    #@Function
+    #def criterion(input, labels):
+    #    #labels = x_last
+    #    # criterion function must drop the <s> from the labels
+    #    postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
+    #    z = model_greedy(input)  #, postprocessed_labels)
+    #    ce   = cross_entropy_with_softmax(z, postprocessed_labels)
+    #    errs = classification_error      (z, postprocessed_labels)
+    #    return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
+    #def lam(input, labels):
+    #    return model_greedy(input)
+    #criterion = create_criterion_function(lambda input, labels: model_greedy(input))
+    model_train = create_model_train(s2smodel)
+    criterion = create_criterion_function(model_train)
+
+    #label_sequence = sequence.slice(find_arg_by_name('raw_labels', model), 1, 0)
+    #lr = learning_rate_schedule(0.007, UnitType.sample)
+    #momentum = momentum_as_time_constant_schedule(1100) # BUGBUG: use Evaluator
 
     # BUGBUG: Must do the same as in train(), drop the first token
-    ce = cross_entropy_with_softmax(model, label_sequence)
-    errs = classification_error(model, label_sequence)
-    trainer = Trainer(model, ce, errs, [momentum_sgd(model.parameters, lr, momentum)])
+    #ce = cross_entropy_with_softmax(model, label_sequence)
+    #errs = classification_error(model, label_sequence)
+    #trainer = Trainer(model, ce, errs, [momentum_sgd(model.parameters, lr, momentum)])
+    evaluator = Evaluator(None, criterion)
 
     test_minibatch_size = 1024
 
@@ -349,61 +378,61 @@ def test(reader, model, num_minibatches=None):
     total_error = 0.0
     while True:
         mb = reader.next_minibatch(test_minibatch_size)
-        if not mb: break
-        mb_error = trainer.test_minibatch({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
-                                           find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
-        total_error += mb_error
-        i += 1
-        
+        if not mb: # finish when end of test set reached
+            break
+        mb_error = evaluator.test_minibatch(mb[train_reader.streams.features], mb[train_reader.streams.labels])
+        #mb_error = evaluator.test_minibatch({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
+        #                                   find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
+        num_samples = mb[train_reader.streams.labels].num_samples
+        total_error += mb_error * num_samples
+        i += num_samples
+
         if num_minibatches != None:
             if i == num_minibatches:
                 break
 
     # and return the test error
-    return total_error/i
+    rate = total_error/i
+    print("error rate of {}% in {} samples", 100 * rate, i)
+    return rate
 
 ########################
 # interactive session  #
 ########################
 
-def translate_string(input_string, model, vocab, i2w, show_attention=False, max_label_length=20):
+def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_label_length=20):
 
     vdict = {vocab[i]:i for i in range(len(vocab))}
-    w = [vdict["<s>"]] + [vdict[w] for w in input_string] + [vdict["</s>"]]
-    
+    try:
+        w = [vdict["<s>"]] + [vdict[c] for c in tokens] + [vdict["</s>"]]
+    except:
+        print('Input contains an unexpected token.')
+        return
+
+    # convert to one_hot
+    # TODO: I think we have a function for this now.
     features = np.zeros([len(w),len(vdict)], np.float32)
     for t in range(len(w)):
-        features[t,w[t]] = 1    
-    
-    l = [vdict["<s>"]] + [0 for i in range(max_label_length)]
-    labels = np.zeros([len(l),len(vdict)], np.float32)
-    for t in range(len(l)):
-        labels[t,l[t]] = 1
-    
-    #pred = model.eval({find_arg_by_name('raw_input' , model) : [features], 
-    #                   find_arg_by_name('raw_labels', model) : [labels]})
-    pred = model([features], [labels])
+        features[t,w[t]] = 1
+    query = [features] # input is a list of parallel sequences in a batch
+
+    pred = model_decoding(query)
     
     # print out translation and stop at the sequence-end tag
-    print(input_string, "->", end='')
-    tlen = 1 # length of the output sequence
     prediction = np.argmax(pred, axis=2)[0]
-    for i in prediction:
-        phoneme = i2w[i]
-        if phoneme == "</s>": break
-        tlen += 1
-        print(phoneme, end=' ')
-    print()
+    translation = [i2w[i] for i in prediction]
     
     # show attention window (requires matplotlib, seaborn, and pandas)
-    if show_attention:
+    if show_attention    and False: # TODO: finish this
     
         import matplotlib.pyplot as plt
         import seaborn as sns
         import pandas as pd
-    
+
+        from cntk.graph import find_by_name
         att = find_by_name(model, 'attention_weights')
         q = combine([model, att])
+        # TODO: fix this as well
         output = q.forward({find_arg_by_name('raw_input' , model) : [features], 
                          find_arg_by_name('raw_labels', model) : [labels]},
                          att.outputs)
@@ -423,15 +452,26 @@ def translate_string(input_string, model, vocab, i2w, show_attention=False, max_
         sns.heatmap(dframe)
         plt.show()
 
-def interactive_session(model, vocab, i2w, show_attention=False):
+    return translation
+
+def interactive_session(s2smodel, vocab, i2w, show_attention=False):
+
+    model_greedy = create_model_greedy(s2smodel)
 
     import sys
 
     while True:
-        user_input = input("> ").upper()
-        if user_input == "QUIT":
+        line = input("> ")
+        if line.lower() == "quit":
             break
-        translate_string(user_input, model, vocab, i2w, show_attention=True)
+        # tokenize. Our task is letter to sound.
+        out_line = []
+        for word in line.split():
+            in_tokens = [c.upper() for c in word]
+            out_tokens = translate(in_tokens, model_greedy, vocab, i2w, show_attention=True)
+            out_line.extend(out_tokens)
+        out_line = [" " if tok == '</s>' else tok[1:] for tok in out_line]
+        print("=", " ".join(out_line))
         sys.stdout.flush()
 
 ########################
@@ -803,49 +843,28 @@ if __name__ == '__main__':
     res = out.eval({out.arguments[0]: [[3.0]], out.arguments[1]: [[5.0]]})
     #res = out.eval([[3.0]])
 
-    # repro for name loss
-    #from cntk import plus, as_block
-    #from _cntk_py import InferredDimension
-    #arg = placeholder_variable()
-    #x = times(arg, parameter((InferredDimension,3), init=glorot_uniform()), name='x')
-    #x = sequence.first(x)
-    #sqr = x*x
-    #x1 = sqr.find_by_name('x')
-    #sqr2 = as_block(sqr, [(sqr.placeholders[0], placeholder_variable())], 'sqr')
-    #sqr2 = combine([sqr2])
-    #x2 = sqr2.find_by_name('x')
-
-    #stest = sqr2
-    ##stest.dump()
-    #stest = stest.replace_placeholders({stest.arguments[0]: input_variable(13)})
-    ##stest.dump()
-
     # hook up data
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
     vocab, i2w, w2i = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
-    #inputs = create_inputs()
     model = create_model()
 
     # train
-    #try:
     train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
-    #except:
-    #    x = input("hit enter")
+
+    test_epoch = 10
 
     # write
     #model = load_model("model_epoch0.cmf")
     #write(valid_reader, model, vocab, i2w)
-    
-    # test
-    #model = load_model("model_epoch0.cmf")
-    #test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
-    #test(test_reader, model)
 
-    # test the model out in an interactive session
-    #print('loading model...')
-    #model_filename = "model_epoch0.cmf"
-    #model = load_model(model_filename)
-    #interactive_session(model, vocab, i2w, show_attention=True)
+    # test
+    model = Function.load(model_path(test_epoch))
+    test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    test(test_reader, model)
+
+    # try the model out in an interactive session
+    model = Function.load(model_path(test_epoch))
+    interactive_session(model, vocab, i2w, show_attention=True)
