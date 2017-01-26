@@ -114,17 +114,17 @@ namespace CNTK
        
         std::vector<DictionaryValue>  functionDictionaries;
         std::unordered_set<std::wstring> outputUids;
-        for (const auto& primitiveFunciton : topoSortedPrimitiveFunctions)
+        for (const auto& primitiveFunction : topoSortedPrimitiveFunctions)
         {
-            for (const auto& output : primitiveFunciton->Outputs())
+            for (const auto& output : primitiveFunction->RawOutputs())
             {
                 if (outputUids.find(output.Uid()) != outputUids.end())
                     LogicError("Output uids of all primitive functions in a function graph must be unique");
 
-                outputUids.insert(primitiveFunciton->Uid());
+                outputUids.insert(primitiveFunction->Uid());
             }
 
-            functionDictionaries.push_back(primitiveFunciton->Serialize());
+            functionDictionaries.push_back(primitiveFunction->Serialize());
         }
 
         dict[functionsKey] = std::move(functionDictionaries);
@@ -255,7 +255,7 @@ namespace CNTK
                 }
             }
 
-            for (const auto& output : root->Outputs())
+            for (const auto& output : root->RawOutputs())
             {
                 const auto& it = uidToInputMap.find(output.Uid());
                 if (it != uidToInputMap.end())
@@ -324,7 +324,7 @@ namespace CNTK
             auto primitiveFunction = dynamic_cast<const PrimitiveFunction*>(function.get());
             if (primitiveFunction->IsStateful())
             {
-                for (const auto& output : function->Outputs())
+                for (const auto& output : function->RawOutputs())
                 {
                     auto node = m_variableToNodeMap.at(output);
                     auto attributes = function->Attributes();
@@ -561,7 +561,7 @@ namespace CNTK
             }
             case PrimitiveOpType::Reshape:
             {
-                computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(primitiveFunction->Output().Shape()));
+                computationNodePtr = New<ReshapeNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(primitiveFunction->RawOutputs()[0].Shape()));
                 break;
             }
             case PrimitiveOpType::ROIPooling:
@@ -922,7 +922,7 @@ namespace CNTK
 
             // Now recursively create the network in a top-down fashion
             auto rootFunction = RootFunction();
-            auto rootFunctionOutputs = rootFunction->Outputs();
+            auto rootFunctionOutputs = rootFunction->RawOutputs();
             for (auto rootOutput : rootFunctionOutputs)
                 GetNode(rootOutput, m_computationNetwork, builder, m_variableToNodeMap, m_isVariableRootMap, m_inputsExcludedFromGradientComputation);
 
@@ -1039,7 +1039,7 @@ namespace CNTK
 
             // Now recursively traverse the network in a top-down fashion
             auto rootFunction = RootFunction();
-            auto rootFunctionOutputs = rootFunction->Outputs();
+            auto rootFunctionOutputs = rootFunction->RawOutputs();
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
                 forwardRootNodes.push_back(m_variableToNodeMap.at(rootOutput));
@@ -1154,7 +1154,7 @@ namespace CNTK
     // Assign the supplied gradients corresponding to the root(s) of the network to be backpropagated through the graph
     void CompositeFunction::PopulateNetworkGradients(const std::unordered_map<Variable, ValuePtr>& gradients)
     {
-        auto functionOutputs = this->Outputs();
+        auto functionOutputs = RawOutputs();
         for (auto gradientVarValuePair : gradients)
         {
             auto outputComputationNode = m_variableToNodeMap.at(gradientVarValuePair.first);
@@ -1335,7 +1335,7 @@ namespace CNTK
         else
             InvalidArgument("Unsupported DataType %s", DataTypeName(dataType));
 
-        std::unordered_set<Variable> functionOutputs(this->Outputs().begin(), this->Outputs().end());
+        std::unordered_set<Variable> functionOutputs(m_outputs.begin(), m_outputs.end());
         std::vector<ComputationNodeBasePtr> outputsToEvaluate;
         std::unordered_set<Variable> requiredArguments;
         for (auto outputVarValuePair : outputs)
