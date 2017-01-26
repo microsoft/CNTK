@@ -249,9 +249,12 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         raise TypeError('generator_function should take 1 positional argument (state) and return a single output or a tuple (output, new state)')
 
     # TODO: having to pass the dynamic axis is suboptimal. Any better way?
-    # BUGBUG: The name _from indicates that the start state should be passed.
+    # BUGBUG: initial_state must be passed to unfold_from
+    # We can still pass dynamic_axes_like; reads like "unfold from XXX along axis of YYY".
+    # And if we can close over 'input' in the generator, we can also bake it into what we pass, i.e. the length.
     @Function
     def unfold_from(dynamic_axes_like):
+    #def unfold_from(initial_state, dynamic_axes_like):
         # create a new dynamic axis if a length increase is specified
         out_axis = dynamic_axes_like
         if length_increase != 1:

@@ -167,7 +167,7 @@ def plot(root, filename=None):
 
     Args:
         node (graph node): the node to start the journey from
-        filename (`str`, default None): file with extension '.dot', 'png', 'pdf', or 'svd'
+        filename (`str`, default None): file with extension '.dot', 'png', 'pdf', or 'svg'
         to denote what format should be written. If `None` then nothing
         will be plotted. Instead, and the returned string can be used to debug the graph.
 
@@ -177,8 +177,8 @@ def plot(root, filename=None):
 
     if filename:
         suffix = os.path.splitext(filename)[1].lower()
-        if suffix not in ('.svd', '.pdf', '.png', '.dot'):
-            raise ValueError('only file extensions ".svd", ".pdf", ".png", and ".dot" are supported')
+        if suffix not in ('.svg', '.pdf', '.png', '.dot'):
+            raise ValueError('only file extensions ".svg", ".pdf", ".png", and ".dot" are supported')
     else:
         suffix = None
 
@@ -199,7 +199,9 @@ def plot(root, filename=None):
     # string to store model
     model = []
 
-    stack = [root.root_function]
+    root = root.root_function
+    root_uid = root.uid
+    stack = [root]
     visited = set() # [uid] instead of node object itself, as this gives us duplicate entries for nodes with multiple outputs
 
     primitive_op_map = {
@@ -240,7 +242,6 @@ def plot(root, filename=None):
 
         try:
             # Function node
-            is_root = node is root
             node = node.root_function
 
             stack.extend(node.inputs)
@@ -341,7 +342,7 @@ def plot(root, filename=None):
                 model.append(line + n.uid + ';\n')
 
             if (filename):
-                if is_root: # only final network outputs are drawn
+                if node.uid == root_uid: # only final network outputs are drawn
                     for output in node.outputs:
                         final_node = pydot.Node(output.uid, shape='egg', label=output.name + '\n' + shape_desc(output),
                                                 fixedsize='true', height=1, width=1.3, penwidth=4)
@@ -365,7 +366,7 @@ def plot(root, filename=None):
         visited.add(node.uid)
 
     if filename:
-        if suffix == '.svd':
+        if suffix == '.svg':
             dot_object.write_svg(filename, prog='dot')
         elif suffix == '.pdf':
             dot_object.write_pdf(filename, prog='dot')

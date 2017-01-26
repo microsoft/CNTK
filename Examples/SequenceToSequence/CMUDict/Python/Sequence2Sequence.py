@@ -9,7 +9,7 @@ import numpy as np
 import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.learner import momentum_sgd, adam_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
                      element_select, alias, hardmax, placeholder_variable, combine, parameter, times, plus
 from cntk.ops.functions import CloneMethod, load_model, Function
@@ -39,7 +39,7 @@ num_layers = 2
 attention_dim = 128
 attention_span = 20
 attention_axis = -3
-use_attention = True
+use_attention = False
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()])
@@ -131,7 +131,6 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         #def decode(history, x_last):
         #    input = x_last
         def decode(history, input):
-            history_axis = history  # we use history_axis wherever we pass this only for the sake of passing its axis
             encoded_input = encode(input)
             r = history
             r = embed(r)
@@ -207,7 +206,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
       raise
     #debughelpers.dump_function(model_greedy, 'model_greedy')
     from cntk.graph import plot
-    plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
+    #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
+    #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.svg')
+    #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.png')
 
     @Function
     def criterion(input, labels):
@@ -218,6 +219,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         ce   = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error      (z, postprocessed_labels)
         return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
+        #return (Label('loss')(ce), Label('metric')(errs))
     try:
       #criterion.dump()
       criterion.update_signature(input=Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
@@ -226,6 +228,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     except:
       #criterion.dump()
       raise
+    plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
     debughelpers.dump_signature(criterion)
     #debughelpers.dump_function(criterion)
 
@@ -235,15 +238,13 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # for this model during training we wire in a greedy decoder so that we can properly sample the validation data
     # This does not need to be done in training generally though
     # Instantiate the trainer object to drive the model training
-    lr_per_sample = learning_rate_schedule(0.005, UnitType.sample)
     minibatch_size = 72
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    clipping_threshold_per_sample = 2.3
-    gradient_clipping_with_truncation = True
-    learner = momentum_sgd(model_train.parameters,
-                           lr_per_sample, momentum_time_constant,
-                           gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
-                           gradient_clipping_with_truncation=gradient_clipping_with_truncation)
+    learner = adam_sgd(model_train.parameters,
+    #learner = momentum_sgd(model_train.parameters, low_memory = True,
+                           lr       = learning_rate_schedule([0.005]*2+[0.0025]*3+[0.00125], UnitType.sample, epoch_size),
+                           momentum = momentum_as_time_constant_schedule(1100),
+                           gradient_clipping_threshold_per_sample=2.3,
+                           gradient_clipping_with_truncation=True)
     trainer = Trainer(None, criterion, learner)
 
     # Get minibatches of sequences to train with and perform model training
@@ -253,7 +254,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
     # print out some useful training information
     log_number_of_parameters(model_train) ; print()
+    #progress_printer = ProgressPrinter(freq=30, tag='Training')
     progress_printer = ProgressPrinter(freq=30, tag='Training')
+    #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=os.path.join(MODEL_DIR, "model_att%d.log" % use_attention))
 
     # dummy for printing the input sequence below. Currently needed because input is sparse.
     I = Constant(np.eye(input_vocab_dim))
@@ -290,10 +293,10 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
         # log a summary of the stats for the epoch
         progress_printer.epoch_summary(with_metric=True)
-        
+
         # save the model every epoch
-        model_filename = os.path.join(MODEL_DIR, "model_epoch%d.cmf" % epoch)
-        
+        model_filename = os.path.join(MODEL_DIR, "model_att{}.cmf.{}".format(use_attention, epoch))
+
         # NOTE: we are saving the model with the greedy decoder wired-in. This is NOT necessary and in some
         # cases it would be better to save the model without the decoder to make it easier to wire-in a 
         # different decoder such as a beam search decoder. For now we save this one though so it's easy to 
@@ -731,6 +734,15 @@ if __name__ == '__main__':
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
 
     #build_model_xy('c:/me/xinying_graph')
+
+    #W = Parameter((-1,42), init=glorot_uniform())
+    #@Function
+    #def simple_layer(x):
+    #    return sigmoid(x @ W)
+    #simple_layer.update_signature(13)
+    #from cntk.graph import plot
+    #plot(simple_layer, 'c:/work/cntk/simple_layer.pdf')
+    #debughelpers.dump_function(simple_layer)
 
     #x = placeholder_variable('x')   # Function argument in definition
     #s = x * x                       # Function

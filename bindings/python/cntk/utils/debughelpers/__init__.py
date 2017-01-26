@@ -11,7 +11,7 @@ def dump_signature(root, tag=None):
     f_name = root.name if root.name else tag if tag else 'Function'
     args = root.signature
     arg_names = [param.name for param in args]
-    output_names = [output.name for output in root.outputs]
+    output_names = [output.name if output.name else '_' for output in root.outputs]
     if len(output_names) > 1:
         output_signature = 'Tuple[' + ', '.join(output_names) + ']'
     else:
@@ -53,17 +53,15 @@ def dump_function(root, tag=None):
         axis_names[actual_name] = name
         return name
     def type_spec(var):
-        s = ":{}".format(var.shape)
-        axes = var.dynamic_axes
-        if axes:
-            s = s + "[" + ",".join([name_axis(axis) for axis in axes]) + "]"
+        s = "[" + ",".join([name_axis(axis) for axis in var.dynamic_axes]) + "]" if var.dynamic_axes else ''
+        s += str(var.shape)
         return s
     def print_item(item):
         name = name_it(item)
         if isinstance(item, cntk_py.Function):
             op_name = item.op_name
-            shape = '(' +  ', '.join([name_it(output) + type_spec(output) for output in item.root_function.outputs]) + ')'
-            inputs = '(' +  ', '.join([name_it(input) + type_spec( input) for input in item.root_function.inputs]) + ')'
+            shape = '(' +  ', '.join([name_it(output) + ':' + type_spec(output) for output in item.root_function.outputs]) + ')'
+            inputs = '(' +  ', '.join([name_it(input) + ':' + type_spec( input) for input in item.root_function.inputs]) + ')'
             sep = '-> '
         elif isinstance(item, cntk_py.Constant):
             op_name = "Constant"
