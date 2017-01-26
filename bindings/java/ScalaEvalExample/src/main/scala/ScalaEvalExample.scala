@@ -8,7 +8,7 @@ import java.awt.Color
 import java.io.File
 import scala.collection.JavaConversions._
 
-object ScalaEvalExample extends App {
+object ScalaEvalExample {//extends App {
   System.loadLibrary("CNTKLib")
 
   val outputName = "Plus2060"

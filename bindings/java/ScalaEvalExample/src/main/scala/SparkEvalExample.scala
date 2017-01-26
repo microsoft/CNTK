@@ -6,20 +6,18 @@ import org.apache.spark.SparkFiles
 import org.apache.spark.input.PortableDataStream
 import org.apache.spark.sql.SparkSession
 
+import Utils._
+
 object SparkEvalExample extends App {
   System.loadLibrary("CNTKLib")
   val spark =
     SparkSession.builder().master("local[*]").appName("Spark SQL basic example").getOrCreate()
   val sc = spark.sparkContext
+  sc.setLogLevel("WARN")
 
   val outputName = "Plus2060"
   val dataPath   = "/home/ratan/Downloads"
   sc.addFile(s"$dataPath/z.model")
-
-  def seqify(fvv: FloatVectorVector): Seq[Seq[Float]] = {
-    (0 until fvv.size.toInt).map(i =>
-      (0 until fvv.get(i.toInt).size().toInt).map(j => fvv.get(i.toInt).get(j.toInt)))
-  }
 
   def eval(model: Function)(img: Seq[Float]): Seq[Float] = {
     val inputVar   = model.getArguments.get(0)
@@ -29,7 +27,8 @@ object SparkEvalExample extends App {
     val floatVecVec = new FloatVectorVector()
     floatVecVec.add(floatVec)
 
-    val inputVal     = Value.CreateDenseFloat(inputShape, floatVecVec, DeviceDescriptor.GetCPUDevice)
+    val inputVal =
+      Value.CreateDenseFloat(inputShape, floatVecVec, DeviceDescriptor.GetCPUDevice)
     val inputDataMap = new UnorderedMapVariableValuePtr()
     inputDataMap.Add(inputVar, inputVal)
 
@@ -61,37 +60,26 @@ object SparkEvalExample extends App {
 
       val bmp     = ImageIO.read(stream.open)
       val resized = bmp.getScaledInstance(imageWidth, imageHeight, Image.SCALE_DEFAULT)
-      val bImg =
-        new BufferedImage(resized.getWidth(null),
-                          resized.getHeight(null),
-                          BufferedImage.TYPE_INT_RGB)
-      // or use any other fitting type
+      val bImg = new BufferedImage(resized.getWidth(null),
+                                   resized.getHeight(null),
+                                   BufferedImage.TYPE_INT_RGB)
       bImg.getGraphics.drawImage(resized, 0, 0, null)
 
-      val image = for {
-        c <- 0 until 3
-        h <- 0 until bImg.getHeight()
-        w <- 0 until bImg.getWidth()
-        color = new Color(bImg.getRGB(w, h))
-        intensity = if (c == 0) {
-          color.getBlue
-        } else if (c == 1) {
-          color.getGreen
-        } else {
-          color.getRed
-        }
-      } yield intensity.toFloat
+      val image = preprocessImage(bImg)
 
       (filename, eval(model)(image).toArray)
     }
   }
 
   val processed = images.mapPartitions(applyModel("z.model"))
-  //println(processed.partitions.size)
   processed.collect.foreach {
     case (filename, data) =>
       println(filename)
       data.foreach(x => print(s"$x "))
       println(); println()
   }
+
+  println(s"Evaluated ${processed.count} images")
+
+  spark.stop()
 }
