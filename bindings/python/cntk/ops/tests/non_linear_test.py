@@ -356,12 +356,12 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     bias         = Parameter(init=AA([init_bias], dtype=dtype), device=dev)
     run_mean     = Constant(mean, shape=(1), dtype=dtype, device=dev)
     run_variance = Constant(var, shape=(1), dtype=dtype, device=dev)
-
+    run_count    = Constant(var, shape=(), dtype=dtype, device=dev)
     from cntk import batch_normalization
 
     a = I(shape=(1), dtype=dtype, needs_gradient=False, name='a')
 
-    op_node = batch_normalization(a, scale, bias, run_mean, run_variance, False, epsilon, use_cudnn)
+    op_node = batch_normalization(a, scale, bias, run_mean, run_variance, run_count, False, epsilon, use_cudnn)
 
     forward_input = {a: t}
 

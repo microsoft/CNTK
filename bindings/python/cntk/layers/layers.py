@@ -469,7 +469,7 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     bias         = Parameter(norm_shape, init=0)
     run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
     run_variance = Constant(0, shape=norm_shape)
-    run_count    = Constant(0, shape=(1,))
+    run_count    = Constant(0, shape=(1,))  # BUGBUG: This should be a scalar, not a 1-dim vector
 
     # expression
     @BlockFunction('BatchNormalization', name)

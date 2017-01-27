@@ -162,13 +162,11 @@ def train(reader, model, max_epochs):
     # BUGBUG (layers): need to verify compatibility when using it as part of another function
 
     # example of how to clone out the feature-extraction part, using Label() layers:
-    hidden_representation = model.find_by_name('hidden_representation')
-    embedded_input = hidden_representation.find_by_name('embedded_input')
-    from cntk.ops.functions import CloneMethod
-    inner_model = hidden_representation.clone(CloneMethod.share, {embedded_input.output: Placeholder(name='catch_me')})
-    #inner_model = hidden_representation.clone(CloneMethod.share, {Placeholder(): Placeholder()})
-    # BUGBUG: This ^^ should fail, but does not, so I must assume this is bogus.
-    inner_model.update_signature(Type(emb_dim))
+    #hidden_representation = model.hidden_representation
+    #embedded_input = hidden_representation.embedded_input
+    #from cntk.ops.functions import CloneMethod
+    #inner_model = hidden_representation.clone(CloneMethod.share, {embedded_input.output: Placeholder(name='catch_me')})
+    #inner_model.update_signature(Type(emb_dim))
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)

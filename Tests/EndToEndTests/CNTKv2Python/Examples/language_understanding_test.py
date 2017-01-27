@@ -14,14 +14,12 @@ TOLERANCE_ABSOLUTE = 1E-1  # TODO: Once set_fixed_random_seed(1) is honored, thi
 from cntk.layers import *
 from cntk.utils import *
 from cntk.ops import splice
-from examples.LanguageUnderstanding.LanguageUnderstanding import data_dir, create_reader, create_model_function, train, evaluate, emb_dim, hidden_dim, num_labels
-from cntk.persist import load_model, save_model
 
 # TODO: what is this?
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "LanguageUnderstanding", "ATIS", "Python"))
 sys.path.append("../LanguageUnderstanding/ATIS/Python")
-from LanguageUnderstanding import data_dir, create_reader, create_model, train, emb_dim, hidden_dim, label_dim
+from LanguageUnderstanding import data_dir, create_reader, create_model_function, train, emb_dim, hidden_dim, num_labels
 
 def test_a_model(what, model, expected_train, expected_test=None):
     print("--- {} ---".format(what))
@@ -56,14 +54,14 @@ def create_test_model():
 def with_lookahead():
     x = Placeholder()
     future_x = future_value(x)
-    apply_x = splice ([x, future_x])
+    apply_x = splice (x, future_x)
     return apply_x
 
 def BiRecurrence(fwd, bwd):
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
     x = Placeholder()
-    apply_x = splice ([F(x), G(x)])
+    apply_x = splice (F(x), G(x))
     return apply_x
 
 def BNBiRecurrence(fwd, bwd, test_dual=True): # special version that calls one shared BN instance at two places, for testing BN param tying
@@ -78,7 +76,7 @@ def BNBiRecurrence(fwd, bwd, test_dual=True): # special version that calls one s
     x1 = BN(x)
     x2 = BN(x) if test_dual else x1
     # In double precision with corpus aggregation, these lead to the same result.
-    apply_x = splice ([F(x1), G(x2)])
+    apply_x = splice (F(x1), G(x2))
     return apply_x
 
 # TODO: the name is wrong

@@ -2452,8 +2452,8 @@ private: // time-constant conversions
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
         {
-            if (IsRunCount0())
-                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
+            //if (IsRunCount0())
+            //    RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 0;                                        // (m_normTimeConst == infinity) no new contribution from current minibatch
         }
 
@@ -2495,8 +2495,8 @@ private: // time-constant conversions
         // in inference mode, only use long-term mean and do not update running estimates
         if (!Environment().IsTraining())
         {
-            if (IsRunCount0())
-                RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
+            //if (IsRunCount0())
+            //    RuntimeError("%ls: inference mode is used, but nothing has been trained.", NodeName().c_str());
             return 1.0;                 // (m_blendTimeConst == infinity) estimate is taken 100% from the long-term running estimate
         }
 

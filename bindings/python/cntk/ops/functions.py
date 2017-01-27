@@ -51,6 +51,8 @@ class Function(cntk_py.Function):
     # Use this as a decorator, e.g.:
     #   @Function
     #   def f(x): return x * x
+    # BUGBUG: This must pass through if input is already a Function. And for UserFunction, 'f' is a Variable.
+    #         UserFunction.__init__() calls it this way: super(Function, self).__init__(var_inputs, name)
     def __new__(cls, f, members = {}, make_block=False, op_name=None, name=None):
         # Parameter() creation inside code of a Function def is forbidden
         from ..default_options import default_options
