@@ -1,0 +1,180 @@
+# VGG19 with ImageNet -- 19 layers ConvNet for image classification
+# Reference: "Very Deep Convolutional Networks for Large-Scale Image Recognition" https://arxiv.org/abs/1409.1556
+
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+ndlMacros="$ConfigDir$/Macros.ndl"
+
+precision = "float"
+deviceId = "Auto"
+
+command = Train:Test
+
+parallelTrain = "true"
+traceLevel = 1
+numMBsToShowResult = 500
+
+modelPath = "$ModelDir$/VGG19"
+stderr = "$OutputDir$/VGG19"
+
+################################
+Train = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        imageShape = 224:224:3
+        labelDim = 1000
+                
+        model = Sequential (
+            ConvolutionalLayer {64, (3:3)} : ReLU : 
+            ConvolutionalLayer {64, (3:3)} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            ConvolutionalLayer {128, (3:3)} : ReLU : 
+            ConvolutionalLayer {128, (3:3)} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            ConvolutionalLayer {256, (3:3)} : ReLU : 
+            ConvolutionalLayer {256, (3:3)} : ReLU : 
+            ConvolutionalLayer {256, (3:3)} : ReLU : 
+            ConvolutionalLayer {256, (3:3)} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            MaxPoolingLayer    {(2:2), stride=(2:2)} :
+            DenseLayer         {4096, activation=ReLU} : Dropout : 
+            DenseLayer         {4096, activation=ReLU} : Dropout :
+            LinearLayer        {labelDim}
+        )
+
+        # inputs
+        features = Input {imageShape}
+        featNorm = features - Splice(Constant(103.939):Constant(116.779):Constant(123.68), axis=3)
+        labels = Input {labelDim}
+
+        # apply model to features
+        z = model (featNorm)
+
+        # loss and error computation
+        ce       = CrossEntropyWithSoftmax  (labels, z)
+        errs     = ClassificationError      (labels, z)
+        top5Errs = ClassificationError      (labels, z, topN=5)  # only used in Eval action
+
+        # declare special nodes
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (z)
+    }
+    
+    SGD = {
+        epochSize = 0
+        minibatchSize = 256
+        # CNTK weights new gradient by (1-momentum) for unit gain, thus we multiply Caffe's learning rate by (1-momentum)
+        learningRatesPerMB = 0.1*20:0.01*20:0.001*20:0.0001
+        momentumPerMB = 0.9
+        maxEpochs = 74
+        gradUpdateType = None
+        L2RegWeight = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
+        dropoutRate = 0.5
+        
+        # TODO: try less bits?
+        ParallelTrain = {
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = "true"
+            parallelizationStartEpoch = 1
+            DataParallelSGD = {
+                gradientBits = 32
+            }
+        }
+        
+        numMBsToShowResult = 100
+    }
+    
+    # Reader
+    reader = {
+        verbosity = 0
+        randomize = true
+        randomizationWindow = 1
+
+        deserializers = (
+        {   
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/train_map.txt"
+            input = {
+                features = {
+                    transforms = (
+                        {
+                            type = "Crop"
+                            cropType = "RandomSide"
+                            sideRatio = 0.875
+                            jitterType = "UniRatio"
+                        }:{
+                            type = "Scale"
+                            width = 224
+                            height = 224
+                            channels = 3
+                            interpolations = "linear"
+                        }:{
+                            type = "Transpose"
+                        }
+                    )
+                }
+                labels = {
+                    labelDim = 1000
+                }
+            }
+        })
+    }    
+}
+
+################################
+Test = {
+    action=test
+    minibatchSize=128
+    evalNodeNames = errs:top5Errs  # also test top-5 error rate
+    
+    # Reader
+    reader = {
+        verbosity = 0
+        randomize = false
+
+        deserializers = (
+        {
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file="$DataDir$/val_map.txt"
+            input = {
+                features = {
+                    transforms = (
+                        {
+                            type = "Crop"
+                            cropType = "center"
+                            sideRatio = 0.875
+                        }:{
+                            type = "Scale"
+                            width = 224
+                            height = 224
+                            channels = 3
+                        }:{
+                            type = "Transpose"
+                        }
+                    )
+                }
+                labels = {
+                    labelDim = 1000
+                }
+            }
+        })
+    }        
+}
