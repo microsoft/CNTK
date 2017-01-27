@@ -30,7 +30,7 @@ from .blocks import _get_current_default_options, _is_given, _initializer_for, _
 # none       given: expand W to all (same as map_rank=0)
 def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_default_or_None,
           input_rank=None, map_rank=None,
-          bias=bias_default_or_True, init_bias=init_bias_default_or_0, 
+          bias=bias_default_or_True, init_bias=init_bias_default_or_0,
           name=''):
     activation = _resolve_activation(activation)
     bias       = bias if _is_given(bias) else _get_current_default_options().bias
@@ -81,7 +81,7 @@ def Dense(shape, init=init_default_or_glorot_uniform, activation=activation_defa
 # To create an embedding from a file, use this:
 #  Embedding(weights=np.load('PATH'))
 def Embedding(shape=None, init=None, weights=None, name=''):
-    if init is not None or weights is not None:
+    if init is not None and weights is not None:
         raise ValueError('Embedding: init and weights options are mutually exclusive')
 
     # parameters bound to this Function:
@@ -133,7 +133,7 @@ def Convolution(filter_shape,        # e.g. (3,3)
                 bias=bias_default_or_True,
                 init_bias=init_bias_default_or_0,
                 reduction_rank=1, # (must be 1 currently)
-                max_temp_mem_size_in_samples=0, 
+                max_temp_mem_size_in_samples=0,
                 name=''):
     #UntestedBranchError("Convolution")
     activation = _resolve_activation(activation)
@@ -185,7 +185,7 @@ def Deconvolution(filter_shape,        # e.g. (3,3)
                 bias=bias_default_or_True,
                 init_bias=init_bias_default_or_0,
                 reduction_rank=1, # (must be 1 currently)
-                max_temp_mem_size_in_samples=0, 
+                max_temp_mem_size_in_samples=0,
                 name=''):
     activation = _resolve_activation(activation)
     pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
@@ -230,15 +230,15 @@ from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def Pooling(op,      # PoolingType_Max or _Average
             filter_shape,  # e.g. (3,3)
             strides=1,
-            pad=False, 
+            pad=False,
             name=''):
     if op == PoolingType_Average:
         op_name = 'AveragePooling'
-        if filter_shape == NDShape.unknown.dimensions(): 
-            op_name = 'GlobalAveragePooling' 
+        if filter_shape == NDShape.unknown.dimensions():
+            op_name = 'GlobalAveragePooling'
     elif op == PoolingType_Max:
         op_name = 'MaxPooling'
-        if filter_shape == NDShape.unknown.dimensions(): 
+        if filter_shape == NDShape.unknown.dimensions():
             op_name = 'GlobalMaxPooling'
     else:
         raise ValueError('Pooling: op must be PoolingType_Max or PoolingType_average')
@@ -250,14 +250,14 @@ def Pooling(op,      # PoolingType_Max or _Average
 # MaxPooling
 def MaxPooling(filter_shape,  # e.g. (3,3)
                strides=1,
-               pad=False, 
+               pad=False,
                name=''):
     return Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad, name=name)
 
 # AveragePooling
 def AveragePooling(filter_shape,  # e.g. (3,3)
                    strides=1,
-                   pad=False, 
+                   pad=False,
                    name=''):
     return Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad, name=name)
 
@@ -274,7 +274,7 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
                  strides=1,
                  pad=False,
                  lower_pad=0,
-                 upper_pad=0, 
+                 upper_pad=0,
                  name=''):
     x = Placeholder(name='unpool_arg')
     y = Placeholder(name='pool_arg')
@@ -334,20 +334,20 @@ def Dropout(prob,name=''):
     apply_x = dropout(x, dropout_rate=prob)
     return Block(apply_x, 'Dropout', name, make_block=True)
 
-# Activation -- create an activation layer 
-def Activation(activation=activation_default_or_None, name=''): 
-    # expression 
+# Activation -- create an activation layer
+def Activation(activation=activation_default_or_None, name=''):
+    # expression
     activation = _resolve_activation(activation)
-    x = Placeholder(name='activation_arg') 
-    apply_x = activation(x) 
-    return Block(apply_x, 'Activation', name, make_block=True) 
+    x = Placeholder(name='activation_arg')
+    apply_x = activation(x)
+    return Block(apply_x, 'Activation', name, make_block=True)
 
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
 def BatchNormalization(map_rank=None,  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=5000, blend_time_constant=0,
-                       epsilon=0.00001, use_cntk_engine=False, 
+                       epsilon=0.00001, use_cntk_engine=False,
                        name=''):
     # TODO: make map_rank a default option, once per-layer type defaults are implemented
 

@@ -12,7 +12,7 @@
 from __future__ import division
 import numpy as np
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, as_block
-from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
+from cntk.ops import times, element_times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
 from cntk.initializer import glorot_uniform
@@ -160,13 +160,17 @@ def _initializer_for(init, rank_params=None):
     return init
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
-# All layers functions call this at the end. 
-def Block(f, op_name, name='', members={}, make_block=False): 
-    if make_block: 
+# All layers functions call this at the end.
+# BUGBUG: does not actually exist yet, faking it
+# BUGBUG: should create a new object, but does it in-place instead. Works for current usage, but should be fixed.
+# BUGBUG: using combine causes an error ater, so the name actually does not get changed
+# BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
+def Block(f, op_name, name='', members={}, make_block=False):
+    if make_block:
         inner_args = f.arguments
         args_map = [(arg, Placeholder(name=arg.name)) for arg in inner_args]
         f = as_block(f, args_map, op_name, name)
-    for key in members:
+    for key in members:   # self.__dict__.update(args_dict)
         f.__dict__[key] = members[key]
     return f
 
@@ -327,3 +331,94 @@ def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
     apply_x_h_c.create_placeholder = create_hc_placeholder
     #return Block(apply_x_h_c, 'LSTM') # BUGBUG: fails with "RuntimeError: A Function instance with more than one output cannot be implicitly converted to a Variable"
     return apply_x_h_c
+
+def GRU(shape, cell_shape=None, init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
+        enable_self_stabilization=enable_self_stabilization_default_or_False): # (x, (h,c))
+
+    enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
+    has_projection = cell_shape is not None
+    has_aux = False
+
+    if has_aux:
+        UntestedBranchError("GRU, has_aux option")
+
+    shape = _as_tuple(shape)
+
+    cell_shape = _as_tuple(cell_shape) if cell_shape is not None else shape
+    if len(shape) != 1 or len(cell_shape) != 1:
+        raise ValueError("GRU: shape and cell_shape must be vectors (rank-1 tensors)")
+        # otherwise we'd need to fix slicing and Param initializers
+
+    stack_axis = -1  # stacking along the fastest-changing one, to match BS
+    # determine stacking dimensions
+    cell_shape_list = list(cell_shape)
+    stacked_dim = cell_shape_list[0]
+    cell_shape_list[stack_axis] = stacked_dim*2
+    cell_shape_stacked = tuple(cell_shape_list)  # patched dims with stack_axis duplicated 4 times
+
+    # parameters
+    b  = Parameter(            cell_shape_stacked, init=init_bias, name='b')                              # a bias
+    W  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='W')                              # input
+    A  = Parameter(_INFERRED + cell_shape_stacked, init=init,      name='A') if has_aux else None         # aux input (optional)
+    H  = Parameter(shape     + cell_shape_stacked, init=init,      name='H')                              # hidden-to-hidden
+
+    bc  = Parameter(            cell_shape, init=init_bias, name='bc')                              # a bias
+    Wc  = Parameter(_INFERRED + cell_shape, init=init,      name='Wc')                              # input
+    Ac  = Parameter(_INFERRED + cell_shape, init=init,      name='Ac') if has_aux else None         # aux input (optional)
+    Hc  = Parameter(shape     + cell_shape, init=init,      name='Hc')                              # hidden-to-hidden
+
+    Wmr = Parameter(cell_shape + shape, init=init) if has_projection else None  # final projection
+
+    Sdh = Stabilizer() if enable_self_stabilization else identity    
+    Sht = Stabilizer() if enable_self_stabilization else identity
+
+    def create_hc_placeholder():
+        # we pass the known dimensions here, which makes dimension inference easier
+        return (Placeholder(shape=shape, name='hPh'), Placeholder(shape=cell_shape, name='cPh')) # (h, c)
+
+    # parameters to model function
+    x = Placeholder(name='gru_block_arg')
+    prev_state = create_hc_placeholder()
+
+    # formula of model function
+    dh, dc = prev_state
+
+    dhs = Sdh(dh)  # previous value, stabilized
+    # note: input does not get a stabilizer here, user is meant to do that outside
+
+    # projected contribution from input(s), hidden, and bias
+    proj2 = b + times(x, W) + times(dhs, H) + times(aux, A) if has_aux else \
+            b + times(x, W) + times(dhs, H)
+
+    zt_proj = slice (proj2, stack_axis, 0*stacked_dim, 1*stacked_dim)  # split along stack_axis
+    rt_proj = slice (proj2, stack_axis, 1*stacked_dim, 2*stacked_dim)
+
+    # update gate z(t)
+    zt = sigmoid (zt_proj)
+
+    # reset gate r(t)
+    rt = sigmoid (rt_proj)
+
+    # "cell" c
+    rs = element_times(dhs, rt)
+    candidate = bc + times(x, Wc) + times(rs, Hc) + times(aux, Ac) if has_aux else \
+                bc + times(x, Wc) + times(rs, Hc)
+    ct = tanh (candidate)
+
+    # hidden state ht / output
+    ones = Constant(1, shape=(cell_shape))
+    ht = element_times((ones - zt), ct) + element_times(zt, dhs)
+
+    c = ct + (dc-dc) # stupid temporary hack
+    h = times(Sht(ht), Wmr) if has_projection else \
+        ht
+
+    _name_node(h, 'h')
+    if _trace_layers:
+        _log_node(h)  # this looks right
+    _name_node(c, 'c')
+
+    # TODO: same fixes as LSTM function
+    apply_x_h = combine([h,c])
+    apply_x_h.create_placeholder = create_hc_placeholder
+    return apply_x_h
