@@ -16,6 +16,7 @@
 #include <fcntl.h>
 #include "PrimitiveFunction.h"
 #include "RecurrentNodes.h"
+#include "Value.h"
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -479,9 +480,8 @@ namespace CNTK
 
         return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
     }
-
     template <typename ElementType>
-    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
+    /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value)
     {
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
@@ -489,26 +489,43 @@ namespace CNTK
         if (AsDataType<ElementType>() != value->GetDataType())
             LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
 
-        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error?
-        if (IsSparseInput(var) && !value->IsSparse())
-            InvalidArgument("Dense input data supplied for a sparse input Variable");
+        bool isPackedValue = (dynamic_cast<PackedValue*>(value.get()) != nullptr);
 
-        if (IsSparseInput(var) && (value->GetStorageFormat() != StorageFormat::SparseCSC))
-            InvalidArgument("Sparse Input data must be in SparseCSC format");
+        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
+        if (!isPackedValue)
+        {
+            if (IsSparseInput(var) && !value->IsSparse())
+                InvalidArgument("Dense input data supplied for a sparse input Variable");
+
+            if (IsSparseInput(var) && (value->GetStorageFormat() != StorageFormat::SparseCSC))
+                InvalidArgument("Sparse Input data must be in SparseCSC format");
+        }
 
         auto varShape = var.Shape();
         auto valueShape = value->Shape();
 
-        if (valueShape.Rank() < varShape.Rank())
-            InvalidArgument("Value's rank should be >= the Variable's rank");
-
         auto numDynamicAxes = var.DynamicAxes().size();
+        if (numDynamicAxes > 2)
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
-        size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
         // max(2, numDynamicAxes) is needed for some backcompat scenarios, where even when there are no sequence axes
         // the user can pass a value object with a dim of 1 for the sequence axis.
         // TODO: try and remove support for this in the future, change the condition below to
         // valueShape.Rank() - varShape.Rank() <=  var.DynamicAxes().size()
+        size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
+
+        // For packed values, we sometimes have the reader return the matrix with a flatenned sample layout
+        if (isPackedValue && ((valueShape.Rank() < varShape.Rank()) || (valueShape.SubShape(0, varShape.Rank()) != varShape)))
+        {
+            // If the leading dim of the value shape is same as the total size of the varShape,
+            // lets expand the leading dim to varShape for the purposes of the rest of the validation
+            if ((valueShape[0] == varShape.TotalSize()) && (valueShape.SubShape(1).Rank() <= (varShape.Rank() + maxAddionalValueAxes)))
+                valueShape = varShape.AppendShape(valueShape.SubShape(1));
+        }
+
+        if (valueShape.Rank() < varShape.Rank())
+            InvalidArgument("Value's rank should be >= the Variable's rank");
+
         if (valueShape.Rank() > (varShape.Rank() + maxAddionalValueAxes))
             InvalidArgument("Value rank should be larger than the Variable%S rank at most by number of dynamic axes", ParanthesizedName(var.Name()).c_str());
 
@@ -519,16 +536,26 @@ namespace CNTK
                 AsStringForErrorReporting(valueShape).c_str(),
                 AsStringForErrorReporting(varShape).c_str());
         }
+    }
 
-        if (numDynamicAxes == 0)
-            return{ value->Data()->GetMatrix<ElementType>(), nullptr };
+    template <typename ElementType>
+    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
+    {
+        VerifyVariableValueCompatibility<ElementType>(var, value);
 
-        if (numDynamicAxes > 2)
-            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
+        auto packedValue = dynamic_cast<PackedValue*>(value.get());
+        if (packedValue)
+            return packedValue->PackedData<ElementType>();
 
+        auto varShape = var.Shape();
+        auto valueShape = value->Shape();
+        auto numDynamicAxes = var.DynamicAxes().size();
         auto mask = value->Mask();
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
+        
+        if (numDynamicAxes == 0)
+            return{ value->Data()->GetMatrix<ElementType>(), nullptr };
 
         size_t maxNumTimeSteps, numSequences;
         std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
