@@ -101,3 +101,10 @@ def test_plot():
     assert p in m
     assert t in m
     assert m.find(p) < m.find(t)
+
+def test_depth_first_search():
+    d = _simple_dict()
+
+    found = depth_first_search(d['op2'], lambda x:True)
+    found_names = [v.name for v in found]
+    assert found_names == ['op2', 'op1', 'i1', 'i2', 'p1']

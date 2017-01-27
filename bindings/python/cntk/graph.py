@@ -25,18 +25,18 @@ def depth_first_search(node, visitor):
     visited = set()
 
     while stack:
-        node = stack.pop()
+        node = stack.pop(0)
         if node in visited:
             continue
 
         try:
             # Function node
-            stack.extend(node.root_function.inputs)
+            stack = list(node.root_function.inputs) + stack
         except AttributeError:
             # OutputVariable node
             try:
                 if node.is_output:
-                    stack.append(node.owner)
+                    stack.insert(0, node.owner)
                     visited.add(node)
                     continue
             except AttributeError:
@@ -169,7 +169,7 @@ def plot(node, to_file=None):
         return "#dyn: %i\nstatic: %s"%(num_dyn_axes, static_shape)
 
     while stack:
-        node = stack.pop()
+        node = stack.pop(0)
 
         if node in visited:
             continue
@@ -177,7 +177,7 @@ def plot(node, to_file=None):
         try:
             # Function node
             node = node.root_function
-            stack.extend(node.inputs)
+            stack = list(node.root_function.inputs) + stack
 
             # add current node
             line = [node.op_name]
@@ -233,7 +233,7 @@ def plot(node, to_file=None):
             # OutputVariable node
             try:
                 if node.is_output:
-                    stack.append(node.owner)
+                    stack.insert(0, node.owner)
             except AttributeError:
                 pass
 
