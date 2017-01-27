@@ -35,7 +35,7 @@ def test_trainer(tmpdir):
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
     z_output = z.output
-    updated, var_map = trainer.train_minibatch(arguments, [z_output])
+    updated, var_map = trainer.train_minibatch(arguments, outputs=[z_output])
 
     p = str(tmpdir / 'checkpoint.dat')
     trainer.save_checkpoint(p)
@@ -63,7 +63,7 @@ def test_output_to_retain():
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
     z_output = z.output
-    updated, var_map = trainer.train_minibatch(arguments, [z_output])
+    updated, var_map = trainer.train_minibatch(arguments, outputs=[z_output])
     assert np.allclose(var_map[z_output], np.asarray(in1_value)+20)
 
 def test_eval_sparse_dense(tmpdir, device_id):
