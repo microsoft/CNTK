@@ -8,6 +8,11 @@ DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 
+<<<<<<< HEAD
+=======
+ndlMacros="$ConfigDir$/Macros.ndl"
+
+>>>>>>> Adding preliminary version of VGG 16 and 19 in BS.
 precision = "float"
 deviceId = "Auto"
 
@@ -25,7 +30,6 @@ ImageW    = 224
 ImageC    = 3
 NumLabels = 1000
 
-################################
 Train = {
     action = "train"
 
