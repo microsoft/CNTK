@@ -160,7 +160,7 @@ class Trainer(cntk_py.Trainer):
 
     def restore_from_checkpoint(self, filename):
         '''
-        Saves a checkpoint of the model and other Trainer state at the
+        Restores a checkpoint of the model and Trainer state from the
         specified file location.
 
         Args:

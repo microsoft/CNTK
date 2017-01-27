@@ -326,15 +326,22 @@ namespace CNTK
 
     void Trainer::Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState)
     {
+        std::wstring tempModelFile = modelFilePath + L".tmp";
         Dictionary state;
         state[learnersPropertyName] = learnerState;
         state[externalStatePropertyName] = externalState;
 
-        m_combinedTrainingFunction->SaveModel(modelFilePath);
+        m_combinedTrainingFunction->SaveModel(tempModelFile);
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
-        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, false);
-        *ckpStream << state;
-        ckpStream->flush();
+        std::wstring tempCheckpointFile = trainerStateCheckpointFilePath + L".tmp";
+
+        state.Save(tempCheckpointFile);
+
+        _wunlink(modelFilePath.c_str());
+        _wunlink(trainerStateCheckpointFilePath.c_str());
+
+        renameOrDie(tempModelFile, modelFilePath);
+        renameOrDie(tempCheckpointFile, trainerStateCheckpointFilePath);
     }
 
     Dictionary Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
@@ -342,10 +349,7 @@ namespace CNTK
         // Restore the model's parameters
         m_combinedTrainingFunction->RestoreModel(modelFilePath);
 
-        std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
-        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);
-        Dictionary checkpoint;
-        *ckpStream >> checkpoint;
+        Dictionary checkpoint = Dictionary::Load(GetTrainerStateCheckpointFilePath(modelFilePath));
 
         auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>();
         auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
