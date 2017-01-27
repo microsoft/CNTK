@@ -13,7 +13,7 @@ def prepare_CIFAR10_data():
     base_path = os.path.normpath(base_path)
     
     # If {train,test}_map.txt don't exist locally, copy to local location
-    if (not(os.path.isfile(os.path.join(base_path, 'train_map.txt')) and os.path.isfile(os.path.join(base_path, 'test_map.txt')))): 
+    if not (os.path.isfile(os.path.join(base_path, 'train_map.txt')) and os.path.isfile(os.path.join(base_path, 'test_map.txt'))): 
         # copy from backup location 
         base_path_bak = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
                                      *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
@@ -21,7 +21,7 @@ def prepare_CIFAR10_data():
         
         copyfile(os.path.join(base_path_bak, 'train_map.txt'), os.path.join(base_path, 'train_map.txt'))
         copyfile(os.path.join(base_path_bak, 'test_map.txt'), os.path.join(base_path, 'test_map.txt'))
-        if (not(os.path.isdir(os.path.join(base_path, 'cifar-10-batches-py')))): 
+        if not os.path.isdir(os.path.join(base_path, 'cifar-10-batches-py')): 
             os.mkdir(os.path.join(base_path, 'cifar-10-batches-py'))
         copyfile(os.path.join(base_path_bak, 'data.zip'), os.path.join(base_path, 'cifar-10-batches-py', 'data.zip'))
         copyfile(os.path.join(base_path_bak, 'CIFAR-10_mean.xml'), os.path.join(base_path, 'CIFAR-10_mean.xml'))
@@ -32,8 +32,8 @@ def prepare_ImageNet_data():
                              *"../../../../Examples/Image/DataSets/ImageNet".split("/"))
     base_path = os.path.normpath(base_path)
     
-    # If {train,test}_map.txt don't exist locally, copy to local location
-    if (not(os.path.isfile(os.path.join(base_path, 'val1024_map.txt')))): 
+    # If val1024_map.txt don't exist locally, copy to local location
+    if not os.path.isfile(os.path.join(base_path, 'val1024_map.txt')): 
         # copy from backup location 
         base_path_bak = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
                                      *"Image/ImageNet/2012/v0".split("/"))

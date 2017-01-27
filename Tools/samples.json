@@ -52,7 +52,7 @@
         "name":  "AlexNet",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/AlexNet",
         "description":  "CNN based network by Alex Krizhevsky. This was the winning model of the ILSVRC2012 classification task.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"]
     },
     {
