@@ -25,6 +25,15 @@
     <ClCompile Include="DistributedLearnerBase.cpp" />
     <ClCompile Include="DataParallelDistributedLearner.cpp" />
     <ClCompile Include="TrainingSession.cpp" />
+    <ClCompile Include="tensorboard\TensorBoardUtils.cpp">
+      <Filter>tensorboard</Filter>
+    </ClCompile>
+    <ClCompile Include="tensorboard\TensorBoardFileWriter.cpp">
+      <Filter>tensorboard</Filter>
+    </ClCompile>
+    <ClCompile Include="tensorboard\tensorboard.pb.cc.VS_wrapper.cpp">
+      <Filter>tensorboard</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -50,6 +59,9 @@
     <ClInclude Include="PrimitiveFunction.h" />
     <ClInclude Include="DistributedLearnerBase.h" />
     <ClInclude Include="DataParallelDistributedLearner.h" />
+    <ClInclude Include="tensorboard\TensorBoardUtils.h">
+      <Filter>tensorboard</Filter>
+    </ClInclude>
     <ClInclude Include="BlockFunction.h" />
     <ClInclude Include="Variable.h" />
     <ClInclude Include="TrainingSession.h" />
@@ -61,10 +73,16 @@
     <Filter Include="proto">
       <UniqueIdentifier>{1a93e221-b14c-476a-a53d-c931030acd6e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="tensorboard">
+      <UniqueIdentifier>{4242f3a9-0e06-4bf5-b2c2-85b292fe0b43}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <None Include="proto\CNTK.proto">
+    <Proto Include="proto\CNTK.proto">
       <Filter>proto</Filter>
-    </None>
+    </Proto>
+    <Proto Include="tensorboard\tensorboard.proto">
+      <Filter>tensorboard</Filter>
+    </Proto>
   </ItemGroup>
 </Project>
