@@ -207,6 +207,15 @@ def create_criterion_function(model):
     #plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
     return criterion
 
+# dummy for printing the input sequence below. Currently needed because input is sparse.
+def create_sparse_to_dense(input_vocab_dim):
+    I = Constant(np.eye(input_vocab_dim))
+    @Function
+    def no_op(input):
+        return times(input, I)
+    no_op.update_signature(Type(input_vocab_dim, is_sparse=True))
+    return no_op
+
 def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_size):
 
     # Note: We would like to set the signature of 's2smodel' (s2smodel.update_signature()), but that will cause
@@ -242,12 +251,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     progress_printer = ProgressPrinter(freq=30, tag='Training')
     #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=os.path.join(MODEL_DIR, "model_att%d.log" % use_attention))
 
-    # dummy for printing the input sequence below. Currently needed because input is sparse.
-    I = Constant(np.eye(input_vocab_dim))
-    @Function
-    def no_op(input):
-        return times(input, I)
-    no_op.update_signature(Type(input_vocab_dim, is_sparse=True))
+    sparse_to_dense = create_sparse_to_dense(input_vocab_dim)
 
     for epoch in range(max_epochs):
         print("Saving model to '%s'" % model_path(epoch))
@@ -266,9 +270,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)
                 e = model_greedy(mb_valid[valid_reader.streams.features])
-                print_sequences(no_op(mb_valid[valid_reader.streams.features]), i2w)
+                print(format_sequences(sparse_to_dense(mb_valid[valid_reader.streams.features]), i2w))
                 print("->")
-                print_sequences(e, i2w)
+                print(format_sequences(e, i2w))
 
                 # debugging attention (uncomment to print out current attention window on validation sequence)
                 if use_attention:
@@ -286,51 +290,62 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     print("%d epochs complete." % max_epochs)
 
 ########################
-# write action         #
+# test decoding        #
 ########################
 
-def write(reader, model, vocab, i2w):
+# This decodes the test set and counts the string error rate.
+def test_decode(reader, s2smodel, i2w):
     
-    minibatch_size = 1024
-    progress_printer = ProgressPrinter(tag='Evaluation')
-    
-    while True:
-        # get next minibatch of data
-        mb = reader.next_minibatch(minibatch_size)
-        if not mb:
-            break
+    model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
 
-        # TODO: just use __call__() syntax
-        e = model.eval({find_arg_by_name('raw_input' , model) : mb[reader.streams.features], 
-                        find_arg_by_name('raw_labels', model) : mb[reader.streams.labels]})
-        print_sequences(e, i2w)
+    progress_printer = ProgressPrinter(tag='Evaluation')
+
+    sparse_to_dense = create_sparse_to_dense(input_vocab_dim)
+
+    minibatch_size = 1024
+    num_total = 0
+    num_wrong = 0
+    while True:
+        mb = reader.next_minibatch(minibatch_size)
+        if not mb: # finish when end of test set reached
+            break
+        e = model_decoding(mb[reader.streams.features])
+        outputs = format_sequences(e, i2w)
+        labels  = format_sequences(sparse_to_dense(mb[reader.streams.labels]), i2w)
+        # prepend sentence start for comparison
+        outputs = ["<s> " + output for output in outputs]
+
+        num_total += len(outputs)
+        num_wrong += sum([label != output for output, label in zip(outputs, labels)])
         
-        progress_printer.update(0, mb[reader.streams.labels].num_samples, None)
+    rate = num_wrong / num_total
+    print("string error rate of {:.1f}% in {} samples".format(100 * rate, num_total))
+    return rate
 
 #######################
-# test action         #
+# test metric         #
 #######################
 
 # This computes the metric on the test set.
 # Note that this is not decoding; just predicting words using ground-truth history, like in training.
-def test(reader, s2smodel, num_minibatches=None):
+def test_metric(reader, s2smodel, num_minibatches=None):
 
     model_train = create_model_train(s2smodel)
     criterion = create_criterion_function(model_train)
 
     evaluator = Evaluator(None, criterion)
 
-    test_minibatch_size = 1024
 
     # Get minibatches of sequences to test and perform testing
+    minibatch_size = 1024
     i = 0
     total_error = 0.0
     while True:
-        mb = reader.next_minibatch(test_minibatch_size)
+        mb = reader.next_minibatch(minibatch_size)
         if not mb: # finish when end of test set reached
             break
-        mb_error = evaluator.test_minibatch(mb[test_reader.streams.features], mb[test_reader.streams.labels])
-        num_samples = mb[test_reader.streams.labels].num_samples
+        mb_error = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
+        num_samples = mb[reader.streams.labels].num_samples
         total_error += mb_error * num_samples
         i += num_samples
 
@@ -340,7 +355,7 @@ def test(reader, s2smodel, num_minibatches=None):
 
     # and return the test error
     rate = total_error/i
-    print("error rate of {:.2f}% in {} samples".format(100 * rate, i))
+    print("error rate of {:.1f}% in {} samples".format(100 * rate, i))
     return rate
 
 ########################
@@ -403,7 +418,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
 
 def interactive_session(s2smodel, vocab, i2w, show_attention=False):
 
-    model_greedy = create_model_greedy(s2smodel)
+    model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
 
     import sys
 
@@ -415,7 +430,7 @@ def interactive_session(s2smodel, vocab, i2w, show_attention=False):
         out_line = []
         for word in line.split():
             in_tokens = [c.upper() for c in word]
-            out_tokens = translate(in_tokens, model_greedy, vocab, i2w, show_attention=True)
+            out_tokens = translate(in_tokens, model_decoding, vocab, i2w, show_attention=True)
             out_line.extend(out_tokens)
         out_line = [" " if tok == '</s>' else tok[1:] for tok in out_line]
         print("=", " ".join(out_line))
@@ -434,9 +449,8 @@ def get_vocab(path):
     return (vocab, i2w, w2i)
 
 # Given a vocab and tensor, print the output
-def print_sequences(sequences, i2w):
-    for s in sequences:
-        print([i2w[np.argmax(w)] for w in s], sep=" ")
+def format_sequences(sequences, i2w):
+    return [" ".join([i2w[np.argmax(w)] for w in s]) for s in sequences]
 
 # helper function to find variables by name
 # which is necessary when cloning or loading the model
@@ -472,8 +486,8 @@ def debug_attention(model, input):
 
 if __name__ == '__main__':
 
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
+    from _cntk_py import set_fixed_random_seed
+    set_fixed_random_seed(1)
 
     # hook up data
     vocab, i2w, w2i = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
@@ -490,12 +504,12 @@ if __name__ == '__main__':
     model = Function.load(model_path(test_epoch))
 
     # write
-    #model = load_model("model_epoch0.cmf")
-    #write(valid_reader, model, vocab, i2w)
+    test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    test_decode(test_reader, model, i2w)
 
     # test
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
-    test(test_reader, model)
+    test_metric(test_reader, model)
 
     # try the model out in an interactive session
     interactive_session(model, vocab, i2w, show_attention=True)
