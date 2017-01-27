@@ -12,10 +12,10 @@ from cntk.io import ReaderConfig, ImageDeserializer, FULL_DATA_SWEEP
 from cntk import distributed
 from cntk.device import set_default_device, gpu
 
-from .prepare_test_data import prepare_CIFAR10_data
-
 abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
+from prepare_test_data import prepare_CIFAR10_data
 from ConvNet_CIFAR10_DataAug_Distributed import convnet_cifar10_dataaug
 
 def run_cifar_convnet_distributed():

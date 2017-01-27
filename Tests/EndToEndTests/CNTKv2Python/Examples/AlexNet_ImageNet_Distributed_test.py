@@ -13,10 +13,10 @@ from cntk.device import set_default_device
 from cntk.io import ReaderConfig, ImageDeserializer
 import pytest
 
-from .prepare_test_data import prepare_ImageNet_data
-
 abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "AlexNet", "Python"))
+from prepare_test_data import prepare_ImageNet_data
 from AlexNet_ImageNet_Distributed import alexnet_train_and_eval
 
 #TOLERANCE_ABSOLUTE = 2E-1

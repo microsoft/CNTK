@@ -13,10 +13,10 @@ from cntk.device import set_default_device
 from cntk.io import ReaderConfig, ImageDeserializer
 import pytest
 
-from .prepare_test_data import prepare_CIFAR10_data
-
 abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
+from prepare_test_data import prepare_CIFAR10_data
 from ConvNetLRN_CIFAR10_DataAug import convnetlrn_cifar10_dataaug, create_reader
 
 #TOLERANCE_ABSOLUTE = 2E-1
