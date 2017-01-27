@@ -541,6 +541,9 @@ namespace CNTK
     {
     public:
         template <typename ElementType>
+        static void VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value);
+
+        template <typename ElementType>
         static std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, Microsoft::MSR::CNTK::MBLayoutPtr> GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value);
 
         template <typename ElementType>
