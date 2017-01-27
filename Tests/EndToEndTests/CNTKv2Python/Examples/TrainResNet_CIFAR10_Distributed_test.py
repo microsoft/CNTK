@@ -7,7 +7,6 @@
 import numpy as np
 import os
 import sys
-from shutil import copyfile
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
@@ -15,6 +14,8 @@ from cntk.io import FULL_DATA_SWEEP
 from cntk import distributed
 import pytest
 import subprocess
+
+from .prepare_test_data import prepare_CIFAR10_data
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ResNet", "Python"))
@@ -30,24 +31,7 @@ def test_cifar_resnet_distributed_error(device_id, is_1bit_sgd):
     if not is_1bit_sgd:
         pytest.skip('test only runs in 1-bit SGD')
 
-    base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                             *"../../../../Examples/Image/DataSets/CIFAR-10".split("/"))
-    base_path = os.path.normpath(base_path)
-    
-    # If {train,test}_map.txt don't exist locally, copy to local location
-    if (not(os.path.isfile(os.path.join(base_path, 'train_map.txt')) and os.path.isfile(os.path.join(base_path, 'test_map.txt')))): 
-        # copy from backup location 
-        base_path_bak = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
-                                     *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
-        base_path_bak = os.path.normpath(base_path_bak)
-        
-        copyfile(os.path.join(base_path_bak, 'train_map.txt'), os.path.join(base_path, 'train_map.txt'))
-        copyfile(os.path.join(base_path_bak, 'test_map.txt'), os.path.join(base_path, 'test_map.txt'))
-        if (not(os.path.isdir(os.path.join(base_path, 'cifar-10-batches-py')))): 
-            os.mkdir(os.path.join(base_path, 'cifar-10-batches-py'))
-        copyfile(os.path.join(base_path_bak, 'data.zip'), os.path.join(base_path, 'cifar-10-batches-py', 'data.zip'))
-        copyfile(os.path.join(base_path_bak, 'CIFAR-10_mean.xml'), os.path.join(base_path, 'CIFAR-10_mean.xml'))
-    
+    base_path = prepare_CIFAR10_data()
     # change dir to locate data.zip correctly
     os.chdir(base_path)
 
