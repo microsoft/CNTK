@@ -7,6 +7,7 @@
 %include <std_map.i>
 %include <std_set.i>
 %include <std_pair.i>
+%include <stdint.i>
 %include <windows.i>
 %include <attribute.i>
 %include <std_shared_ptr.i>
@@ -1068,6 +1069,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::DistributedCommunicator)
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
 %shared_ptr(CNTK::DistributedLearner)
+%shared_ptr(CNTK::Internal::TensorBoardFileWriter)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

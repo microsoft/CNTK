@@ -467,7 +467,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
                 if len(seq_starts) != sample_size:
                     raise ValueError('you have %i sequences, but only %i '
-                            'sequence begin markers' % (sample_sizes, len(seq_starts)))
+                            'sequence begin markers' % (sample_size, len(seq_starts)))
 
 
         if isinstance(batch, MinibatchData) and extract_values_from_minibatch_data:
