@@ -39,7 +39,7 @@ num_layers = 2
 attention_dim = 128
 attention_span = 20
 attention_axis = -3
-use_attention = False
+use_attention = True
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()]) # all lines of VOCAB_FILE in a list
@@ -379,38 +379,34 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
     query = [features] # input is a list of parallel sequences in a batch
 
     pred = model_decoding(query)
-    
+    pred = pred[0] # first sequence (we only have one) -> [len, vocab size]
+    if use_attention:
+        pred = pred[:,0,0,:] # attention has extra dimensions
+
     # print out translation and stop at the sequence-end tag
-    prediction = np.argmax(pred, axis=2)[0]
+    prediction = np.argmax(pred, axis=-1)
     translation = [i2w[i] for i in prediction]
     
     # show attention window (requires matplotlib, seaborn, and pandas)
-    if show_attention    and False: # TODO: finish this
+    if use_attention and show_attention:
     
+        q = combine([model_decoding, model_decoding.attention_model.attention_weights])
+        _, att_value = q(query)
+
+        # get the attention data up to the length of the output (subset of the full window)
+        att_value = att_value[0,:,0:len(w),0,0] # -> (len, span)
+        print(att_value)
+
+        # set up the actual words/letters for the heatmap axis labels
+        columns = [i2w[ww] for ww in prediction]
+        index = [i2w[ww] for ww in w]
+
+        # show the attention weight heatmap
         import matplotlib.pyplot as plt
         import seaborn as sns
         import pandas as pd
 
-        from cntk.graph import find_by_name
-        att = find_by_name(model, 'attention_weights')
-        q = combine([model, att])
-        # TODO: fix this as well
-        output = q.forward({find_arg_by_name('raw_input' , model) : [features], 
-                         find_arg_by_name('raw_labels', model) : [labels]},
-                         att.outputs)
-                         
-        # set up the actual words/letters for the heatmap axis labels
-        columns = [i2w[ww] for ww in prediction[:tlen]]
-        index = [i2w[ww] for ww in w]
- 
-        att_key = list(output[1].keys())[0]
-        att_value = output[1][att_key]
-        
-        # get the attention data up to the length of the output (subset of the full window)
-        X = att_value[0,:tlen,:len(w)]
-        dframe = pd.DataFrame(data=np.fliplr(X.T), columns=columns, index=index)
-    
-        # show the attention weight heatmap
+        dframe = pd.DataFrame(data=np.fliplr(att_value.T), columns=columns, index=index)
         sns.heatmap(dframe)
         plt.show()
 
@@ -503,13 +499,13 @@ if __name__ == '__main__':
     test_epoch = 10
     model = Function.load(model_path(test_epoch))
 
-    # write
-    test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
-    test_decode(test_reader, model, i2w)
+    # test string error rate on decoded output
+    #test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    #test_decode(test_reader, model, i2w)
 
-    # test
-    test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
-    test_metric(test_reader, model)
+    # test same metric same as in training on test set
+    #test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    #test_metric(test_reader, model)
 
     # try the model out in an interactive session
     interactive_session(model, vocab, i2w, show_attention=True)
