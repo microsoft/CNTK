@@ -107,7 +107,7 @@ def create_criterion_function1(model, normalize=identity):
 # train & eval action  #
 ########################
 
-def train_and_evaluate(reader, reader_test, model, max_epochs):
+def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=5):
 
     # declare the model's input dimension
     #model.replace_placeholders({model.placeholders[0]: input_variable((num_channels, image_height, image_width))})
@@ -123,7 +123,6 @@ def train_and_evaluate(reader, reader_test, model, max_epochs):
     plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))
 
     # iteration parameters
-    epoch_size     = 50000
     minibatch_size = 64
     #epoch_size = 1000 ; max_epochs = 1 # for faster testing
 

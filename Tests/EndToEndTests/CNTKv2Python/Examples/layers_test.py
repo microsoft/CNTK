@@ -13,9 +13,7 @@ Tests for Layers library. Currently inside Examples to make them easier to run s
 from __future__ import print_function
 import os
 import math
-from cntk.blocks import *  # non-layer like building blocks such as LSTM()
-from cntk.layers import *  # layer-like stuff such as Linear()
-from cntk.models import *  # higher abstraction level, e.g. entire standard models and also orsisrators like Sequential()
+from cntk.layers import *  # CNTK Layers library
 from cntk.utils import *
 
 # helper to create float32 arrays, to work around a bug that Function.eval() does not know how to cast its inputs
@@ -24,16 +22,19 @@ def array(vals):
 
 if __name__=='__main__':
 
+    # TODO: add all Layers tests here and use the correct pytest pattern
+
     # ----------------------------------------------
     # Recurrence() over regular function
     # ----------------------------------------------
 
     from cntk.layers import Recurrence
     from cntk.ops import plus
+    from cntk.utils import debughelpers
     r = Recurrence(plus)
-    r.dump()
+    debughelpers.dump_function(r)
     r.update_signature(1)
-    r.dump()
+    debughelpers.dump_function(r)
     data = [   # simple sequence
         array([[2], [6], [4], [8], [6]])
     ]
@@ -47,9 +48,9 @@ if __name__=='__main__':
 
     from cntk.layers import Convolution
     c = Convolution(3, init=array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
-    c.dump()
+    debughelpers.dump_function(c)
     c.update_signature(1)
-    c.dump()
+    debughelpers.dump_function(c)
     data = [   # audio sequence
         array([[2], [6], [4], [8], [6]])
     ]
@@ -64,9 +65,9 @@ if __name__=='__main__':
     from cntk.layers import Convolution
     c = Convolution(3, init=array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
     # BUGBUG: pad seems ignored??
-    c.dump()
+    debughelpers.dump_function(c)
     c.update_signature(5)
-    c.dump()
+    debughelpers.dump_function(c)
     data = [   # audio sequence
         array([[2, 6, 4, 8, 6]])
     ]

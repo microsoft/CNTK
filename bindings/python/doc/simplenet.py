@@ -3,8 +3,7 @@ import numpy as np
 import cntk as C
 from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.utils import ProgressPrinter
-from cntk.layers import Dense
-from cntk.models import Sequential
+from cntk.layers import Dense, Sequential
 
 def generate_random_data(sample_size, feature_dim, num_classes):
      # Create synthetic data using NumPy.

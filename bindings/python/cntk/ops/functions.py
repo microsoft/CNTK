@@ -1064,6 +1064,10 @@ def load_model(filename, device=None):
     '''
     return Function.load(filename, device)
 
+@typemap
+def save_model(model, filename): # legacy name
+    return model.save(filename)
+
 
 class UserFunction(Function):
     '''

@@ -12,7 +12,7 @@ import numpy as np
 from ..ops.functions import Function
 from ..ops.variables import Variable
 from ..ops import parameter, input_variable, placeholder_variable, combine
-from ..ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, sequence, softmax, tanh, reduce_sum
+from ..ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum
 from ..utils import Record, _as_tuple
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
@@ -249,7 +249,6 @@ def Convolution(rf_shape,         # e.g. (3,3)
         sequential_rank = 1 if sequential else 0
         num_inserted_axes = sequential_rank + num_faked_axes
         if num_inserted_axes != 0:
-            from .ops import reshape
             x = reshape(x, (1,) * num_inserted_axes, begin_axis=-rf_rank + sequential_rank, end_axis=-rf_rank + sequential_rank) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
         # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
         # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
@@ -266,14 +265,12 @@ def Convolution(rf_shape,         # e.g. (3,3)
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
         if sequential and not pad[-rf_rank]:
-            from .ops.sequence import slice
-            r = slice(r, begin_index=lpad, end_index=-(rf_shape[0]-1-lpad))
+            r = sequence.slice(r, begin_index=lpad, end_index=-(rf_shape[0]-1-lpad))
         # if no output dimension is desired, then strip it
         # also need to strip the fake singleton axes, since they are not reduced away
         # BUGBUG: We still have those axes in the kernel. That can only be solved inside the C++ implementation.
         num_axes_to_remove = sequential + fake_1D + fake_output_depth
         if num_axes_to_remove > 0:
-            from .ops import reshape
             r = reshape(r, (), begin_axis=-rf_rank-num_axes_to_remove, end_axis=-rf_rank) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
         if bias:
             r = r + b
@@ -429,10 +426,9 @@ def Dropout(prob, name=''):
     Layer factory function to create a drop-out layer.
     '''
     @BlockFunction('Dropout', name)
-    def dropout(x):
-        from cntk.ops import dropout # avoid scope mixup
+    def dropout_f(x):
         return dropout(x, dropout_rate=prob)
-    return Block(dropout, 'Dropout')
+    return Block(dropout_f, 'Dropout')
 
 
 def Activation(activation=default_override_or(identity), name=''): 
