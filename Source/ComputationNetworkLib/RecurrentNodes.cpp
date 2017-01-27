@@ -224,7 +224,7 @@ template<class ElemType, int direction>
 
     // --- create the packed index in case of per-sequence initial state
     // In this case, we use Gather() to select the respective columns from the input state.
-    if (InputRef(1).HasMBLayout())
+    if (GetNumInputs() > 1 && InputRef(1).HasMBLayout())
     {
         // ForwardProp() will first propagate a constant zero into the boundary frames.
         // Gather() is then used with beta=1 to add the correct boundary value into those,
@@ -284,7 +284,7 @@ template<class ElemType, int direction>
     // resize the temporaries to their proper sizes
     // TODO: Are we sharing memory correctly? (no big deal as these are small; yet would be nice)
     m_inputInvalidMatrix->Resize(1, GetMBLayout()->GetNumCols());
-    if (InputRef(1).HasMBLayout())
+    if (GetNumInputs() > 1 && InputRef(1).HasMBLayout())
         m_packedIndexMatrix->Resize(1, GetMBLayout()->GetNumCols());
 }
 
@@ -362,7 +362,7 @@ template<class ElemType, int direction>
     auto tgt = ValueTensorFor(rank, fr);
 
     // init value tensor (in case of constant, this is a [1] tensor with broadcasting)
-    auto init = m_inputs.size() == 1 || InputRef(1).HasMBLayout()
+    auto init = GetNumInputs() == 1 || InputRef(1).HasMBLayout()
         ? TensorView<ElemType>(m_initialStateValueMatrix, TensorShape(1)) // old form or per-sequence: initial state given as C++ constant
         : InputRef(1).ValueTensorFor(rank, FrameRange());                 // initial state given as a tensor
 
@@ -375,7 +375,7 @@ template<class ElemType, int direction>
         tgt.AssignCondOf(GetMaskTensor(rank, fr), init, src); // assign either input or init value, based on the mask
     else // no frame is valid: initialize from init value
         tgt.AssignCopyOf(init);
-    if (!m_inputAllSeqValid[fr.t()] && InputRef(1).HasMBLayout())    // implant per-sequence state
+    if (!m_inputAllSeqValid[fr.t()] && GetNumInputs() > 1 && InputRef(1).HasMBLayout())    // implant per-sequence state
     {
         let& idx   =             DataFor(*m_packedIndexMatrix, fr);  // column indices that guide the copy operation
         auto tgt2  =             ValueFor                      (fr); // output goes here
@@ -491,10 +491,8 @@ template<class ElemType, int direction>
     if (isFinalValidationPass && !Input(0)->HasMBLayout())
         InvalidArgument("%ls %ls operation requires the main (first) input to have a dynamic axis.", NodeName().c_str(), OperationName().c_str());
 
-    //if (isFinalValidationPass && m_inputs.size() >= 2 && Input(1)->HasMBLayout())
-    //    InvalidArgument("%ls %ls operation currently does not support the second input (initial state) to have a dynamic axis. It's coming though.", NodeName().c_str(), OperationName().c_str());
     // if we have a per-sequence initial state, we leverage a scalar init value of 0 in the computation
-    if (isFinalValidationPass && m_inputs.size() >= 2 && Input(1)->HasMBLayout() && m_initialStateValue != 0)
+    if (isFinalValidationPass && GetNumInputs() > 1 && Input(1)->HasMBLayout() && m_initialStateValue != 0)
         InvalidArgument("%ls %ls operation requires the scalar initial value to be 0 if the second input (initial state) has a dynamic axis.", NodeName().c_str(), OperationName().c_str());
 }
 
