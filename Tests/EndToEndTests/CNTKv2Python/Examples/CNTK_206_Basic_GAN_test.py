@@ -16,11 +16,11 @@ def test_cntk_206_basic_gan_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedEvalErrorByDeviceId = { -1: 1.85, 0: 2.1 }
+expectedEvalErrorByDeviceId = { -1: 1.95, 0: 2.1 }
 
 def test_cntk_206_basic_gan_evalCorrect(nb, device_id):
     testCell = [cell for cell in nb.cells
                 if cell.cell_type == 'code' and re.search('# Print the generator loss', cell.source)]
     assert len(testCell) == 1
     m = re.match(r"Training loss of the generator is: (?P<actualEvalError>\d+\.\d+)\r?$", testCell[0].outputs[0]['text'])
-    assert np.isclose(float(m.group('actualEvalError')), expectedEvalErrorByDeviceId[device_id], atol=0.1)
+    assert np.isclose(float(m.group('actualEvalError')), expectedEvalErrorByDeviceId[device_id], atol=0.2)
