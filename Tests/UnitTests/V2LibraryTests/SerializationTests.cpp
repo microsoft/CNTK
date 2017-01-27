@@ -321,7 +321,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Block) == 57 &&
                   static_cast<size_t>(PrimitiveOpType::Unpooling) == 58 &&
                   static_cast<size_t>(PrimitiveOpType::LambdaRank) == 59 &&
-                  static_cast<size_t>(PrimitiveOpType::NDCG) == 60,
+                  static_cast<size_t>(PrimitiveOpType::NDCG) == 60 &&
+                  static_cast<size_t>(PrimitiveOpType::EditDistanceError) == 61,
                   "PrimitiveOpType enum value was modified.");
 }
 

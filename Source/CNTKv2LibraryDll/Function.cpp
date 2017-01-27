@@ -1061,6 +1061,18 @@ namespace CNTK
         }
     }
 
+    FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& samplesToIgnore, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameSubstitutionPenalty] = subPen;
+        additionalProperties[PrimitiveFunction::AttributeNameDeletionPenalty] = delPen;
+        additionalProperties[PrimitiveFunction::AttributeNameInsertionPenalty] = insPen;
+        additionalProperties[PrimitiveFunction::AttributeNameSquashInputs] = squashInputs;
+        additionalProperties[PrimitiveFunction::AttributeNameSamplesToIgnore] = AsDictionaryValueVector(samplesToIgnore);
+
+        return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
+    }
+
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
