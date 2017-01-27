@@ -483,7 +483,7 @@ Example:
     p = MaxPooling((3,3), strides=(2,2))(c)
 
 GlobalMaxPooling(), GlobalAveragePooling()
-------------------------------
+------------------------------------------
 
 Factory functions to create a global-max-pooling or global-average-pooling layer.
 
