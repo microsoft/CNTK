@@ -55,6 +55,39 @@ def For(range, constructor, name=''):
 
     return Block(sequential, 'For', Record(layers=layers))
 
+
+# TODO: It is hard to find a good name for this.
+def SequentialClique(functions, name=''):
+    '''
+    Layer factory function to create a composite that applies a sequence of or any functions onto an input,
+    with skip connections between all function. I.e. each function receives a sum of the input and all
+    prior functions' outputs.
+    '''
+    def clique(x):
+        for f in functions:
+            out = f(x)
+            x = x + out
+        return out
+
+    clique = _inject_name(clique, name)
+
+    return clique
+
+
+# TODO: consider potential name clash; users might want to call their functions the same.
+def ResNetBlock(f, name=''):
+    '''
+    Layer factory function to create a composite that adds a skip connection to a function.
+    This is equivalent to ``SequentialClique([f, identity])``.
+    '''
+    def skip(x):
+        return f(x) + x
+
+    skip = _inject_name(skip, name)
+
+    return skip
+
+
 # legacy name--remove
 def LayerStack(N, constructor):
     return For(range(N), constructor)
