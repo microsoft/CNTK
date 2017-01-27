@@ -234,8 +234,9 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # This does not need to be done in training generally though
     # Instantiate the trainer object to drive the model training
     minibatch_size = 72
+    lr = 0.001 if use_attention else 0.005   # TODO: can we use the same value for both?
     learner = adam_sgd(model_train.parameters,
-                       lr       = learning_rate_schedule([0.005]*2+[0.0025]*3+[0.00125], UnitType.sample, epoch_size),
+                       lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], UnitType.sample, epoch_size),
                        momentum = momentum_as_time_constant_schedule(1100),
                        gradient_clipping_threshold_per_sample=2.3,
                        gradient_clipping_with_truncation=True)
@@ -249,7 +250,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # print out some useful training information
     log_number_of_parameters(model_train) ; print()
     progress_printer = ProgressPrinter(freq=30, tag='Training')
-    #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=os.path.join(MODEL_DIR, "model_att%d.log" % use_attention))
+    #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=os.path.join(MODEL_DIR, "model_att_{}.log".format(use_attention)))
 
     sparse_to_dense = create_sparse_to_dense(input_vocab_dim)
 
@@ -395,7 +396,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
 
         # get the attention data up to the length of the output (subset of the full window)
         att_value = att_value[0,0:len(prediction),0:len(w),0,0] # -> (len, span)
-        print(att_value)
+        #print(att_value)
 
         # set up the actual words/letters for the heatmap axis labels
         columns = [i2w[ww] for ww in prediction]
@@ -496,11 +497,10 @@ if __name__ == '__main__':
     # train
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
-    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=30, epoch_size=908241)
 
     test_epoch = 10
     model = Function.load(model_path(test_epoch))
-    #model = Function.load('c:/work/cntk/Examples/model_attTrue.cmf.9')
 
     # test string error rate on decoded output
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)

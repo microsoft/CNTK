@@ -12,6 +12,8 @@ from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, 
 from . import sequence # they are also higher-order functions
 
 
+# TODO: should we have a parameter to specify the arity of the input?
+#       Can it be automatically determined? (yes, unless the first function is a tuple, then we don't know whether to broadcast or not)
 def Sequential(layers, name=''):
     '''
     Layer factory function to create a composite that applies a sequence of layers (or any functions) onto an input.
@@ -66,6 +68,8 @@ def SequentialClique(functions, name=''):
     def clique(x):
         for f in functions:
             out = f(x)
+            # BUGBUG: this should be a splice(), and it should be along depth.
+            #         Interface to be finalized.
             x = x + out
         return out
 
