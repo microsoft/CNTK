@@ -66,8 +66,8 @@ def create_conv_network():
     with cntk.layers.default_options(activation=cntk.ops.relu, pad=True):
         z = cntk.models.Sequential([
             cntk.models.LayerStack(2, lambda : [
-                cntk.layers.Convolution((3,3), 64),
-                cntk.layers.Convolution((3,3), 64),
+                cntk.layers.Convolution2D((3,3), 64),
+                cntk.layers.Convolution2D((3,3), 64),
                 cntk.layers.MaxPooling((3,3), (2,2))
             ]), 
             cntk.models.LayerStack(2, lambda i: [

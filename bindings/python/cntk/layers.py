@@ -170,61 +170,58 @@ def Convolution(filter_shape,        # e.g. (3,3)
         apply_x = apply_x + b
     apply_x = apply_x >> activation
 
-    op_name = 'Convolution'
-    if len(filter_shape) == 1: 
-        op_name = 'Conv1D' 
-    elif len(filter_shape) == 2: 
-        op_name = 'Conv2D'
-    elif len(filter_shape) == 3: 
-        op_name = 'Conv3D'
+    op_name = 'Convolution{}D'.format(len(filter_shape))
     return Block(apply_x, op_name, name, Record(W=W, b=b), make_block=True)
 
-# Conv1D -- create a 1D convolution layer with optional non-linearity
-def Conv1D(filter_shape,        # a scalar, e.g., 3 
-           num_filters=None,
-           activation=activation_default_or_None,
-           init=init_default_or_glorot_uniform,
-           pad=pad_default_or_False,
-           strides=1,
-           sharing=True,     # (must be True currently)
-           bias=bias_default_or_True,
-           init_bias=init_bias_default_or_0,
-           reduction_rank=1, # (must be 1 currently)
-           max_temp_mem_size_in_samples=0, 
-           name=''):
-    assert len(filter_shape) == 1 
+# Convolution1D -- create a 1D convolution layer with optional non-linearity
+def Convolution1D(filter_shape,        # a scalar, e.g., 3 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  reduction_rank=1, # (must be 1 currently)
+                  max_temp_mem_size_in_samples=0, 
+                  name=''):
+    if len(filter_shape) != 1: 
+         raise ValueError('Convolution1D: filter_shape must be a scalar')
     return Convolution(filter_shape, filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, reduction_rank, max_temp_mem_size_in_samples, name)
 
-# Conv2D -- create a 2D convolution layer with optional non-linearity
-def Conv2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
-           num_filters=None,
-           activation=activation_default_or_None,
-           init=init_default_or_glorot_uniform,
-           pad=pad_default_or_False,
-           strides=1,
-           sharing=True,     # (must be True currently)
-           bias=bias_default_or_True,
-           init_bias=init_bias_default_or_0,
-           reduction_rank=1, # (must be 1 currently)
-           max_temp_mem_size_in_samples=0, 
-           name=''):
-    assert len(filter_shape) == 2 
+# Convolution2D -- create a 2D convolution layer with optional non-linearity
+def Convolution2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  reduction_rank=1, # (must be 1 currently)
+                  max_temp_mem_size_in_samples=0, 
+                  name=''):
+    if len(filter_shape) != 2: 
+         raise ValueError('Convolution2D: filter_shape must be a 2D tuple, e.g. (3,3)')
     return Convolution(filter_shape, filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, reduction_rank, max_temp_mem_size_in_samples, name)
 
-# Conv3D -- create a 3D convolution layer with optional non-linearity
-def Conv3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
-           num_filters=None,
-           activation=activation_default_or_None,
-           init=init_default_or_glorot_uniform,
-           pad=pad_default_or_False,
-           strides=1,
-           sharing=True,     # (must be True currently)
-           bias=bias_default_or_True,
-           init_bias=init_bias_default_or_0,
-           reduction_rank=1, # (must be 1 currently)
-           max_temp_mem_size_in_samples=0, 
-           name=''):
-    assert len(filter_shape) == 3 
+# Convolution3D -- create a 3D convolution layer with optional non-linearity
+def Convolution3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  reduction_rank=1, # (must be 1 currently)
+                  max_temp_mem_size_in_samples=0, 
+                  name=''):
+    if len(filter_shape) != 3: 
+         raise ValueError('Convolution3D: filter_shape must be a 3D tuple, e.g. (3,3,3)')
     return Convolution(filter_shape, filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, reduction_rank, max_temp_mem_size_in_samples, name)
 
 # Deconvolution -- create a deconvolution layer with optional non-linearity

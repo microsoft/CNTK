@@ -169,11 +169,11 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
     # and http://vlg.cs.dartmouth.edu/c3d/c3d_video.pdf
     with default_options (activation=relu):
         z = Sequential([
-            Convolution((3,3,3), 64, pad=True),
+            Convolution3D((3,3,3), 64, pad=True),
             MaxPooling((1,2,2), (1,2,2)),
             LayerStack(3, lambda i: [
-                Convolution((3,3,3), [96, 128, 128][i], pad=True),
-                Convolution((3,3,3), [96, 128, 128][i], pad=True),
+                Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
+                Convolution3D((3,3,3), [96, 128, 128][i], pad=True),
                 MaxPooling((2,2,2), (2,2,2))
             ]),
             LayerStack(2, lambda : [
