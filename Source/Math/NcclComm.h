@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+// Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // Encapsulates NCCLs dependencies
@@ -45,6 +45,8 @@ public:
 
         for (size_t i=0; i<grads.size(); ++i)
         {
+            if (grads[i]->Data() == nullptr) // Hack in case of eval
+                continue;
             AllReduceImpl(grads[i]->Data(), grads[i]->GetNumElements(), dtype);
         }
 #else
