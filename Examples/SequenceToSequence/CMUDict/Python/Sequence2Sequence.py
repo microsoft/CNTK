@@ -394,7 +394,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
         _, att_value = q(query)
 
         # get the attention data up to the length of the output (subset of the full window)
-        att_value = att_value[0,:,0:len(w),0,0] # -> (len, span)
+        att_value = att_value[0,0:len(prediction),0:len(w),0,0] # -> (len, span)
         print(att_value)
 
         # set up the actual words/letters for the heatmap axis labels
@@ -408,6 +408,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
 
         dframe = pd.DataFrame(data=np.fliplr(att_value.T), columns=columns, index=index)
         sns.heatmap(dframe)
+        print('close the heatmap window to continue')
         plt.show()
 
     return translation
@@ -415,6 +416,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
 def interactive_session(s2smodel, vocab, i2w, show_attention=False):
 
     model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
+    #model_decoding = s2smodel
 
     import sys
 
@@ -489,23 +491,24 @@ if __name__ == '__main__':
     vocab, i2w, w2i = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
-    #model = create_model()
-    #
-    ## train
-    #train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
-    #valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
-    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    model = create_model()
+    
+    # train
+    train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
+    valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     test_epoch = 10
     model = Function.load(model_path(test_epoch))
+    #model = Function.load('c:/work/cntk/Examples/model_attTrue.cmf.9')
 
     # test string error rate on decoded output
-    #test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
-    #test_decode(test_reader, model, i2w)
+    test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    test_decode(test_reader, model, i2w)
 
     # test same metric same as in training on test set
-    #test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
-    #test_metric(test_reader, model)
+    test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    test_metric(test_reader, model)
 
     # try the model out in an interactive session
     interactive_session(model, vocab, i2w, show_attention=True)
