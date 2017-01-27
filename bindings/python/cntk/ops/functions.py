@@ -90,7 +90,7 @@ class Function(cntk_py.Function):
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='ParameterOrder')
-                global ref_keeper
+                global ref_keeper   # TODO: should this really be 'nonlocal'?
                 ref_keeper = combined_args    # BUGBUG workaround the ref-counting problem
                 return combined_args.outputs
             def force_order_args_rec(fun_args): # use this inside recurrent loop, requires all args to share the same axes
