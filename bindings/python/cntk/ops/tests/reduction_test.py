@@ -142,6 +142,6 @@ def test_op_reduce_log_sum(input_data, axis, device_id, precision):
         'arg': [[backward]]
     }
 
-    from .. import reduce_log_sum
-    _test_unary_op(precision, device_id, reduce_log_sum, input_data,
+    from .. import reduce_log_add_exp
+    _test_unary_op(precision, device_id, reduce_log_add_exp, input_data,
                    expected_forward, expected_backward, {'axis': axis})

@@ -50,8 +50,6 @@ class Function(cntk_py.Function):
     def __init__(self, *args, **kwargs):
         if len(args) > 0 and callable(args[0]) and not isinstance(args[0], Function): # overload
             return
-        # don't call the base class, since Function is abstract in C++
-        # TODO: ^^ is this comment accurate?
         super(Function, self).__init__(*args, **kwargs)
 
     class NamedOutput:
