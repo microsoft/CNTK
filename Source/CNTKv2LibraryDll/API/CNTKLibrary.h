@@ -2723,11 +2723,11 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
-    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
-#ifdef _MSC_VER
         ///
         /// Helpers to inject the node name into error messages. For now Windows only.
         ///
+#ifdef _MSC_VER
+    private:
         std::wstring DiagnosticsName() const
         {
             std::wstring name = Name();
@@ -2737,6 +2737,7 @@ namespace CNTK
                 name = m_rootFunction->DiagnosticsName();
             return OpName() + L" " + name;
         }
+    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
         template <class... _Types>
         __declspec_noreturn inline void RuntimeError(const char* format, _Types&&... _Args) const
         {
@@ -2756,6 +2757,7 @@ namespace CNTK
             ThrowFormatted<std::invalid_argument>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
         }
 #else   // for gcc, LogicError etc. are just #defines that map to ThrowFormatted, so replicate this here
+    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
         template<class E, class... _Types>
         inline void ThrowFormatted(_Types&&... _Args) const
         {

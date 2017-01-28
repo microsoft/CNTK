@@ -564,7 +564,7 @@ namespace CNTK
                     }
                     case PrimitiveOpType::BatchNormalization:
                     {
-                        assert(m_inputs.size() == 5);
+                        assert(m_inputs.size() == 6);
                         auto spatial = m_attributes[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
                         outputShape = BatchNormalizationOutputShape(m_inputs, spatial, true);
                         break;
