@@ -128,9 +128,9 @@ def test_ext_train():
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, z+0, z+0, \
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                True)])
+    trainer = Trainer(z, (z+0, z+0),
+                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+                      True)])
 
     i = 0
     while i<100:
@@ -181,9 +181,9 @@ def test_ext_backpropstate(payload):
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, z+0, z+0, \
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                True)])
+    trainer = Trainer(z, (z+0, z+0),
+                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+                      True)])
 
     i = 0
     input_data = np.random.rand(dim)
@@ -245,9 +245,9 @@ def test_ext_lambdafunc():
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, z+0, z+0, \
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                True)])
+    trainer = Trainer(z, (z+0, z+0),
+                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+                      True)])
 
     i = 0
     input_data = 0.1 * np.ones(dim)
@@ -257,4 +257,3 @@ def test_ext_lambdafunc():
     input_data = 0.3 * np.ones(dim)
     trainer.train_minibatch([input_data])
     assert cb.count == 1
-

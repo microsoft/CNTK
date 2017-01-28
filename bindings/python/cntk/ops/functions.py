@@ -43,12 +43,12 @@ class Function(cntk_py.Function):
     # We override the constructors to implement an overload that constructs
     # a CNTK Functions from a Python function.
     def __new__(cls, *args, **kwargs):
-        if len(args) > 0 and callable(args[0]): # overload
+        if len(args) > 0 and callable(args[0]) and not isinstance(args[0], Function): # overload
             return Function.to_Function(*args, **kwargs)
         return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args)
 
     def __init__(self, *args, **kwargs):
-        if len(args) > 0 and callable(args[0]): # overload
+        if len(args) > 0 and callable(args[0]) and not isinstance(args[0], Function): # overload
             return
         # don't call the base class, since Function is abstract in C++
         # TODO: ^^ is this comment accurate?
