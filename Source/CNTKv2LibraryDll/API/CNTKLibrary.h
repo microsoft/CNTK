@@ -2723,9 +2723,10 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
+#ifdef _MSC_VER
     public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
         ///
-        /// Helpers to inject the node name into error messages.
+        /// Helpers to inject the node name into error messages. For now Windows only.
         ///
         std::wstring DiagnosticsName() const
         {
@@ -2754,7 +2755,13 @@ namespace CNTK
             auto formatString = std::string("%S: ") + format;
             ThrowFormatted<std::invalid_argument>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
         }
-    private:
+#else   // for gcc, LogicError etc. are just #defines that map to ThrowFormatted, so replicate this here
+        template<class E, class... _Types>
+        inline void ThrowFormatted(_Types&&... _Args) const
+        {
+            ThrowFormatted<E>(std::forward<_Types>(_Args)...);
+        }
+#endif
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
