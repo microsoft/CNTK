@@ -455,6 +455,7 @@ public:
 
 // Callback support
 %feature("director") CNTK::Function;
+%feature("nodirector") CNTK::Function::OnPlaceholdersReplaced;
 
 %{
     #include "CNTKLibrary.h"
