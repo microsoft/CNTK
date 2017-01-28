@@ -2723,8 +2723,8 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
-#ifdef _MSC_VER
     public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
+#ifdef _MSC_VER
         ///
         /// Helpers to inject the node name into error messages. For now Windows only.
         ///
