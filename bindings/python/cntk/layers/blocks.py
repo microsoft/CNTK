@@ -88,8 +88,8 @@ def _get_initial_state_or_default(initial_state):
     else:
         return initial_state # already in good shape: return as is
 
-# TODO: move to class Value, or Function.ArgType?
-def Type(shape=None, dtype=None, is_sparse=None, dynamic_axes=None):
+# TODO: move this stuff to class Value, or Function.ArgType?
+def _VarType(shape=None, dtype=None, needs_gradient=None, is_sparse=None, dynamic_axes=None):
     '''
     Create a type specifier; that is, all arguments to instantiate a Placeholder or Input.
     These are meant to be passed to update_signature.
@@ -100,11 +100,32 @@ def Type(shape=None, dtype=None, is_sparse=None, dynamic_axes=None):
         r['shape'] = shape
     if dtype is not None:
         r['dtype'] = dtype
+    if needs_gradient is not None:
+        r['needs_gradient'] = needs_gradient
     if is_sparse is not None:
         r['is_sparse'] = is_sparse
     if dynamic_axes is not None:
         r['dynamic_axes'] = dynamic_axes
     return Record(**r)
+
+def Tensor(*args, **kwargs):
+    '''
+    Create a Variable type descriptor (shape, axes, ...) for use as type annotations in function definitions,
+    and as arguments to update_signature().
+    Function arguments with such type annotations will compile into a CNTK Function with
+    bound Input variables and fully inferred types, e.g. for use with the criterion function.
+    Function arguments without such annotation will get bound to placeholders, e.g. for use
+    when types are unknowable like for Layers-library functions.
+    Example:
+        @Function
+        def f(x: Tensor((13,42))):
+            return x * x
+    '''
+    import typing
+    tp = typing.NewType('Tensor', Variable)
+    tp.var_type = _VarType(*args, **kwargs) # inject it for @Function 
+    return tp
+
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # If passed function is an actual Python function, it will be executed with Placeholders as inputs.

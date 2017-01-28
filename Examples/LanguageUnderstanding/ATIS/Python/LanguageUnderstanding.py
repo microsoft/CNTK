@@ -117,11 +117,12 @@ def create_model_function():
 # This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model):
     @Function
-    def criterion(query, labels):
+    def criterion(query: Tensor(vocab_size, is_sparse=False), labels: Tensor(num_labels, is_sparse=True)):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)
         errs = classification_error      (z, labels)
         return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
+    #debughelpers.dump_function(criterion, 'criterion')
     return criterion
 
 ###########################
@@ -158,7 +159,7 @@ def peek(model, epoch):
 def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
-    model.update_signature(Type(vocab_size, is_sparse=True))
+    model.update_signature(Tensor(vocab_size, is_sparse=True))
     # BUGBUG (layers): need to verify compatibility when using it as part of another function
 
     # example of how to clone out the feature-extraction part, using Label() layers:
@@ -166,7 +167,7 @@ def train(reader, model, max_epochs):
     #embedded_input = hidden_representation.embedded_input
     #from cntk.ops.functions import CloneMethod
     #inner_model = hidden_representation.clone(CloneMethod.share, {embedded_input.output: Placeholder(name='catch_me')})
-    #inner_model.update_signature(Type(emb_dim))
+    #inner_model.update_signature(Tensor(emb_dim))
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
@@ -176,11 +177,11 @@ def train(reader, model, max_epochs):
     #labels = reader.streams.intent_labels  # needs 3 changes to switch to this
 
     # declare argument types
-    criterion.update_signature(query=Type(vocab_size, is_sparse=False), labels=Type(num_labels, is_sparse=True))
+    #criterion.update_signature(query=Tensor(vocab_size, is_sparse=False), labels=Tensor(num_labels, is_sparse=True))
     # note: keywords are optional and used for illustration only
     # BUGBUG: is_sparse=True for query fails with "Matrix.cpp  Line: 1655  Function: Microsoft::MSR::CNTK::Matrix<float>::FSAdagradUpdate  -> Feature Not Implemented."
     #         Works in eval though.
-    #criterion.update_signature(Type(vocab_size, is_sparse=False), Type(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    #criterion.update_signature(Tensor(vocab_size, is_sparse=False), Tensor(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
 
     from cntk.graph import plot
     plot(criterion, filename=data_dir + "/model.pdf")
@@ -228,7 +229,7 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
-    criterion.update_signature(Type(vocab_size, is_sparse=True), Type(num_labels, is_sparse=True))
+    #criterion.update_signature(Tensor(vocab_size, is_sparse=True), Tensor(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(None, criterion)
@@ -261,30 +262,6 @@ if __name__=='__main__':
     #set_computation_network_trace_level(1000000)  # TODO: remove debugging facilities once this all works
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()
-
-    x = placeholder_variable(name='a')
-    print(x.name)
-
-    # repro for Amit
-    #from cntk import as_block
-    #from cntk.ops.functions import CloneMethod
-    ## identity function
-    #f = combine([placeholder_variable()])
-    #f = as_block(f, [(f.placeholders[0], placeholder_variable())], 'id')
-    ## function under test
-    ##  function args
-    #x = placeholder_variable()
-    #y = placeholder_variable()
-    ##  function body
-    ##x = f.clone(CloneMethod.share, {f.placeholders[0]: x})
-    ## BUGBUG: Wiht this ^^ line, it crashes later with "ValueError: Variable with unknown DataType detected when compiling the Function graph!"
-    #z = x-y
-    ## connect to inputs
-    #z.replace_placeholders({z.placeholders[0]: input_variable(1), z.placeholders[1]: input_variable(1)})
-    ## evaluate
-    #res = z.eval({z.arguments[0]: [[5.0]], z.arguments[1]: [[3.0]]})
-    #print(res)
-
 
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
     model = create_model_function()

@@ -64,33 +64,54 @@ class Function(cntk_py.Function):
 
     _placeholders_under_construction = set()
 
-    # helper to get the parameter names of a Python function
+    # helper to get the parameter names and annotations of a Python function
     def _get_param_names(f):
         # Note we only use non-optional params (assume any optional param is not specified).
         # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
-        # Python 2.7:
-        from inspect import getargspec
-        param_specs = getargspec(f)
-        # BUGBUG: This will fail for keyword-only args, e.g. f(x, *args, y=13, **kwargs); but handling this requires Python 3.x (getfullargspec() or signature())
+        import sys
+        if sys.version_info.major >= 3:
+            from inspect import getfullargspec
+            param_specs = getfullargspec(f)
+            annotations = param_specs.annotations
+        else: # 2.7 cannot handle keyword-only args, e.g. f(x, *args, y=13, **kwargs), nor type annotations
+            from inspect import getargspec
+            param_specs = getargspec(f)
+            annotations = {}
         arg_names = param_specs.args
         defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
         if defaults:
             arg_names = arg_names[0:-len(defaults)]
-        return arg_names
-        # Python 3+ version:
-        from inspect import signature, Parameter
-        params = signature(f).parameters
-        def is_optional(param): # helper to determine if a parameter is optional
-            return (param.default != Parameter.empty # has a default value
-                    or param.kind == Parameter.VAR_POSITIONAL  # *args
-                    or param.kind == Parameter.VAR_KEYWORD)    # **kwargs
-        return [name for name, param in params.items() if not is_optional(param)]
+        return (arg_names, annotations)
+        # Python 3+ version, not up-to-date w.r.t. annotations:
+        #from inspect import signature, Parameter
+        #params = signature(f).parameters
+        #def is_optional(param): # helper to determine if a parameter is optional
+        #    return (param.default != Parameter.empty # has a default value
+        #            or param.kind == Parameter.VAR_POSITIONAL  # *args
+        #            or param.kind == Parameter.VAR_KEYWORD)    # **kwargs
+        #return ([name for name, param in params.items() if not is_optional(param)], {}) # TODO: add annotations
+
+    # helper to create a CNTK placeholder or input for a given name
+    # An input_variable is created if the parameter is annotated with a Tensor(...) type.
+    # In this case, CNTK will immediately trigger type inference.
+    # Unannotated parameters will yield placeholder_variables instead.
+    def _make_arg_variable(name, annotations):
+        from .. import placeholder_variable, input_variable
+        if name in annotations:
+            var_type = annotations[name].var_type
+            return input_variable(name=name, **var_type)
+        else:
+            return placeholder_variable(name=name)
 
     # construct a Function from a Python lambda
     # where the Function's input signature is defined by the lambda
     # Use this as a decorator, e.g.:
     #   @Function
     #   def f(x): return x * x
+    # or with given shapes:
+    #   @Function
+    #   def f(x:Tensor(13)): return x * x
+    # The latter form will create a CNTK Function over Inputs; the former over Placeholders.
     def to_Function(f, members = {}, make_block=False, op_name=None, name=None):
         from ..default_options import default_options
         # Parameter() creation inside code of a Function def is forbidden. Setting 'pure' blocks it in Parameter().
@@ -98,7 +119,7 @@ class Function(cntk_py.Function):
             f_name = f.__name__ # (for debugging)
 
             # get the parameter list through inspection
-            arg_names = Function._get_param_names(f)
+            arg_names, annotations = Function._get_param_names(f)
 
             # The Python function is converted to a CNTK Function by executing it once
             # passing placeholders as inputs. This createss a piece of graph.
@@ -110,8 +131,8 @@ class Function(cntk_py.Function):
             # This is prevented by (1) maintaining a "invisible placeholders" list,
             # and always filtering .arguments against that list. This is done by the property .signature;
             # i.e. in all of this, do not use .arguments; use .signature instead.
-            from cntk import placeholder_variable, combine, alias, as_block
-            args = [placeholder_variable(name=name) for name in arg_names]
+            from .. import combine, alias, as_block
+            args = [Function._make_arg_variable(name, annotations) for name in arg_names]
 
             # helpers
             ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
@@ -127,7 +148,7 @@ class Function(cntk_py.Function):
                 #return fun_args
                 # The above seems no longer necessary, the below works just fine if only used when needed
                 # BUGBUG: There still is a Python interpreter crash if I use that always.
-                block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+                block_args = [Function._make_arg_variable(arg.name, annotations) for arg in fun_args]  # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='ParameterOrder')
@@ -187,7 +208,7 @@ class Function(cntk_py.Function):
             # ensure parameter ordering
             # if called from BlockFunction() then wrap into a block
             if make_block: # if we make a block then run off a separate set
-                block_args = [placeholder_variable(name=arg.name) for arg in args]  # placeholders inside the BlockFunction
+                block_args = [Function._make_arg_variable(arg.name, annotations) for arg in args]  # placeholders inside the BlockFunction
                 out = invoke(block_args)
                 out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=op_name, block_instance_name=name)
                 #print('made block out of', f_name, op_name, name)
@@ -298,18 +319,22 @@ class Function(cntk_py.Function):
         Currently you can pass an int, a tuple, an Input, or a dict created with Type()
         '''
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
-        def to_input(arg, name):
+        def to_input(arg_type, name):
             from cntk import input_variable
-            if isinstance(arg, (int, tuple)): # just passed a shape
-                return input_variable(shape=_as_tuple(arg), name=name)
-            else:
-                return input_variable(name=name, **arg)
+            if isinstance(arg_type, (int, tuple)): # just passed a shape
+                return input_variable(shape=_as_tuple(arg_type), name=name)
+            else: # full type given as Tensor(...)
+                return input_variable(name=name, **arg_type.var_type)
+            #if isinstance(arg_type, (int, tuple)): # just passed a shape
+            #    return input_variable(shape=_as_tuple(arg_type), name=name)
+            #else:
+            #    return input_variable(name=name, **arg_type)
         # map the given types:
         #  - create an Input with the given Type or shape
         #  - keep the name property of the Function parameter
         #  - skip argument types passed as None
         #  - TODO: should verify existing shape/axis information
-        arg_map = { param: to_input(arg, name=param.name) for param, arg in arg_map.items() if arg is not None }
+        arg_map = { param: to_input(arg_type, name=param.name) for param, arg_type in arg_map.items() if arg_type is not None }
         self.replace_placeholders(arg_map)
 
     # TODO: change to tuple
