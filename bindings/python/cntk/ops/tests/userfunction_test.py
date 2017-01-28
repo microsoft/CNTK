@@ -106,6 +106,21 @@ def test_ext_eval_5_times():
     # No batch dimension since we have no input
     assert np.allclose(result, ((p_init*np.ones_like(result))+3)*2*2)
 
+def test_ext_clone():
+    dim = 4
+    i = input_variable(dim, needs_gradient=True, name='i_var')
+    m = i + 3
+
+    p = parameter(shape=(dim,), init=10, name='p')
+    z = m + p
+    
+    m_udf = MyPlus(i, constant(3))
+    z_clone = z.clone('share', {m : m_udf} );
+
+    input_data = np.random.rand(dim)
+    result = z_clone.eval([input_data])
+    assert np.allclose(result[0][0], input_data+3+10)
+
 def test_ext_train():
     dim = 4
 
@@ -163,7 +178,6 @@ def test_ext_backpropstate(payload):
     trainer = Trainer(z, z+0, z+0, \
             [sgd(z.parameters, lr_per_sample)])
 
-
     for i in range(100):
         input_data = np.random.rand(dim)
         trainer.train_minibatch({in1:[input_data]})
@@ -176,7 +190,6 @@ class LambdaFunc(UserFunction):
             name=''):
         self.when = when
         self.execute = execute
-
         super(LambdaFunc, self).__init__([arg], name=name)
 
     def infer_outputs(self):
