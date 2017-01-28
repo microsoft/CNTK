@@ -40,20 +40,34 @@ class Function(cntk_py.Function):
     will relay to its only output.
     '''
 
+    # We override the constructors to implement an overload that constructs
+    # a CNTK Functions from a Python function.
+    def __new__(cls, *args, **kwargs):
+        if len(args) > 0 and callable(args[0]): # overload
+            return Function.to_Function(*args, **kwargs)
+        return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args)
+
+    def __init__(self, *args, **kwargs):
+        if len(args) > 0 and callable(args[0]): # overload
+            return
+        # don't call the base class, since Function is abstract in C++
+        # TODO: ^^ is this comment accurate?
+        super(Function, self).__init__(*args, **kwargs)
+
     class NamedOutput:
         def __init__(self, **kwargs):
-            for kw in kwargs:
+            for kw in kwargs: # TODO: only allow one arg
                 self.name = kw
                 self.arg = kwargs[kw]
+
+    _placeholders_under_construction = set()
 
     # construct a Function from a Python lambda
     # where the Function's input signature is defined by the lambda
     # Use this as a decorator, e.g.:
     #   @Function
     #   def f(x): return x * x
-    # BUGBUG: This must pass through if input is already a Function. And for UserFunction, 'f' is a Variable.
-    #         UserFunction.__init__() calls it this way: super(Function, self).__init__(var_inputs, name)
-    def __new__(cls, f, members = {}, make_block=False, op_name=None, name=None):
+    def to_Function(f, members = {}, make_block=False, op_name=None, name=None):
         # Parameter() creation inside code of a Function def is forbidden
         from ..default_options import default_options
         with default_options(pure=True):
@@ -192,12 +206,6 @@ class Function(cntk_py.Function):
             for key in members:   # UNTESTED
                 out.__dict__[key] = members[key]
             return out
-
-    def __init__(self, f, members = {}, make_block=False, op_name=None, name=None):
-        # don't call the base class, since Function is abstract in C++
-        pass
-
-    _placeholders_under_construction = set()
 
     @property
     def signature(self):
@@ -1090,7 +1098,7 @@ class UserFunction(Function):
             else:
                 raise ValueError('expected Variable, but got "%s"'%type(i))
 
-        super(Function, self).__init__(var_inputs, name)
+        super(UserFunction, self).__init__(var_inputs, name)
 
     def _forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         '''
