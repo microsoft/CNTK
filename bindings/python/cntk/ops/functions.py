@@ -60,29 +60,52 @@ class Function(cntk_py.Function):
 
     _placeholders_under_construction = set()
 
+    # helper to get the parameter names of a Python function
+    def _get_param_names(f):
+        # Note we only use non-optional params (assume any optional param is not specified).
+        # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
+        # Python 2.7:
+        from inspect import getargspec
+        param_specs = getargspec(f)
+        # BUGBUG: This will fail for keyword-only args, e.g. f(x, *args, y=13, **kwargs); but handling this requires Python 3.x (getfullargspec() or signature())
+        arg_names = param_specs.args
+        defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
+        if defaults:
+            arg_names = arg_names[0:-len(defaults)]
+        return arg_names
+        # Python 3+ version:
+        from inspect import signature, Parameter
+        params = signature(f).parameters
+        def is_optional(param): # helper to determine if a parameter is optional
+            return (param.default != Parameter.empty # has a default value
+                    or param.kind == Parameter.VAR_POSITIONAL  # *args
+                    or param.kind == Parameter.VAR_KEYWORD)    # **kwargs
+        return [name for name, param in params.items() if not is_optional(param)]
+
     # construct a Function from a Python lambda
     # where the Function's input signature is defined by the lambda
     # Use this as a decorator, e.g.:
     #   @Function
     #   def f(x): return x * x
     def to_Function(f, members = {}, make_block=False, op_name=None, name=None):
-        # Parameter() creation inside code of a Function def is forbidden
         from ..default_options import default_options
+        # Parameter() creation inside code of a Function def is forbidden. Setting 'pure' blocks it in Parameter().
         with default_options(pure=True):
-            # get the parameter list, and also the function name, through inspection
-            from inspect import signature, Parameter
-            params = signature(f).parameters
-            f_name = f.__name__ # (for now only used for debugging)
-            def is_optional(param): # helper to determine if a parameter is optional
-                return (param.default != Parameter.empty # has a default value
-                        or param.kind == Parameter.VAR_POSITIONAL  # *args
-                        or param.kind == Parameter.VAR_KEYWORD)    # **kwargs
-            # only use non-optional params (assume any optional param is not specified)
-            # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
-            arg_names = [name for name, param in params.items() if not is_optional(param)]
-            # execute the lambda with placeholders as inputs, which creates a piece of graph
+            f_name = f.__name__ # (for debugging)
+
+            # get the parameter list through inspection
+            arg_names = Function._get_param_names(f)
+
+            # The Python function is converted to a CNTK Function by executing it once
+            # passing placeholders as inputs. This createss a piece of graph.
             # During execution, the Placeholders of this function are hidden from signatures of any
             # further Functions that may be defined inside this invocation.
+            # This is required when @Function definitions are nested, and expression from
+            # the outer @Function block is used in an inner block, which would introduce
+            # additional Placeholders that will show up as .arguments.
+            # This is prevented by (1) maintaining a "invisible placeholders" list,
+            # and always filtering .arguments against that list. This is done by the property .signature;
+            # i.e. in all of this, do not use .arguments; use .signature instead.
             from cntk import placeholder_variable, combine, alias, as_block
             args = [placeholder_variable(name=name) for name in arg_names]
 
@@ -284,9 +307,6 @@ class Function(cntk_py.Function):
         #  - TODO: should verify existing shape/axis information
         arg_map = { param: to_input(arg, name=param.name) for param, arg in arg_map.items() if arg is not None }
         self.replace_placeholders(arg_map)
-        #for pair in zip(params, args):
-        #    if pair[1] is not None: # passing None will not update the signature of this argument
-        #        self.replace_placeholders({pair[0]: pair[1]})
 
     # TODO: change to tuple
     class OrderedRecord(list):
