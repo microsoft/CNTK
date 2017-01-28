@@ -102,13 +102,13 @@ def create_trainer(network, epoch_size, num_quantization_bits):
     l2_reg_weight     = 0.002
     
     # Create learner
-    learner = data_parallel_distributed_learner(
+    parameter_learner = data_parallel_distributed_learner(
         cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight),
         num_quantization_bits=num_quantization_bits,
         distributed_after=0)
 
     # Create trainer
-    return cntk.Trainer(network['output'], network['ce'], network['pe'], learner)
+    return cntk.Trainer(network['output'], network['ce'], network['pe'], parameter_learner)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, progress_printer, epoch_size):
@@ -120,7 +120,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
     }
 
     training_session = cntk.training_session(train_source, trainer,
-        cntk.minibatch_size_schedule(64), progress_printer, input_map, "ConvNet_CIFAR10_DataAug_", epoch_size)
+        cntk.minibatch_size_schedule(64), progress_printer, input_map, os.path.join(model_path, "ConvNet_CIFAR10_DataAug_"), epoch_size)
     training_session.train()
 
     ### TODO: Stay tuned for an upcoming simpler EvalSession API for test/validation.    
@@ -175,9 +175,9 @@ if __name__=='__main__':
     
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('-datadir', help='only interested in changes to that file');
-    parser.add_argument('-logdir', help='only interested in changes by that user');
-    parser.add_argument('-outputdir',  help='go straight to provided changelist');
+    parser.add_argument('-datadir', help='specify the location of your data');
+    parser.add_argument('-logdir', help='specify where the training log will be saved');
+    parser.add_argument('-outputdir',  help='specify where the output model/checkpoint files shall be saved');
 
     args = vars(parser.parse_args())
 
