@@ -3902,7 +3902,7 @@ void Matrix<ElemType>::_transferFromDeviceToDevice(int from_id, int to_id, bool 
         }
     }
     else
-#pragma omp critical
+// #pragma omp critical // causes a build error on gcc; not clear why this is here
     {
         if (from_id == CPUDEVICE) // from CPU to GPU
         {
