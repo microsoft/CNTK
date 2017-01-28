@@ -161,7 +161,7 @@ def create_model_train(s2smodel):
 def create_model_greedy(s2smodel):
     # model used in (greedy) decoding (history is decoder's own output)
     @Function
-    def model_greedy(input): # (input*) --> (word_sequence*)
+    def model_greedy(input: Tensor(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis])): # (input*) --> (word_sequence*)
 
         # Decoding is an unfold() operation starting from sentence_start.
         # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
@@ -172,7 +172,8 @@ def create_model_greedy(s2smodel):
         return unfold(dynamic_axes_like=input)
 
     try:
-      model_greedy.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+      pass
+      #model_greedy.update_signature(Tensor(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
     except:
       debughelpers.dump_function(model_greedy, 'model_greedy')
       raise
@@ -184,8 +185,8 @@ def create_model_greedy(s2smodel):
 
 def create_criterion_function(model):
     @Function
-    def criterion(input, labels):
-        #labels = x_last
+    def criterion(input  : Tensor(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]),
+                  labels : Tensor(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis])):
         # criterion function must drop the <s> from the labels
         postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
         z = model(input, postprocessed_labels)
@@ -194,9 +195,10 @@ def create_criterion_function(model):
         return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
         #return (Label('loss')(ce), Label('metric')(errs))
     try:
+      pass
       #debughelpers.dump_function(criterion)
-      criterion.update_signature(Type(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-                               Type(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+      #criterion.update_signature(Tensor(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
+      #                         Tensor(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
     except:
       debughelpers.dump_function(criterion)
       raise
@@ -212,9 +214,8 @@ def create_criterion_function(model):
 def create_sparse_to_dense(input_vocab_dim):
     I = Constant(np.eye(input_vocab_dim))
     @Function
-    def no_op(input):
+    def no_op(input: Tensor(input_vocab_dim, is_sparse=True)):
         return times(input, I)
-    no_op.update_signature(Type(input_vocab_dim, is_sparse=True))
     return no_op
 
 def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_size):
