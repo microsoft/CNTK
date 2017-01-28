@@ -34,12 +34,12 @@ VOCAB_FILE = "cmudict-0.7b.mapping"
 # model dimensions
 input_vocab_dim  = 69
 label_vocab_dim  = 69
-hidden_dim = 128
+hidden_dim = 512
 num_layers = 2
 attention_dim = 128
 attention_span = 20
 attention_axis = -3
-use_attention = True
+use_attention = False
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()]) # all lines of VOCAB_FILE in a list
@@ -50,8 +50,9 @@ sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
 sentence_end_index = vocab.index('</s>')
 # TODO: move these where they belong
 
+model_path_stem = os.path.join(MODEL_DIR, "model_att_{}".format(use_attention)) # encode as many config vars as desired
 def model_path(epoch):
-    return os.path.join(MODEL_DIR, "model_att_{}.cmf.{}".format(use_attention, epoch))
+    return model_path_stem + ".cmf." + str(epoch)
 
 
 ########################
@@ -250,7 +251,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # print out some useful training information
     log_number_of_parameters(model_train) ; print()
     progress_printer = ProgressPrinter(freq=30, tag='Training')
-    #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=os.path.join(MODEL_DIR, "model_att_{}.log".format(use_attention)))
+    #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=model_path_stem + ".log") # use this to log to file
 
     sparse_to_dense = create_sparse_to_dense(input_vocab_dim)
 
