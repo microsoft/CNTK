@@ -40,15 +40,19 @@ class Function(cntk_py.Function):
     will relay to its only output.
     '''
 
+    def _callable(obj):
+        return hasattr(obj, '__call__') # Python 2.7+
+        return callable(obj)            # Python 3.x+
+
     # We override the constructors to implement an overload that constructs
     # a CNTK Functions from a Python function.
     def __new__(cls, *args, **kwargs):
-        if len(args) > 0 and callable(args[0]) and not isinstance(args[0], Function): # overload
+        if len(args) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
             return Function.to_Function(*args, **kwargs)
         return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args)
 
     def __init__(self, *args, **kwargs):
-        if len(args) > 0 and callable(args[0]) and not isinstance(args[0], Function): # overload
+        if len(args) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
             return
         super(Function, self).__init__(*args, **kwargs)
 
