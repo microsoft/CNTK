@@ -1371,6 +1371,8 @@ void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ 
     LogicError("CastAssignValuesOf: Only accepts float and double matrices.");
 }
 
+template<>
+void Matrix<int>::SetValue<int>(const size_t numRows, const size_t numCols, int deviceId, int* pArray, const size_t matrixFlags, DataTransferer* transferer) { NOT_IMPLEMENTED; }
 template <class ElemType>
 void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags, DataTransferer* transferer)
 {
