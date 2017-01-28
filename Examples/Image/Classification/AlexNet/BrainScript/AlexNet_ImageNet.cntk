@@ -6,8 +6,6 @@ DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 
-ndlMacros="$ConfigDir$/Macros.ndl"
-
 precision = "float"
 deviceId = "Auto"
 

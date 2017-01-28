@@ -8,8 +8,6 @@ DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 
-ndlMacros="$ConfigDir$/Macros.ndl"
-
 precision = "float"
 deviceId = "Auto"
 
@@ -22,32 +20,37 @@ numMBsToShowResult = 500
 modelPath = "$ModelDir$/VGG16"
 stderr = "$OutputDir$/VGG16"
 
+ImageH    = 224
+ImageW    = 224
+ImageC    = 3
+NumLabels = 1000
+
 ################################
 Train = {
     action = "train"
 
     BrainScriptNetworkBuilder = {
-        imageShape = 224:224:3
-        labelDim = 1000
+        imageShape  = $ImageH$:$ImageW$:$ImageC$
+        labelDim    = $NumLabels$
                 
         model = Sequential (
-            ConvolutionalLayer {64, (3:3)} : ReLU : 
-            ConvolutionalLayer {64, (3:3)} : ReLU : 
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {64, (3:3), pad = true} : ReLU : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
-            ConvolutionalLayer {128, (3:3)} : ReLU : 
-            ConvolutionalLayer {128, (3:3)} : ReLU : 
+            ConvolutionalLayer {128, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {128, (3:3), pad = true} : ReLU : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
-            ConvolutionalLayer {256, (3:3)} : ReLU : 
-            ConvolutionalLayer {256, (3:3)} : ReLU : 
-            ConvolutionalLayer {256, (3:3)} : ReLU : 
+            ConvolutionalLayer {256, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {256, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {256, (3:3), pad = true} : ReLU : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
-            ConvolutionalLayer {512, (3:3)} : ReLU : 
-            ConvolutionalLayer {512, (3:3)} : ReLU : 
-            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            ConvolutionalLayer {512, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {512, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {512, (3:3), pad = true} : ReLU : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
-            ConvolutionalLayer {512, (3:3)} : ReLU : 
-            ConvolutionalLayer {512, (3:3)} : ReLU : 
-            ConvolutionalLayer {512, (3:3)} : ReLU : 
+            ConvolutionalLayer {512, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {512, (3:3), pad = true} : ReLU : 
+            ConvolutionalLayer {512, (3:3), pad = true} : ReLU : 
             MaxPoolingLayer    {(2:2), stride=(2:2)} :
             DenseLayer         {4096, activation=ReLU} : Dropout : 
             DenseLayer         {4096, activation=ReLU} : Dropout :
@@ -56,7 +59,7 @@ Train = {
 
         # inputs
         features = Input {imageShape}
-        featNorm = features - Splice(Constant(103.939):Constant(116.779):Constant(123.68), axis=3)
+        featNorm = features - Splice(Constant(104):Constant(117):Constant(124), axis=3)
         labels = Input {labelDim}
 
         # apply model to features
@@ -101,36 +104,33 @@ Train = {
     
     # Reader
     reader = {
-        verbosity = 0
-        randomize = true
-        randomizationWindow = 1
-
-        deserializers = (
-        {   
+        verbosity = 0 ; randomize = true
+        deserializers = ({
             type = "ImageDeserializer" ; module = "ImageReader"
             file = "$DataDir$/train_map.txt"
             input = {
-                features = {
-                    transforms = (
-                        {
-                            type = "Crop"
-                            cropType = "RandomSide"
-                            sideRatio = 0.875
-                            jitterType = "UniRatio"
-                        }:{
-                            type = "Scale"
-                            width = 224
-                            height = 224
-                            channels = 3
-                            interpolations = "linear"
-                        }:{
-                            type = "Transpose"
-                        }
-                    )
-                }
-                labels = {
-                    labelDim = 1000
-                }
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "randomSide" ; sideRatio = 0.875 ; jitterType = "uniRatio" } :
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = $NumLabels$ }
+            }
+        })
+    }
+
+    cvreader = {
+        verbosity = 0 ; randomize = false
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/val_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "Center" ; sideRatio = 0.875 } :
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = $NumLabels$ }
             }
         })
     }    
@@ -152,25 +152,12 @@ Test = {
             type = "ImageDeserializer" ; module = "ImageReader"
             file="$DataDir$/val_map.txt"
             input = {
-                features = {
-                    transforms = (
-                        {
-                            type = "Crop"
-                            cropType = "center"
-                            sideRatio = 0.875
-                        }:{
-                            type = "Scale"
-                            width = 224
-                            height = 224
-                            channels = 3
-                        }:{
-                            type = "Transpose"
-                        }
-                    )
-                }
-                labels = {
-                    labelDim = 1000
-                }
+                features = { transforms = (
+                    { type = "Crop"; cropType = "center"; sideRatio = 0.875 } :
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = 1000}
             }
         })
     }        
