@@ -337,7 +337,6 @@ def test_metric(reader, s2smodel, num_minibatches=None):
 
     evaluator = Evaluator(None, criterion)
 
-
     # Get minibatches of sequences to test and perform testing
     minibatch_size = 1024
     i = 0
@@ -352,7 +351,8 @@ def test_metric(reader, s2smodel, num_minibatches=None):
         i += num_samples
 
         if num_minibatches != None:
-            if i == num_minibatches:
+            num_minibatches -= 1
+            if num_minibatches == 0:
                 break
 
     # and return the test error
