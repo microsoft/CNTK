@@ -1372,7 +1372,7 @@ void Matrix<ElemType>::CastAssignValuesOf(const MatrixBase& other) /*override*/ 
 }
 
 template<>
-void Matrix<int>::SetValue<int>(const size_t numRows, const size_t numCols, int deviceId, int* pArray, const size_t matrixFlags, DataTransferer* transferer) { NOT_IMPLEMENTED; }
+void Matrix<int>::SetValue(const size_t, const size_t, int, int*, const size_t, DataTransferer*) { NOT_IMPLEMENTED; }
 template <class ElemType>
 void Matrix<ElemType>::SetValue(const size_t numRows, const size_t numCols, int deviceId, ElemType* pArray, const size_t matrixFlags, DataTransferer* transferer)
 {
