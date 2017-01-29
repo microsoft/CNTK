@@ -87,7 +87,7 @@ def create_convnet_cifar10_model(num_classes):
 # This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model, normalize=identity):
     @Function
-    def criterion(x: Tensor((num_channels, image_height, image_width)), y: Tensor(num_classes)):
+    def criterion(x: Tensor[(num_channels, image_height, image_width)], y: Tensor[num_classes]):
         z = model(normalize(x))
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
@@ -117,6 +117,7 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
     # criterion function. This is what is being trained trained.
     # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
     criterion = create_criterion_function(model, normalize=Placeholder() / 256)
+    #debughelpers.dump_function(criterion, 'criterion')
 
     from cntk.graph import plot
     plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))

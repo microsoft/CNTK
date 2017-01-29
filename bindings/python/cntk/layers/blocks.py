@@ -88,22 +88,10 @@ def _get_initial_state_or_default(initial_state):
     else:
         return initial_state # already in good shape: return as is
 
-def _make_tensor_meta(cls_name, is_sparse):
-    class TensorMeta(type):
-        def __getitem__(self, shape):
-            from ..utils import sanitize_shape
-            shape = sanitize_shape(shape)
-            tp = Variable.Type(shape, is_sparse=is_sparse) # inject it for @Function 
-            return tp
-    return TensorMeta(cls_name, (), {})
-
-Tensor       = _make_tensor_meta('Tensor',       is_sparse=False)
-SparseTensor = _make_tensor_meta('SparseTensor', is_sparse=True)
-
-
-def Tensor1(*args, **kwargs):
+def _make_tensor_meta(cls_name, **kwargs):
     '''
-    Create a Variable type descriptor (shape, axes, ...) for use as type annotations in function definitions,
+    BUGBUG: This must be updated
+    Variable type descriptor (shape, axes, ...) for use as type annotations in function definitions,
     and as arguments to update_signature().
     Function arguments with such type annotations will compile into a CNTK Function with
     bound Input variables and fully inferred types, e.g. for use with the criterion function.
@@ -111,13 +99,21 @@ def Tensor1(*args, **kwargs):
     when types are unknowable like for Layers-library functions.
     Example:
         @Function
-        def f(x: Tensor((13,42))):
+        def f(x: Tensor[(13,42)]):
             return x * x
     '''
-    import typing
-    tp = typing.NewType('Tensor', Variable)
-    tp.var_type = _VarType(*args, **kwargs) # inject it for @Function 
-    return tp
+    class TensorMeta(type):
+        def __getitem__(self, shape):
+            from ..utils import sanitize_shape
+            shape = sanitize_shape(shape)
+            return Variable.Type(shape, **kwargs) # inject it for @Function 
+    return TensorMeta(cls_name, (), {})
+
+# Tensor and SparseTensor contain the default axes.
+# If the input has no sequence (e.g. image), then that will be only the batch axis.
+Tensor          = _make_tensor_meta('Tensor',       is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes())
+SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=Axis.default_input_variable_dynamic_axes())
+ParameterTensor = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=[])
 
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters

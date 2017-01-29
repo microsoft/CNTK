@@ -117,8 +117,7 @@ def create_model_function():
 # This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model):
     @Function
-    #def criterion(query: Tensor(vocab_size, is_sparse=False), labels: Tensor(num_labels, is_sparse=True)):
-    def criterion(query: Tensor[vocab_size], labels: SparseTensor[num_labels]):
+    def criterion(query: SparseTensor[vocab_size], labels: SparseTensor[num_labels]):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)
         errs = classification_error      (z, labels)
@@ -179,11 +178,9 @@ def train(reader, model, max_epochs):
     #labels = reader.streams.intent_labels  # needs 3 changes to switch to this
 
     # declare argument types
-    #criterion.update_signature(query=Tensor(vocab_size, is_sparse=False), labels=Tensor(num_labels, is_sparse=True))
+    #criterion.update_signature(query=SparseTensor[vocab_size], labels=SparseTensor[num_labels])
     # note: keywords are optional and used for illustration only
-    # BUGBUG: is_sparse=True for query fails with "Matrix.cpp  Line: 1655  Function: Microsoft::MSR::CNTK::Matrix<float>::FSAdagradUpdate  -> Feature Not Implemented."
-    #         Works in eval though.
-    #criterion.update_signature(Tensor(vocab_size, is_sparse=False), Tensor(num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]))
+    #criterion.update_signature(SparseTensor[vocab_size], SparseTensor[num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]])
 
     from cntk.graph import plot
     plot(criterion, filename=data_dir + "/model.pdf")
