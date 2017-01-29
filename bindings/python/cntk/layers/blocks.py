@@ -15,7 +15,7 @@ from cntk import parameter, constant, input_variable, placeholder_variable, comb
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
-from cntk.utils import Record, _as_tuple
+from cntk.utils import Record, RecordWith, _as_tuple
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
 from cntk.default_options import *
@@ -109,12 +109,30 @@ def _make_tensor_meta(cls_name, **kwargs):
             return Variable.Type(shape, **kwargs) # inject it for @Function 
     return TensorMeta(cls_name, (), {})
 
-# Tensor and SparseTensor contain the default axes.
-# If the input has no sequence (e.g. image), then that will be only the batch axis.
-Tensor          = _make_tensor_meta('Tensor',       is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes())
-SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=Axis.default_input_variable_dynamic_axes())
-ParameterTensor = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=[])
+# Tensor and SparseTensor contain only a batch axis.
+# If you want a sequence, say Seq[Tensor]
+# ParameterTensor has no axis. For future use.
+Tensor          = _make_tensor_meta('Tensor',       is_sparse=False, dynamic_axes=Axis.default_batch_axis())
+SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=Axis.default_batch_axis())
+#ParameterTensor = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=[])
+tensor = Tensor[-2] # TODO: find the correct symbol for the sentinel value
 
+def _make_seq_meta(cls_name, axes):
+    class SeqMeta(type):
+        def __getitem__(self, item_type):
+            return Variable.Type(**RecordWith(item_type, dynamic_axes=axes))
+    return SeqMeta(cls_name, (), {})
+
+Seq = _make_seq_meta('Seq', Axis.default_input_variable_dynamic_axes())
+# TODO: accept typing.Sequence instead
+
+class SequenceOverMeta(type):
+    def __getitem__(self, axis):
+        if isinstance(axis, str):   # if given as a string then create a new one with this name
+            axis = Axis(axis)       # BUGBUG: if the same name is given twice, it'll be different, which is not like forward refs in type hints
+        return _make_seq_meta('Seq', [Axis.default_batch_axis(), axis])
+
+SequenceOver = SequenceOverMeta('SequenceOver', (), {})
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # If passed function is an actual Python function, it will be executed with Placeholders as inputs.

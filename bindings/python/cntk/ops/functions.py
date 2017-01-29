@@ -326,7 +326,7 @@ class Function(cntk_py.Function):
             if isinstance(arg_type, (int, tuple)): # just passed a shape
                 return input_variable(shape=_as_tuple(arg_type), name=name)
             elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
-                return input_variable(name=name, **arg_type)  #.var_type)
+                return input_variable(name=name, **arg_type)
             else:
                 raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
             #if isinstance(arg_type, (int, tuple)): # just passed a shape

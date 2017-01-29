@@ -101,7 +101,7 @@ def create_model_function():
         #Stabilizer(),
         Label('hidden_representation'),
         Dense(num_labels, name='out_projection')
-        #Activation(relu, name='xcxx')   # (test only; not a good result)
+        #Activation(relu, name='act_layer')   # (test only; not meant to give a good result)
         #last,
         #Dense(num_intents)
     ])
@@ -117,7 +117,8 @@ def create_model_function():
 # This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model):
     @Function
-    def criterion(query: SparseTensor[vocab_size], labels: SparseTensor[num_labels]):
+    def criterion(query: Seq[SparseTensor[vocab_size]], labels: Seq[SparseTensor[num_labels]]):
+    #def criterion(query: Seq[SparseTensor[vocab_size]], labels: SparseTensor[num_intents]):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)
         errs = classification_error      (z, labels)
@@ -160,7 +161,7 @@ def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
     #model.update_signature(Tensor(vocab_size, is_sparse=True))
-    model.update_signature(SparseTensor[vocab_size])
+    model.update_signature(Seq[SparseTensor[vocab_size]])
     # BUGBUG (layers): need to verify compatibility when using it as part of another function
 
     # example of how to clone out the feature-extraction part, using Label() layers:

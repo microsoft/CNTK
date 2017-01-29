@@ -69,12 +69,13 @@ def create_reader(path, is_training):
 # define the model     #
 ########################
 
-inputAxis=Axis('inputAxis')
-labelAxis=Axis('labelAxis')
+# type annotations for the two sequence types; later use InputSequence[Tensor[input_vocab_dim]]
+InputSequence = SequenceOver['inputAxis']
+LabelSequence = SequenceOver['labelAxis']
 
 # create the s2s model
 def create_model(): # :: (history*, input*) -> logP(w)*
-    # Embedding: (input*) --> (embedded_input*)
+    # Embedding: (input*) --> embedded_input*
     # Right now assumes shared embedding and shared vocab size.
     embed = Embedding(embedding_dim, name='embed') if use_embedding else identity
 
@@ -94,7 +95,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
             (Label('encoded_h'), Label('encoded_c')),
         ])
 
-    # Decoder: (history*, input*) --> z*
+    # Decoder: (history*, input*) --> unnormalized_word_logp*
     # where history is one of these, delayed by 1 step and <s> prepended:
     #  - training: labels
     #  - testing:  its own output hardmax(z)
@@ -108,10 +109,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         if use_attention:
             attention_model = AttentionModel(attention_dim, attention_span, attention_axis, name='attention_model') # :: (h_enc*, h_dec) -> (h_aug_dec)
         # layer function
-        # TODO: refactor such that it takes encoded_input (to be produced by model_train and model_greedy)
         @Function
-        #def decode(history, x_last):
-        #    input = x_last
         def decode(history, input):
             encoded_input = encode(input)
             r = history
@@ -133,7 +131,8 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                     else:
                         r = Recurrence(rec_block)(r)
                 else:
-                    r = RecurrenceFrom(rec_block)(*encoded_input.outputs, r) # :: h0, c0, r -> h
+                    r = RecurrenceFrom(rec_block)(*(encoded_input.outputs + (r,))) # :: h0, c0, r -> h  (Python < 3.5)
+                    #r = RecurrenceFrom(rec_block)(*encoded_input.outputs, r) # :: h0, c0, r -> h  (Python 3.5+)
             r = stab_out(r)
             r = proj_out(r)
             r = Label('out_proj_out')(r)
@@ -153,7 +152,7 @@ def create_model_train(s2smodel):
 
         # The input to the decoder always starts with the special label sequence start token.
         # Then, use the previous value of the label sequence (for training) or the output (for execution).
-        # BUGBUG: This will fail with sparse input.
+        # BUGBUG: This will currently fail with sparse input.
         past_labels = Delay(initial_state=sentence_start)(labels)
         return s2smodel(past_labels, input)
     return model_train
@@ -161,7 +160,7 @@ def create_model_train(s2smodel):
 def create_model_greedy(s2smodel):
     # model used in (greedy) decoding (history is decoder's own output)
     @Function
-    def model_greedy(input: Tensor(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis])): # (input*) --> (word_sequence*)
+    def model_greedy(input: InputSequence[Tensor[input_vocab_dim]]): # (input*) --> (word_sequence*)
 
         # Decoding is an unfold() operation starting from sentence_start.
         # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
@@ -173,7 +172,7 @@ def create_model_greedy(s2smodel):
 
     try:
       pass
-      #model_greedy.update_signature(Tensor(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]))
+      #model_greedy.update_signature(InputSequence[Tensor[input_vocab_dim]])
     except:
       debughelpers.dump_function(model_greedy, 'model_greedy')
       raise
@@ -185,8 +184,7 @@ def create_model_greedy(s2smodel):
 
 def create_criterion_function(model):
     @Function
-    def criterion(input  : Tensor(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]),
-                  labels : Tensor(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis])):
+    def criterion(input: InputSequence[Tensor[input_vocab_dim]], labels: LabelSequence[Tensor[label_vocab_dim]]):
         # criterion function must drop the <s> from the labels
         postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
         z = model(input, postprocessed_labels)
@@ -197,8 +195,7 @@ def create_criterion_function(model):
     try:
       pass
       #debughelpers.dump_function(criterion)
-      #criterion.update_signature(Tensor(input_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), inputAxis]), 
-      #                         Tensor(label_vocab_dim, dynamic_axes=[Axis.default_batch_axis(), labelAxis]))
+      #criterion.update_signature(InputSequence[Tensor[input_vocab_dim]], LabelSequence[Tensor[label_vocab_dim]])
     except:
       debughelpers.dump_function(criterion)
       raise
@@ -214,7 +211,7 @@ def create_criterion_function(model):
 def create_sparse_to_dense(input_vocab_dim):
     I = Constant(np.eye(input_vocab_dim))
     @Function
-    def no_op(input: Tensor(input_vocab_dim, is_sparse=True)):
+    def no_op(input: InputSequence[SparseTensor[input_vocab_dim]]):
         return times(input, I)
     return no_op
 

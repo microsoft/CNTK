@@ -660,31 +660,6 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         state, forward_output = op.forward(arguments, op.outputs, None, device=device)
         return forward_output, None
 
-def Record1(**kwargs):
-    '''
-    Easy construction of a record (=immutable singleton class) from keyword arguments.
-    e.g. r = Record(x = 13, y = 42) ; x = r.x
-
-    Args:
-        kwargs: keyword arguments to turn into the record members
-
-    Returns:
-        A singleton class instance that has all passed kw args as immutable class members.
-    '''
-    class _ClassFromDict(dict):
-        def __init__(self, args_dict):
-            super(_ClassFromDict, self).__init__(args_dict)
-            self.__dict__.update(args_dict)
-        def __getattr__(self, key):
-            if key not in self:
-                raise AttributeError("record has no attribute '{}'".format(key))
-            return self[key]
-        def __setattr__(self, key, value):
-            # TODO: try to delete __setattr__ to make it immutable
-            raise AttributeError('record is immutable')
-
-    return _ClassFromDict(kwargs)
-
 class Record(dict):
     '''
     Easy construction of a record (=immutable singleton class) from keyword arguments.
@@ -706,6 +681,21 @@ class Record(dict):
     def __setattr__(self, key, value):
         # TODO: try to delete __setattr__ to make it immutable
         raise AttributeError('record is immutable')
+
+def RecordWith(record, **kwargs):
+    '''
+    Create a new Record from an existing one with members modified or added.
+    e.g. r = Record(x = 13) ; print(r.x) ; r = Recordwith(r, x = 42) ; print(r.x)
+
+    Args:
+        kwargs: keyword arguments to turn into the record members
+
+    Returns:
+        A singleton class instance that has all passed kw args as immutable class members.
+    '''
+    d = dict(**record) # make it mutable
+    d.update(kwargs)   # merge the new items
+    return Record(**d) # lock it up again
 
 def _as_tuple(x):
     '''
