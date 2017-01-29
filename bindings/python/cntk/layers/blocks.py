@@ -88,27 +88,20 @@ def _get_initial_state_or_default(initial_state):
     else:
         return initial_state # already in good shape: return as is
 
-# TODO: move this stuff to class Value, or Function.ArgType?
-def _VarType(shape=None, dtype=None, needs_gradient=None, is_sparse=None, dynamic_axes=None):
-    '''
-    Create a type specifier; that is, all arguments to instantiate a Placeholder or Input.
-    These are meant to be passed to update_signature.
-    All are optional, meaning unspecified.
-    '''
-    r = dict()
-    if shape is not None:
-        r['shape'] = shape
-    if dtype is not None:
-        r['dtype'] = dtype
-    if needs_gradient is not None:
-        r['needs_gradient'] = needs_gradient
-    if is_sparse is not None:
-        r['is_sparse'] = is_sparse
-    if dynamic_axes is not None:
-        r['dynamic_axes'] = dynamic_axes
-    return Record(**r)
+def _make_tensor_meta(cls_name, is_sparse):
+    class TensorMeta(type):
+        def __getitem__(self, shape):
+            from ..utils import sanitize_shape
+            shape = sanitize_shape(shape)
+            tp = Variable.Type(shape, is_sparse=is_sparse) # inject it for @Function 
+            return tp
+    return TensorMeta(cls_name, (), {})
 
-def Tensor(*args, **kwargs):
+Tensor       = _make_tensor_meta('Tensor',       is_sparse=False)
+SparseTensor = _make_tensor_meta('SparseTensor', is_sparse=True)
+
+
+def Tensor1(*args, **kwargs):
     '''
     Create a Variable type descriptor (shape, axes, ...) for use as type annotations in function definitions,
     and as arguments to update_signature().

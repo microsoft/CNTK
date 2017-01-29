@@ -3,7 +3,7 @@ from cntk import cntk_py, NDArrayView
 from cntk.device import DeviceDescriptor
 from ..tensor import TensorOpsMixin
 from ..utils import typemap, sanitize_precision, sanitize_value, \
-        sanitize_shape, sanitize_dtype_cntk
+        sanitize_shape, sanitize_dtype_cntk, Record
 
 class VariableMixin(object):
     '''
@@ -130,6 +130,33 @@ class VariableMixin(object):
                 from .. import slice as cntk_slice # must rename to avoid naming confusion
                 r = cntk_slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
         return r
+
+    class Type(Record):
+        '''
+        Describes a Variable's type; that is, all arguments to instantiate a Placeholder or Input.
+        These are meant to be passed to update_signature.
+        All are optional, meaning unspecified.
+        '''
+        def __init__(self, shape=None, dtype=None, needs_gradient=None, is_sparse=None, dynamic_axes=None):
+            r = dict()
+            if shape is not None:
+                r['shape'] = shape
+            if dtype is not None:
+                r['dtype'] = dtype
+            if needs_gradient is not None:
+                r['needs_gradient'] = needs_gradient
+            if is_sparse is not None:
+                r['is_sparse'] = is_sparse
+            if dynamic_axes is not None:
+                r['dynamic_axes'] = dynamic_axes
+            super(Variable.Type, self).__init__(**r)
+
+    @property
+    def type(self):
+        '''
+        The complete type of the data represented by this Variable as a single Variable.Type instance.
+        '''
+        return Variable.Type(shape=self.shape, dtype=self.dtype, needs_gradient=self.needs_gradient, is_sparse=self.is_sparse, dynamic_axes=self.dynamic_axes)
 
 
 class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
