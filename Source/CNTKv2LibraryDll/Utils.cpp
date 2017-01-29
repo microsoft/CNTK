@@ -17,6 +17,7 @@
 #include "PrimitiveFunction.h"
 #include "RecurrentNodes.h"
 #include "Value.h"
+#include "CompositeFunction.h"
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -451,6 +452,33 @@ namespace CNTK
         const auto res = std::mbstowcs(buf, string.c_str(),  sizeof(buf));
         return (res >= 0) ? buf : L"";
 #endif
+    }
+
+    std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
+    {
+        std::vector<Axis> inputVarDynamicAxes;
+        if (internalDynamicAxisName.substr(0, CompositeFunction::InternalDefaultDynamicAxisName.length()) == CompositeFunction::InternalDefaultDynamicAxisName)
+            inputVarDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
+        else if (internalDynamicAxisName.substr(0, CompositeFunction::InternalNoSequenceAxisName.length()) == CompositeFunction::InternalNoSequenceAxisName)
+            inputVarDynamicAxes = { Axis::DefaultBatchAxis() };
+        else
+            inputVarDynamicAxes = { Axis(internalDynamicAxisName), Axis::DefaultBatchAxis() };
+
+        return inputVarDynamicAxes;
+    }
+
+    // Construct the dynamic axis name to be used internally for the CNTK InputNodes
+    std::wstring InternalDynamicAxisNameFromDynamicAxes(const std::vector<Axis>& dynamicAxes)
+    {
+        if (dynamicAxes.empty())
+            LogicError("Empty dynamic axes set");
+
+        if (dynamicAxes == std::vector<Axis>({ Axis::DefaultBatchAxis() }))
+            return CompositeFunction::InternalNoSequenceAxisName;
+        else if (dynamicAxes == std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }))
+            return CompositeFunction::InternalDefaultDynamicAxisName;
+        else
+            return dynamicAxes[0].Name();
     }
 
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
