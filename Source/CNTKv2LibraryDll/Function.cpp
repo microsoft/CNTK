@@ -230,7 +230,7 @@ namespace CNTK
         }
 
         auto primitiveRootFunctionPtr = dynamic_cast<const PrimitiveFunction*>(primitiveRootFunction.get());
-        if (primitiveRootFunctionPtr->OpType() == PrimitiveOpType::Combine)
+        if (primitiveRootFunctionPtr && (primitiveRootFunctionPtr->OpType() == PrimitiveOpType::Combine))
         {
             // Combine's outputs are just a copy of its inputs and any replacements need to be properly 
             // reflected in the outputs as well
@@ -291,10 +291,6 @@ namespace CNTK
 
     void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified)
     {
-        auto primitiveFunction = dynamic_cast<PrimitiveFunction*>(this);
-        if (primitiveFunction == nullptr)
-            LogicError("ValidateOrUpdateOutputs currently only supported for PrimitiveFunction instances");
-
         assert(visitedFunctions.find(this) == visitedFunctions.end());
         visitedFunctions[this] = 1;
 
@@ -311,7 +307,7 @@ namespace CNTK
             }
         }
 
-        auto outputsUsingNewInputs = primitiveFunction->InferOutputs();
+        auto outputsUsingNewInputs = this->InferOutputs();
         auto currentOutputs = RawOutputs();
         for (size_t i = 0; i < currentOutputs.size(); ++i)
         {

@@ -78,8 +78,8 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     with cntk.layers.default_options (activation=cntk.ops.relu, pad=True): 
         z = cntk.models.Sequential([
             cntk.models.LayerStack(2, lambda : [
-                cntk.layers.Convolution((3,3), 64), 
-                cntk.layers.Convolution((3,3), 64), 
+                cntk.layers.Convolution2D((3,3), 64), 
+                cntk.layers.Convolution2D((3,3), 64), 
                 LocalResponseNormalization (1.0, 4, 0.001, 0.75),
                 cntk.layers.MaxPooling((3,3), (2,2))
             ]), 
