@@ -15,6 +15,7 @@ from cntk import *
 from cntk.trainer import *
 from cntk.learner import *
 from cntk.ops.functions import UserFunction
+from .ops_test_utils import AA
 
 class MyPlus(UserFunction):
     def __init__(self, arg1, arg2, name='f1'):
@@ -239,3 +240,35 @@ def test_ext_lambdafunc():
     trainer.train_minibatch([input_data])
     assert cb.count == 1
 
+class PlusAndLast(UserFunction):
+    impl_func = None
+
+    def __init__(self, arg1, arg2, name='f1'):
+        i1 = input_variable(arg1.shape, arg1.dtype, name='i1', dynamic_axes=arg1.dynamic_axes)
+        i2 = input_variable(arg2.shape, arg2.dtype, name='i2', dynamic_axes=arg2.dynamic_axes)
+        self.impl_func = sequence.last(i1 + sequence.broadcast_as(i2, i1))
+
+        super(PlusAndLast, self).__init__([arg1, arg2], name=name)
+
+    def infer_outputs(self):
+        impl_func_output = self.impl_func.output
+        return [output_variable(impl_func_output.shape, impl_func_output.dtype, impl_func_output.dynamic_axes)]
+
+    def forward(self, arguments, device=None, outputs_to_retain=None):
+        _, result = self.impl_func.forward({self.impl_func.arguments[0] : arguments[0], self.impl_func.arguments[1] : arguments[1]}, [self.impl_func.output])
+        return None, result[self.impl_func.output]
+
+def test_udf_plus_and_last():
+    x = input_variable(shape=(2,))
+    y = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis()])
+    
+    func = as_composite(PlusAndLast(x, y))
+
+    dt_precision = np.float32
+    operand1 = [AA([[1., 2.], [3., 4.]], dtype=dt_precision)]
+    operand2 = [AA([2., 2.], dtype=dt_precision)]
+
+    _, result = func.forward({x : operand1, y : operand2}, [func.output])
+    
+    expected_forward = AA([[[5., 6.]]], dtype=dt_precision)
+    np.allclose(result[func.output], expected_forward)
