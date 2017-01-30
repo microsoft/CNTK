@@ -125,11 +125,10 @@ def _make_seq_meta(cls_name, axes):
 
 Seq = _make_seq_meta('Seq', Axis.default_input_variable_dynamic_axes())
 # TODO: accept typing.Sequence instead
+# TODO: reject sequences over sequences (for now)
 
 class SequenceOverMeta(type):
     def __getitem__(self, axis):
-        if isinstance(axis, str):   # if given as a string then create a new one with this name
-            axis = Axis(axis)       # BUGBUG: if the same name is given twice, it'll be different, which is not like forward refs in type hints
         return _make_seq_meta('Seq', [Axis.default_batch_axis(), axis])
 
 SequenceOver = SequenceOverMeta('SequenceOver', (), {})

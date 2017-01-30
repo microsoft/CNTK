@@ -47,12 +47,12 @@ class Function(cntk_py.Function):
     # We override the constructors to implement an overload that constructs
     # a CNTK Functions from a Python function.
     def __new__(cls, *args, **kwargs):
-        if len(args) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
+        if len(args) + len(kwargs) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
             return Function.to_Function(*args, **kwargs)
         return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args)
 
     def __init__(self, *args, **kwargs):
-        if len(args) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
+        if len(args) + len(kwargs) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
             return
         super(Function, self).__init__(*args, **kwargs)
 
@@ -564,6 +564,13 @@ class Function(cntk_py.Function):
         Slicing of a Function result.
         '''
         return self.output.__getitem__(arg)
+
+    @property
+    def type(self):
+        '''
+        Get type of a Function's output.
+        '''
+        return self.output.type
 
     @property
     @typemap

@@ -70,8 +70,11 @@ def create_reader(path, is_training):
 ########################
 
 # type annotations for the two sequence types; later use InputSequence[Tensor[input_vocab_dim]]
-InputSequence = SequenceOver['inputAxis']
-LabelSequence = SequenceOver['labelAxis']
+# CNTK considers these two different types since they run over different sequence indices.
+inputAxis = Axis('inputAxis')
+labelAxis = Axis('labelAxis')
+InputSequence = SequenceOver[inputAxis]
+LabelSequence = SequenceOver[labelAxis]
 
 # create the s2s model
 def create_model(): # :: (history*, input*) -> logP(w)*
@@ -229,6 +232,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # also wire in a greedy decoder so that we can properly log progress on a validation example
     # This is not used for the actual training process.
     model_greedy = create_model_greedy(s2smodel)
+    #print(model_greedy.type)
 
     # This does not need to be done in training generally though
     # Instantiate the trainer object to drive the model training
