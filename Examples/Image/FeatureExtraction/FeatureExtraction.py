@@ -18,11 +18,12 @@ def print_all_node_names(model_file, is_BrainScript=True):
     loaded_model = load_model(model_file)
     if is_BrainScript:
         loaded_model = combine([loaded_model.outputs[0]])
-    node_list = graph.depth_first_search(loaded_model, lambda x: x.is_output)
+    node_list = graph.depth_first_search(loaded_model, lambda x: isinstance(x, Function))
     print("printing node information in the format")
-    print("node name (tensor shape)")
-    for node in node_list:
-        print(node.name, node.shape)
+    for node in node_list: 
+        print("Node name:", node.name)
+        for out in node.outputs: 
+            print("Output name and shape:", out.name, out.shape)
 
 
 def create_mb_source(image_height, image_width, num_channels, map_file):

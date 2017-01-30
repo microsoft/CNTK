@@ -816,31 +816,8 @@ namespace CNTK
         class UniqueDynamicAxesNames
         {
         public:
-            bool RegisterAxisName(const std::wstring& axisName)
-            {
-                std::unique_lock<std::mutex> lock(m_mutex);
-                return m_allKnownDynamicAxisNames.insert(axisName).second;
-            }
-
-            const std::wstring& NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
-            {
-                std::unique_lock<std::mutex> lock(m_mutex);
-                if (m_allKnownDynamicAxisNames.find(axisNamePrefix) == m_allKnownDynamicAxisNames.end())
-                {
-                    m_allKnownDynamicAxisNames.insert(axisNamePrefix);
-                    return axisNamePrefix;
-                }
-
-                for (size_t i = 1;; i++)
-                {
-                    auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
-                    if (m_allKnownDynamicAxisNames.find(newDynamicAxisName) == m_allKnownDynamicAxisNames.end())
-                    {
-                        m_allKnownDynamicAxisNames.insert(newDynamicAxisName);
-                        return *m_allKnownDynamicAxisNames.find(newDynamicAxisName);
-                    }
-                }
-            }
+            CNTK_API bool RegisterAxisName(const std::wstring& axisName);
+            CNTK_API const std::wstring& NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix);
 
         private:
             std::unordered_set<std::wstring> m_allKnownDynamicAxisNames;
@@ -1640,6 +1617,8 @@ private:
 
         void SetOwner(Function* ownerFunction);
 
+        Variable CompositePreservingCopy() const;
+
     private:
 #ifdef SWIGCSHARP
     public:
@@ -1652,8 +1631,10 @@ private:
 
     protected:
         VariableFieldsPtr m_dataFields;
-
         static const size_t s_serializationVersion = 1;
+
+    private:
+        std::shared_ptr<const Function> m_outputComposite; // Currently needed for outputs.
     };
 
     // TODO: Variable equality should be based on uids.
@@ -2382,7 +2363,10 @@ namespace CNTK
     {
         friend class CompositeFunction;
         friend class PrimitiveFunction;
+        friend class BlockFunction;
         friend class Trainer;
+
+        friend Variable GetCorrespondingOutputVariableFromClone(const Variable&, const FunctionPtr&, const FunctionPtr&);
 
     public:
 
@@ -2567,19 +2551,18 @@ namespace CNTK
         ///
         Variable Output() const
         {
-            const auto& outputs = Outputs();
+            auto outputs = Outputs();
             if (outputs.size() > 1)
                 RuntimeError("A Function instance with more than one output cannot be implicitly converted to a Variable");
-
             return outputs[0];
         }
 
         ///
         /// Returns a vector consisting of all Output variables of 'this' Function.
         ///
-        const std::vector<Variable>& Outputs() const
+        std::vector<Variable> Outputs() const
         {
-            return const_cast<Function*>(this)->InitOutputs(); 
+            return *(OutputsImpl().get());
         }
 
         ///
@@ -2677,12 +2660,13 @@ namespace CNTK
     protected:
         static bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate);
 
+        // Returns a outputs without ref-counting the owner.
+        CNTK_API std::vector<Variable>& RawOutputs() const;
     private:
+        CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
 
         // Lazily initialize the Function's outputs on first invocation
         CNTK_API std::vector<Variable>& InitOutputs();
-
-        CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
 
         template <typename VariableType, typename FilterFunction>
         std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc) const
@@ -2703,6 +2687,7 @@ namespace CNTK
         }
 
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl() const;
+        CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
 
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
 
@@ -2731,7 +2716,6 @@ namespace CNTK
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid);
 
         std::vector<Variable> m_inputs;
-
         std::once_flag m_outputsInitFlag;
         std::vector<Variable> m_outputs;
 
@@ -3027,6 +3011,11 @@ namespace CNTK
     {
         return CrossEntropyWithSoftmax(prediction, labels, Axis(0), name);
     }
+
+    ///
+    /// Create an instance of the CNTK built-in operation for computing the edit distance error for specified operands.
+    ///
+    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, const std::vector<size_t>& samplesToIgnore, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
@@ -4042,7 +4031,7 @@ namespace CNTK
     };
 
     /// 
-    /// Instantiate the CNTK built-in test format minibatch source
+    /// Instantiate the CNTK built-in text format minibatch source
     ///
     inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true)
     {
