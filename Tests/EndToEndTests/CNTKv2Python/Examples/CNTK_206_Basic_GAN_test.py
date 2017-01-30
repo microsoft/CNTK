@@ -17,7 +17,7 @@ def test_cntk_206_basic_gan_noErrors(nb):
     assert errors == []
 
 expectedEvalErrorByDeviceId = { -1: 1.95, 0: 2.1 }
-expectedEvalErrorAtolByDeviceId = { -1: 0.3, 0: 0.2 }
+expectedEvalErrorAtolByDeviceId = { -1: 0.35, 0: 0.2 }
 
 def test_cntk_206_basic_gan_evalCorrect(nb, device_id):
     testCell = [cell for cell in nb.cells
