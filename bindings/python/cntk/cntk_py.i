@@ -938,7 +938,10 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 
         while ((item = PyIter_Next(iterator))) {
             void *raw_var = 0 ;
-            int res1 = SWIG_ConvertPtr(item, &raw_var, _SWIG_TYPE,  0 | SWIG_POINTER_IMPLICIT_CONV);
+            int flags = 0; 
+            if (_SWIG_TYPE == SWIGTYPE_p_CNTK__Variable)
+                flags |=  SWIG_POINTER_IMPLICIT_CONV;
+            int res1 = SWIG_ConvertPtr(item, &raw_var, _SWIG_TYPE,  flags);
             if (!SWIG_IsOK(res1)) {
                 SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element"); 
             }
