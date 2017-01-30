@@ -142,17 +142,13 @@ def data_parallel_distributed_learner(learner, distributed_after=0, num_quantiza
 def block_momentum_distributed_learner(learner, block_size, block_momentum_as_time_constant=None, use_nestrov_momentum=True, reset_sgd_momentum_after_aggregation=True, block_learning_rate=1.0, distributed_after=0):
     '''
     Creates a block momentum distributed learner. See [1] for more
-    information
+    information.
 
     Block Momentum divides the full dataset into M non-overlapping blocks,
     and each block is partitioned into N non-overlapping splits.
 
     During training, a random, unprocessed block is randomly taken by the trainer
     and the N partitions of this block are dispatched on the workers.
-
-    Ref: Scalable training of deep learning machines by incremental block training
-         with intra-block parallel optimization and blockwise model-update filtering 
-         (K. Chen and Q. Huo)
 
     Args:
         learner: a local learner (i.e. sgd)
