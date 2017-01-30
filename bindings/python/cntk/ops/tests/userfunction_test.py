@@ -45,7 +45,7 @@ def test_ext_eval_1():
     dim = 4
     p = parameter(shape=(dim,), init=10, name='p')
     i = input_variable(dim, needs_gradient=True, name='i_var')
-    m = MyPlus(i, constant(3))
+    m = MyPlus(i, constant(3)).compose()
     z = m+p
 
     input_data = np.random.rand(dim)
@@ -56,7 +56,7 @@ def test_ext_eval_2_only_param():
     dim = 4
     p = parameter(shape=(dim,), init=10, name='p')
     i = input_variable(dim, needs_gradient=True, name='i_var')
-    m = MyPlus(p, constant(3))
+    m = MyPlus(p, constant(3)).compose()
     # combine does not work
     # z = combine([m.output])
     z = m+i
@@ -68,7 +68,7 @@ def test_ext_eval_2_only_param():
 def test_ext_eval_3_no_input():
     dim = 4
     p = parameter(shape=(dim,), init=10, name='p')
-    m = MyPlus(p, constant(3))
+    m = MyPlus(p, constant(3)).compose()
     z = m+0
 
     result = z.eval()
@@ -79,7 +79,7 @@ def test_ext_eval_4_a_inside_graph():
     dim = 4
     p_init = 10
     p = parameter(shape=(dim,), init=p_init, name='p')
-    m = MyPlus(p, constant(3))
+    m = MyPlus(p, constant(3)).compose()
     z = p * m
 
     result = z.eval()
@@ -90,7 +90,7 @@ def test_ext_eval_4_b_inside_graph():
     dim = 4
     p_init = 10
     p = parameter(shape=(dim,), init=p_init, name='p')
-    z = p * MyPlus(p, constant(3))
+    z = p * MyPlus(p, constant(3)).compose()
 
     result = z.eval()
     # No batch dimension since we have no input
@@ -100,14 +100,14 @@ def test_ext_eval_5_times():
     dim = 2
     p_init = 10
     p = parameter(shape=(dim,), init=p_init, name='p')
-    m = MyPlus(p, constant(3))
+    m = MyPlus(p, constant(3)).compose()
     z = times(m, parameter(shape=(2,50), init=2))
 
     result = z.eval()
     # No batch dimension since we have no input
     assert np.allclose(result, ((p_init*np.ones_like(result))+3)*2*2)
 
-def test_ext_clone():
+def test_ext_eval_6_clone():
     dim = 4
     i = input_variable(dim, needs_gradient=True, name='i_var')
     m = i + 3
@@ -115,11 +115,24 @@ def test_ext_clone():
     p = parameter(shape=(dim,), init=10, name='p')
     z = m + p
     
-    m_udf = MyPlus(i, constant(3))
+    m_udf = MyPlus(i, constant(3)).compose()
     z_clone = z.clone('share', {m : m_udf} );
 
     input_data = np.random.rand(dim)
     result = z_clone.eval([input_data])
+    assert np.allclose(result[0][0], input_data+3+10)
+
+def test_ext_eval_7_placeholder():
+    dim = 4
+    p = parameter(shape=(dim,), init=10, name='p')
+    i = input_variable(dim, needs_gradient=True, name='i_var')
+    pl = placeholder_variable()
+    m = MyPlus(pl, constant(3)).compose()
+    m.replace_placeholder(i)
+    z = m+p
+
+    input_data = np.random.rand(dim)
+    result = z.eval([input_data])
     assert np.allclose(result[0][0], input_data+3+10)
 
 def test_ext_train():
@@ -128,7 +141,7 @@ def test_ext_train():
     p = parameter(shape=(dim,), init=10)
     i = input_variable(dim, needs_gradient=True, name='i_var')
     m = MyPlus(i, constant(3))
-    z = m+p
+    z = m.compose()+p
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
@@ -172,7 +185,7 @@ def test_ext_backpropstate(payload):
 
     p = parameter(shape=(dim,), init=10)
     in1 = input_variable(dim, needs_gradient=True, name='i_var')
-    m = TestBackPropState(in1, payload)
+    m = TestBackPropState(in1, payload).compose()
     z = m+p
 
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
@@ -222,7 +235,7 @@ def test_ext_lambdafunc():
     k = i*p
     m = LambdaFunc(k,
             when=lambda arg: np.sum(arg)>1,
-            execute=cb.inc)
+            execute=cb.inc).compose()
     z = m+0
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
@@ -262,7 +275,7 @@ def test_udf_plus_and_last():
     x = input_variable(shape=(2,))
     y = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis()])
     
-    func = as_composite(PlusAndLast(x, y))
+    func = PlusAndLast(x, y).compose()
 
     dt_precision = np.float32
     operand1 = [AA([[1., 2.], [3., 4.]], dtype=dt_precision)]

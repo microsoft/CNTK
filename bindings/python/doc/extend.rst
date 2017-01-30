@@ -48,7 +48,10 @@ tuple, strings, etc.)::
 
 This can now be used as a normal operator like::
 
-    s = MySigmoid(prev_node)
+    s = MySigmoid(prev_node).compose()
+
+Note that we cannot pass the `UserFunction` instance directly into the graph, but
+rather its `compose()` ed version.
 
 In case, the operator is initialized with multiple inputs, ``forward()`` 's
 ``argument`` will be a list of those inputs::
@@ -133,7 +136,7 @@ interesting behavior, for instance::
     debug_node = LambdaFunc(node,
             when=lambda arg: np.var(arg)>1,
             execute=lambda arg: pdb.set_trace())
-    # out = ... using debug_node ...
+    # out = ... using debug_node.compose() ...
     # ... training out
 
 Now, if the variance of the input tensor exceeds 1, we will be put into

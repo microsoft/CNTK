@@ -46,7 +46,8 @@ def linear_layer(input_var, output_dim):
 
 def dense_layer(input, output_dim, nonlinearity):
     r = linear_layer(input, output_dim)
-    r = nonlinearity(r)
+    if isinstance(nonlinearity, UserFunction):
+        r = nonlinearity(r).compose()
     return r
 
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim,

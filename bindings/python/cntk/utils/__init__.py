@@ -112,6 +112,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
       ``arg`` is a number or NumPy array. Variable otherwise.
     """
 
+    from cntk.ops.functions import UserFunction
     from cntk.ops.variables import Constant, Variable, Parameter
     from cntk.ops.functions import Function
     from cntk.ops import constant
