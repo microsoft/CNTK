@@ -141,7 +141,8 @@ def data_parallel_distributed_learner(learner, distributed_after=0, num_quantiza
 @typemap
 def block_momentum_distributed_learner(learner, block_size, block_momentum_as_time_constant=None, use_nestrov_momentum=True, reset_sgd_momentum_after_aggregation=True, block_learning_rate=1.0, distributed_after=0):
     '''
-    Creates a block momentum distributed learner
+    Creates a block momentum distributed learner. See [1] for more
+    information
 
     Block Momentum divides the full dataset into M non-overlapping blocks,
     and each block is partitioned into N non-overlapping splits.
@@ -155,14 +156,22 @@ def block_momentum_distributed_learner(learner, block_size, block_momentum_as_ti
 
     Args:
         learner: a local learner (i.e. sgd)
-        block_size (int): Size of the partition in samples
+        block_size (int): size of the partition in samples
         block_momentum_as_time_constant (float): block momentum as time constant
         use_nestrov_momentum (bool): use nestrov momentum
         reset_sgd_momentum_after_aggregation (bool): reset SGD momentum after aggregation
         block_learning_rate (float): block learning rate
         distributed_after (int): number of samples after which distributed training starts
+
     Returns:
         a distributed learner instance
+
+    See also:
+        [1] K. Chen and Q. Huo. `Scalable training of deep learning machines
+        by incremental block training with intra-block parallel optimization
+        and blockwise model-update filtering
+        <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/08/0005880.pdf>`_. 
+        Proceedings of ICASSP, 2016. 
     '''
     if block_momentum_as_time_constant == None:
         return cntk_py.create_block_momentum_distributed_learner(
