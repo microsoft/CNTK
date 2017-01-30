@@ -2599,12 +2599,7 @@ namespace CNTK
         ///
         /// Returns the name of the operation that this Function denotes
         ///
-        virtual const std::wstring& OpName() const 
-#ifdef SWIG 
-        { NOT_IMPLEMENTED; }
-#else
-        = 0;
-#endif
+        virtual const std::wstring& OpName() const = 0;
 
     protected:
         ///
@@ -3575,6 +3570,8 @@ namespace CNTK
 #endif
     };
 
+// Swig does not understand type aliasing.
+#ifndef SWIG
     ///
     /// Training parameter schedule with per-sample values.
     ///
@@ -3587,15 +3584,16 @@ namespace CNTK
     template <typename T>
     using TrainingParameterPerMinibatchSchedule = TrainingParameterPerUnitSchedule<T, TrainingParameterSchedule<T>::UnitType::Minibatch>;
 
-    typedef TrainingParameterSchedule<double> LearningRateSchedule;
     typedef TrainingParameterPerSampleSchedule<double> LearningRatePerSampleSchedule;
     typedef TrainingParameterPerMinibatchSchedule<double> LearningRatePerMinibatchSchedule;
 
-    typedef TrainingParameterSchedule<double> MomentumSchedule;
     typedef TrainingParameterPerSampleSchedule<double> MomentumPerSampleSchedule;
     typedef TrainingParameterPerMinibatchSchedule<double> MomentumPerMinibatchSchedule;
+#endif
 
-    typedef TrainingParameterPerSampleSchedule<size_t> MinibatchSizeSchedule;
+    typedef TrainingParameterPerUnitSchedule<size_t, TrainingParameterSchedule<size_t>::UnitType::Sample> MinibatchSizeSchedule;
+    typedef TrainingParameterSchedule<double> LearningRateSchedule;
+    typedef TrainingParameterSchedule<double> MomentumSchedule;
 
     ///
     /// This class allows to specify momentum as time constant in place of momentum per sample in 
