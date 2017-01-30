@@ -9,7 +9,6 @@
 %include <std_shared_ptr.i>
 %include <windows.i>
 %include <attribute.i>
-%include <arrays_java.i>
 
 // include the unordered_map.i.
 %include <std_unordered_map.i>
@@ -38,6 +37,9 @@
 %template(AxisVector) std::vector<CNTK::Axis>;
 %template(NDArrayViewVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 %template(BoolVector) std::vector<bool>;
+
+//ignore size constructor because https://github.com/swig/swig/issues/866
+%ignore std::vector<CNTK::DeviceDescriptor>::vector(size_type);
 %template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 %template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;
 %template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
@@ -436,6 +438,7 @@
 %rename (GetId) CNTK::DeviceDescriptor::Id;
 %rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
 
+
 %typemap(javacode) CNTK::DeviceDescriptor %{
 
     public java.util.ArrayList<DeviceDescriptor> getAllDevices() {
@@ -588,7 +591,7 @@
 
     @Override
     public int hashCode() {
-        return (int)getHashValue();
+        return (int)GetHashValue();
     }
 
 %}

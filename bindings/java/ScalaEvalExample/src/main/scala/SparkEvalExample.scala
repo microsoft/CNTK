@@ -9,7 +9,7 @@ import org.apache.spark.sql.SparkSession
 import Utils._
 
 object SparkEvalExample extends App {
-  System.loadLibrary("CNTKLib")
+  System.loadLibrary("CNTKJava")
   val spark =
     SparkSession.builder().master("local[*]").appName("Spark SQL basic example").getOrCreate()
   val sc = spark.sparkContext
