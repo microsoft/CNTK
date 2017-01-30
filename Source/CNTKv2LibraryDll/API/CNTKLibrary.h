@@ -1995,7 +1995,7 @@ namespace CNTK
         ///
         /// A multi-dimensional value with no mask.
         ///
-        CNTK_API Value(const NDArrayViewPtr& data);
+        explicit CNTK_API Value(const NDArrayViewPtr& data);
 
         ///
         /// A multi-dimensional value with an associated mask.

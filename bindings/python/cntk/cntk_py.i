@@ -1,6 +1,8 @@
 %module(directors="1") cntk_py
 //%feature("autodoc", "1");
 
+%implicitconv Variable;
+
 %include "stl.i"
 %include "std_wstring.i"
 %include <std_vector.i>
@@ -203,7 +205,10 @@ def dynamic_axes(self):
 
         while (PyDict_Next(dictionary, &pos, &py_key, &py_value)) {
             void *cntk_key = 0 ;
-            int res = SWIG_ConvertPtr(py_key, &cntk_key, swig_type,  0);
+            int flags = 0;
+            if (swig_type == SWIGTYPE_p_CNTK__Variable)
+                flags |= SWIG_POINTER_IMPLICIT_CONV;
+            int res = SWIG_ConvertPtr(py_key, &cntk_key, swig_type, flags);
             if (!SWIG_IsOK(res)) {
                 std::string s("cannot convert key of dictionary to ");
                 s+=typeid(T).name();
@@ -585,7 +590,10 @@ public:
 
             while (PyDict_Next($input, &pos, &key, &value)) {
                 void *raw_var = 0 ;
-                int res1 = SWIG_ConvertPtr(key, &raw_var, SWIG_KEY_TYPE,  0);
+                int key_flags = 0;
+                if (SWIG_KEY_TYPE == SWIGTYPE_p_CNTK__Variable)
+                    key_flags |= SWIG_POINTER_IMPLICIT_CONV;
+                int res1 = SWIG_ConvertPtr(key, &raw_var, SWIG_KEY_TYPE,  key_flags );
                 if (!SWIG_IsOK(res1)) {
                     SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert key of dictionary"); 
                 }
@@ -595,8 +603,11 @@ public:
 
                 KEY_TYPE* var = reinterpret_cast<KEY_TYPE*>(raw_var);
 
+                int val_flags = 0; 
+                if (SWIG_VALUE_TYPE == SWIGTYPE_p_CNTK__Variable)
+                    val_flags |= SWIG_POINTER_IMPLICIT_CONV;
                 void *raw_value = 0;
-                int res2 = SWIG_ConvertPtr(value, &raw_value, SWIG_VALUE_TYPE,  0);
+                int res2 = SWIG_ConvertPtr(value, &raw_value, SWIG_VALUE_TYPE,  val_flags );
                 if (!SWIG_IsOK(res2)) {
                     SWIG_exception_fail(SWIG_ArgError(res2), "cannot convert value of dictionary"); 
                 }
@@ -684,7 +695,7 @@ public:
 
         while (PyDict_Next($input, &pos, &py_key, &py_value)) {
             void *cpp_key = 0;
-            int key_res = SWIG_ConvertPtr(py_key, &cpp_key, SWIGTYPE_p_CNTK__Variable, 0);
+            int key_res = SWIG_ConvertPtr(py_key, &cpp_key, SWIGTYPE_p_CNTK__Variable, 0 | SWIG_POINTER_IMPLICIT_CONV);
             if (!SWIG_IsOK(key_res)) {
                 RuntimeError("cannot convert key of dictionary"); 
             }
@@ -927,7 +938,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 
         while ((item = PyIter_Next(iterator))) {
             void *raw_var = 0 ;
-            int res1 = SWIG_ConvertPtr(item, &raw_var, _SWIG_TYPE,  0);
+            int res1 = SWIG_ConvertPtr(item, &raw_var, _SWIG_TYPE,  0 | SWIG_POINTER_IMPLICIT_CONV);
             if (!SWIG_IsOK(res1)) {
                 SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert set element"); 
             }
