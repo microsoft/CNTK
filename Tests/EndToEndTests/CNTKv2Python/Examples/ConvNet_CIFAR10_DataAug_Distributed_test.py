@@ -16,20 +16,35 @@ from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(abs_path)
-from run_ConvNet_CIFAR10_DataAug_Distributed import run_cifar_convnet_distributed
+example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python")
+script_under_test = os.path.join(example_dir, "ConvNet_CIFAR10_DataAug_Distributed.py")
 
-#TOLERANCE_ABSOLUTE = 2E-1
+sys.path.append(example_dir)
+
+TOLERANCE_ABSOLUTE = 2E-1
 TIMEOUT_SECONDS = 300
 
-def test_cifar_convnet_distributed_mpiexec(device_id):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-        pytest.skip('test only runs on GPU')
+def data_set_directory():
+    try:
+        base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
+                                *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
+        # N.B. CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY has {train,test}_map.txt
+        #      and CIFAR-10_mean.xml in the base_path.
+    except KeyError:
+        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                *"../../../../Examples/Image/DataSets/CIFAR-10".split("/"))
 
-    cmd = ["mpiexec", "-n", "2", "python", os.path.join(abs_path, "run_ConvNet_CIFAR10_DataAug_Distributed.py")]
+    base_path = os.path.normpath(base_path)
+    os.chdir(os.path.join(base_path, '..'))
+    return base_path
+
+def mpiexec_test(device_id, script, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE):
+    if cntk_device(device_id).type() != DeviceKind_GPU:
+       pytest.skip('test only runs on GPU')
+
+    cmd = ["mpiexec", "-n", "2", "python", script] + params
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
     if sys.version_info[0] < 3:
-        # TODO add timeout for Py2?
         out = p.communicate()[0]
     else:
         try:
@@ -41,11 +56,32 @@ def test_cifar_convnet_distributed_mpiexec(device_id):
     results = re.findall("Final Results: Minibatch\[.+?\]: errs = (.+?)%", str_out)
 
     assert len(results) == 2
-    assert results[0] == results[1]
 
-# We are removing tolerance in error because running small epoch size has huge variance in accuracy. Will add
-# tolerance back once convolution operator is determinsitic. 
-    
-#    expected_test_error = 0.617
-#    assert np.allclose(float(results[0])/100, expected_test_error,
-#                       atol=TOLERANCE_ABSOLUTE)
+    if match_exactly:
+        assert results[0] == results[1]
+    else:
+        assert np.allclose(float(results[0]), float(results[1]), atol=per_minibatch_tolerance)
+
+    assert np.allclose(float(results[0])/100, expected_test_error, atol=error_tolerance)
+
+def test_cifar_convnet_distributed(device_id):
+    params = [ "-e", "2",
+               "-d", data_set_directory(),
+               "-q", "32",
+               "-device", "0" ]
+    mpiexec_test(device_id, script_under_test, params, 0.617)
+
+def test_cifar_convnet_distributed_1bitsgd(device_id):
+    params = [ "-e", "2",
+               "-d", data_set_directory(),
+               "-q", "1",
+               "-device", "0" ]
+    mpiexec_test(device_id, script_under_test, params, 0.617)
+
+
+def test_cifar_convnet_distributed_block_momentum(device_id):
+    params = [ "-e", "2",
+               "-d", data_set_directory(),
+               "-b", "3200",
+               "-device", "0" ]
+    mpiexec_test(device_id, script_under_test, params, 0.6457, False, 10)
