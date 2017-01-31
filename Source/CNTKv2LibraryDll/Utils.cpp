@@ -508,14 +508,10 @@ namespace CNTK
 
         return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
     }
-    template <typename ElementType>
     /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value)
     {
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
-
-        if (AsDataType<ElementType>() != value->GetDataType())
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
 
         bool isPackedValue = (dynamic_cast<PackedValue*>(value.get()) != nullptr);
 
@@ -569,7 +565,10 @@ namespace CNTK
     template <typename ElementType>
     std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
     {
-        VerifyVariableValueCompatibility<ElementType>(var, value);
+        VerifyVariableValueCompatibility(var, value);
+
+        if (AsDataType<ElementType>() != value->GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
 
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
         if (packedValue)
@@ -587,44 +586,6 @@ namespace CNTK
 
         size_t maxNumTimeSteps, numSequences;
         std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
-
-        auto getSequenceStartsAndLengthsFunc = [](const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes) {
-            auto cpuMask = mask;
-            if (mask->Device() != DeviceDescriptor::CPUDevice())
-                cpuMask = mask->DeepClone(DeviceDescriptor::CPUDevice());
-
-            const MaskKind* maskBuffer = cpuMask->DataBuffer();
-            size_t maxNumTimeSteps, numSequences;
-            std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(mask->Shape(), numDynamicAxes);
-
-            for (size_t i = 0; i < numSequences; ++i)
-            {
-                MaskKind firstMaskEntry = maskBuffer[i * maxNumTimeSteps];
-                if (firstMaskEntry == MaskKind::SequenceBegin)
-                    sequenceBeginIndices[i] = 0;
-                else if (firstMaskEntry == MaskKind::Valid)
-                    sequenceBeginIndices[i] = Microsoft::MSR::CNTK::SentinelValueIndicatingUnspecifedSequenceBeginIdx;
-                else
-                    LogicError("The first entry of a mask should be Valid or SequenceBegin");
-
-                size_t currentSequenceLength = 1;
-                bool currentSequenceEndAlreadyFound = false;
-                for (size_t j = 1; j < maxNumTimeSteps; ++j)
-                {
-                    if (maskBuffer[(i * maxNumTimeSteps) + j] == MaskKind::Invalid)
-                        currentSequenceEndAlreadyFound = true;
-                    else
-                    {
-                        if (currentSequenceEndAlreadyFound)
-                            InvalidArgument("Invalid Value object; only trailing steps of a sequence can be masked");
-
-                        currentSequenceLength++;
-                    }
-                }
-
-                sequenceLengths[i] = currentSequenceLength;
-            }
-        };
 
         if ((numSequences == 1) || (maxNumTimeSteps == 1))
         {
@@ -647,7 +608,7 @@ namespace CNTK
 
                 std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
                 std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
-                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
+                Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
                 for (size_t i = 0; i < numSequences; ++i)
                     layout->AddSequence(i, i, sequenceBeginIndices[i], sequenceLengths[i]);
@@ -660,7 +621,7 @@ namespace CNTK
             std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
             std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
             if (mask != nullptr)
-                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
+                Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
             bool hasTruncatedSequences = std::find_if(sequenceBeginIndices.begin(), sequenceBeginIndices.end(), [](const int& val) { return (val < 0); }) != sequenceBeginIndices.end();
 
