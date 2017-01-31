@@ -44,66 +44,21 @@ def create_reader(path, is_training):
 ########################
 
 def create_model_function():
-  @Function
-  def softplus(x):
-    from cntk.ops import greater, element_select
-    #big = x > 14
-    # BUGBUG: not overloaded
-    big = greater(x, 8)
-    sp = log(1 + exp(x))
-    sw = element_select(big, x, sp)
-    return sw
-
-  @Function
-  def softplus4(x):
-      #from blocks import Parameter
-      sc = -10   # Relu    Parameter(1, init=1)#-1  #4.5
-      return log(sigmoid(sc*x))/sc
-      #return softplus(4.5*x)/4.5
-      # similar to relu for large sc, but not as good with sc=1.
-      # Which makes no sense since it should cancel out.
-
-  softmux = Function(lambda sel, a, b: sel * a + (1-sel) * b)
-  rnn = RNNUnit(hidden_dim, activation=relu)
-  #gate = Dense(hidden_dim, activation=sigmoid)
-  #pr_rnn = Function(lambda x, h: softmux(gate(x), x, rnn(x, h)))
-  def pr_rnn_f(x, prev_h):
-      r = rnn(x, prev_h)
-      return r + x
-      #selx = Dense(hidden_dim)(x)
-      #selh = Dense(hidden_dim, bias=False)(prev_h)
-      #sel = sigmoid (selx + selh)
-      #return (1-sel) * r + sel * x
-      #return sel * r + (1-sel) * x
-      #return softmux(sel, r, x) #sel * r + (1-sel) * x
-  pr_rnn = Function(pr_rnn_f)
-
   from cntk.ops.sequence import last
-  from cntk.ops import plus
-  #from cntk.initializer import uniform
   with default_options(initial_state=0.1, enable_self_stabilization=False):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         #Label('input'), # BUGBUG: PassNode must work for sparse (no reason it cannot)
-        #Embedding(emb_dim, init=uniform(0.1)),
         Embedding(emb_dim, name='embed'),
         Label('embedded_input'),
-        #Stabilizer(),
-        Recurrence(LSTM(hidden_dim), go_backwards=False),
-        #(Recurrence(LSTM(hidden_dim), go_backwards=False), Recurrence(LSTM(hidden_dim), go_backwards=True)),
-        #splice,
-        #Recurrence(GRU(hidden_dim), go_backwards=False),
-        #Recurrence(GRU(hidden_dim, activation=relu), go_backwards=False),
-        #Recurrence(RNNUnit(hidden_dim, activation=relu), go_backwards=False),
-        #Recurrence(RNNUnit(hidden_dim, activation=softplus), go_backwards=False),
-        #Recurrence(RNNUnit(hidden_dim, activation=softplus4), go_backwards=False),
-        #Recurrence(pr_rnn, go_backwards=False),
-        #Recurrence(RNNUnit(hidden_dim, activation=relu) >> Dense(hidden_dim, activation=relu), go_backwards=False),
-        #Stabilizer(),
+        Stabilizer(),
+        Recurrence(LSTM(hidden_dim)),
+        #Recurrence(GRU(hidden_dim, activation=relu)),
+        #Recurrence(RNNUnit(hidden_dim)),
+        #(Recurrence(LSTM(hidden_dim)), Recurrence(LSTM(hidden_dim), go_backwards=True)), splice,
+        Stabilizer(),
         Label('hidden_representation'),
         Dense(num_labels, name='out_projection')
-        #Activation(relu, name='act_layer')   # (test only; not meant to give a good result)
-        #last,
-        #Dense(num_intents)
+        #last, Dense(num_intents)    # for intent classification
     ])
 
 
@@ -114,16 +69,13 @@ def create_model_function():
 # compose model function and criterion primitives into a criterion function
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
-# This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model):
     @Function
     def criterion(query: Seq[SparseTensor[vocab_size]], labels: Seq[SparseTensor[num_labels]]):
-    #def criterion(query: Seq[SparseTensor[vocab_size]], labels: SparseTensor[num_intents]):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)
         errs = classification_error      (z, labels)
-        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
-    #debughelpers.dump_function(criterion, 'criterion')
+        return (ce, errs)
     return criterion
 
 ###########################
@@ -161,28 +113,14 @@ def peek(model, epoch):
 def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
-    #model.update_signature(Tensor(vocab_size, is_sparse=True))
     model.update_signature(Seq[SparseTensor[vocab_size]])
-    # BUGBUG (layers): need to verify compatibility when using it as part of another function
-
-    # example of how to clone out the feature-extraction part, using Label() layers:
-    #hidden_representation = model.hidden_representation
-    #embedded_input = hidden_representation.embedded_input
-    #from cntk.ops.functions import CloneMethod
-    #inner_model = hidden_representation.clone(CloneMethod.share, {embedded_input.output: Placeholder(name='catch_me')})
-    #inner_model.update_signature(Tensor(emb_dim))
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
     criterion = create_criterion_function(model)
 
     labels = reader.streams.slot_labels
-    #labels = reader.streams.intent_labels  # needs 3 changes to switch to this
-
-    # declare argument types
-    #criterion.update_signature(query=SparseTensor[vocab_size], labels=SparseTensor[num_labels])
-    # note: keywords are optional and used for illustration only
-    #criterion.update_signature(SparseTensor[vocab_size], SparseTensor[num_intents, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()]])
+    #labels = reader.streams.intent_labels  # for intent classification
 
     from cntk.graph import plot
     plot(criterion, filename=data_dir + "/model.pdf")
@@ -195,7 +133,6 @@ def train(reader, model, max_epochs):
     # SGD parameters
     learner = adam_sgd(criterion.parameters,
                        lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                       #lr         = learning_rate_schedule(0, UnitType.sample),
                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
                        low_memory = True,
                        gradient_clipping_threshold_per_sample = 15,
@@ -230,7 +167,6 @@ def train(reader, model, max_epochs):
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
-    #criterion.update_signature(Tensor(vocab_size, is_sparse=True), Tensor(num_labels, is_sparse=True))
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(None, criterion)
@@ -254,26 +190,11 @@ def evaluate(reader, model):
 #############################
 
 if __name__=='__main__':
-    # TODO: leave these in for now as debugging aids; remove for beta
-    # TODO: try cntk_py without _ (feedback from Willi)
-    #from cntk import DeviceDescriptor
-    #DeviceDescriptor.set_default_device(cntk_device(-1)) # force CPU
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1)  # TODO: remove debugging facilities once this all works
-    #set_computation_network_trace_level(1000000)  # TODO: remove debugging facilities once this all works
-    set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
-    #force_deterministic_algorithms()
+    from _cntk_py import set_fixed_random_seed
+    set_fixed_random_seed(1) # useful for testing
 
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
     model = create_model_function()
-
-    ## naming test --TODO: make a proper test case
-    #op = model.find_by_name('out_projection')
-    #op = model.out_projection
-    #w = op.W
-    #print(w.shape)
-    #xx = model.hidden_representation
-    #print(xx.shape)
 
     # train
     train(reader, model, max_epochs=8)

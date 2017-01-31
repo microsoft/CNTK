@@ -36,9 +36,9 @@ class Trainer(cntk_py.Trainer):
         if isinstance(criterion, cntk_py.Function): # input can be a tuple of Functions or a tuple-valued Function
             criterion = criterion.outputs           # break up tuple-valued Function into tuple of Functions
         # map Variable to Function
+        from cntk import combine
         #criterion = tuple([sanitize_function(output) for output in criterion])
         # BUGBUG: for tuple-valued BlockFunctions, sanitize_function() returns the tuple; must use combine() instead
-        from cntk import combine
         criterion = tuple([combine([output], output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
         if not isinstance(criterion, tuple): # input can be a single value or a tuple (loss, metric)
             criterion = (criterion, None)    # if single then pad with None for the metric

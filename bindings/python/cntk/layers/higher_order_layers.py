@@ -4,7 +4,9 @@
 # for full license information.
 # ==============================================================================
 
-# higher_order_functions -- higher-order functions, like Sequential() and Recurrence()
+'''
+higher_order_functions -- higher-order functions, like Sequential() and Recurrence()
+'''
 
 from ..utils import Record
 from .blocks import *
@@ -28,7 +30,6 @@ def Sequential(layers, name=''):
 
     composed_function = _inject_name(composed_function, name)
 
-    # TODO: wrap this in a BlockFunction as to enforce inputs = inputs of first function
     return Block(composed_function, 'Sequential', Record(layers=layers))
 
 
@@ -39,9 +40,7 @@ def For(range, constructor, name=''):
      For(range(3), lambda i: Dense(2000))
      For(range(3), lambda: Dense(2000))
     '''
-    #from inspect import signature
-    #takes_arg = len(signature(constructor).parameters) > 0
-    # Python 2.7 support requires us to use getargspec() instead
+    # Python 2.7 support requires us to use getargspec() instead of inspect
     from inspect import getargspec
     takes_arg = len(getargspec(constructor).args) > 0
     # helper to call the layer constructor
@@ -58,7 +57,11 @@ def For(range, constructor, name=''):
     return Block(sequential, 'For', Record(layers=layers))
 
 
-# TODO: It is hard to find a good name for this.
+# legacy name for For() --TODO: remove
+def LayerStack(N, constructor):
+    return For(range(N), constructor)
+
+
 def SequentialClique(functions, name=''):
     '''
     Layer factory function to create a composite that applies a sequence of or any functions onto an input,
@@ -90,8 +93,3 @@ def ResNetBlock(f, name=''):
     skip = _inject_name(skip, name)
 
     return skip
-
-
-# legacy name--remove
-def LayerStack(N, constructor):
-    return For(range(N), constructor)

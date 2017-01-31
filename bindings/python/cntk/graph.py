@@ -124,35 +124,6 @@ def find_by_name(node, node_name, max_depth=None):
 
     return result[0]
 
-# TODO: this is no longer needed, delete
-def try_find_closest_by_name(node, node_name, max_depth=None):
-    '''
-    Finds the closest function or variable in the graph starting from ``node`` and doing a depth-first
-    search. Closest means that if there are multiple, the one with the shortest path is returned.
-
-    Args:
-        node (graph node): the node to start the journey from
-        node_name (`str`): name for which we are search nodes
-
-    Returns:
-        Primitive function or variable having the specified name
-
-    See also:
-        :func:`~cntk.ops.functions.Function.find_by_name` in class
-        :class:`~cntk.ops.functions.Function`.
-
-    '''
-    if not isinstance(node_name, str):
-        raise ValueError('node name has to be a string. You gave '
-                'a %s'%type(node_name))
-
-    result = depth_first_search(node, lambda x: x.name == node_name, max_depth, sort_by_distance=True)
-
-    if not result:
-        return None
-
-    return result[0]
-
 
 def plot(root, filename=None):
     '''
@@ -393,4 +364,3 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
             result = result2
 
     return result
-

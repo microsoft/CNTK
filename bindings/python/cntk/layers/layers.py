@@ -48,8 +48,6 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     #  - if map_rank is given, then the all but the first 'map_rank' dimensions of the input (those are not reduced over)
     # where input_rank and map_rank are mutuallly exclusive.
 
-    #output_rank = -len(output_shape)   # support outputs with tensor layouts
-    # BUGBUG: Should this be a negative number now, since output is the last axis in Python?
     output_rank = len(output_shape)   # support outputs with tensor layouts
 
     # If input_rank not given then pass a single _INFERRED; map_rank if given will determine the input_rank.
@@ -76,12 +74,8 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
         if b:
             r = r + b
         if activation is not None:
-            r = r >> activation#activation(r)
+            r = activation(r)
         return r
-    # BUGBUG: the 'out = combine(out, name=f_name)' in Function() messes up the parameter order. Need to fix that first.
-    #dense = dense(Placeholder(name='x')) # same as Function() without the combine()
-
-    #dense = _inject_name(dense, name)
 
     return Block(dense, 'Dense', Record(W=W, b=b))
 
@@ -126,8 +120,6 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     @BlockFunction('Embedding', name)
     def embed(x):
         return times(x,E)
-
-    #embed = _inject_name(embed, name)
 
     return Block(embed, 'Embedding', Record(E=E))
 
@@ -277,8 +269,6 @@ def Convolution(rf_shape,         # e.g. (3,3)
         if activation is not None:
             r = activation(r)
         return r
-
-    #convolve = _inject_name(convolve, name)
 
     return Block(convolve, op_name, Record(W=W, b=b))
 
@@ -435,8 +425,6 @@ def _Pooling(op,       # PoolingType_Max or _Average
     def pool(x):
         return pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
 
-    #pool = _inject_name(pool, name)
-
     return Block(pool, op_name)
 
 
@@ -541,16 +529,13 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     bias         = Parameter(norm_shape, init=0)
     run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
     run_variance = Constant(0, shape=norm_shape)
-    run_count    = Constant(0, shape=(1,))  # BUGBUG: This should be a scalar, not a 1-dim vector
+    run_count    = Constant(0, shape=(1,))  # TODO: This should be a scalar, not a 1-dim vector
 
     # expression
     @BlockFunction('BatchNormalization', name)
     def batch_normalize(x):
-        #x = Placeholder(name='batch_normalization_arg')
         return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   use_cudnn_engine=not use_cntk_engine)
-
-    #batch_normalize = _inject_name(batch_normalize, name)
 
     return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
 
@@ -574,8 +559,6 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
         #x_hat = element_divide (x0, std)
         x_hat = x0 / std
         return x_hat * scale + bias    # denormalize with learned parameters
-
-    #layer_normalize = _inject_name(layer_normalize, name)
 
     return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))
 

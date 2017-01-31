@@ -46,7 +46,7 @@ class Function(cntk_py.Function):
         return callable(obj)            # Python 3.x+
 
     # We override the constructors to implement an overload that constructs
-    # a CNTK Functions from a Python function.
+    # a CNTK Functions from a Python function (@Function).
     def __new__(cls, *args, **kwargs):
         if len(args) + len(kwargs) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
             return Function.to_Function(*args, **kwargs)
@@ -83,14 +83,6 @@ class Function(cntk_py.Function):
         if defaults:
             arg_names = arg_names[0:-len(defaults)]
         return (arg_names, annotations)
-        # Python 3+ version, not up-to-date w.r.t. annotations:
-        #from inspect import signature, Parameter
-        #params = signature(f).parameters
-        #def is_optional(param): # helper to determine if a parameter is optional
-        #    return (param.default != Parameter.empty # has a default value
-        #            or param.kind == Parameter.VAR_POSITIONAL  # *args
-        #            or param.kind == Parameter.VAR_KEYWORD)    # **kwargs
-        #return ([name for name, param in params.items() if not is_optional(param)], {}) # TODO: add annotations
 
     # helper to create a CNTK placeholder or input for a given name
     # An input_variable is created if the parameter is annotated with a Tensor(...) type.
@@ -140,16 +132,6 @@ class Function(cntk_py.Function):
             ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
             def force_order_args(fun_args):
                 from .. import plus, reduce_sum
-                #zero_in_right_order = plus(*(reduce_sum(arg, all_axes=True) for arg in fun_args)) * 0
-                ## BUGBUG: ^^ fails with "At least one of the placeholders specified for replacement was not found in the function"
-                ##         clone() seems to clone placeholders more than once that are directly consumed more than once.
-                ## As a workaround, consume the placeholder once, and apply square_error() on top.
-                ##zero_in_right_order = plus(*(red(arg*0) for arg in fun_args))
-                #fun_args = tuple(zero_in_right_order + arg for arg in fun_args)
-                ## BUGBUG: fails inside a recurrent loop
-                #return fun_args
-                # The above seems no longer necessary, the below works just fine if only used when needed
-                # BUGBUG: There still is a Python interpreter crash if I use that always.
                 block_args = [Function._make_arg_variable(arg.name, annotations) for arg in fun_args]  # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
@@ -157,15 +139,6 @@ class Function(cntk_py.Function):
                 global ref_keeper   # TODO: should this really be 'nonlocal'?
                 ref_keeper = combined_args    # BUGBUG workaround the ref-counting problem
                 return combined_args.outputs
-            def force_order_args_rec(fun_args): # use this inside recurrent loop, requires all args to share the same axes
-                from .. import plus, sequence, element_select, splice, slice
-                zero_in_right_order = plus(*(sequence.constant_with_dynamic_axes_like(0, arg) for arg in fun_args))
-                def patch_arg(arg):
-                    return zero_in_right_order + arg
-                    #return element_select(zero_in_right_order, arg, arg)
-                    #return slice(splice(zero_in_right_order, arg, axis=-1), axis=-1, begin_index=1, end_index=0)
-                fun_args = tuple(patch_arg(arg) for arg in fun_args)
-                return fun_args
             def invoke(fun_args):
                 try:
                     # hide Placeholders of this function from .signature() of any function defined inside
@@ -179,12 +152,6 @@ class Function(cntk_py.Function):
                     # unhide Placeholders of this function again
                     for arg in args:
                         Function._placeholders_under_construction.remove(arg)
-                #if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                #    print([arg.name for arg in Function._placeholders_under_construction])
-                #    print('out = f(), args:', [arg.name for arg in out.arguments])
-                #    print('out = f(), sig: ', [arg.name for arg in out.signature])
-                #    print([arg.uid for arg in Function._placeholders_under_construction])
-                #    print('out = f(), sig: ', [arg.uid for arg in out.signature])
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
                     if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
@@ -219,8 +186,7 @@ class Function(cntk_py.Function):
                 fun_args = args
                 #if len(fun_args) > 1:
                 #    fun_args = force_order_args(fun_args)
-                # BUGBUG: Python interpreter crash if enabling this
-                # ^^ BUGBUG: due to instability of as_block() and inefficiency of the above solution, for now only do if needed
+                # BUGBUG: Python interpreter used to crash sometimes with this enabled, so for now fix it after the fact only if needed
                 # now invoke the Python function
                 out = invoke(fun_args)
                 # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
@@ -228,14 +194,13 @@ class Function(cntk_py.Function):
                 if set(out_arg_names) == set(arg_names) and out_arg_names != arg_names:  # order came out wrong
                     #print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
                     fun_args = force_order_args(fun_args)
-                    out = invoke(fun_args)   #.outputs) # BUGBUG: move .outputs back up
+                    out = invoke(fun_args)
 
             # verify that we got the parameter order right
             out_arg_names = [arg.name for arg in out.signature]
             assert out_arg_names == arg_names
 
             # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
-            # TODO: solve by consuming that arg somewhere, with the zero-out trick.
             if len(out.signature) != len(args):
                 unfulfilled_args = set(out.signature) - set(args)
                 if unfulfilled_args:
@@ -250,7 +215,7 @@ class Function(cntk_py.Function):
             out.f_name = f_name  # keep in Python wrapper for debugging
 
             # add all members to the Python class
-            # TODO: This should really be a dictionary inside BlockFunction
+            # TODO: remove this, stuff should not be in the Python objects
             for key in members:   # UNTESTED
                 out.__dict__[key] = members[key]
             return out
@@ -259,24 +224,9 @@ class Function(cntk_py.Function):
     def signature(self):
         '''
         Returns the signature of a Function.
-        This is the argument list less placeholders that belong to an outer, not yet completed @Function def.
+        This is the .arguments[] list without placeholders that belong to an outer, not yet completed @Function def.
         '''
-        #arg_names_under_construction = [arg.name for arg in Function._placeholders_under_construction]
-        #arg_names = [arg.name for arg in self.arguments]
-        #sig_names = [arg.name for arg in self.arguments if arg not in Function._placeholders_under_construction]
-        #for arg in self.arguments:
-        #    for uc in Function._placeholders_under_construction:
-        #        if arg == uc:
-        #            print(uc.name)
-        #return tuple(arg for arg in self.arguments if arg not in Function._placeholders_under_construction)
-        # BUGBUG: none of the methods for parameter ordering seem to work for recurrence;
-        #         so we fix it after the fact by detecting a very specific parameter name 'x_last'
-        #         which we report in last position (lying).
         sig = [arg for arg in self.arguments if arg not in Function._placeholders_under_construction]
-        if len(sig) == 0:
-            print(13)
-        #if len(sig) > 0 and sig[0].name == 'x_last':
-        #    sig = sig[1:] + [sig[0]]
         return tuple(sig)
 
     def argument_map(self, *args, **kwargs):
@@ -330,10 +280,6 @@ class Function(cntk_py.Function):
                 return input_variable(name=name, **arg_type)
             else:
                 raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
-            #if isinstance(arg_type, (int, tuple)): # just passed a shape
-            #    return input_variable(shape=_as_tuple(arg_type), name=name)
-            #else:
-            #    return input_variable(name=name, **arg_type)
         # map the given types:
         #  - create an Input with the given Type or shape
         #  - keep the name property of the Function parameter
@@ -342,7 +288,7 @@ class Function(cntk_py.Function):
         arg_map = { param: to_input(arg_type, name=param.name) for param, arg_type in arg_map.items() if arg_type is not None }
         self.replace_placeholders(arg_map)
 
-    # TODO: change to tuple
+    # TODO: change to tuple, or remove entirely
     class OrderedRecord(list):
         '''
         A container that behaves like a list and a class, in that the elements it stores
@@ -375,9 +321,6 @@ class Function(cntk_py.Function):
             return ValueIterator(super(Function.OrderedRecord, self).__iter__())
         # __missing__, __iter__, __contains__, keys(), values(), __delitem__
 
-    # TODO: if all inputs are actual data, this should eval() instead.
-    # TODO: if passed an actual Python function, construct a Function from it. ...how does that affect the function signature??
-    # TODO: accept a single tuple as args, for (F, G) >> plus. tuple members can be None = identity.
     def __call__(self, *args, **kwargs):
         '''
         Call a Function, either on symbolic or numeric inputs.
@@ -402,15 +345,6 @@ class Function(cntk_py.Function):
         # parse argument list and map to the function's input
         arg_map = self.argument_map(*args, **kwargs)
 
-        # Ellipsis is used to create lambdas on the fly.
-        # An ... simply generates a new placeholder.
-        # Multiple Ellipses will turn into Function args in order of occurence, since the underlying
-        # Function is already guaranteed to traverse its arguments in the same order.
-        # This is non-standard Python, so suggestions for alternative syntaxes are welcome.
-        # TODO: remove this again, and just let users use Python lambdas instead
-        from cntk import placeholder_variable
-        #arg_map = { param: arg if arg is not Ellipsis else placeholder_variable() for param, arg in arg_map.items() }
-
         # if placeholders were excluded due to being under construction,
         # we must include them in the argmap, otherwise they will be cloned
         for arg in self.arguments:
@@ -424,33 +358,7 @@ class Function(cntk_py.Function):
         # symbolic: return a cloned Function
         # applying the function means to inline its piece of graph
         if is_symbolic:
-            s = self.signature
-            s_names = [arg.name for arg in s]
-            s_uids = [arg.uid for arg in s]
-            a1 = self.arguments
-            a1_names = [arg.name for arg in a1]
-            a1_uids = [arg.uid for arg in a1]
-            sn = self.name
-
-            arg_map_uids = {frm.uid: too.uid for frm, too in arg_map.items()}
-
-            out = self.clone(CloneMethod.share, arg_map)
-
-            on = out.name
-            if sn == 'hidden_representation':
-                ic = out.is_composite
-                print(13)
-            a2 = out.arguments
-            a2_names = [arg.name for arg in a2]
-            # return the Variables as a Python tuple, rather than the CNTK Function object
-            # TODO: naw, must be able to apply the result in case a new function with placeholders is created
-            #       Maybe instead .outputs should return an OrderedRecord
-            #outputs = out.outputs
-            #if len(outputs) > 1:   # tuple-valued: turn into a Python tuple
-            #    # TODO: Ideally, we should return Variables instead of Functions, but that leads to various failures presently.
-            #    from cntk import combine
-            #    out = Function.OrderedRecord([(output.name, combine([output], name=output.name)) for output in outputs])
-            return out
+            return self.clone(CloneMethod.share, arg_map)
 
         # numeric: evaluate
         outputs = self.outputs
@@ -496,32 +404,12 @@ class Function(cntk_py.Function):
     def __getattr__(self, name):
         '''
         Access a member inside this object.
+        Members of ``Function`` can be accessed directly.
+        In addition, members of the Function's output, if only one, are accessed here.
+        Lastly, this also gives access to Functions and Variables inside this Function;s
+        graph by their user-specified name, e.g. ``model.embed.E``, as long as those names are not also
+        member names of Function or Variable.
         '''
-        # We get here for any member that is not a direct member of the class.
-        # E.g. lay = Dense(500, name='d')
-        #      lay.W
-        # will find the parameter named 'W' that is closest
-        #      y = lay(x)
-        #      y.d
-        # will find the root combine() of the Dense op
-        #      y.d.W
-        # will find the closest 'W' from there.
-        # Although ideally, it will only find what's inside Dense(). Not possible since it's a composite.
-        # Unless we insert a special "stop" combine() for all input args that we don't traverse through. Brittle.
-        #      lstm = LSTM(500, name='cell')
-        #      y = Recurrence(lstm, name='r')(x)
-        #      y.cell
-        #      y.r.cell
-        # will both find the LSTM cell, which is a combine([h, c])
-        #      y.r.cell.outputs.h
-        # The 'closest' is a stop-gap until BlockFunctions or similar work.
-
-        # We do not get here for:
-        #  - actual members of the class, such as f.outputs
-        #    i.e. actual class members override parameter names
-        #  - members that were added to the class, like f.W = W; f.W
-        #    which we should not do
-
         # If name is not a member of Function or Variable, first look for
         # a user-named item in the graph.
         # (Known member names cannot be overridden by user-named items,

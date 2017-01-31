@@ -12,6 +12,7 @@ from ...utils import sanitize_input, get_data_type, typemap
 def delay(x, initial_state=None, time_step=1, name=''):
     '''
     This function combines ``past_value`` and ``future_value`` into a single function.
+    This is useful when the time_step can be specified as positive or negative.
 
     Args:
         x: the tensor (or its name) from which the past value is obtained

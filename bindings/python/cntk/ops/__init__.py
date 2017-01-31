@@ -455,13 +455,12 @@ def edit_distance_error(input_a, input_b, subPen=0, delPen=0, insPen=0, squashIn
     input_b = sanitize_input(input_b, dtype)
     return edit_distance_error(input_a, input_b, subPen, delPen, insPen, squashInputs, samplesToIgnore, name)
 
+
 ##########################################################################
 # convolution ops
 ##########################################################################
 
-
 @typemap
-# TODO: Reorder the kwargs to match a known toolkit, e.g. Keras; cf. layers.Convolution()
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
                 max_temp_mem_size_in_samples=0, name=''):
@@ -556,7 +555,6 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
 AVG_POOLING = PoolingType_Average
-
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
@@ -684,7 +682,6 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, run
 ##########################################################################
 # comparison ops
 ##########################################################################
-
 
 @typemap
 def less(left, right, name=''):
@@ -845,7 +842,6 @@ def less_equal(left, right, name=''):
 # linear ops
 ##########################################################################
 
-
 @typemap
 def plus(left, right, *more, name=''):
     '''
@@ -933,9 +929,8 @@ def element_times(left, right, *more, name=''):
     return cntk_py_element_times(left, right, name)
 
 
-# TODO: bad name. max and min are Python built-ins. element_max()?
 @typemap
-def max(left, right, *more, name=''):
+def element_max(left, right, *more, name=''):
     '''
     The output of this operation is the element-wise max of the two or more input
     tensors. It supports broadcasting.
@@ -949,13 +944,14 @@ def max(left, right, *more, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     if more: # if additional operands then recurse
-        return max(max(left, right, *more[:-1], name=''), more[-1], name=name)
+        return element_max(element_max(left, right, *more[:-1], name=''), more[-1], name=name)
     gt = greater(left, right)
+    # TODO: use as_block()
     return element_select(gt, left, right, name)
 
 
 @typemap
-def min(left, right, *more, name=''):
+def element_min(left, right, *more, name=''):
     '''
     The output of this operation is the element-wise min of the two or more input
     tensors. It supports broadcasting.
@@ -969,8 +965,9 @@ def min(left, right, *more, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     if more: # if additional operands then recurse
-        return min(min(left, right, *more[:-1], name=''), more[-1], name=name)
+        return element_min(element_min(left, right, *more[:-1], name=''), more[-1], name=name)
     lt = less(left, right)
+    # TODO: use as_block()
     return element_select(lt, left, right, name)
 
 
@@ -1079,6 +1076,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     right = sanitize_input(right, dtype)
     return times(right, left, output_rank, infer_input_rank_to_map, name)
 
+
 @typemap
 def times_transpose(left, right, name=''):
     '''
@@ -1181,7 +1179,6 @@ def times_transpose(left, right, name=''):
 # non_diff ops
 ##########################################################################
 
-
 @typemap
 def floor(arg, name=''):
     '''
@@ -1272,6 +1269,7 @@ def round(arg, name=''):
     from cntk.cntk_py import round
     arg = sanitize_input(arg, get_data_type(arg))
     return round(arg, name)
+
 
 ##########################################################################
 # non_linear and nn ops
@@ -1462,6 +1460,7 @@ def softmax(x, axis=None, name=''):
         axis = sanitize_axis(axis)
         Z = reduce_log_sum(x, axis)  # log denominator
         exponent = minus(x, Z.output())
+        # TODO: use as_block()
         return exp(exponent.output(), name) # this is the softmax
     # softmax over all elements
     return softmax(x, name)
@@ -1674,6 +1673,7 @@ def element_select(flag, value_if_true, value_if_false, name=''):
     value_if_false = sanitize_input(value_if_false)
     return element_select(flag, value_if_true, value_if_false, name)
 
+
 ##########################################################################
 # recurrent ops
 # TODO: do these belong into .sequence?
@@ -1835,6 +1835,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         raise(ValueError('unsupported recurrent_op value "%s"'%recurrent_op))
     return optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional, recurrent_op, name)
+
 
 ##########################################################################
 # reshaping ops
@@ -2021,9 +2022,6 @@ def splice(*inputs, axis=-1, name=''):
         return combine([inputs[0]]) # (but make it into a Function)
 
     from cntk.cntk_py import splice
-    #if type(inputs) not in (list, tuple):
-    #    raise ValueError('inputs has to be an iterable')
-    # TODO: also accept a variable-length parameter list, to allow bidirectional RNN as composition
 
     inputs = [sanitize_input(x) for x in inputs]
     axis = sanitize_axis(axis)
@@ -2355,14 +2353,8 @@ def dropout(x, dropout_rate=0.0, name=''):
 # variables_and_parameters ops
 ##########################################################################
 
-# TODO: These are not ops but object constructors.
-
 from cntk.device import use_default_device
 from cntk.axis import Axis
-
-# TODO: if we end up using only factory methods, we should get rid of the
-# class Variable in variables.py
-
 
 @typemap
 def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,

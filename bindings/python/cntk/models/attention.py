@@ -4,7 +4,9 @@
 # for full license information.
 # ==============================================================================
 
-# attention -- standard attention model
+'''
+attention -- standard attention model
+'''
 
 from __future__ import division
 from ..ops.functions import Function
@@ -53,12 +55,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
         h_dec_proj = attn_proj_dec(h_dec)
         # u = v * tanh(W1h + W2d)
         tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
-        #tanh_out = Label('tanh_out')(tanh_out)
         u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
-        #u = Label('u')(u)
-        #h_enc_valid = Label('h_enc_valid')(h_enc_valid)
         u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
-        #u_masked = Label('u_masked')(u_masked)
         attention_weights = softmax(u_masked, axis=attention_axis) #, name='attention_weights')
         attention_weights = Label('attention_weights')(attention_weights)
         # now take weighted sum over the encoder state vectors

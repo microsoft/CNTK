@@ -14,7 +14,6 @@ import numpy as np
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, sequence
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
-from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, RecordWith, _as_tuple
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
@@ -26,24 +25,11 @@ from cntk.default_options import *
 from cntk.ops.functions import Function
 from cntk.ops.variables import Variable
 
-_trace_layers = False
-#_trace_layers = True  # uncomment this to log creation of graph through layers
-
 _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
 
 # call this for all untested branches
 def UntestedBranchError(name):
     raise NotImplementedError("Untested code branch: " + name)
-
-# resolve activation option against current default
-#def _resolve_activation(activation):
-#    # if none is passed to caller then use the default
-#    if activation is _default_sentinel:
-#        activation = _current_default_options.activation
-#    # activation=None is implemented as activation=identity
-#    if activation is None:
-#        activation = identity
-#    return activation
 
 # create the complete initializer for a given 'init' parameter, to pass to parameter()
 # This is called from Parameter() and every place that injects rank parameters.
@@ -54,12 +40,6 @@ def UntestedBranchError(name):
 def _initializer_for(init, rank_params=None):
     if init is None:
         raise ValueError("init parameter cannot be None")
-
-    # if default then select
-    #if init is _default_sentinel_init:
-    #    init = _current_default_options.init
-    #elif init is _default_sentinel_init_bias:
-    #    init = _current_default_options.init_bias
 
     # scalar constant: that's it, nothing further to do here
     if np.isscalar(init):
@@ -89,19 +69,6 @@ def _get_initial_state_or_default(initial_state):
         return initial_state # already in good shape: return as is
 
 def _make_tensor_meta(cls_name, **kwargs):
-    '''
-    BUGBUG: This must be updated
-    Variable type descriptor (shape, axes, ...) for use as type annotations in function definitions,
-    and as arguments to update_signature().
-    Function arguments with such type annotations will compile into a CNTK Function with
-    bound Input variables and fully inferred types, e.g. for use with the criterion function.
-    Function arguments without such annotation will get bound to placeholders, e.g. for use
-    when types are unknowable like for Layers-library functions.
-    Example:
-        @Function
-        def f(x: Tensor[(13,42)]):
-            return x * x
-    '''
     class TensorMeta(type):
         def __getitem__(self, shape):
             from ..utils import sanitize_shape
@@ -110,11 +77,11 @@ def _make_tensor_meta(cls_name, **kwargs):
     return TensorMeta(cls_name, (), {})
 
 # Tensor and SparseTensor contain only a batch axis.
-# If you want a sequence, say Seq[Tensor]
-# ParameterTensor has no axis. For future use.
+# If you want a sequence, say Seq[Tensor].
+# ParameterTensor has no axis.
 Tensor          = _make_tensor_meta('Tensor',       is_sparse=False, dynamic_axes=Axis.default_batch_axis())
 SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=Axis.default_batch_axis())
-#ParameterTensor = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=[])
+ParameterTensor = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=[])
 tensor = Tensor[-2] # TODO: find the correct symbol for the sentinel value
 
 def _make_seq_meta(cls_name, axes):
@@ -133,6 +100,7 @@ class SequenceOverMeta(type):
 
 SequenceOver = SequenceOverMeta('SequenceOver', (), {})
 
+# TODO: this is obsolete; remove
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
 # If passed function is an actual Python function, it will be executed with Placeholders as inputs.
 # All layers functions call this at the end.
@@ -144,18 +112,6 @@ def Block(f, op_name, members={}):
     '''
     Experimental code. Don't assume it does anything.
     '''
-
-    #from inspect import isfunction
-    #if isfunction(f):
-    #    f = Function(f, members)
-
-    #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
-    #_name_node(f, op_name) ; _extend_Function(f)  # debugging
-
-    # BUGBUG: alias() does not work. Once I add this, some clone() call no longer finds the placeholder
-    #if len(p) != len(p1) or len(a) != len(a1):
-    #    raise AssertionError('')
-
     for key in members:   # f.__dict__.update(members)
         f.__dict__[key] = members[key]
     return f
@@ -163,12 +119,9 @@ def Block(f, op_name, members={}):
 
 def BlockFunction(op_name, name):
     '''
-    Same as @Function, but wrap the content into an as_block().
+    Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an as_block().
     '''
     return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
-    # TODO: bring this ^^ back after as_block works, and then undo the x_last hack
-    # BUGBUG: Assumed only be used by recurrent cells to fix their ordering, which fails.
-    #return Function(f)  # BUGBUG: causes random axis inference errors
 
 
 def _inject_name(f, name):
@@ -193,16 +146,14 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
         raise TypeError('parameters cannot be created inside a @Function def')
     dtype = get_default_override(Parameter, dtype=dtype)
     init = _initializer_for(init)
-    p = parameter(shape, init=init, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
-    return _name_node(p, 'parameter')   # these are factory methods for things with state
+    return parameter(shape, init=init, dtype=dtype, name=name)
 
 def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
     '''
     Constructs a Variable object that is constant.
     '''
     dtype = get_default_override(Constant, dtype=dtype)
-    p = constant(value, shape=shape, dtype=dtype, name=name) # TODO: use (*args, **kwargs)
-    return _name_node(p, 'constant')   # these are factory methods for things with state
+    return constant(value, shape=shape, dtype=dtype, name=name)
 
 # TODO: this function should not be necessary anymore
 def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,
@@ -211,8 +162,8 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
     Constructs an Input variable.
     '''
     dtype = get_default_override(Input, dtype=dtype)
-    return _name_node(input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
-                                     dynamic_axes=dynamic_axes, name=name), 'input')
+    return input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
+                          dynamic_axes=dynamic_axes, name=name)
 
 def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder'):
     '''
@@ -220,11 +171,7 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
     '''
     #p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
     # BUGBUG: placeholder does not know is_sparse
-    p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
-    _name_node(p, name)
-    if _trace_layers:
-        print("new " + _node_description(p))
-    return p
+    return placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
 
 def ForwardDeclaration(name='forward_declaration'):
     '''
@@ -265,7 +212,6 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     # parameters bound to this Function
     param = Parameter((), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
-    # BUGBUG: dimension ^^ should be (), a scalar
     # TODO: compute this strange value directly in Python
     # TODO: implement softplus non-linearity in C++ for stability
     # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
@@ -276,8 +222,6 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
     @BlockFunction('Stabilizer', name)
     def stabilize(x):
         return beta * x
-
-    #stabilize = _inject_name(stabilize, name)
 
     return Block(stabilize, 'Stabilizer', Record(beta=beta))
 
@@ -341,15 +285,10 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     #  - the remaining outputs, if any, are additional state
     #  - if for some reason output != state, then output is still fed back and should just be ignored by the recurrent block
 
-    # TODO: rename all x_last back to x once parameter ordering works
     # LSTM model function
     # in this case:
     #   (dh, dc, x_last) --> (h, c)
-    #@BlockFunction(type, name)
-    #def lstm(dh, dc, x_last):
-    #    x = x_last
     def lstm(dh, dc, x):
-    # BUGBUG: now fails with Python crashing, likely the ref-count issue
 
         dhs = Sdh(dh)  # previous values, stabilized
         dcs = Sdc(dc)
@@ -394,7 +333,6 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     # TODO: Is this the same definition as NVidia's? Should we enable multiple definitions of this?
     # BUGBUG: gru(x_last,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
     #          This may have changed with as_block(), which cannot handle unused inputs. TODO: test this.
-    #@BlockFunction(type, name)
     def gru(dh, x_last):
         x = x_last
 
@@ -430,9 +368,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # returns the new state as a tuple with names but order matters
         return Function.NamedOutput(h=h)
 
-    #@BlockFunction(type, name)
-    def rnn(dh, x_last):
-        x = x_last
+    def rnn(dh, x):
         dhs = Sdh(dh)  # previous value, stabilized
         ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
@@ -449,9 +385,6 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     function = BlockFunction(type, name)(function)
 
     # return the corresponding lambda as a CNTK Function
-
-    # BUGBUG: This cannot work for the tuple-valued LSTM Function
-    #function = _inject_name(function, name)
 
     return Block(function, type)
 
@@ -514,6 +447,3 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
     return _RecurrentBlock ('GRU', shape, cell_shape, activation=activation, use_peepholes=False,
                             init=init, init_bias=init_bias,
                             enable_self_stabilization=enable_self_stabilization, name=name)
-
-# TODO in C++ code after next update:
-#  - elementwise: sequence broadcasting for all elementwise operations, as a V2-V1 compilation step

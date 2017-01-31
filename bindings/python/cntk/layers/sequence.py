@@ -22,7 +22,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
 
     # expression
     @BlockFunction('Delay', name)
-    def delay_f(x):
+    def delay(x):
         # TODO: reenable this
         ## if specific dynamic_axes requested then delay without and inject a reconcile_dynamic_axis() on top
         #if dynamic_axes_like:
@@ -33,11 +33,8 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         #    return r;
         ## regular case
         return sequence.delay(x, initial_state=initial_state, time_step=T)
-        # TODO: rename it back
 
-    #delay_f = _inject_name(delay_f, name)
-
-    return Block(delay_f, 'Delay')
+    return Block(delay, 'Delay')
 
 
 def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name=''):
@@ -73,9 +70,6 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
         # value[t] = value of t steps back; valid[t] = true if there was a value t steps back
         return (value, valid)
 
-    # BUGBUG: name does not work for tuple-valued functions
-    #past_value_window = _inject_name(past_value_window, name)
-
     return past_value_window
 
 
@@ -88,12 +82,6 @@ def _sanitize_function(f):
         f = Function(f)
     return f
 
-
-# TODO: move these into layers/sequence.py
-# import layers.sequence
-# sequence.Recurrence(), sequence.Convolution()
-# from layers import *  will import sequence.Recurrence()
-# from layers.sequence import * will also import sequence.reduce(), but override non-seq Convolution.
 
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
@@ -132,19 +120,18 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
             var_fwd.resolve_to(var)
 
         if not return_full_state:
-            out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". Likely the known ref-counting bug. TODO: fix this inside Function(lambda)?
+            out = combine([out.outputs[0]])  # BUGBUG: Without combine(), it fails with "RuntimeError: Runtime exception". Likely the known ref-counting bug.
 
         return out
 
     # functions that this layer represents
     # The @Function pattern only supports fixed signatures, so we need one for each #states we support.
-    # TODO: undo x_last hack
-    def recurrence_from_1(h, x_last):
-        return _recurrence_from_n(h, x_last)
-    def recurrence_from_2(h, c, x_last):
-        return _recurrence_from_n(h, c, x_last)
-    def recurrence_from_3(h, c, a, x_last):
-        return _recurrence_from_n(h, c, a, x_last)
+    def recurrence_from_1(h, x):
+        return _recurrence_from_n(h, x)
+    def recurrence_from_2(h, c, x):
+        return _recurrence_from_n(h, c, x)
+    def recurrence_from_3(h, c, a, x):
+        return _recurrence_from_n(h, c, a, x)
 
     recurrence_from_functions = [recurrence_from_1, recurrence_from_2, recurrence_from_3]
     num_state_args = len(prev_state_args)
@@ -262,20 +249,11 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
             out_axis = sequence.where(factors)  # note: values are irrelevant; only the newly created axis matters
 
         state_fwd = ForwardDeclaration(name='unfold_state_fwd')
-        #state_fwd = placeholder_variable(name='ph')   #ForwardDeclaration()
         prev_state = sequence.delay(state_fwd, initial_state=initial_state, name='unfold_prev_state')
         # TODO: must allow multiple variables, just like recurrence, as to allow beam decoding (permutation matrix)
-        #prev_state = past_value(state_fwd, initial_state=initial_state)
-        #print('gen args:', [arg.name for arg in generator_function.arguments])
         z = generator_function(prev_state) # returns either (output) or (output, new state)
-        #from cntk.ops.functions import CloneMethod
-        #z = generator_function.clone(CloneMethod.share, {generator_function.arguments[0]: prev_state,
-        #                                                 generator_function.arguments[1]: generator_function.arguments[1]}) # returns either (output) or (output, new state)
-        #print('z args:', [arg.name for arg in z.arguments])
         output = z.outputs[0]
         new_state = z.outputs[1] if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
-        #output = combine([z.outputs[0]])   # BUGBUG: ref-count issue
-        #new_state = combine([z.outputs[1]]) if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
         # apply map_state_function if given
         new_state = map_state_function(new_state)
         # implant the dynamic axis (from dynamic_axes_like)
@@ -285,33 +263,15 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         #new_state = combine([new_state])
         new_state = combine([new_state], name='unfold_new_state')
         state_fwd.resolve_to(new_state)
-        # BUGBUG: Could it be this?
-        #new_state.output.owner.replace_placeholders({state_fwd: new_state.output})
-        #new_state.replace_placeholders({state_fwd: new_state.output})
-        #print('state_fwd after resolve:', [arg.name for arg in new_state.signature])
-        #print('state_fwd after resolve, args:', [arg.name for arg in new_state.arguments])
 
         output = combine([output], name='unfold_output') # BUGBUG: without this, it crashes with bad weak ptr
         # BUGBUG: MUST do this after resolving the recurrence, otherwise also crashes
-
-        #print('output args 1:', [arg.name for arg in output.arguments])
-        #state_fwd = None
-        #print('output args 2:', [arg.name for arg in output.arguments])
-        #prev_state = None
-        #print('output args 3:', [arg.name for arg in output.arguments])
-        #z = None
-        #print('output args 4:', [arg.name for arg in output.arguments])
-        #new_state = None
-        #print('output args 5:', [arg.name for arg in output.arguments])
 
         # apply until_predicate if given
         if until_predicate is not None:
             valid_frames = Recurrence(lambda h, x: (1-past_value(x)) * h, initial_state=1, name='valid_frames')(until_predicate(output))
             output = sequence.gather(output, valid_frames, name='chopped_output')
-        # BUGBUG: used to work, but now fails with "Node '__v2libuid__Slice28080__v2libname__Slice22511' (Slice operation): DataFor: FrameRange's dynamic axis is inconsistent with matrix: {numTimeSteps:1, numParallelSequences:1, sequences:[{seqId:0, s:0, begin:0, end:1}]} vs. {numTimeSteps:11, numParallelSequences:1, sequences:[{seqId:0, s:0, begin:0, end:11}]}"
 
-        #print('output:', [arg.name for arg in output.signature])
-        #print('output args:', [arg.name for arg in output.arguments])
         return output
 
     unfold_from = _inject_name(unfold_from, name)

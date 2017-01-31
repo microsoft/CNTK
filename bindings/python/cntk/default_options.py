@@ -4,7 +4,9 @@
 # for full license information.
 # ==============================================================================
 
-# default_options: with default_options() pattern
+'''
+default_options: ``with default_options():`` and ``with default_options_for():`` patterns
+'''
 
 from cntk.utils import Record
 
@@ -58,7 +60,7 @@ def is_default_override(value):
 
 # look up an option default override
 # meant to be used inside functions that use this facility
-# 'function' is the function that calls this
+# 'function' is the function that calls this, e.g.:
 # def Convolution(args, init=default_override_or(glorot_uniform()), activation=default_override_or(identity), pad=default_override_or(False)):
 #     init = _get_default_override(Convolution, init=init) # pass default under the same name
 def get_default_override(function, **kwargs):

@@ -193,8 +193,7 @@ def create_criterion_function(model):
         z = model(input, postprocessed_labels)
         ce   = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error      (z, postprocessed_labels)
-        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
-        #return (Label('loss')(ce), Label('metric')(errs))
+        return (ce, errs)
     try:
       pass
       #debughelpers.dump_function(criterion)
@@ -202,8 +201,8 @@ def create_criterion_function(model):
     except:
       debughelpers.dump_function(criterion)
       raise
-    plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
-    debughelpers.dump_signature(criterion)
+    #plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
+    #debughelpers.dump_signature(criterion)
     #debughelpers.dump_function(criterion)
 
     # render the Function graph to a PDF file
@@ -422,7 +421,6 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
 def interactive_session(s2smodel, vocab, i2w, show_attention=False):
 
     model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
-    #model_decoding = s2smodel
 
     import sys
 
@@ -456,29 +454,13 @@ def get_vocab(path):
 def format_sequences(sequences, i2w):
     return [" ".join([i2w[np.argmax(w)] for w in s]) for s in sequences]
 
-# helper function to find variables by name
-# which is necessary when cloning or loading the model
-def find_arg_by_name(name, expression):
-    vars = [i for i in expression.arguments if i.name == name]
-    assert len(vars) == 1
-    return vars[0]
-
 # to help debug the attention window
 def debug_attention(model, input):
-    #q = combine([model, model.attention_model.attention_weights, model.attention_model.u_masked, model.attention_model.h_enc_valid])
-    #words, p, u, v = q(input)
-    #W = model.out_proj.W
-    #print(W.is_parameter)
-    #Wv = W.value   # BUGBUG: fails. is_parameter, but is not Parameter
-    #print(model.out_proj_out.W)
-    q = combine([model, model.attention_model.attention_weights])
+    q = combine([model, model.attention_model.attention_weights]) # TODO: can we do without combine, just eval the second?
     words, p = q(input)
     len = words.shape[attention_axis-1]
     span = 7 #attention_span  #7 # test sentence is 7 tokens long
     p_sq = np.squeeze(p[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
-    #u_sq = np.squeeze(u[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
-    #v_sq = np.squeeze(v[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
-    #print(p_sq.shape, p_sq, u_sq, v_sq)
     opts = np.get_printoptions()
     np.set_printoptions(precision=5)
     print(p_sq)

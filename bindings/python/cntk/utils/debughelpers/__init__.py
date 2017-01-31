@@ -4,6 +4,10 @@
 # for full license information.
 # ==============================================================================
 
+'''
+Helper functions for debugging graphs.
+'''
+
 def dump_signature(root, tag=None):
     '''
     Debug helper that prints the signature of a Function.
@@ -93,57 +97,3 @@ def dump_function(root, tag=None):
     dump_signature(root, tag)
     for item in graph:
         print_item(item)
-
-
-
-# TODO: All below should no longer be used and be deleted.
-
-# helper to name nodes for printf debugging
-_auto_node_names = dict()
-_auto_name_count = dict()
-def _name_node(n, name):
-    if not n in _auto_node_names:     # only name a node once
-        # strip _.*
-        #name = name.split('[')[0]
-        if not name in _auto_name_count: # count each type separately
-            _auto_name_count[name] = 1
-        else:
-            _auto_name_count[name] += 1
-        #name = name + "[{}]".format(_auto_name_count[name])
-        name = name + ".{}".format(_auto_name_count[name])
-        _auto_node_names[n] = name
-    return n
-
-# this gives a name to anything not yet named
-def _node_name(n):
-    global _auto_node_names, _auto_name_count
-    if n in _auto_node_names:
-        return _auto_node_names[n]
-    try:
-        name = n.what()
-    except:
-        name = n.name
-    # internal node names (not explicitly named)
-    if name == '':
-        if hasattr(n, 'is_placeholder') and n.is_placeholder:
-            name = '_'
-        else:
-            name = '_f'
-    _name_node(n, name)
-    return _node_name(n)
-
-# -> node name (names of function args if any)
-def _node_description(n):
-    desc = _node_name(n)
-    if hasattr(n, 'inputs'):
-        inputs = n.inputs
-        #desc = "{} [{}]".format(desc, ", ".join([_node_name(p) for p in inputs]))
-        func_params = [input for input in inputs if input.is_parameter]
-        func_args   = [input for input in inputs if input.is_placeholder]
-        if func_params:
-            desc = "{} {{{}}}".format(desc, ", ".join([_node_name(p) for p in func_params]))
-        desc = "{} <{}>".format(desc, ", ".join([_node_name(func_arg) for func_arg in func_args]))
-    return desc
-
-def _log_node(n):
-    print (_node_description(n))

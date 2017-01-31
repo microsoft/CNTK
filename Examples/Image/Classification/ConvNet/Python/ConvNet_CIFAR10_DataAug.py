@@ -9,7 +9,7 @@ import os
 import math
 import numpy as np
 
-from cntk.layers import Tensor, Convolution, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, Placeholder, identity, Sequential, For
+from cntk.layers import Tensor, Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, Placeholder, identity, Sequential, For
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer, Evaluator
@@ -100,8 +100,7 @@ def create_criterion_function(model, normalize=identity):
 def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=5):
 
     # declare the model's input dimension
-    #model.replace_placeholders({model.placeholders[0]: input_variable((num_channels, image_height, image_width))})
-    # BUGBUG: ^^ Trainer requires this, although the criterion roots are not part of this.
+    # Training does not require this, but it is needed for deployment.
     model.update_signature((num_channels, image_height, image_width))
 
     # criterion function. This is what is being trained trained.
@@ -109,8 +108,8 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
     criterion = create_criterion_function(model, normalize=Placeholder() / 256)
     #debughelpers.dump_function(criterion, 'criterion')
 
-    from cntk.graph import plot
-    plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))
+    #from cntk.graph import plot
+    #plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))
 
     # iteration parameters
     minibatch_size = 64
@@ -133,15 +132,13 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             mb = reader.next_minibatch(min(minibatch_size, epoch_size - sample_count)) # fetch minibatch.
-            #trainer.train_minibatch({ trainer.loss_function.arguments[0]: mb[reader.streams.features], trainer.loss_function.arguments[1]: mb[reader.streams.labels] }) # update model with it
-            # BUGBUG: ^^ Fails with "Function::Forward: Required argument's () value that the requested output(s) depend on has not been provided"
-            trainer.train_minibatch({ criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels] }) # update model with it
-            # TODO: We should just be able to say train_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
+            trainer.train_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
             sample_count += mb[reader.streams.labels].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
         model.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
 
+    # TODO: we should be done here
     #return metric_numer/metric_denom
 
     
@@ -176,7 +173,6 @@ def evaluate(reader, model):
 
     # criterion function. This is what is being evaluated
     criterion = create_criterion_function(model, normalize=Placeholder() / 256)
-    #criterion.update_signature((num_channels, image_height, image_width), num_classes)
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(None, criterion)
@@ -188,7 +184,7 @@ def evaluate(reader, model):
         mb = reader.next_minibatch(minibatch_size) # fetch minibatch
         if not mb:                                                      # until we hit the end
             break
-        metric = evaluator.test_minibatch({ criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels] }) # evaluate minibatch
+        metric = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels]) # evaluate minibatch
         progress_printer.update(0, mb[reader.streams.labels].num_samples, metric) # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
@@ -210,8 +206,8 @@ if __name__=='__main__':
     # save and load (as an illustration)
     path = data_path + "/model.cmf"
     model.save(path)
-    model1 = Function.load(path)
 
     # test
+    model = Function.load(path)
     reader = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
-    evaluate(reader, model1)
+    evaluate(reader, model)
