@@ -6,7 +6,7 @@
 
 from . import cntk_py
 from .device import use_default_device
-from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
+from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq, variable_value_to_seq
 from .io import _py_dict_to_cntk_dict, MinibatchData
 
 __doc__= '''\
@@ -98,7 +98,7 @@ class Trainer(cntk_py.Trainer):
                     output_map, device)
 
             for k,v in output_map.items():
-                output_map[k] = value_to_seq(v)
+                output_map[k] = variable_value_to_seq(v, k)
 
             return updated, output_map
         else:

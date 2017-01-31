@@ -50,90 +50,26 @@
 // Ignore things in CNTKLibrary.h that are not exposed for C# Eval.
 %ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
 
-%ignore CNTK::Internal::GenerateUid(std::wstring&& prefix);
-%ignore CNTK::Internal::GenerateUid(VariableKind varKind);
-%ignore CNTK::Internal::GenerateUid(const std::wstring& prefix);
+%ignore CNTK::Internal::GenerateUid;
 
-%ignore CNTK::PlaceholderVariable(const NDShape& shape, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
-%ignore CNTK::PlaceholderVariable(const NDShape& shape, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
-%ignore CNTK::PlaceholderVariable(const std::wstring& name = L"");
-
-%ignore CNTK::InputVariable(const NDShape& shape,
-                            bool isSparse, 
-                            ::CNTK::DataType dataType, 
-                            bool needsGradient, 
-                            const std::wstring& name, 
-                            const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-%ignore CNTK::InputVariable(const NDShape& shape, 
-                            ::CNTK::DataType dataType, 
-                            bool needsGradient, 
-                            const std::wstring& name = L"", 
-                            const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-%ignore CNTK::InputVariable(const NDShape& shape, 
-                            DataType dataType, 
-                            const std::wstring& name, 
-                            const std::vector<Axis>& 
-                            dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-%ignore CNTK::InputVariable(const NDShape& shape, 
-                            DataType dataType, 
-                            const wchar_t* name, 
-                            const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-%ignore CNTK::InputVariable(const NDShape& shape, 
-                            DataType dataType, 
-                            const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-%ignore CNTK::InputVariable(const NDShape& shape, 
-                            bool isSparse, 
-                            ::CNTK::DataType dataType, 
-                            const std::wstring& name, 
-                            const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-%ignore CNTK::InputVariable(const NDShape& shape, 
-                            bool isSparse, 
-                            ::CNTK::DataType dataType,
-                            const wchar_t* name, 
-                            const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-%ignore CNTK::InputVariable(const NDShape& shape, 
-                            bool isSparse, 
-                            ::CNTK::DataType dataType, 
-                            const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-
-%ignore CNTK::OutputVariable(const NDShape& shape, 
-                             ::CNTK::DataType dataType, 
-                             Function* ownerFunction, 
-                             const std::vector<Axis>& dynamicAxes, 
-                             const std::wstring& name = L"");
+%ignore CNTK::PlaceholderVariable;
+%ignore CNTK::InputVariable;
+%ignore CNTK::OutputVariable;
 
 %ignore CNTK::Variable::CompositeFunction;
 %ignore CNTK::Variable::Trainer;
 %ignore CNTK::Varaiable::PrimitiveFunction;
 
-%ignore CNTK::ConstantInitializer(double value = 0.0);
-%ignore CNTK::UniformInitializer(double scale, unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::NormalInitializer(double scale, 
-                                int outputRank = SentinelValueForInferParamInitRank, 
-                                int filterRank = SentinelValueForInferParamInitRank, 
-                                unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::XavierInitializer(double scale = DefaultParamInitScale, 
-                                int outputRank = SentinelValueForInferParamInitRank, 
-                                int filterRank = SentinelValueForInferParamInitRank, 
-                                unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::GlorotUniformInitializer(double scale = DefaultParamInitScale, 
-                                       int outputRank = SentinelValueForInferParamInitRank, 
-                                       int filterRank = SentinelValueForInferParamInitRank, 
-                                       unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::GlorotNormalInitializer(double scale = DefaultParamInitScale, 
-                                      int outputRank = SentinelValueForInferParamInitRank, 
-                                      int filterRank = SentinelValueForInferParamInitRank, 
-                                      unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::HeUniformInitializer(double scale = DefaultParamInitScale, 
-                                   int outputRank = SentinelValueForInferParamInitRank, 
-                                   int filterRank = SentinelValueForInferParamInitRank, 
-                                   unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::HeNormalInitializer(double scale = DefaultParamInitScale, 
-                                  int outputRank = SentinelValueForInferParamInitRank, 
-                                  int filterRank = SentinelValueForInferParamInitRank, 
-                                  unsigned long seed = SentinelValueForAutoSelectRandomSeed);
-%ignore CNTK::BilinearInitializer(size_t kernelWidth, size_t kernelHeight);
-%ignore CNTK::RandomInitializerWithRank(const ParameterInitializer& initializer, int outputRank, int filterRank);
+%ignore CNTK::ConstantInitializer;
+%ignore CNTK::UniformInitializer;
+%ignore CNTK::NormalInitializer;
+%ignore CNTK::XavierInitializer;
+%ignore CNTK::GlorotUniformInitializer;
+%ignore CNTK::GlorotNormalInitializer;
+%ignore CNTK::HeUniformInitializer;
+%ignore CNTK::HeNormalInitializer;
+%ignore CNTK::BilinearInitializer;
+%ignore CNTK::RandomInitializerWithRank;
 
 %ignore CNTK::IDictionarySerializable;
 %ignore CNTK::DictionaryValue;
@@ -143,154 +79,96 @@
 %ignore std::hash<::CNTK::Parameter>;
 %ignore CNTK::hash<::CNTK::Constant>;
 
+%ignore CNTK::Value::UnpackVariableValue;
+
 %ignore CNTK::Function::CompositeFunction;
 %ignore CNTK::Function::Trainer;
-%ignore CNTK::Function::Backward(const BackPropStatePtr& state,
-                                 const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
-                                 std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
-%ignore CNTK::Function::Forward(const std::unordered_map<Variable, ValuePtr>& arguments, 
-                                std::unordered_map<Variable, ValuePtr>& outputs, 
-                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
-                                const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {},
-                                const std::unordered_set<Variable>& inputsToExcludeGradientsFor = {});
-%ignore CNTK::Function::Forward(const std::vector<ValuePtr>& inputValues, 
-                                std::unordered_map<Variable, ValuePtr>& outputs, 
-                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(), 
-                                const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {});
-%ignore CNTK::Function::Serialize() const;
-%ignore CNTK::Function::Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
-%ignore CNTK::Function::Parameters() const;
-%ignore CNTK::Function::Constants() const;
-%ignore CNTK::Function::Placeholders() const;
-%ignore CNTK::Function::Attributes() const;
-%ignore CNTK::Function::PrintGraph() const;
-%ignore CNTK::Function::BlockArgumentsMapping() const;
-%ignore CNTK::Function::ReplacePlaceholders(const std::unordered_map<Variable, Variable>& placeholderReplacements);
-%ignore CNTK::Function::ReplacePlaceholder(const Variable& placeholderReplacement);
-%ignore CNTK::Function::Function(const std::vector<Variable>& inputs, 
-                                 const std::vector<Variable>& outputs,
-                                 Dictionary&& functionConfig,
-                                 const std::wstring& name = L"",
-                                 const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
-%ignore CNTK::Function::RestoreFromCheckpoint(const Dictionary& dictionary);
+%ignore CNTK::Function::Backward;
+%ignore CNTK::Function::Forward;
+%ignore CNTK::Function::Serialize;
+%ignore CNTK::Function::Deserialize;
+%ignore CNTK::Function::Parameters;
+%ignore CNTK::Function::Constants;
+%ignore CNTK::Function::Placeholders;
+%ignore CNTK::Function::Attributes;
+%ignore CNTK::Function::PrintGraph;
+%ignore CNTK::Function::BlockArgumentsMapping;
+%ignore CNTK::Function::ReplacePlaceholders;
+%ignore CNTK::Function::ReplacePlaceholder;
+%ignore CNTK::Function::Function;
+%ignore CNTK::Function::RestoreFromCheckpoint;
 
 %ignore CNTK::Parameter;
 %ignore CNTK::Constant;
 %ignore CNTK::BackPropState;
 %ignore CNTK::PoolingType;
 
-%ignore CNTK::Negate(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::operator-(const Variable& operand);
-%ignore CNTK::Sigmoid(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Tanh(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Sin(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Cos(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::ReLU(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Exp(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Log(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Square(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Sqrt(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Round(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Floor(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Ceil(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Abs(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Reciprocal(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Softmax(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Hardmax(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::TransposeAxes(const Variable& operand, const Axis& axis1, const Axis& axis2, const std::wstring& name = L"");
-%ignore CNTK::Transpose(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
-%ignore CNTK::RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name);
-%ignore CNTK::RandomSampleInclusionFrequency(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name);
-%ignore CNTK::Dropout(const Variable& operand, double dropoutRate, const std::wstring& name = L"");
-%ignore CNTK::Reshape(const Variable& operand, const NDShape& newShape, const std::wstring& name = L"");
-%ignore CNTK::Plus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::operator+(const Variable& leftOperand, const Variable& rightOperand);
-%ignore CNTK::Minus(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::operator-(const Variable& leftOperand, const Variable& rightOperand);
-%ignore CNTK::LogAddExp(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::ElementTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::ElementDivide(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::Equal(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::NotEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::Less(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::LessEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::Greater(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::GreaterEqual(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name = L"");
-%ignore CNTK::Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = L"");
-%ignore CNTK::Times(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = L"");
-%ignore CNTK::TransposeTimes(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
-%ignore CNTK::WeightedBinaryCrossEntropy(const Variable& prediction, const Variable& targets, const Variable& weights, const std::wstring& name = L"");
-%ignore CNTK::SquaredError(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
-%ignore CNTK::CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::CrossEntropyWithSoftmax(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
-%ignore CNTK::ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const std::wstring& name = L"");
-%ignore CNTK::ClassificationError(const Variable& prediction, const Variable& labels, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::ClassificationError(const Variable& prediction, const Variable& labels, const std::wstring& name = L"");
-%ignore CNTK::PastValue(const Variable& operand, const Variable& initialState, size_t offset = 1, const std::wstring& name = L"");
-%ignore CNTK::PastValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"");
-%ignore CNTK::FutureValue(const Variable& operand, const Variable& initialState, size_t offset = 1, const std::wstring& name = L"");
-%ignore CNTK::FutureValue(const Variable& operand, size_t offset = 1, const std::wstring& name = L"");
-%ignore CNTK::ReduceSum(const Variable& operand, const std::wstring& name = L"");
-%ignore CNTK::ReduceSum(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::ReduceLogSum(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::ReduceMean(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::ReduceMax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::ReduceMin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"");
-%ignore CNTK::Convolution(const Variable& convolutionMap,
-                          const Variable& operand,
-                          const NDShape& strides = {1}, 
-                          const std::vector<bool>& sharing = {true},
-                          const std::vector<bool>& autoPadding = {true}, 
-                          const NDShape& lowerPad = {0},
-                          const NDShape& upperPad = {0}, 
-                          bool transpose = false, 
-                          size_t maxTempMemSizeInSamples = 0, 
-                          const std::wstring& name = L"");
-%ignore CNTK::ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name = L"");
-
-%ignore CNTK::Pooling(const Variable& operand, 
-                      PoolingType poolingType, 
-                      const NDShape& poolingWindowShape, 
-                      const NDShape& strides = {1}, 
-                      const std::vector<bool>& autoPadding = {false},
-                      const NDShape& lowerPad = {0}, 
-                      const NDShape& upperPad = {0}, 
-                      const std::wstring& name = L"");
-
-
+%ignore CNTK::Negate;
+%ignore CNTK::operator-;
+%ignore CNTK::Sigmoid;
+%ignore CNTK::Tanh;
+%ignore CNTK::Sin;
+%ignore CNTK::Cos;
+%ignore CNTK::ReLU;
+%ignore CNTK::Exp;
+%ignore CNTK::Log;
+%ignore CNTK::Square;
+%ignore CNTK::Sqrt;
+%ignore CNTK::Round;
+%ignore CNTK::Floor;
+%ignore CNTK::Ceil;
+%ignore CNTK::Abs;
+%ignore CNTK::Reciprocal;
+%ignore CNTK::Softmax;
+%ignore CNTK::Hardmax;
+%ignore CNTK::TransposeAxes;
+%ignore CNTK::Transpose;
+%ignore CNTK::Slice;
+%ignore CNTK::RandomSample;
+%ignore CNTK::RandomSampleInclusionFrequency;
+%ignore CNTK::Dropout;
+%ignore CNTK::Reshape;
+%ignore CNTK::Plus;
+%ignore CNTK::operator+;
+%ignore CNTK::Minus;
+%ignore CNTK::operator-;
+%ignore CNTK::LogAddExp;
+%ignore CNTK::ElementTimes;
+%ignore CNTK::ElementDivide;
+%ignore CNTK::Equal;
+%ignore CNTK::NotEqual;
+%ignore CNTK::Less;
+%ignore CNTK::LessEqual;
+%ignore CNTK::Greater;
+%ignore CNTK::GreaterEqual;
+%ignore CNTK::Times;
+%ignore CNTK::TransposeTimes;
+%ignore CNTK::CosineDistance;
+%ignore CNTK::BinaryCrossEntropy;
+%ignore CNTK::WeightedBinaryCrossEntropy;
+%ignore CNTK::SquaredError;
+%ignore CNTK::CrossEntropyWithSoftmax;
+%ignore CNTK::ClassificationError;
+%ignore CNTK::PastValue;
+%ignore CNTK::FutureValue;
+%ignore CNTK::ReduceSum;
+%ignore CNTK::ReduceLogSum;
+%ignore CNTK::ReduceMean;
+%ignore CNTK::ReduceMax;
+%ignore CNTK::ReduceMin;
+%ignore CNTK::PerDimMeanVarianceNormalize;
+%ignore CNTK::Convolution;
+%ignore CNTK::ROIPooling;
+%ignore CNTK::Pooling;
 %ignore CNTK::Unpooling; 
 %ignore CNTK::LambdaRank;
 %ignore CNTK::NDCGAt1;
-
-%ignore CNTK::BatchNormalization(const Variable& operand, 
-                                 const Variable& scale, 
-                                 const Variable& bias, 
-                                 const Variable& runningMean, 
-                                 const Variable& runningInvStd, 
-                                 bool spatial,
-                                 double normalizationTimeConstant = 0, 
-                                 double blendTimeConstant = 0, 
-                                 double epsilon = 0.00001, 
-                                 bool useCuDNNEngine = false, 
-                                 const std::wstring& name = L"");
-%ignore CNTK::OptimizedRNNStack(const Variable& operand, 
-                                const Variable& weights, 
-                                size_t hiddenSize, 
-                                size_t numLayers, 
-                                bool bidirectional = false, 
-                                const std::wstring& recurrentOp = L"lstm", 
-                                const std::wstring& name = L"");
-%ignore CNTK::Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name = L"");
-%ignore CNTK::ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
-%ignore CNTK::Splice(const std::vector<Variable>& operands, const Axis& axis, const std::wstring& name = L"");
-%ignore CNTK::AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
+%ignore CNTK::BatchNormalization;
+%ignore CNTK::OptimizedRNNStack;
+%ignore CNTK::Clip;
+%ignore CNTK::ElementSelect;
+%ignore CNTK::Splice;
+%ignore CNTK::AsBlock;
 
 %ignore CNTK::Sequence;
 
@@ -305,67 +183,18 @@
 %ignore CNTK::AdditionalLearningOptions;
 %ignore CNTK::Learner;
 
-%ignore CNTK::SGDLearner(const std::vector<Parameter>& parameters, 
-                         const LearningRateSchedule& learningRateSchedule, 
-                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
-%ignore CNTK::MomentumSGDLearner(const std::vector<Parameter>& parameters, 
-                                 const LearningRateSchedule& learningRateSchedule, 
-                                 const MomentumSchedule& momentumSchedule,
-                                 bool unitGain = DefaultUnitGainValue(),
-                                 AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
-%ignore CNTK::NesterovLearner(const std::vector<Parameter>& parameters, 
-                              const LearningRateSchedule& learningRateSchedule, 
-                              const MomentumSchedule& momentumSchedule,
-                              bool unitGain = DefaultUnitGainValue(),
-                              AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+%ignore CNTK::SGDLearner;
+%ignore CNTK::MomentumSGDLearner;
+%ignore CNTK::NesterovLearner;
 %ignore CNTK::DefaultVarianceMomentum;
-%ignore CNTK::AdamLearner(const std::vector<Parameter>& parameters, 
-                          const LearningRateSchedule& learningRateSchedule, 
-                          const MomentumSchedule& momentumSchedule,
-                          bool unitGain = DefaultUnitGainValue(),
-                          const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum, 
-                          bool lowMemory = true, 
-                          AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
-%ignore CNTK::AdaGradLearner(const std::vector<Parameter>& parameters, 
-                             const LearningRateSchedule& learningRateSchedule, 
-                             bool needAveMultiplier = true, 
-                             AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
-%ignore CNTK::RMSPropLearner(const std::vector<Parameter>& parameters,
-                             const LearningRateSchedule& learningRateSchedule, 
-                             double gamma, 
-                             double inc, 
-                             double dec, 
-                             double max, 
-                             double min, 
-                             bool needAveMultiplier = true, 
-                             AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+%ignore CNTK::AdamLearner;
+%ignore CNTK::AdaGradLearner;
+%ignore CNTK::RMSPropLearner;
 
 %ignore CNTK::DistributedLearner;
-%ignore CNTK::CreateDataParallelDistributedLearner(DistributedCommunicatorPtr communicator, 
-                                                   LearnerPtr learner, 
-                                                   size_t distributeAfterSamples, 
-                                                   bool useAsyncBufferedParameterUpdate = false);
-%ignore CNTK::CreateQuantizedDataParallelDistributedLearner(QuantizedDistributedCommunicatorPtr communicator, 
-                                                            LearnerPtr learner, 
-                                                            size_t distributeAfterSamples, 
-                                                            bool useAsyncBufferedParameterUpdate = false);
-%ignore CNTK::CreateBlockMomentumDistributedLearner(
-        DistributedCommunicatorPtr communicator,
-        LearnerPtr learner,
-        size_t distributeAfterSamples,
-        size_t blockSize,
-        double blockMomentumAsTimeConstant,
-        bool useNestrovMomentum = true,
-        bool resetSGDMomentumAfterAggregation = true,
-        double blockLearningRate = 1.0);
-%ignore CNTK::CreateBlockMomentumDistributedLearner(
-        DistributedCommunicatorPtr communicator,
-        LearnerPtr learner,
-        size_t distributeAfterSamples,
-        size_t blockSize,
-        bool useNestrovMomentum = true,
-        bool resetSGDMomentumAfterAggregation = true,
-        double blockLearningRate = 1.0);
+%ignore CNTK::CreateDataParallelDistributedLearner;
+%ignore CNTK::CreateQuantizedDataParallelDistributedLearner;
+%ignore CNTK::CreateBlockMomentumDistributedLearner;
 
 %ignore CNTK::Trainer;
 %ignore CNTK::CreateTrainer;
@@ -374,24 +203,22 @@
 
 %ignore CNTK::MinibatchData;
 %ignore CNTK::MinibatchSource;
-%ignore CNTK::CreateCompositeMinibatchSource(const Dictionary& configuration);
+%ignore CNTK::CreateCompositeMinibatchSource;
 %ignore CNTK::StreamConfiguration;
 %ignore CNTK::TextFormatMinibatchSource;
 %ignore CNTK::ComputeInputPerDimMeansAndInvStdDevs;
 %ignore CNTK::DistributedWorkerDescriptor;
 %ignore CNTK::DistributedCommunicator;
 %ignore CNTK::QuantizedDistributedCommunicator;
-%ignore CNTK::MPICommunicator();
-%ignore CNTK::QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits);
+%ignore CNTK::MPICommunicator;
+%ignore CNTK::QuantizedMPICommunicator;
 %ignore CNTK::MinibatchInfo;
 %ignore CNTK::DistributedTrainer;
 %ignore CNTK::TrainingSession;
 %ignore CNTK::CreateBasicTrainingSession;
 %ignore CNTK::Create;
-%ignore CNTK::CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount = 0);
-%ignore CNTK::CreateQuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator, 
-                                                            bool useAsyncBufferedParameterUpdate, 
-                                                            size_t distributedAfterSampleCount);
+%ignore CNTK::CreateDataParallelDistributedTrainer;
+%ignore CNTK::CreateQuantizedDataParallelDistributedTrainer;
 %ignore CNTK::CreateBlockMomentumDistributedTrainer;
 
 %ignore std::hash<::CNTK::DistributedWorkerDescriptor>;
@@ -404,46 +231,37 @@
 %ignore CNTK::Internal::CompositeFunction;
 %ignore CNTK::Internal::MaxNumCPUThreadsSet;
 %ignore CNTK::PrimitiveOpType;
-%ignore CNTK::Internal::IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
-%ignore CNTK::Internal::PackedIndex(const Variable& operand, const Variable& index, const std::wstring& name = L"");
-%ignore CNTK::Internal::GatherPacked(const Variable& operand, const Variable& packedIndex, const std::wstring& name = L"");
-%ignore CNTK::Internal::ScatterPacked(const Variable& operand, const Variable& packedIndex, const Variable& condition, const std::wstring& name = L"");
-%ignore CNTK::Internal::ZeroesWithDynamicAxesLike(const Variable& operand);
-%ignore CNTK::Internal::Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
-%ignore CNTK::Internal::Gather(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
-%ignore CNTK::Internal::Gather(const Variable& operand, 
-                               const Variable& condition, 
-                               const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, 
-                               const std::wstring& name = L"");
-%ignore CNTK::Internal::Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
-%ignore CNTK::Internal::Scatter(const Variable& operand, 
-                                const Variable& condition, 
-                                const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, 
-                                const std::wstring& name = L"");
-%ignore CNTK::Internal::Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
-%ignore CNTK::Internal::ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
+%ignore CNTK::Internal::IsWithin;
+%ignore CNTK::Internal::PackedIndex;
+%ignore CNTK::Internal::GatherPacked;
+%ignore CNTK::Internal::ScatterPacked;
+%ignore CNTK::Internal::ZeroesWithDynamicAxesLike;
+%ignore CNTK::Internal::Where;
+%ignore CNTK::Internal::Gather;
+%ignore CNTK::Internal::Scatter;
+%ignore CNTK::Internal::Slice;
+%ignore CNTK::Internal::ReduceElements;
 
-%ignore CNTK::Internal::EnableReversingTensorShapesInErrorMessages();
-%ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled();
-%ignore CNTK::Internal::AlwaysAllowSettingDefaultDevice();
-%ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed();
-%ignore CNTK::Internal::AllowRenamingFunctions();
-%ignore CNTK::Internal::IsRenamingFunctionsAllowed();
-%ignore CNTK::Internal::SetAutomaticUnpackingOfPackedValues(bool disable);
-%ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled();
-%ignore CNTK::Internal::SetComputationNetworkTraceLevel(int traceLevel);
-%ignore CNTK::Internal::GetComputationNetworkTraceLevel();
-%ignore CNTK::Internal::SetGPUMemoryAllocationTraceLevel(int traceLevel);
-%ignore CNTK::Internal::ForceSynchronousCUDAKernelExecutions();
-%ignore CNTK::Internal::ForceDeterministicAlgorithms();
-%ignore CNTK::Internal::SetFixedRandomSeed(unsigned long fixedRandomSeed);
-%ignore CNTK::Internal::EnableForwardValuesSharing();
-%ignore CNTK::Internal::DisableForwardValuesSharing();
-%ignore CNTK::Internal::EnableHyperMemoryCompress();
-%ignore CNTK::Internal::DisableHyperMemoryCompress();
-%ignore CNTK::Internal::AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
-%ignore CNTK::Internal::AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
-%ignore CNTK::Internal::AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
+%ignore CNTK::Internal::EnableReversingTensorShapesInErrorMessages;
+%ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
+%ignore CNTK::Internal::AlwaysAllowSettingDefaultDevice;
+%ignore CNTK::Internal::IsSettingDefaultDeviceAlwaysAllowed;
+%ignore CNTK::Internal::AllowRenamingFunctions;
+%ignore CNTK::Internal::IsRenamingFunctionsAllowed;
+%ignore CNTK::Internal::SetAutomaticUnpackingOfPackedValues;
+%ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
+%ignore CNTK::Internal::SetComputationNetworkTraceLevel;
+%ignore CNTK::Internal::GetComputationNetworkTraceLevel;
+%ignore CNTK::Internal::SetGPUMemoryAllocationTraceLevel;
+%ignore CNTK::Internal::ForceSynchronousCUDAKernelExecutions;
+%ignore CNTK::Internal::ForceDeterministicAlgorithms;
+%ignore CNTK::Internal::SetFixedRandomSeed;
+%ignore CNTK::Internal::EnableForwardValuesSharing;
+%ignore CNTK::Internal::DisableForwardValuesSharing;
+%ignore CNTK::Internal::EnableHyperMemoryCompress;
+%ignore CNTK::Internal::DisableHyperMemoryCompress;
+%ignore CNTK::Internal::AreEquivalent;
+%ignore CNTK::Internal::AreEqual;
 
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }

@@ -15,6 +15,7 @@
 #include "Value.h"
 #include "Matrix.h"
 #include "CPUSparseMatrix.h"
+#include "RecurrentNodes.h"
 
 namespace CNTK
 {
@@ -362,6 +363,51 @@ namespace CNTK
         }
     }
 
+    void Value::GetSequenceStartsAndLengths(const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes)
+    {
+        if (!mask)
+            return;
+
+        auto cpuMask = mask;
+        if (mask->Device() != DeviceDescriptor::CPUDevice())
+            cpuMask = mask->DeepClone(DeviceDescriptor::CPUDevice());
+
+        const MaskKind* maskBuffer = cpuMask->DataBuffer();
+        size_t maxNumTimeSteps, numSequences;
+        std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(mask->Shape(), numDynamicAxes);
+
+        assert(sequenceLengths.size() == numSequences);
+        assert(sequenceBeginIndices.size() == numSequences);
+
+        for (size_t i = 0; i < numSequences; ++i)
+        {
+            MaskKind firstMaskEntry = maskBuffer[i * maxNumTimeSteps];
+            if (firstMaskEntry == MaskKind::SequenceBegin)
+                sequenceBeginIndices[i] = 0;
+            else if (firstMaskEntry == MaskKind::Valid)
+                sequenceBeginIndices[i] = Microsoft::MSR::CNTK::SentinelValueIndicatingUnspecifedSequenceBeginIdx;
+            else
+                LogicError("The first entry of a mask should be Valid or SequenceBegin");
+
+            size_t currentSequenceLength = 1;
+            bool currentSequenceEndAlreadyFound = false;
+            for (size_t j = 1; j < maxNumTimeSteps; ++j)
+            {
+                if (maskBuffer[(i * maxNumTimeSteps) + j] == MaskKind::Invalid)
+                    currentSequenceEndAlreadyFound = true;
+                else
+                {
+                    if (currentSequenceEndAlreadyFound)
+                        InvalidArgument("Invalid Value object; only trailing steps of a sequence can be masked");
+
+                    currentSequenceLength++;
+                }
+            }
+
+            sequenceLengths[i] = currentSequenceLength;
+        }
+    }
+
     template <typename ElementType, typename DestType>
     void DirectCopy(const ElementType *source, size_t elementCount, std::vector<DestType>& dest);
 
@@ -449,23 +495,11 @@ namespace CNTK
 
     std::pair<size_t, size_t> Value::GetSequenceAndBatchLength(const Variable& outputVariable)
     {
+        Utils::VerifyVariableValueCompatibility(outputVariable, shared_from_this());
+
         size_t varRank = outputVariable.Shape().Rank();
         size_t maxSequenceLength = 1;
         size_t numSequences = 1;
-
-        if (Shape().Rank() < varRank)
-            RuntimeError("The Value'rank should be greater than or equal to the variable's rank.");
-
-        size_t maskRank = Shape().Rank() - varRank;
-        if (outputVariable.Shape() != Shape().SubShape(0, varRank))
-            RuntimeError("The shape of the outputVariable does not match the Value shape.");
-
-        if (outputVariable.DynamicAxes().size() > 2)
-            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
-
-        if (maskRank > 2)
-            LogicError("Value rank which is larger than the output variable rank by more than 2 dynamic axes is currently unsupported.");
-
         std::tie(maxSequenceLength, numSequences) = GetNumTimeStepsAndSequences(Shape().SubShape(varRank), outputVariable.DynamicAxes().size());
 
         return std::pair<size_t, size_t>(maxSequenceLength, numSequences);
