@@ -4,6 +4,7 @@
 //
 
 #include "TrainingNodes.h"
+#include <boost/random/uniform_real_distribution.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -35,7 +36,7 @@ void RandomSampleNodeBase<ElemType>::CopyTo(ComputationNodeBasePtr nodeP, const 
         auto node = dynamic_pointer_cast<RandomSampleNodeBase<ElemType>>(nodeP);
         node->m_allowDuplicates  = m_allowDuplicates;
         node->m_sizeOfSampledSet = m_sizeOfSampledSet;
-        node->m_randomSeed       = m_randomSeed;
+        node->SetRngState(GetRngSeed(), GetRngOffset());
     }
 }
 
@@ -45,6 +46,7 @@ void RandomSampleNodeBase<ElemType>::Save(File& fstream) const
     Base::Save(fstream);
     fstream << m_allowDuplicates;
     fstream << m_sizeOfSampledSet;
+    RngUser::Save(fstream);
 }
 
 template<class ElemType>
@@ -53,6 +55,7 @@ void RandomSampleNodeBase<ElemType>::Load(File& fstream, size_t modelVersion)
     Base::Load(fstream, modelVersion);
     fstream >> m_allowDuplicates;
     fstream >> m_sizeOfSampledSet;
+    RngUser::Load(fstream, modelVersion);
 }
 
 template<class ElemType>
@@ -77,7 +80,7 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
 template<class ElemType>
 const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nTries)
 {
-    std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
+    boost::random::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
     std::unordered_set<int> alreadySampled;
     std::vector<size_t> samples;
     CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
@@ -88,9 +91,11 @@ const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nT
     else
         nTries = 0; // just initialize and count how many tries we need.
 
+    auto offset = GetRngOffset();
     while (samples.size() < m_sizeOfSampledSet)
     {
         double randomValue = r(cpuRNGHandle->Generator());
+        offset++;
         // Find the first index where value[idx] >= randomValue.
         auto lower = std::lower_bound(m_samplingWeightsPrefixSum.begin(), m_samplingWeightsPrefixSum.end(), randomValue);
         int idx = (int)(lower - m_samplingWeightsPrefixSum.begin());
@@ -115,6 +120,7 @@ const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nT
             }
         }
     }
+    UpdateRngOffset(offset);
     return samples;
 }
 
@@ -257,4 +263,22 @@ void RandomSampleInclusionFrequencyNode<ElemType>::Validate(bool isFinalValidati
 
 template class RandomSampleInclusionFrequencyNode<float>;
 template class RandomSampleInclusionFrequencyNode<double>;
+
+template<class ElemType>
+void DropoutNode<ElemType>::Save(File& fstream) const
+{
+    Base::Save(fstream);
+    RngUser::Save(fstream);
+}
+
+template<class ElemType>
+void DropoutNode<ElemType>::Load(File& fstream, size_t modelVersion)
+{
+    Base::Load(fstream, modelVersion);
+    RngUser::Load(fstream, modelVersion);
+}
+
+template class DropoutNode<float>;
+template class DropoutNode<double>;
+
 }}}

@@ -9,9 +9,12 @@ from ..tensor import ArrayMixin
 from ..utils import typemap, value_to_seq
 from cntk.device import use_default_device
 
+import numpy as np
+
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
 INFINITE_SAMPLES = cntk_py.MinibatchSource.infinite_samples
+DEFAULT_RANDOMIZATION_WINDOW = cntk_py.MinibatchSource.default_randomization_window
 
 class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     '''
@@ -24,44 +27,53 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         The number of sequences in this minibatch
         '''
-        return self.m_num_sequences
+        return self.number_of_sequences
 
     @property
     def num_samples(self):
         '''
         The number of samples in this minibatch
         '''
-        return self.m_num_samples
+        return self.number_of_samples
 
     @property
     def value(self):
         '''
         The value of the minibatch as a NumPy array.
         '''
-        return value_to_seq(self.m_data)
+        return value_to_seq(self.data)
 
     @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
         '''
-        return self.m_data.shape().dimensions()
+        return self.data.shape().dimensions()
 
     @property
     def mask(self):
         '''
         The mask object of the minibatch. In it, `2` marks the beginning of a
-        sequence, `1` marks a sequence element as valid, and `0` markse it as
+        sequence, `1` marks a sequence element as valid, and `0` marks it as
         invalid.
         '''
-        return self.m_data.mask().to_numpy()
+        return self.data.mask().to_ndarray()
+
+    @property
+    def end_of_sweep(self):
+        '''
+        Indicates whether the data in this minibatch is comes from a sweep end
+        or crosses a sweep boundary (and as a result includes data from 
+        different sweeps).
+        '''
+        return self.sweep_end
 
     @property
     def is_sparse(self):
         '''
         Whether the data in this minibatch is sparse.
         '''
-        return self.m_data.is_sparse()
+        return self.data.is_sparse()
 
     def __len__(self):
         return self.num_sequences
@@ -77,19 +89,22 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
     Args:
         deserializers ('list', default is empty): list of deserializers
-         (:class:`ImageDeserializer` for now).
-        randomize (bool, default True): randomize images before every epoch
+        randomize (bool, default True): randomize before every epoch
+        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which minibatch source becomes distributed
+        multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES):
+    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(
             deserializers=deserializers,
             randomize=randomize,
+            randomization_window=randomization_window,
             epoch_size=epoch_size,
-            distributed_after=distributed_after)
+            distributed_after=distributed_after,
+            multithreaded_deserializer=multithreaded_deserializer)
         source = minibatch_source(reader_config)
         # transplant into this class instance
         self.__dict__ = source.__dict__
@@ -127,9 +142,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
         return self.stream_info(name)
 
     @typemap
-    def next_minibatch(self, minibatch_size_in_samples=None,
-            minibatch_size_in_sequences=None, input_map=None,
-            device=None):
+    def next_minibatch(self, minibatch_size_in_samples,
+            input_map=None, device=None):
         '''
         Reads a minibatch that contains data for all input streams.  The
         minibatch size is specified in terms of #samples and/or #sequences for the
@@ -141,8 +155,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Args:
             minibatch_size_in_samples (int): number of samples to retrieve for
              the next minibatch. Must be > 0.
-            minibatch_size_in_sequences (int, defaults to `None`): number of
-             samples to retrieve for the next minibatch. Must be > 0.
             input_map (dict): mapping of :class:`~cntk.ops.variabls.Variable`
              to :class:`StreamInformation` which will be used to convert the
              returned data.
@@ -156,25 +168,12 @@ class MinibatchSource(cntk_py.MinibatchSource):
         if device is None:
             device = use_default_device()
 
-        if minibatch_size_in_samples is None and \
-                minibatch_size_in_sequences is None:
-            raise ValueError('you have to specify at least one of '
-                    'minibatch_size_in_samples or minibatch_size_in_sequences')
-
-        if minibatch_size_in_sequences is None:
-            mb = super(MinibatchSource, self).get_next_minibatch(
+        mb = super(MinibatchSource, self).get_next_minibatch(
                 minibatch_size_in_samples, device)
-        else:
-            if minibatch_size_in_samples is None:
-                minibatch_size_in_samples = 0
-
-            mb = super(MinibatchSource, self).get_next_minibatch(
-                minibatch_size_in_samples,
-                minibatch_size_in_sequences, device)
 
         if input_map:
             if not mb:
-                return None
+                return {}
             else:
                 return { key : mb[value] for (key, value) in input_map.items() }
         else:
@@ -254,17 +253,21 @@ class ReaderConfig(dict):
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (bool, default True): randomize images before every epoch
+        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which reader becomes distributed
+        multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES):
-
+    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
         self['epochSize'] = cntk_py.SizeTWrapper(epoch_size) # force to store in size_t
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
+        self['randomizationWindow'] = cntk_py.SizeTWrapper(randomization_window)
         self['distributedAfterSampleCount'] = cntk_py.SizeTWrapper(distributed_after)
+        if multithreaded_deserializer != None:
+            self['multiThreadedDeserialization'] = multithreaded_deserializer
 
     @typemap
     def minibatch_source(self):
@@ -291,6 +294,7 @@ class Deserializer(dict):
     Deserializer type          Description
     ========================== ============
     :class:`ImageDeserializer` Deserializer for images that uses OpenCV
+    :class:`CTFDeserializer`   Deserializer for text of the `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
     ========================== ============
 
     Args:
@@ -307,16 +311,19 @@ class Deserializer(dict):
 class ImageDeserializer(Deserializer):
     '''
     This class configures the image reader that reads images and corresponding
-    labels from a file of the form
+    labels from a file of the form::
 
-         <full path to image><tab><numerical label (0-based class id)>
+         <full path to image> <tab> <numerical label (0-based class id)>
+    or::
+
+        sequenceId <tab> path <tab> label
 
     Args:
         filename (str): file name of the map file that associates images to
          classes
 
     See also:
-        https://github.com/microsoft/cntk/wiki/Image-reader
+        `Image reader definition <https://github.com/microsoft/cntk/wiki/Image-reader>`_
     '''
 
     def __init__(self, filename, streams=None):
@@ -373,34 +380,63 @@ class ImageDeserializer(Deserializer):
             node = node.name()
         self.input[node] = dict(labelDim=num_classes) # reader distinguishes labels from features by calling this 'labelDim'
 
+    # TODO: ignore labels on C++ level if labeldim is not specified
+    def ignore_labels(self):
+        '''
+        Ignore labels from the image deserializer
+        '''
+        self.input["_ignore_labels_"] = dict(labelDim=1000)
+
     @staticmethod
-    def crop(crop_type='center', ratio=1.0, jitter_type='uniRatio'):
+    def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect_ratio=1.0, jitter_type='none'):
         '''
         Crop transform that can be used to pass to `map_features`
 
         Args:
-            crop_type (str, default 'center'): 'center' or 'random'.  'random'
-             is usually used during training while 'center' is usually for testing.
+            crop_type (str, default 'center'): 'center', 'randomside', 'randomarea', 
+             or 'multiview10'.  'randomside' and 'randomarea' are usually used during
+             training, while 'center' and 'multiview10' are usually used during testing. 
              Random cropping is a popular data augmentation technique used to improve
              generalization of the DNN.
-            ratio (`float`, default 1.0): crop ratio. It specifies the ratio of
-             final image dimension, e.g.  width , to the size of the random crop
-             taken from the image. For example, the ratio 224 / 256 = 0.875 means
-             crop of size 224 will be taken from the image rescaled to 256 (implementation
-             detail:  ImageReader  takes the crop and then rescales instead of doing
-             the other way around). To enable scale jitter (another popular data
-             augmentation technique), use colon-delimited values like  cropRatio=0.875:0.466
-             which means 224 crop will be taken from images randomly scaled to have
-             size in [256, 480] range.
-            jitter_type (str, default 'uniRatio'): crop scale jitter type, possible
-             values are 'None', 'UniRatio'. 'uniRatio' means uniform distributed jitter
-             scale between the minimum and maximum cropRatio values.
+            crop_size (`int`, default 0): crop size in pixels. Ignored if set to 0. 
+             When crop_size is non-zero, for example, crop_size=256, it means a cropping
+             window of size 256x256 pixels will be taken. If one want to crop with
+             non-square shapes, specify crop_size=256:224 will crop 256x224 (width x height) 
+             pixels. `When crop_size is specified, side_ratio, area_ratio and aspect_ratio
+             will be ignored.` 
+            side_ratio (`float`, default 0.0): It specifies the ratio of final image 
+             side (width or height) with respect to the original image. Ignored if set 
+             to 0.0. Otherwise, must be set within `(0,1]`. For example, with an input 
+             image size of 640x480, side_ratio of 0.5 means we crop a square region 
+             (if aspect_ratio is 1.0) of the input image, whose width and height are 
+             equal to 0.5*min(640, 480) = 240. To enable scale jitter (a popular data 
+             augmentation technique), use colon-delimited values like side_ratio=0.5:0.75, 
+             which means the crop will have size between 240 (0.5*min(640, 480)) and 360 
+             (0.75*min(640, 480)). 
+            area_ratio (`float`, default 0.0): It specifies the area ratio of final image 
+             with respect to the original image. Ignored if set to 0.0. Otherwise, must be 
+             set within `(0,1]`. For example, for an input image size of 200x150 pixels, 
+             the area is 30,000. If area_ratio is 0.3333, we crop a square region (if 
+             aspect_ratio is 1.0) with width and height equal to sqrt(30,000*0.3333)=100. 
+             To enable scale jitter, use colon-delimited values such as area_ratio=0.3333:0.8, 
+             which means the crop will have size between 100 (sqrt(30,000*0.3333)) and 
+             155 (sqrt(30,000*0.8)). 
+            aspect_ratio (`float`, default 1.0): It specifies the aspect ratio (width/height
+             or height/width) of the crop window. Must be set within `(0,1]`. For example, 
+             if due to size_ratio the crop size is 240x240, an aspect_ratio of 0.64 will 
+             change the window size to non-square: 192x300 or 300x192, each having 50% 
+             chance. Note the area of the crop window does not change. To enable aspect 
+             ratio jitter, use colon-delimited values such as aspect_ratio=0.64:1.0, which means 
+             the crop will have size between 192x300 (or euqally likely 300x192) and 240x240. 
+            jitter_type (str, default 'none'): crop scale jitter type, possible
+             values are 'none' and 'uniratio'. 'uniratio' means uniform distributed jitter
+             scale between the minimum and maximum ratio values.
 
         Returns:
             dict describing the crop transform
         '''
-        return dict(type='Crop', cropType=crop_type, cropRatio=ratio,
-                jitterType=jitter_type)
+        return dict(type='Crop', cropType=crop_type, cropSize=crop_size, sideRatio=side_ratio, 
+                    areaRatio=area_ratio, aspectRatio=aspect_ratio, jitterType=jitter_type)
 
     @staticmethod
     def scale(width, height, channels, interpolations='linear', scale_mode="fill", pad_value=-1):
@@ -413,7 +449,7 @@ class ImageDeserializer(Deserializer):
             channels (int): channels of the image
             interpolations (str, default 'linear'): possible values are
              'nearest', 'linear', 'cubic', and 'lanczos'
-            scale_mode (str, default 'fill'): 'fill', 'crop' or 'pad'. 
+            scale_mode (str, default 'fill'): 'fill', 'crop' or 'pad'.
              'fill' - warp the image to the given target size.
              'crop' - resize the image's shorter side to the given target size and crop the overlap.
              'pad'  - resize the image's larger side to the given target size, center it and pad the rest
@@ -440,26 +476,65 @@ class ImageDeserializer(Deserializer):
         '''
         return dict(type='Mean', meanFile=filename)
 
-    # TODO color transpose
+    @staticmethod
+    def color(brightness_radius=0.0, contrast_radius=0.0, saturation_radius=0.0): 
+        '''
+        Color transform that can be used to pass to `map_features` for data augmentation.
 
-#
-# CNTKTextFormatReader
-# TODO get away from cntk_py.text_format_minibatch_source and set it up
-# similarly to ImageDeserializer
-#
+        Args: 
+            brightness_radius (float, default 0.0): Radius for brightness change. Must be 
+             set within [0.0, 1.0]. For example, assume brightness_radius = 0.2, a random 
+             number `x` is uniformly drawn from [-0.2, 0.2], and every pixel's value is 
+             added by `x*meanVal`, where meanVal is the mean of the image pixel intensity 
+             combining all color channels. 
+            contrast_radius (float, default 0.0): Radius for contrast change. Must be 
+             set within [0.0, 1.0]. For example, assume contrast_radius = 0.2, a random 
+             number `x` is uniformly drawn from [-0.2, 0.2], and every pixel's value is 
+             multiplied by `1+x`. 
+            saturation_radius (float, default 0.0): Radius for saturation change. Only for
+             color images and must be set within [0.0, 1.0]. For example, assume 
+             saturation_radius = 0.2, a random number `x` is uniformly drawn from [-0.2, 0.2], 
+             and every pixel's saturation is multiplied by `1+x`.
 
+        Returns:
+            dict describing the mean transform
+        '''
+        return dict(type='Color', brightnessRadius=brightness_radius, 
+                    contrastRadius=contrast_radius, saturationRadius=saturation_radius)
 
-#class TextFormatDeserializer(Deserializer): # TODO: either call it CNTKTextFormat or CTF. TextFormat is confusable with plain text
+    #@staticmethod
+    #def intensity(intensity_stddev, intensity_file): 
+    #    '''
+    #    Intensity transform that can be used to pass to `map_features` for data augmentation. 
+    #    Intensity jittering based on PCA transform as described in original `AlexNet paper
+    #    <http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf>`_
+
+    #    Currently uses precomputed values from 
+    #    https://github.com/facebook/fb.resnet.torch/blob/master/datasets/imagenet.lua
+
+    #    Args: 
+    #        intensity_stddev (float): intensity standard deviation. 
+    #        intensity_file (str): intensity file. 
+    #    Returns:
+    #        dict describing the mean transform        '''
+    #    return dict(type='Intensity', intensityStdDev=intensity_stddev, intensityFile=intensity_file)
+
 class CTFDeserializer(Deserializer):
     '''
-    This class configures the text reader that reads text-encoded files from a file with lines of the form
-         [Sequence_Id](Sample)+ 
-        where
-         Sample=|Input_Name (Value )* 
+    This class configures the text reader that reads text-encoded files from a
+    file with lines of the form::
+
+        [Sequence_Id](Sample)+
+
+    where::
+
+        Sample=|Input_Name (Value )*
+
     Args:
         filename (str): file name containing the text input
+
     See also:
-        https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
+        `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
     '''
 
     def __init__(self, filename, streams=None):
@@ -476,47 +551,28 @@ class CTFDeserializer(Deserializer):
     # TODO: should be a private method; use constructor only
     def map_input(self, node, dim, format="dense", alias=None):
         '''
-        Maps node (either node instance or node name) to a part of the text input, 
+        Maps node (either node instance or node name) to a part of the text input,
         either specified by the node name or the alias in the text file.
-        Example: for node name 'Apples' an input line could look like this:
-        |Apples 0 1 2 3 4 5 6 7 8 9
+
+        Example: for node name 'input0' an input line could look like this::
+
+          |input0 3 7 1 0 2
+
         Args:
             node (str or input node): node or its name
-            dim (int): specifies the dimension of the input value vector 
-             (for dense input this directly corresponds to the number of values in each sample, 
+            dim (int): specifies the dimension of the input value vector
+             (for dense input this directly corresponds to the number of values in each sample,
              for sparse this represents the upper bound on the range of possible index values).
-            format (str, default 'dense'): 'dense' or 'sparse'. Specifies the input type. 
-            alias (str, default None): None or alias name. Optional abbreviated name that 
+            format (str, default 'dense'): 'dense' or 'sparse'. Specifies the input type.
+            alias (str, default None): None or alias name. Optional abbreviated name that
              is used in the text file to avoid repeating long input names. For details please
-             see https://github.com/Microsoft/CNTK/wiki/CNTKTextFormat-Reader
+             see `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
         '''
         if not isinstance(node, str):
             node = node.name()
         if alias is None:
             alias=node
         self.input[node] = dict(dim=dim, format=format, alias=alias)
-
-
-# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
-@typemap
-def text_format_minibatch_source(path, stream_configs, epoch_size=INFINITELY_REPEAT, randomize=True, distributed_after=INFINITE_SAMPLES):
-    '''
-    Creates a minibatch source from a CNTKTextFormatReader file.
-
-    Args:
-        path (file): filename of the data file
-        stream_configs (`list` of :class:`StreamConfiguration` instances): list
-         of stream configurations, each of which describes one stream in the
-         file
-        epoch_size (int, optional): size of an epoch. In case of 0 the size
-         of the training set will be taken. Default is max of 64bit.
-        randomize (bool, optional): whether to randomize the contents of data file.
-        distributed_after (int, optional): sample count after which minibatch source becomes distributed
-
-    Returns:
-        :class:`MinibatchSource`
-    '''
-    return cntk_py.text_format_minibatch_source(path, stream_configs, epoch_size, randomize, distributed_after)
 
 
 # TODO: this should be a private class; use StreamDef instead
@@ -573,3 +629,97 @@ def StreamDef(field, shape=None, is_sparse=False, transforms=None):
 # StreamDefs for use in constructing deserializers
 # StreamDefs(query = StreamDef(...), labels = StreamDef(...), ...)
 StreamDefs = Record
+
+def _dense_to_str(data):
+    return ' '.join(data.ravel(order='C').astype(np.str))
+
+
+def _sparse_to_str(data):
+    return ' '.join('%s:%s' % (k, v) for k, v in sorted(data.items()))
+
+
+def _is_tensor(data):
+    '''
+    Checks whether the data is a tensor, i.e. whether it is a NumPy array or a
+    list of NumPy arrays.
+
+    Args:
+        data: data to check
+
+    Returns: True, if it is a tensor.
+    '''
+    if isinstance(data, np.ndarray):
+        return True
+
+    if not isinstance(data, list):
+        return False
+
+    while len(data) > 0:
+        # All but the innermost dimension's values have to be lists
+        try:
+            data[0][0]
+        except:
+            # We reached the innermost dimension
+            try:
+                data[0] + 0
+                return True
+            except:
+                # Innermost type is not a number
+                return False
+
+        if isinstance(data, np.ndarray):
+            return True
+
+        if not isinstance(data[0], list):
+            return False
+
+        data = data[0]
+
+    return True
+
+
+def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
+    '''
+    Converts a list of NumPy arrays representing tensors of inputs into a
+    format that is readable by :class:`~cntk.io.CTFDeserializer`.
+
+    Args:
+        seq_idx (int): number of current sequence
+        alias_tensor_map (dict): maps alias (str) to tensor (ndarray). Tensors
+          are assumed to have dynamic axis.
+
+    Returns:
+        String representation in `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
+    '''
+
+    max_seq_length = max(len(t) for t in alias_tensor_map.values())
+
+    if max_seq_length == 0:
+        return ''
+
+    lines = []
+    for elem_idx in range(0, max_seq_length):
+        line = []
+
+        for alias, tensor in sorted(alias_tensor_map.items()):
+            if elem_idx >= len(tensor):
+                # for this alias there no more sequence elements
+                continue
+
+            if _is_tensor(tensor):
+                if not isinstance(tensor, np.ndarray):
+                    tensor = np.asarray(tensor)
+                to_str = _dense_to_str
+            elif isinstance(tensor, list) and isinstance(tensor[0], dict):
+                to_str = _sparse_to_str
+            else:
+                raise ValueError(
+                    'expected a tensor (dense) or list of dicts (sparse), but got "%s"' % type(tensor))
+
+            line.append('%s %s' % (alias, to_str(tensor[elem_idx])))
+
+        lines.append('%i\t|' % seq_idx + ' |'.join(line))
+
+    return '\n'.join(lines)
+
+

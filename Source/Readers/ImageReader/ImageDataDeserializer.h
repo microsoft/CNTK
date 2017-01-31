@@ -5,7 +5,7 @@
 
 #pragma once
 #include <opencv2/core/mat.hpp>
-#include "DataDeserializerBase.h"
+#include "ImageDeserializerBase.h"
 #include "Config.h"
 #include "ByteReader.h"
 #include <unordered_map>
@@ -18,7 +18,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // All sequences consist only of a single sample (image/label).
 // For features it uses dense storage format with different layout (dimensions) per sequence.
 // For labels it uses the csc sparse storage format.
-class ImageDataDeserializer : public DataDeserializerBase
+class ImageDataDeserializer : public ImageDeserializerBase
 {
 public:
     // A new constructor to support new compositional configuration,
@@ -53,22 +53,8 @@ private:
 
     class ImageChunk;
 
-    // A helper class for generation of type specific labels (currently float/double only).
-    class LabelGenerator;
-    typedef std::shared_ptr<LabelGenerator> LabelGeneratorPtr;
-    LabelGeneratorPtr m_labelGenerator;
-
     // Sequence descriptions for all input data.
     std::vector<ImageSequenceDescription> m_imageSequences;
-
-    // Mapping of logical sequence key into sequence description.
-    std::map<size_t, size_t> m_keyToSequence;
-
-    // Precision required by the network.
-    ElementType m_precision;
-
-    // whether images shall be loaded in grayscale 
-    bool m_grayscale;
 
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
@@ -81,7 +67,6 @@ private:
     SeqReaderMap m_readers;
 
     std::unique_ptr<FileByteReader> m_defaultReader;
-    int m_verbosity;
 };
 
 }}}

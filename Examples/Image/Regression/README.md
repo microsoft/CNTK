@@ -25,6 +25,6 @@ Run the example from the current folder using:
 
 `cntk configFile=RegrSimple_CIFAR10.cntk`
 
-The network produces root-mean-square error (rmse) of around 0.00098, which indicates that the regression accuracy is very high for this simple task.
+The network produces root-mean-square error (rmse) of around 0.1257.
 
 You may examine the cntk configuration file [RegrSimple_CIFAR10.cntk](./RegrSimple_CIFAR10.cntk) for more details. Note the network is a linear one without nonlinearity. This is intended as we know that computing the average RGB values of images is a linear operation. The reader is a composite reader that uses the `ImageReader` to read images and the `CNTKTextFormatReader` to read the regression ground truth labels. The configuration file also demonstrates how to write the network prediction for the test data into an output file.

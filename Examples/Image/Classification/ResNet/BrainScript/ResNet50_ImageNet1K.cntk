@@ -110,9 +110,9 @@ TrainNetwork = {
             width = 224
             height = 224
             channels = 3
-            cropType = "Random"
+            cropType = "RandomSide"
             jitterType = "UniRatio"
-            cropRatio = 0.46666:0.875
+            sideRatio = 0.46666:0.875
             hflip = true
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
@@ -130,7 +130,7 @@ TrainNetwork = {
             height = 224
             channels = 3
             cropType = "Center"
-            cropRatio = 0.875
+            sideRatio = 0.875
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
@@ -156,9 +156,9 @@ BNStatistics = {
             width = 224
             height = 224
             channels = 3
-            cropType = "Random"
+            cropType = "RandomSide"
             hflip = true
-            cropRatio = 0.46666:0.875
+            sideRatio = 0.46666:0.875
             jitterType = "UniRatio"
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
@@ -183,7 +183,7 @@ Eval = {
             height = 224
             channels = 3
             cropType = "Center"
-            cropRatio = 0.875
+            sideRatio = 0.875
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {

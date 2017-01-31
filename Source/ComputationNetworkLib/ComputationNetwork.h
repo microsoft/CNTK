@@ -139,7 +139,8 @@ public:
     template <class NODESET> // version that takes multiple nodes
     void ForwardProp(const NODESET& nodes)
     {
-        for (auto& node : nodes)
+        auto nodesSortedByGlobalEvalOrder = SortByGlobalEvalOrder(nodes);
+        for (auto& node : nodesSortedByGlobalEvalOrder)
             ForwardProp(node);
     }
 
@@ -196,7 +197,7 @@ public:
 
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
-    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
+    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>>& parentsMap);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
 public:
@@ -253,6 +254,25 @@ public:
             }
         }
         m_evalOrders[rootNode] = evalOrder;
+    }
+
+    template <typename ContainerType>
+    std::vector<ComputationNodeBasePtr> SortByGlobalEvalOrder(const ContainerType& nodesToSort)
+    {
+        std::vector<ComputationNodeBasePtr> sortedEvalOrder;
+        if (nodesToSort.size() == 1)
+            sortedEvalOrder.assign(nodesToSort.cbegin(), nodesToSort.cend());
+        else
+        {
+            const std::list<ComputationNodeBasePtr>& allNodesEvalOrder = GetEvalOrder(nullptr);
+            for (auto& node : allNodesEvalOrder)
+            {
+                if (std::find(nodesToSort.cbegin(), nodesToSort.cend(), node) != nodesToSort.cend())
+                    sortedEvalOrder.push_back(node);
+            }
+        }
+
+        return sortedEvalOrder;
     }
 
     // replace an existing eval order with an updated one
@@ -567,6 +587,8 @@ public:
     // add a node to a node group
     void AddToNodeGroup(const std::wstring& groupTag, const ComputationNodeBasePtr& node)
     {
+        assert(node);
+
         // determine the node group by its group tag string
         auto& nodeGroup = GetNodeGroup(groupTag);
         // if node is already in the list then we are done

@@ -4,10 +4,11 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import print_function
 import numpy as np
 import sys
 import os
-from cntk import Trainer, Axis, save_model, load_model #, text_format_minibatch_source, StreamConfiguration
+from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
 from cntk.learner import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
@@ -15,7 +16,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import CloneMethod
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "common"))
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "common"))
 from nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress
 
 # Given a vocab and tensor, print the output
@@ -55,7 +56,7 @@ def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_ou
     total_error = 0.0
     while True:
         mb = test_reader.next_minibatch(test_minibatch_size, input_map=test_bind)
-        if mb is None: break
+        if not mb: break
         mb_error = trainer.test_minibatch(mb)
         total_error += mb_error
 
@@ -156,7 +157,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
     clipping_threshold_per_sample = 2.3
     gradient_clipping_with_truncation = True
     learner = momentum_sgd(z.parameters, 
-                           lr_per_minibatch, momentum_time_constant, 
+                           lr_per_minibatch, momentum_time_constant,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
     trainer = Trainer(z, ce, errs, learner)
@@ -232,15 +233,16 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
 
     error1 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
-    save_model(z, "seq2seq.dnn")
-    z = load_model("seq2seq.dnn")
+    z.save_model("seq2seq.dnn")
+    z.restore_model("seq2seq.dnn")
 
     label_seq_axis = Axis('labelAxis')
     label_sequence = sequence.slice(find_arg_by_name('raw_labels',z), 1, 0)
     ce = cross_entropy_with_softmax(z, label_sequence)
     errs = classification_error(z, label_sequence)
     trainer = Trainer(z, ce, errs, [momentum_sgd(
-                    z.parameters, lr_per_minibatch, momentum_time_constant, clipping_threshold_per_sample, gradient_clipping_with_truncation)])
+                    z.parameters, lr_per_minibatch, momentum_time_constant, True,
+                    clipping_threshold_per_sample, gradient_clipping_with_truncation)])
 
     error2 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 

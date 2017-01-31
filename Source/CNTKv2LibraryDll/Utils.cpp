@@ -13,10 +13,14 @@
 #include "CNTKLibrary.h"
 #include "Utils.h"
 #include "Serialization.h"
-#include "Function.h"
 #include <fcntl.h>
+#include "PrimitiveFunction.h"
+#include "RecurrentNodes.h"
+#include "Value.h"
+#include "CompositeFunction.h"
 
 using namespace std;
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
@@ -239,7 +243,7 @@ namespace CNTK
 
     template <typename T>
     TrainingParameterSchedule<T>::TrainingParameterSchedule(T value, UnitType unit) 
-        : m_schedule({ make_pair(0, value) }), m_unit(unit), m_epochSize(EntireSweep)
+        : m_schedule({ make_pair(0, value) }), m_unit(unit), m_epochSize(FullDataSweep)
     {
     }
 
@@ -266,13 +270,9 @@ namespace CNTK
     template <typename T>
     void TrainingParameterSchedule<T>::ConstructSchedule(const std::vector<std::pair<size_t, T>>& schedule)
     {
-        if (m_epochSize == EntireSweep)
-        {
-            //Sweep based schedules are currently not functional (learners don't have sweep info).
-            NOT_IMPLEMENTED;
-        }
-
-        const auto epochSize = (m_epochSize == EntireSweep) ? 1 : m_epochSize;
+        // In case of the FullDataSweep, the scheduling unit is just 1 sweep, 
+        // otherwise, it's the epoch size in samples.
+        const auto unitSize = (m_epochSize == FullDataSweep) ? 1 : m_epochSize;
 
         if (schedule.size() == 0)
             RuntimeError("TrainingParameterSchedule::ConstructSchedule : schedule is empty.");
@@ -286,7 +286,7 @@ namespace CNTK
                 RuntimeError("TrainingParameterSchedule::ConstructSchedule : unit count in the 'schedule' argument cannot be 0.");
 
             unitCount += (pair.first != 0) ? pair.first : 1;
-            m_schedule[epochSize * unitCount] = pair.second;
+            m_schedule[unitSize * unitCount] = pair.second;
         }
     }
 
@@ -385,6 +385,11 @@ namespace CNTK
 
     std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
     {
+        if (!readOnly)
+        {
+            msra::files::make_intermediate_dirs(filePath.c_str());
+        }
+
         std::shared_ptr<std::fstream> stream;
         std::ios_base::openmode mode = std::ios_base::binary | (readOnly ? std::ios_base::in : std::ios_base::out);
 #ifdef _MSC_VER
@@ -402,6 +407,11 @@ namespace CNTK
 
     int GetFileDescriptor(const std::wstring& filePath, bool readOnly)
     {
+        if (!readOnly)
+        {
+            msra::files::make_intermediate_dirs(filePath.c_str());
+        }
+
         auto mode = (readOnly ? O_RDONLY : ( O_CREAT | O_WRONLY));
         int fd;
 #ifdef _MSC_VER
@@ -444,6 +454,379 @@ namespace CNTK
 #endif
     }
 
+    std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
+    {
+        std::vector<Axis> inputVarDynamicAxes;
+        if (internalDynamicAxisName.substr(0, CompositeFunction::InternalDefaultDynamicAxisName.length()) == CompositeFunction::InternalDefaultDynamicAxisName)
+            inputVarDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
+        else if (internalDynamicAxisName.substr(0, CompositeFunction::InternalNoSequenceAxisName.length()) == CompositeFunction::InternalNoSequenceAxisName)
+            inputVarDynamicAxes = { Axis::DefaultBatchAxis() };
+        else
+            inputVarDynamicAxes = { Axis(internalDynamicAxisName), Axis::DefaultBatchAxis() };
+
+        return inputVarDynamicAxes;
+    }
+
+    // Construct the dynamic axis name to be used internally for the CNTK InputNodes
+    std::wstring InternalDynamicAxisNameFromDynamicAxes(const std::vector<Axis>& dynamicAxes)
+    {
+        if (dynamicAxes.empty())
+            LogicError("Empty dynamic axes set");
+
+        if (dynamicAxes == std::vector<Axis>({ Axis::DefaultBatchAxis() }))
+            return CompositeFunction::InternalNoSequenceAxisName;
+        else if (dynamicAxes == std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }))
+            return CompositeFunction::InternalDefaultDynamicAxisName;
+        else
+            return dynamicAxes[0].Name();
+    }
+
+    std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
+    {
+        size_t maxNumTimeSteps = 1;
+        size_t numSequences = 1;
+        if (maskShape.Rank() > 1)
+        {
+            // since only 2 axes are supported at the moment, sequence axis should be the first and batch axis -- the second.
+            // sequence axis dimension determines the maximum number of time steps (= maximum sequence length),
+            // batch axis dimension -- the number of sequences (= 'training units') in a batch.
+            maxNumTimeSteps = maskShape[0];
+            numSequences = maskShape[1];
+        }
+        else if (maskShape.Rank() > 0)
+        {
+            if (numDynamicAxes > 1)
+            {
+                maxNumTimeSteps = maskShape[0];
+            }
+            else
+            {
+                // there's only one axis (the default batch axis).
+                numSequences = maskShape[0];
+            }
+        }
+
+        return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
+    }
+    /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value)
+    {
+        if (var.GetDataType() != value->GetDataType())
+            LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
+
+        bool isPackedValue = (dynamic_cast<PackedValue*>(value.get()) != nullptr);
+
+        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
+        if (!isPackedValue)
+        {
+            if (IsSparseInput(var) && !value->IsSparse())
+                InvalidArgument("Dense input data supplied for a sparse input Variable");
+
+            if (IsSparseInput(var) && (value->GetStorageFormat() != StorageFormat::SparseCSC))
+                InvalidArgument("Sparse Input data must be in SparseCSC format");
+        }
+
+        auto varShape = var.Shape();
+        auto valueShape = value->Shape();
+
+        auto numDynamicAxes = var.DynamicAxes().size();
+        if (numDynamicAxes > 2)
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
+
+        // max(2, numDynamicAxes) is needed for some backcompat scenarios, where even when there are no sequence axes
+        // the user can pass a value object with a dim of 1 for the sequence axis.
+        // TODO: try and remove support for this in the future, change the condition below to
+        // valueShape.Rank() - varShape.Rank() <=  var.DynamicAxes().size()
+        size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
+
+        // For packed values, we sometimes have the reader return the matrix with a flatenned sample layout
+        if (isPackedValue && ((valueShape.Rank() < varShape.Rank()) || (valueShape.SubShape(0, varShape.Rank()) != varShape)))
+        {
+            // If the leading dim of the value shape is same as the total size of the varShape,
+            // lets expand the leading dim to varShape for the purposes of the rest of the validation
+            if ((valueShape[0] == varShape.TotalSize()) && (valueShape.SubShape(1).Rank() <= (varShape.Rank() + maxAddionalValueAxes)))
+                valueShape = varShape.AppendShape(valueShape.SubShape(1));
+        }
+
+        if (valueShape.Rank() < varShape.Rank())
+            InvalidArgument("Value's rank should be >= the Variable's rank");
+
+        if (valueShape.Rank() > (varShape.Rank() + maxAddionalValueAxes))
+            InvalidArgument("Value rank should be larger than the Variable%S rank at most by number of dynamic axes", ParanthesizedName(var.Name()).c_str());
+
+        if (valueShape.SubShape(0, varShape.Rank()) != varShape)
+        {
+            InvalidArgument("The %s dimensions of the Value shape %S do not match the shape of the variable %S that it corresponds to!",
+                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
+                AsStringForErrorReporting(valueShape).c_str(),
+                AsStringForErrorReporting(varShape).c_str());
+        }
+    }
+
+    template <typename ElementType>
+    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
+    {
+        VerifyVariableValueCompatibility(var, value);
+
+        if (AsDataType<ElementType>() != value->GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
+
+        auto packedValue = dynamic_cast<PackedValue*>(value.get());
+        if (packedValue)
+            return packedValue->PackedData<ElementType>();
+
+        auto varShape = var.Shape();
+        auto valueShape = value->Shape();
+        auto numDynamicAxes = var.DynamicAxes().size();
+        auto mask = value->Mask();
+        if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
+            InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
+        
+        if (numDynamicAxes == 0)
+            return{ value->Data()->GetMatrix<ElementType>(), nullptr };
+
+        size_t maxNumTimeSteps, numSequences;
+        std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
+
+        if ((numSequences == 1) || (maxNumTimeSteps == 1))
+        {
+            // The data need not be shuffled
+            std::shared_ptr<const Matrix<ElementType>> matrixData = value->Data()->GetMatrix<ElementType>(varShape.Rank());
+            auto layout = std::make_shared<MBLayout>();
+            if (!mask)
+            {
+                if (maxNumTimeSteps == 1)
+                    layout->InitAsFrameMode(numSequences);
+                else
+                {
+                    layout->Init(numSequences, maxNumTimeSteps);
+                    layout->AddSequence(0, 0, 0, maxNumTimeSteps);
+                }
+            }
+            else
+            {
+                layout->Init(numSequences, maxNumTimeSteps);
+
+                std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
+                std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
+                Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
+
+                for (size_t i = 0; i < numSequences; ++i)
+                    layout->AddSequence(i, i, sequenceBeginIndices[i], sequenceLengths[i]);
+            }
+
+            return{ matrixData, layout };
+        }
+        else
+        {
+            std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
+            std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
+            if (mask != nullptr)
+                Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
+
+            bool hasTruncatedSequences = std::find_if(sequenceBeginIndices.begin(), sequenceBeginIndices.end(), [](const int& val) { return (val < 0); }) != sequenceBeginIndices.end();
+
+            auto layout = std::make_shared<MBLayout>();
+            std::vector<std::pair<size_t, size_t>> placement;
+            if (!hasTruncatedSequences)
+            {
+                std::vector<MBLayout::SequenceInfo> sequences;
+                for (size_t i = 0; i < numSequences; ++i)
+                    sequences.push_back({ i, SIZE_MAX, sequenceBeginIndices[i], sequenceLengths[i] });
+
+                std::vector<size_t> rowAllocations;
+                layout->InitAsPackedSequences(sequences, placement, rowAllocations);
+            }
+            else
+            {
+                layout->Init(numSequences, maxNumTimeSteps);
+
+                // We cannot pack as some of the sequences are truncated and thus all sequences have to be
+                // kept in their original parallel streams
+                placement.resize(numSequences);
+                for (size_t i = 0; i < numSequences; ++i)
+                {
+                    layout->AddSequence(i, i, sequenceBeginIndices[i], sequenceLengths[i]);
+
+                    // Add the gap if there is one
+                    if (sequenceLengths[i] < maxNumTimeSteps)
+                        layout->AddSequence(GAP_SEQUENCE_ID, i, sequenceLengths[i], maxNumTimeSteps);
+
+                    placement[i] = std::make_pair(i, 0);
+                }
+            }
+
+            if (maxNumTimeSteps != layout->GetNumTimeSteps())
+                LogicError("The number of time steps in the packed MBLayout does not match the longest sequence's length in the Value object");
+
+            if (numSequences != layout->GetNumSequences())
+                LogicError("The number of sequences in the packed MBLayout does not match the sequence count in the Value object");
+
+            // The data needs to be rearranged since CNTK requires sequences to be interleaved across timesteps
+            // Now generate the gather indices
+            auto matrixData = std::make_shared<Matrix<ElementType>>(varShape.TotalSize(),
+                layout->GetNumCols(),
+                AsCNTKImplDeviceId(value->Device()),
+                value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
+                AsCNTKImplMatrixFormat(value->GetStorageFormat()));
+
+            std::vector<size_t> sequencesShorterThanLongestSequence;
+            for (size_t i = 0; i < numSequences; ++i)
+                if (sequenceLengths[i] != maxNumTimeSteps)
+                    sequencesShorterThanLongestSequence.push_back(i);
+
+            // Set the source location for all gaps to be the last step of the first sequence that is shorter than the longest sequence in the batch
+            size_t sourceColIdxForInvalidColumns = sequencesShorterThanLongestSequence.empty() ? 0 : (((sequencesShorterThanLongestSequence[0] + 1) * maxNumTimeSteps) - 1);
+            std::vector<ElementType> gatherIndicesVector(layout->GetNumCols(), (ElementType)sourceColIdxForInvalidColumns);
+            for (size_t i = 0; i < numSequences; ++i)
+            {
+                size_t targetParallelStreamIdx = placement[i].first;
+                size_t targetStartIdxInParallelStream = placement[i].second;
+                for (size_t j = 0; j < sequenceLengths[i]; ++j)
+                    gatherIndicesVector[((targetStartIdxInParallelStream + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElementType)((i * maxNumTimeSteps) + j);
+            }
+
+            auto gatherIdxMatrix = std::make_shared<Matrix<ElementType>>(1, layout->GetNumCols(), gatherIndicesVector.data(), AsCNTKImplDeviceId(value->Device()));
+            matrixData->DoGatherColumnsOf(0, *gatherIdxMatrix, *(value->Data()->GetMatrix<ElementType>(varShape.Rank())), 1);
+            return{ matrixData, layout };
+        }
+    }
+
+    template <typename ElementType>
+    ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
+    {
+        NDShape valueDataShape = sampleShape;
+
+        size_t maxNumTimeSteps = 1;
+        size_t numSequences = 1;
+        if (layout != nullptr)
+        {
+            maxNumTimeSteps = layout->GetNumTimeSteps();
+            numSequences = layout->GetNumSequences();
+            valueDataShape = valueDataShape.AppendShape({ maxNumTimeSteps, numSequences });
+        }
+
+        auto createMaskFunc = [](const MBLayoutPtr& layout, const DeviceDescriptor& device, std::vector<size_t>& sequencesShorterThanLongestSequence) {
+            std::vector<bool> sequenceBeginFlags;
+            std::vector<size_t> sequenceLengths;
+            sequencesShorterThanLongestSequence.clear();
+
+            size_t maxNumTimeSteps = layout->GetNumTimeSteps();
+            size_t numSequences = layout->GetNumSequences();
+            auto& layoutSequences = layout->GetAllSequences();
+
+            size_t sequenceIdx = 0;
+            bool allSequencesStartInThisMB = true;
+            bool allSequencesSameLength = true;
+            for (auto sequenceInfo : layoutSequences)
+            {
+                if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+                {
+                    auto currentSequenceBeginIdx = std::max<ptrdiff_t>(0, sequenceInfo.tBegin);
+                    auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
+                    auto currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
+                    auto isCurrentSequenceBeginningInsideThisMB = sequenceInfo.tBegin >= 0;
+
+                    allSequencesStartInThisMB = allSequencesStartInThisMB && isCurrentSequenceBeginningInsideThisMB;
+                    allSequencesSameLength = allSequencesSameLength && (currentSequenceLength == maxNumTimeSteps);
+
+                    sequenceBeginFlags.push_back(isCurrentSequenceBeginningInsideThisMB);
+                    sequenceLengths.push_back(currentSequenceLength);
+
+                    if (currentSequenceLength != maxNumTimeSteps)
+                        sequencesShorterThanLongestSequence.push_back(sequenceIdx);
+
+                    sequenceIdx++;
+                }
+            }
+
+            if (!allSequencesStartInThisMB && (numSequences != layout->GetNumParallelSequences()))
+                LogicError("Cannot create an unpacked Value object from packed data where one or more sequences are truncated");
+
+            bool maskNeeded = !allSequencesSameLength || !allSequencesStartInThisMB;
+
+            NDMaskPtr mask;
+            if (maskNeeded)
+            {
+                mask = MakeSharedObject<NDMask>(NDShape({ maxNumTimeSteps, numSequences }), DeviceDescriptor::CPUDevice());
+                for (size_t i = 0; i < numSequences; ++i)
+                    if (sequenceBeginFlags[i])
+                        mask->MarkSequenceBegin({ 0, i });
+
+                for (auto shortSequenceIdx : sequencesShorterThanLongestSequence)
+                    mask->InvalidateSection({ sequenceLengths[shortSequenceIdx], shortSequenceIdx }, { NDShape::InferredDimension, 1 });
+            }
+
+            return mask;
+        };
+
+        // No data shuffling needed if no layout or the layout has just one time-step or just one sequence
+        std::vector<size_t> sequencesShorterThanLongestSequence;
+        if ((maxNumTimeSteps == 1) || (numSequences == 1))
+        {
+            // Just create a view over the existing matrix itself
+            auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(valueDataShape));
+            auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, readOnly, tensorView);
+            if (layout == nullptr)
+                return MakeSharedObject<Value>(data);
+            else
+            {
+                auto mask = createMaskFunc(layout, AsDeviceDescriptor(matrix.GetDeviceId()), sequencesShorterThanLongestSequence);
+                return MakeSharedObject<Value>(data, mask);
+            }
+        }
+
+        if (layout->GetNumCols() != matrix.GetNumCols())
+            LogicError("Bad MBLayout: The number of columns in the MBLayout does not match the number of columns in the data matrix!");
+
+        // Reshuffle to data to unpack and uninterleave the CNTK form packed data
+        // Now generate the scatter indices
+        auto shuffledMatrixData = std::make_shared<Matrix<ElementType>>(matrix.GetNumRows(), maxNumTimeSteps * numSequences, matrix.GetDeviceId(), matrix.GetMatrixType(), matrix.GetFormat());
+        auto mask = createMaskFunc(layout, AsDeviceDescriptor(matrix.GetDeviceId()), sequencesShorterThanLongestSequence);
+
+        // Set the target location of all gaps to be the last step of the first sequence that is shorter than the longest sequence in the batch
+        size_t targetColIdxForInvalidColumns = sequencesShorterThanLongestSequence.empty() ? 0 : (((sequencesShorterThanLongestSequence[0] + 1) * maxNumTimeSteps) - 1);
+        std::vector<ElementType> scatterIndicesVector(layout->GetNumCols(), (ElementType)targetColIdxForInvalidColumns);
+
+        size_t i = 0;
+        auto& layoutSequences = layout->GetAllSequences();
+        for (auto sequenceInfo : layoutSequences)
+        {
+            if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+            {
+                size_t targetParallelStreamIdx = sequenceInfo.s;
+                auto currentSequenceBeginIdx = std::max<ptrdiff_t>(0, sequenceInfo.tBegin);
+                auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
+                size_t currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
+
+                for (size_t j = 0; j < currentSequenceLength; ++j)
+                    scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElementType)((i * maxNumTimeSteps) + j);
+
+                i++;
+            }
+        }
+
+        auto scatterIdxMatrix = std::make_shared<Matrix<ElementType>>(1, layout->GetNumCols(), scatterIndicesVector.data(), matrix.GetDeviceId());
+        shuffledMatrixData->DoScatterColumnsOf(0, *scatterIdxMatrix, matrix, 1);
+
+        auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorViewShape(valueDataShape));
+        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(shuffledMatrixData->GetFormat()), valueDataShape, readOnly, tensorView);
+        return MakeSharedObject<Value>(data, mask);
+    }
+
+    template <typename ElementType>
+    ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
+    {
+        if (var.DynamicAxes().size() > 2)
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
+
+        if (AsDataType<ElementType>() != var.GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.GetDataType()));
+
+        if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
+            LogicError("Unexpected matrix layout: The number of rows in the matrix does not match the sample size of the Variable");
+
+        return GetValueObjectFromCNTKImplMatrixAndMBLayout(var.Shape(), matrix, layout, readOnly);
+    }
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);
     template void DictionaryValue::AllocateDataPtr<Axis>(const Axis& value);
     template void DictionaryValue::AllocateDataPtr<vector<DictionaryValue>>(const vector<DictionaryValue>& value);
@@ -459,4 +842,106 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
 
     template class TrainingParameterSchedule<double>;
+    template class TrainingParameterSchedule<size_t>;
+
+    Learners::Learners(const std::vector<LearnerPtr>& learners) :
+        m_learners(learners),
+        m_isDistributed(false)
+    {
+        if (learners.empty())
+            InvalidArgument("Please specify learners.");
+
+        std::unordered_set<Parameter> learnerParameters;
+        for (const auto& learner : m_learners)
+        {
+            if (dynamic_pointer_cast<DistributedLearner>(learner) != nullptr)
+                m_isDistributed = true;
+
+            const auto& currentLearnerParameters = learner->Parameters();
+            for (const auto& parameter : currentLearnerParameters)
+            {
+                auto insertRetVal = learnerParameters.insert(parameter);
+                if (!insertRetVal.second)
+                    InvalidArgument("Parameter named %S is covered by 2 different learners", parameter.Name().c_str());
+            }
+        }
+
+        if (m_isDistributed)
+            CheckDistributedLearners();
+    }
+
+    void Learners::CheckDistributedLearners()
+    {
+        for (const auto& learner : m_learners)
+        {
+            if (dynamic_pointer_cast<DistributedLearner>(learner) == nullptr)
+                InvalidArgument("Distributed and local learners cannot be used side by side.");
+        }
+    }
+
+    void Learners::GetLearnerGradients(LearnerPtr learner, const std::unordered_map<Parameter, NDArrayViewPtr>& allGradients, std::unordered_map<Parameter, NDArrayViewPtr>& learnerGradients)
+    {
+        const auto& learnerParameters = learner->Parameters();
+        for (const auto& parameter : learnerParameters)
+        {
+            auto value = allGradients.find(parameter);
+            if (value == allGradients.end())
+                LogicError("Learner contains parameter that does not exists in the model");
+
+            learnerGradients[parameter] = value->second;
+        }
+    }
+
+    bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t sampleInMinibatch, bool sweepEnd)
+    {
+        bool anyUpdatesPerformed = false;
+        for (auto learner : m_learners)
+        {
+            std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
+            GetLearnerGradients(learner, gradientValues, learnerGradients);
+            anyUpdatesPerformed |= learner->Update(learnerGradients, sampleInMinibatch, sweepEnd);
+        }
+        return anyUpdatesPerformed;
+    }
+
+    bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& minibatch)
+    {
+        bool anyUpdatesPerformed = false;
+        for (auto l : m_learners)
+        {
+            auto learner = dynamic_pointer_cast<DistributedLearner>(l);
+            std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
+            GetLearnerGradients(learner, gradientValues, learnerGradients);
+            anyUpdatesPerformed |= learner->Update(learnerGradients, minibatch);
+        }
+        return anyUpdatesPerformed;
+    }
+
+    std::vector<DictionaryValue> Learners::CreateCheckpoint()
+    {
+        std::vector<DictionaryValue> state;
+        for (auto l : m_learners)
+            state.push_back(l->CreateCheckpoint());
+        return state;
+    }
+
+    void Learners::RestoreFromCheckpoint(const std::vector<DictionaryValue>& state)
+    {
+        if (m_learners.size() != state.size())
+            RuntimeError("Number of learners does not match the checkpoint state.");
+
+        for (size_t i = 0; i < m_learners.size(); ++i)
+        {
+            m_learners[i]->RestoreFromCheckpoint(state[i].Value<Dictionary>());
+        }
+    }
+
+    template std::pair<std::shared_ptr<const Matrix<float>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<float>(const Variable& var, const ValuePtr& value);
+    template std::pair<std::shared_ptr<const Matrix<double>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<double>(const Variable& var, const ValuePtr& value);
+
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const NDShape& sampleShape, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const NDShape& sampleShape, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const Variable& var, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const Variable& var, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
 }

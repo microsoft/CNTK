@@ -157,7 +157,7 @@ inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t 
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(CNTK::SentinelValueForInferParamInitRank, CNTK::SentinelValueForInferParamInitRank, CNTK::DefaultParamInitScale, 1), device, L"timesParam");
+    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(CNTK::DefaultParamInitScale, CNTK::SentinelValueForInferParamInitRank, CNTK::SentinelValueForInferParamInitRank, 1), device, L"timesParam");
     auto timesFunction = CNTK::Times(timesParam, input, L"times");
 
     auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device, L"plusParam");
@@ -207,13 +207,13 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(C
         return CNTK::Parameter({ dim }, (ElementType)0.0, device);
     };
 
-    unsigned long seed = 1;
-    auto createProjectionParam = [device, &seed](size_t outputDim) {
-        return CNTK::Parameter({ outputDim, CNTK::NDShape::InferredDimension }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed++), device);
+    unsigned long seed2 = 1;
+    auto createProjectionParam = [device, &seed2](size_t outputDim) {
+        return CNTK::Parameter({ outputDim, CNTK::NDShape::InferredDimension }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
     };
 
-    auto createDiagWeightParam = [device, &seed](size_t dim) {
-        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1, 0, 1, seed++), device);
+    auto createDiagWeightParam = [device, &seed2](size_t dim) {
+        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
     };
 
     auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
@@ -352,6 +352,30 @@ inline CNTK::ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengt
     }
 }
 
+template <typename ElementType>
+inline std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr> GenerateSparseSequence(size_t vocabSize, size_t sequenceLength, size_t maxNumberOfNonZeroValuesPerSparseInputSample)
+{
+    std::vector<ElementType> inputData(vocabSize * sequenceLength, 0);
+    for (size_t j = 0; j < sequenceLength; ++j)
+    {
+        size_t numActualValuesWritten = 0;
+        for (size_t k = 0; k < vocabSize; ++k)
+        {
+            if ((numActualValuesWritten < maxNumberOfNonZeroValuesPerSparseInputSample) && ((rand() % vocabSize) < maxNumberOfNonZeroValuesPerSparseInputSample))
+            {
+                numActualValuesWritten++;
+                inputData[(j * vocabSize) + k] = ((ElementType)rand()) / RAND_MAX;
+            }
+        }
+    }
+
+    CNTK::NDShape inputDataShape = CNTK::NDShape({ vocabSize, sequenceLength });
+    CNTK::NDArrayViewPtr inputValueData = CNTK::MakeSharedObject<CNTK::NDArrayView>(inputDataShape, inputData);
+    CNTK::NDArrayViewPtr sparseData = CNTK::MakeSharedObject<CNTK::NDArrayView>(CNTK::AsDataType<ElementType>(), CNTK::StorageFormat::SparseCSC, inputDataShape, CNTK::DeviceDescriptor::CPUDevice());
+    sparseData->CopyFrom(*inputValueData);
+    return{ inputValueData->DeepClone(), sparseData };
+}
+
 #pragma warning(pop)
 
 inline CNTK::NDShape CreateShape(size_t numAxes, size_t maxDimSize)
@@ -381,12 +405,12 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     stream.exceptions(std::ios_base::badbit);  
 }
 
-inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
+inline void PrintTrainingProgress(const CNTK::TrainerPtr trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
 {
-    if ((minibatchIdx % outputFrequencyInMinibatches) == 0)
+    if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer->PreviousMinibatchSampleCount() != 0)
     {
-        double trainLossValue = trainer.PreviousMinibatchLossAverage();
-        double evaluationValue = trainer.PreviousMinibatchEvaluationAverage();
+        double trainLossValue = trainer->PreviousMinibatchLossAverage();
+        double evaluationValue = trainer->PreviousMinibatchEvaluationAverage();
         printf("Minibatch %d: CrossEntropy loss = %.8g, Evaluation criterion = %.8g\n", (int)minibatchIdx, trainLossValue, evaluationValue);
     }
 }
@@ -450,10 +474,9 @@ inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, s
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
 
-template <typename ElementType> 
 inline bool AreEqual(const CNTK::NDArrayViewPtr& view1, const CNTK::NDArrayViewPtr& view2)
 {
-    return AreEqual<ElementType>(*view1, *view2);
+    return CNTK::Internal::AreEqual(*view1, *view2);
 }
 
 inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
@@ -528,17 +551,14 @@ using namespace CNTK;
 inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod, const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
 {
     // TODO: try to refactor this some more, using AreEqual functions above.
-    if ((first->RootFunction() == nullptr) != (second->RootFunction() == nullptr))
-        throw std::runtime_error("CompareFunctions: Both functions should be primitives or both should be composites");
-
     if (first->Name() != second->Name())
         throw std::runtime_error("CompareFunctions: Both functions' names should match");
 
     if (first->Attributes() != second->Attributes())
         throw std::runtime_error("CompareFunctions: Both functions' attributes should match");
 
-    auto firstPrimitive = (first->RootFunction() == nullptr) ? first : first->RootFunction();
-    auto secondPrimitive = (second->RootFunction() == nullptr) ? second : second->RootFunction();
+    auto firstPrimitive = first->RootFunction();
+    auto secondPrimitive = second->RootFunction();
 
     if (firstPrimitive->Name() != secondPrimitive->Name())
         throw std::runtime_error("CompareFunctions: Both functions' names should match");

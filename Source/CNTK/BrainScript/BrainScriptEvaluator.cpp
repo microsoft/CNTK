@@ -1149,6 +1149,9 @@ struct Debug : public Object
     {
     }
 }; // fake class type to get the template below trigger
+
+#pragma warning(push)
+#pragma warning(disable : 4505) // 'function' : unreferenced local function has been removed
 template <>
 /*static*/ ConfigurableRuntimeType MakeRuntimeTypeConstructor<Debug>()
 {
@@ -1171,6 +1174,7 @@ template <>
     rtInfo.isConfigRecord = false;
     return rtInfo;
 }
+#pragma warning(pop)
 
 // =======================================================================
 // register ComputationNetwork with the ScriptableObject system

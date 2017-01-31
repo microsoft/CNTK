@@ -160,6 +160,7 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassificationErrorNode), L"ErrorPrediction")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(EditDistanceErrorNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;

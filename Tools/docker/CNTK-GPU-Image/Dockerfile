@@ -1,4 +1,4 @@
-FROM nvidia/cuda:7.5-cudnn5-devel
+FROM nvidia/cuda:8.0-cudnn5-devel-ubuntu14.04
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
         autotools-dev \
@@ -57,7 +57,7 @@ RUN wget -q -O - https://github.com/NVlabs/cub/archive/1.4.1.tar.gz | tar -C /us
 RUN OPENCV_VERSION=3.1.0 && \
     wget -q -O - https://github.com/Itseez/opencv/archive/${OPENCV_VERSION}.tar.gz | tar -xzf - && \
     cd opencv-${OPENCV_VERSION} && \
-    cmake -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
+    cmake -DWITH_CUDA=OFF -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local/opencv-${OPENCV_VERSION} . && \
     make -j"$(nproc)" install && \
     rm -rf /opencv-${OPENCV_VERSION}
 
@@ -92,15 +92,11 @@ RUN PROTOBUF_VERSION=3.1.0 \
     cd .. && \
     rm -rf $PROTOBUF_STRING
 
-# Install CNTK custom MKL, version 2
-RUN mkdir /usr/local/CNTKCustomMKL && \
-    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-2.tgz | \
+# Install CNTK custom MKL
+RUN CNTK_CUSTOM_MKL_VERSION=3 && \
+    mkdir /usr/local/CNTKCustomMKL && \
+    wget --no-verbose -O - https://www.cntk.ai/mkl/CNTKCustomMKL-Linux-$CNTK_CUSTOM_MKL_VERSION.tgz | \
     tar -xzf - -C /usr/local/CNTKCustomMKL
-
-RUN mkdir -p /usr/local/cudnn/cuda/include && \
-    ln -s /usr/include/cudnn.h /usr/local/cudnn/cuda/include/cudnn.h && \
-    mkdir -p /usr/local/cudnn/cuda/lib64 && \
-    ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn/cuda/lib64/libcudnn.so
 
 # Install Kaldi
 ENV KALDI_VERSION=c024e8aa
@@ -139,12 +135,28 @@ RUN wget -q https://repo.continuum.io/archive/Anaconda3-4.2.0-Linux-x86_64.sh &&
     bash Anaconda3-4.2.0-Linux-x86_64.sh -b && \
     rm Anaconda3-4.2.0-Linux-x86_64.sh
 
-RUN wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/install/linux/conda-linux-cntk-py34-environment.yml -O /tmp/conda-linux-cntk-py34-environment.yml && \
-    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py34/ --file /tmp/conda-linux-cntk-py34-environment.yml
+RUN CONDA_ENV_PATH=/tmp/conda-linux-cntk-py35-environment.yml; \
+    wget -q https://raw.githubusercontent.com/Microsoft/CNTK/master/Scripts/install/linux/conda-linux-cntk-py35-environment.yml -O "$CONDA_ENV_PATH" && \
+    /root/anaconda3/bin/conda env create -p /root/anaconda3/envs/cntk-py35 --file "$CONDA_ENV_PATH" && \
+    rm -f "$CONDA_ENV_PATH"
 
-ENV PATH /root/anaconda3/envs/cntk-py34/bin:$PATH
+ENV PATH /root/anaconda3/envs/cntk-py35/bin:$PATH
+
+# NCCL
+ENV NCCL_VERSION=1.3.0-1
+ENV NCCL_PATH /usr/local/nccl-${NCCL_VERSION}
+RUN git clone --depth=1 -b v${NCCL_VERSION} https://github.com/NVIDIA/nccl.git && \
+    cd nccl && \
+    make CUDA_HOME=/usr/local/cuda PREFIX=$NCCL_PATH install && \
+    rm -rf /nccl
 
 WORKDIR /cntk
+
+RUN mkdir -p /usr/local/cudnn/cuda/include && \
+    ln -s /usr/include/cudnn.h /usr/local/cudnn/cuda/include/cudnn.h && \
+    mkdir -p /usr/local/cudnn/cuda/lib64 && \
+    ln -s /etc/alternatives/libcudnn_so /usr/local/cudnn/cuda/lib64/libcudnn.so && \
+    ln -s /usr/local/cuda/lib64/stubs/libnvidia-ml.so /usr/local/cuda/lib64/stubs/libnvidia-ml.so.1
 
 # Build CNTK
 RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
@@ -153,8 +165,9 @@ RUN git clone --depth=1 -b master https://github.com/Microsoft/CNTK.git . && \
       --with-gdk-include=/usr/local/cuda/include \
       --with-gdk-nvml-lib=/usr/local/cuda/lib64/stubs \
       --with-kaldi=${KALDI_PATH} \
-      --with-py34-path=/root/anaconda3/envs/cntk-py34 \
-      --with-cudnn=/usr/local/cudnn" && \
+      --with-py35-path=/root/anaconda3/envs/cntk-py35 \
+      --with-cudnn=/usr/local/cudnn \
+      --with-nccl=${NCCL_PATH}" && \
     git submodule update --init Source/Multiverso && \
     mkdir -p build/gpu/release && \
     cd build/gpu/release && \

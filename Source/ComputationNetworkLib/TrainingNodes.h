@@ -11,7 +11,6 @@
 #include "InputAndParamNodes.h"
 #include "CPURNGHandle.h"
 
-
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include <map>
@@ -722,10 +721,10 @@ public:
             InvalidArgument("%ls operation requires three inputs instead of %d.", NodeDescription().c_str(), (int)m_inputs.size());
 
         if (Input(0)->NeedsGradient() == true)
-            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 1st input.", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for gain input.", NodeName().c_str(), OperationName().c_str());
 
         if (Input(2)->NeedsGradient() == true)
-            InvalidArgument("%ls %ls operation needs input type (no gradient) for the 3rd input.", NodeName().c_str(), OperationName().c_str());
+            InvalidArgument("%ls %ls operation needs input type (no gradient) for group input.", NodeName().c_str(), OperationName().c_str());
 
         ValidateBinaryReduce(isFinalValidationPass);
     }
@@ -1151,7 +1150,7 @@ class IRngUser
 {
 public:
     virtual RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) = 0;
-    virtual void SetRandomSeed(const unsigned long val) = 0;
+    virtual void SetRngState(uint64_t seed, uint64_t offset = 0) = 0;
 };
 
 // This implements IRngUser using RNGHandle.
@@ -1161,21 +1160,67 @@ public:
     RNGHandle& GetRNGHandle(DEVICEID_TYPE deviceId) override
     {
         if (!m_RNGHandle)
-            m_RNGHandle = RNGHandle::Create(deviceId, m_randomSeed);
+            m_RNGHandle = RNGHandle::Create(deviceId, m_rngSeed, m_rngOffset);
 
         return *m_RNGHandle;
     }
 
     // E.g. called from ComputationNetwork to make sure that CNTK running on different nodes will have different seed.
-    void SetRandomSeed(const unsigned long val) override
+    void SetRngState(uint64_t seed, uint64_t offset = 0) override
     {
-        m_randomSeed = (unsigned long)val;
-
+        m_rngSeed = seed;
+        m_rngOffset = offset;
         m_RNGHandle.reset(); // Reset handle. New handle will be generated with next call of GetRNGHandle(...).
     }
 
+    uint64_t GetRngSeed() const
+    {
+        return m_rngSeed;
+    }
+
+    uint64_t GetRngOffset() const
+    {
+        return m_rngOffset;
+    }
+
+    void UpdateRngOffset(uint64_t val)
+    {
+        m_rngOffset = val;
+    }
+
 protected:
-    unsigned long m_randomSeed = 0;
+
+    void Load(File& fstream, size_t modelVersion)
+    {
+        if (modelVersion < CNTK_MODEL_VERSION_16)
+            return;
+
+        uint64_t seed;
+        uint64_t offset;
+
+        if (modelVersion == CNTK_MODEL_VERSION_16)
+        {
+            unsigned long seed_16;
+            fstream >> seed_16;
+            seed = seed_16;
+        }
+        else 
+        {
+            fstream >> seed;
+        }
+
+        fstream >> offset;
+        SetRngState(seed, offset);  
+    }
+
+    void Save(File& fstream) const
+    {
+        fstream << GetRngSeed();
+        fstream << GetRngOffset();
+    }
+
+    uint64_t m_rngSeed = 0;
+    uint64_t m_rngOffset = 0;
     std::shared_ptr<RNGHandle> m_RNGHandle;
 };
 
@@ -1200,7 +1245,7 @@ public:
     RandomSampleNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t sizeOfSampledSet = 0, bool allowDuplicates = false)
         : Base(deviceId, name), m_sizeOfSampledSet(sizeOfSampledSet), m_allowDuplicates(allowDuplicates)
     {
-        SetRandomSeed((unsigned long)CreateUniqId());
+        SetRngState(CreateUniqId());
     }
 
     RandomSampleNodeBase(const ScriptableObjects::IConfigRecordPtr configp)
@@ -1211,8 +1256,7 @@ public:
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override;
 
-    void Save(File& fstream) const;
-
+    virtual void Save(File& fstream) const override;
     virtual void Load(File& fstream, size_t modelVersion) override;
 
 protected:
@@ -2075,10 +2119,13 @@ public:
     DeclareConstructorFromConfigWithNumInputs(DropoutNode);
     DropoutNode(DEVICEID_TYPE deviceId, const wstring& name)
         : Base(deviceId, name),
-          m_dropoutRate(0)
+        m_dropoutRate(0)
     {
-        SetRandomSeed((unsigned long)CreateUniqId());
+        SetRngState(CreateUniqId());
     }
+
+    virtual void Save(File& fstream) const override;
+    virtual void Load(File& fstream, size_t modelVersion) override;
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
@@ -2118,6 +2165,7 @@ public:
             sliceMask.SetUniformRandomMask((ElemType)m_dropoutRate, (ElemType)(1.0 / (1.0 - m_dropoutRate)) /*pre-scaled*/, GetRNGHandle());
             // apply dropout mask
             sliceOutputValue.AssignElementProductOf(sliceMask, sliceInput0Value);
+            UpdateRngOffset(GetRngOffset() + sliceMask.GetNumElements());
         }
     }
 
@@ -2146,7 +2194,7 @@ public:
         {
             auto node = dynamic_pointer_cast<DropoutNode<ElemType>>(nodeP);
             node->m_dropoutRate = m_dropoutRate;
-            node->SetRandomSeed(m_randomSeed);
+            node->SetRngState(GetRngSeed(), GetRngOffset());
             node->m_maskOfDropout = m_maskOfDropout;
         }
     }
@@ -2170,9 +2218,6 @@ private:
     double m_dropoutRate;
     shared_ptr<Matrix<ElemType>> m_maskOfDropout;
 };
-
-template class DropoutNode<float>;
-template class DropoutNode<double>;
 
 // -----------------------------------------------------------------------
 // BatchNormalizationNode (input, scale, bias, runMean, runVariance,
@@ -2478,22 +2523,20 @@ public:
                               sliceInputGrad,                   // (out) gradient for data input goes here
                               scale,                            // (in)  out of scale and bias, only scale is needed in gradient propagation
                               blendFactor,                      // (in)  smoothing weight for running stats (1=use only running stats)
-                              *m_savedMean, *m_savedInvStdDev,   // (in)  saved mean/invstddev values used in ForwardProp()
+                              *m_savedMean, *m_savedInvStdDev,  // (in)  saved mean/invstddev values used in ForwardProp()
                               *m_dScale, *m_dBias);             // (out) gradients for scale and bias
         }
         else if (inputIndex == 1) // derivative with respect to the scale
         {
             // Derivative with respect to the scale was precomputed during input derivative computation.
             Matrix<ElemType>& grad = Input(1)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dScale->Data());
-            // BUGBUG: ^^ This should add the gradient, not overwrite it.
+            Matrix<ElemType>::ScaleAndAdd(1, *m_dScale, grad);
         }
         else if (inputIndex == 2) // derivative with respect to the bias
         {
             // Derivative with respect to the bias was precomputed during input derivative computation.
             Matrix<ElemType>& grad = Input(2)->Gradient();
-            grad.SetValue(grad.GetNumRows(), grad.GetNumCols(), grad.GetDeviceId(), m_dBias->Data());
-            // BUGBUG: ^^ Also here, this should add the gradient, not overwrite it.
+            Matrix<ElemType>::ScaleAndAdd(1, *m_dBias, grad);
         }
         // No derivatives with respect to running mean and variance.
     }
@@ -2541,6 +2584,11 @@ public:
 
         if (isFinalValidationPass)
         {
+            // The current implementation requires that the gradient of the first operand/input be computed
+            // in order to compute gradients for the bias and scale parameters (2nd and 3rd inputs)
+            if (Environment().IsTraining() && ((Input(1)->NeedsGradient() || Input(2)->NeedsGradient()) && !Input(0)->NeedsGradient()))
+                InvalidArgument("%ls %ls currently supports learnable scale and bias parameters only if the first input also needs gradient (i.e. is dependent on at-least one learnable parameter).", NodeName().c_str(), OperationName().c_str());
+
             if (m_convertRunningVariancePending)
             {
                 // Prior to CNTK CuDNN v5 support (and the CNTK engine of the same time), mean and inverse standard deviation
@@ -2581,6 +2629,29 @@ public:
                     "Please specify imageLayout=\"cudnn\" in BatchNormalization node in your NDL/BrainScript "
                     "and make sure your input data layout is CHW", NodeName().c_str(), OperationName().c_str());
             }
+
+            if (!m_useCntkEngine)
+            {
+                // Fallback to cntk engine on CPU device if cuDnn is not available,
+                bool cpuDevice = (m_deviceId == CPUDEVICE);
+
+                // or if parameters cannot be handled by cuDnn (which is needed for compatibility when changing the default to cudnn)
+                // In Source/Math/CuDnnBatchNormalization.cu :
+                //   if (blendFactor != 0 && (blendFactor != 1 || expAvgFactor > 0))
+                //      InvalidArgument("cuDNN batch normalization engine currently supports blendTimeConstant of 0 or 1 only.");
+                // Check ComputeBlendFactor()/ComputeExpAvgFactor() for inferring blendFactor/expAvgFactor from m_blendTimeConst/m_normTimeConst
+                bool cuDnnUnsupportedParams = (m_blendTimeConst != 0 && (isfinite(m_blendTimeConst) || isfinite(m_normTimeConst)));
+
+                if (cpuDevice || cuDnnUnsupportedParams)
+                {
+                    m_useCntkEngine = true;
+                    if (cuDnnUnsupportedParams)
+                    {
+                        fprintf(stderr, "\nWARNING: batch normalization falls back to cntk engine for parameters not supported by cuDnn.\n");
+                    }
+                }
+            }
+
             double cudnnMinEps = 1e-5; // CUDNN_BN_MIN_EPSILON
             if (!m_useCntkEngine && m_epsilon < cudnnMinEps) 
                 fprintf(stderr, "\nWARNING: cuDNN batch normalization requires epsilon >= %e. Epsilon will be reset to that value.\n", cudnnMinEps);

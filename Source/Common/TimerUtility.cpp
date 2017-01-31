@@ -1,35 +1,12 @@
 #include "TimerUtility.h"
-#include <assert.h>
-#ifdef WIN32
-#define NOMINMAX
-#include "Windows.h"
-static LARGE_INTEGER s_ticksPerSecond;
-static BOOL s_setFreq = QueryPerformanceFrequency(&s_ticksPerSecond);
-#else
-#include <time.h>
-#endif
+#include <chrono>
+using namespace std::chrono;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-long long Timer::GetStamp()
-{
-#ifdef WIN32
-    LARGE_INTEGER li;
-    QueryPerformanceCounter(&li);
-    return li.QuadPart;
-#else
-    timespec ts;
-    clock_gettime(CLOCK_REALTIME, &ts); // Works on Linux
-
-    long long ret = ts.tv_sec * NANO_PER_SEC + ts.tv_nsec;
-
-    return ret;
-#endif
-}
-
 void Timer::Start()
 {
-    m_start = GetStamp();
+    m_start = Clock::GetTimeStamp();
 }
 
 void Timer::Restart()
@@ -40,12 +17,16 @@ void Timer::Restart()
 
 void Timer::Stop()
 {
-    m_end = GetStamp();
+    m_end = Clock::GetTimeStamp();
 }
 
-long long Timer::ElapsedMicroseconds()
+double Timer::ElapsedSeconds()
 {
-    assert(m_start != 0);
+    if (m_start == 0)
+    {
+        return 0.0; // the timer hasn't been started yet
+    }
+
     long long diff = 0;
 
     if (m_end != 0)
@@ -54,7 +35,7 @@ long long Timer::ElapsedMicroseconds()
     }
     else
     {
-        diff = GetStamp() - m_start;
+        diff = Clock::GetTimeStamp() - m_start;
     }
 
     if (diff < 0)
@@ -62,11 +43,22 @@ long long Timer::ElapsedMicroseconds()
         diff = 0;
     }
 
-#ifdef WIN32
-    assert(s_setFreq == TRUE);
-    return (diff * MICRO_PER_SEC) / s_ticksPerSecond.QuadPart;
-#else
-    return diff / MICRO_PER_NANO;
-#endif
+    high_resolution_clock::duration dur(diff);
+    long long nsec = duration_cast<nanoseconds>(dur).count();
+    return static_cast<double>(nsec) / 1e9;
 }
+
+long long Clock::GetTimeStamp()
+{
+    // This takes 20-30 ns.
+    return high_resolution_clock::now().time_since_epoch().count();
+}
+
+long long Clock::GetTicksPerSecond()
+{
+    typedef high_resolution_clock::period TickPeriod;
+    static_assert(TickPeriod::den % TickPeriod::num == 0, "Ticks per second is not an integer");
+    return TickPeriod::den / TickPeriod::num;
+}
+
 } } }

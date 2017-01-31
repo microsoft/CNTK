@@ -1,8 +1,7 @@
 dataDir: ../../../../Speech/Data
 
 tags:
-    - nightly-e (build_sku == 'gpu') and (flavor=='release') and (device=='gpu') and (os=='linux')
-    - weekly-e (build_sku == 'gpu') and (flavor=='release') and (device=='gpu')
+    - nightly-e (build_sku == 'gpu') and (flavor == 'release') and (device == 'gpu') and (os == 'linux')
 
 testCases:
   CNTK Run must be completed:

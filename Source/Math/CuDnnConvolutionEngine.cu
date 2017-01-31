@@ -183,6 +183,8 @@ public:
     {
     }
 
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
+
 protected:
     using Base::m_geometry;
     using Base::m_deviceId;
@@ -255,7 +257,7 @@ protected:
         CUDNN_CALL(err);
     }
 
-    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, Mat& workspace) override
+    void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool accumulateGradient, Mat& workspace) override
     {
         size_t batchSize = srcGrad.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
@@ -282,11 +284,11 @@ protected:
             workspace.Resize((m_backDataAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardData(*m_cudnn, &C::One, *m_kernelT, ptr(kernel), m_outT, ptr(srcGrad), *m_conv, m_backDataAlgo.Algo.algo,
-                                                ptr(workspace), m_backDataAlgo.Algo.memory, &C::One, m_inT, ptr(grad)));
+                                                ptr(workspace), m_backDataAlgo.Algo.memory, accumulateGradient ? &C::One : &C::Zero, m_inT, ptr(grad)));
         workspace.Resize(0, 0);
     }
 
-    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*allowReuse*/, Mat& workspace) override
+    void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool accumulateGradient, bool /*allowReuse*/, Mat& workspace) override
     {
         size_t batchSize = in.GetNumCols();
         // Find best algo and allocate temp buffer, if needed.
@@ -313,7 +315,7 @@ protected:
             workspace.Resize((m_backFiltAlgo.Algo.memory + sizeof(ElemType) - 1) / sizeof(ElemType), 1);
         // Compute gradients with respect to the output tensor (data).
         CUDNN_CALL(cudnnConvolutionBackwardFilter(*m_cudnn, &C::One, m_inT, ptr(in), m_outT, ptr(srcGrad), *m_conv, m_backFiltAlgo.Algo.algo,
-                                                  ptr(workspace), m_backFiltAlgo.Algo.memory, &C::One, *m_kernelT, ptr(kernelGrad)));
+                                                  ptr(workspace), m_backFiltAlgo.Algo.memory, accumulateGradient ? &C::One : &C::Zero, *m_kernelT, ptr(kernelGrad)));
         workspace.Resize(0, 0);
     }
 
@@ -495,14 +497,35 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
     const auto& kernel = geometry->KernelShape();
     const auto& sharing = geometry->Sharing();
     const auto& mapCount = geometry->MapCount();
+
+    const auto& inputRank = input.GetRank();
+    const auto& kernelRank = kernel.GetRank();
+    const auto& mapRank = mapCount.GetRank();
     // cuDNN supports 2D and 3D convolutions at the moment with full sharing.
     // In case map count size > 1, then it should have all ones except last dimension.
     // If pooling is requested, then cuDNN supports only 2D/3D inputs and 2D pooling kernels.
-    return (input.GetRank() <= 4 &&
-            std::find(begin(sharing), end(sharing), false) == sharing.end() &&
-            mapCount.GetNumElements() == mapCount[mapCount.GetRank() - 1] &&
-            (poolKind == PoolKind::None || 
-             input.GetRank() <= 3 && (kernel.GetRank() < 3 || kernel[2] == 1)));
+    bool retVal = (inputRank <= 4 &&
+                   std::find(begin(sharing), end(sharing), false) == sharing.end() &&
+                   mapCount.GetNumElements() == mapCount[mapRank - 1] &&
+                   (poolKind == PoolKind::None ||
+                   inputRank <= 3 && (kernelRank < 3 || kernel[2] == 1)));
+
+    return retVal;
+
+    // TODO: This currently either causes a CUDA timeout or slows the whole machine down to a crawl (GPU).
+    // cuDNN as of version 8.0 does not handle asymmetric padding for convolution correctly. We need to detect asymmetric 
+    // padding due to auto-padding and choose the reference convolution implementation instead 
+    //if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine 
+    //{
+    //    for (int i = 0; i < kernelRank; i++)
+    //    {
+    //        if (geometry->GetAutoPad(i))
+    //            retVal = retVal && (kernel[i] % 2 != 0);  // make sure kernel size is odd 
+    //        else
+    //            retVal = retVal && (geometry->GetLowerPad(i) == geometry->GetUpperPad(i));   // lower pad is same as upper pad 
+    //    }
+    //}
+    //return retVal;
 }
 
 template class CuDnnConvolutionEngineFactory<float>;

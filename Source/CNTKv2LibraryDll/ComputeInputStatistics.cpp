@@ -6,7 +6,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Utils.h"
-#include "Function.h"
+#include "CompositeFunction.h"
 #include <tuple>
 #include "ComputationNetworkBuilder.h"
 
@@ -74,6 +74,7 @@ namespace CNTK
         for (auto & preComputeNode : preComputeNodes)
             dynamic_pointer_cast<IPreComputeNode>(preComputeNode)->MarkComputed(false /*begin accumulating*/);
 
+        std::unordered_map<MBLayoutPtr, Variable> layoutsPopulated;
         const size_t maxMinibatchDataSize = (1 << 27); // 128 MB
         const size_t minibatchSize = maxMinibatchDataSize / totalSizePerSample;
         for (;;)
@@ -83,7 +84,7 @@ namespace CNTK
                 break;
 
             for (auto& currentStreamKV : computedMeanAndInvStdDevs)
-                CompositeFunction::PopulateComputationNodeValue<float>({ streamToDummyInputVariableMap[currentStreamKV.first], minibatchData[currentStreamKV.first].m_data }, streamToInputNodeMap[currentStreamKV.first]);
+                CompositeFunction::PopulateComputationNodeValue<float>({ streamToDummyInputVariableMap[currentStreamKV.first], minibatchData[currentStreamKV.first].data }, streamToInputNodeMap[currentStreamKV.first], layoutsPopulated);
 
             ComputationNetwork::BumpEvalTimeStamp(allInputNodes);
 

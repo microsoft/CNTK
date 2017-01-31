@@ -7,12 +7,15 @@
 
 import os
 import numpy as np
+import pytest
+
+from cntk.io import *
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
-def test_text_format(tmpdir):
-    from cntk.io import text_format_minibatch_source, StreamConfiguration, MinibatchSource
+AA = np.asarray
 
+def test_text_format(tmpdir):
     mbdata = r'''0	|x 560:1	|y 1 0 0 0 0
 0	|x 0:1
 0	|x 0:1
@@ -28,9 +31,11 @@ def test_text_format(tmpdir):
     input_dim = 1000
     num_output_classes = 5
 
-    mb_source = text_format_minibatch_source(tmpfile, [
-                    StreamConfiguration( 'features', input_dim, True, 'x' ),
-                    StreamConfiguration( 'labels', num_output_classes, False, 'y')])
+    mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
+         features  = StreamDef(field='x', shape=input_dim, is_sparse=True),
+         labels    = StreamDef(field='y', shape=num_output_classes, is_sparse=False)
+       )))
+
     assert isinstance(mb_source, MinibatchSource)
 
     features_si = mb_source.stream_info('features')
@@ -41,6 +46,9 @@ def test_text_format(tmpdir):
     features = mb[features_si]
     # 2 samples, max seq len 4, 1000 dim
     assert features.shape == (2, 4, input_dim)
+    assert features.end_of_sweep
+    assert features.num_sequences == 2
+    assert features.num_samples == 7
     assert features.is_sparse
     # TODO features is sparse and cannot be accessed right now:
     # *** RuntimeError: DataBuffer/WritableDataBuffer methods can only be called for NDArrayiew objects with dense storage format
@@ -51,6 +59,9 @@ def test_text_format(tmpdir):
     labels = mb[labels_si]
     # 2 samples, max seq len 1, 5 dim
     assert labels.shape == (2, 1, num_output_classes)
+    assert labels.end_of_sweep
+    assert labels.num_sequences == 2
+    assert labels.num_samples == 2
     assert not labels.is_sparse
 
     label_data = np.asarray(labels)
@@ -60,8 +71,16 @@ def test_text_format(tmpdir):
                 [[ 0.,  1.,  0.,  0.,  0.]]
                 ]))
 
+    mb = mb_source.next_minibatch(1)
+    features = mb[features_si]
+    labels = mb[labels_si]
+
+    assert not features.end_of_sweep
+    assert not labels.end_of_sweep
+    assert features.num_samples < 7
+    assert labels.num_samples == 1
+
 def test_image():
-    from cntk.io import ReaderConfig, ImageDeserializer
     map_file = "input.txt"
     mean_file = "mean.txt"
     epoch_size = 150
@@ -76,8 +95,8 @@ def test_image():
     
     image = ImageDeserializer(map_file)
     image.map_features(feature_name,
-            [ImageDeserializer.crop(crop_type='Random', ratio=0.8,
-                jitter_type='uniRatio'),
+            [ImageDeserializer.crop(crop_type='randomside', side_ratio=0.8,
+                jitter_type='uniratio'),
              ImageDeserializer.scale(width=image_width, height=image_height,
                  channels=num_channels, interpolations='linear'),
              ImageDeserializer.mean(mean_file)])
@@ -102,16 +121,43 @@ def test_image():
     assert t0['type'] == 'Crop'
     assert t1['type'] == 'Scale'
     assert t2['type'] == 'Mean'
-    t0['cropType'] == 'Random'
-    t0['cropRatio'] == 0.8
-    t0['jitterType'] == 'uniRatio'
+    t0['cropType'] == 'randomside'
+    t0['sideRatio'] == 0.8
+    t0['aspectRatio'] == 0.9
+    t0['jitterType'] == 'uniratio'
     t1['width'] == image_width
     t1['height'] == image_height
     t1['channels'] == num_channels
     t1['interpolations'] == 'linear'
     t2['type'] == 'mean'
     t2['meanFile'] == mean_file
-
+    
+    rc = ReaderConfig(image, randomize=False, randomization_window = 100, epoch_size=epoch_size)
+    
+    assert rc['epochSize'].value == epoch_size
+    assert rc['randomize'] == False
+    assert len(rc['deserializers']) == 1
+    d = rc['deserializers'][0]
+    assert d['type'] == 'ImageDeserializer'
+    assert d['file'] == map_file
+    assert set(d['input'].keys()) == {label_name, feature_name}
+    
+    l = d['input'][label_name]
+    assert l['labelDim'] == num_classes
+    
+    rc = ReaderConfig(image, randomize=True, randomization_window = 100, epoch_size=epoch_size)
+    
+    assert rc['epochSize'].value == epoch_size
+    assert rc['randomize'] == True
+    assert len(rc['deserializers']) == 1
+    d = rc['deserializers'][0]
+    assert d['type'] == 'ImageDeserializer'
+    assert d['file'] == map_file
+    assert set(d['input'].keys()) == {label_name, feature_name}
+    
+    l = d['input'][label_name]
+    assert l['labelDim'] == num_classes
+    
     # TODO depends on ImageReader.dll
     ''' 
     mbs = rc.minibatch_source()
@@ -119,7 +165,7 @@ def test_image():
     assert set(sis.keys()) == { feature_name, label_name }
     '''
 
-def test_minibatch(tmpdir):
+def test_full_sweep_minibatch(tmpdir):
 
     mbdata = r'''0	|S0 0   |S1 0
 0	|S0 1 	|S1 1 
@@ -134,23 +180,20 @@ def test_minibatch(tmpdir):
     with open(tmpfile, 'w') as f:
         f.write(mbdata)
 
-    feature_stream_name = 'features'
-    labels_stream_name = 'labels'
-
-    from cntk.io import text_format_minibatch_source, StreamConfiguration
-    mb_source = text_format_minibatch_source(tmpfile, [
-        StreamConfiguration(feature_stream_name, 1, False, 'S0'),
-        StreamConfiguration(labels_stream_name, 1, False, 'S1')],
-        randomize=False)
-
-    features_si = mb_source.stream_info(feature_stream_name)
-    labels_si = mb_source.stream_info(labels_stream_name)
+    mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
+        features  = StreamDef(field='S0', shape=1),
+        labels    = StreamDef(field='S1', shape=1))),
+        randomize=False, epoch_size=FULL_DATA_SWEEP)
+     
+    features_si = mb_source.stream_info('features')
+    labels_si = mb_source.stream_info('labels')
     
     mb = mb_source.next_minibatch(1000)
     assert mb[features_si].num_sequences == 2
     assert mb[labels_si].num_sequences == 2
 
     features = mb[features_si]
+    assert features.end_of_sweep
     assert len(features.value) == 2
     expected_features = \
             [
@@ -166,6 +209,7 @@ def test_minibatch(tmpdir):
              [2, 1, 1, 0]])
 
     labels = mb[labels_si]
+    assert labels.end_of_sweep
     assert len(labels.value) == 2
     expected_labels = \
             [
@@ -178,3 +222,87 @@ def test_minibatch(tmpdir):
     assert np.allclose(labels.mask, 
             [[2, 1, 1],
              [2, 1, 0]])
+
+def test_large_minibatch(tmpdir):
+
+    mbdata = r'''0  |S0 0   |S1 0
+0   |S0 1   |S1 1 
+0   |S0 2   
+0   |S0 3   |S1 3 
+0   |S0 4   
+0   |S0 5   |S1 1
+0   |S0 6   |S1 2 
+'''
+
+    tmpfile = str(tmpdir/'mbtest.txt')
+    with open(tmpfile, 'w') as f:
+        f.write(mbdata)
+
+    mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
+        features  = StreamDef(field='S0', shape=1),
+        labels    = StreamDef(field='S1', shape=1))),
+        randomize=False)
+     
+    features_si = mb_source.stream_info('features')
+    labels_si = mb_source.stream_info('labels')
+
+    mb = mb_source.next_minibatch(1000)
+    features = mb[features_si]
+    labels = mb[labels_si]
+
+    # Actually, the minibatch spans over multiple sweeps,
+    # not sure if this is an artificial situation, but 
+    # maybe instead of a boolean flag we should indicate
+    # the largest sweep index the data was taken from.
+    assert features.end_of_sweep
+    assert labels.end_of_sweep
+
+    assert features.num_samples == 1000 - 1000 % 7
+    assert labels.num_samples == 5 * (1000 // 7)
+
+    assert mb[features_si].num_sequences == (1000 // 7)
+    assert mb[labels_si].num_sequences == (1000 // 7)
+
+
+@pytest.mark.parametrize("idx, alias_tensor_map, expected", [
+    (0, {'A': [object()]}, ValueError),
+])
+def test_sequence_conversion_exceptions(idx, alias_tensor_map, expected):
+    with pytest.raises(expected):
+        sequence_to_cntk_text_format(idx, alias_tensor_map)
+
+
+@pytest.mark.parametrize("idx, alias_tensor_map, expected", [
+    (0, {'W': AA([])}, ""),
+    (0, {'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]])}, """\
+0\t|W 1 0 0 0 1 0 0 0\
+"""),
+    (0, {
+        'W': AA([[[1, 0, 0, 0], [1, 0, 0, 0]]]),
+        'L': AA([[[2]]])
+    },
+        """\
+0\t|L 2 |W 1 0 0 0 1 0 0 0\
+"""),
+    (0, {
+        'W': AA([[[1, 0], [1, 0]], [[5, 6], [7, 8]]]),
+        'L': AA([[[2]]])
+    },
+        """\
+0\t|L 2 |W 1 0 1 0
+0\t|W 5 6 7 8"""),
+])
+def test_sequence_conversion_dense(idx, alias_tensor_map, expected):
+    assert sequence_to_cntk_text_format(idx, alias_tensor_map) == expected
+
+
+@pytest.mark.parametrize("data, expected", [
+    ([1], True),
+    ([[1, 2]], True),
+    ([[AA([1, 2])]], False),
+    ([AA([1, 2])], False),
+    ([AA([1, 2]), AA([])], False),
+])
+def test_is_tensor(data, expected):
+    from cntk.io import _is_tensor
+    assert _is_tensor(data) == expected

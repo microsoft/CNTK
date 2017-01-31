@@ -18,6 +18,7 @@
 #include "DataReader.h"
 #include "ReaderShim.h"
 #include "DataTransferer.h"
+#include "PerformanceProfiler.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -27,6 +28,7 @@ ReaderShim<ElemType>::ReaderShim() :
     m_dataTransferers(2, DataTransfererPtr()),
     m_currentDataTransferIndex(0),
     m_endOfEpoch(false),
+    m_endOfSweep(false),
     m_currentSamplePosition(0),
     m_reader(nullptr),
     m_factory(nullptr)
@@ -273,6 +275,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
 
     m_endOfEpoch = result.m_isEndOfEpoch;
+    m_endOfSweep = result.m_isEndOfSweep;
     if (m_endOfEpoch && !result.m_isDataAvailable)
     {
         // No data and end of epoch, simply return.
@@ -346,6 +349,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
 template <class ElemType>
 typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMinibatch(size_t currentDataTransferIndex)
 {
+    PROFILE_SCOPE(profilerEvtPrefetchMinibatch);
+
     // Resetting layouts.
     for (auto& mx : m_prefetchBuffers)
         mx.second.m_mbLayout = std::make_shared<MBLayout>();
@@ -354,7 +359,7 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
 
     // If there is no data we can simply return.
     if (minibatch.m_data.empty())
-        return PrefetchResult{ minibatch.m_endOfEpoch, false };
+        return PrefetchResult{ minibatch.m_endOfSweep, minibatch.m_endOfEpoch, false };
 
     // Ok we have some data. Let's load it to GPU.
     // But before we need to make sure that corresponding compute has already finished from the last iteration.
@@ -377,7 +382,7 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
     if (m_dataTransferers[currentDataTransferIndex])
         m_dataTransferers[currentDataTransferIndex]->RecordCPUToGPUCopy();
 
-    return PrefetchResult{ minibatch.m_endOfEpoch, true };
+    return PrefetchResult{ minibatch.m_endOfSweep, minibatch.m_endOfEpoch, true };
 }
 
 

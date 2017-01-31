@@ -127,8 +127,7 @@ function VerifyInstallationContent(
     $path = $table["Path"]
 
     $noInstallRequired = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
-    $noInstallRequired = (join-path $path prerequisites\VS2012\vcredist_x64.exe | test-path -PathType Leaf) -and $noInstallRequired
-    $noInstallRequired = (join-path $path prerequisites\VS2013\vcredist_x64.exe | test-path -PathType Leaf) -and $noInstallRequired
+    $noInstallRequired = (join-path $path prerequisites\VS2015\vc_redist.x64.exe | test-path -PathType Leaf) -and $noInstallRequired
     $noInstallRequired = (join-path $path prerequisites\MSMpiSetup.exe | test-path -PathType Leaf) -and $noInstallRequired
 
     if ($noInstallRequired) {
@@ -136,7 +135,7 @@ function VerifyInstallationContent(
         return $noInstallRequired
     }
     
-    throw "`nFatal Error: Files from CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package, not from a CNTK source clone."
+    throw "`nFatal Error: Files from the CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package, not from a CNTK source clone."
 }
 
 function VerifyDirectory(

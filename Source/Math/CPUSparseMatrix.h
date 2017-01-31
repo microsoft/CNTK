@@ -140,6 +140,8 @@ public:
         NOT_IMPLEMENTED;
     }
 
+    static void InnerProduct(const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise);
+
     static void AddScaledDifference(const ElemType /*alpha*/, const CPUSparseMatrix<ElemType>& /*a*/, const CPUMatrix<ElemType>& /*b*/, CPUMatrix<ElemType>& /*c*/,
                                     bool /*bDefaultZero*/)
     {
@@ -201,14 +203,23 @@ public:
 
             return 0;
         }
-        else
+        else if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol)
         {
-            NOT_IMPLEMENTED;
+            for (size_t blockId = 0; blockId < GetBlockSize(); blockId++)
+            {
+                size_t blockCol = GetBlockIds()[blockId] - GetBlockIdShift();
+                if (blockCol == col)
+                {
+                    return ((ElemType*)Buffer())[blockId * GetNumRows() + row];
+                }
+            }
+            return 0;
         }
+        NOT_IMPLEMENTED;
     }
 
 public:
-    void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum);
+    void NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum = true);
     ElemType Adagrad(CPUMatrix<ElemType>& c, const bool needAveMultiplier);
 
 public:
@@ -256,6 +267,11 @@ public:
     void SetBlockSize(size_t newBlockSize)
     {
         BaseMatrix<ElemType>::SetBlockSize(newBlockSize);
+    }
+
+    size_t GetBlockSize() const
+    {
+        return BaseMatrix<ElemType>::GetBlockSize();
     }
 
     size_t* BlockIdsLocation() const
@@ -325,7 +341,6 @@ public:
     {
         return (GetFormat() & matrixFormatRowMajor) ? MajorIndexSize() : SecondaryIndexSize();
     } // actual number of bytes in use
-
 };
 
 typedef CPUSparseMatrix<float> CPUSingleSparseMatrix;

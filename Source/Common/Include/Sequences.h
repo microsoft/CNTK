@@ -294,6 +294,13 @@ public:
         return GetNumTimeSteps() * GetNumParallelSequences();
     }
 
+    // Get the number of frames of the input sequence that belong to the MB, i.e. disregarding sequence elements that are outside of the MB boundaries
+    // Input sequence is expected to belong to this MBLayout
+    size_t GetNumSequenceFramesInCurrentMB(const SequenceInfo& sequenceInfo) const
+    {
+        return min(sequenceInfo.tEnd, GetNumTimeSteps()) - max(sequenceInfo.tBegin, (ptrdiff_t)0);
+    }
+
     // return all sequences stored in this minibatch
     const vector<SequenceInfo>& GetAllSequences() const
     {
@@ -499,6 +506,18 @@ public:
         size_t col = (size_t)tIn * GetNumParallelSequences() + seq.s;
         assert(col < GetNumCols());
         return col;
+    }
+
+    // get the matrix-column indices for a given sequence
+    // sequence is expected to belong to this MB
+    vector<size_t> GetColumnIndices(const SequenceInfo& seq) const
+    {
+        size_t numFrames = GetNumSequenceFramesInCurrentMB(seq);
+        vector<size_t> res;
+        res.reserve(numFrames);
+        for (size_t i = 0; i < numFrames;++i)
+            res.push_back(GetColumnIndex(seq,i));
+        return res;
     }
 
 private:
@@ -822,7 +841,7 @@ inline bool MBLayout::IsBeyondMinibatch(const FrameRange& fr) const
     if (fr.IsAllFrames())
         LogicError("MBLayout::IsBeyondStartOrEnd() cannot be applied to FrameRange that specifies more than a single time step.");
 
-    const auto beginTime = (ptrdiff_t)fr.timeIdxInSeq + fr.m_timeOffset; // we test off the frame without offset
+    const auto beginTime = (ptrdiff_t)fr.timeIdxInSeq + fr.m_timeOffset; // we test off the frame with offset
     const auto endTime = beginTime + (ptrdiff_t)fr.m_timeRange;
     return beginTime < 0 || endTime > (ptrdiff_t)GetNumTimeSteps();
 }

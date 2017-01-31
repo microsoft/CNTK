@@ -204,8 +204,10 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
 }
 
 // understood options:
-//  uniform:       1/20
+//  uniformBS:     1/20
+//  uniform:       1.0
 //  gaussian:      sqrt(0.04 / fanin)
+//  normal:        1.0
 //  xavier:        sqrt(3 / fanin)
 //  glorotNormal:  sqrt(2 / (fanin+fanout))
 //  glorotUniform: sqrt(6 / (fanin+fanout))
@@ -214,9 +216,11 @@ void LearnableParameter<ElemType>::PostInitParameters(const wstring& initString,
 // returns (*,0) for unrecognized string
 static pair<bool/*uniform*/,double/*stddev or range*/> ParseRandomizationType(const wstring& type, size_t fanOut /* = 1*/, size_t fanIn /*= 1*/)
 {
-    if      (type == UniformInitializerTypeName)       return make_pair( true, 0.05f);
+    if      (type == UniformBSInitializerTypeName)     return make_pair(true, 0.05f);
+    if      (type == UniformInitializerTypeName)       return make_pair(true, 1.0f); 
     else if (type == GaussianInitializerTypeName)      return make_pair(false, 0.2 / sqrt(fanIn));
-    else if (type == XavierInitializerTypeName)        return make_pair(true,  sqrt(3.0 / fanIn));
+    else if (type == NormalInitializerTypeName)        return make_pair(false, 1.0f);
+    else if (type == XavierInitializerTypeName)        return make_pair(true, sqrt(3.0 / fanIn));
     else if (type == GlorotUniformInitializerTypeName) return make_pair(true,  sqrt(6.0 / (fanIn + fanOut)));
     else if (type == GlorotNormalInitializerTypeName)  return make_pair(false, sqrt(2.0 / (fanIn + fanOut)));
     else if (type == HeUniformInitializerTypeName)     return make_pair(true,  sqrt(6.0 / fanIn));
@@ -614,7 +618,7 @@ template <class ElemType>
         Base::DumpNodeInfo(printValues, printMetadata, fstream);
 
         char str[4096];
-        sprintf(str, "[%lu,%lu]  ", GetAsMatrixNumRows(), GetAsMatrixNumCols());
+        sprintf(str, "[%lu,%lu]  ", (unsigned long)GetAsMatrixNumRows(), (unsigned long)GetAsMatrixNumCols());
         fstream << string(str);
         sprintf(str, "learningRateMultiplier=%f  NeedsGradient=%s", m_learningRateMultiplier, m_learningRateMultiplier>0 ? "true" : "false"); // TODO: update NDL to accept a better matching name as well
         fstream << string(str);

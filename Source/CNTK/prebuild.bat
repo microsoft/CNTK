@@ -98,6 +98,24 @@ if not %l_build_target% == CPU-only (
     )
 )
 
+:: MPI info
+set MPI_NAME="Unknown"
+set MPI_VERSION="Unknown"
+where -q mpiexec && mpiexec.exe -help > NUL 2>&1 
+if not errorlevel 1 (
+    for /f "tokens=1 delims= " %%i in ('mpiexec -help ^| findstr Version') do (
+        if "%%i" == "Microsoft" (
+            set MPI_NAME="Microsoft MPI"
+            for /f "tokens=6 delims=] " %%i in ('mpiexec -help ^| findstr Version') do set MPI_VERSION="%%i"
+        ) else if "%%i" == "Intel" (
+            set MPI_NAME="Intel MPI"
+            for /f "tokens=8 delims= " %%i in ('mpiexec -help ^| findstr Version') do set MPI_VERSION="%%i"
+        )
+    )
+)
+echo #define _MPI_NAME_ %MPI_NAME% >> buildinfo.h$$
+echo #define _MPI_VERSION_ %MPI_VERSION% >> buildinfo.h$$
+
 echo #endif >> buildinfo.h$$
 
 ::: update file only if it changed (otherwise CNTK.cpp will get rebuilt each time)

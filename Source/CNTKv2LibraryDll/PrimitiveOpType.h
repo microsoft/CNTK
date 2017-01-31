@@ -36,15 +36,15 @@ namespace CNTK
         Less = 24,
         LessEqual = 25,
         Greater = 26,
-        GreaterEqual= 27,
+        GreaterEqual = 27,
         PackedIndex = 28,
         GatherPacked = 29,
         ScatterPacked = 30,
         Times = 31,
         TransposeTimes = 32,
-        Convolution= 33,
+        Convolution = 33,
         SquaredError = 34,
-        CrossEntropyWithSoftmax= 35,
+        CrossEntropyWithSoftmax = 35,
         ClassificationError = 36,
         PastValue = 37,
         FutureValue = 38,
@@ -62,8 +62,17 @@ namespace CNTK
         ReconcileDynamicAxis = 50,
         LogSoftmax = 51,
         LogPlus = 52,
+        CosDistance = 53,
+        Sin = 54,
+        Cos = 55,
+        Pass = 56,
+        Block = 57,
+        Unpooling = 58,
+        LambdaRank = 59,
+        NDCG = 60,
+        EditDistanceError = 61
         // New op types should only be appended to the end of this list.
-        // If you append here also add checks in SerializationTests (CheckEnumValuesNotModified)
-        // and bump up PrimitiveFunction::s_serializationVersion
+        // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)
+        // and bump up PrimitiveFunction::s_serializationVersion and update PrimitiveFunction::Deserialize
     };
 }

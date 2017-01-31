@@ -54,6 +54,7 @@ public:
     static_assert(sizeof(double) == sizeof(ValueType), "Quantized word size != size of ElemType=double");
 };
 
+#pragma warning(disable : 4334) // 'operator' : result of 32-bit shift implicitly converted to 64 bits (was 64-bit shift intended?)
 template <class ElemType>
 class ValueQuantizer
 {

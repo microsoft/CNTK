@@ -8,7 +8,6 @@
 #include "ComputationNode.h"
 #include "Matrix.h"
 #include "TensorView.h"
-
 #include <unordered_set>
 #include <map>
 #include <string>
@@ -19,6 +18,9 @@
 #include <algorithm>
 #include <utility>
 #include <assert.h>
+#include <set>
+#include "Quantizers.h"
+#include "InputAndParamNodes.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -58,8 +60,13 @@ public:
         if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
             MaskMissingGradientColumnsToZero(fr);
 
-        inputGradient.AddCopyOf(gradient);
+        if (Input(inputIndex)->ParentOverwritesGradient())
+            inputGradient.AssignCopyOf(gradient);
+        else
+            inputGradient.AddCopyOf(gradient);
     }
+
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
 };
 
 template class PlusNode<float>;
@@ -226,7 +233,10 @@ public:
         if (c.Input(inputIndex)->ReducesInTimeWrt(c.Input(1 - inputIndex)))
             c.Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-        inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
+        if (c.Input(inputIndex)->ParentOverwritesGradient())
+            inputGradient.AssignElementwiseProductOf(gradient, otherInputValue);
+        else
+            inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
     }
 };
 
@@ -288,7 +298,7 @@ public:
             m_inferInputRankToMap = -1;
     }
 
-private:
+protected:
     // if the left argument of the matrix product (A) has a time axis, it can only be applied sample by sample
     // where each sample is treated as a separate matrix object (as a consequence, it then also applies to B and the result as well)
     TensorView<ElemType> OneSampleTensorFor(int inputIndex/*-1 for output*/, bool gradient/*instead of value*/, const FrameRange& fr)
@@ -304,31 +314,37 @@ private:
         return TensorView<ElemType>(data, tensorShape);
     }
 
+private:
     // Check if TimesNodeBase could be simplified to ElementTimes to avoid unroll when:
-    // 1. input0: DENSE, is rank-1 and transposed, or is rank-2 with Dim(0)==1
-    // 2. input1: DENSE, is rank-1
+    // 1. input0: is rank-1 and transposed, or is rank-2 with Dim(0)==1
+    // 2. input1: is rank-1
     // 3. output: rank-1 and reduced to a scalar (Dim(0)==1)
-    // NOTE we might relax the condition on DENSE when ElementTimes support sparse in future
-    bool IsReduceableDotProduct(const FrameRange& fr)
+    // 4. m_transpose (becomes Matrix::InnerProduct), or both input being dense
+    bool IsReduceableDotProduct(const FrameRange& fr, bool& hasSparse)
     {
         const auto& shape0   = InputRef(0).GetSampleLayout();
         const auto& shape1   = InputRef(1).GetSampleLayout();
         const auto& shapeOut =             GetSampleLayout();
 
+        bool input0Sparse = (InputRef(0).Value().GetMatrixType() != DENSE);
+        bool input1Sparse = (InputRef(1).Value().GetMatrixType() != DENSE);
+
         bool input0_ok =
-            ((shape0.GetRank() == 1 && m_transpose) ||
-             (shape0.GetRank() == 2 && shape0.GetDim(0) == 1)) &&
-            (InputRef(0).Value().GetMatrixType() == DENSE); // TODO: add support in ElementTimes for sparse and remove this limitation
+            (shape0.GetRank() == 1 && m_transpose) ||
+            (shape0.GetRank() == 2 && shape0.GetDim(0) == 1);
 
         bool input1_ok =
-            (shape1.GetRank() == 1) &&
-            (InputRef(1).Value().GetMatrixType() == DENSE);
+            (shape1.GetRank() == 1);
 
         bool outputScalar =
             (shapeOut.GetRank() == 1) &&
             (shapeOut.GetDim(0) == 1);
 
-        return input0_ok && input1_ok && outputScalar;
+        bool notBothSparse = !(input0Sparse && input1Sparse);
+
+        hasSparse = (input0Sparse || input1Sparse);
+        
+        return input0_ok && input1_ok && outputScalar && notBothSparse && (m_transpose || !hasSparse);
     }
 
 public:
@@ -339,9 +355,24 @@ public:
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
             // speed up using ElementTimes to avoid unroll if possible
-            if (IsReduceableDotProduct(fr))
+            bool hasSparse;
+            if (IsReduceableDotProduct(fr, hasSparse))
             {
-                ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, false/*allowBroadcast*/);
+                // for sparse transposed, use InnerProduct
+                if (hasSparse)
+                {
+                    Matrix<ElemType> value  =             ValueFor(fr);
+                    Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
+                    Matrix<ElemType> input1 = InputRef(1).ValueFor(fr);
+                    if (input0.GetMatrixType() == SPARSE)
+                        Matrix<ElemType>::InnerProduct(input0, input1, value, true/*isColWise*/);
+                    else
+                        Matrix<ElemType>::InnerProduct(input1, input0, value, true/*isColWise*/);
+                }
+                else
+                {
+                    ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, false/*allowBroadcast*/);
+                }
                 return;
             }
 
@@ -360,7 +391,7 @@ public:
         auto input0 = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
         auto input1 = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
         auto output = OneSampleTensorFor(-1, /*gradient=*/false, fr);
-        output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/);
+        output.AssignMatrixProductOf(false/*transC*/, input0, m_transpose/*transA*/, input1, false/*transB*/, 1.0f, this->m_pQuantizedMultiplier);
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -369,9 +400,25 @@ public:
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
             // speed up using ElementTimes to avoid unroll if possible
-            if (IsReduceableDotProduct(fr))
+            bool hasSparse;
+            if (IsReduceableDotProduct(fr, hasSparse))
             {
-                ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false/*allowBroadcast*/);
+                if (hasSparse)
+                {
+                    Matrix<ElemType> gradient = GradientFor(fr);
+                    Matrix<ElemType> inputValue = InputRef(1 - inputIndex).ValueFor(fr);
+                    Matrix<ElemType> inputGradient = InputRef(inputIndex).GradientFor(fr);
+                    Matrix<ElemType> gradientDiagonal(gradient.GetNumCols(), gradient.GetNumCols(), gradient.GetDeviceId());
+                    gradientDiagonal.SetDiagonalValue(gradient);
+                    Matrix<ElemType>::MultiplyAndWeightedAdd(
+                        (ElemType)1.0, inputValue, false, gradientDiagonal, true,
+                        Input(inputIndex)->ParentOverwritesGradient() ? (ElemType)0.0 : (ElemType)1.0,
+                        inputGradient);
+                }
+                else
+                {
+                    ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false/*allowBroadcast*/);
+                }
                 return;
             }
 
@@ -391,41 +438,30 @@ public:
 
         if (inputIndex == 0) // left derivative
         {
-            // currently we only support one combination when the input is sparse
-            // If input data is sparse, then gradient is block sparse.
-            if (InputRef(1).Value().GetMatrixType() == SPARSE && InputRef(0).Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
-            {
-                // We need a sparse matrix for the gradient. We allocate a new one instead of switching the type in place
-                // since switching in place may affect other nodes who share this matrix due to memory sharing
-                auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
-                auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
-                                                                                        currentInput0GradientMatrixRef.GetNumCols(),
-                                                                                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
-                                                                                        SPARSE,
-                                                                                        MatrixFormat::matrixFormatSparseBlockCol);
-
-                // BUGBUG: Copy over the current contents since we accumulate into the gradient matrix instead of overwriting the content
-                // newInput0SparseGradientMatrix.AssignValuesOf(currentInput0GradientMatrixRef);
-                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
-            }
-
             auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
-            input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+            if (Input(inputIndex)->ParentOverwritesGradient())
+                input0Gradient.AssignMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
+            else
+                input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
         }
         else if (inputIndex == 1) // right derivative
         {
-            // BUGBUG: Above block produces case of sparse second input a sparse gradient gor first input. We should either have corresponding code here or not at all.
             auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
             auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
-            input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+            if (Input(inputIndex)->ParentOverwritesGradient())
+                input1Gradient.AssignMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
+            else
+                input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
         }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
     // but both *inputs* are used, so we don't overload the InputUsed-() function which defaults to 'true'
+
+    virtual bool ImplementsGradientOverwriteOptimization() const override { return true; }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
@@ -556,23 +592,11 @@ public:
         // this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
         if (Input(0)->NeedsGradient() && Input(1)->Value().GetMatrixType() == SPARSE)
         {
-            Input(0)->CreateGradientMatrixIfNull();
-
-            // We need a sparse matrix for the gradient. We allocate a new one instead of switching the type in place
-            // since switching in place may affect other nodes who share this matrix due to memory sharing
-            auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
-            if (currentInput0GradientMatrixRef.GetMatrixType() != SPARSE)
-            {
-                auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
-                                                                                        currentInput0GradientMatrixRef.GetNumCols(),
-                                                                                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
-                                                                                        SPARSE,
-                                                                                        MatrixFormat::matrixFormatSparseBlockCol);
-
-                // BUGBUG: Copy over the current contents since we accumulate into the gradient matrix instead of overwriting the content
-                // newInput0SparseGradientMatrix.AssignValuesOf(currentInput0GradientMatrixRef);
-                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
-            }
+            InputRef(0).GradientPtrRef() = std::make_shared<Matrix<ElemType>>(0, // size would be initialized later
+                                                                              0,
+                                                                              Gradient().GetPreferredDeviceId(),
+                                                                              SPARSE,
+                                                                              MatrixFormat::matrixFormatSparseBlockCol);
         }
 
         // we need to call base allocation at end since we will need to allocate special ones first
@@ -582,6 +606,9 @@ public:
 
     size_t OutputRank() const { return m_outputRank; }
     int InferInputRankToMap() const { return m_inferInputRankToMap; }
+
+protected: 
+    shared_ptr<QuantizedMultiplier<ElemType>> m_pQuantizedMultiplier;
 
 private:
     size_t m_outputRank;
@@ -654,6 +681,96 @@ public:
 
 template class TransposeTimesNode<float>;
 template class TransposeTimesNode<double>;
+
+// Fixed-point matrix product. This scales inputs to 16bit signed integers by Symmetric quantizers, performs
+// integer multiplication using SSE/AVX2, and transforms the results back.
+// Only dense untransposed matrix multiplication will be quantized. If at least one matrix is sparse then it will fall back to un-quantized default evaluation
+// Currently it works for CPU only. On GPU logicError will be thrown.
+// One way to include this node to the network is with the Edit command:
+// ...
+// node => if node.name == 'LSTMoutput1.output' then QuantizedTimes(node.inputs[0], node.inputs[1], bitShiftA=1, bitShiftB=2) else node,
+// ...
+// bitShift(A|B) - bit shift parameters of quantizers for matrices A and B, see the quantizers for more details. Decreases the maximum range of quantziation by 2^bitShift to prevent integer overflow during BLAS routines.
+// bitShift=0 doesn't change the range; higher bitShift will decrease precision of quantization, but will make BLAS routines less prone to overflow.
+// Other parameters - refer to the base multiplication class
+template <class ElemType>
+class QuantizedTimesNode : public TimesNodeBase<ElemType, false>
+{
+    typedef TimesNodeBase<ElemType, false> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"QuantizedTimes";
+    }
+
+private:
+    // Quantizer bit shift for matrices A and B
+    size_t m_bitShiftA; 
+    size_t m_bitShiftB; 
+
+public:
+    QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = -1)
+        : Base(deviceId, name, outputRank, inferInputRankToMap), m_bitShiftA(bitShiftA), m_bitShiftB(bitShiftB)
+    {
+        // TODO support multiplication on GPUs as well.
+        if (deviceId != CPUDEVICE)
+            LogicError("Quantized operation is supposed to be used on CPU device only.");
+
+        shared_ptr<SymmetricQuantizer<ElemType, short>> pQA(new SymmetricQuantizer<ElemType, short>(m_bitShiftA));
+        shared_ptr<SymmetricQuantizer<ElemType, short>> qQB(new SymmetricQuantizer<ElemType, short>(m_bitShiftB));
+        this->m_pQuantizedMultiplier = shared_ptr<QuantizedMultiplier<ElemType>>(new QuantizedMultiplier<ElemType>(pQA, qQB));
+    }
+
+    QuantizedTimesNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : QuantizedTimesNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"bitShiftA"), configp->Get(L"bitShiftB"), configp->Get(L"outputRank"), configp->Get(L"inferInputRankToMap"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<QuantizedTimesNode<ElemType>>(nodeP);
+            node->m_bitShiftA = m_bitShiftA;
+            node->m_bitShiftB = m_bitShiftB;
+        }
+    }
+
+    void Save(File& fstream) const
+    {
+        Base::Save(fstream);
+        fstream << m_bitShiftA;
+        fstream << m_bitShiftB;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_bitShiftA;
+        fstream >> m_bitShiftB;
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        if (dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(0)))
+            this->m_pQuantizedMultiplier->SetIsAConstant(true);
+        if (dynamic_pointer_cast<LearnableParameter<ElemType>>(Input(1)))
+            this->m_pQuantizedMultiplier->SetIsBConstant(true);
+
+        Base::ForwardProp(fr);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& /*fr*/) override
+    {
+        // This operation is intended only for inference
+        NOT_IMPLEMENTED;
+    }
+};
+
+template class QuantizedTimesNode<float>;
+template class QuantizedTimesNode<double>;
 
 // -----------------------------------------------------------------------
 // SumElementsNode (input)
@@ -1282,6 +1399,16 @@ template <class ElemType>
 void UpdateRunningAverage(ComputationNode<ElemType>& newInput, TensorView<ElemType>& runningAverage,
                           size_t& runningCount);
 
+class MPIWrapper;
+struct DistGradHeader;
+
+template <typename ElemType>
+void AggregateAccumulatorValuesAndUpdateEvaluation(
+    shared_ptr<ComputationNetwork> net,
+    set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
+    shared_ptr<DistGradHeader> gradHeader,
+    shared_ptr<MPIWrapper> mpi);
+
 // -----------------------------------------------------------------------
 // EpochAccumulatorNode calculates mean values of all samples used in forward pass.
 // During training, mean sample value is calculated in each epoch. Value of the node will contain mean sample value of
@@ -1326,7 +1453,20 @@ public:
     // We don't release accumulator as it is needed after forward pass.
 
 protected:
+
+    friend void AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(
+        shared_ptr<ComputationNetwork> net,
+        set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
+        shared_ptr<DistGradHeader> gradHeader,
+        shared_ptr<MPIWrapper> mpi);
+
     void Reset();
+
+    size_t GetNumberOfSamples() const { return m_numSamples; }
+    void SetNumberOfSamples(size_t samples) { m_numSamples = samples; }
+    shared_ptr<Matrix<ElemType>> GetAccumulator() { return m_accumulator; }
+    // Copies internal accumulator to the output.
+    void CopyAccumulatorToValue();
 
     shared_ptr<Matrix<ElemType>> m_accumulator;
     size_t m_numSamples;

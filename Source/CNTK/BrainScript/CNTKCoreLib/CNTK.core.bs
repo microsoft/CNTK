@@ -84,20 +84,44 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
                     #reductionRank = 1,          # TODO: support this
                     stride = 1, pad = false,
                     lowerPad = 0, upperPad = 0,
-                    #transpose = false,          # TODO: support this
                     maxTempMemSizeInSamples = 0} =
 {
     reductionRank = 1 # TODO: shall become an optional parameter
     outputChannelsShape = _AsArray (numOutputChannels)
-    outputRank = Length (outputChannelsShape)
     filterRank = Length (filterShape)
     kernelShape = _ConcatArrays (filterShape, Repeat (reductionRank, Inferred)) # kernel := filter plus reductionDims
     W = ParameterTensor{_ConcatArrays (kernelShape, outputChannelsShape), init = init, initValueScale = initValueScale, initFilterRank = filterRank, initOutputRank = -1}  # [ W x H x C x K ]
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
-    transpose = false # TODO: support this
     apply (x) = {
-        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, transpose = transpose, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, deconv = false, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        res = activation (if bias then c + b else c)
+    }.res
+}.apply
+
+# DeconvLayer -- create a deconvolution layer with optional non-linearity
+DeconvLayer {numOutputChannels,
+             filterShape,         # e.g. (3:3)
+             numInputChannels,
+             bias = true,
+             activation = (x=>x),
+             init = 'glorotUniform',
+             initValueScale = 0.001,
+             initBias = 0,
+             stride = 1, 
+             sharing = true,
+             autoPadding = false,
+             lowerPad = 0, 
+             upperPad = 0,
+             maxTempMemSizeInSamples = 0} =
+{
+    outputChannelsShape = _AsArray (numOutputChannels)
+    kernelShape = _ConcatArrays (filterShape, outputChannelsShape) 
+    paramShape = _ConcatArrays (kernelShape, _AsArray (numInputChannels)) 
+    W = ParameterTensor{paramShape, init=init, initValueScale=initValueScale, initOnCPUOnly=true}
+    b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)
+    apply (x) = {
+        c = Convolution(W, x, kernelShape, mapDims=numInputChannels, stride=stride, sharing=sharing, autoPadding=autoPadding, lowerPad=lowerPad, upperPad=upperPad, deconv=true, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
 }.apply
@@ -115,6 +139,15 @@ MaxPoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 
 AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0} =
     _PoolingLayer {"average", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad}
 
+MaxUnpoolingLayer {filterShape,     # e.g. (3:3)
+                   stride = 1, 
+                   pad = false,
+                   lowerPad = 0, 
+                   upperPad = 0} = 
+{
+    apply (unpoolInput, poolInput) = MaxUnpooling (unpoolInput, poolInput, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
+}.apply
+    
 # RecurrentLSTMLayer -- create an LSTM layer
 RecurrentLSTMLayer {outputDim,
                     cellShape = None, # if set then use a projection
@@ -195,7 +228,7 @@ DelayLayer {T=1, defaultHiddenActivation=0} =
 BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to reduce over (w,h) in a [W x H x C]-shaped input
                          initialScale = 1,
                          normalizationTimeConstant = 5000, blendTimeConstant = 0,
-                         epsilon = 0.00001, useCntkEngine = true} =
+                         epsilon = 0.00001, useCntkEngine = false} =
 {
     #normShape   = _ConcatArrays (Repeat (spatialRank, 1), 0) # spatial dims get a dimension of 1 (broadcasting, while all others are inferred from input)
     normShape   = (0:1)  # TODO: Update this once we support broadcasting-style parameters.
@@ -393,15 +426,9 @@ CNTK2 = [
         ].out
         else new ComputationNode [ operation = 'Slice' ; inputs = _AsNodes (_) /*plus the function args*/ ] # non-time axis
 
-    Splice (_, axis=1, tag='') = # TODO: This is a workaround. RowStack itself shall interpret 'axis' and be renamed to Splice().
+    Splice (_, axis=1, tag='') =
         if axis < 1 then Fail('Splice does not yet implement splicing the time axis.')
-        else if axis == 1 then [tag1=tag; out = RowStack (_, tag=tag1)].out
-        else [ # workaround: swap 'axis' to first position, RowStack, swap back
-            ArrayTransposeDimensions (_, axis1, axis2) = [ # transpose each element of a BS array
-                inputsT[i:0..Length(_)-1] = TransposeDimensions (_[i], axis1, axis2)
-            ].inputsT
-            out = [tag1=tag; out=TransposeDimensions (RowStack (ArrayTransposeDimensions (_, 1, axis)), 1, axis, tag=tag)].out
-        ].out
+        else [tag1=tag; out = RowStack (_, axis=axis, tag=tag1)].out
 
     // Swap two axes of a tensor
     TransposeDimensions(_, axis1, axis2, tag='') = new ComputationNode [ operation = 'TransposeDimensions' ; inputs = _AsNodes (_) /*plus the function args*/ ]
@@ -548,7 +575,7 @@ FutureValue (dims, input, timeStep = 1, initialState = None, defaultHiddenActiva
 Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag='') = new ComputationNode [ operation = 'Shift' ; inputs = _AsNodes (input : boundaryValue) /*plus the function args*/ ]
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-RowStack(inputs, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
+RowStack(inputs, axis=1, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
     if axis < 0 then [ # time axis: specify -1
         beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, input)) else                 BS.Loop.IsLastN  (-beginIndex, input)
@@ -576,7 +603,7 @@ ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ ope
 ReconcileMBLayout = ReconcileDynamicAxis # back compat
 CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
 # ND convo & pooling/unpooling   --why is autoPadding true? Normally one would want to reduce dimensions, no?
-Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
+Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, deconv=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; transpose = deconv /*plus the function args*/ ]
 Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = _AsNodes (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = _AsNodes (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 # 2D pooling
@@ -645,6 +672,7 @@ Tanh(z, tag='') = new ComputationNode [ operation = 'Tanh' ; inputs = _AsNodes (
 TimeReverse(vectorSequence, tag='') = new ComputationNode [ operation = 'TimeReverse' ; inputs = _AsNodes (vectorSequence) /*plus the function args*/ ]
 Trace (node, say='', logFrequency=100, logFirst=10, logGradientToo=false, onlyUpToRow=100000000, onlyUpToT=100000000, format=[], tag='') = new ComputationNode [ operation = 'Trace' ; inputs = _AsNodes (node) ]
 TransposeTimes(leftMatrix, rightMatrix, tag='') = new ComputationNode [ operation = 'TransposeTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
+QuantizedTimes(leftMatrix, rightMatrix, bitSmoothingA=1, bitSmoothingB=1, outputRank=1, inferInputRankToMap=-1, tag='') = new ComputationNode [ operation = 'QuantizedTimes' ; inputs = _AsNodes (leftMatrix : rightMatrix) /*plus the function args*/ ]
 Where(cond, tag='') = new ComputationNode [ operation = 'Where' ; inputs = _AsNodes (cond) /*plus the function args*/ ]
 
 ##############################################################################

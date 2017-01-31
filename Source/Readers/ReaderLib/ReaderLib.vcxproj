@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -40,7 +40,7 @@
   <PropertyGroup Label="UserMacros" />
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\Math;$(SolutionDir)Source\PerformanceProfilerDll</AdditionalIncludeDirectories>
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -50,6 +50,7 @@
     <ClInclude Include="ChunkCache.h" />
     <ClInclude Include="ChunkRandomizer.h" />
     <ClInclude Include="ExceptionCapture.h" />
+    <ClInclude Include="Indexer.h" />
     <ClInclude Include="ReaderBase.h" />
     <ClInclude Include="SequenceData.h" />
     <ClInclude Include="TransformBase.h" />
@@ -65,7 +66,7 @@
     <ClInclude Include="NoRandomizer.h" />
     <ClInclude Include="CudaMemoryProvider.h" />
     <ClInclude Include="DataDeserializer.h" />
-    <ClInclude Include="ElementTypeUtils.h" />
+    <ClInclude Include="ReaderUtil.h" />
     <ClInclude Include="FramePacker.h" />
     <ClInclude Include="HeapMemoryProvider.h" />
     <ClInclude Include="MemoryProvider.h" />
@@ -78,6 +79,7 @@
     <ClCompile Include="Bundler.cpp" />
     <ClCompile Include="ChunkCache.cpp" />
     <ClCompile Include="ChunkRandomizer.cpp" />
+    <ClCompile Include="Indexer.cpp" />
     <ClCompile Include="NoRandomizer.cpp" />
     <ClCompile Include="BlockRandomizer.cpp" />
     <ClCompile Include="PackerBase.cpp" />

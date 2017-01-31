@@ -67,13 +67,13 @@ Train=[
             channels=3
             # Below are the optional parameters.
             # Possible values: Center, Random. Default: Center
-            cropType="Random"
-            # Horizontal random flip, will be enabled by default if cropType=Random
+            cropType="RandomSide"
+            # Horizontal random flip, will be enabled because cropType=RandomSide
             #hflip="true"
-            # Crop scale ratio. Examples: cropRatio=0.9, cropRatio=0.7:0.9. Default: 1.
-            cropRatio=0.875
+            # Crop scale side ratio. Examples: sideRatio=0.9, sideRatio=0.7:0.9.
+            sideRatio=0.875
             # Crop scale ratio jitter type.
-            # Possible values: None, UniRatio, UniLength, UniArea. Default: UniRatio
+            # Possible values: None, UniRatio. Default: None
             jitterType="UniRatio"
             # Interpolation to use when scaling image to width x height size.
             # Possible values: nearest, linear, cubic, lanczos. Default: linear.

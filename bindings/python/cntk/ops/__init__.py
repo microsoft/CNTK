@@ -3,11 +3,16 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import division
+from __future__ import print_function
 import numpy as np
+import numbers
+from numbers import Number
 from . import sequence
-from .functions import Function
+from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
+from ..axis import Axis
 
 @typemap
 def combine(operands, name=''):
@@ -18,6 +23,23 @@ def combine(operands, name=''):
      model, typically the CrossEntropy loss Function and the ClassificationError Function comprise
      the two roots of the computation graph which can be combined to create a single Function
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
+
+    Example:
+        >>> in1 = C.input_variable((4,))
+        >>> in2 = C.input_variable((4,))
+
+        >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
+        >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
+
+        >>> plus_operation = in1 + in2
+        >>> minus_operation = in1 - in2
+
+        >>> forward = C.combine([plus_operation, minus_operation]).eval({in1: in1_data, in2: in2_data})
+        >>> len(forward)
+        2
+        >>> list(forward.values()) # doctest: +SKIP
+        [array([[[ 1., -3.,  6.,  2.]]], dtype=float32),
+         array([[[ 1.,  7.,  0.,  6.]]], dtype=float32)]
 
     Args:
         operands (list): list of functions or their variables to combine
@@ -37,13 +59,56 @@ def combine(operands, name=''):
     return combine(converted_operands, name)
 
 @typemap
+def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
+    '''
+     Create a new block Function instance which just encapsulates the specified composite Function
+     to create a new Function that appears to be a primitive. All the arguments of the composite
+     being encapsulated must be Placeholder variables.
+     The purpose of block Functions is to enable creation of hierarchical Function graphs
+     where details of implementing certain building block operations can be encapsulated away
+     such that the actual structure of the block's implementation is not inlined into
+     the parent graph where the block is used, and instead the block just appears as an opaque
+     primtive. Users still have the ability to peek at the underlying Function graph that implements
+     the actual block Function.
+
+    Args:
+        composite: The composite Function that the block encapsulates
+        block_arguments_map: A list of tuples, mapping from block's underlying composite's arguments to
+        actual variables they are connected to
+        block_op_name: Name of the op that the block represents
+        block_instance_name (str, optional): the name of the block Function in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import as_block
+    return as_block(composite, block_arguments_map, block_op_name, block_instance_name)
+
+@typemap
+def as_composite(root_function, name=''):
+    '''
+     Creates a composite Function that has the specified root_function as its root.
+     The composite denotes a higher-level Function encapsulating the entire graph
+     of Functions underlying the specified rootFunction.
+
+    Args:
+        root_function: Root Function, the graph underlying which, the newly created composite encapsulates
+        name (str, optional): the name of the Alias Function in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import as_composite
+    return as_composite(root_function, name)
+
+@typemap
 def alias(x, name=''):
     '''
      Create a new Function instance which just aliases the specified 'x' Function/Variable
-     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified 
+     such that the 'Output' of the new 'Function' is same as the 'Output' of the specified
      'x' Function/Variable, and has the newly specified name.
      The purpose of this operator is to create a new distinct reference to a symbolic
-     computation which is different from the original Function/Variable that it aliases and can 
+     computation which is different from the original Function/Variable that it aliases and can
      be used for e.g. to substitute a specific instance of the aliased Function/Variable in the
      computation graph instead of substituting all usages of the aliased Function/Variable.
 
@@ -63,9 +128,36 @@ def alias(x, name=''):
 ##########################################################################
 
 @typemap
+def cosine_distance(x, y, name=''):
+    '''
+    Computes the cosine distance between ``x`` and ``y``:
+
+    Example:
+        >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
+        >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
+        >>> x = C.input_variable(shape=(2,))
+        >>> y = C.input_variable(shape=(2,))
+        >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
+        array([[-1.,  1.],
+               [ 1.,  0.],
+               [ 0., -1.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cosine_distance
+    dtype = get_data_type(x, y)
+    x = sanitize_input(x, dtype)
+    y = sanitize_input(y, dtype)
+    return cosine_distance(x, y, name)
+
+@typemap
 def binary_cross_entropy(output, target, name=''):
     r'''
-    This operation computes the binary cross entropy between the ``output`` and ``target``.
+    Computes the binary cross entropy between the ``output`` and ``target``.
 
     Example:
         TBA
@@ -153,7 +245,7 @@ def squared_error(output, target, name=''):
     '''
     This operation computes the sum of the squared difference between elements
     in the two input matrices. The result is a scalar (i.e., one by one matrix).
-    This is often used as a training criterion node.
+    This is often used as a training criterion.
 
     Example:
         >>> i1 = C.input_variable((1,2))
@@ -178,11 +270,112 @@ def squared_error(output, target, name=''):
     target = sanitize_input(target, dtype)
     return squared_error(output, target, name)
 
+@typemap
+def lambda_rank(output, gain, group, name=''):
+    r'''
+    Groups samples according to ``group``, sorts
+    them within each group based on ``output`` and
+    computes the Normalized Discounted Cumulative Gain
+    (NDCG) at infinity for each group. Concretely,
+    the Discounted Cumulative Gain (DCG) at infinity is:
+
+    :math:`\mathrm{DCG_{\infty}}()=\sum_{i=0}^{\infty} \frac{gain_{(i)}}{\log(i+2)}`
+
+    where :math:`gain_{(i)}` means the gain of the :math:`i`-th ranked sample.
+
+    The NDCG is just the DCG  divided by the maximum achievable DCG (obtained
+    by placing the samples with the largest gain at the top of the ranking).
+
+    Samples in the same group must appear in order of decreasing gain.
+
+    It returns 1 minus the average NDCG across all the groups in the minibatch
+    multiplied by 100 times the number of samples in the minibatch.
+
+    In the backward direction it back-propagates LambdaRank gradients.
+
+    Example:
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,), needs_gradient=True)
+        >>> gain  = C.input_variable((1,))
+        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
+        >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1,1)
+        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> f = C.lambda_rank(score, gain, group)
+        >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score])[0],4)
+        array([[[-0.2121]],
+        <BLANKLINE>
+               [[ 0.2121]],
+        <BLANKLINE>
+               [[-0.1486]],
+        <BLANKLINE>
+               [[ 0.1486]]], dtype=float32)
+
+    Args:
+        output: score of each sample
+        gain: gain of each sample
+        group: group of each sample
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import lambda_rank
+    dtype = get_data_type(output, gain, group)
+    output = sanitize_input(output, dtype)
+    gain = sanitize_input(gain, dtype)
+    group = sanitize_input(group, dtype)
+    return lambda_rank(output, gain, group, name)
+
+
+@typemap
+def ndcg_at_1(output, gain, group, name=''):
+    r'''
+    Groups samples according to ``group``, sorts
+    them within each group based on ``output`` and
+    computes the Normalized Discounted Cumulative Gain
+    (NDCG) at 1 for each group. Concretely,
+    the NDCG at 1 is:
+
+    :math:`\mathrm{NDCG_1} = \frac{gain_{(1)}}{\max_i gain_i}`
+
+    where :math:`gain_{(1)}` means the gain of the first ranked sample.
+
+    Samples in the same group must appear in order of decreasing gain.
+
+    It returns the average NDCG at 1 across all the groups in the minibatch
+    multiplied by 100 times the number of samples in the minibatch.
+
+    This is a forward-only operation, there is no gradient for it.
+
+    Example:
+        >>> group = C.input_variable((1,))
+        >>> score = C.input_variable((1,))
+        >>> gain  = C.input_variable((1,))
+        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
+        >>> s = np.array([2, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> C.ndcg_at_1(score, gain, group).eval({score:s, gain:n, group: g})
+        array(400.0, dtype=float32)
+
+    Args:
+        output: score of each sample
+        gain: gain of each sample
+        group: group of each sample
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import ndcg_at_1
+    dtype = get_data_type(output, gain, group)
+    output = sanitize_input(output, dtype)
+    gain = sanitize_input(gain, dtype)
+    group = sanitize_input(group, dtype)
+    return ndcg_at_1(output, gain, group, name)
+
 
 @typemap
 def classification_error(output_vector, target_vector, axis=-1, topN=1, name=''):
     '''
-    This operation computes the classification_error error. It finds the index of the highest
+    This operation computes the classification error. It finds the index of the highest
     value in the output_vector and compares it to the actual ground truth label
     (the index of the hot bit in the target vector). The result is a scalar
     (i.e., one by one matrix). This is often used as an evaluation criterion.
@@ -217,6 +410,51 @@ def classification_error(output_vector, target_vector, axis=-1, topN=1, name='')
     axis = sanitize_axis(axis)
     return classification_error(output_vector, target_vector, topN, axis, name)
 
+@typemap
+def edit_distance_error(input_a, input_b, subPen=0, delPen=0, insPen=0, squashInputs=False, samplesToIgnore=[], name=''):
+    '''
+    Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
+    Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
+
+    Each sequence in the inputs is expected to be a matrix. Prior to computation of the edit distance, the operation extracts the indices of maximum element in each column.
+    For example, a sequence matrix
+    1 2 9 1
+    3 0 3 2
+    will be represented as the vector of labels (indices) as [1, 0, 0, 1], on which edit distance will be actually evaluated.
+
+    The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and samplesToIgnore contains label '-' then
+    given first input sequence as s1="1-12-" and second as s2="-11--122" the edit distance will be computed against s1' = "112" and s2' = "112".
+
+    The returned error is computed as: EditDistance(s1,s2) * length(s1') / length(s1)
+
+    Just like ClassificationError and other evaluation nodes, when used as an evaluation criterion, the SGD process will aggregate all values over an epoch and report the average, i.e. the error rate.
+    Primary objective of this node is for error evaluation of CTC training, see formula (1) in "Connectionist Temporal Classification: Labelling Unsegmented
+    Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+
+    Example:
+        i1 = cntk.input_variable(shape=(2,))
+        i2 = cntk.input_variable(shape=(2,))
+        arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
+        a = edit_distance_error(i1, i2, 0, 1, 1, True, [1])
+        print(a.eval(arguments))
+
+    Args:
+        input_a: first input sequence
+        input_b: second input sequence
+        subPen, delPen, insPen: substitution, deletion and insertion penalties
+        squashInputs: whether to merge sequences of identical samples (in both input sequences). If true and samplesToIgnore contains label '-' then
+                given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
+        samplesToIgnore: list of samples to ignore during edit distance evaluation (in both sequences)
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import edit_distance_error
+    dtype = get_data_type(input_a, input_b)
+    input_a = sanitize_input(input_a, dtype)
+    input_b = sanitize_input(input_b, dtype)
+    return edit_distance_error(input_a, input_b, subPen, delPen, insPen, squashInputs, samplesToIgnore, name)
+
 ##########################################################################
 # convolution ops
 ##########################################################################
@@ -246,15 +484,15 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
 
     Example:
-    >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-    >>> x = C.input_variable(img.shape)
-    >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
-    >>> kernel = C.constant(value = filter)
-    >>> C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]})
-    array([[[[[  6.,   8.,  10.,  12.],
-              [ 16.,  18.,  20.,  22.],
-              [ 26.,  28.,  30.,  32.],
-              [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+        >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
+        >>> x = C.input_variable(img.shape)
+        >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+        >>> kernel = C.constant(value = filter)
+        >>> np.round(C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
+        array([[[[[  6.,   8.,  10.,  12.],
+                  [ 16.,  18.,  20.,  22.],
+                  [ 26.,  28.,  30.,  32.],
+                  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
 
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
@@ -282,8 +520,11 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    return convolution(convolution_map, operand, tuple(strides), sharing, auto_padding,
-                       tuple(lower_pad), tuple(upper_pad), transpose,
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return convolution(convolution_map, operand, strides, sharing, auto_padding,
+                       lower_pad, upper_pad, transpose,
                        max_temp_mem_size_in_samples, name)
 
 
@@ -327,18 +568,18 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     N-dimensional pooling allows to create max or average pooling of any dimensions, stride or padding.
 
     Example:
-    >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-    >>> x = C.input_variable(img.shape)
-    >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
-    array([[[[[  2.5,   4.5],
-              [ 10.5,  12.5]]]]], dtype=float32)
-    >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
-    array([[[[[  5.,   7.],
-              [ 13.,  15.]]]]], dtype=float32)
+        >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+        >>> x = C.input_variable(img.shape)
+        >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
+        array([[[[[  2.5,   4.5],
+                  [ 10.5,  12.5]]]]], dtype=float32)
+        >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
+        array([[[[[  5.,   7.],
+                  [ 13.,  15.]]]]], dtype=float32)
 
     Args:
         operand: pooling input
-        pooling_type: one of :const:`cntk.ops.MAX_POOLING` or :const:`cntk.ops.AVG_POOLING`
+        pooling_type: one of :const:`~cntk.ops.MAX_POOLING` or :const:`~cntk.ops.AVG_POOLING`
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
         auto_padding: automatic padding flags for each input dimension.
@@ -358,6 +599,51 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
                    lower_pad, upper_pad, name)
 
 
+MAX_UNPOOLING = PoolingType_Max
+@typemap
+def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
+            lower_pad=(0,), upper_pad=(0,), name=''):
+    '''
+    Unpools the ``operand`` using information from ``pooling_input``. Unpooling mirrors the operations
+    performed by pooling and depends on the values provided to the corresponding pooling operation. The output
+    should have the same shape as pooling_input. Pooling the result of an unpooling operation should
+    give back the original input.
+
+    Example:
+        >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
+        >>> x = C.input_variable(img.shape)
+        >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
+        >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
+	array([[[[[  0.,   0.,   0.,   0.],
+		  [  0.,   5.,   0.,   7.],
+		  [  0.,   0.,   0.,   0.],
+		  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
+
+    Args:
+        operand: unpooling input
+        pooling_input: input to the corresponding pooling operation
+        unpooling_type: only :const:`~cntk.ops.MAX_UNPOOLING` is supported now
+        unpooling_window_shape: dimensions of the unpooling window
+        strides (default 1): strides.
+        auto_padding: automatic padding flags for each input dimension.
+        lower_pad: precise lower padding for each input dimension
+        upper_pad: precise upper padding for each input dimension
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import unpooling
+    operand = sanitize_input(operand)
+    pooling_input = sanitize_input(pooling_input)
+    unpooling_window_shape = sanitize_shape(unpooling_window_shape)
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    return unpooling(operand, pooling_input, unpooling_type,
+                     unpooling_window_shape, strides, auto_padding,
+                     lower_pad, upper_pad, name)
+
+
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=5000, blend_time_constant=0,
@@ -367,7 +653,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
     and applies affine transformation to preserve representation of the layer.
 
     Args:
-        operand: input of the batch normalization node
+        operand: input of the batch normalization operation
         scale: parameter tensor that holds the learned componentwise-scaling factors
         bias: parameter tensor that holds the learned bias. ``scale`` and ``bias`` must have the same
          dimensions which must be equal to the input dimensions in case of ``spatial`` = False or
@@ -617,7 +903,7 @@ def minus(left, right, name=''):
 def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two input
-    tensors. It supports broadcasting. 
+    tensors. It supports broadcasting.
 
     Example:
         >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -644,7 +930,7 @@ def element_times(left, right, name=''):
 def element_divide(left, right, name=''):
     '''
     The output of this operation is the element-wise division of the two input
-    tensors. It supports broadcasting. 
+    tensors. It supports broadcasting.
 
     Example:
         >>> C.element_divide([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
@@ -669,15 +955,15 @@ def element_divide(left, right, name=''):
 @typemap
 def log_add_exp(left, right, name=''):
     '''
-    The output of this operation is the log of the sum of the exponentials
+    Calculates the log of the sum of the exponentials
     of the two input tensors. It supports broadcasting.
 
     Example:
-    >>> a=np.arange(3,dtype=np.float32)
-    >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
-    array([ 2.,  4.,  8.], dtype=float32)
-    >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
-    array([ 2.,  3.,  4.], dtype=float32)
+        >>> a = np.arange(3,dtype=np.float32)
+        >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
+        array([ 2.,  4.,  8.], dtype=float32)
+        >>> np.exp(C.log_add_exp(np.log(1+a), [0.]).eval())
+        array([ 2.,  3.,  4.], dtype=float32)
 
     Args:
         left: left side tensor
@@ -1041,6 +1327,50 @@ def tanh(x, name=''):
     x = sanitize_input(x)
     return tanh(x, name)
 
+@typemap
+def sin(x, name=''):
+    '''
+    Computes the element-wise sine of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.sin(np.arcsin([[1,0.5],[-0.25,-0.75]])).eval(),5)
+        array([[ 1.  ,  0.5 ],
+               [-0.25, -0.75]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import sin
+    x = sanitize_input(x)
+    return sin(x, name)
+
+@typemap
+def cos(x, name=''):
+    '''
+    Computes the element-wise cosine of ``x``:
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> np.round(C.cos(np.arccos([[1,0.5],[-0.25,-0.75]])).eval(),5)
+        array([[ 1.  ,  0.5 ],
+               [-0.25, -0.75]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cos
+    x = sanitize_input(x)
+    return cos(x, name)
+
 
 @typemap
 def softmax(x, name=''):
@@ -1071,7 +1401,7 @@ def softmax(x, name=''):
     '''
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
-    return softmax(x)
+    return softmax(x, name)
 
 
 @typemap
@@ -1089,13 +1419,13 @@ def hardmax(x, name=''):
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        name (str): the name of the node in the network
+        name (str): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import hardmax
     x = sanitize_input(x)
-    return hardmax(x)
+    return hardmax(x, name)
 
 
 @typemap
@@ -1298,8 +1628,9 @@ def future_value(x, initial_state=None, time_step=1, name=''):
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> y = C.future_value(x)
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> y = C.future_value(x) # using initial state of 0 by default
         >>> y.eval({x:x0})
         array([[[[  6.,   7.],
                  [  8.,   9.],
@@ -1319,8 +1650,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
 
     Args:
         x: the tensor (or its name) from which the future value is obtained.
-        initial_state: tensor or scalar representing the initial value to be
-        used when the input tensor is shifted in time.
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
         time_step (int): the number of time steps to look into the future (default 1)
         name (str, optional): the name of the Function instance in the network
     Returns:
@@ -1350,8 +1680,9 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
-        >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(4,3,2))
-        >>> y = C.past_value(x)
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> y = C.past_value(x) # using initial state of 0 by default
         >>> y.eval({x:x0})
         array([[[[  0.,   0.],
                  [  0.,   0.],
@@ -1371,8 +1702,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     Args:
         x: the tensor (or its name) from which the past value is obtained
-        initial_state: tensor or scalar representing the initial value to be
-        used when the input tensor is shifted in time.
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
         time_step (int): the number of time steps to look into the past (default 1)
         name (str, optional): the name of the Function instance in the network
 
@@ -1402,7 +1732,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         weights: parameter tensor that holds the learned weights.
         hidden_size (int): number of hidden units in each layer (and in each direction).
         num_layers (int): number of layers in the stack.
-        bidirectional(bool, optional): whether each layer should compute both in forward
+        bidirectional(bool, default False): whether each layer should compute both in forward
          and separately in backward mode and concatenate the results
          (if True the output is twice the hidden_size). The default is
          False which means the recurrence is only computed in the forward direction.
@@ -1414,18 +1744,29 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
         >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
         >>> x = C.input_variable(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
-        >>> f = C.optimized_rnnstack(x, W, 8, 2)
-        >>> f.eval({x:s}).shape
-        (1, 5, 8)
+        >>> t = np.reshape(np.arange(12.0, dtype=np.float32), (3,4))
+        >>> f = C.optimized_rnnstack(x, W, 8, 2) # doctest: +SKIP
+        >>> r = f.eval({x:[s,t]})                # doctest: +SKIP
+        >>> len(r)                               # doctest: +SKIP
+        2
+        >>> print(*r[0].shape)                   # doctest: +SKIP
+        5 8
+        >>> print(*r[1].shape)                   # doctest: +SKIP
+        3 8
+        >>> r[0][:3,:]-r[1]                      # doctest: +SKIP
+        array([[ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.,  0.,  0.,  0.,  0.]], dtype=float32)
 
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    # FIXME figure out how to only SKIP the doctest in CPU
     from cntk.cntk_py import optimized_rnnstack
     operand = sanitize_input(operand)
     if recurrent_op not in set(['lstm','gru','relu','tanh']):
         raise(ValueError('unsupported recurrent_op value "%s"'%recurrent_op))
-    return optimized_rnnstack(operand, weights, hidden_size, num_layers, 
+    return optimized_rnnstack(operand, weights, hidden_size, num_layers,
                        bidirectional, recurrent_op, name)
 
 ##########################################################################
@@ -1436,14 +1777,14 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
 
 
 @typemap
-def reshape(x, shape, name=''):
+def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     '''
     Reinterpret input samples as having different tensor dimensions
     One dimension may be specified as 0 and will be inferred
 
     The output tensor has the shape specified by 'shape'.
 
-    Examples:
+    Example:
         >>> i1 = C.input_variable(shape=(3,2))
         >>> C.reshape(i1, (2,3)).eval({i1:np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=np.float32)})
         array([[[[ 0.,  1.,  2.],
@@ -1456,16 +1797,36 @@ def reshape(x, shape, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    if np.any(np.asarray(shape) < 0):
-        # TODO decide on whether -1 instead of 0 should be used to infer the
-        # dimension
-        raise ValueError('shape dimensions cannot be negative')
-
     from cntk.cntk_py import reshape
     x = sanitize_input(x)
     shape = sanitize_shape(shape)
 
-    return reshape(x, shape, name)
+    if begin_axis is None:
+        begin_axis = Axis(0)
+
+    if end_axis is None:
+        end_axis = Axis.end_static_axis()
+
+    # Pass begin_axis as the end_axis and vice versa to account for
+    # the automatic shape reversal across the python SWIG boundary
+    def sanitize_reshape_axis(axis):
+        if isinstance(axis, numbers.Integral):
+            axis = Axis(axis)
+
+        if not axis.is_static_axis:
+            return axis
+
+        if (axis ==  Axis.end_static_axis()):
+            return Axis(0)
+        elif (axis == Axis(0)):
+            return Axis.end_static_axis()
+        else:
+            return Axis(-axis.static_axis_index())
+
+    internal_reshape_begin_axis = sanitize_reshape_axis(end_axis)
+    internal_reshape_end_axis = sanitize_reshape_axis(begin_axis)
+
+    return reshape(x, shape, internal_reshape_begin_axis, internal_reshape_end_axis, name)
 
 
 @typemap
@@ -1474,7 +1835,7 @@ def transpose(x, axis1=0, axis2=1, name=''):
     Swaps two axes of the tensor. The output tensor has the same data but with
     ``axis1`` and ``axis2`` swapped.
 
-    Examples:
+    Example:
         >>> C.transpose([[[0,1],[2,3],[4,5]]], 1, 2).eval()
         array([[[ 0.,  2.,  4.],
                 [ 1.,  3.,  5.]]], dtype=float32)
@@ -1499,7 +1860,7 @@ def slice(x, axis, begin_index, end_index, name=''):
     '''
     Slice the input along an axis.
 
-    Examples:
+    Example:
         >>> # Slice using input variable
         >>> # create 2x3 matrix
         >>> x1 = C.input_variable((2,3))
@@ -1525,8 +1886,8 @@ def slice(x, axis, begin_index, end_index, name=''):
 
     NumPy's way of slicing works, too:
 
-    Examples:
-        TODO: Make following lines work. Uncomment when done
+    Example:
+        #TODO: Make following lines work. Uncomment when done
         #>>> x1[1].eval()
         #array([[ 4.,  5.,  6.]], dtype=float32)
         #>>> x1[:,:2,:].eval()
@@ -1560,7 +1921,7 @@ def splice(inputs, axis=-1, name=''):
     '''
     Concatenate the input tensors along an axis.
 
-    Examples:
+    Example:
         >>> # create 2x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data1 = np.asarray([[[1, 2],
         ...                      [4, 5]]], dtype=np.float32)
@@ -1609,7 +1970,7 @@ def reduce_sum(x, axis=None, name=''):
     is not specified then the sum will be computed over all axes, that is, the output is a scalar,
     which is the sum of tensor's elements.
 
-    Examples:
+    Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
 
@@ -1658,7 +2019,7 @@ def reduce_log_sum(x, axis=None, name=''):
     Computes the log of the sum of the exponentiations of the input tensor's
     elements across the specified axis.
 
-    Examples:
+    Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
         >>> lse = C.reduce_log_sum(x)
@@ -1686,17 +2047,17 @@ def reduce_mean(x, axis=None, name=''):
     '''
     Computes the mean of the input tensor's elements across the specified axis.
 
-    Examples:
+    Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
+        >>> data = [[5, 20],[30, 40],[55, 60]]
 
         >>> C.reduce_mean(data, 0).eval()
         array([[ 30.,  40.]], dtype=float32)
 
         >>> C.reduce_mean(data, 1).eval()
-        array([[ 15.],
-               [ 35.],
-               [ 55.]], dtype=float32)
+        array([[ 12.5],
+               [ 35. ],
+               [ 57.5]], dtype=float32)
 
     Args:
         x: input tensor
@@ -1717,7 +2078,7 @@ def reduce_max(x, axis=None, name=''):
     '''
     Computes the max of the input tensor's elements across the specified axis.
 
-    Examples:
+    Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
 
@@ -1748,7 +2109,7 @@ def reduce_min(x, axis=None, name=''):
     '''
     Computes the min of the input tensor's elements across the specified axis.
 
-    Examples:
+    Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
 
@@ -1783,7 +2144,7 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
     Estimates inclusion frequencies for random sampling with or without
     replacement.
 
-    The node's value is a set of num_samples random samples represented
+    The output value is a set of num_samples random samples represented
     by a (sparse) matrix of shape [num_samples x len(weights)],
     where len(weights) is the number of classes (categories) to choose
     from. The output has no dynamic axis.
@@ -1818,7 +2179,7 @@ def random_sample_inclusion_frequency(
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
-    this node computes the expected number of occurences of each class
+    this operation computes the expected number of occurences of each class
     in the the sampled set. In case of sampling without replacement
     the result is only an estimate which might be quite rough in the
     case of small sample sizes.
@@ -1834,7 +2195,7 @@ def random_sample_inclusion_frequency(
         allow_duplicates (bool): If sampling is done
          with replacement (`True`) or without (`False`).
 
-    Examples:
+    Example:
         >>> import numpy as np
         >>> from cntk import *
         >>> # weight vector with 100 '1000'-values followed
@@ -1880,7 +2241,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     In CNTK's implementation, because the values that are not set to 0 are multiplied
     with (1 / (1 - ``dropout_rate``)), this is not necessary.
 
-    Examples:
+    Example:
         >>> data = [[10, 20],[30, 40],[50, 60]]
         >>> C.dropout(data, 0.5).eval() # doctest: +SKIP
         array([[  0.,  40.],
@@ -1920,15 +2281,16 @@ from cntk.axis import Axis
 
 
 @typemap
-def input_variable(shape, dtype=np.float32, needs_gradient=True, is_sparse=False,
+def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
                    dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
-    It creates an input node.
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
 
     Args:
         shape (tuple or int): the shape of the input tensor
         dtype (type, optional): np.float32 (default) or np.float64
-        needs_gradients (bool, optional): whether to back-propagates to it or not. True by default.
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
@@ -1950,6 +2312,35 @@ def input_variable(shape, dtype=np.float32, needs_gradient=True, is_sparse=False
     # TODO sparse for numpy arrays
 
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
+
+
+@typemap
+def output_variable(shape, dtype, dynamic_axes, name=''):
+    '''
+    It creates an output node that is used to define a user defined function.
+
+    Args:
+        shape (tuple or int): the shape of the input tensor
+        dtype (type): np.float32 or np.float64
+        dynamic_axes (list or tuple): a list of dynamic axis (e.g., batch axis, time axis)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.variables.Variable` that is of output type
+    '''
+    from cntk.cntk_py import output_variable
+    from ..utils import sanitize_shape, sanitize_dtype_cntk
+
+    shape = sanitize_shape(shape)
+
+    dtype = sanitize_dtype_cntk(dtype)
+
+    for a in dynamic_axes:
+        if not a.is_dynamic_axis:
+            raise ValueError('axis in dynamic_axes attribute is not dynamic')
+    dynamic_axes = list(reversed(dynamic_axes))
+
+    return output_variable(shape, dtype, dynamic_axes, name)
 
 
 @typemap
@@ -1980,11 +2371,11 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
 
 
 @typemap
-def parameter(shape=None, init=None, device=None, name=''):
+def parameter(shape=None, init=None, dtype=None, device=None, name=''):
     '''
     It creates a parameter tensor.
 
-    Examples:
+    Example:
         >>> init_parameter = C.parameter(shape=(3,4), init=2)
         >>> np.asarray(init_parameter) # doctest: +SKIP
         array([[ 2.,  2.,  2.,  2.],
@@ -2018,7 +2409,7 @@ def parameter(shape=None, init=None, device=None, name=''):
         else:
             data_type = np.float32
     else:
-        data_type = None
+        data_type = dtype
 
     return Parameter(shape, init, data_type, device, name)
 
@@ -2028,7 +2419,7 @@ def constant(value=None, shape=None, device=None, name=''):
     '''
     It creates a constant tensor initialized from a numpy array
 
-    Examples
+    Example:
         >>> constant_data = C.constant([[1., 2.], [3., 4.], [5., 6.]])
         >>> constant_data.value
         array([[ 1.,  2.],

@@ -82,12 +82,12 @@ void GranularGPUDataTransferer::CopyGPUToCPUAsync(const void* gpuBuffer, size_t 
 {
     PrepareDevice(m_deviceId);
 
-    cudaMemcpyAsync(cpuBuffer, gpuBuffer, numElements * elementSize, cudaMemcpyDeviceToHost, m_fetchStream) || "cudaMemcpyAsync failed";
+    cudaMemcpyAsync(cpuBuffer, gpuBuffer, numElements * elementSize, cudaMemcpyDeviceToHost, GetFetchStream()) || "cudaMemcpyAsync failed";
 }
 
 void GranularGPUDataTransferer::RecordGPUToCPUCopy()
 {
-    cudaEventRecord(m_fetchCompleteEvent, m_fetchStream) || "cudaEventRecord failed";
+    cudaEventRecord(m_fetchCompleteEvent, GetFetchStream()) || "cudaEventRecord failed";
 }
 
 void GranularGPUDataTransferer::WaitForCopyGPUToCPU()
@@ -99,12 +99,12 @@ void GranularGPUDataTransferer::WaitForCopyGPUToCPU()
 void GranularGPUDataTransferer::CopyCPUToGPUAsync(const void* cpuBuffer, size_t numElements, size_t elementSize, void* gpuBuffer)
 {
     PrepareDevice(m_deviceId);
-    cudaMemcpyAsync(gpuBuffer, cpuBuffer, numElements * elementSize, cudaMemcpyHostToDevice, m_assignStream) || "cudaMemcpyAsync failed";
+    cudaMemcpyAsync(gpuBuffer, cpuBuffer, numElements * elementSize, cudaMemcpyHostToDevice, GetAssignStream()) || "cudaMemcpyAsync failed";
 }
 
 void GranularGPUDataTransferer::RecordCPUToGPUCopy()
 {
-    cudaEventRecord(m_assignCompleteEvent, m_assignStream) || "cudaEventRecord failed";
+    cudaEventRecord(m_assignCompleteEvent, GetAssignStream()) || "cudaEventRecord failed";
 }
 
 void GranularGPUDataTransferer::WaitForCopyCPUToGPU()
@@ -122,13 +122,13 @@ void GranularGPUDataTransferer::RecordComputeStreamSyncPoint()
 void GranularGPUDataTransferer::WaitForSyncPointOnFetchStreamAsync()
 {
     PrepareDevice(m_deviceId);
-    cudaStreamWaitEvent(m_fetchStream, m_syncEvent, 0 /*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
+    cudaStreamWaitEvent(GetFetchStream(), m_syncEvent, 0 /*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
 }
 
 void GranularGPUDataTransferer::WaitForSyncPointOnAssignStreamAsync()
 {
     PrepareDevice(m_deviceId);
-    cudaStreamWaitEvent(m_assignStream, m_syncEvent, 0 /*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
+    cudaStreamWaitEvent(GetAssignStream(), m_syncEvent, 0 /*flags 'must be 0'*/) || "cudaStreamWaitEvent failed";
 }
 
 //// GPUDataTransferer
@@ -200,19 +200,28 @@ void GPUDataTransferer::WaitForCopyCPUToGPUAsync()
 
 /// PrefetchGPUDataTransferer
 
-cudaStream_t PrefetchGPUDataTransferer::s_prefetchStream = nullptr;
-cudaStream_t PrefetchGPUDataTransferer::s_gpuToCpuStream = nullptr;
-
-PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int deviceId) : GranularGPUDataTransferer(deviceId, s_gpuToCpuStream, s_prefetchStream, true)
+PrefetchGPUDataTransferer::PrefetchGPUDataTransferer(int deviceId) : GranularGPUDataTransferer(deviceId, nullptr, nullptr, true)
 {
-#pragma warning(disable : 4127)
-    if (s_prefetchStream == nullptr)
-    {
-        // Assign stream always stays null, not required for prefetch.
+     cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking) || "cudaStreamCreateWithFlags failed (PrefetchGPUDataTransferer ctor)";
+}
 
-        // TODO: Currently the s_prefetchStream is not destroyed.
-        // As static it can be used in several readers with different lifecycle so we allow it to live till the end.
-        cudaStreamCreateWithFlags(&s_prefetchStream, cudaStreamNonBlocking) || "cudaStreamCreateWithFlags failed";
+PrefetchGPUDataTransferer::~PrefetchGPUDataTransferer()
+{
+    try
+    {
+        PrepareDevice(m_deviceId);
+    }
+    catch (...)
+    {
+        // the error is already logged
+        return;
+    }
+
+    auto code = cudaStreamDestroy(m_stream);
+    if (code != cudaSuccess)
+    {
+        std::cerr << "cudaStreamDestroy failed (PrefetchGPUDataTransferer dtor): "
+            << cudaGetErrorString(code) << " (cuda error " <<  code << ")"<< std::endl;
     }
 }
 

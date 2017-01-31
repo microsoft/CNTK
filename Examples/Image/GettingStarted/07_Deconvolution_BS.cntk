@@ -1,0 +1,109 @@
+# Parameters can be overwritten on the command line
+# for example: cntk configFile=myConfigFile RootDir=../.. 
+# For running from Visual Studio add
+# currentDirectory=$(SolutionDir)/<path to corresponding data folder> 
+
+#command = trainNetwork:testNetwork:writeResults
+command = trainNetwork:testNetwork
+
+precision = "float"; traceLevel = 1 ; deviceId = "auto"
+
+rootDir = ".." ; dataDir = "$rootDir$/DataSets/MNIST" ;
+outputDir = "./Output" ;
+
+modelPath = "$outputDir$/Models/07_Deconvolution_BS.model"
+#stderr = "$outputDir$/07_Deconvolution_BS_out.txt"
+#makemode=false
+
+# TRAINING CONFIG
+trainNetwork = {
+    action = "train"
+    
+    BrainScriptNetworkBuilder = {
+        cMap = 1
+        model = inputFeatures => {
+            conv1   = ConvolutionalLayer {cMap, (5:5), pad = true, activation=ReLU}(inputFeatures)
+            pool1   = MaxPoolingLayer {(4:4), stride=(4:4)}(conv1)
+            unpool1 = MaxUnpoolingLayer {(4:4), stride=(4:4)}(pool1, conv1)
+            deconv1 = DeconvLayer {1, (5:5), cMap, lowerPad=(2:2:0), upperPad=(2:2:0), bias=false}(unpool1)
+        }.deconv1
+
+        # inputs
+        imageShape = 28:28:1
+        features = Input {imageShape}
+
+        featScale = 1/256
+        Scale{f} = x => Constant(f) .* x
+
+        # apply model to features
+        f1 = Scale{featScale} (features)
+        z = model (f1)
+
+        # rmse loss function
+        f2 = Scale{featScale} (features)
+        err = z - f2
+        sqErr = ElementTimes(err, err)
+        mse = ReduceMean(sqErr)
+        rmse = Sqrt(mse)
+        
+        # declare special nodes
+        featureNodes = (features)
+        criterionNodes = (rmse)
+        evaluationNodes = (rmse)
+        outputNodes = (z)
+    }
+
+    SGD = {
+        epochSize = 60000
+        minibatchSize = 64
+        maxEpochs = 3
+        
+        learningRatesPerSample = 0.00015
+        momentumAsTimeConstant = 600
+        
+        firstMBsToShowResult = 5
+        numMBsToShowResult = 235
+    }
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        # See DataSets/MNIST/README.md for details on getting the data (Train-28x28_cntk_text.txt).
+        file = "$DataDir$/Train-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }   
+}
+
+# TEST CONFIG
+testNetwork = {
+    action = "test"
+    minibatchSize = 1024    # reduce this if you run out of memory
+
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}
+
+# WRITE CONFIG
+writeResults = {
+    action = "write"
+    minibatchSize = 1
+    outputPath = "$outputDir$/decoder_output_bs.txt"
+    
+    reader = {
+        randomize = False
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}

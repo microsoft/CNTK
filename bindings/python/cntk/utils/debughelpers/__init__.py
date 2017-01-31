@@ -8,7 +8,7 @@ import numpy as np
 import sys
 import os
 import time
-from cntk import DeviceDescriptor, Trainer, Axis, text_format_minibatch_source, StreamConfiguration
+from cntk import DeviceDescriptor, Trainer, Axis, StreamConfiguration
 from cntk.learner import sgd, adam_sgd
 from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
 import itertools

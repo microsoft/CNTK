@@ -87,10 +87,10 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
         ValuePtr inputValue = GenerateSequences<ElementType>(sequenceLengths, { inputDim }, device, false);
 
         std::vector<std::vector<ElementType>> labelsData;
-        for (size_t i = 0; i < numSequences; ++i)
+        for (size_t i2 = 0; i2 < numSequences; ++i2)
         {
-            std::vector<ElementType> currentSequence(numOutputClasses * sequenceLengths[i]);
-            for (size_t j = 0; j < sequenceLengths[i]; ++j)
+            std::vector<ElementType> currentSequence(numOutputClasses * sequenceLengths[i2]);
+            for (size_t j = 0; j < sequenceLengths[i2]; ++j)
                 currentSequence[(j * numOutputClasses) + (rand() % numOutputClasses)] = 1;
 
             labelsData.push_back(std::move(currentSequence));
@@ -147,13 +147,13 @@ void TestSimpleRecurrence(size_t inputDim,
     plusOutput = plusOutput->ReplacePlaceholders({ { placeholder, placeholderReplacement } });
 
     auto reducedOutput = ReduceSum(plusOutput, L"sum");
-    auto rootFunc = Combine({ reducedOutput, plusOutput });
 
     if (testSaveAndReLoad)
     {
         Variable plusOutputVar = plusOutput;
         Variable reducedOutputVar = reducedOutput;
 
+        auto rootFunc = Combine({ reducedOutput, plusOutput });
         SaveAndReloadModel<ElementType>(rootFunc, { &inputVar, &timesParam, &plusParam, &plusOutputVar, &reducedOutputVar }, device);
 
         plusOutput = plusOutputVar;
@@ -242,7 +242,7 @@ void TestSimpleRecurrence(size_t inputDim,
         ValuePtr plusOutputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(plusOutputShape, plusOutputData.data(), plusOutputData.size(), DeviceDescriptor::CPUDevice(), false), MakeSharedObject<NDMask>(inputValue->Mask()->Shape()));
 
         std::unordered_map<Variable, ValuePtr> outputs = { { reducedOutput, reducedOutputValue }, { plusOutput, plusOutputValue } };
-        auto backpropState = rootFunc->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput });
+        auto backpropState = reducedOutput->Forward({ { inputVar, inputValue } }, outputs, device, { plusOutput });
 
         // Perform backprop
         std::vector<ElementType> rootGradientsData(plusOutputShape.TotalSize(), std::numeric_limits<ElementType>::quiet_NaN());
@@ -269,7 +269,7 @@ void TestSimpleRecurrence(size_t inputDim,
         ValuePtr inputGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputGradientData.data(), inputGradientData.size(), DeviceDescriptor::CPUDevice(), false), inputValue->Mask()->DeepClone());
 
         std::unordered_map<Variable, ValuePtr> outGradients = { { inputVar, inputGradientValue }, { plusParam, plusParameterGradientValue }, { timesParam, timesParameterGradientValue } };
-        rootFunc->Backward(backpropState, { { plusOutput, rootGradientValue } }, outGradients);
+        reducedOutput->Backward(backpropState, { { plusOutput, rootGradientValue } }, outGradients);
 
         // Verify forward prop results
         std::vector<ElementType> expectedPlusOutputData(plusOutputShape.TotalSize(), 0);

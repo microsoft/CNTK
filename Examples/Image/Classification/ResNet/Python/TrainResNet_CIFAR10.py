@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import print_function
 import os
 import argparse
 import math
@@ -12,7 +13,7 @@ import numpy as np
 from cntk.utils import *
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
-from cntk import Trainer, persist, cntk_py
+from cntk import Trainer, cntk_py
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from _cntk_py import set_computation_network_trace_level
 
@@ -39,7 +40,7 @@ def create_reader(map_file, mean_file, train):
     transforms = []
     if train:
         transforms += [
-            ImageDeserializer.crop(crop_type='Random', ratio=0.8, jitter_type='uniRatio') # train uses jitter
+            ImageDeserializer.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
         ]
     transforms += [
         ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
@@ -52,7 +53,7 @@ def create_reader(map_file, mean_file, train):
 
 
 # Train and evaluate the network.
-def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
+def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs):
 
     set_computation_network_trace_level(0)
 
@@ -75,7 +76,6 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
     pe = classification_error(z, label_var)
 
     # shared training parameters 
-    epoch_size = 50000                    # for now we manually specify epoch size
     minibatch_size = 128
     momentum_time_constant = -minibatch_size/np.log(0.9)
     l2_reg_weight = 0.0001
@@ -108,10 +108,10 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        persist.save_model(z, os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        z.save_model(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
     
     # Evaluation parameters
-    epoch_size     = 10000
+    test_epoch_size     = 10000
     minibatch_size = 16
 
     # process minibatches and evaluate the model
@@ -120,8 +120,8 @@ def train_and_evaluate(reader_train, reader_test, network_name, max_epochs):
     sample_count    = 0
     minibatch_index = 0
 
-    while sample_count < epoch_size:
-        current_minibatch = min(minibatch_size, epoch_size - sample_count)
+    while sample_count < test_epoch_size:
+        current_minibatch = min(minibatch_size, test_epoch_size - sample_count)
         # Fetch next test min batch.
         data = reader_test.next_minibatch(current_minibatch, input_map=input_map)
         # minibatch data to be trained with
@@ -149,4 +149,5 @@ if __name__=='__main__':
     reader_train = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
-    train_and_evaluate(reader_train, reader_test, network_name, epochs)
+    epoch_size = 50000
+    train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs)

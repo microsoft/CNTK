@@ -159,20 +159,23 @@ def _add_tensor_ops(klass):
             raise ValueError('class "%s" already has operator overload "%s"' %
                              (klass, overload_name))
 
-        setattr(klass, overload_name, getattr(TensorOpsMixin, overload_name))
+        setattr(klass, overload_name, TensorOpsMixin.__dict__[overload_name])
 
 
 class ArrayMixin(object):
     @property
     def __array_interface__(self):
         try:
-            np_array = self.to_numpy()
+            # This checks for a MinibatchData object.
+            np_array = self.value
         except AttributeError:
             try:
-                np_array = self.data().to_numpy()
+                # This checks for a Value object. Trying with self.to_ndarray first would lead to
+                # a infinite recursion, since Value has a to_ndarray method
+                np_array = self.data().to_ndarray()
             except AttributeError:
                 try:
-                    np_array = self.value
+                    np_array = self.to_ndarray()
                 except AttributeError:
                     # Ideally an exception would be raised here, but getattr would swallow it
                     # so we return None

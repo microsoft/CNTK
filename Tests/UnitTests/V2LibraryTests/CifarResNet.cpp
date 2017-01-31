@@ -20,8 +20,8 @@ MinibatchSourcePtr CreateCifarMinibatchSource(size_t epochSize)
 
     Dictionary cropTransformConfig;
     cropTransformConfig[L"type"] = L"Crop";
-    cropTransformConfig[L"cropType"] = L"Random";
-    cropTransformConfig[L"cropRatio"] = L"0.8";
+    cropTransformConfig[L"cropType"] = L"RandomSide";
+    cropTransformConfig[L"sideRatio"] = L"0.8";
     cropTransformConfig[L"jitterType"] = L"uniRatio";
 
     Dictionary scaleTransformConfig;
@@ -116,7 +116,7 @@ FunctionPtr ResNetClassifier(Variable input, size_t numOutputClasses, const Devi
     auto pool = Pooling(rn3_3, PoolingType::Average, { poolW, poolH, 1 }, { poolhStride, poolvStride, 1 });
 
     // Output DNN layer
-    auto outTimesParams = Parameter({ numOutputClasses, 1, 1, cMap3 }, DataType::Float, GlorotUniformInitializer(1, 0, fc1WScale), device);
+    auto outTimesParams = Parameter({ numOutputClasses, 1, 1, cMap3 }, DataType::Float, GlorotUniformInitializer(fc1WScale, 1, 0), device);
     auto outBiasParams = Parameter({ numOutputClasses }, (float)fc1BValue, device);
 
     return Plus(Times(outTimesParams, pool), outBiasParams, outputName);
@@ -158,7 +158,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     }
 
     LearningRatePerSampleSchedule learningRatePerSample = 0.0078125;
-    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     const size_t minibatchSize = 32;
     size_t numMinibatchesToTrain = 2000;
@@ -166,7 +166,7 @@ void TrainResNetCifarClassifer(const DeviceDescriptor& device, bool testSaveAndR
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-        trainer.TrainMinibatch({ { imageInput, minibatchData[imageStreamInfo].m_data }, { labelsVar, minibatchData[labelStreamInfo].m_data } }, device);
+        trainer->TrainMinibatch({ { imageInput, minibatchData[imageStreamInfo] }, { labelsVar, minibatchData[labelStreamInfo] } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }

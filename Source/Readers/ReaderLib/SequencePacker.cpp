@@ -10,7 +10,7 @@
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 #include "SequencePacker.h"
-#include "ElementTypeUtils.h"
+#include "ReaderUtil.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -38,14 +38,12 @@ MBLayoutPtr SequencePacker::CreateMBLayout(const StreamBatch& batch)
 
 Minibatch SequencePacker::ReadMinibatch()
 {
-    auto sequences = m_sequenceEnumerator->GetNextSequences(m_minibatchSize);
+    auto sequences = m_sequenceEnumerator->GetNextSequences(m_globalMinibatchSizeInSamples, m_localMinibatchSizeInSamples);
     const auto& batch = sequences.m_data;
 
-    Minibatch minibatch(sequences.m_endOfEpoch);
+    Minibatch minibatch(sequences.m_endOfSweep, sequences.m_endOfEpoch);
     if (batch.empty())
-    {
         return minibatch;
-    }
 
     auto& currentBuffer = m_streamBuffers[m_currentBufferIndex];
 
@@ -74,6 +72,33 @@ Minibatch SequencePacker::ReadMinibatch()
 
     m_currentBufferIndex = (m_currentBufferIndex + 1) % m_numberOfBuffers;
     return minibatch;
+}
+
+void SequencePacker::SetConfiguration(const ReaderConfiguration& config, const std::vector<MemoryProviderPtr>& memoryProviders)
+{
+    PackerBase::SetConfiguration(config, memoryProviders);
+
+    if (m_useLocalTimeline)
+    {
+        // Set global minibatch size to max and local minibatch per worker.
+        bool shouldAddOneSample = (int)m_config.m_minibatchSizeInSamples % m_config.m_numberOfWorkers > m_config.m_workerRank;
+        m_localMinibatchSizeInSamples = (int)m_config.m_minibatchSizeInSamples / (int)m_config.m_numberOfWorkers + (shouldAddOneSample ? 1 : 0);
+        m_globalMinibatchSizeInSamples = SIZE_MAX;
+
+        if (m_localMinibatchSizeInSamples == 0)
+        {
+            // We expect to have a least a single sample per worker.
+            fprintf(stderr, "WARNING: The minibatch size '%" PRIu64 "' is too small to be used with %d workers, adjusting to minibatch size of 1 sample per worker\n",
+                m_config.m_minibatchSizeInSamples,
+                (int)m_config.m_numberOfWorkers);
+            m_localMinibatchSizeInSamples = 1;
+        }
+    }
+    else
+    {
+        // Set global and minibatch local minibatch size as in config.
+        m_globalMinibatchSizeInSamples = m_localMinibatchSizeInSamples = m_config.m_minibatchSizeInSamples;
+    }
 }
 
 void SequencePacker::CheckSampleShape(const std::vector<SequenceDataPtr>& minibatch, StreamDescriptionPtr outputStream)

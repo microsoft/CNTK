@@ -44,7 +44,7 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesDense, RandomSeedFixture)
 {
     // DENSE
     Matrix<float> mAdense(c_deviceIdZero);
-    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
+    mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -300.0f, 0.1f, IncrementCounter()), 0);
 
     // MATRIX mAsparse becomes sparse
     Matrix<float> mAsparse(mAdense.DeepClone());
@@ -66,6 +66,44 @@ BOOST_FIXTURE_TEST_CASE(MatrixSparseTimesDense, RandomSeedFixture)
     Matrix<float>::MultiplyAndWeightedAdd(alpha, mAsparse, transposeA, mB, transposeB, beta, mD);
 
     BOOST_CHECK(mD.IsEqualTo(mC, c_epsilonFloatE4));
+
+    // SPARSE * DENSE -> SPARSE
+    beta = 1; // note that dense only allow beta == 1, while sparse CPU support arbitrary beta
+    transposeA = false;
+    transposeB = true; // only support !transposeA && tranposeB for Dense * CSC -> SBC
+
+    Matrix<float> mA1sparseCSC(mAdense.DeepClone());
+    mA1sparseCSC.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
+
+    Matrix<float> mA2dense(c_deviceIdZero);
+    mA2dense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -300.0f, 0.1f, IncrementCounter()), 0);
+
+    Matrix<float> mA2sparseCSC(mA2dense.DeepClone());
+    mA2sparseCSC.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseCSC, true);
+
+    // dense for comparison
+    mC.Resize(dim1, dim1);
+    mC.SetValue(0.0f);
+    Matrix<float>::MultiplyAndAdd(mAdense, transposeA, mAdense, transposeB, mC);
+    Matrix<float>::MultiplyAndWeightedAdd(alpha, mAdense, transposeA, mA2dense, transposeB, beta, mC);
+
+    // make sure (dense * sparse -> dense) == (dense * dense -> dense)
+    mD.Resize(dim1, dim1);
+    mD.SetValue(0.0f);
+    Matrix<float>::MultiplyAndAdd(mAdense, transposeA, mA1sparseCSC, transposeB, mD);
+    Matrix<float>::MultiplyAndWeightedAdd(alpha, mAdense, transposeA, mA2sparseCSC, transposeB, beta, mD);
+
+    BOOST_CHECK(mD.IsEqualTo(mC, c_epsilonFloatE4));
+
+    // test on sparse
+    mD.SwitchToMatrixType(MatrixType::SPARSE, matrixFormatSparseBlockCol, false);
+    Matrix<float>::MultiplyAndAdd(mAdense, transposeA, mA1sparseCSC, transposeB, mD);
+    Matrix<float>::MultiplyAndWeightedAdd(alpha, mAdense, transposeA, mA2sparseCSC, transposeB, beta, mD);
+
+    // copy mD to dense and compare
+    Matrix<float> mE = Matrix<float>::Zeros(dim1, dim1, c_deviceIdZero);
+    Matrix<float>::ScaleAndAdd(1, mD, mE);
+    BOOST_CHECK(mE.IsEqualTo(mC, c_epsilonFloatE4));
 }
 
 BOOST_FIXTURE_TEST_CASE(MatrixDenseTimesSparse, RandomSeedFixture)
@@ -98,8 +136,6 @@ BOOST_FIXTURE_TEST_CASE(MatrixDenseTimesSparse, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(CPUMatrixDenseTimesSparse, RandomSeedFixture)
 {
-    // TODO: test fails with large dimensions
-    size_t dim1 = 4, dim2 = 2;
     Matrix<float> mAdense(CPUDEVICE);
     mAdense.AssignTruncateBottomOf(Matrix<float>::RandomUniform(dim1, dim2, c_deviceIdZero, -3.0f, 0.1f, IncrementCounter()), 0);
 

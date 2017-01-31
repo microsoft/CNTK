@@ -80,16 +80,6 @@ Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
-# Add Python artefacts to 2.0 Beta Drop
-# If (Test-Path $baseDropPath\cntk\Python)
-# {
-# 	Remove-Item $baseDropPath\cntk\Python -Recurse
-# }
-# Add CNTKLibrary-2.0.dll to 2.0 Beta Drop
-# If (Test-Path $baseDropPath\cntk\CNTKLibrary-2.0.dll)
-# {
-# 	Remove-Item $baseDropPath\cntk\CNTKLibrary-2.0.dll
-# }
 If (Test-Path $baseDropPath\cntk\CPPEvalClientTest.exe)
 {
 	Remove-Item $baseDropPath\cntk\CPPEvalClientTest.exe

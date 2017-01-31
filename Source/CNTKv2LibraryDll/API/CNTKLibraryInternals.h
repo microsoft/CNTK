@@ -149,14 +149,19 @@ namespace CNTK
 namespace CNTK
 {
     // Forward declarations
+    class Utils;
     class PrimitiveFunction;
     class CompositeFunction;
+    class BlockFunction;
     class Function;
     class Variable;
     class Axis;
     class DeviceDescriptor;
     enum class PrimitiveOpType : unsigned int;
     enum class DataType : unsigned int;
+
+    struct MinibatchInfo;
+    struct MinibatchData;
 
     class Serializer;
 
@@ -185,6 +190,9 @@ namespace CNTK
     class Learner;
     typedef std::shared_ptr<Learner> LearnerPtr;
 
+    class Learners;
+    typedef std::shared_ptr<Learners> LearnersPtr;
+
     class Dictionary;
     typedef std::shared_ptr<Dictionary> DictionaryPtr;
 
@@ -197,8 +205,17 @@ namespace CNTK
     class QuantizedDistributedCommunicator;
     typedef std::shared_ptr<QuantizedDistributedCommunicator> QuantizedDistributedCommunicatorPtr;
 
-    class DistributedTrainer;
-    typedef std::shared_ptr<DistributedTrainer> DistributedTrainerPtr;
+    class DistributedLearner;
+    typedef std::shared_ptr<DistributedLearner> DistributedLearnerPtr;
+
+    struct VariableFields;
+    typedef std::shared_ptr<VariableFields> VariableFieldsPtr;
+
+    class TrainingSession;
+    typedef std::shared_ptr<TrainingSession> TrainingSessionPtr;
+
+    class Trainer;
+    typedef std::shared_ptr<Trainer> TrainerPtr;
 
     namespace Internal
     {
@@ -215,6 +232,9 @@ namespace CNTK
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
 
+        // This is meant for debugging purposes only and is very likely to be deprecated in the future.
+        CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
+
         CNTK_API size_t NewUniqueId();
 
         // Internal hooks for testing and higher-level bindings
@@ -225,32 +245,97 @@ namespace CNTK
         CNTK_API void AlwaysAllowSettingDefaultDevice();
         bool IsSettingDefaultDeviceAlwaysAllowed();
 
+        CNTK_API void AllowRenamingFunctions();
+        bool IsRenamingFunctionsAllowed();
+
         CNTK_API void SetAutomaticUnpackingOfPackedValues(bool disable);
-        bool IsAutomaticUnpackingOfPackedValuesDisabled();
+        CNTK_API bool IsAutomaticUnpackingOfPackedValuesDisabled();
 
         CNTK_API void SetComputationNetworkTraceLevel(int traceLevel);
         int GetComputationNetworkTraceLevel();
 
         CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
 
-        CNTK_API void ForceSynchronousCUDAKernelExecutions();
-
         CNTK_API void ForceDeterministicAlgorithms();
+        CNTK_API bool ShouldForceDeterministicAlgorithms();
 
         CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
 
         CNTK_API void EnableForwardValuesSharing();
+        CNTK_API void DisableForwardValuesSharing();
+
         CNTK_API void EnableHyperMemoryCompress();
+        CNTK_API void DisableHyperMemoryCompress();
+
+        CNTK_API void EnableGradientAccumulationOptimization();
+        CNTK_API void DisableGradientAccumulationOptimization();
 
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
 
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
+        CNTK_API bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
-        template <typename ElementType>
-        Variable GetVariable(const  Microsoft::MSR::CNTK::ComputationNodeBasePtr& node,
-                             std::unordered_map<Microsoft::MSR::CNTK::ComputationNodeBasePtr, ::CNTK::Variable>& nodeToVariableMap,
-                             std::unordered_map<::CNTK::Variable, ::CNTK::Variable>& placeholderReplacements,
-                             std::unordered_set<::CNTK::FunctionPtr>& allPrimitiveFunctions);
+        class VariableResolver;
+
+        ///
+        /// Returns true if num CPU Threads was set.
+        ///
+        bool MaxNumCPUThreadsSet();
+
+        ///
+        /// TensorBoardFileWriter allows collecting various metrics (e.g. loss/error etc.) as the training progresses,
+        /// so that they can be analyzed in TensorBoard.
+        /// It also provides an option to serialize the model being trained, so that it can also be visualized.
+        /// The class is NOT thread-safe: it is assumed that only one thread is using each instance.
+        ///
+        class TensorBoardFileWriter final
+        {
+        public:
+            ///
+            /// Construct a TensorBoardFileWriter to log metrics as files in the given directory.
+            /// An optional model argument allows serializing the model as well, so that it can be visualized
+            /// in an external tool.
+            ///
+            CNTK_API explicit TensorBoardFileWriter(const std::wstring& dir, const FunctionPtr& modelToVisualize = nullptr);
+
+            ///
+            /// Destruct the TensorBoardFileWriter and close any open files.
+            ///
+            CNTK_API ~TensorBoardFileWriter() { Close(); }
+
+            ///
+            /// Record a value of some metric at a particular step.
+            /// For example, to record average value of a loss function for the n-th minibatch, one could call this:
+            ///     WriteValue("mb_avg_loss", lossValue, minibatchIdx);
+            ///
+            CNTK_API void WriteValue(const std::wstring& name, float value, uint64_t step);
+
+            ///
+            /// Flushes any outstanding records to disk. Returns true on success, false otherwise.
+            ///
+            CNTK_API bool Flush();
+
+            ///
+            /// Flushes any outstanding records to disk and closes a currently open underlying file.
+            /// Subsequent calls to WriteValue will open a new file. Returns true on success, false otherwise.
+            ///
+            CNTK_API bool Close();
+
+        private:
+            void Init();
+            void WriteModel();
+            void WriteRecord(const std::string& data);
+            void WriteVersion(time_t time);
+
+            // Disable copy-construction and assignment.
+            TensorBoardFileWriter(const TensorBoardFileWriter& other) = delete;
+            TensorBoardFileWriter& operator=(const TensorBoardFileWriter& other) = delete;
+
+            const FunctionPtr m_model;
+            const std::wstring m_dir;
+            FILE* m_file;
+            std::wstring m_fileName;
+        };
     }
 }

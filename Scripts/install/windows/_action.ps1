@@ -89,14 +89,14 @@ function InstallYml(
     $env= $table["Env"]
     $ymlFile  = $table["ymlFile"]
 
-    $envsDir = join-path $basePath "envs"
-    $targetDir = join-path $envsDir $env
+    $envsDir = Join-Path $basePath envs
+    $targetDir = Join-Path $envsDir $env
 
     if (test-path -path $targetDir -PathType Container) {
-        $newTable = @{ Function = "InstallExe"; Command = "$basepath\Scripts\conda.exe"; Param = "env update --file $ymlFile --name $targetDir"; WorkDir = "$basePath\Scripts"; runAs=$false }
+        $newTable = @{ Function = "InstallExe"; Command = "$basepath\Scripts\conda.exe"; Param = "env update --file `"$ymlFile`" --name `"$targetDir`""; WorkDir = "$basePath\Scripts"; runAs=$false }
     }
     else {
-        $newTable = @{ Function = "InstallExe"; Command = "$basepath\Scripts\conda.exe"; Param = "env create --file $ymlFile --prefix $targetDir"; WorkDir = "$basePath\Scripts"; runAs=$false }
+        $newTable = @{ Function = "InstallExe"; Command = "$basepath\Scripts\conda.exe"; Param = "env create --file `"$ymlFile`" --prefix `"$targetDir`""; WorkDir = "$basePath\Scripts"; runAs=$false }
     }
 
     InstallExe $newTable
@@ -149,6 +149,7 @@ function InstallWheel(
     $EnvName      = $table["EnvName"]
     $message      = $table["message"]
     $whlDirectory = $table["WheelDirectory"]
+    $pyVersion = $table["PyVersion"]
 
     Write-Host $message
     if (-not $Execute) {
@@ -156,8 +157,8 @@ function InstallWheel(
          return 
     }
 
-    $whlFile = Get-ChildItem $cntkRootDir\cntk\Python\cntk*.whl
-    if ($whlFile -eq $null) {
+    $whlFile = Get-ChildItem $cntkRootDir\cntk\Python\cntk*cp$pyVersion-cp$pyVersion*.whl
+    if (-not $whlFile) {
         throw "No WHL file found at $cntkRootDir\cntk\Python"
     }
     if ($whlFile.Count -gt 1) {
@@ -260,6 +261,7 @@ function CreateBatch(
 
     $func = $table["Function"]
     $filename = $table["Filename"]
+    $pyVersion = $table["PyVersion"]
 
     if (-not $Execute) {
         Write-Host "Create-Batch [$filename]:No-Execute flag. No file created"
@@ -277,7 +279,7 @@ if /I "%CMDCMDLINE%" neq ""%COMSPEC%" " (
     exit /b 0
 )
 set PATH=$cntkRootDir\cntk;%PATH%
-"$AnacondaBasePath\Scripts\activate" "$AnacondaBasePath\envs\cntk-py34"
+"$AnacondaBasePath\Scripts\activate" "$AnacondaBasePath\envs\cntk-py$pyVersion"
 "@
 
     add-content -Path $filename -Encoding Ascii -Value $batchScript

@@ -2,9 +2,9 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
 #include "stdafx.h"
 #include "EvalTestHelper.h"
+#include "ComputationNode.h"
 #define __STDC_FORMAT_MACROS
 #include <inttypes.h>
 
@@ -43,7 +43,7 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
     outputLayouts = eval->GetOutputSchema();
 
     for (auto vl : outputLayouts)
-    {        
+    {
         fprintf(stderr, "Output dimension: %" PRIu64 "\n", vl.m_numElements);
         fprintf(stderr, "Output name: %ls\n", vl.m_name.c_str());
     }
@@ -53,6 +53,14 @@ IEvaluateModelExtended<float>* SetupNetworkAndGetLayouts(std::string modelDefini
     outputLayouts = eval->GetOutputSchema();
 
     return eval;
+}
+
+BOOST_AUTO_TEST_CASE(CheckModelVersion)
+{
+    // This is a watch guard to make sure that any change in the model version will be detected. 
+    // If you change the CNTK model version, please do not silently adapt this test. 
+    // Instead, please do notify the CNTK release team (AlexeyO, Wolfgang, Zhou, Mark) to prepare required steps for the next release.
+    BOOST_REQUIRE_MESSAGE(CURRENT_CNTK_MODEL_VERSION == 18, "The model version has been changed. Before making changes in this test, please first notify the CNTK release team to prepare required steps in the next release. Thanks!\n");
 }
 
 BOOST_AUTO_TEST_CASE(EvalConstantPlusTest)
@@ -69,7 +77,7 @@ BOOST_AUTO_TEST_CASE(EvalConstantPlusTest)
         "ol = Plus(v1, v2, tag=\"output\") \n"
         "FeatureNodes = (v1) \n"
         "] \n";
-    
+
     VariableSchema inputLayouts;
     VariableSchema outputLayouts;
     IEvaluateModelExtended<float> *eval;
@@ -115,7 +123,7 @@ BOOST_AUTO_TEST_CASE(EvalScalarTimesTest)
     // Allocate the input values layer
     Values<float> inputBuffer(1);
     inputBuffer[0].m_buffer = { 2 };
-    
+
     // We can call the evaluate method and get back the results...
     BOOST_REQUIRE_THROW(eval->ForwardPass(inputBuffer, outputBuffer), std::exception); // Output not initialized
 
@@ -261,7 +269,7 @@ BOOST_AUTO_TEST_CASE(EvalSparseTimesTest)
 
     // We can call the evaluate method and get back the results...
     eval->ForwardPass(inputBuffer, outputBuffer);
-    
+
     // [2,2,2] * [1,2,3]^T etc.
     std::vector<float> expected{ 6, 0, 28 };
     auto buf = outputBuffer[0].m_buffer;
@@ -296,7 +304,7 @@ BOOST_AUTO_TEST_CASE(EvalRNNTest)
         "   wx = Parameter(cellDimX4, 0, init = \"uniform\", initValueScale = 1); \n"
         "   b = Parameter(cellDimX4, 1, init = \"fixedValue\", value = 0.0);\n"
         "   Wh = Parameter(cellDimX4, 0, init = \"uniform\", initValueScale = 1);\n"
-        
+
         "   Wci = Parameter(cellDim, init = \"uniform\", initValueScale = 1);\n"
         "   Wcf = Parameter(cellDim, init = \"uniform\", initValueScale = 1);\n"
         "    Wco = Parameter(cellDim, init = \"uniform\", initValueScale = 1);\n"
@@ -361,17 +369,13 @@ BOOST_AUTO_TEST_CASE(EvalRNNTest)
     eval->ForwardPass(inputBuffer, outputBuffer);
 
     // the result is different on GCC. The root cause is in the model initialization (default_random_engine class), which is platform specific.
-#ifdef _WIN32
-    std::vector<int> expected = { -67, 135, -58, 178 };
-#else
-    std::vector<int> expected = { 0, 0, 0, 0 };
-#endif
+    std::vector<int> expected = { 50, 10, 54, 55 };
 
     int scaler = 100000;
     std::vector<int> result;
     for (size_t i = 0; i < labelDim; i++)
         result.push_back((int)(outputBuffer[0].m_buffer[i] * scaler));
-   
+
     BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
 
     // the second pass with reset
@@ -395,11 +399,7 @@ BOOST_AUTO_TEST_CASE(EvalRNNTest)
     for (size_t i = 0; i < labelDim; i++)
         result[i] = (int)(outputBuffer[0].m_buffer[i] * scaler);
 
-#ifdef _WIN32
-    expected = { -63, 126, -54, 166 };
-#else
-    expected = { 109, -63, -7, -55 };
-#endif
+    expected = { 13, 2, 14, 14 };
 
     BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
 
@@ -408,13 +408,8 @@ BOOST_AUTO_TEST_CASE(EvalRNNTest)
     for (size_t i = 0; i < labelDim; i++)
         result[i] = (int)(outputBuffer[0].m_buffer[i] * scaler);
 
-#ifdef _WIN32
-    expected = { -61, 122, -52, 161 };
-#else
-    expected = { 158, -91, -10, -79 };
-#endif
+    expected = { -4, 0, -4, -4 };
 
-    
     BOOST_CHECK_EQUAL_COLLECTIONS(result.begin(), result.end(), expected.begin(), expected.end());
 
     eval->Destroy();

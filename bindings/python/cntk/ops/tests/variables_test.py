@@ -9,7 +9,7 @@ Unit tests for Variable and its descendents.
 """
 
 from ..variables import *
-from .. import times, placeholder_variable, constant
+from .. import times, placeholder_variable, constant, plus, input_variable
 import numpy as np
 
 import pytest
@@ -42,6 +42,22 @@ VALUES = [
         [[[1,2],[3,4],[5,6]],[[1,2],[3,4],[5,6]]]
         ]
 
+def test_parameter_set_value():
+    p = Parameter(shape=(2,3), init=1);
+    n = np.random.randn(2, 3)
+    p.value = n
+    assert np.all(p.value == n.astype(p.dtype))
+
+    n = np.reshape(np.arange(6), (2, 3))
+    p.value = n
+    op = plus(p, p)
+    state, output = op.forward({}, op.outputs, op.outputs)
+    value = output[op.output]
+    assert np.all(value == 2*n.astype(p.dtype))
+
+    p.value = sanitize_value(p.shape, 1.0, np.float32, None)
+    assert np.all(p.value == np.ones((2,3)))
+
 @pytest.mark.parametrize("value", VALUES)
 def test_constant_value(value):
     c = Constant(value=value)
@@ -72,3 +88,18 @@ def test_constant_shape_inf():
     assert np.allclose(c.shape, shape)
     with pytest.raises(ValueError):
         c.value
+
+def test_convert_to_variable_dtype():
+    assert input_variable(1).dtype == np.float32
+
+    data = np.arange(1, dtype=np.int32)
+    result = (input_variable(1)+2).eval([data])
+    assert result==[[[2]]]
+    assert result.dtype == np.float32
+
+    data = np.arange(1., dtype=np.float64)
+    (input_variable(1)+2).eval([data])
+    result = (input_variable(1)+2).eval([data])
+    assert result==[[[2]]]
+    assert result.dtype == np.float32
+

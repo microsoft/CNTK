@@ -116,7 +116,7 @@ declare -a opencvFiles=("libopencv_core.so.3.1" "libopencv_imgproc.so.3.1" "libo
 declare -a libzipFiles=("libzip.so.4")
 
 # CUDA
-declare -a cudaFiles=("libcudart.so.7.5" "libcublas.so.7.5" "libcurand.so.7.5" "libcusparse.so.7.5")
+declare -a cudaFiles=("libcudart.so.8.0" "libcublas.so.8.0" "libcurand.so.8.0" "libcusparse.so.8.0")
 
 # cuDNN
 # Note: can be only a single file currently, see copy below.
@@ -144,8 +144,7 @@ opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnVersion="5.1"
-cudnnPath="/usr/local/cudnn-$cudnnVersion/cuda/lib64"
+cudnnPath="/usr/local/cuda/lib64"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"
 kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
@@ -170,17 +169,21 @@ mkdir -p $baseBinariesPath
 echo "Copying build binaries..." >&3
 cp -r $buildPath/* $baseBinariesPath
 # Remove unnessesary file(s) if exist(s)
-# Add Python artefacts to 2.0 Beta Drop
-# rm -rf $baseBinariesPath/python
+#
+# General TODO: Implement White List of Binary Drop contents.
+# For the time being "cherry pick"  removal of unneeded files
+#
 rm -f $baseBinariesPath/bin/brainscripttests
 rm -f $baseBinariesPath/bin/cppevalclient
+rm -f $baseBinariesPath/bin/cppevalextendedclient
+rm -f $baseBinariesPath/bin/cppevalv2client
 rm -f $baseBinariesPath/bin/evaltests
 rm -f $baseBinariesPath/bin/mathtests
+rm -f $baseBinariesPath/bin/multiversotests
 rm -f $baseBinariesPath/bin/networktests
 rm -f $baseBinariesPath/bin/readertests
+rm -f $baseBinariesPath/bin/v2librarydistributiontests
 rm -f $baseBinariesPath/bin/v2librarytests
-# libcntklibrary-2.0.so added to drop for 2.0 Beta
-# rm -f $baseBinariesPath/lib/libcntklibrary-2.0.so
 
 # Make Include directory
 mkdir -p $baseIncludePath

@@ -42,10 +42,10 @@ private:
     DISABLE_COPY_AND_MOVE(HTKDataDeserializer);
 
     // Initialization functions.
-    void InitializeChunkDescriptions(ConfigHelper& config);
+    void InitializeChunkDescriptions(const vector<wstring>& paths);
     void InitializeStreams(const std::wstring& featureName);
     void InitializeFeatureInformation();
-    void InitializeAugmentationWindow(ConfigHelper& config);
+    void InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow);
 
     // Gets sequence by its chunk id and id inside the chunk.
     void GetSequenceById(ChunkIdType chunkId, size_t id, std::vector<SequenceDataPtr>&);

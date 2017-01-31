@@ -65,12 +65,10 @@ public:
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
+            m_net->ForwardProp(outputNodes);
 
             for (int i = 0; i < outputNodes.size(); i++)
-            {
-                m_net->ForwardProp(outputNodes[i]);
                 outputMatrices[outputNodes[i]->NodeName()] = (void*) (&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
-            }
 
             if (doWriterUnitTest)
             {
@@ -92,7 +90,7 @@ public:
         }
 
         if (m_verbosity > 0)
-            fprintf(stderr, "Total Samples Evaluated = %lu\n", totalEpochSamples);
+            fprintf(stderr, "Total Samples Evaluated = %lu\n", (unsigned long)totalEpochSamples);
 
         // clean up
     }
@@ -109,11 +107,9 @@ public:
 
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
 
+        m_net->ForwardProp(outputNodes);
         for (int i = 0; i < outputNodes.size(); i++)
-        {
-            m_net->ForwardProp(outputNodes[i]);
             outputMatrices[outputNodes[i]->NodeName()] = (void*)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
-        }
 
         // TODO: What should the data size be?
         dataWriter.SaveData(0, outputMatrices, 1, 1, 0);
@@ -237,12 +233,12 @@ public:
         for (size_t numMBsRun = 0; DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr); numMBsRun++)
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
+            m_net->ForwardProp(outputNodes);
 
             for (auto & onode : outputNodes)
             {
                 // compute the node value
                 // Note: Intermediate values are memoized, so in case of multiple output nodes, we only compute what has not been computed already.
-                m_net->ForwardProp(onode);
 
                 FILE* file = *outputStreams[onode];
                 WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false);
@@ -268,7 +264,7 @@ public:
             }
             totalEpochSamples += actualMBSize;
 
-            fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", numMBsRun, actualMBSize);
+            fprintf(stderr, "Minibatch[%lu]: ActualMBSize = %lu\n", (unsigned long)numMBsRun, (unsigned long)actualMBSize);
             if (outputPath == L"-") // if we mush all nodes together on stdout, add some visual separator
                 fprintf(stdout, "\n");
 
@@ -285,7 +281,7 @@ public:
             fprintfOrDie(f, "%s", formattingOptions.epilogue.c_str());
         }
 
-        fprintf(stderr, "Written to %ls*\nTotal Samples Evaluated = %lu\n", outputPath.c_str(), totalEpochSamples);
+        fprintf(stderr, "Written to %ls*\nTotal Samples Evaluated = %lu\n", outputPath.c_str(), (unsigned long)totalEpochSamples);
 
         // flush all files (where we can catch errors) so that we can then destruct the handle cleanly without error
         for (auto & iter : outputStreams)
