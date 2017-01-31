@@ -93,6 +93,23 @@ void NcclComm::AllReduceImpl(void* buffer, size_t count, DataType dtype)
         RuntimeError("NcclComm ncclAllReduce failed: %s", ncclGetErrorString(res));
 }
 
+void NcclComm::BroadcastImpl(void* buffer, size_t count, MPI_Datatype dtype, int root)
+{
+    ncclResult_t res;
+    if (dtype == MPI_CHAR)
+    {
+        res = ncclBcast(buffer, count, ncclChar, root, m_ncclComm, m_stream);
+    }
+    else
+    {
+        RuntimeError("NcclComm Broadcast supports Char type only");
+    }
+    if (res != ncclSuccess)
+    {
+        RuntimeError("NcclComm ncclBcast failed: %s", ncclGetErrorString(res));
+    }
+}
+
 void NcclComm::Sync()
 {
     cudaStreamSynchronize(m_stream) || "NcclComm: cudaStreamSynchronize failed";

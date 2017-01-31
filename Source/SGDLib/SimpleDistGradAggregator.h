@@ -293,7 +293,7 @@ private:
         if (!m_mpi->IsMainNode())
             m_mpi->Isend(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), numGradMatrices, &sendHeaderRequest) || MpiFail("MPI_Isend");
 
-        // Perform sync allreduce on the gradient data
+        // Perform async allreduce on the gradient data
         std::vector<MPI_Request> allReduceRequests;
         if (!m_nccl.IsSupported())
         {
@@ -355,21 +355,14 @@ private:
             assert(numNodesHeadersReceivedFrom == (NumProc() - 1));
         }
 
-        // Initiate receive of the aggregate header
-        MPI_Request recvAggHeaderRequest;
-        if (!m_mpi->IsMainNode())
-            m_mpi->Irecv(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), numGradMatrices + 1 + numGradMatrices, &recvAggHeaderRequest) || MpiFail("MPI_Irecv");
-
-        // Intiate send of the aggregate header from main node
-        std::vector<MPI_Request> sendAggHeaderRequests(NumProc() - 1);
-        if (m_mpi->IsMainNode())
+        // Broadcast the aggregated header to all nodes
+        if (!m_nccl.IsSupported())
         {
-            for (size_t j = 0; j < NumProc() - 1; ++j)
-            {
-                int dest = (j >= MyRank()) ? (j + 1) : j;
-                // TODO: Should we use MPI_Bcast instead for better performance
-                m_mpi->Isend(headerCPU, headerCPU->Size(), MPI_CHAR, dest, numGradMatrices + 1 + numGradMatrices, &(sendAggHeaderRequests[j])) || MpiFail("MPI_Isend");
-            }
+            MPI_Bcast(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), m_mpi->Communicator()) || MpiFail("MPI_Bcast");
+        }
+        else
+        {
+            m_nccl.Broadcast(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank());
         }
 
         // Wait for the allreduce operations to finish and initiate transfer back to the GPU if needed
@@ -404,10 +397,6 @@ private:
             }
         }
 
-        // Wait to receive aggregate header
-        if (!m_mpi->IsMainNode())
-            m_mpi->Wait(&recvAggHeaderRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
-
         if (m_nccl.IsSupported())
             m_nccl.Sync();
         else if (deviceId >= 0 && m_AggregationBuffer == 0)
@@ -419,8 +408,6 @@ private:
         // Wait for completion of the async send requests
         if (!m_mpi->IsMainNode())
             m_mpi->Wait(&sendHeaderRequest, MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
-        else
-            m_mpi->Waitall(sendAggHeaderRequests.size(), sendAggHeaderRequests.data(), MPI_STATUSES_IGNORE) || MpiFail("MPI_Waitall");
 
         if (showSyncPerfStats)
         {
