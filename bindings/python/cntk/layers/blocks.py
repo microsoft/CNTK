@@ -4,11 +4,11 @@
 # for full license information.
 # ==============================================================================
 
-# blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
-#           e.g. the LSTM
-# TODO: This has become too large. Need to break out some locally used stuff into another module.
+'''
+blocks -- basic building blocks that are semantically not layers (not used in a layered fashion)
+          e.g. the LSTM
+'''
 
-# TODO: further clean up the dependencies
 from __future__ import division
 import numpy as np
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, sequence
@@ -23,7 +23,6 @@ from cntk.default_options import *
 # from .ops.functions import Function
 # No -> SystemError: Parent module '' not loaded, cannot perform relative import
 from cntk.ops.functions import Function
-from cntk.ops.variables import Variable
 
 _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
 
@@ -67,38 +66,6 @@ def _get_initial_state_or_default(initial_state):
         return Constant(initial_state, shape=(1))
     else:
         return initial_state # already in good shape: return as is
-
-def _make_tensor_meta(cls_name, **kwargs):
-    class TensorMeta(type):
-        def __getitem__(self, shape):
-            from ..utils import sanitize_shape
-            shape = sanitize_shape(shape)
-            return Variable.Type(shape, **kwargs) # inject it for @Function 
-    return TensorMeta(cls_name, (), {})
-
-# Tensor and SparseTensor contain only a batch axis.
-# If you want a sequence, say Seq[Tensor].
-# ParameterTensor has no axis.
-Tensor          = _make_tensor_meta('Tensor',       is_sparse=False, dynamic_axes=Axis.default_batch_axis())
-SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=Axis.default_batch_axis())
-ParameterTensor = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=[])
-tensor = Tensor[-2] # TODO: find the correct symbol for the sentinel value
-
-def _make_seq_meta(cls_name, axes):
-    class SeqMeta(type):
-        def __getitem__(self, item_type):
-            return Variable.Type(**RecordWith(item_type, dynamic_axes=axes))
-    return SeqMeta(cls_name, (), {})
-
-Seq = _make_seq_meta('Seq', Axis.default_input_variable_dynamic_axes())
-# TODO: accept typing.Sequence instead
-# TODO: reject sequences over sequences (for now)
-
-class SequenceOverMeta(type):
-    def __getitem__(self, axis):
-        return _make_seq_meta('Seq', [Axis.default_batch_axis(), axis])
-
-SequenceOver = SequenceOverMeta('SequenceOver', (), {})
 
 # TODO: this is obsolete; remove
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters

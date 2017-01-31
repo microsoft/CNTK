@@ -76,7 +76,6 @@
       <Filter>cntk\utils\debughelpers</Filter>
     </None>
     <None Include="cntk\blocks.py" />
-    <None Include="cntk\blocks.py" />
     <None Include="cntk\layers\__init__.py">
       <Filter>cntk\layers</Filter>
     </None>
@@ -217,6 +216,10 @@
     </None>
     <None Include="cntk\utils\tests\utils_test.py">
       <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\tests\layers_test.py" />
+    <None Include="cntk\layers\typing.py">
+      <Filter>cntk\layers</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

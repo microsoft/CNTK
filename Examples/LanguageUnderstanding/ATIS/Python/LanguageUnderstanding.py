@@ -8,6 +8,7 @@ from __future__ import print_function
 import os
 import math
 from cntk.layers import *  # Layers library
+from cntk.layers.typing import *
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer, Evaluator
@@ -71,7 +72,7 @@ def create_model_function():
 #  returns: Function: (features, labels) -> (loss, metric)
 def create_criterion_function(model):
     @Function
-    def criterion(query: Seq[SparseTensor[vocab_size]], labels: Seq[SparseTensor[num_labels]]):
+    def criterion(query: Sequence[SparseTensor[vocab_size]], labels: Sequence[SparseTensor[num_labels]]):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)
         errs = classification_error      (z, labels)
@@ -113,7 +114,7 @@ def peek(model, epoch):
 def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
-    model.update_signature(Seq[SparseTensor[vocab_size]])
+    model.update_signature(Sequence[SparseTensor[vocab_size]])
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)

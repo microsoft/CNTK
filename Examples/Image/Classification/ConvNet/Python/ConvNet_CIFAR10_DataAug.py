@@ -9,7 +9,8 @@ import os
 import math
 import numpy as np
 
-from cntk.layers import Tensor, Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, Placeholder, identity, Sequential, For
+from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, Placeholder, identity, Sequential, For
+from cntk.layers.typing import *
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer, Evaluator

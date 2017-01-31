@@ -19,6 +19,7 @@ from cntk.graph import plot
 from cntk.layers import *
 from cntk.layers.sequence import *
 from cntk.models.attention import *
+from cntk.layers.typing import *
 
 ########################
 # variables and stuff  #

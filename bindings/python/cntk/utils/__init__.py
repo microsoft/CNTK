@@ -682,6 +682,7 @@ class Record(dict):
         # TODO: try to delete __setattr__ to make it immutable
         raise AttributeError('record is immutable')
 
+# TODO: instead create an operator, so we can say r = r | Record(x=42), like the set type
 def RecordWith(record, **kwargs):
     '''
     Create a new Record from an existing one with members modified or added.
