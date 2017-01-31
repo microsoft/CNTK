@@ -651,21 +651,11 @@ class UserFunction(Function):
 
     '''
     def __init__(self, inputs, name=''):
-        var_inputs = []
-        # TODO: this should be done in Swig
-        for i in inputs:
-            if isinstance(i, cntk_py.Variable):
-                var_inputs.append(i)
-            elif isinstance(i, cntk_py.Function):
-                var_inputs.append(i.output)
-            else:
-                raise ValueError('expected Variable, but got "%s"'%type(i))
-
         # FIXME we need to save a reference here so that the function does not
         # disappear
-        self.var_inputs = var_inputs
+        self.inputs = inputs
 
-        super(Function, self).__init__(var_inputs, name)
+        super(Function, self).__init__(inputs, name)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -764,7 +754,7 @@ class UserFunction(Function):
             variables[k] = sanitize_batch(k, v, None, state.device())
 
     def infer_outputs(self):
-        raise NotImplementedError('infer_outputs has to be overwritten')
+        raise NotImplementedError('infer_outputs has to be overridden')
 
     def op_name(self):
         return 'UserFunction'

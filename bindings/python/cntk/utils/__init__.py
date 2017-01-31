@@ -113,22 +113,16 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
 
     from cntk.ops.variables import Constant, Variable, Parameter
+    from cntk.ops.functions import Function
     from cntk.ops import constant
 
-    # is it a Variable?
+    # is it a Variable or a Function?
     if isinstance(arg,
                   (Constant, cntk_py.Constant,
                    Variable, cntk_py.Variable,
-                   Parameter, cntk_py.Parameter)):
+                   Parameter, cntk_py.Parameter,
+                   Function, cntk_py.Function)):
         return arg
-
-    # or a Function?
-    if isinstance(arg, cntk_py.Function):
-        try:
-            return arg.output
-        except RuntimeError:
-            raise ValueError(
-                'the argument has more than one output, please provide the one you want')
 
     # maybe a Python list that we can interpret as a NumPy array?
     if isinstance(arg, list) and not arg:

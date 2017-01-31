@@ -49,14 +49,8 @@ def combine(operands, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import combine
-    converted_operands = list()
-    for o in operands:
-        if isinstance(o, Function):
-            converted_operands.append(o.output)
-        else:
-            converted_operands.append(o)
+    return combine(operands, name)
 
-    return combine(converted_operands, name)
 
 @typemap
 def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
