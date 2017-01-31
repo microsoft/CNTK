@@ -46,6 +46,7 @@
 
 %template() std::vector<bool>;
 %template() std::pair<size_t, double>;
+/*%template() std::vector<std::shared_ptr<CNTK::Trainer>>;*/
 %template() std::vector<std::pair<size_t, double>>;
 
 // Ignore things in CNTKLibrary.h that are not exposed for C# Eval.
@@ -355,6 +356,7 @@
         double blockLearningRate = 1.0);
 
 %ignore CNTK::Trainer;
+%ignore CNTK::CreateTrainer;
 %ignore CNTK::StreamInformation;
 %ignore std::hash<::CNTK::StreamInformation>;
 
@@ -371,6 +373,9 @@
 %ignore CNTK::QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits);
 %ignore CNTK::MinibatchInfo;
 %ignore CNTK::DistributedTrainer;
+%ignore CNTK::TrainingSession;
+%ignore CNTK::CreateBasicTrainingSession;
+%ignore CNTK::Create;
 %ignore CNTK::CreateDataParallelDistributedTrainer(DistributedCommunicatorPtr communicator, bool useAsyncBufferedParameterUpdate, size_t distributedAfterSampleCount = 0);
 %ignore CNTK::CreateQuantizedDataParallelDistributedTrainer(QuantizedDistributedCommunicatorPtr communicator,
                                                             bool useAsyncBufferedParameterUpdate,
