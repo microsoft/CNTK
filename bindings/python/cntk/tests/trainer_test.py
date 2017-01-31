@@ -8,7 +8,7 @@ import os
 import math
 import numpy as np
 from .. import Function
-from ..ops import times, sequence, as_block
+from ..ops import times, sequence, as_block, element_select
 from ..ops.tests.ops_test_utils import cntk_device
 from ..utils import one_hot
 from ..trainer import *
@@ -278,3 +278,29 @@ def test_trainer_with_some_params_not_learned():
         W_orig_value = W.value
 
     trainer.test_minibatch(arguments)
+
+def test_not_replaced_placeholders():
+    
+    def wrap_in_block(fun_args, name):
+        block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+        combined_block_args = combine(block_args)                               # the content of the BlockFunction
+        arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
+        combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=name)
+        return combined_args
+
+
+    input_dim = 2
+    x = input_variable(shape=(input_dim,))
+    p1 = placeholder_variable()
+    p2 = placeholder_variable()
+
+    a = abs(x)
+    b = wrap_in_block(list(a.outputs) + [p1], "my_first_block")
+    b = wrap_in_block(list(b.outputs) + [p2], "my_second_block")
+    b = past_value(b.outputs[0])
+
+    model = b.replace_placeholders({p1:b.outputs[0], p2:b.outputs[0]})
+
+    x0 = [[1, 1],[2, 2]]
+    with pytest.raises(RuntimeError):
+        model.forward({x : x0}, model.outputs)

@@ -11,6 +11,7 @@ from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
 from cntk.io import ReaderConfig, ImageDeserializer
+from cntk import distributed
 import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -45,6 +46,7 @@ def test_alexnet_error(device_id):
                                         minibatch_size=16,
                                         epoch_size=64, 
                                         max_epochs=2)
+    distributed.Communicator.finalize()
 #    expected_test_error = 0.0
 
 # We are removing tolerance in error because running small epoch size has huge variance in accuracy. Will add

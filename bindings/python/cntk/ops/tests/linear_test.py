@@ -12,7 +12,7 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE
+from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
 from ...utils import sanitize_dtype_cntk, _ones_like, eval
 
 TENSOR_PAIRS = [
@@ -54,6 +54,26 @@ def test_op_plus(left_operand, right_operand, device_id, precision):
     _test_binary_op(precision, device_id, '+',
                     left_operand, right_operand,
                     expected_forward, expected_backward)
+
+def test_op_plus_sequences(device_id, precision):
+    dt_precision = PRECISION_TO_TYPE[precision]
+    operand = [AA([[1., 2.], [3., 4.]], dtype=dt_precision), AA([[5., 6.]], dtype=dt_precision)]
+    root_gradient = [AA([[1., 1.], [1., 1.]], dtype=dt_precision), AA([[1., 1.]], dtype=dt_precision)]
+
+    expected_forward = [AA([[2., 4.], [6., 8.]], dtype=dt_precision), AA([[10., 12.]], dtype=dt_precision)]
+    expected_backward = [AA([[2., 2.], [2., 2.]], dtype=dt_precision), AA([[2., 2.]], dtype=dt_precision)]
+
+    from .. import plus, input_variable
+    x = input_variable(shape=(2,), needs_gradient=True)
+    z = x + x
+    state, actual_forward = z.forward({x : operand}, [z.output], {z.output}, cntk_device(device_id))
+    actual_backward = z.backward(state, {z.output : root_gradient}, [x])
+
+    np.allclose(list(actual_forward.values())[0][0], expected_forward[0])
+    np.allclose(list(actual_forward.values())[0][1], expected_forward[1])
+
+    np.allclose(list(actual_backward.values())[0][0], expected_backward[0])
+    np.allclose(list(actual_backward.values())[0][1], expected_backward[1])
 
 def test_op_plus_gradient_accumulation(device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]

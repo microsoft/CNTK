@@ -237,5 +237,5 @@ if __name__=='__main__':
                            max_epochs=112, 
                            log_to_file=log_dir, 
                            num_mbs_per_log=500, 
-                           gen_heartbeat=False)
+                           gen_heartbeat=True)
     Communicator.finalize()
