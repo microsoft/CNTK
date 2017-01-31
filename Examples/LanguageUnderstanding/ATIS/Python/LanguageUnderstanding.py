@@ -85,7 +85,7 @@ def create_model_function():
     return Sequential([
         #Label('input'), # BUGBUG: PassNode must work for sparse (no reason it cannot)
         #Embedding(emb_dim, init=uniform(0.1)),
-        Embedding(emb_dim),
+        Embedding(emb_dim, name='embed'),
         Label('embedded_input'),
         #Stabilizer(),
         Recurrence(LSTM(hidden_dim), go_backwards=False),
@@ -152,6 +152,7 @@ def peek(model, epoch):
     print("Example Sentence After Epoch [{}]".format(epoch))
     for query, slot_label in zip(seq.split(),[slots_wl[s] for s in best[0]]):
         print("\t{}\t{}".format(query, slot_label))
+    #print(model.embed.E.value)
 
 ########################
 # train action         #

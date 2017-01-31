@@ -39,7 +39,7 @@ num_layers = 2
 attention_dim = 128
 attention_span = 20
 attention_axis = -3
-use_attention = False
+use_attention = True
 use_embedding = True
 embedding_dim = 200
 vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()]) # all lines of VOCAB_FILE in a list
@@ -228,6 +228,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # create the training wrapper for the s2smodel, as well as the criterion function
     model_train = create_model_train(s2smodel)
     criterion = create_criterion_function(model_train)
+    #from cntk.graph import plot
+    #plot(criterion, filename="c:/me/plot.pdf")
 
     # also wire in a greedy decoder so that we can properly log progress on a validation example
     # This is not used for the actual training process.
