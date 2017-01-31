@@ -165,7 +165,7 @@ def last(seq, name=''):
 def where(condition, name=''):
     '''
     Given a symbolic sequence ``condition`` of boolean-like values, it will return
-    a new sequence containing the indices for which the values were true.
+    a new scalar sequence containing the indices for which the values were true.
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
@@ -179,8 +179,7 @@ def where(condition, name=''):
                 [ 1.]]], dtype=float32)
         >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
-        array([[[ 2.],
-                [ 3.]]], dtype=float32)
+        array([[ 2., 3.]], dtype=float32)
 
     Args:
         condition: the symbolic sequence of booleans
