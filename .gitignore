@@ -241,7 +241,7 @@ bindings/java/Swig/cntk_java_wrap.h
 bindings/java/Swig/cntk_java_wrap.cxx
 bindings/java/Swig/*.java
 bindings/java/Swig/*.class
-bindings/java/Swig/*.class
+bindings/java/Swig/*.so
 bindings/java/ScalaEvalExample/.idea
 bindings/java/**/target
 bindings/java/**/*.jar
