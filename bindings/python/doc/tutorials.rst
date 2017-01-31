@@ -13,19 +13,19 @@ Tutorials
 #.  *Learn how to predict the stock market*
      CNTK 104: `Time Series basics`_ with finance data
                           
-#.  *Compress (using autoencoder) hand written digits from MNIST data with no human input* 
+#.  *Compress (using autoencoder) hand written digits from MNIST data with no human input (unsupervised learning)* 
      CNTK 105 Part A: `Data preparation <https://github.com/Microsoft/CNTK/tree/v2.0.beta9.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb>`_ ,  Part B: `Feed Forward autoencoder`_
 
 #.  *Forecasting using data from an IOT device* 
      CNTK 106: LSTM based forecasting - Part A: `with simulated data <https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb>`_
 
-#.  *Recognize objects in images from CIFAR-10-10 data*
+#.  *Recognize objects in images from CIFAR-10 data*
      CNTK 201 Part A: `Data preparation <https://github.com/Microsoft/CNTK/tree/v2.0.beta9.0/Tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb>`_,  Part B: `VGG and ResNet classifiers`_
  
 #.  *Infer meaning from text snippets using LSTMs and word embeddings*
      CNTK 202: `Language understanding`_ with ATIS3 text data
               
-#.  *Train a computer to play games in a simulated environment*
+#.  *Train a computer to perform tasks optimally (e.g., win games) in a simulated environment*
      CNTK 203: `Reinforcement learning basics`_ with OpenAI Gym data
 
 #.  *Translate text from one domain (grapheme) to other (phoneme)*
@@ -34,7 +34,7 @@ Tutorials
 #.  *Teach a computer to paint like Piccasso or van Gogh*
      CNTK 205: `Artistic Style Transfer`_
               
-#.  *Produce realistic data (MNIST images) with no human input*
+#.  *Produce realistic data (MNIST images) with no human input (unsupervised learning)*
      CNTK 206 Part A: `Data preparation <https://github.com/Microsoft/CNTK/tree/v2.0.beta9.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb>`_ ,  Part B: `Basic Generative Adversarial Networks (GAN)`_
 
 For our Japanese users, you can find some of the `tutorials in Japanese`_.
