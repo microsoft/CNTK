@@ -1,8 +1,8 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
 from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
-        sanitize_dtype_cntk, value_to_seq, sanitize_var_substitution_map, \
-        sanitize_substitution_var
+        sanitize_dtype_cntk, value_to_seq, variable_value_to_seq, \
+        sanitize_var_substitution_map, sanitize_substitution_var
 from cntk.utils.swig_helper import map_if_possible
 from cntk.ops.variables import Variable
 from enum import Enum, unique
@@ -291,7 +291,7 @@ class Function(cntk_py.Function):
                                              keep_for_backward)
 
         for k in output_map:
-            output_map[k] = value_to_seq(output_map[k])
+            output_map[k] = variable_value_to_seq(output_map[k], k)
 
         return state, output_map
 
@@ -336,7 +336,7 @@ class Function(cntk_py.Function):
         self._backward(state, root_gradients, var_gradients)
 
         for var, value in var_gradients.items():
-            var_gradients[var] = value_to_seq(value)
+            var_gradients[var] = variable_value_to_seq(value, var)
 
         return var_gradients
 
@@ -690,7 +690,7 @@ class UserFunction(Function):
         Returns:
              A BackPropState instance, which is used by :func:`backward`.
         '''
-        arguments = tuple(value_to_seq(v) for v in arguments)
+        arguments = tuple(variable_value_to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
 
         map_if_possible(outputs)
         map_if_possible(outputs_to_retain)
@@ -742,7 +742,7 @@ class UserFunction(Function):
             dict: mapping of ``variables`` to NumPy arrays
         '''
         for v in root_gradients:
-            root_gradients[v] = value_to_seq(root_gradients[v])
+            root_gradients[v] = variable_value_to_seq(root_gradients[v], v)
         map_if_possible(variables)
 
 

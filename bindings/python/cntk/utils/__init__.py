@@ -41,7 +41,7 @@ def sanitize_precision(precision):
 @typemap
 def one_hot(batch, num_classes, dtype=None, device=None):
     '''
-    Converts ``batch`` into a :class:`Value` object of ``dtype``
+    Converts ``batch`` into a :class:`~cntk.core.Value` object of ``dtype``
     such that the integer data in ``batch`` is interpreted as the indices
     representing one-hot vectors.
 
@@ -226,7 +226,7 @@ def _is_dense(batch):
 @typemap
 def sanitize_batch(var, batch, seq_starts=None, device=None):
     '''
-    Convert to :class:`Value`.
+    Convert to :class:`~cntk.core.Value`.
 
     Args:
         var (:class:`~cntk.ops.variables.Variable`): input variable into which
@@ -234,7 +234,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
         batch: batch input for `var`. It can be
          * a single NumPy array denoting the full minibatch
          * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
-         * a :class:`Value` object (e.g. returned by :func:`one_hot`)
+         * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans one for each sequence in the batch that tell whether a
@@ -244,7 +244,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
          this value should be put on
 
     Returns:
-        :class:`Value`: converted batch that can be passed to the core API
+        :class:`~cntk.core.Value`: converted batch that can be passed to the core API
     '''
     if isinstance(batch, cntk_py.Value):
         if seq_starts is not None:
@@ -391,7 +391,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          this value should be put on
         extract_values_from_minibatch_data (`bool`, defaults to `True`): specifies 
          if :class:`~cntk.io.MinibatchData` instances in the arguments map are
-         converted to the underlying value (:class:`Value`) instances (default),
+         converted to the underlying value (:class:`~cntk.core.Value`) instances (default),
          or if they should remain intact, as they contain additional meta 
          information required by the Trainer (specifically, by the 
          :meth:`~cntk.Trainer.train_minibatch` method).
@@ -580,13 +580,14 @@ def get_train_eval_criterion(trainer):
     return copy.copy(trainer.previous_minibatch_evaluation_average)
 
 
+# Obsolete: All usages should be replaced with the variable_value_to_seq procedure below
 def value_to_seq(value):
     '''
     Convert a Value to a sequence of NumPy arrays that have their masked
     entries removed.
 
     Args:
-        value (:class:`Value`): Value as it is returned by Swig
+        value (:class:`~cntk.core.Value`): Value as it is returned by Swig
 
     Returns:
         a list of NumPy arrays
@@ -600,6 +601,26 @@ def value_to_seq(value):
                    for idx, seq in enumerate(np_data)]
 
     return np_data
+
+
+def variable_value_to_seq(value, variable):
+    '''
+    Convert a Value to a sequence of NumPy arrays that have their masked
+    entries removed.
+
+    Args:
+        value (:class:`~cntk.core.Value`): Value as it is returned by Swig
+
+    Returns:
+        a list of NumPy arrays
+    '''
+
+    mask = value.mask()
+    if mask:
+        value_sequences = value.unpack_variable_value(variable, cpu())
+        return [np.asarray(seq) for seq in value_sequences]
+    else:
+        return np.asarray(value)
 
 
 def eval(op, arguments=None, precision=None, device=None, backward_pass=False, expected_backward=None):

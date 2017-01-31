@@ -19,7 +19,7 @@ def _is_c_contiguous(data):
 
 class NDArrayView(cntk_py.NDArrayView):
     '''
-    Creates an empty dense internal data representation of a :class:`Value` object.
+    Creates an empty dense internal data representation of a :class:`~cntk.core.Value` object.
     To create an NDArrayView from a NumPy array, use :meth:`from_dense`.
     To create an NDArrayView from a sparse array, use :meth:`from_csr`.
 
@@ -137,7 +137,7 @@ class Value(cntk_py.Value):
          It can be:
           * a pure Python structure (list of lists, ...),
           * a list of NumPy arrays or SciPy sparse CSR matrices
-          * a :class:`Value` object (e.g. returned by :func:`one_hot`)
+          * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -187,7 +187,7 @@ class Value(cntk_py.Value):
     @typemap
     def create(var, data, seq_starts=None, device=None, read_only=False):
         '''
-        Creates a :class:`Value` object.
+        Creates a :class:`~cntk.core.Value` object.
 
         Args:
             var (:class:`~cntk.ops.variables.Variable`): variable into which
@@ -207,7 +207,7 @@ class Value(cntk_py.Value):
             read_only (bool, default False): whether the data is read only
 
         Returns:
-            :class:`Value` object.
+            :class:`~cntk.core.Value` object.
         '''
         if not isinstance(var, cntk_py.Variable):
             raise TypeError('Variable expected, but got "%s"'%type(var))
