@@ -179,7 +179,7 @@ def where(condition, name=''):
                 [ 1.]]], dtype=float32)
         >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
-        array([[ 2., 3.]], dtype=float32)
+        array([[ 2.,  3.]], dtype=float32)
 
     Args:
         condition: the symbolic sequence of booleans

@@ -1460,6 +1460,7 @@ def softmax(x, axis=None, name=''):
         axis = sanitize_axis(axis)
         Z = reduce_log_sum(x, axis)  # log denominator
         exponent = minus(x, Z.output())
+        # TODO: use -
         # TODO: use as_block()
         return exp(exponent.output(), name) # this is the softmax
     # softmax over all elements
