@@ -39,11 +39,13 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
     if not os.path.exists(map_file):
         raise RuntimeError("File '%s' does not exist." %map_file)
 
+    randomize = False
     # transformation pipeline for the features has jitter/crop only when training
     transforms = []
     if is_training:
+        randomize = True
         transforms += [
-            ImageDeserializer.crop(crop_type='randomside', side_ratio=(0.4375,0.875), jitter_type='uniratio') # train uses jitter
+            ImageDeserializer.crop(crop_type='randomside', side_ratio='0.4375:0.875', jitter_type='uniratio') # train uses jitter
         ]
     else: 
         transforms += [
@@ -59,6 +61,7 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
         ImageDeserializer(map_file, StreamDefs(
             features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
+        randomize = randomize, 
         epoch_size=total_number_of_samples,
         multithreaded_deserializer = True)
 
