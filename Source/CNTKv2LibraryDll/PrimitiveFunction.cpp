@@ -72,6 +72,11 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngSeed = L"rngSeed";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameRngOffset = L"rngOffset";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUnpoolingWindowShape = L"unpoolingWindowShape";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSubstitutionPenalty = L"SubstitutionPenalty";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDeletionPenalty = L"DeletionPenalty";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameInsertionPenalty = L"InsertionPenalty";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSquashInputs = L"SquashInputs";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameSamplesToIgnore = L"SamplesToIgnore";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -520,6 +525,7 @@ namespace CNTK
                         break;
                     }
                     case PrimitiveOpType::CosDistance:
+                    case PrimitiveOpType::EditDistanceError:
                     case PrimitiveOpType::Logistic:
                     case PrimitiveOpType::SquaredError:
                     case PrimitiveOpType::CrossEntropyWithSoftmax:
@@ -534,12 +540,14 @@ namespace CNTK
                         else
                             assert(m_inputs.size() == 2);
 
-                        if ((m_inputs[0].Shape().Rank() > 2) || ((m_inputs[0].Shape().Rank() > 1) && (m_inputs[0].Shape()[1] != 1)))
+                        if (((m_inputs[0].Shape().Rank() > 2) || ((m_inputs[0].Shape().Rank() > 1) && (m_inputs[0].Shape()[1] != 1))) ||
+                            ((m_inputs[1].Shape().Rank() > 2) || ((m_inputs[1].Shape().Rank() > 1) && (m_inputs[1].Shape()[1] != 1))))
                             InvalidArgument("The shape of input operands for the %S operation should have at most one axis", PrimitiveOpTypeName(m_op).c_str());
 
                         auto predictionShape = m_inputs[0].Shape();
                         auto labelsShape = m_inputs[1].Shape();
-                        if (predictionShape != labelsShape)
+                        auto numLeadingAxesToCompare = std::min(predictionShape.Rank(), labelsShape.Rank());
+                        if (predictionShape.SubShape(0, numLeadingAxesToCompare) != labelsShape.SubShape(0, numLeadingAxesToCompare))
                             RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(m_op).c_str());
 
                         std::vector<int> reductionAxes;
@@ -740,7 +748,7 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list, after Combine.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::NDCG)
+        if (op > PrimitiveOpType::EditDistanceError)
         {
             CNTK::LogicError("Unexpected op '%ls':'%u' (%s).", 
                              opKey.c_str(), 

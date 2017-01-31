@@ -172,7 +172,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
                 reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0,
-                name=''):
+                op_name='Convolution', name=''):
     '''
     Layer factory function to create a convolution layer.
     '''
@@ -280,12 +280,84 @@ def Convolution(rf_shape,         # e.g. (3,3)
 
     #convolve = _inject_name(convolve, name)
 
-    return Block(convolve, 'Convolution', Record(W=W, b=b))
+    return Block(convolve, op_name, Record(W=W, b=b))
+
+
+def Convolution1D(rf_shape,         # e.g. (3)
+                  num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
+                  activation=default_override_or(identity),
+                  init=default_override_or(glorot_uniform()),
+                  pad=default_override_or(False),
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=default_override_or(True),
+                  init_bias=default_override_or(0),
+                  name=''):
+    '''
+    Layer factory function to create a 1D convolution layer with optional non-linearity.
+    Same as Convolution() except that rf_shape is verified to be 1-dimensional.
+    '''
+    activation = get_default_override(Convolution1D, activation=activation)
+    init       = get_default_override(Convolution1D, init=init)
+    pad        = get_default_override(Convolution1D, pad=pad)
+    bias       = get_default_override(Convolution1D, bias=bias)
+    init_bias  = get_default_override(Convolution1D, init_bias=init_bias)
+    if len(rf_shape) != 1: 
+         raise ValueError('Convolution1D: rf_shape must be a scalar')
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, op_name='Convolution1D', name=name)
+
+
+def Convolution2D(rf_shape,         # a 2D tuple, e.g., (3,3) 
+                  num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
+                  activation=default_override_or(identity),
+                  init=default_override_or(glorot_uniform()),
+                  pad=default_override_or(False),
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=default_override_or(True),
+                  init_bias=default_override_or(0),
+                  name=''):
+    '''
+    Layer factory function to create a 2D convolution layer with optional non-linearity.
+    Same as Convolution() except that rf_shape is verified to be 2-dimensional.
+    '''
+    activation = get_default_override(Convolution2D, activation=activation)
+    init       = get_default_override(Convolution2D, init=init)
+    pad        = get_default_override(Convolution2D, pad=pad)
+    bias       = get_default_override(Convolution2D, bias=bias)
+    init_bias  = get_default_override(Convolution2D, init_bias=init_bias)
+    if len(rf_shape) != 2: 
+         raise ValueError('Convolution2D: rf_shape must be a 2D tuple, e.g. (3,3)')
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, op_name='Convolution2D', name=name)
+
+
+def Convolution3D(rf_shape,         # a 3D tuple, e.g., (3,3,3)
+                  num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
+                  activation=default_override_or(identity),
+                  init=default_override_or(glorot_uniform()),
+                  pad=default_override_or(False),
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=default_override_or(True),
+                  init_bias=default_override_or(0),
+                  name=''):
+    '''
+    Layer factory function to create a 3D convolution layer with optional non-linearity.
+    Same as Convolution() except that rf_shape is verified to be 3-dimensional.
+    '''
+    activation = get_default_override(Convolution3D, activation=activation)
+    init       = get_default_override(Convolution3D, init=init)
+    pad        = get_default_override(Convolution3D, pad=pad)
+    bias       = get_default_override(Convolution3D, bias=bias)
+    init_bias  = get_default_override(Convolution3D, init_bias=init_bias)
+    if len(rf_shape) != 3: 
+         raise ValueError('Convolution3D: rf_shape must be a 3D tuple, e.g. (3,3,3)')
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, op_name='Convolution3D', name=name)
 
 
 # Deconvolution -- create a deconvolution layer with optional non-linearity
 # TODO: need to merge with above. Can it simply be transpose=True?
-def Deconvolution(filter_shape,        # e.g. (3,3)
+def Deconvolution(rf_shape,        # e.g. (3,3)
                 num_filters,
                 num_input_filters,
                 activation=default_override_or(identity),
@@ -319,13 +391,13 @@ def Deconvolution(filter_shape,        # e.g. (3,3)
         NotImplementedError("Deconvolution: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
     input_channels_shape = _as_tuple(num_input_filters)
-    kernel_shape = output_channels_shape + filter_shape
+    kernel_shape = output_channels_shape + rf_shape
     param_shape = input_channels_shape + kernel_shape
 
-    filter_rank = len(filter_shape)
+    filter_rank = len(rf_shape)
     init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
     W = Parameter(param_shape, init=init_kernel, name='W')
-    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias, name='b') if bias else None
+    b = Parameter(output_channels_shape + (1,) * len(rf_shape), init=init_bias, name='b') if bias else None
 
     # expression
     x = Placeholder(name='deconvolution_arg')

@@ -53,6 +53,9 @@ class Trainer(cntk_py.Trainer):
         # TODO sanitizing should be removed once Swig's typemaps are in place
         if model is not None:  # None means dummy model that is, e.g., the same as a criterion
             model = sanitize_function(model)
+        loss_function = sanitize_function(loss_function)
+        if eval_function is not None:
+            eval_function = sanitize_function(eval_function)
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
 
@@ -213,7 +216,7 @@ class Trainer(cntk_py.Trainer):
 
     def restore_from_checkpoint(self, filename):
         '''
-        Saves a checkpoint of the model and other Trainer state at the
+        Restores a checkpoint of the model and Trainer state from the
         specified file location.
 
         Args:
@@ -281,6 +284,7 @@ class Trainer(cntk_py.Trainer):
         The number of samples seen globally between all workers from the beginning of training.
         '''
         return super(Trainer, self).total_number_of_samples_seen()
+
 
 def Evaluator(model, criterion):
     '''

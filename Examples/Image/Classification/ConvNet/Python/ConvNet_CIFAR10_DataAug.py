@@ -66,8 +66,8 @@ def create_convnet_cifar10_model(num_classes):
     with default_options(activation=relu, pad=True):
         return Sequential([
             For(range(2), lambda : [
-                Convolution((3,3), 64), 
-                Convolution((3,3), 64), 
+                Convolution2D((3,3), 64), 
+                Convolution2D((3,3), 64), 
                 MaxPooling((3,3), strides=(2,2))
             ]), 
             For(range(2), lambda i: [
@@ -84,7 +84,6 @@ def create_convnet_cifar10_model(num_classes):
 # compose model function and criterion primitives into a criterion function
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
-# This function is generic and could be a stock function create_ce_classification_criterion().
 def create_criterion_function(model, normalize=identity):
     @Function
     def criterion(x: Tensor[(num_channels, image_height, image_width)], y: Tensor[num_classes]):
@@ -93,15 +92,6 @@ def create_criterion_function(model, normalize=identity):
         errs = classification_error      (z, y)
         return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
     return criterion
-
-# alternative way of doing it, e.g. for use with Beta2
-def create_criterion_function1(model, normalize=identity):
-    x, y = (Placeholder(), Placeholder())
-    z = model(normalize(x))
-    ce   = cross_entropy_with_softmax(z, y)
-    errs = classification_error      (z, y)
-    from cntk.ops import combine
-    return combine ([ce, errs]) # (features, labels) -> (loss, metric)
 
 ########################
 # train & eval action  #

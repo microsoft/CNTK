@@ -54,7 +54,7 @@ namespace CNTK
         std::unordered_map<Variable, Variable> CompositeOutputsMap() const
         {
             std::unordered_map<Variable, Variable> outputsMap;
-            auto outputs = Outputs();
+            auto outputs = RawOutputs();
             for (auto output : outputs)
             {
                 if (output.BlockFunctionVariableMapping() == Variable())
@@ -149,7 +149,7 @@ namespace CNTK
             m_composite->ReplacePlaceholders(replacementMap);
 
             std::vector<Variable> blockFunctionOutputs;
-            auto compositeOutputs = m_composite->Outputs();
+            auto compositeOutputs = m_composite->RawOutputs();
             for (auto compositeOutput : compositeOutputs)
             {
                 auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), Name());

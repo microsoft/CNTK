@@ -67,6 +67,7 @@ namespace CNTK
         {PrimitiveOpType::SquaredError, L"SquaredError"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
+        {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
         {PrimitiveOpType::PastValue, L"PastValue"},
         {PrimitiveOpType::FutureValue, L"FutureValue"},
         {PrimitiveOpType::ReduceElements, L"ReduceElements"},
@@ -226,6 +227,11 @@ namespace CNTK
         static const std::wstring AttributeNameHiddenSize;
         static const std::wstring AttributeNameRecurrentOp;
         static const std::wstring AttributeNameUnpoolingWindowShape;
+        static const std::wstring AttributeNameSubstitutionPenalty;
+        static const std::wstring AttributeNameDeletionPenalty;
+        static const std::wstring AttributeNameInsertionPenalty;
+        static const std::wstring AttributeNameSquashInputs;
+        static const std::wstring AttributeNameSamplesToIgnore;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

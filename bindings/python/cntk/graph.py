@@ -29,7 +29,7 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
     visited = set()    # [node]
 
     while stack:
-        node, distance, depth = stack.pop()
+        node, distance, depth = stack.pop(0)
         if node in visited:
             continue
         if max_depth is None or depth < max_depth:
@@ -52,12 +52,13 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
                 pass
         try:
             # Function node
-            stack.extend((input, distance+1, depth) for input in node.root_function.inputs)
+            stack = [(input, distance+1, depth) for input in node.root_function.inputs] + stack
+            #stack = list(node.root_function.inputs) + stack
         except AttributeError:
             # OutputVariable node
             try:
                 if node.is_output:
-                    stack.append((node.owner, distance+1, depth))
+                    stack.insert(0, (node.owner, distance+1, depth))
                     visited.add(node)
                     continue
             except AttributeError:
@@ -235,8 +236,8 @@ def plot(root, filename=None):
         return '"#dyn: %i\nstatic: %s"'%(num_dyn_axes, static_shape)
 
     while stack:
-        node = stack.pop()
-        
+        node = stack.pop(0)
+
         if node.uid in visited:
             continue
 
@@ -244,7 +245,8 @@ def plot(root, filename=None):
             # Function node
             node = node.root_function
 
-            stack.extend(node.inputs)
+            #stack.extend(node.inputs)
+            stack = list(node.root_function.inputs) + stack
 
             # add current Function node
             def lazy_create_node(node):
@@ -359,7 +361,7 @@ def plot(root, filename=None):
             # OutputVariable node
             try:
                 if node.is_output:
-                    stack.append(node.owner)
+                    stack.insert(0, node.owner)
             except AttributeError:
                 pass
 

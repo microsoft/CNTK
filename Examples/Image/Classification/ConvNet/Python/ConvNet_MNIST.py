@@ -39,11 +39,11 @@ def convnet_mnist(debug_output=False):
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
 
     with cntk.layers.default_options(activation=cntk.ops.relu, pad=False): 
-        conv1 = cntk.layers.Convolution((5,5), 32, pad=True)(scaled_input)
+        conv1 = cntk.layers.Convolution2D((5,5), 32, pad=True)(scaled_input)
         pool1 = cntk.layers.MaxPooling((3,3), (2,2))(conv1)
-        conv2 = cntk.layers.Convolution((3,3), 48)(pool1)
+        conv2 = cntk.layers.Convolution2D((3,3), 48)(pool1)
         pool2 = cntk.layers.MaxPooling((3,3), (2,2))(conv2)
-        conv3 = cntk.layers.Convolution((3,3), 64)(pool2)
+        conv3 = cntk.layers.Convolution2D((3,3), 64)(pool2)
         f4    = cntk.layers.Dense(96)(conv3)
         drop4 = cntk.layers.Dropout(0.5)(f4)
         z     = cntk.layers.Dense(num_output_classes, activation=None)(drop4)

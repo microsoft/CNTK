@@ -433,6 +433,17 @@ namespace CNTK
                 {
                     opType = PrimitiveOpType::LogSoftmax;
                 }
+                else if (node->OperationName() == OperationNameOf(EditDistanceErrorNode)) 
+                {
+                    auto edNode = node->As<EditDistanceErrorNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInsertionPenalty] = edNode->InsertionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDeletionPenalty] = edNode->DeletionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSubstitutionPenalty] = edNode->SubstitutionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSquashInputs] = edNode->SquashInputs();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSamplesToIgnore] = AsDictionaryValueVector(edNode->SamplesToIgnore());
+
+                    opType = PrimitiveOpType::EditDistanceError;
+                }
                 else
                     LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
 
@@ -527,10 +538,10 @@ namespace CNTK
             switch (dataType)
             {
             case DataType::Float:
-                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, {}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, {}, {}, false);
                 break;
             case DataType::Double:
-                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, {}, false);
                 break;
             default:
                 LogicError("Unknown DataType %s", DataTypeName(dataType));
