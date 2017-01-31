@@ -541,30 +541,30 @@ namespace CNTK
             }
         }
 
+        // option for handling the mean for 1-bit quantization
+        // force 1-bit quant to threshold against 0 rather than the midpoint between lower and upper
+        const bool m_zeroThresholdFor1Bit;
+
+        // Number of bits that each gradient value is quantized to before communication with other nodes.
+        const size_t m_numQuantizationBits;
+
+        // Since the self-stripe in an all-reduce is not communicated, there is really no reason to
+        // quantize it for reduced communication. However, we add this as an option for for consistency
+        // across all stripes if desired
+        const bool m_useQuantizationForSelfStripe;
+
+        const std::unique_ptr<CUDAPageLockedMemAllocator> m_allocator;
+
         // Buffer for quantized gradients.
         vector<QuantizedMatrixBasePtr> m_quantizedGradients;
 
         // Buffer for quantized stripes.
         vector<vector<QuantizedMatrixBasePtr>> m_recvGradientStripesQuantized;
 
-        // Number of bits that each gradient value is quantized to before communication with other nodes.
-        size_t m_numQuantizationBits;
-
-        // option for handling the mean for 1-bit quantization
-        // force 1-bit quant to threshold against 0 rather than the midpoint between lower and upper
-        bool m_zeroThresholdFor1Bit;
-
-        // Since the self-stripe in an all-reduce is not communicated, there is really no reason to
-        // quantize it for reduced communication. However, we add this as an option for for consistency
-        // across all stripes if desired
-        bool m_useQuantizationForSelfStripe;
-
         // Quantizers to quantize initial gradients.
         vector<shared_ptr<MatrixQuantizerBase>> m_preAggregatedGradientQuantizers;
 
         // Quantizers to quantize aggregated stripes.
         vector<shared_ptr<MatrixQuantizerBase>> m_aggregatedGradientStripeQuantizers;
-
-        std::unique_ptr<CUDAPageLockedMemAllocator> m_allocator;
     };
 }
