@@ -1991,7 +1991,7 @@ def slice(x, axis, begin_index, end_index, name=''):
 
 
 @typemap
-def splice(*inputs, axis=-1, name=''):
+def splice(*inputs, **kw_axis_name):
     '''
     Concatenate the input tensors along an axis.
 
@@ -2023,6 +2023,7 @@ def splice(*inputs, axis=-1, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    axis, name = (lambda axis=-1, name='': (axis, name))(**kw_axis_name) # Python 2.7 does not allow (*inputs, axis=-1, name='')
     # short-circuit if nothing to splice
     if len(inputs) == 1:
         return combine([inputs[0]]) # (but make it into a Function)
