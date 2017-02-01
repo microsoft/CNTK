@@ -843,7 +843,7 @@ def less_equal(left, right, name=''):
 ##########################################################################
 
 @typemap
-def plus(left, right, *more, name=''):
+def plus(left, right, *more, **kwname):
     '''
     The output of this operation is the sum of the two or more input tensors. It supports broadcasting.
 
@@ -862,6 +862,7 @@ def plus(left, right, *more, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
     if more: # if additional operands then recurse
         return plus(plus(left, right, *more[:-1], name=''), more[-1], name=name)
     from cntk.cntk_py import plus as cntk_py_plus
@@ -900,7 +901,7 @@ def minus(left, right, name=''):
 
 
 @typemap
-def element_times(left, right, *more, name=''):
+def element_times(left, right, *more, **kwname):
     '''
     The output of this operation is the element-wise product of the two or more input
     tensors. It supports broadcasting.
@@ -920,6 +921,7 @@ def element_times(left, right, *more, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
     if more: # if additional operands then recurse
         return element_times(element_times(left, right, *more[:-1], name=''), more[-1], name=name)
     from cntk.cntk_py import element_times as cntk_py_element_times
@@ -930,7 +932,7 @@ def element_times(left, right, *more, name=''):
 
 
 @typemap
-def element_max(left, right, *more, name=''):
+def element_max(left, right, *more, **kwname):
     '''
     The output of this operation is the element-wise max of the two or more input
     tensors. It supports broadcasting.
@@ -943,6 +945,7 @@ def element_max(left, right, *more, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
     if more: # if additional operands then recurse
         return element_max(element_max(left, right, *more[:-1], name=''), more[-1], name=name)
     gt = greater(left, right)
@@ -951,7 +954,7 @@ def element_max(left, right, *more, name=''):
 
 
 @typemap
-def element_min(left, right, *more, name=''):
+def element_min(left, right, *more, **kwname):
     '''
     The output of this operation is the element-wise min of the two or more input
     tensors. It supports broadcasting.
@@ -964,6 +967,7 @@ def element_min(left, right, *more, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
     if more: # if additional operands then recurse
         return element_min(element_min(left, right, *more[:-1], name=''), more[-1], name=name)
     lt = less(left, right)
@@ -999,7 +1003,7 @@ def element_divide(left, right, name=''):
 
 
 @typemap
-def log_add_exp(left, right, *more, name=''):
+def log_add_exp(left, right, *more, **kwname):
     '''
     Calculates the log of the sum of the exponentials
     of the two or more input tensors. It supports broadcasting.
@@ -1019,6 +1023,7 @@ def log_add_exp(left, right, *more, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
     if more: # if additional operands then recurse
         return log_add_exp(log_add_exp(left, right, *more[:-1], name=''), more[-1], name=name)
     from cntk.cntk_py import log_add_exp as cntk_py_log_add_exp
