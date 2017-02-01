@@ -79,7 +79,7 @@ class Trainer(cntk_py.Trainer):
                 raise ValueError("evaluation function must have the same signature and inputs as the loss function")
         return args
 
-    def train_minibatch(self, *arguments, outputs=None, device=None, **kwargs):
+    def train_minibatch(self, *arguments, **kwargs):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
 
@@ -113,6 +113,7 @@ class Trainer(cntk_py.Trainer):
             return value is a tuple of the that `bool` and a dictionary that
             maps the variables in `outputs` to their respective NumPy arrays.
         '''
+        outputs, device, kwargs = (lambda outputs=None, device=None, **kwargs: (outputs, device, kwargs))(**kwargs) # Python 2.7 does not allow (self, *arguments, outputs=None, device=None, **kwargs)
         if not device:
             device = use_default_device()
 
@@ -158,7 +159,7 @@ class Trainer(cntk_py.Trainer):
 
         return updated
 
-    def test_minibatch(self, *arguments, device=None, **kwargs):
+    def test_minibatch(self, *arguments, **kwargs):
         '''
         Test the model on the specified batch of samples using the evaluation
         Function specified during construction of the Trainer. 
@@ -187,6 +188,7 @@ class Trainer(cntk_py.Trainer):
             `float`: the average evaluation criterion value per sample for the
               tested minibatch.
         '''
+        device, kwargs = (lambda device=None, **kwargs: (device, kwargs))(**kwargs) # Python 2.7 does not allow (self, *arguments, device=None, **kwargs)
         if not device:
             device = use_default_device()
 
