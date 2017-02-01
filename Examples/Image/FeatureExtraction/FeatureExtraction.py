@@ -28,10 +28,11 @@ def print_all_node_names(model_file, is_BrainScript=True):
 
 def create_mb_source(image_height, image_width, num_channels, map_file):
     transforms = [ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
-    return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-        features=StreamDef(field='image', transforms=transforms),  # first column in map file is referred to as 'image'
-        labels=StreamDef(field='label', shape=1000))),             # and second as 'label'. TODO: add option to ignore labels
-        randomize=False)
+    image_source = ImageDeserializer(map_file)
+    image_source.ignore_labels()
+    image_source.map_features('features', transforms)
+
+    return MinibatchSource(image_source, randomize=False)
 
 
 def eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects):
@@ -72,12 +73,12 @@ if __name__ == '__main__':
     # print_all_node_names(model_file)
 
     # use this to get 1000 class predictions (not yet softmaxed!)
-    # node_name = "z"
-    # output_file = os.path.join(base_folder, "predOutput.txt")
+    node_name = "z"
+    output_file = os.path.join(base_folder, "predOutput.txt")
 
     # use this to get 512 features from the last but one layer of ResNet_18
-    node_name = "z.x"
-    output_file = os.path.join(base_folder, "layerOutput.txt")
+    # node_name = "z.x"
+    # output_file = os.path.join(base_folder, "layerOutput.txt")
 
     # evaluate model and write out the desired layer output
     eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects=5)

@@ -262,3 +262,14 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
 
     return result
 
+# helper to print all node names
+def print_all_nodes(node, is_BrainScript=True):
+    node_list = depth_first_search(node, lambda x: True)
+    print("printing node information in the format")
+    print("node name (shape)")
+    for node in node_list:
+        try:
+            for out in node.outputs:
+                print(out.name, out.shape)
+        except AttributeError:
+            pass
