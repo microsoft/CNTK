@@ -749,6 +749,9 @@ class UserFunction(Function):
 
             variables[k] = sanitize_batch(k, v, None, state.device())
 
+    def _infer_outputs(self, outputs):
+        outputs.extend(self.infer_outputs())
+
     def infer_outputs(self):
         raise NotImplementedError('infer_outputs has to be overridden')
 
