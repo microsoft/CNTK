@@ -374,5 +374,13 @@
         "description":  "Create and train an LSTM sequence classification model.",
         "language":  ["Python"],
         "type":  ["Recipe"]
+    },
+	{
+        "category": ["Text"],
+        "name":  "Training with Sampled Softmax",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb",
+        "description":  "Improve training speed for models with large vocabularies.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
     }
 ]
