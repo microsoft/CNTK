@@ -436,6 +436,9 @@ void BlockRandomizer::SetCurrentSamplePosition(size_t currentSamplePosition)
 
 void BlockRandomizer::SetConfiguration(const ReaderConfiguration& config)
 {
+    // If configuration changes this can lead to reinitialization of worker chunks.
+    m_currentWindowRange = ClosedOpenChunkInterval{};
+
     *((ReaderConfiguration*)&m_config) = config;
 }
 
