@@ -46,19 +46,6 @@ Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/
 CNTK V 2.0 Beta 8 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
 
-***2017-01-16.* V 2.0 Beta 8 Release**  
-Highlights of this Release:
-* Support of Python v. 2.7, 3.4, and 3.5. See [binary and source setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine) instructions to find out about how to select Python version.
-* New Python API features.
-* New Python example [Feature extraction using a trained model in Python API](https://github.com/Microsoft/CNTK/tree/v2.0.beta8.0/Examples/Image/FeatureExtraction).
-* Support of [Visual Studio 2015](https://github.com/Microsoft/CNTK/wiki/Setup-Migrate-VS13-to-VS15) for Windows version.
-* Introduction of [C# API in CNTK Evaluation Library](https://github.com/Microsoft/CNTK/wiki/CNTK-Library-Managed-API) and a new set of [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
-* CNTK Runtime packages are now available as [Public Images at Docker Hub](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers). (**Beta 7** is currently available; Beta 8 Images availability will be announced separately in a few days)
-* Version 3 of [CNTK Custom MKL Library](https://cntk.ai/mkl/) is available.
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_8_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
 # What is The Microsoft Cognitive Toolkit
