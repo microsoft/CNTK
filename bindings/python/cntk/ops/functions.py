@@ -653,7 +653,7 @@ class UserFunction(Function):
     def __init__(self, inputs, name=''):
         # FIXME we need to save a reference here so that the function does not
         # disappear
-        self.inputs = inputs
+        self.var_inputs = inputs
 
         super(Function, self).__init__(inputs, name)
 
