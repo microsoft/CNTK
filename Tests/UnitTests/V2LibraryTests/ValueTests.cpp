@@ -11,9 +11,62 @@
 using namespace CNTK;
 using namespace std;
 
+void CheckMask(const ValuePtr testValue, const vector<size_t>& seqLenList, const vector<bool>& seqStartFlags)
+{
+    vector<bool> actualStarts = seqStartFlags;
+    if (actualStarts.empty())
+    {
+        actualStarts.resize(seqLenList.size(), true);
+    }
+    if (actualStarts.size() != seqLenList.size())
+    {
+        ReportFailure("The seqStartFlags does not match the number of sequences");
+    }
+    size_t maxSeqLen = *max_element(seqLenList.begin(), seqLenList.end());
+
+    if (testValue->Mask() == nullptr)
+    {
+        bool needsMask = (std::find(actualStarts.begin(), actualStarts.end(), false) != actualStarts.end());
+        needsMask = needsMask || (std::find_if(seqLenList.begin(), seqLenList.end(), [maxSeqLen](const size_t& currentSequenceLength) {
+                                    return (currentSequenceLength != maxSeqLen);
+                                 }) != seqLenList.end());
+        if (needsMask)
+        {
+            ReportFailure("A mask for the Value object is expected, but it is not present");
+        }
+        return;
+    }
+
+    auto cpuMask = (testValue->Device().Type() != DeviceKind::CPU) ? testValue->Mask()->DeepClone(DeviceDescriptor::CPUDevice()) : testValue->Mask();
+    auto maskData = cpuMask->DataBuffer();
+
+    for (int i = 0; i < seqLenList.size(); i++)
+    {
+        if ((actualStarts[i] && (maskData[i * maxSeqLen] != MaskKind::SequenceBegin)) || 
+            (!actualStarts[i] && (maskData[i * maxSeqLen] != MaskKind::Valid)))
+        {
+            ReportFailure("The sequence does not have expected value at start.");
+        }
+        for (size_t j = 1; j < seqLenList[i]; j++)
+        {
+            if (maskData[i * maxSeqLen + j] != MaskKind::Valid)
+            {
+                ReportFailure("The sequence should have a Valid mask at position %d", static_cast<int>(i * maxSeqLen + j));
+            }
+        }
+        for (size_t j = seqLenList[i]; j < maxSeqLen; j++)
+        {
+            if (maskData[i * maxSeqLen + j] != MaskKind::Invalid)
+            {
+                ReportFailure("The sequence should have a Invalid mask at position %d", static_cast<int>(i * maxSeqLen + j));
+            }
+        }
+    }
+}
+
 // Check the actual Value match the expected shape and the given data (in dense format)
 template <typename ElementType>
-void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vector<vector<ElementType>>& expectedData, const vector<size_t>& seqLenList)
+void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vector<vector<ElementType>>& expectedData, const vector<size_t>& seqLenList, const vector<bool>& seqStartFlags = {})
 {
     size_t sampleSize = sampleShape.TotalSize();
     // Check parameters
@@ -52,6 +105,8 @@ void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vect
         ReportFailure("The sequence number in the Value does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", expectedData.size(), numOfSequences);
     }
 
+    CheckMask(testValue, seqLenList, seqStartFlags);
+
     // Get data from Value 
     vector<ElementType> outputData(testValue->Shape().TotalSize());
     NDArrayViewPtr arrayOutput = MakeSharedObject<NDArrayView>(testValue->Shape(), outputData, false);
@@ -59,10 +114,8 @@ void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vect
 
     size_t maxSeqLen = *max_element(seqLenList.begin(), seqLenList.end());
     size_t oIndex = 0;
-
     for (size_t seq = 0; seq < seqLenList.size(); seq++)
     {
-        // TODO: need to check NDMask is also correct. It is partly done in CopyTo tests.
         size_t seqLen = seqLenList[seq];
         for (size_t sIndex = 0; sIndex < seqLen * sampleSize; sIndex++, oIndex++)
         {
@@ -78,7 +131,7 @@ void CheckValue(const ValuePtr testValue, const NDShape& sampleShape, const vect
 
 // Check the actual Value match the expected shape and the given data (in onehot vector format)
 template <typename ElementType>
-void CheckValue(const ValuePtr testValue, const size_t vocabSize, const vector<vector<size_t>>& expectedData, const vector<size_t>& seqLenList)
+void CheckValue(const ValuePtr testValue, const size_t dimension, const vector<vector<size_t>>& expectedData, const vector<size_t>& seqLenList, const vector<bool>& seqStartFlags = {})
 {
     // Check parameters
     if (expectedData.size() != seqLenList.size())
@@ -96,7 +149,7 @@ void CheckValue(const ValuePtr testValue, const size_t vocabSize, const vector<v
     // Check shape
     NDShape shape = testValue->Shape();
     size_t valueRank = shape.Rank();
-    if (valueRank < 2 || valueRank > 3 || shape[0] != vocabSize)
+    if (valueRank < 2 || valueRank > 3 || shape[0] != dimension)
     {
         ReportFailure("The shape of the value does not match\n");
     }
@@ -105,6 +158,8 @@ void CheckValue(const ValuePtr testValue, const size_t vocabSize, const vector<v
     {
         ReportFailure("The sequence number in the Value does not match. Expected: %" PRIu64 ", actual: %" PRIu64 ".", expectedData.size(), numOfSequences);
     }
+
+    CheckMask(testValue, seqLenList, seqStartFlags);
 
     // Get data from Value
     vector<ElementType> outputData(shape.TotalSize());
@@ -118,7 +173,7 @@ void CheckValue(const ValuePtr testValue, const size_t vocabSize, const vector<v
         size_t seqLen = seqLenList[seq];
         for (size_t sample = 0; sample < seqLen; sample++)
         {
-            for (size_t c = 0; c < vocabSize; c++, oIndex++)
+            for (size_t c = 0; c < dimension; c++, oIndex++)
             {
                 if (outputData[oIndex] != 0)
                 {
@@ -134,7 +189,7 @@ void CheckValue(const ValuePtr testValue, const size_t vocabSize, const vector<v
             }
         }
         // Skip mask data
-        oIndex += (maxSeqLen - seqLen) * vocabSize;
+        oIndex += (maxSeqLen - seqLen) * dimension;
     }
 }
 
@@ -210,7 +265,7 @@ void ValueCreationWithNDMaskTest(const DeviceDescriptor device, bool readOnly)
     data = GenerateSequences<ElementType>(seqLenList, sampleShape);
 
     ValuePtr testValue = Value::Create(sampleShape, data, {false}, device, readOnly);
-    CheckValue(testValue, sampleShape, data, seqLenList);
+    CheckValue(testValue, sampleShape, data, seqLenList, {false} );
 }
 
 template <typename ElementType>
@@ -679,6 +734,260 @@ void SparseSequenceBatchValueCreationTest(size_t vocabSize, size_t maxAllowedSeq
         ReportFailure("Sparse sequence batch does not match expectation");
 }
 
+template <typename ElementType>
+void CreateBatchTestDense(const DeviceDescriptor device, bool readOnly)
+{
+    size_t numAxes = 3;
+    size_t maxDimSize = 20; 
+    NDShape sampleShape = CreateShape(numAxes, maxDimSize);
+    auto sampleSize = sampleShape.TotalSize();
+
+    size_t batchCount = 1;
+    size_t maxSequenceLen = 100;
+    auto seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
+    // Here we miss use GenertaeSequences to create batch.
+    auto data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    auto batch2 = data[0];
+    auto testValue = Value::CreateBatch(sampleShape, batch2, device, readOnly);
+    vector<vector<ElementType>> expectedResult;
+    for (size_t i = 0; i < data[0].size(); i += sampleSize)
+    {
+        expectedResult.push_back(vector<ElementType>(data[0].begin() + i, data[0].begin() + i + sampleSize));
+    }
+    vector<size_t> resultSeqLen(data[0].size()/sampleSize, 1);
+    CheckValue(testValue, sampleShape, expectedResult, resultSeqLen);
+
+    vector<ElementType> wrongBatch(sampleSize * 2 - 1, 0);
+    VerifyException([&sampleShape, &wrongBatch, &device, &readOnly]() {
+        Value::CreateBatch(sampleShape, wrongBatch, device, readOnly);
+    }, "The expected exception has not been caugth: The number of data is not a multiple of the sample size.");
+
+    auto emptyBatch = vector<ElementType>(0);
+    VerifyException([&sampleShape, &emptyBatch, &device, &readOnly]() {
+        Value::CreateBatch(sampleShape, emptyBatch, device, readOnly);
+    }, "The expected exception has not been caugth: The number of sequences is 0");
+}
+
+template <typename ElementType>
+void CreateSequenceTestDense(const DeviceDescriptor device, bool readOnly)
+{
+    size_t numAxes = 4;
+    size_t maxDimSize = 30;
+    NDShape sampleShape = CreateShape(numAxes, maxDimSize);
+    auto sampleSize = sampleShape.TotalSize();
+
+    size_t batchCount = 1;
+    size_t maxSequenceLen = 60;
+
+    // Test without using seqStartFlag
+    auto seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
+    auto data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    auto seq = data[0];
+    auto testValue = Value::CreateSequence(sampleShape, seq, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList);
+
+    // Test seqStartFlag is true
+    seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
+    data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    seq = data[0];
+    testValue = Value::CreateSequence(sampleShape, seq, true, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList, { true });
+
+    // Test seqStartFlag is false
+    seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
+    data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    seq = data[0];
+    testValue = Value::CreateSequence(sampleShape, seq, false, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList, { false });
+
+    vector<ElementType> wrongSeq(sampleSize * 2 - 1, 0);
+    VerifyException([&sampleShape, &wrongSeq, &device, &readOnly]() {
+        Value::CreateSequence(sampleShape, wrongSeq, device, readOnly);
+    }, "The expected exception has not been caugth: The number of data is not a multiple of the sample size.");
+
+    auto emptySeq = vector<ElementType>(0);
+    VerifyException([&sampleShape, &emptySeq, &device, &readOnly]() {
+        Value::CreateSequence(sampleShape, emptySeq, device, readOnly);
+    }, "The expected exception has not been caugth: The sequence length is 0");
+}
+
+
+template <typename ElementType>
+void CreateBatchOfSequencesTestDense(const DeviceDescriptor device, bool readOnly)
+{
+    size_t numAxes = 3;
+    size_t maxDimSize = 10;
+    NDShape sampleShape = CreateShape(numAxes, maxDimSize);
+    size_t maxNumOfSequences = 20;
+    size_t maxAllowedSequenceLen = 10;
+    size_t batchCount;
+
+    // Explicitly test seqStartFlags
+    batchCount = 2;
+    auto seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+    auto data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    vector<bool> seqStartFlags = { true, true };
+    auto testValue = Value::CreateBatchOfSequences(sampleShape, data, seqStartFlags, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList, seqStartFlags);
+
+    seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+    data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    seqStartFlags = { false, false };
+    testValue = Value::CreateBatchOfSequences(sampleShape, data, seqStartFlags, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList, seqStartFlags);
+
+    batchCount = 3;
+    seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+    data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+    seqStartFlags = { true, false, true };
+    testValue = Value::CreateBatchOfSequences(sampleShape, data, seqStartFlags, device, readOnly);
+    CheckValue(testValue, sampleShape, data, seqLenList, seqStartFlags);
+
+    int testRun = 4;
+    std::default_random_engine generator;
+    std::uniform_int_distribution<size_t> distribution(1, maxNumOfSequences);
+    for (int i = 0; i < testRun; i++)
+    {
+        batchCount = distribution(generator);
+        seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+        data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+        testValue = Value::CreateBatchOfSequences(sampleShape, data, device, readOnly);
+        CheckValue(testValue, sampleShape, data, seqLenList);
+
+        seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+        data = GenerateSequences<ElementType>(seqLenList, sampleShape);
+        seqStartFlags = GenerateSequenceStartFlags(batchCount);
+        testValue = Value::CreateBatchOfSequences(sampleShape, data, seqStartFlags, device, readOnly);
+        CheckValue(testValue, sampleShape, data, seqLenList, seqStartFlags);
+    }
+}
+
+
+template <typename ElementType>
+void CreateBatchTestOneHot(const DeviceDescriptor device, bool readOnly)
+{
+    size_t maxDimSize = 30;
+    std::default_random_engine dimSizeGenerator;
+    std::uniform_int_distribution<size_t> dimSizeDistribution(1, maxDimSize);
+    size_t dimSize = dimSizeDistribution(dimSizeGenerator);
+    size_t batchCount = 1;
+    size_t maxSequenceLen = 100;
+
+    auto seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
+    // Here we miss use GenertaeSequences to create batch.
+    auto data = GenerateOneHotSequences(seqLenList, dimSize);
+    auto batch2 = data[0];
+    auto testValue = Value::CreateBatch<ElementType>(dimSize, batch2, device, readOnly);
+    vector<vector<size_t>> expectedResult;
+    for (size_t i = 0; i < data[0].size(); i ++)
+    {
+        expectedResult.push_back(vector<size_t>(1, data[0][i]));
+    }
+    vector<size_t> resultSeqLen(data[0].size(), 1);
+    CheckValue<ElementType>(testValue, dimSize, expectedResult, resultSeqLen);
+
+    auto emptyBatch = vector<size_t>(0);
+    VerifyException([&dimSize, &emptyBatch, &device, &readOnly]() {
+        Value::CreateBatch<ElementType>(dimSize, emptyBatch, device, readOnly);
+    }, "The expected exception has not been caugth: The number of sequences is 0");
+}
+
+template <typename ElementType>
+void CreateSequenceTestOneHot(const DeviceDescriptor device, bool readOnly)
+{
+    size_t maxDimSize = 210;
+    std::default_random_engine dimSizeGenerator;
+    std::uniform_int_distribution<size_t> dimSizeDistribution(1, maxDimSize);
+    size_t dimSize = dimSizeDistribution(dimSizeGenerator);
+    size_t batchCount = 1;
+    size_t maxSequenceLen = 40;
+
+    // Test without using seqStartFlag
+    auto seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
+    auto data = GenerateOneHotSequences(seqLenList, dimSize);
+    auto seq = data[0];
+    auto testValue = Value::CreateSequence<ElementType>(dimSize, seq, device, readOnly);
+    CheckValue<ElementType>(testValue, dimSize, data, seqLenList);
+
+    // Test seqStartFlag is true
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
+    data = GenerateOneHotSequences(seqLenList, dimSize);
+    seq = data[0];
+    testValue = Value::CreateSequence<ElementType>(dimSize, seq, true, device, readOnly);
+    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, { true });
+
+    // Test seqStartFlag is false
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    seqLenList = GenerateSequenceLengths(batchCount, maxSequenceLen);
+    data = GenerateOneHotSequences(seqLenList, dimSize);
+    seq = data[0];
+    testValue = Value::CreateSequence<ElementType>(dimSize, seq, false, device, readOnly);
+    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, { false });
+
+    auto emptySeq = vector<size_t>(0);
+    VerifyException([&dimSize, &emptySeq, &device, &readOnly]() {
+        Value::CreateSequence<ElementType>(dimSize, emptySeq, device, readOnly);
+    }, "The expected exception has not been caugth: The sequences length is 0");
+}
+
+
+template <typename ElementType>
+void CreateBatchOfSequencesTestOneHot(const DeviceDescriptor device, bool readOnly)
+{
+    size_t maxDimSize = 40;
+    std::default_random_engine dimSizeGenerator;
+    std::uniform_int_distribution<size_t> dimSizeDistribution(1, maxDimSize);
+    size_t dimSize = dimSizeDistribution(dimSizeGenerator);
+    size_t maxNumOfSequences = 20;
+    size_t maxAllowedSequenceLen = 10;
+    size_t batchCount;
+
+    // Explicitly test seqStartFlags
+    batchCount = 2;
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    auto seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+    auto data = GenerateOneHotSequences(seqLenList, dimSize);
+    vector<bool> seqStartFlags = { true, true };
+    auto testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, seqStartFlags, device, readOnly);
+    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, seqStartFlags);
+
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+    data = GenerateOneHotSequences(seqLenList, dimSize);
+    seqStartFlags = { false, false };
+    testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, seqStartFlags, device, readOnly);
+    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, seqStartFlags);
+
+    batchCount = 3;
+    dimSize = dimSizeDistribution(dimSizeGenerator);
+    seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+    data = GenerateOneHotSequences(seqLenList, dimSize);
+    seqStartFlags = { true, false, true };
+    testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, seqStartFlags, device, readOnly);
+    CheckValue<ElementType>(testValue, dimSize, data, seqLenList, seqStartFlags);
+
+    int testRun = 4;
+    std::default_random_engine generator;
+    std::uniform_int_distribution<size_t> distribution(1, maxNumOfSequences);
+    for (int i = 0; i < testRun; i++)
+    {
+        batchCount = distribution(generator);
+        dimSize = dimSizeDistribution(dimSizeGenerator);
+        seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+        data = GenerateOneHotSequences(seqLenList, dimSize);
+        testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, device, readOnly);
+        CheckValue<ElementType>(testValue, dimSize, data, seqLenList);
+
+        seqLenList = GenerateSequenceLengths(batchCount, maxAllowedSequenceLen);
+        data = GenerateOneHotSequences(seqLenList, dimSize);
+        seqStartFlags = GenerateSequenceStartFlags(batchCount);
+        testValue = Value::CreateBatchOfSequences<ElementType>(dimSize, data, seqStartFlags, device, readOnly);
+        CheckValue<ElementType>(testValue, dimSize, data, seqLenList, seqStartFlags);
+    }
+}
+
+
 void ValueTests()
 {
     fprintf(stderr, "\nValueTests..\n");
@@ -694,12 +1003,28 @@ void ValueTests()
     ValueCreationOneHotNoNDMaskTest<double>(DeviceDescriptor::CPUDevice(), true);
     ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::CPUDevice(), false);
     ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::CPUDevice(), true);
+
     SparseSequenceBatchValueCreationTest(300, 7, DeviceDescriptor::CPUDevice());
     SparseSequenceBatchValueCreationTest(2300, 1, DeviceDescriptor::CPUDevice());
+
     ValueCopyToDenseTest<float>(DeviceDescriptor::CPUDevice());
     ValueCopyToDenseTest<double>(DeviceDescriptor::CPUDevice());
     ValueCopyToOneHotTest<float>(DeviceDescriptor::CPUDevice());
     ValueCopyToOneHotTest<double>(DeviceDescriptor::CPUDevice());
+    ValueCopyToExceptionsTest(DeviceDescriptor::CPUDevice());
+
+    CreateBatchTestDense<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateBatchTestDense<double>(DeviceDescriptor::CPUDevice(), false);
+    CreateSequenceTestDense<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateSequenceTestDense<double>(DeviceDescriptor::CPUDevice(), false);
+    CreateBatchOfSequencesTestDense<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateBatchOfSequencesTestDense<double>(DeviceDescriptor::CPUDevice(), false);
+    CreateBatchTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateBatchTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
+    CreateSequenceTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateSequenceTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
+    CreateBatchOfSequencesTestOneHot<float>(DeviceDescriptor::CPUDevice(), true);
+    CreateBatchOfSequencesTestOneHot<double>(DeviceDescriptor::CPUDevice(), false);
 
     if (IsGPUAvailable())
     {
@@ -713,13 +1038,26 @@ void ValueTests()
         ValueCreationOneHotNoNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), true);
         ValueCreationOneHotWithNDMaskTest<float>(DeviceDescriptor::GPUDevice(0), false);
         ValueCreationOneHotWithNDMaskTest<double>(DeviceDescriptor::GPUDevice(0), true);
+
         SparseSequenceBatchValueCreationTest(50000, 1, DeviceDescriptor::GPUDevice(0));
         SparseSequenceBatchValueCreationTest(6000, 6, DeviceDescriptor::GPUDevice(0));
+
         ValueCopyToDenseTest<float>(DeviceDescriptor::GPUDevice(0));
         ValueCopyToDenseTest<double>(DeviceDescriptor::GPUDevice(0));
         ValueCopyToOneHotTest<float>(DeviceDescriptor::GPUDevice(0));
-        ValueCopyToOneHotTest<double>(DeviceDescriptor::GPUDevice(0));
-    }
+        ValueCopyToExceptionsTest(DeviceDescriptor::GPUDevice(0));
 
-    ValueCopyToExceptionsTest(DeviceDescriptor::CPUDevice());
+        CreateBatchTestDense<float>(DeviceDescriptor::GPUDevice(0), false);
+        CreateBatchTestDense<double>(DeviceDescriptor::GPUDevice(0), true);
+        CreateSequenceTestDense<float>(DeviceDescriptor::GPUDevice(0), false);
+        CreateSequenceTestDense<double>(DeviceDescriptor::GPUDevice(0), true);
+        CreateBatchOfSequencesTestDense<float>(DeviceDescriptor::GPUDevice(0), false);
+        CreateBatchOfSequencesTestDense<double>(DeviceDescriptor::GPUDevice(0), true);
+        CreateBatchTestOneHot<float>(DeviceDescriptor::GPUDevice(0), false);
+        CreateBatchTestOneHot<double>(DeviceDescriptor::GPUDevice(0), true);
+        CreateSequenceTestOneHot<float>(DeviceDescriptor::GPUDevice(0), false);
+        CreateSequenceTestOneHot<double>(DeviceDescriptor::GPUDevice(0), true);
+        CreateBatchOfSequencesTestOneHot<float>(DeviceDescriptor::GPUDevice(0), false);
+        CreateBatchOfSequencesTestOneHot<double>(DeviceDescriptor::GPUDevice(0), true);
+    }
 }

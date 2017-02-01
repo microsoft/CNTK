@@ -2004,7 +2004,7 @@ namespace CNTK
         ///
         /// A multi-dimensional value with no mask.
         ///
-        CNTK_API Value(const NDArrayViewPtr& data);
+        explicit CNTK_API Value(const NDArrayViewPtr& data);
 
         ///
         /// A multi-dimensional value with an associated mask.
@@ -2054,16 +2054,185 @@ namespace CNTK
         /// The created Value object contains a copy of the specified 'sequences' data.
         ///
         template <typename ElementType>
-        CNTK_API static ValuePtr Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false);
+        CNTK_API static ValuePtr Create(size_t dimension, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false);
 
         ///
         /// Create a new Value object containing a collection of variable length sequences of one hot vectors
         /// The created Value object contains a copy of the specified 'sequences' data.
         ///
         template <typename ElementType>
-        static ValuePtr Create(size_t vocabularySize, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly = false)
+        static ValuePtr Create(size_t dimension, const std::vector<std::vector<size_t>>& oneHotSequences, const DeviceDescriptor& device, bool readOnly = false)
         {
-            return Create<ElementType>(vocabularySize, oneHotSequences, {}, device, readOnly);
+            return Create<ElementType>(dimension, oneHotSequences, {}, device, readOnly);
+        }
+
+        ///
+        /// Creates a new Value object containing a batch of samples.
+        /// The number of samples in the batch is the number of elements in batch divided by the size of shape (A runtime error occurs if the remainder is not zero).
+        /// The created Value object contains a copy of the specified data in batch.
+        /// Parameters:
+        ///     shape: the tensor shape of the Value object.
+        ///     batchData : the data to be contained in the Value object.
+        ///     device : on which device the Value object should be created.
+        ///     readOnly : the Value object is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        CNTK_API static ValuePtr CreateBatch(const NDShape& sampleShape, const std::vector<ElementType>& batchData, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Creates a new Value object containing a sequence of samples.
+        /// The created Value object contains a copy of the specified sequence data.
+        /// The sequenceStartFlag specifies wehther this sequence is a new sequence or continuation of a previous sequence at the same index in the sequences list from a previous call to this method.The sequence length is the number of elements in sequence divided by the size of shape.
+        /// (A runtime error occurs if the remainder is not zero).
+        /// Parameters:
+        ///     shape: the tensor shape of the Value.
+        ///     sequenceData : the data to be contained in the Value.
+        ///     sequenceStartFlag : true indicates that it is a new sequence. false means a continuation of a previous sequence.
+        ///     device : on which device the Value object should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        CNTK_API static ValuePtr CreateSequence(const NDShape& sampleShape, const std::vector<ElementType>& sequenceData, bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Creates a new Value object containing a sequence of samples.
+        /// The created Value object contains a copy of the specified data in sequence.
+        /// The sequence length is the number of elements in sequence divided by the size of shape(A runtime error occurs if the remainder is not zero).
+        /// The created sequece is a new sequence.
+        /// Parameters:
+        ///     shape: the tensor shape of the Value.
+        ///     sequenceData : the data to be contained in the Value.
+        ///     device : on which device the Value object should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        static ValuePtr CreateSequence(const NDShape& sampleShape, const std::vector<ElementType>& sequenceData, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return CreateSequence(sampleShape, sequenceData, true, device, readOnly);
+        }
+
+        ///
+        /// Creates a new Value object containing a batch of variable length sequences.
+        /// The created Value object contains a copy of the specified data in batchOfSequences.
+        /// The number of sequences in the batch is the size of batchOfSequences.
+        /// The length of each sequence is the number of elements in the corresponding sequence of batchOfSequences divided by the size of shape.
+        /// (A runtime error occurs if the remainder is not zero).
+        /// Parameters:
+        ///     shape: the tensor shape of the Value.
+        ///     batchOfSequences : the data to be stored in the Value.The outer List represents a collection of sequences with variable length, and the inner List represents each individual sequence.
+        ///     sequenceStartFlags: A collection of boolean value. Each element represent whether the correspoinding sequence in batchOfSequences is a new sequence (in case of true) or a continuation of a previous sequence (in case of false).
+        ///     device : on which device the Value should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        static ValuePtr CreateBatchOfSequences(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& batchOfSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create(sampleShape, batchOfSequences, sequenceStartFlags, device, readOnly);
+        }
+
+        ///
+        /// Creates a new Value object containing a batch of variable length sequences.
+        /// The created Value object contains a copy of the specified data in batchOfSequences.
+        /// The number of sequences in the batch is the size of batchOfSequences.
+        /// The length of each sequence is the number of elements in the corresponding sequence of batchOfSequences divided by the size of shape.
+        /// (A runtime error occurs if the remainder is not zero).
+        /// Each sequence in batchOfSequences is a new sequence.
+        /// Parameters:
+        ///     shape: the tensor shape of the Value.
+        ///     batchOfSequences : the data to be stored in the Value.The outer List represents a collection of sequences with variable length, and the inner List represents each individual sequence.
+        ///     device : on which device the Value should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        static ValuePtr CreateBatchOfSequences(const NDShape& sampleShape, const std::vector<std::vector<ElementType>>& batchOfSequences, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create(sampleShape, batchOfSequences, {}, device, readOnly);
+        }
+
+        ///
+        /// Creates a new Value object containing a batch of samples.
+        /// Each sample is represented by an index value that points to the non-zero value in the one-hot vector of dimension elements.
+        /// The number of samples in the batch is the number of elements in batch.
+        /// Parameters:
+        ///     ElementType: data type of the created Value object. Currently, float and double are supported.
+        ///     dimension : the size of dimension of the one - hot vector.
+        ///     batchData : the collection of indexes representing the batch of samples.
+        ///     device : on which device the Value object should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        CNTK_API static ValuePtr CreateBatch(size_t dimension, const std::vector<size_t>& batchData, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Creates a new Value object containing a sequence of samples.
+        /// Each sample is represented by an index value that points to the non-zero value in the one-hot vector of dimension elements.
+        /// The sequenceStartFlag specifies wehther this sequence is a new sequence or continuation of a previous sequence at the same index in the sequences list from a previous call to this method.
+        /// The sequence length is the number of elements in sequence.
+        /// Parameters:
+        ///     ElementType: data type of the created Value object.Currently, float and double are supported.
+        ///     dimension : the size of dimension of the one - hot vector.
+        ///     sequenceData : the collection of indexes representing the sequence of samples.
+        ///     sequenceStartFlag : true indicates that it is a new sequence. false means a continuation of a previous sequence.
+        ///     device : on which device the Value object should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        CNTK_API static ValuePtr CreateSequence(size_t dimension, const std::vector<size_t>& sequenceData, bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false);
+
+        ///
+        /// Creates a new Value object containing a sequence of samples.
+        /// Each sample is represented by an index value that points to the non-zero value in the one-hot vector of dimension elements.
+        /// The sequence length is the number of elements in sequence.
+        /// The created sequence is a new sequence.
+        /// Parameters:
+        ///     ElementType: data type of the created Value object.Currently, float and double are supported.
+        ///     dimension : the size of dimension of the one - hot vector.
+        ///     sequenceData : the collection of indexes representing the sequence of samples.
+        ///     device : on which device the Value object should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        static ValuePtr CreateSequence(size_t dimension, const std::vector<size_t>& sequenceData, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return CreateSequence<ElementType>(dimension, sequenceData, true, device, readOnly);
+        }
+
+        ///
+        /// Creates a new Value object containing a batch of variable length sequences.
+        /// Each sample is represented by an index value that points to the non-zero value in the one-hot vector of dimension elements.
+        /// The number of sequences is the number of elements in the outer vector of batchOfSequences.
+        /// The length of each sequence is the number of elements of the corresponding sequence in the inner vector of batchOfSequences.
+        /// Parameters:
+        ///     ElementType: data type of the created Value object.Currently, float and double are supported.
+        ///     dimension : the size of dimension of the one - hot vector.
+        ///     batchOfSequences : the collection of indexes representing sequences of samples.The outer List represents a collection of sequences with variable length, and the inner List represents each individual sequence.
+        ///     sequenceStartFlags : A collection of boolean value.Each element represent whether the correspoinding sequence in batchOfSequences is a new sequence(in case of true) or a continuation of a previous sequence(in case of false).
+        ///     device : on which device the Value object should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        static ValuePtr CreateBatchOfSequences(size_t dimension, const std::vector<std::vector<size_t>>& batchOfSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create<ElementType>(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
+        }
+
+        ///
+        /// Creates a new Value object containing a batch of variable length sequences.
+        /// Each sample is represented by an index value that points to the non-zero value in the one-hot vector of dimension elements.
+        /// The number of sequences is the number of elements in the outer vector of batchOfSequences.
+        /// The length of each sequence is the number of elements of the corresponding sequence in the inner vector of batchOfSequences.
+        /// Each sequence in batchOfSequences is a new sequence.
+        /// Parameters:
+        ///     ElementType: data type of the created Value object.Currently, float and double are supported.
+        ///     dimension : the size of dimension of the one - hot vector.
+        ///     batchOfSequences : the collection of indexes representing sequences of samples.The outer List represents a collection of sequences with variable length, and the inner List represents each individual sequence.
+        ///     device : on which device the Value object should be created.
+        ///     readOnly : the Value is read - only if this flag is true.
+        ///
+        template <typename ElementType>
+        static ValuePtr CreateBatchOfSequences(size_t dimension, const std::vector<std::vector<size_t>>& batchOfSequences, const DeviceDescriptor& device, bool readOnly = false)
+        {
+            return Create<ElementType>(dimension, batchOfSequences, {}, device, readOnly);
         }
 
         ///

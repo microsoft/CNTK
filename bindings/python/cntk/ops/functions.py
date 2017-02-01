@@ -1,8 +1,7 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
-from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
-        sanitize_dtype_cntk, value_to_seq, variable_value_to_seq, \
-        sanitize_var_substitution_map, sanitize_substitution_var
+from cntk.utils import typemap, sanitize_var_map, sanitize_batch, variable_value_to_seq
+
 from cntk.utils.swig_helper import map_if_possible
 from cntk.ops.variables import Variable
 from enum import Enum, unique
@@ -100,7 +99,7 @@ class Function(cntk_py.Function):
         if not hasattr(Variable, name) or name.startswith('_') or \
                 name in ['outputs', 'output', 'this']:
             # These should not be looked up in self's output.
-            # 'outputs' and 'output' are required to fetch the attribute for 
+            # 'outputs' and 'output' are required to fetch the attribute for
             # in the Variable.
             # 'this' is required for Swig and needs to be thrown if the
             # object is created the first time.
@@ -154,7 +153,9 @@ class Function(cntk_py.Function):
         '''
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
-        substitutions = sanitize_var_substitution_map(substitutions)
+        substitutions = substitutions or {}
+        if not isinstance(substitutions, dict):
+            raise TypeError("Variable substitution map must be a dictionary")
         return super(Function, self).clone(method, substitutions)
 
     @property
@@ -528,7 +529,9 @@ class Function(cntk_py.Function):
         Returns:
             :class:`Function`: itself
         '''
-        substitutions = sanitize_var_substitution_map(substitutions)
+        substitutions = substitutions or {}
+        if not isinstance(substitutions, dict):
+            raise TypeError("Variable substitution map must be a dictionary")
         return super(Function, self).replace_placeholders(substitutions)
 
     @typemap
@@ -546,7 +549,6 @@ class Function(cntk_py.Function):
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        substitution = sanitize_substitution_var(substitution)
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap
@@ -649,21 +651,11 @@ class UserFunction(Function):
 
     '''
     def __init__(self, inputs, name=''):
-        var_inputs = []
-        # TODO: this should be done in Swig
-        for i in inputs:
-            if isinstance(i, cntk_py.Variable):
-                var_inputs.append(i)
-            elif isinstance(i, cntk_py.Function):
-                var_inputs.append(i.output)
-            else:
-                raise ValueError('expected Variable, but got "%s"'%type(i))
-
         # FIXME we need to save a reference here so that the function does not
         # disappear
-        self.var_inputs = var_inputs
+        self.var_inputs = inputs
 
-        super(Function, self).__init__(var_inputs, name)
+        super(Function, self).__init__(inputs, name)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -762,7 +754,7 @@ class UserFunction(Function):
             variables[k] = sanitize_batch(k, v, None, state.device())
 
     def infer_outputs(self):
-        raise NotImplementedError('infer_outputs has to be overwritten')
+        raise NotImplementedError('infer_outputs has to be overridden')
 
     def op_name(self):
         return 'UserFunction'
