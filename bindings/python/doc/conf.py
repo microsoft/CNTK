@@ -55,7 +55,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = 'Python API for CNTK'
-copyright = '2016, Microsoft'
+copyright = '2017, Microsoft'
 author = 'Microsoft'
 
 # The version info for the project you're documenting, acts as replacement for
