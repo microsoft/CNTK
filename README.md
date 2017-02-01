@@ -6,7 +6,6 @@ Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki
 
 # Latest news
 ***2017-02-01.* V 2.0 Beta 10 Release**
-Highlights of this Release:
 * New and updated core and Python API features ([Operators with UserFunctions](https://www.cntk.ai/pythondocs/extend.html), [Tensorboard support](https://github.com/Microsoft/CNTK/wiki/Using-TensorBoard-for-Visualization), [Python API Fast R CNN](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN)).
 * Improved speed of CrossEntropyWithSoftmax and ClassificationError for sparse labels.
 * New Tutorials and Examples:
