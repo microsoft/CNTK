@@ -37,7 +37,7 @@ Tutorials
 #.  *Produce realistic data (MNIST images) with no human input (unsupervised learning)*
      CNTK 206 Part A: `Data preparation <https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb>`_ ,  Part B: `Basic Generative Adversarial Networks (GAN)`_
 
-#.   *Training with Sampled Softmax*
+#.  *Training with Sampled Softmax*
      CNTK 207: `Training with Sampled Softmax`_
 
 For our Japanese users, you can find some of the `tutorials in Japanese`_.
@@ -56,6 +56,6 @@ For our Japanese users, you can find some of the `tutorials in Japanese`_.
 .. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
 .. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
 .. _`Basic Generative Adversarial Networks (GAN)`: https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_206_Basic_GAN.ipynb
-.. _`Training with Sampled Softmax`: https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb
+.. _`Training with Sampled Softmax`: https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb
 
 .. _`tutorials in Japanese`: https://notebooks.azure.com/library/cntkbeta2_ja
