@@ -391,11 +391,7 @@ class Function(cntk_py.Function):
         '''
         List of all input variables of this function.
         '''
-        input_nodes = super(Function, self).inputs()
-        if self.is_primitive and self.root_function.op_name in ['Times', 'TransposeTimes']:
-            input_nodes = tuple(reversed(input_nodes))
-
-        return input_nodes
+        return super(Function, self).inputs(True)
 
     @property
     def name(self):

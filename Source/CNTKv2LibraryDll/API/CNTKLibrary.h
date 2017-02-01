@@ -2734,9 +2734,9 @@ namespace CNTK
         ///
         /// Returns all Input variables of 'this' Function.
         ///
-        std::vector<Variable> Inputs() const
+        std::vector<Variable> Inputs(bool pythonOperandOrder = false) const
         {
-            return *(InputsImpl().get());
+            return *(InputsImpl(pythonOperandOrder).get());
         }
 
         ///
@@ -2880,7 +2880,7 @@ namespace CNTK
             return filteredInputs;
         }
 
-        CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl() const;
+        CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl(bool pythonOperandOrder = false) const;
         CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
 
         void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
