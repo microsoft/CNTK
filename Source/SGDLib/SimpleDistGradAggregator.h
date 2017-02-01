@@ -14,6 +14,8 @@
 #include "TimerUtility.h"
 #include "MatrixQuantizerImpl.h"
 
+#define _DEFAULT_PACK_THRESHOLD_SIZE (32 * 1024)
+
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 template <class ElemType>
@@ -22,8 +24,9 @@ class SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
     UsingIDistGradAggregatorMembers;
 
 public:
-    SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace)
-        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0), m_nccl(deviceId, mpi)
+    SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, size_t packThresholdSize = _DEFAULT_PACK_THRESHOLD_SIZE)
+        : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace),
+        m_iterationCount(0), m_nccl(deviceId, mpi), m_packThresholdSize(packThresholdSize)
     {}
 
     ~SimpleDistGradAggregator()
@@ -164,7 +167,7 @@ private:
             {
                 // Packing matrices into continous buffer if not doing async aggregation
                 m_AggregationBuffer.reset();
-                if (!m_useAsyncAggregation)
+                if (!m_useAsyncAggregation && (sizeof(ElemType) * totalGradientsSizeInElements <= m_packThresholdSize))
                 {
                     m_AggregationBuffer.reset(new (std::nothrow) Matrix<ElemType>(1, totalGradientsSizeInElements, deviceId));
                 }
@@ -433,6 +436,9 @@ private:
 
     // Future corresponding to the current in-flight async gradient aggregation
     std::future<void> m_pendingAsyncAggregation;
+
+    // Threshold size to pack all gradients in a continous buffer
+    size_t m_packThresholdSize;
 
     // Buffered gradients that we asynchronously aggregate
     std::unordered_map<Matrix<ElemType>*, std::unique_ptr<Matrix<ElemType>>> m_bufferedGradients;

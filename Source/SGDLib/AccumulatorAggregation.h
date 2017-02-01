@@ -26,7 +26,8 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
     std::shared_ptr<ComputationNetwork> net,
     std::set<std::shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
     std::shared_ptr<DistGradHeader> gradHeader,
-    std::shared_ptr<MPIWrapper> mpi)
+    std::shared_ptr<MPIWrapper> mpi,
+    size_t packThresholdSize)
 {
     // Accumulator stores mean value and number of samples. Aggregation performs simple summation of values,
     // so we transfer sum instead of mean, and calculate mean after aggregation is finished.
@@ -52,13 +53,15 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
             false /*useAsyncAggregation*/,
             net->GetDeviceId(),
             0 /*syncStatsTrace*/,
-            ::CNTK::MPICommunicator());
+            ::CNTK::MPICommunicator(),
+            packThresholdSize);
     else
         distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(
             mpi,
             false /*useAsyncAggregation*/,
             net->GetDeviceId(),
-            0 /*syncStatsTrace*/);
+            0 /*syncStatsTrace*/,
+            packThresholdSize);
 
     // Prepare header.
     const size_t c_evalNodes = 1;
@@ -127,10 +130,11 @@ void AggregateAccumulatorValuesAndUpdateEpochEvaluation(
     std::vector<EpochCriterion>& epochEvalErrors,
     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
     CriterionAccumulator<ElemType> localEpochEvalErrors,
-    std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult)
+    std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult,
+    size_t packThresholdSize = (size_t)(32 * 1024))
 {
     // Each node contains accumulated values for part of the data set, we have to aggregate accumulated values.
-    AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(net, evalNodesWhichAccumulateResult, gradHeader, mpi);
+    AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(net, evalNodesWhichAccumulateResult, gradHeader, mpi, packThresholdSize);
 
     // After values of accumulators have been aggregated accross nodes, we have to update evaluation results for
     // evaluation nodes that accumulate results.
