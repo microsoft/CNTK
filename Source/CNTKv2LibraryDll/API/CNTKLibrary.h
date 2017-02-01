@@ -1854,8 +1854,11 @@ private:
 
     private:
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
-            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value->DeepClone(false), true, {}, name, uid)
-        {}
+            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value, true, {}, name, uid)
+        {
+            if (value->IsReadOnly())
+                InvalidArgument("Parameter cannot be constructed from a read-only NDArrayView value; you can create a non read-only clone of the value and use that instead!");
+        }
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
@@ -1936,7 +1939,7 @@ private:
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
-            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value->DeepClone(), false, {}, name, uid)
+            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, false, {}, name, uid)
         {}
 
         ///
@@ -2596,6 +2599,7 @@ namespace CNTK
         CNTK_API virtual void Backward(const BackPropStatePtr& state,
                                        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
+
         ///
         /// Returns the name of the operation that this Function denotes
         ///
@@ -2851,6 +2855,7 @@ namespace CNTK
 
         // Returns a outputs without ref-counting the owner.
         CNTK_API std::vector<Variable>& RawOutputs() const;
+
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
 

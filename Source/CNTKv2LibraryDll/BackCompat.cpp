@@ -311,7 +311,7 @@ namespace CNTK
                     // tensor dimensions flattended into the column dimension of the 2D paramater matrix
                     // We need to recover the actual tensor shape of the parameter in this case
                     auto& convolutionMapVar = inputVars[0];
-                    if (convolutionNode->IsConvolution2D())
+                    if (convolutionNode->IsConvolution2D() || (convolutionMapVar.Shape().Rank() == 2))
                     {
                         assert(convolutionMapVar.Shape().Rank() == 2);
                         assert(convolutionMapVar.IsConstant() || convolutionMapVar.IsParameter());
