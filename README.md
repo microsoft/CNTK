@@ -1,8 +1,21 @@
 **The [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) has all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine), [examples](https://github.com/Microsoft/CNTK/wiki/Examples), etc.**
 
+Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) and [BlockMomentumSGD](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd) code is moved to a new Repository in GitHub.
+
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-01-25.* V 2.0 Beta 9 Release available at Docker Hub**  
+CNTK V 2.0 Beta 9 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
+See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
+
+***2017-01-25.* 1bit-SGD Code is relocated to GitHub. Submodule configuration update is required for affected users**  
+This news is related to users who are working with CNTK code base. If you use Binary or Docker Runtime Images installation you may ignore it.
+
+Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) and [BlockMomentumSGD](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd) code is moved to a new Repository in GitHub.
+
+If you cloned CNTK Repository with [1bit-SGD enabled](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) *prior to January 25, 2017* you need to update git submodule configuration as described in [this Wiki article](https://github.com/Microsoft/CNTK/wiki/Update-1bit-SGD-Submodule-Location).
+
 ***2017-01-20.* V 2.0 Beta 9 Release**  
 Highlights of this Release:
 * Default Python version is now 3.5 (relates to default parameters in client installations as well as [Runtime Images at Docker Hub](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers)).
@@ -32,26 +45,6 @@ Highlights of this Release:
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_8_Release_Notes).  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-01-10.* CNTK for Windows supports Visual 2015**
-
-If you pull or merge the master branch, CNTK will now require Visual Studio 2015 to build on Windows. There are two ways to move your development environment to Visual Studio 2015:
-
-* [Migrate VS2013 to VS2015](https://github.com/Microsoft/CNTK/wiki/Setup-Migrate-VS13-to-VS15): This gives you a fine grained control over where components are installed 
-* [Script driven setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows): This gives you an mostly automated migration to Visual Studio 2015
-
-***2016-12-22.* V 2.0 Beta 7 Release**
-Highlights of this Release:
-
-* Python API behaviour is changed to be more strict.
-* New Examples and Tutorials ([Artistic Style Transfer](https://github.com/Microsoft/CNTK/blob/v2.0.beta7.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb)
-and [GoogLeNet (Inception V3)](https://github.com/Microsoft/CNTK/tree/v2.0.beta7.0/Examples/Image/Classification/GoogLeNet)
-).
-* New version of CNTK Evaluation library NuGet Package.
-* CNTK Background Improvements.
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_7_Release_Notes)
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases)
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 

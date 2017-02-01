@@ -2,12 +2,26 @@ setlocal
 
 cd "%~dp0"
 
-call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall" amd64
+if not defined VS140COMNTOOLS (
+  @echo Environment variable VS140COMNTOOLS not defined.
+  @echo Make sure Visual Studion 2015 Update 3 is installed.
+  goto FIN
+)
+set VCDIRECTORY=%VS140COMNTOOLS%
+if "%VCDIRECTORY:~-1%"=="\" set VCDIRECTORY=%VCDIRECTORY:~,-1%
+
+if not exist "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" (
+  echo Error: "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" not found. 
+  echo Make sure you have installed Visual Studion 2015 Update 3 correctly.  
+  goto FIN
+)
+
+call "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" amd64 
 
 set MSSdk=1
 set DISTUTILS_USE_SDK=1
 
-python .\setup.py build_ext --inplace --force
+python .\setup.py build_ext --inplace --force --compiler msvc
 if errorlevel 1 exit /b 1
 
 set PATH=%CD%\..\..\x64\Release;%PATH%

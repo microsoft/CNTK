@@ -282,5 +282,60 @@ namespace CNTK
         /// Returns true if num CPU Threads was set.
         ///
         bool MaxNumCPUThreadsSet();
+
+        ///
+        /// TensorBoardFileWriter allows collecting various metrics (e.g. loss/error etc.) as the training progresses,
+        /// so that they can be analyzed in TensorBoard.
+        /// It also provides an option to serialize the model being trained, so that it can also be visualized.
+        /// The class is NOT thread-safe: it is assumed that only one thread is using each instance.
+        ///
+        class TensorBoardFileWriter final
+        {
+        public:
+            ///
+            /// Construct a TensorBoardFileWriter to log metrics as files in the given directory.
+            /// An optional model argument allows serializing the model as well, so that it can be visualized
+            /// in an external tool.
+            ///
+            CNTK_API explicit TensorBoardFileWriter(const std::wstring& dir, const FunctionPtr& modelToVisualize = nullptr);
+
+            ///
+            /// Destruct the TensorBoardFileWriter and close any open files.
+            ///
+            CNTK_API ~TensorBoardFileWriter() { Close(); }
+
+            ///
+            /// Record a value of some metric at a particular step.
+            /// For example, to record average value of a loss function for the n-th minibatch, one could call this:
+            ///     WriteValue("mb_avg_loss", lossValue, minibatchIdx);
+            ///
+            CNTK_API void WriteValue(const std::wstring& name, float value, uint64_t step);
+
+            ///
+            /// Flushes any outstanding records to disk. Returns true on success, false otherwise.
+            ///
+            CNTK_API bool Flush();
+
+            ///
+            /// Flushes any outstanding records to disk and closes a currently open underlying file.
+            /// Subsequent calls to WriteValue will open a new file. Returns true on success, false otherwise.
+            ///
+            CNTK_API bool Close();
+
+        private:
+            void Init();
+            void WriteModel();
+            void WriteRecord(const std::string& data);
+            void WriteVersion(time_t time);
+
+            // Disable copy-construction and assignment.
+            TensorBoardFileWriter(const TensorBoardFileWriter& other) = delete;
+            TensorBoardFileWriter& operator=(const TensorBoardFileWriter& other) = delete;
+
+            const FunctionPtr m_model;
+            const std::wstring m_dir;
+            FILE* m_file;
+            std::wstring m_fileName;
+        };
     }
 }

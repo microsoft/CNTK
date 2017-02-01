@@ -1,9 +1,9 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
-from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
-        sanitize_dtype_cntk, value_to_seq, sanitize_var_substitution_map, \
-        sanitize_substitution_var
+from cntk.utils import typemap, sanitize_var_map, sanitize_batch, variable_value_to_seq
+
 from cntk.utils.swig_helper import map_if_possible
+from cntk.ops.variables import Variable
 from enum import Enum, unique
 import numpy as np
 
@@ -94,24 +94,25 @@ class Function(cntk_py.Function):
         return self(other)
 
     def __getattr__(self, name):
-        try:
-            return self.__dict__[name]
-        except KeyError:
-            # If name is a member of self's single output, then we relay to
-            # that.
-            if name in ['outputs', 'output', 'this']:
-                # 'outputs' and 'output' are required to fetch the attribute for
-                # in the Variable.
-                # 'this' is required for Swig and needs to be thrown if the
-                # object is created the first time.
-                # All others we try to find in self.output.
-                raise
+        # If something is not found in Function, look it up in its output
+        # variable, if it has only one.
+        if not hasattr(Variable, name) or name.startswith('_') or \
+                name in ['outputs', 'output', 'this']:
+            # These should not be looked up in self's output.
+            # 'outputs' and 'output' are required to fetch the attribute for
+            # in the Variable.
+            # 'this' is required for Swig and needs to be thrown if the
+            # object is created the first time.
+            raise AttributeError("neither Function nor its output variable"
+                    " has '%s'"%name)
 
-            if len(self.outputs) == 1 and hasattr(self.output, name):
-                return getattr(self.output, name)
-            else:
-                raise AttributeError("'%s' object has no attribute '%s'" %
-                        (type(self), name))
+        outputs = self.__getattribute__('outputs')
+        if len(outputs) != 1:
+            raise AttributeError("Function does not have '%s' and it cannot "
+                    "be looked up in its outputs because it does not have "
+                    "exactly one"%name)
+
+        return getattr(outputs[0], name)
 
 
     @property
@@ -152,7 +153,9 @@ class Function(cntk_py.Function):
         '''
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
-        substitutions = sanitize_var_substitution_map(substitutions)
+        substitutions = substitutions or {}
+        if not isinstance(substitutions, dict):
+            raise TypeError("Variable substitution map must be a dictionary")
         return super(Function, self).clone(method, substitutions)
 
     @property
@@ -289,7 +292,7 @@ class Function(cntk_py.Function):
                                              keep_for_backward)
 
         for k in output_map:
-            output_map[k] = value_to_seq(output_map[k])
+            output_map[k] = variable_value_to_seq(output_map[k], k)
 
         return state, output_map
 
@@ -334,7 +337,7 @@ class Function(cntk_py.Function):
         self._backward(state, root_gradients, var_gradients)
 
         for var, value in var_gradients.items():
-            var_gradients[var] = value_to_seq(value)
+            var_gradients[var] = variable_value_to_seq(value, var)
 
         return var_gradients
 
@@ -389,7 +392,7 @@ class Function(cntk_py.Function):
         List of all input variables of this function.
         '''
         input_nodes = super(Function, self).inputs()
-        if self.root_function.op_name in ['Times', 'TransposeTimes']:
+        if self.is_primitive and self.root_function.op_name in ['Times', 'TransposeTimes']:
             input_nodes = tuple(reversed(input_nodes))
 
         return input_nodes
@@ -526,7 +529,9 @@ class Function(cntk_py.Function):
         Returns:
             :class:`Function`: itself
         '''
-        substitutions = sanitize_var_substitution_map(substitutions)
+        substitutions = substitutions or {}
+        if not isinstance(substitutions, dict):
+            raise TypeError("Variable substitution map must be a dictionary")
         return super(Function, self).replace_placeholders(substitutions)
 
     @typemap
@@ -544,7 +549,6 @@ class Function(cntk_py.Function):
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        substitution = sanitize_substitution_var(substitution)
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap
@@ -647,17 +651,17 @@ class UserFunction(Function):
 
     '''
     def __init__(self, inputs, name=''):
-        var_inputs = []
-        # TODO: this should be done in Swig
-        for i in inputs:
-            if isinstance(i, cntk_py.Variable):
-                var_inputs.append(i)
-            elif isinstance(i, cntk_py.Function):
-                var_inputs.append(i.output)
-            else:
-                raise ValueError('expected Variable, but got "%s"'%type(i))
+        # FIXME we need to save a reference here so that the function does not
+        # disappear
+        self.var_inputs = inputs
 
-        super(Function, self).__init__(var_inputs, name)
+        super(Function, self).__init__(inputs, name)
+
+        # Memory management for user defined functions has to be controlled by
+        # the C++ side. For more information:
+        # http://www.swig.org/Doc3.0/Python.html#Python_nn35
+        self.__disown__()
+
 
     def _forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         '''
@@ -678,12 +682,20 @@ class UserFunction(Function):
         Returns:
              A BackPropState instance, which is used by :func:`backward`.
         '''
-        arguments = tuple(value_to_seq(v) for v in arguments)
+        arguments = tuple(variable_value_to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
 
         map_if_possible(outputs)
         map_if_possible(outputs_to_retain)
 
-        state, results = self.forward(arguments, outputs, device, outputs_to_retain)
+        args = arguments if len(arguments)>1 else arguments[0]
+
+        if len(outputs) <= 1:
+            state, result = self.forward(args, device, outputs_to_retain)
+            for k in outputs:
+                outputs[k] = result
+        else:
+            state = self.forward(args, outputs, device, outputs_to_retain)
+
         if not isinstance(state, cntk_py.BackPropState):
             state = cntk_py.UserBackPropState(self, device, state)
 
@@ -694,7 +706,7 @@ class UserFunction(Function):
             # FIXME: seq_starts
             outputs[k] = sanitize_batch(k, v, None, device)
 
-        return state, results
+        return state, outputs
 
     def _backward(self, state, root_gradients, variables):
         '''
@@ -722,16 +734,27 @@ class UserFunction(Function):
             dict: mapping of ``variables`` to NumPy arrays
         '''
         for v in root_gradients:
-            root_gradients[v] = value_to_seq(root_gradients[v])
+            root_gradients[v] = variable_value_to_seq(root_gradients[v], v)
         map_if_possible(variables)
 
-        self.backward(cntk_py.UserBackPropState.data(state), root_gradients, variables)
+
+        if len(variables)>1:
+            self.backward(cntk_py.UserBackPropState.data(state), root_gradients, variables)
+        else:
+            for rg in root_gradients.values():
+                break
+            result = self.backward(cntk_py.UserBackPropState.data(state), rg)
+            for k in variables:
+                variables[k] = result
 
         for k,v in variables.items():
             if v is None:
                 raise ValueError('gradients were not provided for all variables')
 
             variables[k] = sanitize_batch(k, v, None, state.device())
+
+    def infer_outputs(self):
+        raise NotImplementedError('infer_outputs has to be overridden')
 
     def op_name(self):
         return 'UserFunction'

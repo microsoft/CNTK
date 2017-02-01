@@ -52,7 +52,7 @@
         "name":  "AlexNet",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/AlexNet",
         "description":  "CNN based network by Alex Krizhevsky. This was the winning model of the ILSVRC2012 classification task.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"]
     },
     {
@@ -124,6 +124,14 @@
         "name":  "Neural Artistic Style Transfer",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb",
         "description":  "This tutorial shows how to transfer the style of one image to another. This allows us to take our ordinary photos and render them in the style of famous images or paintings.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "Generative Adversarial Networks (GAN)",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_205_Basic_GAN.ipynb",
+        "description":  "This tutorial is a basic implementation of GAN networks. This allows us generate realistic looking MNIST images.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },

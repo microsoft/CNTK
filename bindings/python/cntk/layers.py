@@ -169,7 +169,54 @@ def Convolution(filter_shape,        # e.g. (3,3)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Convolution', name, Record(W=W, b=b), make_block=True)
+
+    op_name = 'Convolution{}D'.format(len(filter_shape))
+    return Block(apply_x, op_name, name, Record(W=W, b=b), make_block=True)
+
+# Convolution1D -- create a 1D convolution layer with optional non-linearity
+def Convolution1D(filter_shape,        # a scalar, e.g., 3 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  name=''):
+    if len(filter_shape) != 1: 
+         raise ValueError('Convolution1D: filter_shape must be a scalar')
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
+
+# Convolution2D -- create a 2D convolution layer with optional non-linearity
+def Convolution2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  name=''):
+    if len(filter_shape) != 2: 
+         raise ValueError('Convolution2D: filter_shape must be a 2D tuple, e.g. (3,3)')
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
+
+# Convolution3D -- create a 3D convolution layer with optional non-linearity
+def Convolution3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  name=''):
+    if len(filter_shape) != 3: 
+         raise ValueError('Convolution3D: filter_shape must be a 3D tuple, e.g. (3,3,3)')
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
 
 # Deconvolution -- create a deconvolution layer with optional non-linearity
 def Deconvolution(filter_shape,        # e.g. (3,3)
@@ -333,6 +380,14 @@ def Dropout(prob,name=''):
     x = Placeholder(name='dropout_arg')
     apply_x = dropout(x, dropout_rate=prob)
     return Block(apply_x, 'Dropout', name, make_block=True)
+
+# Activation -- create an activation layer 
+def Activation(activation=activation_default_or_None, name=''): 
+    # expression 
+    activation = _resolve_activation(activation)
+    x = Placeholder(name='activation_arg') 
+    apply_x = activation(x) 
+    return Block(apply_x, 'Activation', name, make_block=True) 
 
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.

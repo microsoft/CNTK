@@ -13,21 +13,15 @@ from cntk import distributed
 from cntk.device import set_default_device, gpu
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
+from prepare_test_data import prepare_CIFAR10_data
 from ConvNet_CIFAR10_DataAug_Distributed import convnet_cifar10_dataaug
 
 def run_cifar_convnet_distributed():
-    try:
-        base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
-                                *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
-        # N.B. CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY has {train,test}_map.txt
-        #      and CIFAR-10_mean.xml in the base_path.
-    except KeyError:
-        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                *"../../../../Examples/Image/DataSets/CIFAR-10".split("/"))
-
-    base_path = os.path.normpath(base_path)
-    os.chdir(os.path.join(base_path, '..'))
+    base_path = prepare_CIFAR10_data()
+    # change dir to locate data.zip correctly
+    os.chdir(base_path)
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
     set_computation_network_trace_level(1) 

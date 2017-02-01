@@ -597,11 +597,11 @@ def rmsprop(parameters, lr,
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
-        gamma (float):
-        inc (float):
-        dec (float):
-        max (float):
-        min (float):
+        gamma (float): Trade-off factor for current and previous gradients. Common value is 0.95
+        inc (float): Increasing factor when trying to adjust current learning_rate
+        dec (float): Decreasing factor when trying to adjust current learning_rate
+        max (float): Maximum scale allowed for the initial learning_rate
+        min (float): Minimum scale allowed for the initial learning_rate
         need_ave_multiplier (bool, default ``True``):
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0

@@ -43,6 +43,14 @@ We recommend that you execute the script from Powershell Version 4 or later. You
 "
 }
 
+function Display64BitWarningMessage
+{
+"
+A 64bit version of Powershell is required to run this script.
+Please check the short-cut/command to start Powershell and make sure you start the 64bit version of Powershell.
+"
+}
+
 function DisplayWarningNoExecuteMessage
 {
 "
@@ -73,6 +81,17 @@ function CheckPowershellVersion
     return $false
 }
 
+function Check64BitProcess
+{
+    if ([System.Environment]::Is64BitProcess) {
+        return $true
+    }
+
+    Write-Warning $(Display64BitWarningMessage)
+
+    return $false
+}
+
 function CheckOSVersion 
 {
     $runningOn = (Get-WmiObject -class Win32_OperatingSystem).Caption
@@ -90,6 +109,10 @@ Windows Server 2012 R2, and Windows Server 2016.
 function DisplayStart()
 {
     Write-Host $(DisplayStartMessage)
+
+    if (-not (Check64BitProcess)) {
+        return $false
+    }
 
     if (-not (CheckPowershellVersion)) {
         return $false
@@ -153,4 +176,4 @@ function DisplayAfterVerify(
     return $false
 }
 
-# vim:set expandtab shiftwidth=2 tabstop=2:
+# vim:set expandtab shiftwidth=4 tabstop=4:
