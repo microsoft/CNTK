@@ -268,9 +268,6 @@ struct TensorOps
 //----------------------------------------------------------------------------
 
 // NeutralValue seems to be dead code
-// NeutralValue for  opMax used to be FLT_MIN 
-// but when running a small test with negative 
-// values the result was not FLT_MIN
 template <typename ElemType> __device__ ElemType NeutralValue(ElementWiseOperator op)
 {
     return 0; // error, only the explicit instantiations below should be used.
