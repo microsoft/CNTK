@@ -24,8 +24,59 @@
 %rename(times_transpose) CNTK::TransposeTimes;
 %rename(sequence_slice) CNTK::Sequence::Slice;
 %rename(sequence_reduce_sum) CNTK::Sequence::ReduceSum;
-
 %rename(momentum_as_time_constant_schedule) CNTK::MomentumAsTimeConstantSchedule;
+
+%rename(_none) CNTK::DictionaryValue::Type::None;
+
+// Disabling warning about constructor shadowing, learner tests check this.
+%warnfilter(401, 509) CNTK::TrainingParameterPerUnitSchedule;
+%warnfilter(509) CNTK::MomentumAsTimeConstantSchedule;
+%warnfilter(509) CNTK::NDArrayView::NDArrayView;
+
+%warnfilter(315) CNTK::TrainingParameterPerSampleSchedule;
+
+// Disabling warning about movable constructor shadowing, io tests check this.
+%warnfilter(509) CNTK::DictionaryValue::DictionaryValue;
+%warnfilter(509) CNTK::Dictionary::Dictionary;
+
+// Disabling warning about Trainer shadowing, trainer tests check this.
+%warnfilter(509) TrainerImpl;
+
+// Returning an immutable string by reference.
+%warnfilter(473) CNTK::Function::OpName;
+
+// Operator overloading is not supported by Python.
+%rename(eq) operator==;
+%ignore CNTK::Variable::operator FunctionPtr;
+%ignore CNTK::AddConfigString;
+%ignore CNTK::GetCorrespondingOutputVariableFromClone;
+
+// Specialization of non-template function - hash,
+// TODO: it is not clear how to limit this only to hash, but we do not use partial specialization in other places.
+#pragma SWIG nowarn=-317
+
+// Disabling enable_shared_from_this - we never use this class to actually access the object.
+%warnfilter(401) CNTK::NDArrayView;
+%warnfilter(401) CNTK::NDMask;
+%warnfilter(401) CNTK::Function;
+%warnfilter(401) CNTK::Trainer;
+%warnfilter(401) CNTK::Value;
+%warnfilter(401) CNTK::BackPropState;
+%warnfilter(401) CNTK::MinibatchSource;
+
+%warnfilter(401, 509) CNTK::MomentumAsTimeConstantSchedule;
+
+// The following operators are not supported in Python.
+%ignore operator<<;
+%ignore operator>>;
+%ignore CNTK::DictionaryValue::operator=;
+%ignore CNTK::DictionaryValue::Value;
+
+%ignore CNTK::Dictionary::operator=;
+%ignore CNTK::Dictionary::operator[];
+
+%ignore CNTK::TrainingParameterSchedule::operator=;
+%ignore CNTK::TrainingParameterSchedule::operator[];
 
 // renaming overloads for TrainMinibatch and TestMinibatch that take a map 
 // of Variables and MinibatchData as their first parameter. If this is not done, 
@@ -108,11 +159,11 @@ def dynamic_axes(self):
 {
     PyObject *NDShapeToTuple(const CNTK::NDShape& shape)
     {
-        size_t rank = shape.Rank();
+        int rank = static_cast<int>(shape.Rank());
         auto result = PyTuple_New(rank);
-        for (size_t i=0; i<rank; i++)
+        for (size_t i = 0; i < rank; i++)
         {
-            size_t dim = (&shape)->operator[](i);
+            int dim = static_cast<int>((&shape)->operator[](i));
             PyTuple_SetItem(result, rank-i-1, PyInt_FromLong(dim));
         }
         return result;
@@ -134,7 +185,7 @@ def dynamic_axes(self):
         size_t num_elements = 1;
 
         // CNTK uses column major, thus we reverse the shape
-        for (int i=dimensions_cntk.size()-1; i>=0; i--)
+        for (int i = static_cast<int>(dimensions_cntk.size()) - 1; i >= 0; i--)
         {
             dimensions.push_back(dimensions_cntk[i]);
             num_elements *= dimensions_cntk[i];
@@ -173,7 +224,7 @@ def dynamic_axes(self):
             throw std::invalid_argument("unknown CNTK data type");
         }
 
-        PyObject* ndarray = PyArray_SimpleNew(dimensions.size(), shape, numpy_type);
+        PyObject* ndarray = PyArray_SimpleNew(static_cast<int>(dimensions.size()), shape, numpy_type);
         void *arr_data = PyArray_DATA((PyArrayObject*)ndarray);
 
         memcpy(arr_data, buffer, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements);
@@ -602,7 +653,7 @@ public:
         // CNTK uses column major, thus we reverse the shape
         for (size_t i=0; i<rank; i++)
         {
-            size_t dim = dims[i];
+            int dim = static_cast<int>(dims[i]);
             PyTuple_SET_ITEM(result, rank-1-i, PyInt_FromLong(dim));
         }
         return result;
@@ -1126,6 +1177,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %unordered_map_ref_conversion(CNTK::Parameter, SWIGTYPE_p_CNTK__Parameter, CNTK::NDArrayViewPtr, SWIGTYPE_p_std__shared_ptrT_CNTK__NDArrayView);
 %unordered_map_ref_conversion(CNTK::Variable, SWIGTYPE_p_CNTK__Variable, CNTK::Variable, SWIGTYPE_p_CNTK__Variable);
 
+%shared_ptr(CNTK::IDictionarySerializable)
 %shared_ptr(CNTK::Trainer)
 %shared_ptr(CNTK::TrainingSession)
 %shared_ptr(CNTK::BasicTrainingSession)
@@ -1204,7 +1256,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 
         void* buffer = const_cast<void*>(reinterpret_cast<const void*>(cpuMask->DataBuffer()));
 
-        PyObject* ndarray = PyArray_SimpleNew(dimensions.size(), shape, NPY_BYTE);
+        PyObject* ndarray = PyArray_SimpleNew(static_cast<int>(dimensions.size()), shape, NPY_BYTE);
         void *arr_data = PyArray_DATA((PyArrayObject*)ndarray);
 
         memcpy(arr_data, buffer, PyArray_ITEMSIZE((PyArrayObject*) ndarray) * num_elements);
@@ -1339,7 +1391,6 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 }
 
 // end of NDArrayView
-
 %template(NDArrayViewFloat) CNTK::NDArrayView::NDArrayView<float>;
 %template(NDArrayViewDouble) CNTK::NDArrayView::NDArrayView<double>;
 %template(ConstantFloat) CNTK::Constant::Constant<float>;
@@ -1349,7 +1400,6 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %template(random_uniform_float) CNTK::NDArrayView::RandomUniform<float>;
 %template(random_uniform_double) CNTK::NDArrayView::RandomUniform<double>;
 %template(DictionaryValueFromDict) CNTK::DictionaryValue::DictionaryValue<CNTK::Dictionary>;
-
 
 %template(training_parameter_per_sample_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Sample>;
 %template(training_parameter_per_minibatch_schedule) CNTK::TrainingParameterPerUnitSchedule<double, CNTK::TrainingParameterSchedule<double>::UnitType::Minibatch>;

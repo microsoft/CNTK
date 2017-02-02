@@ -119,7 +119,7 @@ seems to be successful in practice is the Long Short Term Memory (LSTM) network.
 LSTMs are a type of RNN that are exceedingly useful and in practice are what we commonly 
 use when implementing an RNN. A good explanation of the merits of LSTMs is at 
 http://colah.github.io/posts/2015-08-Understanding-LSTMs. An LSTM is a 
-a differentiable function that takes an input and a state and produces an output
+differentiable function that takes an input and a state and produces an output
 and a new state.
 
 In our example, we will be using an LSTM to do sequence classification. But for even 
@@ -219,6 +219,6 @@ This list denotes a minibatch of 1 and **minibatches
 are specified as lists**. The reason for this is because different elements of 
 the minibatch can have different lengths. If all the elements in the 
 minibatch are sequences of the same length then it is acceptable to provide
-the minibatch as one big tensor of dimnesion :math:`b \times s \times d_1 \times \ldots \times d_k`
+the minibatch as one big tensor of dimension :math:`b \times s \times d_1 \times \ldots \times d_k`
 where `b` is the batch size, `s` is the sequence length and :math:`d_i`
 is the dimension of the i-th static axis of the input variable.

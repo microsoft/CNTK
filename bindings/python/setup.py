@@ -106,6 +106,7 @@ if IS_WINDOWS:
         "/EHsc",
         "/DEBUG",
         "/Zi",
+        "/WX"
     ]
     extra_link_args = ['/DEBUG']
     runtime_library_dirs = []
@@ -127,7 +128,7 @@ cntk_module = Extension(
     name="_cntk_py",
 
     sources = [os.path.join("cntk", "cntk_py.i")],
-    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
+    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon, "-Werror" ],
     libraries = link_libs,
     library_dirs = [CNTK_LIB_PATH],
 
@@ -160,7 +161,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta9.0",
+      version="2.0.beta10.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

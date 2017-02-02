@@ -5,6 +5,19 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-02-01.* V 2.0 Beta 10 Release**
+* New and updated core and Python API features ([Operators with UserFunctions](https://www.cntk.ai/pythondocs/extend.html), [Tensorboard support](https://github.com/Microsoft/CNTK/wiki/Using-TensorBoard-for-Visualization), [Python API Fast R CNN](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN)).
+* Improved speed of CrossEntropyWithSoftmax and ClassificationError for sparse labels.
+* New Tutorials and Examples:
+  * A Python version of the deconvolution layer and image auto encoder example was added ([Example **07_Deconvolution** in *Image - Getting Started*](https://github.com/Microsoft/CNTK/tree/v2.0.beta10.0/Examples/Image/GettingStarted)).
+  * A Python distributed training example for image classification using AlexNet was added, cf. [here](https://github.com/Microsoft/CNTK/tree/v2.0.beta10.0/Examples/Image/Classification/AlexNet/Python)
+  * [Basic implementation of Generative Adversarial Networks (GAN) networks](https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_206_Basic_GAN.ipynb)
+  * [Training with Sampled Softmax](https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb)
+* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_10_Release_Notes).
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
 ***2017-01-25.* V 2.0 Beta 9 Release available at Docker Hub**  
 CNTK V 2.0 Beta 9 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
@@ -32,19 +45,6 @@ Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/
 ***2017-01-19.* V 2.0 Beta 8 Release available at Docker Hub**  
 CNTK V 2.0 Beta 8 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
-
-***2017-01-16.* V 2.0 Beta 8 Release**  
-Highlights of this Release:
-* Support of Python v. 2.7, 3.4, and 3.5. See [binary and source setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine) instructions to find out about how to select Python version.
-* New Python API features.
-* New Python example [Feature extraction using a trained model in Python API](https://github.com/Microsoft/CNTK/tree/v2.0.beta8.0/Examples/Image/FeatureExtraction).
-* Support of [Visual Studio 2015](https://github.com/Microsoft/CNTK/wiki/Setup-Migrate-VS13-to-VS15) for Windows version.
-* Introduction of [C# API in CNTK Evaluation Library](https://github.com/Microsoft/CNTK/wiki/CNTK-Library-Managed-API) and a new set of [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
-* CNTK Runtime packages are now available as [Public Images at Docker Hub](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers). (**Beta 7** is currently available; Beta 8 Images availability will be announced separately in a few days)
-* Version 3 of [CNTK Custom MKL Library](https://cntk.ai/mkl/) is available.
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_8_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
