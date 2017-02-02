@@ -25,6 +25,22 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+//----------------------------------------------------------------------------
+// For reductions we need the neutral elements of the corresponding binary ops
+//----------------------------------------------------------------------------
+template <typename ElemType> ElemType NeutralValue(ElementWiseOperator op)
+{
+    switch (op)
+    {
+    case ElementWiseOperator::opSum:                return  0;
+    case ElementWiseOperator::opLogSum:             return -std::numeric_limits<ElemType>::infinity();
+    case ElementWiseOperator::opMin:                return  std::numeric_limits<ElemType>::max();
+    case ElementWiseOperator::opMax:                return  std::numeric_limits<ElemType>::lowest();
+    case ElementWiseOperator::opElementwiseProduct: return 1;
+    default:                                        return 0; // error
+    }
+};
+
 // -----------------------------------------------------------------------
 // ReduceElements (op, axis=, input)
 // -----------------------------------------------------------------------
@@ -61,12 +77,17 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
-    if (m_reduceAll && m_mean)
+    if (m_reduceAll)
     {
-        //for mean reduction and all axes we need to carefully compute the scaling factor
+        // When operating on all axes we need to mask the invalid parts of the minibatch
         auto mbLayout = InputRef(0).GetMBLayout();
-        auto actual_samples = mbLayout != nullptr ? mbLayout->GetActualNumSamples() : 1;
-        m_scale = ElemType((1.0 / GetInputSampleLayout(0).GetNumElements()) / actual_samples);
+        InputRef(0).MaskMissingValueColumnsTo(fr.WithLayout(mbLayout), NeutralValue<ElemType>(m_reductionOp));
+        if (m_mean)
+        {
+            //for mean reduction and all axes we need to carefully compute the scaling factor
+            auto actual_samples = mbLayout != nullptr ? mbLayout->GetActualNumSamples() : 1;
+            m_scale = ElemType((1.0 / GetInputSampleLayout(0).GetNumElements()) / actual_samples);
+        }
     }
 
     // get the args
@@ -134,9 +155,9 @@ template <class ElemType>
     }
     case ElementWiseOperator::opElementwiseProduct:
     {        
-        auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
-        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
-        sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, input, output);
+        auto input  = InputRef(inputIndex).ValueTensorFor(rank, fr);
+        auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
+        sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
         break;
     }
         // more coming

@@ -2162,15 +2162,15 @@ def reduce_prod(x, axis=None, name=''):
 
     Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
+        >>> data = [[1, 2],[3, 4],[5, 6]]
 
-        >>> C.reduce_min(data, 0).eval()
-        array([[ 10.,  20.]], dtype=float32)
+        >>> C.reduce_prod(data, 0).eval()
+        array([[ 15.,  48.]], dtype=float32)
 
-        >>> C.reduce_min(data, 1).eval()
-        array([[ 10.],
-               [ 30.],
-               [ 50.]], dtype=float32)
+        >>> C.reduce_prod(data, 1).eval()
+        array([[  2.],
+               [ 12.],
+               [ 30.]], dtype=float32)
 
     Args:
         x: input tensor
