@@ -11,6 +11,7 @@ default_options: ``with default_options():`` and ``with default_options_for():``
 from cntk.utils import Record
 
 # this global variable holds a linked list of default overrides, which is managed by _OptionsContextManager
+# TODO: move into _OptionsContextManager [Willi]
 _current_default_overrides = None
 
 # context manager for overriding defaults, use through default_options() or default_options_for() below

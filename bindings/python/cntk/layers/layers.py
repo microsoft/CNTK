@@ -565,11 +565,13 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
 
 def Label(name):
     '''
-    Layer factory function to create a function that assigns a label string to an intermediate Function
-    Dense(...) >> Label('hidden') >> Dense(...)
+    Layer factory function to create a function that assigns a label string to an intermediate value
+    flowing through computation. E.g.
+      ``Dense(...) >> Label('hidden') >> Dense(...)``
     '''
     @Function  # cannot be a BlockFunction since that would hide the label
     def label(x):
         return alias(x, name=name)
-    # BUGBUG: Fails for sparse, since PassNode cannot pass on sparse data presently. Shallow fix would be to add an 'if' inside PassNode.
+    # BUGBUG: Currently fails for sparse, since PassNode cannot pass on sparse data presently.
+    #         This problem will go away once the Pass() call of alias() is eliminated in generation of the V1 graph.
     return label

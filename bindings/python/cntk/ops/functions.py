@@ -285,6 +285,8 @@ class Function(cntk_py.Function):
         arg_map = { param: to_input(arg_type, name=param.name) for param, arg_type in arg_map.items() if arg_type is not None }
         self.replace_placeholders(arg_map)
 
+    # TODO: add a back-compat version of update_signature with the beta name and accepting Input() variables instead.
+
     # TODO: change to tuple, or remove entirely
     class OrderedRecord(list):
         '''

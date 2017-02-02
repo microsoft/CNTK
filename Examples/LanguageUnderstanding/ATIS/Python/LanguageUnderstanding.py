@@ -44,6 +44,7 @@ def create_reader(path, is_training):
 # define the model     #
 ########################
 
+# TODO: separate slot and intent tagging; maybe do multi-task learning
 def create_model_function():
   from cntk.ops.sequence import last
   with default_options(initial_state=0.1, enable_self_stabilization=False):  # inject an option to mimic the BS version identically; remove some day
@@ -53,8 +54,13 @@ def create_model_function():
         Label('embedded_input'),
         Stabilizer(),
         Recurrence(LSTM(hidden_dim)),
-        #Recurrence(GRU(hidden_dim, activation=relu)),
-        #Recurrence(RNNUnit(hidden_dim)),
+        # For illustration, variations of Recurrence(LSTM(...)) include
+        #  - GRU
+        #  - RNN
+        #  - bidirectional LSTM
+        # which would be invoked as follows:
+        #Recurrence(GRU(hidden_dim)),
+        #Recurrence(RNNUnit(hidden_dim, activation=relu)),
         #(Recurrence(LSTM(hidden_dim)), Recurrence(LSTM(hidden_dim), go_backwards=True)), splice,
         Stabilizer(),
         Label('hidden_representation'),
