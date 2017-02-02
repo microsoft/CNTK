@@ -27,6 +27,7 @@ void DeviceSelectionTests();
 void MultiThreadsEvaluation(bool);
 void MinibatchSourceTests();
 void UserDefinedFunctionTests();
+void LoadLegacyModelTests();
 
 int main()
 {
@@ -60,10 +61,11 @@ int main()
 
     FeedForwardTests();
     RecurrentFunctionTests();
-
     UserDefinedFunctionTests();
 
     SerializationTests();
+    LoadLegacyModelTests();
+
     LearnerTests();
 
     TrainerTests();

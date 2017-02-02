@@ -131,7 +131,7 @@ namespace CNTK
             return blockFunctionInputs;
         }
 
-        virtual std::vector<Variable> InferOutputs() override
+        void InferOutputs(std::vector<Variable>& outputs) override
         {
             // We determine the outputs by replacing the arguments of the composite with new placeholders with updated 
             // shape etc. information matching the corresponding mapped input
@@ -148,17 +148,14 @@ namespace CNTK
 
             m_composite->ReplacePlaceholders(replacementMap);
 
-            std::vector<Variable> blockFunctionOutputs;
             auto compositeOutputs = m_composite->RawOutputs();
             for (auto compositeOutput : compositeOutputs)
             {
                 auto output = OutputVariable(compositeOutput.Shape(), compositeOutput.GetDataType(), compositeOutput.DynamicAxes(), Name());
                 output.m_dataFields->m_blockFunctionVariableMapping = compositeOutput;
 
-                blockFunctionOutputs.push_back(output);
+                outputs.push_back(output);
             }
-
-            return blockFunctionOutputs;
         }
 
     private:
