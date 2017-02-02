@@ -60,6 +60,7 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="CNTKLibraryManaged-2.0, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64" />
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
@@ -68,12 +69,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\..\bindings\csharp\CNTKLibraryManagedDll\CNTKLibraryManagedDll.csproj">
-      <Project>{50ef9ee6-5018-453e-a063-f77044ef1a97}</Project>
-      <Name>CNTKLibraryManagedDll</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\..\..\..\Examples\Evaluation\CNTKLibraryCSEvalCPUOnlyExamples\CntkBitmapExtensions.cs">
