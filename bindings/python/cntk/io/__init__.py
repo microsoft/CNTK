@@ -143,7 +143,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
     @typemap
     def next_minibatch(self, minibatch_size_in_samples,
-            input_map=None, device=None):
+            input_map=None, device=None, num_data_partitions=None, partition_index=None):
         '''
         Reads a minibatch that contains data for all input streams.  The
         minibatch size is specified in terms of #samples and/or #sequences for the
@@ -159,17 +159,26 @@ class MinibatchSource(cntk_py.MinibatchSource):
              to :class:`StreamInformation` which will be used to convert the
              returned data.
             device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
+            num_data_partitions: Used for distributed training, indicates into how many partitions
+             the source should split the data.
+            partition_index: Used for distributed training, indicates data from which partition to take.
 
         Returns:
-            A mapping of :class:`StramInformation` to :class:`MinibatchData` if
+            a mapping of :class:`StreamInformation` to :class:`MinibatchData` if
             ``input_map`` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`~cntk.ops.variabls.Variable` to class:`MinibatchData`.
+            be a mapping of :class:`~cntk.ops.variables.Variable` to class:`MinibatchData`.
         '''
         if device is None:
             device = use_default_device()
 
-        mb = super(MinibatchSource, self).get_next_minibatch(
-                minibatch_size_in_samples, device)
+        if num_data_partitions is None:
+            num_data_partitions = 1
+
+        if partition_index is None:
+            partition_index = 0
+
+        mb = super(MinibatchSource, self).get_next_minibatch(0,
+                minibatch_size_in_samples, num_data_partitions, partition_index, device)
 
         if input_map:
             if not mb:
