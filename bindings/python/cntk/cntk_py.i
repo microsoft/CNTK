@@ -17,6 +17,7 @@
 
 %rename(_forward) CNTK::Function::Forward;
 %rename(_backward) CNTK::Function::Backward;
+%rename(_infer_outputs) CNTK::Function::InferOutputs;
 %rename(sgd_learner) CNTK::SGDLearner;
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
@@ -581,10 +582,11 @@ public:
 //
 %exception {
     try { $action }
-    catch (Swig::DirectorException &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
-    catch (std::runtime_error &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
-    catch (std::invalid_argument &e) { SWIG_exception(SWIG_ValueError,e.what()); }
-    catch (std::logic_error &e) { SWIG_exception(SWIG_RuntimeError,e.what()); }
+    catch (const Swig::DirectorException &e) { SWIG_exception(SWIG_RuntimeError, e.what()); }
+    catch (const std::runtime_error &e) { SWIG_exception(SWIG_RuntimeError, e.what()); }
+    catch (const std::invalid_argument &e) { SWIG_exception(SWIG_ValueError, e.what()); }
+    catch (const std::logic_error &e) { SWIG_exception(SWIG_RuntimeError, e.what()); }
+    catch (const std::exception &e) { SWIG_exception(SWIG_UnknownError, e.what()); }
     catch (...) { SWIG_exception(SWIG_UnknownError,"Runtime exception"); }
 }
 
@@ -738,6 +740,43 @@ public:
     }
 %enddef
 
+
+// Implementing typemapping for InferOutputs virtual function that takes vector of variables by reference
+// And can be implemented in Python.
+
+%typemap(directorin) std::vector<CNTK::Variable>& outputs
+{
+    $input = PyList_New(0);
+}
+
+%typemap(directorargout) std::vector<CNTK::Variable>& outputs
+{
+    if (!PyList_Check($input))
+        RuntimeError("List expected");
+
+    auto iterator = std::shared_ptr<PyObject>(PyObject_GetIter($input), [](PyObject* p) { Py_DECREF(p); });
+    if (!iterator)
+        RuntimeError("Cannot get iterator to the list");
+
+     PyObject *item = nullptr;
+     while ((item = PyIter_Next(iterator.get())))
+     {
+         void *raw_var = nullptr;
+         int res = SWIG_ConvertPtr(item, &raw_var, swig::type_info<CNTK::Variable>(),  0);
+         if (!SWIG_IsOK(res))
+             RuntimeError("Cannot convert list element to CNTK::Variable");
+
+         if (!raw_var)
+             RuntimeError("Invalid null reference when converting a list element to CNTK::Variable");
+
+         auto var = reinterpret_cast<CNTK::Variable*>(raw_var);
+         $1.push_back(*var);
+         Py_DECREF(item);
+     }
+
+     if (PyErr_Occurred())
+         RuntimeError("Cannot convert list element to CNTK::Variable");
+}
 
 // For the output dict (the non-const unordered_map) we need to get the
 // modified values and put them back into the dictionary. This is used, when

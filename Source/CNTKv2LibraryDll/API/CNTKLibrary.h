@@ -1854,8 +1854,11 @@ private:
 
     private:
         explicit Parameter(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
-            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value->DeepClone(false), true, {}, name, uid)
-        {}
+            : Variable(value->Shape(), VariableKind::Parameter, value->GetDataType(), value, true, {}, name, uid)
+        {
+            if (value->IsReadOnly())
+                InvalidArgument("Parameter cannot be constructed from a read-only NDArrayView value; you can create a non read-only clone of the value and use that instead!");
+        }
     };
 
     // Implementation note: The Variable type is a value type and not polymorphic in nature. 
@@ -1936,7 +1939,7 @@ private:
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
-            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value->DeepClone(), false, {}, name, uid)
+            : Variable(value->Shape(), VariableKind::Constant, value->GetDataType(), value, false, {}, name, uid)
         {}
 
         ///
@@ -2596,6 +2599,7 @@ namespace CNTK
         CNTK_API virtual void Backward(const BackPropStatePtr& state,
                                        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
+
         ///
         /// Returns the name of the operation that this Function denotes
         ///
@@ -2624,8 +2628,11 @@ namespace CNTK
         ///
         /// Infers the shape, data type and dynamic axes of the outputs of 'this' function based on the 
         /// Function's inputs, and returns Output Variable objects containing the inferred information
+        /// Result cannot exceed the max number of outputs (128).
+        /// The passed "outputs" vector should also reserve 128 elements in order to not cause memory allocation during
+        /// crossing of dll boundary.
         ///
-        CNTK_API virtual std::vector<Variable> InferOutputs() = 0;
+        CNTK_API virtual void InferOutputs(std::vector<Variable>& outputs) = 0;
 
     public:
 
@@ -2730,9 +2737,9 @@ namespace CNTK
         ///
         /// Returns all Input variables of 'this' Function.
         ///
-        std::vector<Variable> Inputs() const
+        std::vector<Variable> Inputs(bool pythonOperandOrder = false) const
         {
-            return *(InputsImpl().get());
+            return *(InputsImpl(pythonOperandOrder).get());
         }
 
         ///
@@ -2830,6 +2837,11 @@ namespace CNTK
         ///
         CNTK_API void PrintGraph() const;
 
+        ///
+        /// Maimum number of outputs that is currently supported.
+        ///
+        static const int MaxNumOutputs = 64;
+
     protected:
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
@@ -2851,6 +2863,7 @@ namespace CNTK
 
         // Returns a outputs without ref-counting the owner.
         CNTK_API std::vector<Variable>& RawOutputs() const;
+
     private:
         CNTK_API std::shared_ptr<std::vector<std::pair<Variable, Variable>>> BlockArgumentsMappingImpl() const;
 
@@ -2875,10 +2888,10 @@ namespace CNTK
             return filteredInputs;
         }
 
-        CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl() const;
+        CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl(bool pythonOperandOrder = false) const;
         CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
 
-        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
+        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& buffer);
 
         static void ReplacePlaceholderInPlace(Variable& var,
                                               const std::unordered_map<Variable, Variable>& placeholderReplacements,

@@ -16,7 +16,9 @@ namespace CNTK
     std::vector<Variable>& Function::InitOutputs()
     {
         std::call_once(m_outputsInitFlag, [this]() {
-            auto outputs = InferOutputs();
+            std::vector<Variable> outputs;
+            outputs.reserve(Function::MaxNumOutputs);
+            InferOutputs(outputs);
             std::unordered_set<Variable> uniqueOutputs;
             for (auto outputVar : outputs)
             {
@@ -51,14 +53,26 @@ namespace CNTK
         return const_cast<Function*>(this)->InitOutputs();
     }
 
-    std::shared_ptr<std::vector<Variable>> Function::InputsImpl() const
+    std::shared_ptr<std::vector<Variable>> Function::InputsImpl(bool pythonOperandOrder) const
     {
-        const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
         std::vector<Variable> inputs;
+
+        const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
         if (compositeFunction == nullptr)
-            inputs = m_inputs;
+        {
+            // For the Times and TransposeTimes primitive functions, if we want the python operand order
+            // then we need to reorder the operands as stored in m_inputs
+            const PrimitiveFunction* primitiveFunction = dynamic_cast<const PrimitiveFunction*>(this);
+            if (pythonOperandOrder && primitiveFunction && ((primitiveFunction->OpType() == PrimitiveOpType::Times) || (primitiveFunction->OpType() == PrimitiveOpType::TransposeTimes)))
+            {
+                assert(m_inputs.size() == 2);
+                inputs = { m_inputs[1], m_inputs[0] };
+            }
+            else
+                inputs = m_inputs;
+        }
         else
-            inputs = compositeFunction->DetermineInputs();
+            inputs = compositeFunction->DetermineInputs(pythonOperandOrder);
 
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(inputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
@@ -289,7 +303,7 @@ namespace CNTK
         return updated;
     }
 
-    void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified)
+    void Function::ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& outputsUsingNewInputs)
     {
         assert(visitedFunctions.find(this) == visitedFunctions.end());
         visitedFunctions[this] = 1;
@@ -301,13 +315,17 @@ namespace CNTK
             {
                 auto owner = input.Owner().get();
                 if (visitedFunctions.find(owner) == visitedFunctions.end())
-                    owner->ValidateOrUpdateOutputs(visitedFunctions, recurrentNodeOutputModified);
+                {
+                    outputsUsingNewInputs.clear();
+                    owner->ValidateOrUpdateOutputs(visitedFunctions, recurrentNodeOutputModified, outputsUsingNewInputs);
+                }
                 else
                     visitedFunctions[owner]++;
             }
         }
 
-        auto outputsUsingNewInputs = this->InferOutputs();
+        outputsUsingNewInputs.clear();
+        this->InferOutputs(outputsUsingNewInputs);
         auto currentOutputs = RawOutputs();
         for (size_t i = 0; i < currentOutputs.size(); ++i)
         {
@@ -468,11 +486,13 @@ namespace CNTK
         const size_t maxNumValidationPassesAllowed = 128;
         bool recurrentNodeOutputModified = false;
         size_t numValidationPasses = 0;
+        std::vector<Variable> outputVarBuffer;
+        outputVarBuffer.reserve(Function::MaxNumOutputs);
         do
         {
             recurrentNodeOutputModified = false;
             functionVisitCounts.clear();
-            RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts, recurrentNodeOutputModified);
+            RootFunction()->ValidateOrUpdateOutputs(functionVisitCounts, recurrentNodeOutputModified, outputVarBuffer);
             numValidationPasses++;
         } while (recurrentNodeOutputModified && (numValidationPasses < maxNumValidationPassesAllowed));
 
@@ -1115,12 +1135,11 @@ namespace CNTK
 
     FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name)
     {
-        // TODO: Should this too be encapsulated as a block?
-
+        auto operandPlaceholder = PlaceholderVariable(L"operand");
         Constant meanVar(mean);
         Constant invStdDevVar(invStdDev);
 
-        return ElementTimes(Minus(operand, meanVar), invStdDevVar, name);
+        return AsBlock(std::move(ElementTimes(Minus(operandPlaceholder, meanVar), invStdDevVar)), { { operandPlaceholder, operand } }, L"PerDimMeanVarianceNormalize", name);
     }
 
     FunctionPtr Convolution(const Variable& convolutionMap,

@@ -188,9 +188,9 @@ class ProgressPrinter(object):
                 speed = samples / time_delta
                 self.epoch_start_time = epoch_end_time
             if with_metric:
-                self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples, time_delta, speed))
+                self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples per second);".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples, time_delta, speed))
             else:
-                self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second)".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, time_delta, speed))
+                self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second);".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, time_delta, speed))
 
             # For logging to TensorBoard, we use self.total_updates as it does not reset after each epoch.
             self.update_value('epoch_avg_loss', avg_loss, self.epochs)
@@ -254,10 +254,10 @@ class ProgressPrinter(object):
                 first_mb = max(self.updates_since_start - self.freq + 1, self.first+1)
 
             if metric is not None:
-                self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}, metric = {:0.1f}% * {:d}'.format(
+                self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}, metric = {:0.1f}% * {:d};'.format(
                     first_mb, self.updates_since_start, avg_loss, samples, avg_metric*100.0, samples))
             else:
-                self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}'.format(
+                self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d};'.format(
                     first_mb, self.updates_since_start, avg_loss, samples))
 
             if self.updates_since_start > self.first:

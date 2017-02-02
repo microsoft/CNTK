@@ -12,10 +12,6 @@ import numpy as np
 import cntk
 import _cntk_py
 
-from cntk.utils import *
-from cntk.device import set_default_device, gpu
-from cntk.distributed import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
-
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(abs_path, "Models")
@@ -109,9 +105,9 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
                                               l2_regularization_weight=l2_reg_weight)
 
     if block_size != None:
-        learner = block_momentum_distributed_learner(local_learner, block_size=block_size)
+        learner = cntk.distributed.block_momentum_distributed_learner(local_learner, block_size=block_size)
     else:
-        learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
+        learner = cntk.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
     # Create trainer
     return cntk.Trainer(network['output'], network['ce'], network['pe'], learner)
@@ -126,7 +122,11 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
     }
 
     training_session = cntk.training_session(train_source, trainer,
-        cntk.minibatch_size_schedule(64), progress_printer, input_map, os.path.join(model_path, "ConvNet_CIFAR10_DataAug_"), epoch_size)
+                                             cntk.minibatch_size_schedule(64),
+                                             progress_printer, input_map,
+                                             os.path.join(model_path, "ConvNet_CIFAR10_DataAug_"),
+                                             epoch_size)
+    # Train all minibatches 
     training_session.train()
 
     ### TODO: Stay tuned for an upcoming simpler EvalSession API for test/validation.    
@@ -139,6 +139,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
     metric_denom    = 0
     minibatch_index = 0
 
+    # Test minibatch loop
     while True:
         data = test_source.next_minibatch(minibatch_size, input_map=input_map)
         if not data: break
@@ -146,7 +147,6 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         metric_numer += trainer.test_minibatch(data) * local_mb_samples
         metric_denom += local_mb_samples
         minibatch_index += 1
-
 
     fin_msg = "Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom)
     progress_printer.end_progress_print(fin_msg)
@@ -159,14 +159,16 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
 
 # Train and evaluate the network.
-def convnet_cifar10_dataaug(train_data, test_data, mean_data, epoch_size=50000, num_quantization_bits=32, block_size=3200, warm_up=0, max_epochs=2, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False):
+def convnet_cifar10_dataaug(train_data, test_data, mean_data, epoch_size=50000, num_quantization_bits=32, 
+                            block_size=3200, warm_up=0, max_epochs=2, log_to_file=None, 
+                            num_mbs_per_log=None, gen_heartbeat=False):
     _cntk_py.set_computation_network_trace_level(0)
 
-    progress_printer = ProgressPrinter(
+    progress_printer = cntk.utils.ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
-        rank=Communicator.rank(),
+        rank=cntk.distributed.Communicator.rank(),
         gen_heartbeat=gen_heartbeat,
         num_epochs=max_epochs)
 
@@ -196,7 +198,7 @@ if __name__=='__main__':
     if args['outputdir'] is not None:
         model_path = args['o'] + "/models"
     if args['device'] is not None:
-        set_default_device(gpu(args['device']))
+        cntk.device.set_default_device(cntk.device.gpu(args['device']))
     if args['datadir'] is not None:
         data_path = args['datadir']
 
@@ -208,10 +210,12 @@ if __name__=='__main__':
         convnet_cifar10_dataaug(train_data, test_data, mean_data, 
                                 epoch_size=50000,
                                 num_quantization_bits=args['quantized_bits'],
-                                block_size=args['block_samples'], 
+                                block_size=args['block_samples'],
                                 warm_up=args['distributed_after'],
                                 max_epochs=args['epochs'],
-                                log_to_file=args['log'], num_mbs_per_log=10)
+                                log_to_file=args['log'],
+                                num_mbs_per_log=10,
+                                gen_heartbeat=True)
     finally:
-        Communicator.finalize()
+        cntk.distributed.Communicator.finalize()
 

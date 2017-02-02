@@ -229,3 +229,26 @@ def test_as_composite():
     assert(composite.root_function.name == func_name)
     composite = as_composite(t_plus_b)
     assert(composite.root_function.name == func_name)
+
+def test_input_order():
+    input_dim = 1
+    proj_dim = 2
+    x = input_variable((input_dim,), name='x')
+    b = parameter((proj_dim), name='b')
+    w = parameter((input_dim, proj_dim), name='w')
+    func_name = 't_plus_b'
+    t = times(x, w)
+    t_plus_b = plus(t, b, name=func_name)
+
+    def compare_var_names(vars, names): 
+        num_vars = len(vars)
+        for i in range(num_vars):
+            if (vars[i].name != names[i]):
+                return False
+
+        return True
+
+    assert compare_var_names(t.root_function.inputs, ['x', 'w'])
+    assert compare_var_names(t.inputs, ['x', 'w'])
+    assert compare_var_names(t_plus_b.inputs, ['x', 'w', 'b'])
+

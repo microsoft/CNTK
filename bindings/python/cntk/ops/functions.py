@@ -391,11 +391,7 @@ class Function(cntk_py.Function):
         '''
         List of all input variables of this function.
         '''
-        input_nodes = super(Function, self).inputs()
-        if self.is_primitive and self.root_function.op_name in ['Times', 'TransposeTimes']:
-            input_nodes = tuple(reversed(input_nodes))
-
-        return input_nodes
+        return super(Function, self).inputs(True)
 
     @property
     def name(self):
@@ -752,6 +748,9 @@ class UserFunction(Function):
                 raise ValueError('gradients were not provided for all variables')
 
             variables[k] = sanitize_batch(k, v, None, state.device())
+
+    def _infer_outputs(self, outputs):
+        outputs.extend(self.infer_outputs())
 
     def infer_outputs(self):
         raise NotImplementedError('infer_outputs has to be overridden')

@@ -699,7 +699,7 @@ namespace CNTK
         static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
         static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig);
 
-        virtual std::vector<Variable> InferOutputs() override;
+        void InferOutputs(std::vector<Variable>& outputs) override;
 
     private:
         PrimitiveOpType m_op;
