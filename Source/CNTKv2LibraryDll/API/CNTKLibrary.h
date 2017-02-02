@@ -2628,8 +2628,11 @@ namespace CNTK
         ///
         /// Infers the shape, data type and dynamic axes of the outputs of 'this' function based on the 
         /// Function's inputs, and returns Output Variable objects containing the inferred information
+        /// Result cannot exceed the max number of outputs (128).
+        /// The passed "outputs" vector should also reserve 128 elements in order to not cause memory allocation during
+        /// crossing of dll boundary.
         ///
-        CNTK_API virtual std::vector<Variable> InferOutputs() = 0;
+        CNTK_API virtual void InferOutputs(std::vector<Variable>& outputs) = 0;
 
     public:
 
@@ -2834,6 +2837,11 @@ namespace CNTK
         ///
         CNTK_API void PrintGraph() const;
 
+        ///
+        /// Maimum number of outputs that is currently supported.
+        ///
+        static const int MaxNumOutputs = 64;
+
     protected:
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
@@ -2883,7 +2891,7 @@ namespace CNTK
         CNTK_API std::shared_ptr<std::vector<Variable>> InputsImpl(bool pythonOperandOrder = false) const;
         CNTK_API std::shared_ptr<std::vector<Variable>> OutputsImpl() const;
 
-        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified);
+        void ValidateOrUpdateOutputs(std::unordered_map<const Function*, size_t>& visitedFunctions, bool& recurrentNodeOutputModified, std::vector<Variable>& buffer);
 
         static void ReplacePlaceholderInPlace(Variable& var,
                                               const std::unordered_map<Variable, Variable>& placeholderReplacements,

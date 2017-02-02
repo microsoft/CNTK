@@ -93,9 +93,10 @@ namespace CNTK
             NOT_IMPLEMENTED;
         }
 
-        virtual std::vector<Variable> InferOutputs() override
+        void InferOutputs(std::vector<Variable>& outputs) override
         {
-            return m_rootFunction->InitOutputs();
+            auto& inferred = m_rootFunction->InitOutputs();
+            outputs.assign(inferred.begin(), inferred.end());
         }
 
         virtual void Backward(const BackPropStatePtr& state,

@@ -214,10 +214,13 @@ namespace CNTK
         return outputDynamicAxes;
     }
 
-    /*virtual*/ std::vector<Variable> PrimitiveFunction::InferOutputs() /*override*/
+    void PrimitiveFunction::InferOutputs(std::vector<Variable>& outputs)
     {
         if (m_op == PrimitiveOpType::Combine)
-            return m_inputs;
+        {
+            outputs.assign(m_inputs.begin(), m_inputs.end());
+            return;
+        }
 
         DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
         std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, m_attributes);
@@ -680,7 +683,7 @@ namespace CNTK
             }
         }
 
-        return{ OutputVariable(outputShape, outputDataType, outputDynamicAxes, Name().empty() ? L"" : Name()) };
+        outputs.push_back({ OutputVariable(outputShape, outputDataType, outputDynamicAxes, Name().empty() ? L"" : Name()) });
     }
 
     static const std::wstring s_primitiveFunctionTypeValue = L"PrimitiveFunction";
