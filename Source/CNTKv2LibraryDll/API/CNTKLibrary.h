@@ -912,7 +912,7 @@ namespace CNTK
         CNTK_API static const Axis& AllStaticAxes();
 
         ///
-        /// Axis object representing all the axes of an operand
+        /// Axis object representing all static and dynamic axes of an operand
         ///
         CNTK_API static const Axis& AllAxes();
 

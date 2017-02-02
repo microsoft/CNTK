@@ -12,6 +12,7 @@
 #include "Config.h"
 #include "Reader.h"
 #include "ConvolutionEngine.h"
+#include "ReshapingNodes.h"
 
 namespace CNTK
 {
@@ -305,8 +306,8 @@ namespace CNTK
         }
     }
 
-    static int const CNTKInternalIdxValueForAllStaticAxes = 0;
-    static int const CNTKInternalIdxValueForAllAxes = -1;
+    static int const CNTKInternalIdxValueForAllStaticAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllStaticAxes;
+    static int const CNTKInternalIdxValueForAllAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllAxes;
     inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllStaticAxes)

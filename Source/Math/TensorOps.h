@@ -262,14 +262,6 @@ DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b cop
 DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
 DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
-// ElementwiseProductWithQuotient is used in the backward pass of the product reduction
-// a is the gradient of the layer above
-// b is the reduction layer output
-// c is the reduction layer input
-// Element i of the gradient can be obtained by scaling "a" with the product of all the inputs except the i-th one
-// This can be achieved via a * b / c (with the appropriate broadcasting semantics) 
-// The reason for the more complicated formula below is that c can contain zeros
-// In fact the formula below is wrong (in one element) when c contains exactly one zero
 DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
 
 #pragma pop_macro("DefTernaryOp")

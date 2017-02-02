@@ -228,6 +228,9 @@ public:
     std::wstring ReductionOpName() const { return m_operation; }
     int ReductionAxis() const { return m_axis; }
 
+    static const int  CNTKInternalIdxValueForAllStaticAxes = 0;
+    static const int  CNTKInternalIdxValueForAllAxes = -1;
+
 private:
     // operation attributes
     int m_axis;
