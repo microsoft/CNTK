@@ -59,6 +59,7 @@ template <class ElemType>
     }
 }
 
+// TODO: load and save are ignoring m_reduceAll for now. 
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Load(File& fstream, size_t modelVersion) /*override*/
 {
