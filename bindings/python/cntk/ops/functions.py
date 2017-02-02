@@ -2,7 +2,7 @@ from cntk import cntk_py
 from cntk.device import DeviceDescriptor
 from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
         sanitize_dtype_cntk, value_to_seq, _as_tuple, variable_value_to_seq, \
-        sanitize_var_substitution_map, sanitize_substitution_var
+        sanitize_var_substitution_map, sanitize_substitution_var, Record
 from cntk.utils.swig_helper import map_if_possible
 from cntk.ops.variables import Variable
 from enum import Enum, unique
@@ -41,19 +41,15 @@ class Function(cntk_py.Function):
     will relay to its only output.
     '''
 
-    def _callable(obj):
-        return hasattr(obj, '__call__') # Python 2.7+
-        return callable(obj)            # Python 3.x+
-
     # We override the constructors to implement an overload that constructs
     # a CNTK Functions from a Python function (@Function).
     def __new__(cls, *args, **kwargs):
-        if len(args) + len(kwargs) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
+        if len(args) > 0 and hasattr(args[0], '__call__') and not isinstance(args[0], Function): # overload
             return Function.to_Function(*args, **kwargs)
-        return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args)
+        return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args
 
     def __init__(self, *args, **kwargs):
-        if len(args) + len(kwargs) > 0 and Function._callable(args[0]) and not isinstance(args[0], Function): # overload
+        if len(args) > 0 and hasattr(args[0], '__call__') and not isinstance(args[0], Function): # overload
             return
         super(Function, self).__init__(*args, **kwargs)
 
@@ -72,12 +68,13 @@ class Function(cntk_py.Function):
         import sys
         if sys.version_info.major >= 3:
             from inspect import getfullargspec
-            param_specs = getfullargspec(f)
-            annotations = param_specs.annotations
-        else: # 2.7 cannot handle keyword-only args, e.g. f(x, *args, y=13, **kwargs), nor type annotations
-            from inspect import getargspec
-            param_specs = getargspec(f)
-            annotations = {}
+        else:
+            def getfullargspec(f):
+                from inspect import getargspec
+                a = getargspec(f)
+                return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations={})
+        param_specs = getfullargspec(f)
+        annotations = param_specs.annotations
         arg_names = param_specs.args
         defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
         if defaults:
