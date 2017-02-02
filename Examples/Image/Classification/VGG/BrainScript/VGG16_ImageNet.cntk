@@ -84,7 +84,7 @@ Train = {
     SGD = {
         epochSize = 0
         minibatchSize = 128
-        # CNTK weights new gradient by (1-momentum) for unit gain, thus we multiply Caffe's learning rate by (1-momentum)
+        # CNTK weights new gradient by (1-momentum) for unit gain, thus we divide Caffe's learning rate by (1-momentum)
         learningRatesPerMB = 0.1*20:0.01*20:0.001*20:0.0001*10:0.00001
         momentumPerMB = 0.9
         maxEpochs = 80
