@@ -25,6 +25,14 @@
     },
     {
         "category": ["Image"],
+        "name":  "Transfer Learning",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/TransferLearning",
+        "description":  "Transfer Learning: adapt a pretrained model to a new classification task.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "Image auto encoder",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#07_deconvolution",
         "description":  "A simple image auto encoder using deconvolution and unpooling.",

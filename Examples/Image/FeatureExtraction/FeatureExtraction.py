@@ -73,12 +73,12 @@ if __name__ == '__main__':
     # print_all_node_names(model_file)
 
     # use this to get 1000 class predictions (not yet softmaxed!)
-    node_name = "z"
-    output_file = os.path.join(base_folder, "predOutput.txt")
+    # node_name = "z"
+    # output_file = os.path.join(base_folder, "predOutput.txt")
 
     # use this to get 512 features from the last but one layer of ResNet_18
-    # node_name = "z.x"
-    # output_file = os.path.join(base_folder, "layerOutput.txt")
+    node_name = "z.x"
+    output_file = os.path.join(base_folder, "layerOutput.txt")
 
     # evaluate model and write out the desired layer output
     eval_and_write(model_file, node_name, output_file, minibatch_source, num_objects=5)

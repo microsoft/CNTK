@@ -155,6 +155,8 @@ ModelManifest.xml
 # Python
 *.pyc
 __pycache__/
+Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
+Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
 
 # =========================
 # Windows detritus
@@ -247,9 +249,12 @@ Examples/Image/DataSets/grocery/negative/
 Examples/Image/DataSets/grocery/positive/
 Examples/Image/DataSets/grocery/testImages/
 Examples/Image/DataSets/grocery/*.txt
+Examples/Image/DataSets/Flowers/jpg/
+Examples/Image/DataSets/Flowers/*.txt
 Examples/Image/PretrainedModels/*.model
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
+Examples/Image/TransferLearning/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
