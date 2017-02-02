@@ -559,7 +559,7 @@ namespace CNTK
                     }
                     case PrimitiveOpType::ReduceElements:
                     {
-                        assert(inputs.size() == 1);
+                        assert(m_inputs.size() == 1);
                         auto reductionAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape());
                         if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                             outputShape = {};
