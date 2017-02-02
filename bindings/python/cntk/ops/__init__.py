@@ -1276,6 +1276,51 @@ def relu(x, name=''):
 
 
 @typemap
+def elu(x, name=''):
+    '''
+    Exponential linear unit operation. Computes the element-wise exponential linear
+    of ``x``: ``max(x, 0)`` for ``x >= 0`` and ``x``: ``exp(x)-1`` otherwise.
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.elu([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[ -0.632,  -0.393,  0.,  1.,  2.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import elu
+    x = sanitize_input(x)
+    return elu(x, name)
+
+
+@typemap
+def leaky_relu(x, name=''):
+    '''
+    Leaky Rectified linear operation. Computes the element-wise leaky rectified linear
+    of ``x``: ``max(x, 0)`` for ``x >= 0`` and ``x``: ``0.01*x`` otherwise.
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.leaky_relu([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[ -0.01,  -0.005,  0.,  1.,  2.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import leaky_re_lu
+    x = sanitize_input(x)
+    return leaky_re_lu(x, name)
+
+@typemap
 def sigmoid(x, name=''):
     '''
     Computes the element-wise sigmoid of ``x``:

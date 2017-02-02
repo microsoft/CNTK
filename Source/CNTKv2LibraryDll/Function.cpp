@@ -1318,10 +1318,10 @@ namespace CNTK
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable();
-        auto result = ElementSelect(
-            Less(operandPlaceholder, Constant::Scalar(0)),
-                Minus(Exp(operandPlaceholder), Constant::Scalar(1)),
-                operandPlaceholder);
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero, 
+            Minus(Exp(operandPlaceholder), Constant::Scalar(operand.GetDataType(), 1.0)),
+            operandPlaceholder);
 
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ELU", name);
     }
@@ -1329,10 +1329,10 @@ namespace CNTK
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable();
-        auto result = ElementSelect(
-            Less(operandPlaceholder, Constant::Scalar(0)),
-                ElementTimes(Constant::Scalar(0.01), operandPlaceholder),
-                operandPlaceholder);
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero,
+            ElementTimes(Constant::Scalar(operand.GetDataType(), 0.01), operandPlaceholder),
+            operandPlaceholder);
 
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"LeakyReLU", name);
     }
