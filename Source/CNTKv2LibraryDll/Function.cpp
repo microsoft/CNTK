@@ -1296,6 +1296,28 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::OptimizedRNNStack, operand, weights, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ELU(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = ElementSelect(
+            Less(operandPlaceholder, Constant::Scalar(0)),
+                Minus(Exp(operandPlaceholder), Constant::Scalar(1)),
+                operandPlaceholder);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ELU", name);
+    }
+
+    FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = ElementSelect(
+            Less(operandPlaceholder, Constant::Scalar(0)),
+                ElementTimes(Constant::Scalar(0.01), operandPlaceholder),
+                operandPlaceholder);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"LeakyReLU", name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)

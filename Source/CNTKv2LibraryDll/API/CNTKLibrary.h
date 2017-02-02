@@ -3428,6 +3428,16 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = L"");
+
     namespace Sequence
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");
