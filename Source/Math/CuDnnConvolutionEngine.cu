@@ -432,7 +432,7 @@ private:
             auto res = std::find_if(algoPerf, algoPerf + calgo,
                       [=](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0; });
             if (res == algoPerf + calgo)
-                RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.");
+                RuntimeError("In initState, cuDNN could not find no-workspace algorithm for the current convolution configuration.");
             algo.autotuningState = AutotuningState::pendingTuningState;
             algo.Algo = *res;
             algo.NoWorkspaceAlgo = (*res).algo;
@@ -445,7 +445,7 @@ private:
         auto res = std::find_if(algoPerf, algoPerf + calgo,
             [=](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem; });
         if (res == algoPerf + calgo)
-            RuntimeError("cuDNN could not find suitable algorithm for the current convolution configuration.");
+            RuntimeError("During auto-tuning, cuDNN could not find suitable algorithm for the current convolution configuration.");
 
         algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
         algo.Algo = *res;
@@ -458,7 +458,7 @@ private:
         res = std::find_if(algoPerf, algoPerf + calgo,
             [](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0; });
         if (res == algoPerf + calgo)
-            RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.");
+            RuntimeError("During auto-tuning, cuDNN could not find no-workspace algorithm for the current convolution configuration.");
         else
             algo.NoWorkspaceAlgo = (*res).algo;
     }
