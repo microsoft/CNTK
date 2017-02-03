@@ -236,7 +236,8 @@ BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to r
     bias        = ParameterTensor {normShape, initValue = 0}
     runMean     = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
     runVariance = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0}
-    apply (x)   = BatchNormalization (x, scale, bias, runMean, runVariance, spatialRank > 0, normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
+    runCount    = ParameterTensor {(1),       initValue = 0, learningRateMultiplier = 0}
+    apply (x)   = BatchNormalization (x, scale, bias, runMean, runVariance, runCount=runCount, spatial=(spatialRank > 0), normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
 }.apply
 
 # LayerNormalizationLayer -- create a layer-normalization layer
@@ -614,7 +615,15 @@ ColumnwiseCrossProduct = KhatriRaoProduct // deprecated
 ErrorPrediction = ClassificationError   # legacy name
 Delay = PastValue 
 
-BatchNormalization(input, scale, bias, runMean, runVariance, spatial, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'BatchNormalization' ; inputs = _AsNodes (input : scale : bias : runMean : runVariance) /*plus the function args*/ ]
+BatchNormalization(input, scale, bias, runMean, runVariance, runCount=None, spatial=false, normalizationTimeConstant = 0, blendTimeConstant = 0, epsilon = 0.00001, useCntkEngine = true, imageLayout='CHW', tag='') = new ComputationNode
+{
+    operation = 'BatchNormalization'
+    inputs =
+        if BS.Constants.IsNone(runCount)
+        then _AsNodes (input : scale : bias : runMean : runVariance : ParameterTensor {(1), initValue = 0, learningRateMultiplier = 0})
+        else _AsNodes (input : scale : bias : runMean : runVariance : runCount)
+    /*plus the function args*/
+}
 ClassBasedCrossEntropyWithSoftmax(labelClassDescriptorVectorSequence, mainInputInfo, mainWeight, classLogProbsBeforeSoftmax, tag='') = new ComputationNode [ operation = 'ClassBasedCrossEntropyWithSoftmax' ; inputs = _AsNodes (labelClassDescriptorVectorSequence : mainInputInfo : mainWeight : classLogProbsBeforeSoftmax) /*plus the function args*/ ]
 Clip(minValue, maxValue, x, tag='') = new ComputationNode [ operation = 'Clip' ; inputs = _AsNodes (minValue : maxValue : x) /* plus the function args*/ ]
 ColumnElementTimes(aVectorSequence, anotherVectorSequence, tag='') = new ComputationNode [ operation = 'ColumnElementTimes' ; inputs = _AsNodes (aVectorSequence : anotherVectorSequence) /*plus the function args*/ ]

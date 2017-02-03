@@ -66,6 +66,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>$(MSMPI_LIB64);$(OutDir);$(BOOST_LIB_PATH);$(NvmlLibPath)</AdditionalLibraryDirectories>
       <DelayLoadDLLs>math.dll;msmpi.dll</DelayLoadDLLs>
+      <StackReserveSize>100000000</StackReserveSize>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(DebugBuild)">
@@ -111,6 +112,7 @@
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptEvaluator.cpp" />
     <ClCompile Include="..\..\..\Source\CNTK\BrainScript\BrainScriptParser.cpp" />
     <ClCompile Include="AccumulatorNodeTests.cpp" />
+    <ClCompile Include="BatchNormalizationTests.cpp" />
     <ClCompile Include="CropNodeTests.cpp" />
     <ClCompile Include="EditDistanceTests.cpp" />
     <ClCompile Include="OperatorEvaluation.cpp" />
@@ -123,6 +125,16 @@
     <Text Include="Config\Network_Operator_Plus.cntk" />
     <Text Include="Control\Network_Operator_Plus_Control.txt" />
     <Text Include="Data\Network_Operator_Plus_Data.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Config\BatchNorm_BS_Builder.cntk" />
+    <None Include="Config\BatchNorm_BS_Model.cntk" />
+    <None Include="Config\BatchNorm_NDL_Builder_BN5.cntk" />
+    <None Include="Config\BatchNorm_NDL_Builder_BN6.cntk" />
+    <None Include="Config\BatchNorm_NDL_Model.cntk" />
+    <None Include="Config\Macros.bs" />
+    <None Include="Models\01_OneHidden.dnn" />
+    <None Include="Models\ResNet20_CIFAR10_DataAug.dnn" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="Build" Condition="$(HasBoost)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />

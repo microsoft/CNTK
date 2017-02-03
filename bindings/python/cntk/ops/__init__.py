@@ -608,10 +608,10 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
         >>> x = C.input_variable(img.shape)
         >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
         >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
-	array([[[[[  0.,   0.,   0.,   0.],
-		  [  0.,   5.,   0.,   7.],
-		  [  0.,   0.,   0.,   0.],
-		  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
+        array([[[[[  0.,   0.,   0.,   0.],
+                  [  0.,   5.,   0.,   7.],
+                  [  0.,   0.,   0.,   0.],
+                  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
 
     Args:
         operand: unpooling input
@@ -637,11 +637,11 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
                      unpooling_window_shape, strides, auto_padding,
                      lower_pad, upper_pad, name)
 
-
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=5000, blend_time_constant=0,
-                        epsilon=0.00001, use_cudnn_engine=False, name=''):
+                        epsilon=0.00001, use_cudnn_engine=False, name='',
+                        running_sample_count=None):
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
     and applies affine transformation to preserve representation of the layer.
@@ -653,7 +653,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
          dimensions which must be equal to the input dimensions in case of ``spatial`` = False or
          number of output convolution feature maps in case of ``spatial`` = True
         running_mean: running mean which is used during evaluation phase and might be used during
-         training as well. You must pass a parameter tensor with initial value 0 and the same dimensions
+         training as well. You must pass a constant tensor with initial value 0 and the same dimensions
          as ``scale`` and ``bias``
         running_inv_std: running variance. Represented as ``running_mean``
         spatial(bool): flag that indicates whether to compute mean/var for each feature in a minibatch
@@ -665,13 +665,24 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
         use_cudnn_engine(bool, default True):
         name (str, optional): the name of the Function instance in the network
+        running_sample_count: Denotes the total number of samples that have been used so far to compute 
+         the ``running_mean`` and ``running_inv_std`` parameters. When defining a new model from scratch, 
+         the value for this parameter should be a scalar (either rank-0 ``constant(val)`` or
+         rank-1 ``constant(val, shape=(1,))``)
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    if running_sample_count is None:
+        running_sample_count = constant(0)
+        import warnings
+        warnings.warn("batch_normalization requires an additional "
+            "'running_sample_count' parameter, which can be "
+            "instantiated as 'constant(0)'", Warning)
+
     from cntk.cntk_py import batch_normalization
     operand = sanitize_input(operand)
-    return batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
-                               normalization_time_constant, blend_time_constant,
+    return batch_normalization(operand, scale, bias, running_mean, running_inv_std, running_sample_count, 
+                               spatial, normalization_time_constant, blend_time_constant,
                                epsilon, use_cudnn_engine, name)
 
 ##########################################################################

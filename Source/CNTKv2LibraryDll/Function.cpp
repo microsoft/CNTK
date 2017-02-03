@@ -714,6 +714,9 @@ namespace CNTK
 
         auto restoredFunction = Function::Deserialize(modelDictionary, DeviceDescriptor::CPUDevice());
 
+        //TODO (backcompat): when loading a stale model we can still pass this test
+        // by patching up restored functions on the fly during deserialization (e.g., by 
+        // inserting an extra input for the sample count in case of BatchNorm).
         if (!Internal::AreEquivalent(shared_from_this(), restoredFunction))
             InvalidArgument("'This' function is not equivalent (isomorphic) to the function restored from a checkpoint.");
 
@@ -725,6 +728,11 @@ namespace CNTK
         for (int i = 0; i < parameters.size(); i++)
         {
             assert(Internal::AreEquivalent(parameters[i], restoredParameters[i]));
+
+            //TODO (backcompat): this test would fail if we were to load a stale model 
+            // (i.e. saved before the sample count was added as an extra input to BatchNorm) into
+            // a graph constructed using the updated API (i.e. the call to Constant ctor to intantiate 
+            // the sample count will bump up the id counter and shift the whole uid sequence).
 
             // Additionally, to be super-safe, compare parameter UIDs.
             if (parameters[i].Uid() != restoredParameters[i].Uid())
@@ -1230,6 +1238,7 @@ namespace CNTK
                                    const Variable& bias,
                                    const Variable& runningMean,
                                    const Variable& runningInvStd,
+                                   const Variable& runningSampleCount,
                                    bool spatial,
                                    double normalizationTimeConstant,
                                    double blendTimeConstant,
@@ -1244,12 +1253,11 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
         additionalProperties[PrimitiveFunction::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
 
-        std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
-                                                                             operands,
-                                                                             std::move(additionalProperties),
-                                                                             name),
-                                         name);
+        std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningSampleCount };
+        return AsComposite(
+            MakeSharedObject<PrimitiveFunction>(
+                PrimitiveOpType::BatchNormalization, operands, std::move(additionalProperties), name),
+            name);
     }
 
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)
