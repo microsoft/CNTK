@@ -354,7 +354,7 @@ def test_op_gather_dynamic_axes_equivalence(device_id, precision):
     assert np.array_equal(res, expected_forward)
 
 
-def test_op_gather_scatter_derived_dynamic_axes_equivalence(device_id, precision):
+def test_op_gather_derived_dynamic_axes_equivalence(device_id, precision):
     from .. import sequence
 
     input_data1 = AA([1], dtype=PRECISION_TO_TYPE[precision])
@@ -367,8 +367,8 @@ def test_op_gather_scatter_derived_dynamic_axes_equivalence(device_id, precision
           dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
           name='b')
 
-    a_last = sequence.gather(a, sequence.is_last(a), new_sequence_axis_scaling_and_additive_factor=(0, 1))
-    b_last = sequence.gather(b, sequence.is_last(b), new_sequence_axis_scaling_and_additive_factor=(0, 1))
+    a_last = sequence.gather(a, sequence.is_last(a), new_sequence_axis_typeinfo=(0, 1))
+    b_last = sequence.gather(b, sequence.is_last(b), new_sequence_axis_typeinfo=(0, 1))
 
     z = a_last + b_last
 

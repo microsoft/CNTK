@@ -170,7 +170,7 @@ def where(condition, name=''):
     return where(condition, name)
 
 @typemap
-def gather(seq, condition, new_sequence_axis_scaling_and_additive_factor=None, name=''):
+def gather(seq, condition, new_sequence_axis_typeinfo=None, name=''):
     '''
     Takes two sequences of the same length and returns a new sequence whose
     elements are those elements of sequence ``seq`` whose corresponding element
@@ -197,7 +197,7 @@ def gather(seq, condition, new_sequence_axis_scaling_and_additive_factor=None, n
         seq: the symbolic sequence from which elements will be selected
         condition: the symbolic sequence of booleans which indicate which
             elements should be selected
-        new_sequence_axis_scaling_and_additive_factor:  tuple of integers indicating
+        new_sequence_axis_typeinfo:  tuple of integers indicating
             the scaling and additive factors for the length of the new sequence axis
             w.r.t. the operand sequence. This is used to determine the sequence axis
             to be used for the output of the gather operation. If this argument is left 
@@ -209,14 +209,14 @@ def gather(seq, condition, new_sequence_axis_scaling_and_additive_factor=None, n
     from cntk.cntk_py import gather
     seq = sanitize_input(seq, get_data_type(seq))
     condition = sanitize_input(condition, get_data_type(condition))
-    if new_sequence_axis_scaling_and_additive_factor is None:
+    if new_sequence_axis_typeinfo is None:
         return gather(seq, condition, name)
     else:
-        return gather(seq, condition, new_sequence_axis_scaling_and_additive_factor, name)
+        return gather(seq, condition, new_sequence_axis_typeinfo, name)
 
 
 @typemap
-def scatter(seq, condition, new_sequence_axis_scaling_and_additive_factor=None, name=''):
+def scatter(seq, condition, new_sequence_axis_typeinfo=None, name=''):
     '''
     Performs the inverse of gather. The sequence ``seq`` must have as many
     elements as the number of True values in the sequence ``condition``.
@@ -254,7 +254,7 @@ def scatter(seq, condition, new_sequence_axis_scaling_and_additive_factor=None, 
             output
         condition: the symbolic sequence which denotes the locations where
             elements should be copied
-        new_sequence_axis_scaling_and_additive_factor:  tuple of integers indicating
+        new_sequence_axis_typeinfo:  tuple of integers indicating
             the scaling and additive factors for the length of the new sequence axis
             w.r.t. the condition sequence. This is used to determine the sequence axis
             to be used for the output of the gather operation. If this argument is left 
@@ -266,10 +266,10 @@ def scatter(seq, condition, new_sequence_axis_scaling_and_additive_factor=None, 
     from cntk.cntk_py import scatter
     seq = sanitize_input(seq, get_data_type(seq))
     condition = sanitize_input(condition, get_data_type(condition))
-    if new_sequence_axis_scaling_and_additive_factor is None:
+    if new_sequence_axis_typeinfo is None:
         return scatter(seq, condition, name)
     else:
-        return scatter(seq, condition, new_sequence_axis_scaling_and_additive_factor, name)
+        return scatter(seq, condition, new_sequence_axis_typeinfo, name)
 
 
 @typemap

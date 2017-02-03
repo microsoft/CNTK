@@ -583,8 +583,8 @@ def variable_value_to_seq(value, variable):
 
     mask = value.mask()
     if mask:
-        value_sequences = value.unpack_variable_value(variable, cpu())
-        return [np.asarray(seq) for seq in value_sequences]
+        value_sequences = value.unpack_variable_value(variable, True, cpu())
+        return [np.asarray(seq) for seq in value_sequences[0]]
     else:
         return np.asarray(value)
 
