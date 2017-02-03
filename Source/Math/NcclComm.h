@@ -57,6 +57,22 @@ public:
 #endif
     }
 
+    template <typename ElemType>
+    void AllReduce(Matrix<ElemType>* grad)
+    {
+#ifdef USE_NCCL
+        DataType dtype = DataType::FLOAT;
+        if (std::is_same<ElemType, double>::value)
+            dtype = DataType::DOUBLE;
+        else if (!std::is_same<ElemType, float>::value)
+            RuntimeError("NcclComm Unsupported reduction type");
+
+        AllReduceImpl(grad->Data(), grad->GetNumElements(), dtype);
+#else
+        RuntimeError("NcclComm: CNTK was built without NCCL support.");
+#endif
+}
+
     void Broadcast(void* buffer, size_t count, MPI_Datatype dtype, int root)
     {
 #ifdef USE_NCCL

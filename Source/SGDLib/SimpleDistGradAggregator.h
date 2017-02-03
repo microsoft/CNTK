@@ -253,9 +253,10 @@ private:
         }
 
         // Copy all gradient data into a single contiguous buffer
-        if (!m_nccl.IsSupported())
+        if (m_AggregationBuffer != 0)
         {
-            if (m_AggregationBuffer != 0)
+            // If there are more than one gradients, do the packing
+            if (numGradMatrices != 1)
             {
                 size_t offset = 0;
                 for (size_t i = 0; i < numGradMatrices; ++i)
@@ -263,14 +264,17 @@ private:
                     m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).AssignValuesOf(gradients[i]->Reshaped(1, gradients[i]->GetNumElements()));
                     offset += gradients[i]->GetNumElements();
                 }
-
-                // Initiate transfer of the bufferred data to the CPU if needed
-                if (deviceId >= 0)
-                {
-                    m_gpuDataTransferer->CopyGPUToCPUAsync(m_AggregationBuffer->Data(), m_AggregationBuffer->GetNumElements(), m_intermediateCPUBuffer.get());
-                }
             }
-            else if (deviceId >= 0)
+        }
+
+        // Initiate transfer of the bufferred data to the CPU if needed
+        if (!m_nccl.IsSupported() && deviceId >= 0)
+        {
+            if (m_AggregationBuffer != 0)
+            {
+                m_gpuDataTransferer->CopyGPUToCPUAsync(m_AggregationBuffer->Data(), m_AggregationBuffer->GetNumElements(), m_intermediateCPUBuffer.get());
+            }
+            else
             {
                 for (size_t i = 0; i < numGradMatrices; ++i)
                 {
@@ -334,7 +338,14 @@ private:
         } 
         else
         {
-            m_nccl.AllReduce(gradients);
+            if (m_AggregationBuffer == 0 || numGradMatrices == 1)
+            {
+                m_nccl.AllReduce(gradients);
+            }
+            else
+            {
+                m_nccl.AllReduce(m_AggregationBuffer.get());
+            }
         }
 
         // On the main node wait for the headers to arrive and aggregate
@@ -368,41 +379,47 @@ private:
             m_nccl.Broadcast(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank());
         }
 
-        // Wait for the allreduce operations to finish and initiate transfer back to the GPU if needed
-        if (!m_nccl.IsSupported())
+        if (m_nccl.IsSupported())
         {
-            if (m_AggregationBuffer != 0)
+            m_nccl.Sync();
+        }
+
+        // Wait for the allreduce operations to finish and initiate transfer back to the GPU if needed
+        if (m_AggregationBuffer != 0)
+        {
+            if (!m_nccl.IsSupported())
             {
                 m_mpi->Wait(&allReduceRequests[0], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
                 if (deviceId >= 0)
                 {
                     m_gpuDataTransferer->CopyCPUToGPUAsync(m_intermediateCPUBuffer.get(), m_AggregationBuffer->GetNumElements(), m_AggregationBuffer->Data());
                     m_gpuDataTransferer->WaitForCopyCPUToGPUAsync();
-               }
+                }
+            }
 
-                // Copy all gradient data back from the single contiguous buffer used for aggregation
+            // Copy all gradient data back from the single contiguous buffer used for aggregation
+            if (numGradMatrices != 1)
+            {
                 size_t offset = 0;
                 for (size_t i = 0; i < numGradMatrices; ++i)
                 {
                     gradients[i]->AssignValuesOf(m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).Reshaped(gradients[i]->GetNumRows(), gradients[i]->GetNumCols()));
                     offset += gradients[i]->GetNumElements();
-                
-                }
-            }
-            else
-            {
-                for (size_t i = 0; i < numGradMatrices; ++i)
-                {
-                    m_mpi->Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
-                    if (deviceId >= 0)
-                        m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
+
                 }
             }
         }
-
-        if (m_nccl.IsSupported())
-            m_nccl.Sync();
-        else if (deviceId >= 0 && m_AggregationBuffer == 0)
+        else if (!m_nccl.IsSupported())
+        {
+            for (size_t i = 0; i < numGradMatrices; ++i)
+            {
+                m_mpi->Wait(&allReduceRequests[i], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
+                if (deviceId >= 0)
+                    m_gpuDataTransferers[i]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[i].get(), gradients[i]->GetNumElements(), gradients[i]->Data());
+            }
+        }
+        
+        if (deviceId >= 0 && m_AggregationBuffer == 0)
         {
             for (size_t i = 0; i < numGradMatrices; ++i)
                 m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();

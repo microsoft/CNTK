@@ -234,11 +234,7 @@ private:
 
         // Prepare gradients.
         std::vector<::CNTK::NDArrayViewPtr> valuesToAggregate;
-        if (m_nccl.IsSupported()) // nccl is only enabled if all ranks have net on GPUs.
-        {                         // we assume in this case all grad layers are on the GPU too.
-            m_nccl.AllReduce(gradients);
-        }
-        else
+        if (!m_nccl.IsSupported())
         {
             size_t offset = 0;
             for (size_t i = 0; i < gradients.size(); ++i)
@@ -264,6 +260,18 @@ private:
                 ::CNTK::NDShape shape{ m_AggregationBuffer->GetNumElements() };
                 auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(), shape, m_AggregationBuffer->Data(), m_AggregationBuffer->GetNumElements() * sizeof(ElemType), ::CNTK::AsDeviceDescriptor(m_AggregationBuffer->GetDeviceId()));
                 valuesToAggregate.push_back(data);
+            }
+        }
+
+        if (m_nccl.IsSupported()) // nccl is only enabled if all ranks have net on GPUs.
+        {                         // we assume in this case all grad layers are on the GPU too.
+            if (m_AggregationBuffer == 0 || gradients.size() == 1)
+            {
+                m_nccl.AllReduce(gradients);
+            }
+            else
+            {
+                m_nccl.AllReduce(m_AggregationBuffer.get());
             }
         }
 
