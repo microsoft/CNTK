@@ -20,8 +20,13 @@ struct Sequences
     // Indices in the outer vector have to correspond to the stream ids returned from the GetStreamDescriptions().
     std::vector<std::vector<SequenceDataPtr>> m_data;
 
+    // Indicates whether the returned data comes from a sweep end or
+    // crosses a sweep boundary (and as a result includes sequences 
+    // from different sweeps).
+    bool m_endOfSweep{ false };
+
     // Indicates whether the epoch ends with the data returned.
-    bool m_endOfEpoch = false;
+    bool m_endOfEpoch{ false };
 };
 
 class SequenceEnumerator;

@@ -54,6 +54,12 @@ Test module "NetworkTests" has passed with:
     Test case "CropNodeTestSuite/CropNodeBackwardTest" has passed with:
       40 assertions out of 40 passed
 
+Test suite "EditDistanceTests" has passed with:
+    1 test cases out of 1 passed
+    1 assertions out of 1 passed
+
+    Test case "EditDistanceTests/ComputeEditDistanceErrorTest" has passed
+	  
   Test suite "NetworkTestSuite" has passed with:
     1 test case out of 1 passed
     1 assertion out of 1 passed

@@ -1598,8 +1598,8 @@ protected:
         DetermineDataSize(rows, cols);
         try
         {
-        m.VerifySize(rows, cols);
-    }
+            m.VerifySize(rows, cols);
+        }
         catch (const std::exception& e)
         {
             Rethrow(e);
@@ -1671,12 +1671,37 @@ public:
         }
     }
 
-#if 0   // (keep it around in case we need to add stuff in the future)
-        virtual void /*IComputationNode::*/BeginBackprop() override
+    virtual void /*IComputationNode::*/BeginBackprop() override
+    {
+        Base::BeginBackprop();
+
+        if (NeedsGradient())
         {
-            Base::BeginBackprop();
+            // Verify that the shapes of the output/input Value matrices that the gradient backprop for this node needs
+            // are intact and have not been erroneously reshaped due to incorrect memory sharing
+            auto VerifyValueShape = [](const ComputationNode<ElemType>& node) {
+                size_t rows, cols;
+                node.DetermineDataSize(rows, cols);
+
+                auto& valueMatrix = node.Value();
+                if ((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols))
+                {
+                    LogicError("%ls %ls operation found to have incorrect Value() matrix shape %lu x %lu during backprop; expected shape is %lu x %lu. "
+                               "This may be due to incorrect memory sharing.",
+                               node.NodeName().c_str(), node.OperationName().c_str(), valueMatrix.GetNumRows(), valueMatrix.GetNumCols(), rows, cols);
+                }
+            };
+
+            if (IsOutputNeededDuringBackprop())
+                VerifyValueShape(*this);
+
+            for (size_t i = 0; i < m_inputs.size(); i++)
+            {
+                if (InputUsedInComputingInputNodesGradients(i))
+                    VerifyValueShape(InputRef(i));
+            }
         }
-#endif
+    }
 
     virtual void /*IComputationNode::*/ EndBackprop() override
     {

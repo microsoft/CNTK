@@ -61,20 +61,20 @@ void TrainSimpleFeedForwardClassifer(const DeviceDescriptor& device)
 
     LearningRatePerSampleSchedule learningRatePerSample = 0.02;
     minibatchSource = TextFormatMinibatchSource(L"SimpleDataTrain_cntk_text.txt", { { L"features", inputDim }, { L"labels", numOutputClasses } });
-    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
     size_t outputFrequencyInMinibatches = 20;
     size_t trainingCheckpointFrequency = 100;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-        trainer.TrainMinibatch({ { input, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        trainer->TrainMinibatch({ { input, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
 
         if ((i % trainingCheckpointFrequency) == (trainingCheckpointFrequency - 1))
         {
             const wchar_t* ckpName = L"feedForward.net";
-            trainer.SaveCheckpoint(ckpName);
-            trainer.RestoreFromCheckpoint(ckpName);
+            trainer->SaveCheckpoint(ckpName);
+            trainer->RestoreFromCheckpoint(ckpName);
         }
     }
 }
@@ -122,13 +122,13 @@ void TrainMNISTClassifier(const DeviceDescriptor& device)
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
     LearningRatePerSampleSchedule learningRatePerSample = 0.003125;
-    Trainer trainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { SGDLearner(classifierOutput->Parameters(), learningRatePerSample) });
 
     size_t outputFrequencyInMinibatches = 20;
     for (size_t i = 0; i < numMinibatchesToTrain; ++i)
     {
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
-        trainer.TrainMinibatch({ { input, minibatchData[featureStreamInfo].m_data }, { labels, minibatchData[labelStreamInfo].m_data } }, device);
+        trainer->TrainMinibatch({ { input, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
         PrintTrainingProgress(trainer, i, outputFrequencyInMinibatches);
     }
 }

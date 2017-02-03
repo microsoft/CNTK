@@ -289,6 +289,99 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
     }
 
+    NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const
+    {
+        auto rank = Shape().Rank();
+        if (startOffset.size() != rank)
+            InvalidArgument("NDArrayView::SliceView: Rank of the NDArrayView (%d) does not match the dimensionality of the specified slice offset (%d)", (int)rank, (int)startOffset.size());
+
+        if (extent.size() > rank)
+            InvalidArgument("NDArrayView::SliceView: Dimensionality of the specified slice extent (%d) exceeds the rank of this NDArrayView (%d)", (int)extent.size(), (int)rank);
+
+        if (std::find(extent.begin(), extent.end(), 0) != extent.end())
+            InvalidArgument("NDArrayView::SliceView: Specified slice extent contains a zero in at least one axes");
+
+        bool anyPrevAxisSliced = false;
+        NDShape sliceViewShape(extent);
+        std::vector<size_t> endOffset(rank);
+        for (size_t i = 0; i < rank; ++i)
+        {
+            if ((i < sliceViewShape.Rank()) && (sliceViewShape[i] == NDShape::InferredDimension))
+                sliceViewShape[i] = Shape()[i] - startOffset[i];
+
+            endOffset[i] = startOffset[i] + ((i < sliceViewShape.Rank()) ? sliceViewShape[i] : 1);
+
+            if (anyPrevAxisSliced && ((endOffset[i] - startOffset[i]) != 1))
+                InvalidArgument("NDArrayView::SliceView: Cannot create a slice that is not contiguous in memory");
+
+            bool isCurrentAxisSliced = (startOffset[i] != 0) || (endOffset[i] != Shape()[i]);
+            anyPrevAxisSliced = anyPrevAxisSliced || isCurrentAxisSliced;
+        }
+
+        auto flatBufferOffset = AsTensorShape(Shape()).Locate(startOffset);
+        auto sliceViewMatrixDims = GetMatrixDimensions(sliceViewShape);
+        assert((flatBufferOffset % sliceViewMatrixDims.first) == 0);
+        auto sliceMatrixColumnOffset = flatBufferOffset / sliceViewMatrixDims.first;
+        void* tensorView = nullptr;
+        switch (m_dataType)
+        {
+        case DataType::Float:
+        {
+            auto currentMatrix = GetMatrix<float>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            if (sliceViewMatrixDims.first != currentMatrixDims.first)
+                LogicError("NDArrayView::SliceView: Currently only slices that can be realized a slice of the Matrix object underlying this NDArrayView, are allowed");
+
+            auto slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+            tensorView = new TensorView<float>(slicedMatrixView, AsTensorShape(sliceViewShape));
+            break;
+        }
+        case DataType::Double:
+        {
+            auto currentMatrix = GetMatrix<double>();
+            std::pair<size_t, size_t> currentMatrixDims = { currentMatrix->GetNumRows(), currentMatrix->GetNumCols() };
+            if (sliceViewMatrixDims.first != currentMatrixDims.first)
+                LogicError("NDArrayView::SliceView: Currently only slices that can be realized a slice of the Matrix object underlying this NDArrayView, are allowed");
+
+            auto slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
+            tensorView = new TensorView<double>(slicedMatrixView, AsTensorShape(sliceViewShape));
+            break;
+        }
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), sliceViewShape, IsReadOnly() || readOnly, tensorView);
+    }
+
+    NDArrayViewPtr NDArrayView::AsShape(const NDShape& newShape) const
+    {
+        if (newShape.TotalSize() != Shape().TotalSize())
+        {
+            InvalidArgument("NDArrayView::AsShape: The size (%d) of 'source' view shape's (%S) must be same as the size (%d) of the newShape (%S)!",
+                (int)Shape().TotalSize(), AsStringForErrorReporting(Shape()).c_str(),
+                (int)newShape.TotalSize(), AsStringForErrorReporting(newShape).c_str());
+        }
+
+        auto newTensorShape = AsTensorShape(newShape);
+        void* tensorView = nullptr;
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            tensorView = new TensorView<float>(*(GetTensorView<float>()), newTensorShape);
+            break;
+        case DataType::Double:
+            tensorView = new TensorView<double>(*(GetTensorView<double>()), newTensorShape);
+            break;
+        default:
+            LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+
+        return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), newShape, IsReadOnly(), tensorView);
+    }
+
     // TODO: This could actually be strided?
     template <typename ElementType>
     ElementType* NDArrayView::WritableDataBuffer()

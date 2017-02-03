@@ -474,6 +474,32 @@ namespace CNTK
     
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
+    bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_allKnownDynamicAxisNames.insert(axisName).second;
+    }
+
+    const std::wstring& Axis::UniqueDynamicAxesNames::NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_allKnownDynamicAxisNames.find(axisNamePrefix) == m_allKnownDynamicAxisNames.end())
+        {
+            m_allKnownDynamicAxisNames.insert(axisNamePrefix);
+            return axisNamePrefix;
+        }
+
+        for (size_t i = 1;; i++)
+        {
+            auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
+            if (m_allKnownDynamicAxisNames.find(newDynamicAxisName) == m_allKnownDynamicAxisNames.end())
+            {
+                m_allKnownDynamicAxisNames.insert(newDynamicAxisName);
+                return *m_allKnownDynamicAxisNames.find(newDynamicAxisName);
+            }
+        }
+    }
+
     static std::shared_ptr<std::vector<Axis>> s_defaultInputVariableDynamicAxes, s_unknownDynamicAxes;
     static std::once_flag s_initDefaultInputVariableDynamicAxesFlag, s_initUnknownDynamicAxesFlag;
 
@@ -527,5 +553,17 @@ namespace CNTK
     size_t GetMaxNumCPUThreads()
     {
         return Microsoft::MSR::CNTK::CPUMatrix<float>::GetMaxNumThreads();
+    }
+
+    static std::atomic<bool> s_defaultUnitGainValue(true);
+
+    bool DefaultUnitGainValue() 
+    {
+        return s_defaultUnitGainValue;
+    }
+
+    void SetDefaultUnitGainValue(bool value) 
+    {
+        s_defaultUnitGainValue.store(value);
     }
 }

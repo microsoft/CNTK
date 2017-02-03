@@ -19,7 +19,7 @@ def test_rnn_error(device_id):
     error, loss = train_sequence_classifier()
 
     expected_error = 0.333333
-    expected_loss  = 1.060453
+    expected_loss  = 1.12
 
     assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)
     assert np.allclose(loss, expected_loss, atol=TOLERANCE_ABSOLUTE)

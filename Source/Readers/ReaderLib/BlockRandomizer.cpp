@@ -29,7 +29,7 @@ BlockRandomizer::BlockRandomizer(
       m_epochSize(SIZE_MAX),
       m_globalSamplePosition(SIZE_MAX),
       m_epochStartPosition(0),
-      m_sweepTotalNumberOfSamples(0),
+      m_sweepSizeInSamples(0),
       m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence),
       m_prefetchedChunk(CHUNKID_MAX),
@@ -43,10 +43,10 @@ BlockRandomizer::BlockRandomizer(
     m_sequenceRandomizer = std::make_shared<SequenceRandomizer>(verbosity, m_deserializer, m_chunkRandomizer);
 
     // Calculate total number of samples.
-    m_sweepTotalNumberOfSamples = 0;
+    m_sweepSizeInSamples = 0;
     for (auto const & chunk : m_deserializer->GetChunkDescriptions())
     {
-        m_sweepTotalNumberOfSamples += chunk->m_numberOfSamples;
+        m_sweepSizeInSamples += chunk->m_numberOfSamples;
     }
 }
 
@@ -63,7 +63,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
     m_config = config;
     if (config.m_totalEpochSizeInSamples == requestDataSize)
     {
-        m_epochSize = m_sweepTotalNumberOfSamples;
+        m_epochSize = m_sweepSizeInSamples;
     }
     else
     {
@@ -92,7 +92,7 @@ void BlockRandomizer::StartEpoch(const EpochConfiguration& config)
 // Prepares a new sweep if needed.
 void BlockRandomizer::PrepareNewSweepIfNeeded(size_t samplePosition)
 {
-    size_t sweep = samplePosition / m_sweepTotalNumberOfSamples;
+    size_t sweep = samplePosition / m_sweepSizeInSamples;
     if (m_sweep != sweep)
     {
         if (m_verbosity >= Notification)
@@ -115,32 +115,94 @@ Sequences BlockRandomizer::GetNextSequences(size_t globalSampleCount, size_t loc
 {
     // Get next sequence descriptions.
     Sequences result;
-    ClosedOpenChunkInterval windowRange;
-    m_sequenceBuffer.clear();
-    result.m_endOfEpoch = GetNextSequenceDescriptions(globalSampleCount, localSampleCount, m_sequenceBuffer, windowRange);
-    if (m_sequenceBuffer.size() == 0)
+    size_t numGlobalSamplesLoaded = 0, numLocalSamplesLoaded = 0;
+    do
     {
-        return result;
+        assert(globalSampleCount > numGlobalSamplesLoaded && localSampleCount > numLocalSamplesLoaded);
+        bool atTheSweepBoundary = result.m_endOfSweep;
+        // in case when we continue filling up a minibatch that crosses a sweep boundary, 
+        // make sure that it does not exceed the required number of samples. Set the atLeastOnceSequenceNeeded
+        // flag to false.
+        size_t numGlobalSamples = 0, numLocalSamples = 0;
+        std::tie(numGlobalSamples, numLocalSamples) = 
+            LoadSequenceData(globalSampleCount - numGlobalSamplesLoaded, 
+                             localSampleCount - numLocalSamplesLoaded,
+                             result, !atTheSweepBoundary);
+
+        if (atTheSweepBoundary && numGlobalSamples == 0)
+        {
+            break;
+        }
+
+        numGlobalSamplesLoaded += numGlobalSamples;
+        numLocalSamplesLoaded += numLocalSamples;
+
+    } while (m_config.m_allowMinibatchesToCrossSweepBoundaries && 
+             !result.m_endOfEpoch &&
+             result.m_endOfSweep &&
+             globalSampleCount > numGlobalSamplesLoaded &&
+             localSampleCount > numLocalSamplesLoaded);
+
+    m_cleaner.Clean(result);
+
+    return result;
+}
+
+std::pair<size_t, size_t> BlockRandomizer::LoadSequenceData(size_t globalSampleCount, size_t localSampleCount, Sequences& sequences, bool atLeastOneSequenceNeeded)
+{
+    ClosedOpenChunkInterval windowRange;    
+    m_sequenceBuffer.clear();
+    size_t numGlobalSamples = 0, numLocalSamples = 0; // actual number of samples to load (filled in from the sequence descriptions) 
+    bool endOfSweep, endOfEpoch;
+    std::tie(endOfSweep, endOfEpoch, numGlobalSamples, numLocalSamples) = GetNextSequenceDescriptions(globalSampleCount, localSampleCount, m_sequenceBuffer, windowRange, atLeastOneSequenceNeeded);
+    sequences.m_endOfSweep |= endOfSweep;
+    sequences.m_endOfEpoch |= endOfEpoch;
+    
+    assert(atLeastOneSequenceNeeded || (numGlobalSamples <= globalSampleCount && numLocalSamples <= localSampleCount));
+
+    if (numGlobalSamples == 0)
+    {
+        assert(!atLeastOneSequenceNeeded || sequences.m_endOfEpoch);
+        return {0, 0};
     }
 
     // Retrieve new data chunks if required.
     LoadDataChunks(windowRange);
 
-    result.m_data.resize(m_streams.size(), std::vector<SequenceDataPtr>(m_sequenceBuffer.size()));
+    auto& data = sequences.m_data;
+    size_t offset = 0;
+
+    if (data.empty())
+    {
+        data.resize(m_streams.size(), std::vector<SequenceDataPtr>(m_sequenceBuffer.size()));
+    }
+    else
+    {
+        // sequence data is not empty, we're appending new items to exiting 
+        // sequence data vectors.
+        offset = data.front().size();
+        for (auto& sequenceDataVector : data)
+        {
+            // make sure that all streams contain the same number of sequences
+            assert(sequenceDataVector.size() == offset); 
+            sequenceDataVector.resize(offset + m_sequenceBuffer.size());
+        }
+    }
 
     auto process = [&](int i) -> void {
         const auto& description = m_sequenceBuffer[i];
-        std::vector<SequenceDataPtr> sequence;
+        std::vector<SequenceDataPtr> sequenceData;
         auto it = m_chunks.find(description.m_chunk->m_original->m_id);
         if (it == m_chunks.end())
         {
             LogicError("Invalid chunk requested.");
         }
 
-        it->second->GetSequence(description.m_id, sequence);
+        it->second->GetSequence(description.m_id, sequenceData);
         for (int j = 0; j < m_streams.size(); ++j)
         {
-            result.m_data[j][i] = sequence[j];
+            assert(offset + i < data[j].size());
+            data[j][offset + i] = sequenceData[j];
         }
     };
 
@@ -158,18 +220,16 @@ Sequences BlockRandomizer::GetNextSequences(size_t globalSampleCount, size_t loc
             process(i);
     }
 
-    m_cleaner.Clean(result);
-
     // Now it is safe to start the new chunk prefetch.
     ChunkIdType chunkToPrefetchNext = GetChunkToPrefetch(windowRange);
     Prefetch(chunkToPrefetchNext);
 
-    return result;
+    return { numGlobalSamples, numLocalSamples };
 }
 
 // Get next sequence descriptions for that worker that do not exceed global and local sample count.
 // Returns true if epoch end is reached.
-bool BlockRandomizer::GetNextSequenceDescriptions(size_t globalSampleCount, size_t localSampleCount, std::vector<RandomizedSequenceDescription>& result, ClosedOpenChunkInterval& windowRange)
+std::tuple<bool, bool, size_t, size_t> BlockRandomizer::GetNextSequenceDescriptions(size_t globalSampleCount, size_t localSampleCount, std::vector<RandomizedSequenceDescription>& result, ClosedOpenChunkInterval& windowRange, bool atLeastOneSequenceNeeded)
 {
     if (globalSampleCount == 0)
         LogicError("Global sample count must not be zero.");
@@ -179,17 +239,22 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t globalSampleCount, size
 
     PrepareNewSweepIfNeeded(m_globalSamplePosition);
 
+    auto sweepPosition = m_globalSamplePosition % m_sweepSizeInSamples;
+    auto epochEndPosition = m_epochSize + m_epochStartPosition;
+
     // Check epoch end.
-    if (m_globalSamplePosition >= m_epochSize + m_epochStartPosition)
+    if (m_globalSamplePosition >= epochEndPosition)
     {
-        return true;
+        auto reachedEndOfEpoch = true;
+        auto reachedEndOfSweep = (m_globalSamplePosition >= m_sweepSizeInSamples) && (sweepPosition == 0);
+        return std::make_tuple(reachedEndOfSweep, reachedEndOfEpoch, 0, 0);
     }
 
     // Global sample count should not exceed the epoch.
-    globalSampleCount = std::min(globalSampleCount, m_epochSize + m_epochStartPosition - m_globalSamplePosition);
+    globalSampleCount = std::min(globalSampleCount, epochEndPosition - m_globalSamplePosition);
 
     // Global sample count should also not exceed the sweep.
-    globalSampleCount = std::min(globalSampleCount, (long)m_sweepTotalNumberOfSamples - m_globalSamplePosition % m_sweepTotalNumberOfSamples);
+    globalSampleCount = std::min(globalSampleCount, m_sweepSizeInSamples - sweepPosition);
 
     if (globalSampleCount == 0)
         LogicError("Global sample count must not result in zero.");
@@ -197,12 +262,17 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t globalSampleCount, size
     std::function<bool(const RandomizedSequenceDescription*)> isLocalSequence =
         [this](const RandomizedSequenceDescription* s) { return s->m_chunk->m_chunkId % m_config.m_numberOfWorkers == m_config.m_workerRank; };
 
-    size_t actualNumberOfGlobalSamples = m_sequenceRandomizer->GetNextSequenceDescriptions(
+    size_t actualNumberOfGlobalSamples = 0, actualNumberOfLocalSamples = 0;
+    std::tie(actualNumberOfGlobalSamples, actualNumberOfLocalSamples) = m_sequenceRandomizer->GetNextSequenceDescriptions(
         globalSampleCount,
         localSampleCount,
         isLocalSequence,
         windowRange,
-        result);
+        result,
+        atLeastOneSequenceNeeded);
+
+    if (actualNumberOfLocalSamples > actualNumberOfGlobalSamples)
+        LogicError("Local sample count cannot be greater than the global sample count.");
 
     if (m_verbosity >= Debug)
         fprintf(stderr, "BlockRandomizer::GetNextSequenceDescriptions(): getting %" PRIu64 " sequences for %" PRIu64 "/%" PRIu64 " requested local/global samples in sweep %" PRIu64 "\n",
@@ -211,10 +281,15 @@ bool BlockRandomizer::GetNextSequenceDescriptions(size_t globalSampleCount, size
                 globalSampleCount,
                 m_sweep);
 
+    // set "reachedEndOfSweep" to true if the minibatch is last in a sweep
+    auto reachedEndOfSweep = (sweepPosition + actualNumberOfGlobalSamples >= m_sweepSizeInSamples);
+    // set "reachedEndOfEpoch" to true if the current batch is last in an epoch.
+    auto reachedEndOfEpoch = (m_globalSamplePosition + actualNumberOfGlobalSamples >= epochEndPosition);
+
+    // Update the global sample position.
     m_globalSamplePosition += actualNumberOfGlobalSamples;
 
-    // return true if the current batch is last in an epoch.
-    return m_globalSamplePosition >= m_epochSize + m_epochStartPosition;
+    return std::make_tuple(reachedEndOfSweep, reachedEndOfEpoch, actualNumberOfGlobalSamples, actualNumberOfLocalSamples);
 }
 
 // Retrieves chunk data based on the window information provided by SequenceRandomizer
@@ -350,9 +425,9 @@ void BlockRandomizer::SetCurrentSamplePosition(size_t currentSamplePosition)
 
     // Sets sequence cursor to the sequence that corresponds to the epoch start position.
     // If last epoch ended in the middle of a sequence, the cursor is moved to the next sequence in the sweep.
-    size_t offsetInSweep = currentSamplePosition % m_sweepTotalNumberOfSamples;
+    size_t offsetInSweep = currentSamplePosition % m_sweepSizeInSamples;
     size_t newOffset = m_sequenceRandomizer->Seek(offsetInSweep, m_sweep);
-    m_globalSamplePosition = m_sweep * m_sweepTotalNumberOfSamples + newOffset;
+    m_globalSamplePosition = m_sweep * m_sweepSizeInSamples + newOffset;
 
     // Check if we have some data, if not set to the end of epoch.
     if (m_config.m_workerRank >= m_chunkRandomizer->GetRandomizedChunks().size())

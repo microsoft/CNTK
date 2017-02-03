@@ -11,7 +11,7 @@
 # TODO: further clean up the dependencies
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias
+from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, as_block
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
 from cntk.utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from cntk.utils import Record, _as_tuple
@@ -160,15 +160,13 @@ def _initializer_for(init, rank_params=None):
     return init
 
 # turn a Function into a Block, with a new name and an optional dictionary of named parameters
-# All layers functions call this at the end.
-# BUGBUG: does not actually exist yet, faking it
-# BUGBUG: should create a new object, but does it in-place instead. Works for current usage, but should be fixed.
-# BUGBUG: using combine causes an error ater, so the name actually does not get changed
-# BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
-def Block(f, op_name, members={}):
-    #f = combine([f], op_name)  # 'combine' to create a separate identity so we can reassign the debug name --BUGBUG: "Unknown DataType"
-    #_name_node(f, op_name) ; _extend_Function(f)  # debugging
-    for key in members:   # self.__dict__.update(args_dict)
+# All layers functions call this at the end. 
+def Block(f, op_name, name='', members={}, make_block=False): 
+    if make_block: 
+        inner_args = f.arguments
+        args_map = [(arg, Placeholder(name=arg.name)) for arg in inner_args]
+        f = as_block(f, args_map, op_name, name)
+    for key in members:
         f.__dict__[key] = members[key]
     return f
 
@@ -210,7 +208,7 @@ identity = _Identity()
 
 # TODO: add a flag enable_self_stabilizer (maybe rename it) default to True, overridable by default_options
 # This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
-def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_default_or_False):
+def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_default_or_False, name=''):
     if _is_given(enable_self_stabilization):
         raise NotImplementedError('Stagbilizer: enable_self_stabilization flag not implemented yet')
     #enable_self_stabilization = enable_self_stabilization if _is_given(enable_self_stabilization) else _current_default_options.enable_self_stabilization
@@ -230,7 +228,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=enable_self_stabilization_
     # TODO: risk of confusion; can these functions be namespaced?
     beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething
     apply_x = beta * x
-    return Block(apply_x, 'Stabilizer', Record(beta=beta))
+    return Block(apply_x, 'Stabilizer', name, Record(beta=beta), make_block=True)
 
 def LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
          init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,

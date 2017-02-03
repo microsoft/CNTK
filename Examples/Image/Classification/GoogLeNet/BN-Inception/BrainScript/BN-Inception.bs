@@ -1,0 +1,47 @@
+#
+# BN-Inception network definition
+# Details are in https://arxiv.org/pdf/1502.03167v3.pdf
+#
+
+BN_Inception(input, labelDim, bnScale, bnTimeConst) =
+{
+    # 224 x 224 x 3
+    conv1 = ConvBNReLULayer{64, (7:7), (2:2), true, bnScale, bnTimeConst}(input)
+    # 112 x 112 x 64
+    pool1 = MaxPoolingLayer{(3:3), stride = (2:2), pad = true}(conv1)
+    # 56 x 56 x 64
+    conv2a = ConvBNReLULayer{64, (1:1), (1:1), true, bnScale, bnTimeConst}(pool1)
+    # 56 x 56 x 64
+    conv2b = ConvBNReLULayer{192, (3:3), (1:1), true, bnScale, bnTimeConst}(conv2a)
+    # 56 x 56 x 192
+    pool2 = MaxPoolingLayer{(3:3), stride = (2:2), pad = true}(conv2b)
+    
+    # Inception Blocks
+    # 28 x 28 x 192
+    inception3a = InceptionWithAvgPoolLayer{64, 64, 64, 64, 96, 32, bnScale, bnTimeConst}(pool2) 
+    # 28 x 28 x 256
+    inception3b = InceptionWithAvgPoolLayer{64, 64, 96, 64, 96, 64, bnScale, bnTimeConst}(inception3a) 
+    # 28 x 28 x 320
+    inception3c = InceptionPassThroughLayer{0, 128, 160, 64, 96, 0, bnScale, bnTimeConst}(inception3b) 
+    # 14 x 14 x 576
+    inception4a = InceptionWithAvgPoolLayer{224, 64, 96, 96, 128, 128, bnScale, bnTimeConst}(inception3c) 
+    # 14 x 14 x 576
+    inception4b = InceptionWithAvgPoolLayer{192, 96, 128, 96, 128, 128, bnScale, bnTimeConst}(inception4a) 
+    # 14 x 14 x 576
+    inception4c = InceptionWithAvgPoolLayer{160, 128, 160, 128, 160, 128, bnScale, bnTimeConst}(inception4b) 
+    # 14 x 14 x 576
+    inception4d = InceptionWithAvgPoolLayer{96, 128, 192, 160, 192, 128, bnScale, bnTimeConst}(inception4c) 
+    # 14 x 14 x 576
+    inception4e = InceptionPassThroughLayer{0, 128, 192, 192, 256, 0, bnScale, bnTimeConst}(inception4d)
+    # 7 x 7 x 1024
+    inception5a = InceptionWithAvgPoolLayer{352, 192, 320, 160, 224, 128, bnScale, bnTimeConst}(inception4e) 
+    # 7 x 7 x 1024
+    inception5b = InceptionWithMaxPoolLayer{352, 192, 320, 192, 224, 128, bnScale, bnTimeConst}(inception5a) 
+    
+    # Global Average
+    # 7 x 7 x 1024
+    pool3 = AveragePoolingLayer{(7:7)}(inception5b)
+    # 1 x 1 x 1024
+    z = LinearLayer{labelDim, init = 'heNormal'}(pool3)
+}
+

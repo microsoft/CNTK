@@ -247,7 +247,7 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncate(const Elem
 
 // normal update for smoothed gradients c and current gradients (this)
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum)
+void GPUSparseMatrix<ElemType>::NormalGrad(GPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
 {
 }
 template <class ElemType>
@@ -255,8 +255,17 @@ ElemType GPUSparseMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& c, const bool n
 {
     return 1;
 }
-//template<class ElemType>
-//void GPUSparseMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType) { }
+
+template<class ElemType>
+void GPUSparseMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>&, GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType, bool)
+{
+}
+
+template<class ElemType>
+ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType, ElemType, const bool)
+{
+    return 1;
+}
 
 template <class ElemType>
 void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPUSparseMatrix<ElemType>& a, const bool transposeA,
@@ -346,6 +355,11 @@ template <class ElemType>
 ElemType GPUSparseMatrix<ElemType>::InnerProductOfMatrices(const GPUMatrix<ElemType>& /*a*/, const GPUSparseMatrix<ElemType>& /*b*/)
 {
     return ElemType(0);
+}
+
+template <class ElemType>
+void GPUSparseMatrix<ElemType>::InnerProduct(const GPUSparseMatrix<ElemType>&, const GPUMatrix<ElemType>&, GPUMatrix<ElemType>&, const bool)
+{
 }
 
 template <class ElemType>
@@ -1057,8 +1071,9 @@ ElemType GPUMatrix<ElemType>::Adagrad(GPUMatrix<ElemType>& gradients, const bool
 {
     return 0;
 }
+
 template <class ElemType>
-void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul)
+void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
 {
 }
 

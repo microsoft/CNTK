@@ -666,7 +666,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0.beta7.0+ (");
+    fprintf(stderr, "CNTK 2.0.beta10.0+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -860,6 +860,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
             PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
             LOGPRINTF(stderr, "No command-line argument given.\n");
             PrintUsageInfo();
+            fflush(stderr);
             return EXIT_FAILURE;
         }
 

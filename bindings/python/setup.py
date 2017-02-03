@@ -16,9 +16,10 @@ if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
 
 if IS_WINDOWS:
     if os.system('cl 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
-        print("Compiler was not found in path. Please run this from a Visual Studio 2013 x64 Native Tools Command Prompt,\n"
-              "e.g., by running the following command:\n"
-              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 12.0\\VC\\vcvarsall\" amd64\n")
+        print("Compiler was not found in path.\n"
+              "Make sure you installed the C++ tools during Visual Studio 2015 install and \n"
+              "run vcvarsall.bat from a DOS command prompt:\n"
+              "  \"C:\\Program Files (x86)\\Microsoft Visual Studio 14.0\\VC\\vcvarsall\" amd64\n")
         sys.exit(1)
 
     try:
@@ -105,6 +106,7 @@ if IS_WINDOWS:
         "/EHsc",
         "/DEBUG",
         "/Zi",
+        "/WX"
     ]
     extra_link_args = ['/DEBUG']
     runtime_library_dirs = []
@@ -126,7 +128,7 @@ cntk_module = Extension(
     name="_cntk_py",
 
     sources = [os.path.join("cntk", "cntk_py.i")],
-    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
+    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon, "-Werror" ],
     libraries = link_libs,
     library_dirs = [CNTK_LIB_PATH],
 
@@ -159,7 +161,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta7.0",
+      version="2.0.beta10.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

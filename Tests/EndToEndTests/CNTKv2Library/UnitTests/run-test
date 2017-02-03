@@ -22,7 +22,7 @@ TestDataDir=$TEST_RUN_DIR/TestData
 mkdir $TestDataDir
 cp -R $DataSourceDir/MNIST/v0/Train-28x28_cntk_text.txt $TestDataDir || exit $?
 cp -R $DataSourceDir/CIFAR/v0/cifar-10-batches-py $TestDataDir || exit $?
-cp -R $TEST_DIR/../../Simple2d/Data/SimpleDataTrain_cntk_text.txt $TestDataDir || exit $?
+cp -R $TEST_DIR/../../Simple2d/Data/SimpleDataT*_cntk_text.txt $TestDataDir || exit $?
 cp -R $TEST_DIR/../../Text/SequenceClassification/Data/Train.ctf $TestDataDir || exit $?
 cp -R $TEST_DIR/../../../../Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b.train-dev-20-21.ctf $TestDataDir || exit $?
 cp -R $TEST_DIR/../../../../Examples/Speech/AN4/Data/* $TestDataDir || exit $?
@@ -43,6 +43,20 @@ DeleteModelsAfterTest=0
 [ -f $ConfigDir/01_OneHidden.cntk ] || exit 1
 cntkrun 01_OneHidden.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
 cp $OutputDir/Models/01_OneHidden $TestDataDir || exit $?
+
+
+# Train model that is used by LoadLegacyModel tests.
+# Setup predefined variables $DataDir, $ConfigDir, and $OutputDir that are required by cntkrun
+ConfigDir=$TEST_ROOT_DIR/../../Examples/Speech/AN4/Config
+OutputDir=$ConfigDir/../Output
+DataDir=$ConfigDir/../Data
+
+[ -d $OutputDir ] || mkdir $OutputDir || exit $?
+[ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
+DeleteModelsAfterTest=0
+[ -f $ConfigDir/FeedForward.cntk ] || exit 1
+cntkrun FeedForward.cntk "stderr=- command=speechTrain parallelTrain=false speechTrain=[SGD=[maxEpochs=1]]" || exit $?
+cp $OutputDir/Models/cntkSpeechFF.dnn $TestDataDir || exit $?
 
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
 if [ "$TEST_DEVICE" == "cpu" ]; then

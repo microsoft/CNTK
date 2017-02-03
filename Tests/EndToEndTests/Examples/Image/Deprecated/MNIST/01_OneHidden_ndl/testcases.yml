@@ -2,9 +2,9 @@ dataDir: ../../../../../../../Examples/Image/DataSets/MNIST
 
 tags:
     # In BVT, run Release GPU
-    - bvt-e (build_sku=='gpu') and (device=='gpu') and (flavor=='release') 
+    - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release') 
     # In Nightly on Linux, additionally run Debug GPU and Release CPU
-    - nightly-e (build_sku=='gpu') and (((device=='gpu') and (flavor=='release')) or (os=='linux' and ((flavor=='debug') ^ (device=='cpu'))))
+    - nightly-e (build_sku == 'gpu') and (((device == 'gpu') and (flavor == 'release')) or (os == 'linux' and ((flavor == 'debug') ^ (device == 'cpu'))))
 
 testCases:
   CNTK Run must be completed:

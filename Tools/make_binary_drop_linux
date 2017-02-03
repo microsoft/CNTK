@@ -144,7 +144,7 @@ opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cuda/lib64"
+cudnnPath="/usr/local/cudnn/cuda/lib64"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"
 kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
@@ -173,8 +173,6 @@ cp -r $buildPath/* $baseBinariesPath
 # General TODO: Implement White List of Binary Drop contents.
 # For the time being "cherry pick"  removal of unneeded files
 #
-# Remove Py 2.7 for the time being
-rm -f $baseBinariesPath/python/cntk*27*27*.whl
 rm -f $baseBinariesPath/bin/brainscripttests
 rm -f $baseBinariesPath/bin/cppevalclient
 rm -f $baseBinariesPath/bin/cppevalextendedclient

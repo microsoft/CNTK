@@ -10,8 +10,7 @@
 namespace CNTK
 {
     DistributedLearnerBase::DistributedLearnerBase(DistributedCommunicatorPtr communicator, LearnerPtr learner, size_t distributeAfterSamples)
-        : DistributedLearner(communicator, learner),
-          m_distributeAfterSamples(distributeAfterSamples)
+        : DistributedLearner(communicator, learner, distributeAfterSamples)
     {
         if (!m_learner)
             InvalidArgument("Learner is not allowed to be null.");

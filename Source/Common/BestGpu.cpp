@@ -61,8 +61,6 @@ struct ProcessorData
     nvmlMemory_t memory;
     nvmlUtilization_t utilization;
     cudaDeviceProp deviceProp;
-    size_t cudaFreeMem;
-    size_t cudaTotalMem;
     bool cntkFound;
     int deviceId; // the deviceId (cuda side) for this processor
 };
@@ -270,29 +268,16 @@ void BestGpu::GetCudaProperties()
     if (m_cudaData)
         return;
 
-    int currentDevice, rc;
-    rc = cudaGetDevice(&currentDevice);
     int dev = 0;
 
     for (ProcessorData* pd : m_procData)
     {
-        cudaSetDevice(dev);
         pd->deviceId = dev;
         cudaGetDeviceProperties(&pd->deviceProp, dev);
-        size_t free;
-        size_t total;
-        cudaMemGetInfo(&free, &total);
         pd->cores = _ConvertSMVer2Cores(pd->deviceProp.major, pd->deviceProp.minor) * pd->deviceProp.multiProcessorCount;
-        pd->cudaFreeMem = free;
-        pd->cudaTotalMem = total;
         dev++;
-        cudaDeviceReset();
     }
     m_cudaData = m_procData.size() > 0;
-    if (rc == CUDA_SUCCESS)
-    {
-        cudaSetDevice(currentDevice);
-    }
 }
 
 void BestGpu::Init()
@@ -486,10 +471,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
         score = (1.0 - pd->utilization.gpu / 75.0f) * utilGpuW;
         score += (1.0 - pd->utilization.memory / 60.0f) * utilMemW;
         score += pd->cores / 1000.0f * speedW;
-        double mem = pd->memory.total > 0 ? pd->memory.free / (double) pd->memory.total : 1000000; // I saw this to be 0 when remoted in
-        // if it's not a tcc driver, then it's WDDM driver and values will be off because windows allocates all the memory from the nvml point of view
-        if (!pd->deviceProp.tccDriver || pd->memory.total == 0)
-            mem = pd->cudaFreeMem / (double) pd->cudaTotalMem;
+        double mem = pd->memory.total > 0 ? pd->memory.free / (double) pd->memory.total : 1; // I saw this to be 0 when remoted in
         score += mem * freeMemW;
         score += (pd->cntkFound ? 0 : 1) * mlAppRunningW;
         for (int i = 0; i < best.size(); i++)

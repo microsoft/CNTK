@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+# Visual Studio 14
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTK", "Source\CNTK\CNTK.vcxproj", "{E6F26F9A-FF64-4F0A-B749-CD309EE357EE}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -134,8 +134,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ComputationNetworkLib", "So
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "SGDLib", "Source\SGDLib\SGDLib.vcxproj", "{DE3C54E5-D7D0-47AF-A783-DFDCE59E7937}"
 	ProjectSection(ProjectDependencies) = postProject
-		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
 		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {4B442D34-641A-4B37-9A4B-D18DBE28A979}
+		{16F14058-B116-49D9-8BA0-209F3AFFE849} = {16F14058-B116-49D9-8BA0-209F3AFFE849}
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ParallelTraining", "ParallelTraining", "{5E666C53-2D82-49C9-9127-3FDDC321C741}"
@@ -568,6 +568,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Speech", "Speech", "{FB7AF7B9-6BEA-459F-94D9-94D53916D2B6}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ReaderLib", "Source\Readers\ReaderLib\ReaderLib.vcxproj", "{F0A9637C-20DA-42F0-83D4-23B4704DE602}"
+	ProjectSection(ProjectDependencies) = postProject
+		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {4B442D34-641A-4B37-9A4B-D18DBE28A979}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AN4", "AN4", "{AC7BA8D3-B4C8-42A4-8507-B359BB6D49E8}"
 EndProject
@@ -1448,7 +1451,40 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "PerformanceProfilerDll", "S
 		{86883653-8A61-4038-81A0-2379FAE4200A} = {86883653-8A61-4038-81A0-2379FAE4200A}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryManagedExamplesTest", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryManagedExamplesTest\CNTKLibraryManagedExamplesTest.csproj", "{3500A847-E024-4E7D-92DD-CC587C17460B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryCSEvalExamplesTest", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryCSEvalExamplesTest\CNTKLibraryCSEvalExamplesTest.csproj", "{3500A847-E024-4E7D-92DD-CC587C17460B}"
+	ProjectSection(ProjectDependencies) = postProject
+		{50EF9EE6-5018-453E-A063-F77044EF1A97} = {50EF9EE6-5018-453E-A063-F77044EF1A97}
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "GoogLeNet", "GoogLeNet", "{789B4AB8-40F1-4A37-823A-BC20D80C8BF1}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\README.md = Examples\Image\Classification\GoogLeNet\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BN-Inception", "BN-Inception", "{CE223840-1DEE-4849-B530-F06BEE05BAA8}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\BN-Inception\README.md = Examples\Image\Classification\GoogLeNet\BN-Inception\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "InceptionV3", "InceptionV3", "{824766FA-759A-4466-9C39-13200D2D3159}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\InceptionV3\README.md = Examples\Image\Classification\GoogLeNet\InceptionV3\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript", "{BD07C9F3-B10C-4C21-82BC-4F249B65DDFE}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionBlocks.bs = Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionBlocks.bs
+		Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionV3.bs = Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionV3.bs
+		Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionV3.cntk = Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\InceptionV3.cntk
+		Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\README.md = Examples\Image\Classification\GoogLeNet\InceptionV3\BrainScript\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript", "{5CC403B9-2405-4FFB-A73B-DAE0DC986C76}"
+	ProjectSection(SolutionItems) = preProject
+		Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\BN-Inception.bs = Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\BN-Inception.bs
+		Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\BN-Inception.cntk = Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\BN-Inception.cntk
+		Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\InceptionLayers.bs = Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\InceptionLayers.bs
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -2104,5 +2140,10 @@ Global
 		{CB4566F1-6C8F-4270-83EE-F6AED84EBB2B} = {39C3C8CA-9A8A-4733-ADBB-3E19D0F52528}
 		{4B442D34-641A-4B37-9A4B-D18DBE28A979} = {DD043083-71A4-409A-AA91-F9C548DCF7EC}
 		{3500A847-E024-4E7D-92DD-CC587C17460B} = {05E45AF7-C069-4057-BC16-0A532D068CE4}
+		{789B4AB8-40F1-4A37-823A-BC20D80C8BF1} = {151202CF-C2E4-47A6-A31C-CE039D698519}
+		{CE223840-1DEE-4849-B530-F06BEE05BAA8} = {789B4AB8-40F1-4A37-823A-BC20D80C8BF1}
+		{824766FA-759A-4466-9C39-13200D2D3159} = {789B4AB8-40F1-4A37-823A-BC20D80C8BF1}
+		{BD07C9F3-B10C-4C21-82BC-4F249B65DDFE} = {824766FA-759A-4466-9C39-13200D2D3159}
+		{5CC403B9-2405-4FFB-A73B-DAE0DC986C76} = {CE223840-1DEE-4849-B530-F06BEE05BAA8}
 	EndGlobalSection
 EndGlobal

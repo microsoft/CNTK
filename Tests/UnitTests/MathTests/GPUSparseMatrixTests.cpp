@@ -413,11 +413,28 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixInnerProduct, RandomSeedFixture)
     GPUSparseMatrix<float> matrixOp1(c_deviceIdZero);
     BOOST_CHECK(matrixOp1.IsEmpty());
     matrixOp1.SetMatrixFromCSRFormat(c_i, c_j, c_v, c_size, c_rowCount, c_colCount);
+    GPUMatrix<float> matrixOp1Dense = matrixOp1.CopyToDenseMatrix();
 
     const GPUMatrix<float> matrixOp2(GPUMatrix<float>::RandomUniform(c_rowCount, c_colCount, c_deviceIdZero, -3, 4, IncrementCounter()));
     const float x = GPUSparseMatrix<float>::InnerProductOfMatrices(matrixOp1, matrixOp2);
-    const float y = GPUMatrix<float>::InnerProductOfMatrices(matrixOp1.CopyToDenseMatrix(), matrixOp2);
+    const float y = GPUMatrix<float>::InnerProductOfMatrices(matrixOp1Dense, matrixOp2);
     BOOST_CHECK(fabsf(x - y) < c_epsilonFloatE5);
+
+    GPUSparseMatrix<float> matrixOp1CSC(matrixOp1Dense, matrixFormatSparseCSC);
+    const float x1 = GPUSparseMatrix<float>::InnerProductOfMatrices(matrixOp1CSC, matrixOp2);
+
+    BOOST_CHECK(fabsf(x1 - y) < c_epsilonFloatE5);
+
+    for(bool isColWise : {true, false})
+    {
+        GPUMatrix<float> matrixInnerProductDense(c_deviceIdZero);
+        GPUMatrix<float> matrixInnerProductSparse(c_deviceIdZero);
+
+        GPUMatrix<float>::InnerProduct(matrixOp1Dense, matrixOp2, matrixInnerProductDense, isColWise);
+        GPUSparseMatrix<float>::InnerProduct(matrixOp1CSC, matrixOp2, matrixInnerProductSparse, isColWise);
+
+        BOOST_CHECK(matrixInnerProductDense.IsEqualTo(matrixInnerProductSparse, c_epsilonFloatE5));
+    }
 }
 
 BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixColumnSlice, RandomSeedFixture)

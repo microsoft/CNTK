@@ -100,9 +100,15 @@ public:
         return m_endOfEpoch;
     }
 
+    bool IsEndOfSweep() const
+    {
+        return m_endOfSweep;
+    }
+
 private:
     struct PrefetchResult
     {
+        bool m_isEndOfSweep;
         bool m_isEndOfEpoch;
         bool m_isDataAvailable;
     };
@@ -113,6 +119,7 @@ private:
     ReaderPtr m_reader;
     ReaderFactory m_factory;
     bool m_endOfEpoch;
+    bool m_endOfSweep;
 
     size_t m_numParallelSequences;
 

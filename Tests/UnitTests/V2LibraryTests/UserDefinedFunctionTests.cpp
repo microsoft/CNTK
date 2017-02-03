@@ -23,7 +23,7 @@ public:
 
 public:
 
-    BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
+    BackPropStatePtr Forward(const std::vector<ValuePtr>& inputValues,
                              std::unordered_map<Variable, ValuePtr>& outputs,
                              const DeviceDescriptor& computeDevice,
                              const std::unordered_set<Variable>& outputsToRetainBackwardStateFor) override
@@ -33,14 +33,22 @@ public:
         if (!outputsToRetainBackwardStateFor.empty())
             retainBackwardStateFor = { m_timesOrPlusFunc->Output() };
 
+        auto inputs = Inputs();
+        auto GetInputIndex = [&inputs](const Variable& input) -> size_t {
+            for (size_t i = 0; i < inputs.size(); ++i)
+            {
+                if (inputs[i] == input)
+                    return i;
+            }
+
+            throw std::runtime_error("GetInputIndex: Specified variable is not an input of this Function");
+            return 0;
+        };
+
         std::unordered_map<Variable, ValuePtr> argumentValues;
         for (auto argumentMapping : m_timesOrPlusFuncArgumentMap)
         {
-            ValuePtr argValue;
-            if (argumentMapping.second.IsConstant() || argumentMapping.second.IsParameter())
-                argValue = MakeSharedObject<Value>(argumentMapping.second.IsConstant() ? Constant(argumentMapping.second).Value() : Parameter(argumentMapping.second).Value());
-            else
-                argValue = arguments.at(argumentMapping.second);
+            ValuePtr argValue = inputValues[GetInputIndex(argumentMapping.second)];
 
             if (argumentMapping.first.IsParameter())
                 Parameter(argumentMapping.first).SetValue(argValue->Data());
@@ -102,28 +110,30 @@ public:
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
 private:
-    static std::vector<Variable> GetOutputVariables(const Variable& leftOperand, const Variable& rightOperand, bool isTimes)
+    void InferOutputs(std::vector<Variable>& outputs) override
     {
-        auto tempFunc = isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
+        auto leftOperand = Inputs()[0];
+        auto rightOperand = Inputs()[1];
+        auto tempFunc = m_isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
         auto tempFuncOutputs = tempFunc->Outputs();
 
-        std::vector<Variable> outputs;
         for (auto tempFuncOutput : tempFuncOutputs)
             outputs.push_back(OutputVariable(tempFuncOutput.Shape(), tempFuncOutput.GetDataType(), tempFuncOutput.DynamicAxes()));
-
-        return outputs;
     }
 
     UserDefinedTimesOrPlusFunction(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name)
-        : Function({ leftOperand, rightOperand }, GetOutputVariables(leftOperand, rightOperand, isTimes), Dictionary(), name)
+        : Function({ leftOperand, rightOperand }, Dictionary(), name), m_isTimes(isTimes)
     {
         auto createTimesOperandVar = [this](const Variable& operand, const std::wstring& operandName) {
             Variable var;
-            if (Combine({ operand })->Parameters().empty())
-                std::runtime_error("Cannot determine device to place Parameter on!");
 
             if (operand.DynamicAxes().empty())
+            {
+                if (Combine({ operand })->Parameters().empty())
+                    throw std::runtime_error("Cannot determine device to place Parameter on!");
+
                 var = Parameter(operand.Shape(), operand.GetDataType(), 0, Combine({ operand })->Parameters()[0].Value()->Device());
+            }
             else
                 var = InputVariable(operand.Shape(), operand.IsSparse(), operand.GetDataType(), operand.NeedsGradient(), operandName, operand.DynamicAxes());
 
@@ -137,6 +147,7 @@ private:
     }
 
 private:
+    bool m_isTimes;
     FunctionPtr m_timesOrPlusFunc;
     std::unordered_map<Variable, Variable> m_timesOrPlusFuncArgumentMap;
 };
@@ -339,9 +350,9 @@ void TestDuplicateVariablesInInputs(size_t dim, const DeviceDescriptor& device)
     // Verify backward prop results
     if (device.Type() != DeviceKind::CPU)
     {
-        NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(DataType::Float, inputShape, DeviceDescriptor::CPUDevice());
-        cpuArrayView->CopyFrom(*inputGradientValue->Data());
-        const float* cpuArrayViewBuffer = cpuArrayView->DataBuffer<float>();
+        NDArrayViewPtr cpuArrayViewBack = MakeSharedObject<NDArrayView>(DataType::Float, inputShape, DeviceDescriptor::CPUDevice());
+        cpuArrayViewBack->CopyFrom(*inputGradientValue->Data());
+        const float* cpuArrayViewBuffer = cpuArrayViewBack->DataBuffer<float>();
         memcpy(inputGradientData.data(), cpuArrayViewBuffer, inputShape.TotalSize() * sizeof(float));
     }
 

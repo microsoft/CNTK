@@ -583,13 +583,6 @@ template<typename BlockHandlerT> class BlockMultiplier
         int m_oldNumThreads;
 };
 
-// Instantiate block multipliers
-template<> const int BlockMultiplier<BlockHandlerSSE>::MAXRANGE;
-#ifdef SUPPORT_AVX2
-template<> const int BlockMultiplier<BlockHandlerAVX>::MAXRANGE;
-#endif
-
-
 template<typename BlockHandlerT> typename BlockMultiplier<BlockHandlerT>::ScalarAT* BlockMultiplier<BlockHandlerT>::CreateMatrixA(int m, int n, ScalarAT initVal)
 {
     return CreateAlignedMatrix<ScalarAT>(m, n, initVal);

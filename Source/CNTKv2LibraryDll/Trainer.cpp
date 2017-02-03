@@ -68,13 +68,29 @@ namespace CNTK
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
 
         auto modelParameters = m_combinedTrainingFunction->Parameters();
-        std::unordered_set<Parameter> learnerParameters = m_parameterLearners->GetParameters();
+        m_learnerParameters = m_parameterLearners->GetParameters();
         std::unordered_set<Parameter> modelParametersSet(modelParameters.begin(), modelParameters.end());
-        if (modelParametersSet != learnerParameters)
-            InvalidArgument("Trainer ctor: Union of the parameters covered by the specified parameterLearners should match the specified model's parameters");
+        std::unordered_set<Parameter> learnerParametersNotPartOfModel;
+        for (const auto& learnerParameter : m_learnerParameters)
+        {
+            if (modelParametersSet.find(learnerParameter) == modelParametersSet.end())
+                learnerParametersNotPartOfModel.insert(learnerParameter);
+        }
+
+        for (const auto& modelParameter : modelParametersSet)
+        {
+            if (m_learnerParameters.find(modelParameter) == m_learnerParameters.end())
+                m_modelParametersNotCoveredByLearners.insert(modelParameter);
+        }
+
+        if (!learnerParametersNotPartOfModel.empty())
+            InvalidArgument("Trainer ctor: %d of the learner parameters are not part of the model specified", (int)learnerParametersNotPartOfModel.size());
+
+        if (!m_modelParametersNotCoveredByLearners.empty())
+            fprintf(stderr, "[Note:] Trainer ctor: %d of the model parameters are not covered by any of the specified Learners; these parameters will not be learned\n", (int)m_modelParametersNotCoveredByLearners.size());
+
         m_distributed = m_parameterLearners->IsDistributed();
     }
-
 
     static double GetScalarValue(const ValuePtr& value)
     {
@@ -116,6 +132,29 @@ namespace CNTK
         return (numSamplesInDataArrayView - numMaskedSamples);
     }
 
+    static std::unordered_map<Variable, ValuePtr> GetInputs(const std::unordered_map<Variable, MinibatchData>& arguments)
+    {
+        std::unordered_map<Variable, ValuePtr> inputs(arguments.size());
+        for (const auto& kv : arguments)
+        {
+            inputs[kv.first] = kv.second.data;
+        }
+        return inputs;
+    }
+
+    static bool IsAtSweepEnd(const std::unordered_map<Variable, MinibatchData>& arguments)
+    {
+        return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const Variable, MinibatchData>& kv)
+        {
+            return kv.second.sweepEnd;
+        });
+    }
+
+    double Trainer::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        return TestMinibatch(GetInputs(arguments), computeDevice);
+    }
+
     double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         if (!m_aggregatedEvaluationFunction)
@@ -123,10 +162,24 @@ namespace CNTK
 
         // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
         std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
+
         m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
 
         auto sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
         return (GetScalarValue(outputs[m_aggregatedEvaluationFunction]) / sampleCount);
+    }
+
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
+        return TrainMinibatch(arguments, outputsToFetch, computeDevice);
+    }
+
+    bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    {
+        if (!m_distributed)
+            return TrainLocalMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice);
+        return TrainDistributedMinibatch(GetInputs(arguments), outputsToFetch, IsAtSweepEnd(arguments), computeDevice);
     }
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
@@ -138,11 +191,11 @@ namespace CNTK
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         if (!m_distributed)
-            return TrainLocalMinibatch(arguments, outputsToFetch, computeDevice);
-        return TrainDistributedMinibatch(arguments, outputsToFetch, computeDevice);
+            return TrainLocalMinibatch(arguments, outputsToFetch, false, computeDevice);
+        return TrainDistributedMinibatch(arguments, outputsToFetch, false, computeDevice);
     }
 
-    bool Trainer::TrainLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    bool Trainer::TrainLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         bool emptyMinibatch = arguments.empty() || (arguments.begin()->second == nullptr);
         if (emptyMinibatch) // Nothing to train with.
@@ -152,16 +205,15 @@ namespace CNTK
         ExecuteForwardBackward(arguments, outputsToFetch, computeDevice, parameterGradients);
 
         std::unordered_map<Parameter, NDArrayViewPtr> gradients;
-        for (const auto& parameter : m_combinedTrainingFunction->Parameters())
+        for (const auto& parameter : m_learnerParameters)
             gradients[parameter] = parameterGradients[parameter]->Data();
-        return m_parameterLearners->Update(gradients, m_prevMinibatchNumSamples);
+        return m_parameterLearners->Update(gradients, m_prevMinibatchNumSamples, sweepEnd);
     }
 
-    bool Trainer::TrainDistributedMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
+    bool Trainer::TrainDistributedMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         std::unordered_map<Parameter, NDArrayViewPtr> gradients;
-        auto modelParameters = m_combinedTrainingFunction->Parameters();
-        gradients.reserve(modelParameters.size());
+        gradients.reserve(m_learnerParameters.size());
 
         bool emptyMinibatch = arguments.empty() || (arguments.begin()->second == nullptr);
         NDArrayViewPtr trainingLoss = nullptr;
@@ -170,7 +222,7 @@ namespace CNTK
         {
             m_prevMinibatchNumSamples = 0;
             // Gradients are not existing.
-            for (const auto& parameter : modelParameters)
+            for (const auto& parameter : m_learnerParameters)
                 gradients[parameter] = nullptr;
         }
         else
@@ -178,13 +230,13 @@ namespace CNTK
             // Get gradients after forward/backward pass.
             std::unordered_map<Variable, ValuePtr> parameterGradients;
             ExecuteForwardBackward(arguments, outputsToFetch, computeDevice, parameterGradients);
-            for (const auto& parameter : modelParameters)
+            for (const auto& parameter : m_learnerParameters)
                 gradients[parameter] = parameterGradients[parameter]->Data();
             trainingLoss = m_prevMinibatchAggregateTrainingLossValue->Data();
             evalCriterion = m_prevMinibatchAggregateEvalCriterionValue->Data();
         }
 
-        MinibatchInfo info { arguments.empty(), m_prevMinibatchNumSamples, trainingLoss, evalCriterion };
+        MinibatchInfo info{ arguments.empty(), sweepEnd, m_prevMinibatchNumSamples, trainingLoss, evalCriterion };
         bool updated = m_parameterLearners->Update(gradients, info);
         m_prevMinibatchNumSamples = info.numberOfSamples;
 
@@ -206,7 +258,7 @@ namespace CNTK
 
         outputs.insert(outputsToFetch.begin(), outputsToFetch.end());
 
-        auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_aggregatedLossFunction });
+        auto backPropSate = m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice, { m_aggregatedLossFunction }, m_modelParametersNotCoveredByLearners);
         m_prevMinibatchAggregateTrainingLossValue = outputs[m_aggregatedLossFunction];
         if (m_aggregatedEvaluationFunction)
             m_prevMinibatchAggregateEvalCriterionValue = outputs[m_aggregatedEvaluationFunction];
@@ -231,11 +283,8 @@ namespace CNTK
         else
             m_rootGradientValue->Data()->SetValue(1.0);
 
-        auto modelParameters = m_combinedTrainingFunction->Parameters();
-        for (const auto& parameter : modelParameters)
-        {
+        for (const auto& parameter : m_learnerParameters)
             parameterGradients[parameter] = nullptr;
-        }
 
         // TODO: Why Backward signature does not take Parameter instead of Variable for gradients?
         m_combinedTrainingFunction->Backward(backPropSate, { { m_aggregatedLossFunction, m_rootGradientValue } }, parameterGradients);
@@ -277,15 +326,22 @@ namespace CNTK
 
     void Trainer::Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState)
     {
+        std::wstring tempModelFile = modelFilePath + L".tmp";
         Dictionary state;
         state[learnersPropertyName] = learnerState;
         state[externalStatePropertyName] = externalState;
 
-        m_combinedTrainingFunction->SaveModel(modelFilePath);
+        m_combinedTrainingFunction->SaveModel(tempModelFile);
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
-        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, false);
-        *ckpStream << state;
-        ckpStream->flush();
+        std::wstring tempCheckpointFile = trainerStateCheckpointFilePath + L".tmp";
+
+        state.Save(tempCheckpointFile);
+
+        _wunlink(modelFilePath.c_str());
+        _wunlink(trainerStateCheckpointFilePath.c_str());
+
+        renameOrDie(tempModelFile, modelFilePath);
+        renameOrDie(tempCheckpointFile, trainerStateCheckpointFilePath);
     }
 
     Dictionary Trainer::RestoreFromCheckpoint(const std::wstring& modelFilePath)
@@ -293,10 +349,7 @@ namespace CNTK
         // Restore the model's parameters
         m_combinedTrainingFunction->RestoreModel(modelFilePath);
 
-        std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
-        auto ckpStream = GetFstream(trainerStateCheckpointFilePath, true);
-        Dictionary checkpoint;
-        *ckpStream >> checkpoint;
+        Dictionary checkpoint = Dictionary::Load(GetTrainerStateCheckpointFilePath(modelFilePath));
 
         auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>();
         auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
@@ -340,5 +393,15 @@ namespace CNTK
     size_t Trainer::TotalNumberOfSamplesSeen() const
     {
         return m_parameterLearners->ParameterLearners().front()->TotalNumberOfSamplesSeen();
+    }
+
+    TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners)
+    {
+        return MakeSharedObject<Trainer>(model, lossFunction, parameterLearners);
+    }
+
+    TrainerPtr CreateTrainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners)
+    {
+        return MakeSharedObject<Trainer>(model, lossFunction, evaluationFunction, parameterLearners);
     }
 }

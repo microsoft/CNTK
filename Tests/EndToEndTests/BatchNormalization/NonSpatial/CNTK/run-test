@@ -11,9 +11,3 @@ if [ $? != 0 ]; then
 fi
 
 cntkrun 01_OneHidden.cntk batchNormalizationEngine=cntk
-ExitCode=$?
-
-# Delete the test data if copied
-[[ "$Copied" -eq "1" ]] && rm -rf "$DataDir"
-
-exit $ExitCode

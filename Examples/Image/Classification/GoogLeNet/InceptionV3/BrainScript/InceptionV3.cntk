@@ -1,0 +1,142 @@
+#
+# Inception V3 network
+# Details are in https://arxiv.org/pdf/1512.00567.pdf
+#
+
+command = Train:Eval
+
+deviceId        = "Auto"
+precision       = "float"
+#traceLevel     = 1
+#perfTraceLevel = 1
+parallelTrain  = true
+
+RootDir     = "."
+ConfigDir   = "$RootDir$"
+ImageNetDir = "$ConfigDir$"
+DataDir     = "$RootDir$"
+OutputDir   = "$RootDir$/Output"
+ModelDir    = "$OutputDir$/Model"
+stderr      = "$OutputDir$/InceptionV3.log"
+modelPath   = "$ModelDir$/InceptionV3.model"
+    
+ImageH    = 299
+ImageW    = 299
+ImageC    = 3
+NumLabels = 1000
+
+Train = {
+    action = "train"
+
+    BrainScriptNetworkBuilder = {
+        include "$ConfigDir$/InceptionBlocks.bs"
+        include "$ConfigDir$/InceptionV3.bs"
+
+        imageShape  = $ImageH$:$ImageW$:$ImageC$
+        labelDim    = $NumLabels$
+        bnTimeConst = 4096
+        auxWeight   = Constant(0.3)
+
+        # inputs
+        features = Input {imageShape}
+        labels   = Input {labelDim}
+
+        # apply model to features
+        model    = InceptionV3Norm(features, labelDim, bnTimeConst)
+        z        = model.z
+        aux      = model.aux
+
+        # connect to system
+        ceAux    = CrossEntropyWithSoftmax     (labels, aux)
+        ceZ      = CrossEntropyWithSoftmax     (labels, z)
+        errs     = ClassificationError         (labels, z)
+        top5Errs = ClassificationError         (labels, z, topN=5)  # only used in Eval action
+        ce       = auxWeight .* ceAux + ceZ
+
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)  # top5Errs only used in Eval
+        outputNodes     = (z)
+    }
+
+    SGD = {
+        epochSize     = 0
+        maxEpochs     = 160
+        minibatchSize = 512 # 16 GPUs, 32 per GPU.
+        dropoutRate   = 0.2
+
+        learningRatesPerMB     = 3.2*10: 1.6*10: 0.8*10: 0.4*10: 0.2*10: 0.1*10: 0.05*10: 0.025*10: 0.0125*10: 0.00625*10: 0.003125*10: 0.0015625*10: 0.00078125*10: 0.000390625*10: 0.0001953125
+        momentumPerMB          = 0.9
+
+        disableRegInBatchNormalization = true
+        
+        parallelTrain = {
+            parallelizationMethod = "dataParallelSGD"
+            parallelizationStartEpoch = 1
+            distributedMBReading = true
+            dataParallelSGD = { 
+                gradientBits = 32 
+            }
+        }
+        
+        firstMBsToShowResult = 10 ; numMBsToShowResult = 500
+    }
+
+    reader = {
+        verbosity = 0 ; randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/train_map.txt"
+            input = {
+                features = { transforms = (
+                    { type = "Crop" ; cropType = "randomArea" ; areaRatio = 0.08:1.0 ; jitterType = "uniRatio" ; aspectRatio = 0.75:1.0 } :
+                    { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
+                    { type = "Color" ; brightnessRadius = 0.2 ; contrastRadius = 0.2 ; saturationRadius = 0.4 } :
+                    { type = "Transpose" }
+                )}
+                labels = { labelDim = $NumLabels$ }
+            }
+        })
+    }
+    
+    cvreader = {
+        verbosity = 0 ; randomize = false
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/val_map.txt"
+            input = {
+                features = { transforms = (
+                   { type = "Crop" ; cropType = "Center" ; sideRatio = 0.875 } :
+                   { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
+                   { type = "Transpose" }
+                )}
+                labels = { labelDim = $NumLabels$ }
+            }
+        })
+    }    
+}
+
+# Eval action
+Eval = {
+    action = "eval"
+    evalNodeNames = errs:top5Errs  # also test top-5 error rate
+    # Set minibatch size for testing.
+    minibatchSize = 32
+
+    reader = {
+        verbosity = 0 ; randomize = false
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$DataDir$/val_map.txt"
+            input = {
+                features = { transforms = (
+                   { type = "Crop" ; cropType = "Center" ; sideRatio = 0.875 } :
+                   { type = "Scale" ; width = $ImageW$ ; height = $ImageH$ ; channels = $ImageC$ ; interpolations = "linear" } :
+                   { type = "Transpose" }
+                )}
+                labels = { labelDim = $NumLabels$ }
+            }
+        })
+    }
+}
