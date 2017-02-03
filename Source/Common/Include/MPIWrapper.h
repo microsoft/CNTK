@@ -63,6 +63,14 @@ typedef std::shared_ptr<MPIWrapper> MPIWrapperPtr;
 
 extern "C" void GetMpiWrapper(MPIWrapper **mpi);
 
+// Note: This is now a pure interface, so please don't add
+//       any functionality to this class.
+//       Instead, make your own implementation class, add/change
+//       functions there as needed and use a private interface to
+//       these functions.
+//       In case you need to add functions that affect all
+//       implementations, add a pure virtual function here and
+//       update any affected implementation.
 class MPIWrapper : public std::enable_shared_from_this<MPIWrapper>
 {
 public:
