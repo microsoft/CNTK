@@ -17,9 +17,9 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    // -----------------------------------------------------------------------
-    // Specific MPIWrapper class definitions.
-    // -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
+// Specific MPIWrapper class definitions.
+// -----------------------------------------------------------------------
 
 #if HAS_MPI
 class MPIWrapperMpi : public MPIWrapper
