@@ -180,6 +180,7 @@
     <ClCompile Include="stdafx.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="ProgressWriter.cpp" />
     <ClCompile Include="tensorboard\tensorboard.pb.cc.VS_wrapper.cpp" />
     <ClCompile Include="tensorboard\TensorBoardFileWriter.cpp" />
     <ClCompile Include="tensorboard\TensorBoardUtils.cpp" />

@@ -214,7 +214,7 @@ namespace CNTK
             return functionNode;
         }
 
-        void CreateTensorFlowGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
+        void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
         {
             // For each function/variable visited, contains a matching tensorflow node.
             std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;

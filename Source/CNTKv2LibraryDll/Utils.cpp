@@ -893,4 +893,64 @@ namespace CNTK
 
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const Variable& var, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const Variable& var, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+
+    void Accumulator::Update(const ValuePtr& delta, const DeviceDescriptor& device)
+    {
+        if (!delta)
+        {
+            InvalidArgument("Attempting to add a null value");
+        }
+
+        bool copied = false;
+        if (!Data() ||
+            GetDataType() != delta->GetDataType() ||
+            Shape() != delta->Shape() ||
+            Device() != device ||
+            Mask() != delta->Mask())
+        {
+            copied = true;
+            m_data = MakeSharedObject<NDArrayView>(delta->GetDataType(), delta->Shape(), device);
+            m_mask = delta->Mask();
+            ResetToZero();
+        }
+
+        if (delta->GetDataType() == DataType::Float)
+        {
+            Data()->GetWritableTensorView<float>()->AddCopyOf(*delta->Data()->GetTensorView<float>());
+        }
+        else
+        {
+            Data()->GetWritableTensorView<double>()->AddCopyOf(*delta->Data()->GetTensorView<double>());
+        }
+
+        if (copied && m_numUpdates != 0)
+        {
+            RuntimeError("Accumulation values are created when accumulated num updates not zero");
+        }
+
+        m_numUpdates++;
+    }
+
+    void Accumulator::Reset()
+    {
+        ResetToZero();
+        m_numUpdates = 0;
+    }
+
+    void Accumulator::ResetToZero()
+    {
+        if (Data() == nullptr)
+        {
+            return;
+        }
+
+        if (GetDataType() == DataType::Float)
+        {
+            Data()->SetValue(0.0f);
+        }
+        else
+        {
+            Data()->SetValue(0.0);
+        }
+    }
 }

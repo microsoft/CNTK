@@ -123,7 +123,7 @@ namespace CNTK
 
             // Convert the model to tensorflow GraphDef first.
             tensorflow::GraphDef graph;
-            CreateTensorFlowGraph(m_model->RootFunction(), graph);
+            CreateTensorBoardGraph(m_model->RootFunction(), graph);
 
             std::string graphStr;
             graph.AppendToString(&graphStr);
