@@ -19,12 +19,8 @@ namespace CNTK
             std::vector<Variable> outputs;
             outputs.reserve(Function::MaxNumOutputs);
             InferOutputs(outputs);
-            std::unordered_set<Variable> uniqueOutputs;
             for (auto outputVar : outputs)
             {
-                if (uniqueOutputs.find(outputVar) != uniqueOutputs.end())
-                    RuntimeError("Same variable appears multiple times in the outputs vector passed to Function constructor");
-
                 if (outputVar.IsOutput() && !outputVar.Owner())
                     outputVar.SetOwner(this);
 
@@ -40,8 +36,6 @@ namespace CNTK
                     // Nuke the composite ptr to allow release of cyclic graphs.
                     m_outputs.back().m_outputComposite = nullptr;
                 }
-
-                uniqueOutputs.insert(outputVar);
             }
         });
 
@@ -1284,17 +1278,7 @@ namespace CNTK
 
     FunctionPtr Combine(const std::vector<Variable>& operands, const std::wstring& name)
     {
-        std::unordered_set<Variable> uniqueOperands;
-        for (auto operand : operands)
-        {
-            if (uniqueOperands.find(operand) != uniqueOperands.end())
-                LogicError("All operands specified to Combine must be unique");
-
-            uniqueOperands.insert(operand);
-        }
-
-        std::vector<Variable> operandsCopy = operands;
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operandsCopy, Dictionary(), name), name);
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Combine, operands, Dictionary(), name), name);
     }
 
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)
@@ -1403,11 +1387,25 @@ namespace CNTK
             return AsBlock(std::move(Internal::Gather(operandPlaceholder, conditionPlaceholder)), { { operandPlaceholder, operand }, { conditionPlaceholder, condition } }, L"Sequence::Gather", name);
         }
 
+        FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
+        {
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto conditionPlaceholder = PlaceholderVariable(L"condition");
+            return AsBlock(std::move(Internal::Gather(operandPlaceholder, conditionPlaceholder, newDerivedSequenceAxisScalingAndAdditiveFactor)), { { operandPlaceholder, operand },{ conditionPlaceholder, condition } }, L"Sequence::Gather", name);
+        }
+
         FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name)
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto conditionPlaceholder = PlaceholderVariable(L"condition");
             return AsBlock(std::move(Internal::Scatter(operandPlaceholder, conditionPlaceholder)), { { operandPlaceholder, operand }, { conditionPlaceholder, condition } }, L"Sequence::Scatter", name);
+        }
+
+        FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
+        {
+            auto operandPlaceholder = PlaceholderVariable(L"operand");
+            auto conditionPlaceholder = PlaceholderVariable(L"condition");
+            return AsBlock(std::move(Internal::Scatter(operandPlaceholder, conditionPlaceholder, newDerivedSequenceAxisScalingAndAdditiveFactor)), { { operandPlaceholder, operand },{ conditionPlaceholder, condition } }, L"Sequence::Scatter", name);
         }
 
         FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name)

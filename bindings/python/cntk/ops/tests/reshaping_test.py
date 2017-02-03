@@ -352,3 +352,30 @@ def test_op_gather_dynamic_axes_equivalence(device_id, precision):
     res = z.eval({a: input_data1, b: input_data2})
     expected_forward = [[[3.]]]
     assert np.array_equal(res, expected_forward)
+
+
+def test_op_gather_scatter_derived_dynamic_axes_equivalence(device_id, precision):
+    from .. import sequence
+
+    input_data1 = AA([1], dtype=PRECISION_TO_TYPE[precision])
+    input_data2 = AA([2], dtype=PRECISION_TO_TYPE[precision])
+
+    a = I(shape=input_data1.shape,
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          name='a')
+    b = I(shape=input_data2.shape,
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          name='b')
+
+    a_last = sequence.gather(a, sequence.is_last(a), new_sequence_axis_scaling_and_additive_factor=(0, 1))
+    b_last = sequence.gather(b, sequence.is_last(b), new_sequence_axis_scaling_and_additive_factor=(0, 1))
+
+    z = a_last + b_last
+
+    # create batch
+    input_data1.shape = (1, 1) + input_data1.shape
+    input_data2.shape = (1, 1) + input_data2.shape
+
+    res = z.eval({a: input_data1, b: input_data2})
+    expected_forward = [[[3.]]]
+    assert np.array_equal(res, expected_forward)
