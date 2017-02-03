@@ -819,6 +819,7 @@ namespace CNTK
         CNTK_API static const int SentinelStaticAxisIndexValueForAllStaticAxes;
         CNTK_API static const int SentinelStaticAxisIndexValueForUnknownAxes;
         CNTK_API static const int SentinelEndStaticAxisIndexValue;
+        CNTK_API static const int SentinelStaticAxisIndexValueForAllAxes;
 
         class UniqueDynamicAxesNames
         {
@@ -867,7 +868,8 @@ namespace CNTK
         {
             return ((m_staticAxisIdx != SentinelStaticAxisIndexValueForDynamicAxes) &&
                     (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllStaticAxes) &&
-                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForUnknownAxes));
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForUnknownAxes) &&
+                    (m_staticAxisIdx != SentinelStaticAxisIndexValueForAllAxes));
         }
 
         ///
@@ -908,6 +910,11 @@ namespace CNTK
         /// Axis object representing all the static axes of an operand
         ///
         CNTK_API static const Axis& AllStaticAxes();
+
+        ///
+        /// Axis object representing all static and dynamic axes of an operand
+        ///
+        CNTK_API static const Axis& AllAxes();
 
         ///
         /// Returns a new unique Dynamic axis
@@ -3323,6 +3330,11 @@ namespace CNTK
     CNTK_API FunctionPtr ReduceMin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in Prod reduction operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr ReduceProd(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"");
@@ -3389,6 +3401,7 @@ namespace CNTK
                                             const Variable& bias,
                                             const Variable& runningMean,
                                             const Variable& runningInvStd,
+                                            const Variable& runningSampleCount,
                                             bool spatial,
                                             double normalizationTimeConstant = 0,
                                             double blendTimeConstant = 0,

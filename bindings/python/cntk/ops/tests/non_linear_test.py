@@ -354,14 +354,21 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     scale        = Parameter(init=AA([init_scale], dtype=dtype), device=dev)
     bias         = Parameter(init=AA([init_bias], dtype=dtype), device=dev)
-    run_mean     = Constant(mean, shape=(1), dtype=dtype, device=dev)
-    run_variance = Constant(var, shape=(1), dtype=dtype, device=dev)
+    run_mean     = constant(mean, shape=(1), device=dev)
+    run_variance = constant(var, shape=(1), device=dev)
+    run_count = constant(0, device=dev)
 
     from cntk import batch_normalization
 
     a = I(shape=(1), dtype=dtype, needs_gradient=False, name='a')
 
-    op_node = batch_normalization(a, scale, bias, run_mean, run_variance, False, epsilon, use_cudnn)
+    with pytest.warns(Warning):
+        op = batch_normalization(a, scale, bias, run_mean, run_variance, False,
+            #no running_sample_count here, 
+            epsilon=epsilon, use_cudnn_engine=use_cudnn)
+
+    op_node = batch_normalization(a, scale, bias, run_mean, run_variance, False,
+        running_sample_count=run_count, epsilon=epsilon, use_cudnn_engine=use_cudnn)
 
     forward_input = {a: t}
 

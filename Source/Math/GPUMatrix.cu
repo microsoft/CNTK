@@ -4464,7 +4464,8 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
     if (reductionOp != ElementWiseOperator::opSum    &&
         reductionOp != ElementWiseOperator::opLogSum &&
         reductionOp != ElementWiseOperator::opMin    &&
-        reductionOp != ElementWiseOperator::opMax)
+        reductionOp != ElementWiseOperator::opMax    &&
+        reductionOp != ElementWiseOperator::opElementwiseProduct)
         InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
 
     a.PrepareDevice();

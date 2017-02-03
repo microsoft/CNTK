@@ -196,11 +196,8 @@ void ComputationNetwork::SaveToFileImpl(const wstring& fileName, const FileOptio
     fstream.Flush();
 }
 
-// load the section of nodes that contain persistable parameters
-// This is also used for reloading a model without recreating it, e.g. during training.
-// TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
-template <class ElemType> // ElemType is the default for models prior to CNTK_MODEL_VERSION_7; after that, it is serialized, and ElemType is ignored
-void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
+
+size_t ComputationNetwork::GetModelVersion(File& fstream) 
 {
     fstream.GetMarker(FileMarker::fileMarkerBeginSection, L"BCN");
 
@@ -213,7 +210,16 @@ void ComputationNetwork::ReadPersistableParameters(File& fstream, bool create)
     }
     if (modelVersion > CURRENT_CNTK_MODEL_VERSION)
         InvalidArgument("Read: The model file has a newer format version (%d) than this CNTK version can handle (%d).", (int)modelVersion, (int)CURRENT_CNTK_MODEL_VERSION);
+    
+    return modelVersion;
+}
 
+// load the section of nodes that contain persistable parameters
+// This is also used for reloading a model without recreating it, e.g. during training.
+// TODO: Why not just reload it? Because SGD::Train() holds pointers to the parameters directly? That should be fixed.
+template <class ElemType> // ElemType is the default for models prior to CNTK_MODEL_VERSION_7; after that, it is serialized, and ElemType is ignored
+void ComputationNetwork::ReadPersistableParameters(size_t modelVersion, File& fstream, bool create)
+{
     size_t numNodes;
     fstream >> numNodes;
 
@@ -270,7 +276,9 @@ void ComputationNetwork::Read(const wstring& fileName)
 
     File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
 
-    ReadPersistableParameters<ElemType>(fstream, true);
+    auto modelVersion = GetModelVersion(fstream);
+
+    ReadPersistableParameters<ElemType>(modelVersion, fstream, true);
 
     size_t numNodes = m_nameToNodeMap.size();
 
@@ -294,6 +302,15 @@ void ComputationNetwork::Read(const wstring& fileName)
             childrenNodes.resize(numChildren);
             for (int j = 0; j < numChildren; j++)
                 childrenNodes[j] = GetNodeFromName(childrenNames[j]);
+
+            if (modelVersion < CNTK_MODEL_VERSION_19 && nodePtr->OperationName() == OperationNameOf(BatchNormalizationNode)) 
+            {
+                ComputationNodeBasePtr runSampleCount = New<LearnableParameter<ElemType>>(m_deviceId, nodeName + L".run_sample_count", TensorShape(1));
+                runSampleCount->SetLearningRateMultiplier(0);
+                AddNodeToNet(runSampleCount);
+                InitLearnableParameters(runSampleCount, L"fixedValue", 0);
+                childrenNodes.push_back(runSampleCount);
+            }
 
             nodePtr->AttachInputs(childrenNodes);
         }
@@ -1505,7 +1522,7 @@ void ComputationNetwork::SaveToDbnFile(ComputationNetworkPtr net, const std::wst
 
 template void ComputationNetwork::InitLearnableParametersWithBilinearFill<float>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 template void ComputationNetwork::Read<float>(const wstring& fileName);
-template void ComputationNetwork::ReadPersistableParameters<float>(File& fstream, bool create);
+template void ComputationNetwork::ReadPersistableParameters<float>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<float>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 template /*static*/ void ComputationNetwork::SetIRngUserSeed<float>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);
@@ -1516,7 +1533,7 @@ template void ComputationNetwork::SaveToDbnFile<float>(ComputationNetworkPtr net
 
 template void ComputationNetwork::InitLearnableParametersWithBilinearFill<double>(const ComputationNodeBasePtr& node, size_t kernelWidth, size_t kernelHeight);
 template void ComputationNetwork::Read<double>(const wstring& fileName);
-template void ComputationNetwork::ReadPersistableParameters<double>(File& fstream, bool create);
+template void ComputationNetwork::ReadPersistableParameters<double>(size_t modelVersion, File& fstream, bool create);
 template void ComputationNetwork::PerformSVDecomposition<double>(const map<wstring, float>& SVDConfig, size_t alignedsize);
 template /*static*/ void ComputationNetwork::SetDropoutRate<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, const double dropoutRate, double& prevDropoutRate);
 template /*static*/ void ComputationNetwork::SetIRngUserSeed<double>(ComputationNetworkPtr net, const ComputationNodeBasePtr& criterionNode, size_t randSeedBase);

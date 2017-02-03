@@ -362,7 +362,7 @@ class Function(cntk_py.Function):
             at (dict) : mapping of the Function's arguments to values
             wrt (list optional): list of Variables with respect to which the
              gradient will be computed. If omitted, the gradients with
-             respect to all arguments will be computed. If a variable
+             respect to all arguments that need gradient will be computed. If a variable
              is repeated in this list, the gradient will be repeated
              in the output as a shallow copy.
 
@@ -376,7 +376,7 @@ class Function(cntk_py.Function):
             raise InvalidArgumentException('function must return a single tensor')
 
         if wrt is None:
-            wrt = self.arguments
+            wrt = [arg for arg in self.arguments if arg.needs_gradient]
 
         unique_wrt = set(wrt)
         output = [self.output]
