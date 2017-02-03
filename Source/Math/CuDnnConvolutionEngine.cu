@@ -164,6 +164,13 @@ private:
     cudnnPoolingDescriptor_t m_pool;
 };
 
+enum AutotuningState
+{
+    initState = 0,          // initial state 
+    pendingTuningState = 1, // memory of all nodes have been allocated, it's safe to do tuning now 
+    runState = 2            // done tuning, no long performing auto-tuning, code is running normally 
+};
+
 template <class ElemType>
 class CuDnnConvolutionEngine : public ConvolutionEngine<ElemType>
 {
@@ -360,7 +367,11 @@ private:
     void FindBestAlgo(size_t batchSize, TAlgo& algo, TFinder finder, TStaticFinder staticFinder)
     {
         m_inT.UpdateBatchSize(batchSize);
-        m_outT.UpdateBatchSize(batchSize);
+        m_outT.UpdateBatchSize(batchSize); 
+        if (batchSize > algo.MaxAllowedMBSizeForCurrentAlgo && algo.autotuningState == AutotuningState::runState)     // batchSize is bigger, need to re-do auto-tuning 
+        {
+            algo.autotuningState = AutotuningState::initState;
+        }
 
         if (!algo.NeedAutotuning(batchSize))
             return;
@@ -385,33 +396,44 @@ private:
             algo.Algo.memory = 0;
             algo.Algo.status = CUDNN_STATUS_SUCCESS;
             algo.NoWorkspaceAlgo = noMemAlgo;
+            algo.autotuningState = AutotuningState::runState;
             return;
         }
         CUDNN_CALL(err);
         assert(calgo > 0);
+
+        if (algo.autotuningState == AutotuningState::initState)
+        {   // in initState, where memory allocation for nodes are not completed, we only run the algorithm with 0 memory 
+            auto res = std::find_if(algoPerf, algoPerf + calgo,
+                      [=](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0; });
+            if (res == algoPerf + calgo)
+                RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.");
+            algo.autotuningState = AutotuningState::pendingTuningState;
+            algo.Algo = *res;
+            algo.NoWorkspaceAlgo = (*res).algo;
+            return;
+        }
+
         size_t inputSampleSize = m_geometry->InputShape().GetNumElements();
         size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inputSampleSize * m_maxTempMemSizeInSamples * sizeof(ElemType);
-        // Find best (fastest) algorithm which satisfies workspace requirements.
+        // Find best (fastest) algorithm which satisfies workspace memory requirements.
         auto res = std::find_if(algoPerf, algoPerf + calgo,
             [=](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem; });
-
         if (res == algoPerf + calgo)
             RuntimeError("cuDNN could not find suitable algorithm for the current convolution configuration.");
+
         algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
         algo.Algo = *res;
-
+        algo.autotuningState = AutotuningState::runState;
         if (m_forceDeterministicAlgorithms) // does not allow fallback.
             return;
 
         // Find fastest algorithm that does NOT require workspace. It is used as a fallback algo in Forward function.
         // Currently all Forward algorithms are deterministic, so no need for checking.
-        res = std::find_if(algoPerf, algoPerf + calgo, 
+        res = std::find_if(algoPerf, algoPerf + calgo,
             [](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0; });
         if (res == algoPerf + calgo)
-        {
-            // In theory, this should never happen.
             RuntimeError("cuDNN could not find no-workspace algorithm for the current convolution configuration.");
-        }
         else
             algo.NoWorkspaceAlgo = (*res).algo;
     }
@@ -432,13 +454,14 @@ private:
         using CuDnnAlgoT = decltype(T::algo);
 
         ConvAlgoInfo()
-            : MaxAllowedMBSizeForCurrentAlgo(0)
+            : MaxAllowedMBSizeForCurrentAlgo(0), autotuningState(AutotuningState::initState)
         {
             Algo.status = CUDNN_STATUS_NOT_INITIALIZED;
             NoWorkspaceAlgo = (CuDnnAlgoT)-1;
         }
         // Current mini-batch size, needed for re-computing statistics in auto-tuner.
         size_t MaxAllowedMBSizeForCurrentAlgo;
+        AutotuningState autotuningState;
 
         T Algo;
         CuDnnAlgoT NoWorkspaceAlgo;
@@ -452,7 +475,8 @@ private:
             // We also need to reset auto-tuning status at the beginning of each epoch but ComputationNode currently does not provide such notification.
             // We assume no other dimensions of tensors can change so we don't check it.
             // REVIEW alexeyk: review once we get response from NVIDIA.
-            return (Algo.status != CUDNN_STATUS_SUCCESS || batchSize > MaxAllowedMBSizeForCurrentAlgo);
+            return (autotuningState != AutotuningState::runState || 
+                    batchSize > MaxAllowedMBSizeForCurrentAlgo);
         }
     };
 
