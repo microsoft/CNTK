@@ -122,31 +122,6 @@ namespace CNTK
         }
 
         template <typename FunctionType>
-        static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, const FunctionType& functor)
-        {
-            std::unordered_set<FunctionPtr> visitedFunctions;
-            PreorderTraverseFunctions(rootFunction, visitedFunctions, functor);
-        }
-
-        // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
-        template <typename FunctionType>
-        static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
-        {
-            visitedFunctions.insert(rootFunction);
-            functor(rootFunction);
-
-            std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
-            for (const auto& rootInput : rootFunctionInputs)
-            {
-                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
-                {
-                    const auto& function = rootInput.Owner();
-                    PreorderTraverseFunctions(function, visitedFunctions, functor);
-                }
-            }
-        }
-
-        template <typename FunctionType>
         static void PreorderTraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder = false)
         {
             std::unordered_set<FunctionPtr> visitedFunctions;

@@ -643,35 +643,35 @@ void ValueCopyToExceptionsTest(const DeviceDescriptor& device)
     auto sampleVariable = CreateVariable<float>(NDShape::Unknown, 0);
     VerifyException([&val, &sampleVariable, &output]() {
         val->CopyVariableValueTo(sampleVariable, output);
-    }, "The expected exception has not been caugth: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
+    }, "The expected exception has not been caught: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
 
     // Test variable having shape with InferredDimentsion.
     sampleVariable = CreateVariable<float>(NDShape(2), 0);
     VerifyException([&val, &sampleVariable, &output]() {
         val->CopyVariableValueTo(sampleVariable, output);
-    }, "The expected exception has not been caugth: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
+    }, "The expected exception has not been caught: It is not supported that the outputVariable has a unknown shape or inferred dimension.");
 
     // Test variable having incorrect data type.
     sampleVariable = CreateVariable<double>(sampleShape, 0);
     VerifyException([&val, &sampleVariable, &output]() {
         val->CopyVariableValueTo(sampleVariable, output);
-    }, "The expected exception has not been caugth: The outputVariable has a different data type than the Value object.");
+    }, "The expected exception has not been caught: The outputVariable has a different data type than the Value object.");
 
     sampleVariable = CreateVariable<double>(sampleOneHotShape, 0);
     VerifyException([&val, &sampleVariable, &outputInOneHot]() {
         val->CopyVariableValueTo(sampleVariable, outputInOneHot);
-    }, "The expected exception has not been caugth: The outputVariable has a different data type than the Value object.");
+    }, "The expected exception has not been caught: The outputVariable has a different data type than the Value object.");
 
     // Test output buffer having incorrect data type.
     sampleVariable = CreateVariable<float>(sampleShape, 0);
     VerifyException([&val, &sampleVariable, &outputInDouble]() {
         val->CopyVariableValueTo(sampleVariable, outputInDouble);
-    }, "The expected exception has not been caugth: The specified ElementType Double does not match the DataType Float");
+    }, "The expected exception has not been caught: The specified ElementType Double does not match the DataType Float");
 
     // Test the first axis when using one-hot format.
     VerifyException([&val, &sampleVariable, &outputInOneHot]() {
         val->CopyVariableValueTo(sampleVariable, outputInOneHot);
-    }, "The expected exception has not been caugth: The outputVariable's leading axis dimensionality must equal the total size of the variable for sparse data.");
+    }, "The expected exception has not been caught: The outputVariable's leading axis dimensionality must equal the total size of the variable for sparse data.");
 }
 
 
@@ -760,12 +760,12 @@ void CreateBatchTestDense(const DeviceDescriptor device, bool readOnly)
     vector<ElementType> wrongBatch(sampleSize * 2 - 1, 0);
     VerifyException([&sampleShape, &wrongBatch, &device, &readOnly]() {
         Value::CreateBatch(sampleShape, wrongBatch, device, readOnly);
-    }, "The expected exception has not been caugth: The number of data is not a multiple of the sample size.");
+    }, "The expected exception has not been caught: The number of data is not a multiple of the sample size.");
 
     auto emptyBatch = vector<ElementType>(0);
     VerifyException([&sampleShape, &emptyBatch, &device, &readOnly]() {
         Value::CreateBatch(sampleShape, emptyBatch, device, readOnly);
-    }, "The expected exception has not been caugth: The number of sequences is 0");
+    }, "The expected exception has not been caught: The number of sequences is 0");
 }
 
 template <typename ElementType>
@@ -803,12 +803,12 @@ void CreateSequenceTestDense(const DeviceDescriptor device, bool readOnly)
     vector<ElementType> wrongSeq(sampleSize * 2 - 1, 0);
     VerifyException([&sampleShape, &wrongSeq, &device, &readOnly]() {
         Value::CreateSequence(sampleShape, wrongSeq, device, readOnly);
-    }, "The expected exception has not been caugth: The number of data is not a multiple of the sample size.");
+    }, "The expected exception has not been caught: The number of data is not a multiple of the sample size.");
 
     auto emptySeq = vector<ElementType>(0);
     VerifyException([&sampleShape, &emptySeq, &device, &readOnly]() {
         Value::CreateSequence(sampleShape, emptySeq, device, readOnly);
-    }, "The expected exception has not been caugth: The sequence length is 0");
+    }, "The expected exception has not been caught: The sequence length is 0");
 }
 
 
@@ -889,7 +889,7 @@ void CreateBatchTestOneHot(const DeviceDescriptor device, bool readOnly)
     auto emptyBatch = vector<size_t>(0);
     VerifyException([&dimSize, &emptyBatch, &device, &readOnly]() {
         Value::CreateBatch<ElementType>(dimSize, emptyBatch, device, readOnly);
-    }, "The expected exception has not been caugth: The number of sequences is 0");
+    }, "The expected exception has not been caught: The number of sequences is 0");
 }
 
 template <typename ElementType>
@@ -928,7 +928,7 @@ void CreateSequenceTestOneHot(const DeviceDescriptor device, bool readOnly)
     auto emptySeq = vector<size_t>(0);
     VerifyException([&dimSize, &emptySeq, &device, &readOnly]() {
         Value::CreateSequence<ElementType>(dimSize, emptySeq, device, readOnly);
-    }, "The expected exception has not been caugth: The sequences length is 0");
+    }, "The expected exception has not been caught: The sequences length is 0");
 }
 
 
