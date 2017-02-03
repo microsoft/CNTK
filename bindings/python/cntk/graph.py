@@ -6,7 +6,6 @@
 
 import os
 
-
 def depth_first_search(node, visitor):
     '''
     Generic function that walks through the graph starting at ``node`` and
@@ -249,6 +248,7 @@ def plot(node, to_file=None):
 
     return model
 
+
 def output_function_graph(node, dot_file_path=None, png_file_path=None):
     import warnings
     warnings.warn('This will be removed in future versions. Please use '
@@ -262,14 +262,25 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
 
     return result
 
-# helper to print all node names
-def print_all_nodes(node, is_BrainScript=True):
+
+def get_node_outputs(node):
+    '''
+    Walks through every node of the graph starting at ``node``
+    and returns a list of all node outputs.
+
+    Args:
+        node (graph node): the node to start the journey from
+
+    Returns:
+        A list of all node outputs
+    '''
     node_list = depth_first_search(node, lambda x: True)
-    print("printing node information in the format")
-    print("node name (shape)")
+    node_outputs = []
     for node in node_list:
         try:
             for out in node.outputs:
-                print(out.name, out.shape)
+                node_outputs.append(out)
         except AttributeError:
             pass
+
+    return node_outputs

@@ -6,7 +6,6 @@
 
 from __future__ import print_function
 import os, sys
-import os.path
 
 
 base_folder = os.path.dirname(os.path.abspath(__file__))

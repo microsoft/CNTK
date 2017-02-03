@@ -11,19 +11,7 @@ from cntk import load_model, graph
 from cntk.ops import combine
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 from cntk import graph
-
-
-# helper to print all node names
-def print_all_node_names(model_file, is_BrainScript=True):
-    loaded_model = load_model(model_file)
-    if is_BrainScript:
-        loaded_model = combine([loaded_model.outputs[0]])
-    node_list = graph.depth_first_search(loaded_model, lambda x: isinstance(x, Function))
-    print("printing node information in the format")
-    for node in node_list: 
-        print("Node name:", node.name)
-        for out in node.outputs: 
-            print("Output name and shape:", out.name, out.shape)
+from cntk.graph import get_node_outputs
 
 
 def create_mb_source(image_height, image_width, num_channels, map_file):
@@ -70,7 +58,8 @@ if __name__ == '__main__':
     minibatch_source = create_mb_source(image_height, image_width, num_channels, map_file)
 
     # use this to print all node names of the model (and knowledge of the model to pick the correct one)
-    # print_all_node_names(model_file)
+    # node_outputs = get_node_outputs(load_model(model_file))
+    # for out in node_outputs: print("{0} {1}".format(out.name, out.shape))
 
     # use this to get 1000 class predictions (not yet softmaxed!)
     # node_name = "z"
