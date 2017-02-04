@@ -209,7 +209,7 @@ class ProgressPrinter(object):
 
             return avg_loss, avg_metric, samples  # BUGBUG: for freq=0, we don't return anything here
 
-    def ___gererate_progress_heartbeat(self):
+    def ___generate_progress_heartbeat(self):
         timer_delta = time.time() - self.progress_timer_time
         
         # print progress no sooner than 10s apart
