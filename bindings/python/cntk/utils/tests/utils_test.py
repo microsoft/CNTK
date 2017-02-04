@@ -94,7 +94,6 @@ def test_sanitize_batch_sparse():
     (one_hot([[3, 4, 5, 1], [60, 61]], num_classes=62),
         [True, False],
         ValueError),
-        #[[2, 1, 1, 1], [2, 1, 0, 0]]),
 ])
 def test_mask(batch, seq_starts, expected):
     shape = ()
@@ -106,14 +105,21 @@ def test_mask(batch, seq_starts, expected):
         s = sanitize_batch(var, batch, seq_starts)
         assert np.allclose(s.mask, expected)
 
+def test_one_hot():
+    with pytest.raises(ValueError):
+        s = one_hot([[1.0, 2.0], [3.]], 4)
+    with pytest.raises(ValueError):
+        s = one_hot([1, 2], 4)
+
 def test_sanitize_batch_contiguity():
     a1 = AA([[1,2],[3,4]])
     a2 = AA([[5,6],[7,8]])
     var = input_variable((2,2), is_sparse=True)
 
     batch = [a1.T,a2.T]
-    with pytest.raises(ValueError):
+    with pytest.warns(RuntimeWarning):
         b = sanitize_batch(var, batch)
+        assert b.shape == (2,1,2,2)
 
     batch = [a1,a2]
     b = sanitize_batch(var, batch)

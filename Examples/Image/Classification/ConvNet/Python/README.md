@@ -37,9 +37,19 @@ Run the example from the current folder using:
 
 We use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perform translation transform without scaling. The accuracy of the network on test data is around `14%`, which is a lot better than the previous model.
 
+### ConvNetLRN_CIFAR10_DataAug.py
+
+The fourth example added local response normalization (LRN) to the previous example. LRN was used in [AlexNet](../../AlexNet), but it has lost its popularity. We implemented the LRN with a 3D convolution.
+
+Run the example from the current folder using:
+
+`python ConvNetLRN_CIFAR10_DataAug.py`
+
+All settings are identical to the previous example. The accuracy of the network on test data is slightly (`0.1-0.2%`) better than the previous example.
+
 ### ConvNet_CIFAR10_DataAug_Distributed.py
 
-The fourth example uses the same CNN as ConvNet_CIFAR10_DataAug.py, but it adds support for distributed training with simple aggregation. For a reference on distributed training, please check [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines).
-Note that [this example](./ConvNet_CIFAR10_DataAug_Distributed.py) supports CPU-only build.
+The fifth example uses the same CNN as ConvNet_CIFAR10_DataAug.py, but it adds support for distributed training with simple aggregation. For a reference on distributed training, please check [here](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#32-python).
+Note that this example will run with a CPU-only build.
 
 `mpiexec -n <#workers> python ConvNet_CIFAR10_DataAug_Distributed.py`

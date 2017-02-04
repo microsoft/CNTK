@@ -23,10 +23,11 @@
 // REVIEW alexeyk: disable warnings properly for GCC/clang
 #ifdef _MSC_VER
 #pragma warning(push)
-#pragma warning(disable : 4100)
-#pragma warning(disable : 4127)
-#pragma warning(disable : 4201)
-#pragma warning(disable : 4515)
+#pragma warning(disable : 4100) // 'identifier': unreferenced formal parameter
+#pragma warning(disable : 4127) // conditional expression is constant
+#pragma warning(disable : 4201) // nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4458) // declaration of 'identifier' hides class member
+#pragma warning(disable : 4515) // 'namespace': namespace uses itself
 #endif
 #include <cub/cub.cuh>
 #ifdef _MSC_VER
@@ -39,6 +40,10 @@
 #ifndef CUDA_LONG
 #define CUDA_LONG int32_t
 #endif
+
+// special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
+static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;
+static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX;
 
 #define IDX2C(i, j, ld) (((j) * (ld)) + (i)) // 0 based indexing
 
@@ -1416,8 +1421,9 @@ __global__ void _adagrad4BlockSparse(
 
 template <class ElemType>
 __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
-                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul)
+                           ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
 {
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
     CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG stride = blockDim.x * gridDim.x;
     for (; idx < size; idx += stride)
@@ -1444,7 +1450,70 @@ __global__ void _fsadagrad(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, 
 
         if (mom > 0.0f)
         {
-            g = mom * smoothMom[idx] + (1.0f - mom) * g;
+            g = mom * smoothMom[idx] + unitGainFactor * g;
+            smoothMom[idx] = g;
+        }
+
+        g *= lr;
+        val[idx] -= g;
+    }
+}
+
+template<class ElemType>
+inline __device__ ElemType _getvalue4BlockSparseCol(ElemType* v, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len, CUDA_LONG idx)
+{
+    CUDA_LONG col = idx / len;
+    CUDA_LONG row = idx - col * len;
+    CUDA_LONG blockid = colOrRow2blockId[col];
+    return (blockid == Id_NotAssigned) ? 0 : v[blockid * len + row];
+}
+
+template<class ElemType>
+inline __device__ void _scalevalue4BlockSparseCol(ElemType* v, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len, CUDA_LONG idx, ElemType s)
+{
+    CUDA_LONG col = idx / len;
+    CUDA_LONG row = idx - col * len;
+    CUDA_LONG blockid = colOrRow2blockId[col];
+    if (blockid != Id_NotAssigned)
+    {
+        v[blockid * len + row] *= s;
+    }
+}
+
+template <class ElemType>
+__global__ void _fsadagrad4BlockSparseCol(CUDA_LONG size, 
+    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
+    ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - mom) : 1.0;
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
+        ElemType adaSqr = adaWeight * smoothAda[idx] + (1.0f - adaWeight) * g * g;
+        smoothAda[idx] = adaSqr;
+        if (adaSqr != 0.0f)
+        {
+            ElemType w;
+            if (sizeof(ElemType) == sizeof(double))
+            {
+                w = adaMul * rsqrt(adaSqr);
+            }
+            else
+            {
+                w = adaMul * rsqrtf(adaSqr);
+            }
+
+            if (w > 10.0f)
+                w = 10.0f;
+            g *= w;
+        }
+
+        if (mom > 0.0f)
+        {
+            g = mom * smoothMom[idx] + unitGainFactor * g;
             smoothMom[idx] = g;
         }
 
@@ -1464,6 +1533,23 @@ __global__ void _rmsprop_init(
         return;
 
     ElemType tmp = curr_grad[i];
+    avars[i] = tmp * tmp;
+    signs[i] = ElemType(0.0);
+    steps[i] = ElemType(0.02);
+}
+
+template <class ElemType>
+__global__ void _rmsprop_init4BlockSparseCol(
+    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* curr_grad, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    const CUDA_LONG N)
+{
+    CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= N)
+        return;
+
+    ElemType tmp = _getvalue4BlockSparseCol(curr_grad, colOrRow2blockId, len, i);
+
     avars[i] = tmp * tmp;
     signs[i] = ElemType(0.0);
     steps[i] = ElemType(0.02);
@@ -1516,6 +1602,61 @@ __global__ void _rmsprop(
 
     ElemType temp = steps[i] / sqrt(avars[i] + floor);
     curr_grad[i] *= temp;
+    signs[i] = grad_sign;
+
+    if (multipliers != nullptr)
+        multipliers[i] = temp;
+}
+
+template <class ElemType>
+__global__ void _rmsprop4BlockSparseCol(
+    ElemType* avars, ElemType* signs, ElemType* steps,
+    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    const CUDA_LONG N,
+    ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN,
+    ElemType floor,
+    ElemType* upd_gpu,
+    ElemType* multipliers)
+{
+    CUDA_LONG i = blockDim.x * blockIdx.x + threadIdx.x;
+    if (i >= N)
+        return;
+
+    ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i);
+
+    avars[i] = RMS_GAMMA * avars[i] + (ElemType(1.0) - RMS_GAMMA) * (g * g);
+
+    // // grad sign base 3: 0->neg, 1->zero, 2->pos
+    // const int grad_sign = 1 + (ElemType(0) < curr_grad[i]) - (curr_grad[i] < ElemType(0));
+
+    // // signs[i] contains three consecutive grad_sign
+    // signs[i]  = 3*(int(signs[i]) % 9) + grad_sign;
+
+    // // update according to the following table:
+    // // (!pos,!pos,!pos) or (!neg,!neg,!neg): RMS_WGT_INC
+    // // (!neg,!neg,neg) or (!pos,!pos,pos): RMS_WGT_DEC
+    // // otherwise: no action
+
+    // switch(int(upd_gpu[int(signs[i])]))
+    // {
+    // case 0:
+    //    steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+    //    break;
+    // case 2:
+    //    steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+    //    break;
+    // }
+    // curr_grad[i] *= steps[i] / sqrt(avars[i] + floor);
+
+    const int grad_sign = (ElemType(0) < g) - (g < ElemType(0));
+
+    if (signs[i] * grad_sign > 0)
+        steps[i] = min(steps[i] * RMS_WGT_INC, RMS_WGT_MAX);
+    else
+        steps[i] = max(steps[i] * RMS_WGT_DEC, RMS_WGT_MIN);
+
+    ElemType temp = steps[i] / sqrt(avars[i] + floor);
+    _scalevalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, i, temp);
     signs[i] = grad_sign;
 
     if (multipliers != nullptr)
@@ -2170,6 +2311,51 @@ __global__ void _innerProduct(
         {
             index = IDX2C(id, j, N);
             sum += a[index] * b[index];
+        }
+    }
+
+    c[id] = sum;
+}
+
+template <class ElemType>
+__global__ void _innerProduct4SparseCSC(
+    ElemType* c,
+    const ElemType* a,
+    const GPUSPARSE_INDEX_TYPE* aRowIndex,
+    const GPUSPARSE_INDEX_TYPE* aColCSCIndex,
+    const ElemType* b,
+    const CUDA_LONG M, // a.GetNumRows();
+    const CUDA_LONG N, // a.GetNumCols();
+    const bool isColWise)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if ((isColWise && id >= N) || (!isColWise && id >= M))
+        return;
+
+    ElemType sum = 0;
+    CUDA_LONG index;
+
+    if (isColWise)
+    {
+        for (CUDA_LONG i = aColCSCIndex[id]; i < aColCSCIndex[id+1]; i++)
+        {
+            index = IDX2C(aRowIndex[i], id, M);
+            sum += a[i] * b[index];
+        }
+    }
+    else
+    {
+        for (CUDA_LONG j = 0; j < N; ++j)
+        {
+            for (CUDA_LONG i = aColCSCIndex[j]; i < aColCSCIndex[j+1]; i++)
+            {
+                if (aRowIndex[i] == id)
+                {
+                    index = IDX2C(id, j, M);
+                    sum += a[i] * b[index];
+                    break;
+                }
+            }
         }
     }
 
@@ -3008,10 +3194,6 @@ __global__ void _reshape(
         newColumnIndex[newNumCols] = oldColumnIndex[oldNumCols]; // set end pointer
 }
 
-// special markers in BlockId2ColOrRow()/ColOrRow2BlockId()
-static const GPUSPARSE_INDEX_TYPE Id_NotAssigned = -1;
-static const GPUSPARSE_INDEX_TYPE Id_Pending = INT_MAX;
-
 //called before _determineBlockIds and _denseMulSparseCSCTransposeToSparseBlockCol to determine which columns have values and
 //what's the mapping from the column id in the resulted SparseBlockCol format to the column id in the dense format
 //input: rowIndexes: the row indexes of the CSC sparse matrix to be multiplied with
@@ -3845,8 +4027,10 @@ __global__ void _normalGradForSparseBlock(
     const size_t numBlocks,
     ElemType* lhsValues, // lhs is blockCol or blockRow
     const GPUSPARSE_INDEX_TYPE* blockIds,
-    ElemType* rhs)
+    ElemType* rhs,
+    bool unitGainMomentum)
 {
+    const ElemType unitGainFactor = unitGainMomentum ? (1.0 - momentum) : 1.0;
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     CUDA_LONG row, col;
     if (blockCol)
@@ -3865,7 +4049,7 @@ __global__ void _normalGradForSparseBlock(
         col = index - numCols * blockId;
         row = blockIds[blockId];
     }
-    rhs[IDX2C(row, col, numRows)] = (1 - momentum) * lhsValues[index] + momentum * rhs[IDX2C(row, col, numRows)];
+    rhs[IDX2C(row, col, numRows)] = unitGainFactor * lhsValues[index] + momentum * rhs[IDX2C(row, col, numRows)];
     lhsValues[index] = rhs[IDX2C(row, col, numRows)];
 }
 

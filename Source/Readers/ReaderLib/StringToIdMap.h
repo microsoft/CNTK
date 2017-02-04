@@ -69,7 +69,7 @@ public:
     // Get string value by its integer id.
     const TString& operator[](size_t id) const
     {
-        if (id < m_indexedValues.size())
+        if (id >= m_indexedValues.size())
             RuntimeError("Unknown id requested");
         return *m_indexedValues[id];
     }

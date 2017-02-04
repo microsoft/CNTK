@@ -1126,11 +1126,75 @@ template <class ElemType>
     return result;
 }
 
-// normal update for smoothed gradients c and current gradients (this)
-// TODO: comment seems wrong; cf. SGD.cpp: smoothedGradient.NormalGrad(gradientValues, functionValues,...)
-template <class ElemType>
-void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum)
+template<class ElemType>
+void CPUSparseMatrix<ElemType>::InnerProduct(const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, const bool isColWise)
 {
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("InnerProduct:  one of the input matrices is empty.");
+
+    const int m = (int)a.GetNumRows();
+    const int n = (int)a.GetNumCols();
+    const int k = (int)b.GetNumRows();
+    const int l = (int)b.GetNumCols();
+
+    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
+    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
+    if (m != k || n != l)
+        InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
+
+    if (isColWise) // col-wise
+    {
+        c.RequireSize(1, n);
+
+#pragma omp parallel for
+        foreach_column(j, c)
+        {
+            ElemType sum = 0;
+            for (CPUSPARSE_INDEX_TYPE iRow = a.ColLocation()[j]; iRow < a.ColLocation()[j+1]; ++iRow)
+            {
+                size_t row = a.RowLocation()[iRow];
+                sum += a.Data()[iRow] * b(row, j);
+            }
+            c(0, j) = sum;
+        }
+    }
+    else
+    {
+        c.RequireSize(m, 1);
+
+#pragma omp parallel for
+        foreach_row(i, c)
+        {
+            ElemType sum = 0;
+            for(CPUSPARSE_INDEX_TYPE j = 0; j < n; ++j)
+            {
+                for (CPUSPARSE_INDEX_TYPE iRow = a.ColLocation()[j]; iRow < a.ColLocation()[j + 1]; ++iRow)
+                {
+                    if (a.RowLocation()[iRow] == i)
+                    {
+                        sum += a.Data()[iRow] * b(i, j);
+                        break;
+                    }
+                }
+            }
+            c(i, 0) = sum;
+        }
+    }
+}
+
+// A helper method used in MomentumSGDUpdate and NesterovAcceleratedMomentumSGDUpdate.
+// Modifies the smoothed gradients "c", as well as the current gradients "this" on which this method is invoked. 
+// Classic momentum (unitGainFactor == 1.0):
+// 1) c = momentum * c + this
+// Unit-gain momentum (unitGainFactor == 1.0 - momentum):
+// 1) c = momentum * c + (1.0 - momentum) * this
+// 2) this = c
+// TODO: NormalGrad is a misnomer here. Come up with a better name.
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemType momentum, bool unitGainMomentum)
+{
+    const auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+
     if (c.IsEmpty())
     {
         c.RequireSize(GetNumRows(), GetNumCols());
@@ -1140,17 +1204,18 @@ void CPUSparseMatrix<ElemType>::NormalGrad(CPUMatrix<ElemType>& c, const ElemTyp
 
     if (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol || GetFormat() == MatrixFormat::matrixFormatSparseBlockRow)
     {
+        const auto isSparseBlockCol = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol);
         for (size_t j = 0; j < GetBlockSize(); j++)
         {
             size_t i = GetBlockIds()[j] - GetBlockIdShift();
-            size_t len = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? GetNumRows() : GetNumCols();
+            size_t len = (isSparseBlockCol) ? GetNumRows() : GetNumCols();
             size_t start = j * len;
             for (size_t p = start; p < start + len; p++)
             {
                 ElemType val = Buffer()[p];
-                size_t row = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? (p - start) : i;
-                size_t col = (GetFormat() == MatrixFormat::matrixFormatSparseBlockCol) ? i : (p - start);
-                c(row, col) = (1 - momentum) * val + momentum * c(row, col);
+                size_t row = (isSparseBlockCol) ? (p - start) : i;
+                size_t col = (isSparseBlockCol) ? i : (p - start);
+                c(row, col) = unitGainFactor * val + momentum * c(row, col);
                 Buffer()[p] = c(row, col);
             }
         }
@@ -1589,6 +1654,7 @@ template CPUSparseMatrix<char> CPUSparseMatrix<char>::ColumnSlice(size_t startCo
 template CPUMatrix<char> CPUSparseMatrix<char>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
 template void CPUSparseMatrix<char>::AssignColumnSliceToDense(CPUMatrix<char>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<char>& CPUSparseMatrix<char>::operator=(const CPUSparseMatrix<char>& deepCopyFrom);
+template void CPUSparseMatrix<char>::ScaleAndAdd(char, class Microsoft::MSR::CNTK::CPUSparseMatrix<char> const &, class Microsoft::MSR::CNTK::CPUMatrix<char> &);
 
 // Support <short>
 template CPUSparseMatrix<short>::CPUSparseMatrix(const MatrixFormat format, const size_t numRows, const size_t numCols, const size_t size);
@@ -1611,6 +1677,7 @@ template CPUSparseMatrix<short> CPUSparseMatrix<short>::ColumnSlice(size_t start
 template CPUMatrix<short> CPUSparseMatrix<short>::CopyColumnSliceToDense(size_t startColumn, size_t numCols) const;
 template void CPUSparseMatrix<short>::AssignColumnSliceToDense(CPUMatrix<short>&, size_t startColumn, size_t numCols) const;
 template CPUSparseMatrix<short>& CPUSparseMatrix<short>::operator=(const CPUSparseMatrix<short>& deepCopyFrom);
+template void CPUSparseMatrix<short>::ScaleAndAdd(short, class Microsoft::MSR::CNTK::CPUSparseMatrix<short> const &, class Microsoft::MSR::CNTK::CPUMatrix<short> &);
 
 template CPUSparseMatrix<int>::CPUSparseMatrix(const MatrixFormat, const size_t, const size_t, const size_t);
 template CPUSparseMatrix<int>::~CPUSparseMatrix();

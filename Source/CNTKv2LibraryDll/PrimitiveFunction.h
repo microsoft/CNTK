@@ -11,6 +11,7 @@
 #include "Utils.h"
 #include "ConvolveGeometry.h"
 #include "ConvolutionalNodes.h"
+#include "Variable.h"
 
 namespace std
 {
@@ -66,6 +67,7 @@ namespace CNTK
         {PrimitiveOpType::SquaredError, L"SquaredError"},
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
+        {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
         {PrimitiveOpType::PastValue, L"PastValue"},
         {PrimitiveOpType::FutureValue, L"FutureValue"},
         {PrimitiveOpType::ReduceElements, L"ReduceElements"},
@@ -86,6 +88,9 @@ namespace CNTK
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
         { PrimitiveOpType::Block, L"Block" },
+        { PrimitiveOpType::Unpooling, L"Unpooling" },
+        { PrimitiveOpType::LambdaRank, L"LambdaRank" },
+        { PrimitiveOpType::NDCG, L"NDCG" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -116,6 +121,10 @@ namespace CNTK
             if (numFunctionInputs > 2)
                 indexMap.insert({ 2, 2 });
         }
+        else if (op == PrimitiveOpType::LambdaRank)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 }, { 2, 2 } });
+        else if (op == PrimitiveOpType::NDCG)
+            indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 },{ 1, 0 },{ 2, 2 } });
         else if (op == PrimitiveOpType::CrossEntropyWithSoftmax)
             indexMap = std::unordered_map<size_t, size_t>({ { 0, 1 }, { 1, 0 } });
         else if (op == PrimitiveOpType::GatherPacked)
@@ -175,6 +184,7 @@ namespace CNTK
         static const std::wstring InternalMeanReductionOpName;
         static const std::wstring InternalMaxReductionOpName;
         static const std::wstring InternalMinReductionOpName;
+        static const std::wstring InternalProdReductionOpName;
         static const std::wstring InternalAllReductionOpName;
         static const std::wstring InternalAnyReductionOpName;
 
@@ -217,28 +227,28 @@ namespace CNTK
         static const std::wstring AttributeNameNumLayers;
         static const std::wstring AttributeNameHiddenSize;
         static const std::wstring AttributeNameRecurrentOp;
+        static const std::wstring AttributeNameUnpoolingWindowShape;
+        static const std::wstring AttributeNameSubstitutionPenalty;
+        static const std::wstring AttributeNameDeletionPenalty;
+        static const std::wstring AttributeNameInsertionPenalty;
+        static const std::wstring AttributeNameSquashInputs;
+        static const std::wstring AttributeNameSamplesToIgnore;
 
     protected:
-        PrimitiveFunction(const std::vector<Variable>& blockInputs, const std::vector<Variable>& blockOutputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(blockInputs, blockOutputs, std::move(functionConfig), functionName, uid), m_op(PrimitiveOpType::Block)
+        PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
+            : Function(inputs, std::move(functionConfig), functionName, uid), m_op(op)
         {}
 
     public:
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
+        PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName = L"")
             : PrimitiveFunction(op, inputs, std::move(functionConfig), functionName, GenerateUid(op))
         {}
 
-        virtual BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& /*arguments*/,
+        // Primitive functions are currently implemented using the core CNTK engine ComputationNode types
+        virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& /*inputValues*/,
                                          std::unordered_map<Variable, ValuePtr>& /*outputs*/,
                                          const DeviceDescriptor& /*computeDevice*/,
-                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/) override
-        {
-            NOT_IMPLEMENTED;
-        }
-
-        virtual void Backward(const BackPropStatePtr& /*state*/,
-                              const std::unordered_map<Variable, ValuePtr>& /*rootGradientValues*/,
-                              std::unordered_map<Variable, ValuePtr>& /*backPropagatedGradientValuesForInputs*/) override
+                                         const std::unordered_set<Variable>& /*outputsToRetainBackwardStateFor*/)
         {
             NOT_IMPLEMENTED;
         }
@@ -272,10 +282,6 @@ namespace CNTK
         }
 
     private:
-
-        PrimitiveFunction(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
-            : Function(inputs, GetOutputVariables(op, inputs, functionConfig, true, (functionName != L"" ? functionName : uid)), std::move(functionConfig), functionName, uid), m_op(op)
-        {}
 
         // The following helper functions are used to determine the output shape for different 
         // types of primitive operations accounting for broadcasting and reductions where applicable.
@@ -424,6 +430,12 @@ namespace CNTK
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
 
+            if (leftOperandShape == NDShape::Unknown)
+                leftOperandShape = rightOperandShape;
+
+            if (rightOperandShape == NDShape::Unknown)
+                rightOperandShape = leftOperandShape;
+
             // All operand shapes should be known
             assert((leftOperandShape != NDShape::Unknown) && (rightOperandShape != NDShape::Unknown));
 
@@ -473,16 +485,16 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed)
+        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions)
         {
             assert(operands.size() > 1);
 
             // TODO: Is this logic of transitively constructing the output shape from the operands correct?
             Variable dummyOutputVariable = PlaceholderVariable(NDShape());
             for (auto& operand : operands)
-                dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, false);
+                dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, inferInputDimensions);
 
-            return dummyOutputVariable.m_dataFields->m_shape;
+            return dummyOutputVariable.Shape();
         }
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
@@ -658,13 +670,14 @@ namespace CNTK
         static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
         {
             NDShape mainOperandShape = operands[0].Shape();
-            for (size_t i = 1; i < operands.size(); i++)
+            for (size_t i = 1; i < operands.size() - 1; i++) // all but first and last arguments must match the first; last one must be a [1]
             {
                 if (!operands[i].DynamicAxes().empty())
                     InvalidArgument("BatchNormalization: Input[%d] has a dynamic axis that is not allowed!", (int)i);
 
                 // Infer dimensions of learnable parameters
                 auto paramShape = operands[i].Shape();
+              
                 if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
                 {
                     size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
@@ -678,26 +691,34 @@ namespace CNTK
                                     (int)i,
                                     AsStringForErrorReporting(paramShape).c_str(),
                                     AsStringForErrorReporting(operands[1].Shape()).c_str());
+                
+            }
+            const auto& runCount = operands[operands.size() - 1];
+            auto runCountRank = runCount.Shape().Rank();
+            if (runCountRank > 1 || (runCountRank == 1 && runCount.Shape()[0] != 1)) // last arguments is count, must be a scalar
+            {
+                InvalidArgument("BatchNormalization: Input[%d] (running mean sample count) must be a scalar.", (int)(operands.size() - 1));
             }
 
             return UnaryElementwiseOpOutputShape(mainOperandShape);
         }
 
-        virtual std::vector<Variable> GetOutputVariables(bool inferDimensions);
-
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
-        static std::vector<Variable> GetOutputVariables(PrimitiveOpType op,
-                                                        std::vector<Variable>& inputs,
-                                                        Dictionary& functionConfig,
-                                                        bool inferDimensions,
-                                                        const std::wstring& functionName);
+        static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
+        static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig);
+
+        void InferOutputs(std::vector<Variable>& outputs) override;
 
     private:
         PrimitiveOpType m_op;
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
-        static const size_t s_serializationVersion = 2;
+        // version 1: initial version.
+        // version 2: changed in 7af3a7c0e46cb12f873f1289400a9c5d86746662. TODO(n17s): add description.
+        // version 3: changed in df0ab4e58186738931968e806b61bc80d7b6e20e. TODO(pkrannen): add description.
+        // version 4: added extra parameter (#6) for the running mean sample count in BatchNormalization.
+        static const size_t s_serializationVersion = 4;
     };
 }

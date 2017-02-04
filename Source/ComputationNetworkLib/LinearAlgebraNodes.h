@@ -233,7 +233,10 @@ public:
         if (c.Input(inputIndex)->ReducesInTimeWrt(c.Input(1 - inputIndex)))
             c.Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
 
-        inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
+        if (c.Input(inputIndex)->ParentOverwritesGradient())
+            inputGradient.AssignElementwiseProductOf(gradient, otherInputValue);
+        else
+            inputGradient.AddElementwiseProductOf(gradient, otherInputValue);
     }
 };
 
@@ -313,30 +316,35 @@ protected:
 
 private:
     // Check if TimesNodeBase could be simplified to ElementTimes to avoid unroll when:
-    // 1. input0: DENSE, is rank-1 and transposed, or is rank-2 with Dim(0)==1
-    // 2. input1: DENSE, is rank-1
+    // 1. input0: is rank-1 and transposed, or is rank-2 with Dim(0)==1
+    // 2. input1: is rank-1
     // 3. output: rank-1 and reduced to a scalar (Dim(0)==1)
-    // NOTE we might relax the condition on DENSE when ElementTimes support sparse in future
-    bool IsReduceableDotProduct(const FrameRange& fr)
+    // 4. m_transpose (becomes Matrix::InnerProduct), or both input being dense
+    bool IsReduceableDotProduct(const FrameRange& fr, bool& hasSparse)
     {
         const auto& shape0   = InputRef(0).GetSampleLayout();
         const auto& shape1   = InputRef(1).GetSampleLayout();
         const auto& shapeOut =             GetSampleLayout();
 
+        bool input0Sparse = (InputRef(0).Value().GetMatrixType() != DENSE);
+        bool input1Sparse = (InputRef(1).Value().GetMatrixType() != DENSE);
+
         bool input0_ok =
-            ((shape0.GetRank() == 1 && m_transpose) ||
-             (shape0.GetRank() == 2 && shape0.GetDim(0) == 1)) &&
-            (InputRef(0).Value().GetMatrixType() == DENSE); // TODO: add support in ElementTimes for sparse and remove this limitation
+            (shape0.GetRank() == 1 && m_transpose) ||
+            (shape0.GetRank() == 2 && shape0.GetDim(0) == 1);
 
         bool input1_ok =
-            (shape1.GetRank() == 1) &&
-            (InputRef(1).Value().GetMatrixType() == DENSE);
+            (shape1.GetRank() == 1);
 
         bool outputScalar =
             (shapeOut.GetRank() == 1) &&
             (shapeOut.GetDim(0) == 1);
 
-        return input0_ok && input1_ok && outputScalar;
+        bool notBothSparse = !(input0Sparse && input1Sparse);
+
+        hasSparse = (input0Sparse || input1Sparse);
+        
+        return input0_ok && input1_ok && outputScalar && notBothSparse && (m_transpose || !hasSparse);
     }
 
 public:
@@ -347,9 +355,24 @@ public:
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
             // speed up using ElementTimes to avoid unroll if possible
-            if (IsReduceableDotProduct(fr))
+            bool hasSparse;
+            if (IsReduceableDotProduct(fr, hasSparse))
             {
-                ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, false/*allowBroadcast*/);
+                // for sparse transposed, use InnerProduct
+                if (hasSparse)
+                {
+                    Matrix<ElemType> value  =             ValueFor(fr);
+                    Matrix<ElemType> input0 = InputRef(0).ValueFor(fr);
+                    Matrix<ElemType> input1 = InputRef(1).ValueFor(fr);
+                    if (input0.GetMatrixType() == SPARSE)
+                        Matrix<ElemType>::InnerProduct(input0, input1, value, true/*isColWise*/);
+                    else
+                        Matrix<ElemType>::InnerProduct(input1, input0, value, true/*isColWise*/);
+                }
+                else
+                {
+                    ElementTimesNode<ElemType>::ForwardPropImpl(*this, fr, false/*allowBroadcast*/);
+                }
                 return;
             }
 
@@ -377,9 +400,25 @@ public:
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
             // speed up using ElementTimes to avoid unroll if possible
-            if (IsReduceableDotProduct(fr))
+            bool hasSparse;
+            if (IsReduceableDotProduct(fr, hasSparse))
             {
-                ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false/*allowBroadcast*/);
+                if (hasSparse)
+                {
+                    Matrix<ElemType> gradient = GradientFor(fr);
+                    Matrix<ElemType> inputValue = InputRef(1 - inputIndex).ValueFor(fr);
+                    Matrix<ElemType> inputGradient = InputRef(inputIndex).GradientFor(fr);
+                    Matrix<ElemType> gradientDiagonal(gradient.GetNumCols(), gradient.GetNumCols(), gradient.GetDeviceId());
+                    gradientDiagonal.SetDiagonalValue(gradient);
+                    Matrix<ElemType>::MultiplyAndWeightedAdd(
+                        (ElemType)1.0, inputValue, false, gradientDiagonal, true,
+                        Input(inputIndex)->ParentOverwritesGradient() ? (ElemType)0.0 : (ElemType)1.0,
+                        inputGradient);
+                }
+                else
+                {
+                    ElementTimesNode<ElemType>::BackpropToImpl(*this, inputIndex, fr, false/*allowBroadcast*/);
+                }
                 return;
             }
 
@@ -399,24 +438,6 @@ public:
 
         if (inputIndex == 0) // left derivative
         {
-            // currently we only support one combination when the input is sparse
-            // If input data is sparse, then gradient is block sparse.
-            if (InputRef(1).Value().GetMatrixType() == SPARSE && InputRef(0).Gradient().GetMatrixType() == DENSE && Gradient().GetMatrixType() == DENSE)
-            {
-                // We need a sparse matrix for the gradient. We allocate a new one instead of switching the type in place
-                // since switching in place may affect other nodes who share this matrix due to memory sharing
-                auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
-                auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
-                                                                                        currentInput0GradientMatrixRef.GetNumCols(),
-                                                                                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
-                                                                                        SPARSE,
-                                                                                        MatrixFormat::matrixFormatSparseBlockCol);
-
-                // BUGBUG: Copy over the current contents since we accumulate into the gradient matrix instead of overwriting the content
-                // newInput0SparseGradientMatrix.AssignValuesOf(currentInput0GradientMatrixRef);
-                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
-            }
-
             auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
@@ -427,7 +448,6 @@ public:
         }
         else if (inputIndex == 1) // right derivative
         {
-            // BUGBUG: Above block produces case of sparse second input a sparse gradient gor first input. We should either have corresponding code here or not at all.
             auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
             auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
@@ -572,23 +592,11 @@ public:
         // this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
         if (Input(0)->NeedsGradient() && Input(1)->Value().GetMatrixType() == SPARSE)
         {
-            Input(0)->CreateGradientMatrixIfNull();
-
-            // We need a sparse matrix for the gradient. We allocate a new one instead of switching the type in place
-            // since switching in place may affect other nodes who share this matrix due to memory sharing
-            auto& currentInput0GradientMatrixRef = InputRef(0).Gradient();
-            if (currentInput0GradientMatrixRef.GetMatrixType() != SPARSE)
-            {
-                auto newInput0SparseGradientMatrix = std::make_shared<Matrix<ElemType>>(currentInput0GradientMatrixRef.GetNumRows(),
-                                                                                        currentInput0GradientMatrixRef.GetNumCols(),
-                                                                                        currentInput0GradientMatrixRef.GetPreferredDeviceId(),
-                                                                                        SPARSE,
-                                                                                        MatrixFormat::matrixFormatSparseBlockCol);
-
-                // BUGBUG: Copy over the current contents since we accumulate into the gradient matrix instead of overwriting the content
-                // newInput0SparseGradientMatrix.AssignValuesOf(currentInput0GradientMatrixRef);
-                InputRef(0).GradientPtrRef() = newInput0SparseGradientMatrix;
-            }
+            InputRef(0).GradientPtrRef() = std::make_shared<Matrix<ElemType>>(0, // size would be initialized later
+                                                                              0,
+                                                                              Gradient().GetPreferredDeviceId(),
+                                                                              SPARSE,
+                                                                              MatrixFormat::matrixFormatSparseBlockCol);
         }
 
         // we need to call base allocation at end since we will need to allocate special ones first

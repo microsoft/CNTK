@@ -4,9 +4,9 @@
 
 |Data:     |The ILSVRC2012 dataset (http://www.image-net.org/challenges/LSVRC/2012/) for image classification.
 |:---------|:---
-|Purpose   |This folder contains examples that demonstrate how to use CNTK to define GoogLeNet (https://arxiv.org/abs/1409.4842) for image classification.
+|Purpose   |This folder contains examples that demonstrate how to use CNTK to define GoogLeNet (https://arxiv.org/abs/1409.4842) and its derivations for image classification.
 |Network   |Deep convolutional neural networks codenamed "Inception" (GoogLeNet).
-|Training  |RMSProp.
+|Training  |See the details.
 |Comments  |See below.
 
 ## Running the example
@@ -19,6 +19,8 @@ ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it
 
 ## Details
 
-We currently offer the Inception V3 model, published in December 2015 (https://arxiv.org/abs/1512.00567). Only BrainScript version is available at this moment.
+We currently offer the BN-Inception (https://arxiv.org/abs/1502.03167) and Inception V3 (https://arxiv.org/abs/1512.00567) models.
 
-### [BrainScript](./BrainScript)
+### [BN-Inception](./BN-Inception)
+
+### [Inception V3](./InceptionV3)

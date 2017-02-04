@@ -497,14 +497,35 @@ bool CuDnnConvolutionEngineFactory<ElemType>::IsSupported(DEVICEID_TYPE deviceId
     const auto& kernel = geometry->KernelShape();
     const auto& sharing = geometry->Sharing();
     const auto& mapCount = geometry->MapCount();
+
+    const auto& inputRank = input.GetRank();
+    const auto& kernelRank = kernel.GetRank();
+    const auto& mapRank = mapCount.GetRank();
     // cuDNN supports 2D and 3D convolutions at the moment with full sharing.
     // In case map count size > 1, then it should have all ones except last dimension.
     // If pooling is requested, then cuDNN supports only 2D/3D inputs and 2D pooling kernels.
-    return (input.GetRank() <= 4 &&
-            std::find(begin(sharing), end(sharing), false) == sharing.end() &&
-            mapCount.GetNumElements() == mapCount[mapCount.GetRank() - 1] &&
-            (poolKind == PoolKind::None || 
-             input.GetRank() <= 3 && (kernel.GetRank() < 3 || kernel[2] == 1)));
+    bool retVal = (inputRank <= 4 &&
+                   std::find(begin(sharing), end(sharing), false) == sharing.end() &&
+                   mapCount.GetNumElements() == mapCount[mapRank - 1] &&
+                   (poolKind == PoolKind::None ||
+                   inputRank <= 3 && (kernelRank < 3 || kernel[2] == 1)));
+
+    return retVal;
+
+    // TODO: This currently either causes a CUDA timeout or slows the whole machine down to a crawl (GPU).
+    // cuDNN as of version 8.0 does not handle asymmetric padding for convolution correctly. We need to detect asymmetric 
+    // padding due to auto-padding and choose the reference convolution implementation instead 
+    //if (poolKind == PoolKind::None)     // only for convolution, pooling seems fine 
+    //{
+    //    for (int i = 0; i < kernelRank; i++)
+    //    {
+    //        if (geometry->GetAutoPad(i))
+    //            retVal = retVal && (kernel[i] % 2 != 0);  // make sure kernel size is odd 
+    //        else
+    //            retVal = retVal && (geometry->GetLowerPad(i) == geometry->GetUpperPad(i));   // lower pad is same as upper pad 
+    //    }
+    //}
+    //return retVal;
 }
 
 template class CuDnnConvolutionEngineFactory<float>;

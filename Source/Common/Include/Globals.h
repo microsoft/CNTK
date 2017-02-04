@@ -19,32 +19,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void       ForceConstantRandomSeed() {        m_forceConstantRandomSeed = true; }
         static bool ShouldForceConstantRandomSeed() { return m_forceConstantRandomSeed; }
 
-        static void EnableGradientAccumulationOptimization() { m_optimizeGradientAccumulation = true; }
-        static void DisableGradientAccumulationOptimization() { m_optimizeGradientAccumulation = false; }
+        static void SetGradientAccumulationOptimization(bool enable) { m_optimizeGradientAccumulation = enable; }
         static bool ShouldOptimizeGradientAccumulation() { return m_optimizeGradientAccumulation; }
 
         // TODO: Currently the flag is set to false. Should be switched to true after more rigorous testing.
         static bool UseV2Aggregator() { return false; }
 
-        static void EnableShareNodeValueMatrices()
-        {
-            m_enableShareNodeValueMatrices = true;
-        }
+        static void SetShareNodeValueMatrices(bool enable) { m_enableShareNodeValueMatrices = enable; }
+        static bool ShouldEnableShareNodeValueMatrices() { return m_enableShareNodeValueMatrices; }
 
-        static bool ShouldEnableShareNodeValueMatrices()
-        {
-            return m_enableShareNodeValueMatrices;
-        }
-
-        static void EnableHyperCompressMemory()
-        {
-            m_enableHyperCompressMemory = true;
-        }
-
-        static bool ShouldEnableHyperCompressMemory()
-        {
-            return m_enableHyperCompressMemory;
-        }
+        static void SetHyperCompressMemory(bool enable) { m_enableHyperCompressMemory = enable; }
+        static bool ShouldEnableHyperCompressMemory() { return m_enableHyperCompressMemory; }
 
     private:
         static std::atomic<bool> m_forceDeterministicAlgorithms;

@@ -1,9 +1,6 @@
 dataDir: ../../Data
 tags:
-     # running on every BVT job in 'P' (Parallel) leg in Debug-GPU and Release-CPU configurations:
-     # Also skipping Release-CPU on linux to save time (for now due to unknown reason it runs much longer comparing to windows)
-     - bvt-p  ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and ((flavor=='debug') ^ (device=='cpu')) and not (os=='linux' and device=='cpu')
-     # running unconditionally on every Nightly job in 'P' leg
+     - bvt-p ((build_sku == 'gpu') or (build_sku == '1bitsgd')) and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
      - nightly-p ((build_sku == 'gpu') or (build_sku == '1bitsgd'))
 
 testCases:

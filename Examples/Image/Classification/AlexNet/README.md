@@ -18,6 +18,8 @@ ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it
 
 ## Details
 
-We currently only offer the BrainScript version. Compared to the original AlexNet, and the Caffe implementation of AlexNet (https://github.com/BVLC/caffe/tree/master/models/bvlc_alexnet), our model differs slightly in that we no longer split the convolution layers into two groups (model parallelism). As a result our model has very slightly more parameters, but achieves better accuracy.
+We give examples for both Python and BrainScript. Compared to the original AlexNet, and the Caffe implementation of AlexNet (https://github.com/BVLC/caffe/tree/master/models/bvlc_alexnet), our model differs slightly in that we no longer split the convolution layers into two groups (model parallelism). As a result our model has very slightly more parameters, but achieves better accuracy.
+
+### [Python](./Python)
 
 ### [BrainScript](./BrainScript)

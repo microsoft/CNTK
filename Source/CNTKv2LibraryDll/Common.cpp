@@ -49,6 +49,17 @@ namespace CNTK
             return s_alwaysAllowSettingDefaultDevice.load();
         }
 
+        std::atomic<bool> s_allowRenamingFunctions(false);
+        void AllowRenamingFunctions()
+        {
+            s_allowRenamingFunctions.store(true);
+        }
+
+        bool IsRenamingFunctionsAllowed()
+        {
+            return s_allowRenamingFunctions.load();
+        }
+
         std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
         void SetAutomaticUnpackingOfPackedValues(bool disable)
         {
@@ -62,22 +73,32 @@ namespace CNTK
 
         void EnableForwardValuesSharing()
         {
-            Microsoft::MSR::CNTK::Globals::EnableShareNodeValueMatrices();
+            Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ true);
+        }
+
+        void DisableForwardValuesSharing()
+        {
+            Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ false);
         }
 
         void EnableHyperMemoryCompress()
         {
-            Microsoft::MSR::CNTK::Globals::EnableHyperCompressMemory();
+            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ true);
+        }
+
+        void DisableHyperMemoryCompress()
+        {
+            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ false);
         }
 
         void EnableGradientAccumulationOptimization()
         {
-            Microsoft::MSR::CNTK::Globals::EnableGradientAccumulationOptimization();
+            Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ true);
         }
 
         void DisableGradientAccumulationOptimization()
         {
-            Microsoft::MSR::CNTK::Globals::DisableGradientAccumulationOptimization();
+            Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ false);
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -450,8 +471,35 @@ namespace CNTK
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
     
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
+
+    bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_allKnownDynamicAxisNames.insert(axisName).second;
+    }
+
+    const std::wstring& Axis::UniqueDynamicAxesNames::NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_allKnownDynamicAxisNames.find(axisNamePrefix) == m_allKnownDynamicAxisNames.end())
+        {
+            m_allKnownDynamicAxisNames.insert(axisNamePrefix);
+            return axisNamePrefix;
+        }
+
+        for (size_t i = 1;; i++)
+        {
+            auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
+            if (m_allKnownDynamicAxisNames.find(newDynamicAxisName) == m_allKnownDynamicAxisNames.end())
+            {
+                m_allKnownDynamicAxisNames.insert(newDynamicAxisName);
+                return *m_allKnownDynamicAxisNames.find(newDynamicAxisName);
+            }
+        }
+    }
 
     static std::shared_ptr<std::vector<Axis>> s_defaultInputVariableDynamicAxes, s_unknownDynamicAxes;
     static std::once_flag s_initDefaultInputVariableDynamicAxesFlag, s_initUnknownDynamicAxesFlag;
@@ -492,6 +540,12 @@ namespace CNTK
         return s_allStaticAxes;
     }
 
+    /*static*/ const Axis& Axis::AllAxes()
+    {
+        static const Axis s_allAxes(SentinelStaticAxisIndexValueForAllAxes);
+        return s_allAxes;
+    }
+
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
@@ -506,5 +560,17 @@ namespace CNTK
     size_t GetMaxNumCPUThreads()
     {
         return Microsoft::MSR::CNTK::CPUMatrix<float>::GetMaxNumThreads();
+    }
+
+    static std::atomic<bool> s_defaultUnitGainValue(true);
+
+    bool DefaultUnitGainValue() 
+    {
+        return s_defaultUnitGainValue;
+    }
+
+    void SetDefaultUnitGainValue(bool value) 
+    {
+        s_defaultUnitGainValue.store(value);
     }
 }

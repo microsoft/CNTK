@@ -71,7 +71,8 @@ public:
     // The following functions create nodes and link them to the network and their inputs.
     // TODO: Do we need both this set and the one above that does not add inputs? Can they share more code?
     ComputationNodePtr BatchNormalization(const ComputationNodePtr input, const ComputationNodePtr scale, const ComputationNodePtr bias,
-                                          const ComputationNodePtr runMean, const ComputationNodePtr runVariance, bool spatial = false, double normalizationTimeConstant = 0, double blendTimeConstant = 0, double epsilon = 1e-5, bool useCntkEngine = true,
+                                          const ComputationNodePtr runMean, const ComputationNodePtr runVariance, const ComputationNodePtr runSampleCount,
+                                          bool spatial = false, double normalizationTimeConstant = 0, double blendTimeConstant = 0, double epsilon = 1e-5, bool useCntkEngine = true,
                                           ImageLayoutKind imageLayoutKind = ImageLayoutKind::CHW, const std::wstring nodeName = L"");
     ComputationNodePtr Convolution(const ComputationNodePtr weight,
                                    const ComputationNodePtr inputValues,
@@ -129,6 +130,7 @@ public:
     ComputationNodePtr Diagonal(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr DummyCriterion(const ComputationNodePtr objectives, const ComputationNodePtr derivatives, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
+    ComputationNodePtr EditDistanceError(const ComputationNodePtr a, const ComputationNodePtr b, float subPen, float delPen, float insPen, bool squashInputs, vector<size_t> samplesToIgnore, const std::wstring nodeName = L"");
     ComputationNodePtr ElementTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr DynamicAxis(const ComputationNodePtr a, const std::wstring& nodeName = L"");
     ComputationNodePtr ClassificationError(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");

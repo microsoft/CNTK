@@ -194,6 +194,10 @@ Tests/EndToEndTests/UnitTests/MathTests/M.txt
 Tests/EndToEndTests/UnitTests/MathTests/MCPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MGPU.txt
 Tests/EndToEndTests/UnitTests/MathTests/MS.txt
+Tests/UnitTests/MathTests/M.txt
+Tests/UnitTests/MathTests/MCPU.txt
+Tests/UnitTests/MathTests/MGPU.txt
+Tests/UnitTests/MathTests/MS.txt
 
 Tests/Install/linux/BinaryDrops.tar.gz
 
@@ -221,7 +225,7 @@ bindings/python/cntk/i_plus_i_0.mod
 # CSharp bindings
 bindings/csharp/Swig/cntk_cs_wrap.h
 bindings/csharp/Swig/cntk_cs_wrap.cxx
-bindings/csharp/CSEvalV2Library/SwigProxyClasses/*.cs
+bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
 
 # Examples and Tutorials
 Examples/Image/DataSets/Pascal/VOC*
@@ -239,8 +243,14 @@ Examples/Image/DataSets/CIFAR-10/train_map.txt
 Examples/Image/DataSets/CIFAR-10/train_regrLabels.txt
 Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt
 Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt
-Examples/Image/DataSets/grocery/
-Examples/Image/PretrainedModels/
+Examples/Image/DataSets/grocery/negative/
+Examples/Image/DataSets/grocery/positive/
+Examples/Image/DataSets/grocery/testImages/
+Examples/Image/DataSets/grocery/*.txt
+Examples/Image/PretrainedModels/*.model
+Examples/Image/FeatureExtraction/*.txt
+Examples/Image/GettingStarted/Output/
+Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
 Tutorials/.ipynb_checkpoints/

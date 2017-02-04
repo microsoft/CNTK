@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -x -e -o pipefail
+
+# Note: must match current test, cf. testcases.yml
+./TestDriver.py run -s gpu -d gpu -f release TestDriverTest/EmptyTest
+
+echo __COMPLETED__

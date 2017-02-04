@@ -282,6 +282,16 @@ inline CNTK::FunctionPtr SimpleRecurrentLayer(const  CNTK::Variable& input, cons
     return output->ReplacePlaceholders({ { dh, output } });
 }
 
+inline std::vector<bool> GenerateSequenceStartFlags(size_t numSequences)
+{
+    std::vector<bool> sequenceStartFlags(numSequences);
+    for (size_t i = 0; i < numSequences; ++i)
+    {
+        sequenceStartFlags[i] = static_cast<int>(rand()) % 2 == 0 ? true : false;
+    }
+    return sequenceStartFlags;
+}
+
 inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t maxAllowedSequenceLength)
 {
     std::vector<size_t> sequenceLengths(numSequences);
@@ -405,12 +415,12 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     stream.exceptions(std::ios_base::badbit);  
 }
 
-inline void PrintTrainingProgress(const CNTK::Trainer& trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
+inline void PrintTrainingProgress(const CNTK::TrainerPtr trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
 {
-    if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer.PreviousMinibatchSampleCount() != 0)
+    if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer->PreviousMinibatchSampleCount() != 0)
     {
-        double trainLossValue = trainer.PreviousMinibatchLossAverage();
-        double evaluationValue = trainer.PreviousMinibatchEvaluationAverage();
+        double trainLossValue = trainer->PreviousMinibatchLossAverage();
+        double evaluationValue = trainer->PreviousMinibatchEvaluationAverage();
         printf("Minibatch %d: CrossEntropy loss = %.8g, Evaluation criterion = %.8g\n", (int)minibatchIdx, trainLossValue, evaluationValue);
     }
 }
@@ -630,3 +640,46 @@ inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second
         }
     }
 }
+
+inline  MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputClasses, const Dictionary& readModeConfig, size_t epochSize, bool randomize = true)
+{
+    auto featuresFilePath = L"glob_0000.scp";
+    auto labelsFilePath = L"glob_0000.mlf";
+    auto labelMappingFile = L"state.list";
+
+    Dictionary featuresStreamConfig;
+    featuresStreamConfig[L"dim"] = featureDim;
+    featuresStreamConfig[L"scpFile"] = featuresFilePath;
+
+    CNTK::Dictionary featInputStreamsConfig;
+    featInputStreamsConfig[L"features"] = featuresStreamConfig;
+
+    CNTK::Dictionary featDeserializerConfiguration;
+    featDeserializerConfiguration[L"type"] = L"HTKFeatureDeserializer";
+    featDeserializerConfiguration[L"input"] = featInputStreamsConfig;
+
+    Dictionary labelsStreamConfig;
+    labelsStreamConfig[L"dim"] = numOutputClasses;
+    labelsStreamConfig[L"mlfFile"] = labelsFilePath;
+    labelsStreamConfig[L"labelMappingFile"] = labelMappingFile;
+    labelsStreamConfig[L"scpFile"] = featuresFilePath;
+
+    CNTK::Dictionary labelsInputStreamsConfig;
+    labelsInputStreamsConfig[L"labels"] = labelsStreamConfig;
+
+    CNTK::Dictionary labelsDeserializerConfiguration;
+    labelsDeserializerConfiguration[L"type"] = L"HTKMLFDeserializer";
+    labelsDeserializerConfiguration[L"input"] = labelsInputStreamsConfig;
+
+    Dictionary minibatchSourceConfiguration;
+    if (randomize)
+        minibatchSourceConfiguration[L"randomize"] = true;
+
+    minibatchSourceConfiguration[L"epochSize"] = epochSize;
+    minibatchSourceConfiguration[L"deserializers"] = std::vector<DictionaryValue>({ featDeserializerConfiguration, labelsDeserializerConfiguration });
+    minibatchSourceConfiguration.Add(readModeConfig);
+
+    return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
+}
+
+

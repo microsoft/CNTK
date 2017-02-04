@@ -244,15 +244,104 @@ void TestTimesAndPlus(size_t inputDim,
     }
 }
 
+template <typename ElementType>
+void TestReduceableTransposeTimes(size_t inputDim,
+    size_t numSamples,
+    const DeviceDescriptor& device,
+    size_t numIterations,
+    unsigned int seed = 1)
+{
+    auto timesParamName = L"timesParameters";
+    Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({inputDim}), device), timesParamName);
+
+    auto inputVarName = L"input";
+    auto inputVar = InputVariable({ inputDim }, AsDataType<ElementType>(), inputVarName);
+    auto dotFunc = TransposeTimes(ElementTimes(timesParam, inputVar), inputVar + Constant({}, 0.0f, device));
+
+    srand(seed);
+    for (size_t iterIdx = 0; iterIdx < numIterations; ++iterIdx)
+    {
+        std::vector<ElementType> inputData(inputDim * numSamples);
+        for (size_t i = 0; i < inputData.size(); ++i)
+            inputData[i] = ((ElementType)rand()) / RAND_MAX;
+
+        NDShape inputShape = inputVar.Shape().AppendShape({ 1, numSamples });
+        ValuePtr inputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputShape, inputData.data(), inputData.size(), DeviceDescriptor::CPUDevice(), true));
+
+        NDShape outputShape = dotFunc->Output().Shape().AppendShape({ 1, numSamples });
+        std::vector<ElementType> outputData(outputShape.TotalSize());
+        ValuePtr outputValue;
+
+        std::unordered_map<Variable, ValuePtr> outputs = { { dotFunc->Output(), outputValue } };
+        auto backpropState = dotFunc->Forward({ { inputVar, inputValue } }, outputs, device, { dotFunc->Output() });
+
+        outputValue = outputs[dotFunc->Output()];
+
+        // Perform backprop
+        std::vector<ElementType> rootGradientsData(outputShape.TotalSize(), 1);
+        ValuePtr rootGradientValue;
+        if (device.Type() == DeviceKind::CPU)
+            rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), device, true));
+        else
+        {
+            NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(outputShape, rootGradientsData.data(), rootGradientsData.size(), DeviceDescriptor::CPUDevice(), true);
+            NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), outputShape, device);
+            gpuArrayView->CopyFrom(*cpuArrayView);
+            rootGradientValue = MakeSharedObject<Value>(gpuArrayView);
+        }
+
+        ValuePtr timesParamGradientValue;
+        std::vector<ElementType> timesParamGradientData(inputVar.Shape().TotalSize(), std::numeric_limits<ElementType>::quiet_NaN());
+        if (device.Type() == DeviceKind::CPU)
+        {
+            timesParamGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(inputVar.Shape(), timesParamGradientData.data(), timesParamGradientData.size(), device));
+        }
+        else
+        {
+            NDArrayViewPtr cpuArrayView = MakeSharedObject<NDArrayView>(inputVar.Shape(), timesParamGradientData.data(), timesParamGradientData.size(), DeviceDescriptor::CPUDevice());
+            NDArrayViewPtr gpuArrayView = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), inputVar.Shape(), device);
+            gpuArrayView->CopyFrom(*cpuArrayView);
+            timesParamGradientValue = MakeSharedObject<Value>(gpuArrayView);
+        }
+        std::unordered_map<Variable, ValuePtr> paramGradients = { { timesParam, timesParamGradientValue } };
+        dotFunc->Backward(backpropState, { { dotFunc->Output(), rootGradientValue } }, paramGradients);
+
+
+        if (device.Type() == DeviceKind::CPU)
+        {
+            const ElementType* p = timesParamGradientValue->Data()->DataBuffer<ElementType>();
+            for (int i = 0; i < inputDim; i++)
+            {
+                if (std::isnan(p[i])) ReportFailure("Found NaN in gradient!");
+            }
+        }
+        else
+        {
+            NDArrayViewPtr cpuView = timesParamGradientValue->Data()->DeepClone(DeviceDescriptor::CPUDevice());
+            const ElementType* p = cpuView->DataBuffer<ElementType>();
+            for (int i = 0; i < inputDim; i++)
+            {
+                if (std::isnan(p[i])) ReportFailure("Found NaN in gradient!");
+            }
+        }
+    }
+}
+
 void FeedForwardTests()
 {
     fprintf(stderr, "\nFeedForwardTests..\n");
 
     TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true, true);
+
+    TestReduceableTransposeTimes<double>(4, 5, DeviceDescriptor::CPUDevice(), 3);
+
     if (IsGPUAvailable())
     {
         TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false, true);
         TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false, false);
+
+        TestReduceableTransposeTimes<float>(4, 5, DeviceDescriptor::GPUDevice(0), 3);
+        TestReduceableTransposeTimes<double>(4, 5, DeviceDescriptor::GPUDevice(0), 3);
 
         TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), true);
         TestFeedForwardNetworkCreation(DeviceDescriptor::GPUDevice(0), false);

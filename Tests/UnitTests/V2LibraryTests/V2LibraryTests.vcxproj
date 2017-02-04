@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="12.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="CheckDependencies" ToolsVersion="14.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|x64">
       <Configuration>Debug</Configuration>
@@ -33,13 +33,13 @@
   <PropertyGroup Condition="$(DebugBuild)" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -114,12 +114,13 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\..\..\Examples\Evaluation\CPPEvalV2Client\EvalMultithreads.cpp" />
+    <ClCompile Include="..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalExamples\EvalMultithreads.cpp" />
     <ClCompile Include="BlockTests.cpp" />
     <ClCompile Include="CifarResNet.cpp" />
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="DeviceSelectionTests.cpp" />
     <ClCompile Include="LearnerTests.cpp" />
+    <ClCompile Include="LoadLegacyModelTests.cpp" />
     <ClCompile Include="MinibatchSourceTest.cpp" />
     <ClCompile Include="Seq2Seq.cpp" />
     <ClCompile Include="SerializationTests.cpp" />
@@ -140,6 +141,8 @@
     <ClInclude Include="Image.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="data\batch.norm.no.sample.count.v1.bin" />
+    <None Include="data\batch.norm.no.sample.count.v2.bin" />
     <None Include="data\future.dictionary.proto.bin" />
     <None Include="data\past.dictionary.proto.bin" />
     <None Include="data\v2.0.beta1.0.dictionary.proto.bin" />

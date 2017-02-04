@@ -53,6 +53,71 @@ BOOST_AUTO_TEST_CASE(ImageAndTextReaderSimple)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageSimpleCompositeAndBase64)
+{
+    auto test = [this](std::vector<std::wstring> additionalParameters)
+    {
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageReaderSimple_Config.cntk",
+            testDataPath() + "/Control/ImageSimpleCompositeAndBase64_Control.txt",
+            testDataPath() + "/Control/ImageSimpleCompositeAndBase64_Output.txt",
+            "Composite_Test",
+            "reader",
+            4,
+            4,
+            1,
+            1,
+            1,
+            0,
+            1,
+            false,
+            false,
+            true,
+            additionalParameters);
+    };
+
+    // Image deserializer.
+    test({});
+    // Base64 deserializer.
+    test(
+    {
+        L"MapFile=\"$RootDir$/Base64ImageReaderSimple_map.txt\"",
+        L"DeserializerType=\"Base64ImageDeserializer\""
+    });
+};
+
+BOOST_AUTO_TEST_CASE(InvalidImageSimpleCompositeAndBase64)
+{
+    auto test = [this](std::vector<std::wstring> additionalParameters)
+    {
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageReaderSimple_Config.cntk",
+            testDataPath() + "/Control/InvalidImageSimpleCompositeAndBase64_Control.txt",
+            testDataPath() + "/Control/InvalidImageSimpleCompositeAndBase64_Output.txt",
+            "Composite_Test",
+            "reader",
+            4,
+            4,
+            1,
+            1,
+            1,
+            0,
+            1,
+            false,
+            false,
+            true,
+            additionalParameters);
+    };
+
+    test(
+    {
+        L"MapFile=\"$RootDir$/InvalidBase64ImageReaderSimple_map.txt\"",
+        L"DeserializerType=\"Base64ImageDeserializer\""
+        L"maxErrors=4"
+    });
+};
+
+
 BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
 {
     HelperRunReaderTest<float>(

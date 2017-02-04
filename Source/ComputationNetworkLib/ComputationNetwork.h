@@ -88,15 +88,15 @@ public:
     // -----------------------------------------------------------------------
     // (de-)serialization
     // -----------------------------------------------------------------------
-
     template <class ElemType>
-    void ReadPersistableParameters(File& fstream, bool create);
+    void ReadPersistableParameters(size_t modelVersion, File& fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
     template <class ElemType>
     void RereadPersistableParameters(const std::wstring& fileName)
     {
         File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-        ReadPersistableParameters<ElemType>(fstream, false);
+        auto modelVersion = GetModelVersion(fstream);
+        ReadPersistableParameters<ElemType>(modelVersion, fstream, false);
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
@@ -123,6 +123,8 @@ public:
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
+    
+    static size_t GetModelVersion(File& fstream);
 
 public:
 
@@ -139,7 +141,8 @@ public:
     template <class NODESET> // version that takes multiple nodes
     void ForwardProp(const NODESET& nodes)
     {
-        for (auto& node : nodes)
+        auto nodesSortedByGlobalEvalOrder = SortByGlobalEvalOrder(nodes);
+        for (auto& node : nodesSortedByGlobalEvalOrder)
             ForwardProp(node);
     }
 
@@ -196,7 +199,7 @@ public:
 
 private:
     void PrintMemorySharingStructure(const std::vector<ComputationNodeBasePtr>& nodes);
-    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, int>& parentCount);
+    void ReleaseMatricesAfterEvalForChildren(ComputationNodeBasePtr n, std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>>& parentsMap);
     void AllocateGradientMatricesForInputs(ComputationNodeBasePtr parentNode);
 
 public:
@@ -253,6 +256,25 @@ public:
             }
         }
         m_evalOrders[rootNode] = evalOrder;
+    }
+
+    template <typename ContainerType>
+    std::vector<ComputationNodeBasePtr> SortByGlobalEvalOrder(const ContainerType& nodesToSort)
+    {
+        std::vector<ComputationNodeBasePtr> sortedEvalOrder;
+        if (nodesToSort.size() == 1)
+            sortedEvalOrder.assign(nodesToSort.cbegin(), nodesToSort.cend());
+        else
+        {
+            const std::list<ComputationNodeBasePtr>& allNodesEvalOrder = GetEvalOrder(nullptr);
+            for (auto& node : allNodesEvalOrder)
+            {
+                if (std::find(nodesToSort.cbegin(), nodesToSort.cend(), node) != nodesToSort.cend())
+                    sortedEvalOrder.push_back(node);
+            }
+        }
+
+        return sortedEvalOrder;
     }
 
     // replace an existing eval order with an updated one

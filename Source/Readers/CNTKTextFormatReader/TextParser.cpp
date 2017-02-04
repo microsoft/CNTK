@@ -168,7 +168,7 @@ void TextParser<ElemType>::Initialize()
                 "UTF-16 encoding is currently not supported.", m_filename.c_str());
         }
 
-        m_indexer = make_unique<Indexer>(m_file, m_isPrimary, m_skipSequenceIds, m_chunkSizeBytes);
+        m_indexer = make_unique<Indexer>(m_file, m_isPrimary, m_skipSequenceIds, NAME_PREFIX, m_chunkSizeBytes);
 
         m_indexer->Build(m_corpus);
     });
@@ -665,10 +665,10 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
                     return true;
                 }
 
-                if (ShouldWarn())
+                if (m_traceLevel >= Info)
                 {
                     fprintf(stderr,
-                        "WARNING: Unknown input ('%s') %ls. "
+                        "INFO: Skipping unknown input ('%s') %ls. "
                         "Input name '%s' was not specified in the reader config section.\n",
                         name.c_str(), GetFileInfo().c_str(), name.c_str());
                 }

@@ -531,7 +531,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, outputData, false));
 
     std::unordered_map<Variable, ValuePtr> outputs = { { plus->Output(), outputValue } };
-    plus->Forward({}, outputs, device);
+    plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
 
     NDArrayViewPtr cpuView;
     auto getParameterData = [&cpuView](const Parameter& p) -> const ElementType*
@@ -563,7 +563,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
         }
 
         param.RecordValueUpdate();
-        plus->Forward({}, outputs, device);
+        plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
         parameterData = getParameterData(param);
         for (int i = 0; i < numElements; i++)
         {
@@ -582,7 +582,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     auto newValuesNDarray = MakeSharedObject<NDArrayView>(shape, newValues, false);
 
     param.SetValue(newValuesNDarray);
-    plus->Forward({}, outputs, device);
+    plus->Forward(std::unordered_map<Variable, ValuePtr>({}), outputs, device);
     parameterData = getParameterData(param);
     for (int i = 0; i < numElements; i++)
     {
@@ -641,6 +641,55 @@ void TestRecurrenceShapeInference()
     testShapeInferenceInRecurrence(2, 1);
     testShapeInferenceInRecurrence(1, 2);
     testShapeInferenceInRecurrence(2, 2);
+}
+
+void TestFunctionOutputs(const DeviceDescriptor& device)
+{
+    // Simple
+    {
+        Variable o1, o2;
+        {
+            size_t inputDim = 1;
+            size_t outputDim = 2;
+
+            auto inputVar = InputVariable({ inputDim }, false, DataType::Float, true, L"features", { Axis::NewUniqueDynamicAxis(L"inputSequence"), Axis::DefaultBatchAxis() });
+            auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ inputDim }, -0.05, 0.05, 1, device));
+            auto plusFunc = CNTK::Plus(plusParam, inputVar);
+
+            auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+            auto timesFunc = CNTK::Times(timesParam, plusFunc);
+
+            o1 = plusFunc->Output();
+            o2 = timesFunc->Output();
+
+            // Here all function smart pointers going out of scope.
+        }
+
+        FunctionPtr combine = CNTK::Combine({ o1, o2 });
+        auto args = combine->Arguments();
+    }
+
+    // Recurrent
+    {
+        Variable o;
+        {
+            auto stateFwd = PlaceholderVariable(L"p1");
+
+            auto placeHolder = PlaceholderVariable(L"p2");
+            auto abs = Abs(placeHolder, L"abs");
+
+            auto z = abs->Clone(ParameterCloningMethod::Share, { { placeHolder, PastValue(stateFwd, 1, L"pastValue") } });
+            auto newState = z->ReplacePlaceholders({ {stateFwd, z->Output() } });
+            o = newState->Output();
+        }
+
+        auto args = o.Owner()->Arguments();
+        for (auto a : args)
+        {
+            if (a.Name() == L"" || a.Owner()->Name() == L"")
+                RuntimeError("Unexpected name");
+        }
+    }
 }
 
 void TestOuputVariableName(const DeviceDescriptor& device)
@@ -755,5 +804,6 @@ void FunctionTests()
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
 
     TestOuputVariableName(DeviceDescriptor::CPUDevice());
+    TestFunctionOutputs(DeviceDescriptor::CPUDevice());
 }
 

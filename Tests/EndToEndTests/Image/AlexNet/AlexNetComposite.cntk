@@ -26,12 +26,12 @@ Train = [
                             [
                                 type = "Crop"
                                 # Possible values: Center, Random. Default: Center
-                                cropType = "random"
-                                # Crop scale ratio. Examples: cropRatio = 0.9, cropRatio = 0.7:0.9. Default: 1.
-                                cropRatio = 0.875
+                                cropType = "RandomSide"
+                                # Crop scale side ratio. Examples: sideRatio = 0.9, sideRatio = 0.7:0.9.
+                                sideRatio = 0.875
                                 # Crop scale ratio jitter type.
-                                # Possible values: None, UniRatio, UniLength, UniArea. Default: UniRatio
-                                jitterType = "uniRatio"
+                                # Possible values: None, UniRatio. Default: None
+                                jitterType = "UniRatio"
                             ]:[
                                 type = "Scale"
                                 width = 224

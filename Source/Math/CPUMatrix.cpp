@@ -964,7 +964,7 @@ void CPUMatrix<ElemType>::SetDiagonalValue(const CPUMatrix<ElemType>& vector)
 
     if (vector.GetNumElements() == 1) // reduce to simple form
         SetDiagonalValue(vector(0, 0));
-    else if (vector.GetNumRows() != GetNumRows())
+    else if (vector.GetNumRows() != GetNumRows() && vector.GetNumCols() != GetNumRows())
         LogicError("SetDiagonalValue: input vector's dimension does not agree with [this].");
     else
     {
@@ -1198,8 +1198,11 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
                                     ElemType learnRatePerSample,
                                     ElemType momentum,
                                     ElemType adaWeight,
-                                    ElemType adaMul)
+                                    ElemType adaMul,
+                                    bool unitGainMomentum)
 {
+    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+
     size_t numColsNeeded = 2 * gradients.GetNumCols();
 
     if (IsEmpty() || (GetNumCols() < numColsNeeded))
@@ -1234,7 +1237,7 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
         if (momentum > 0.0f)
         {
-            g = momentum * smoothMom[i] + (1.0f - momentum) * g;
+            g = momentum * smoothMom[i] + unitGainFactor * g;
             smoothMom[i] = g;
         }
 
@@ -6338,6 +6341,7 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
         CaseTensorOpWithFnAndReduction(LogSum);
         CaseTensorOpWithFnAndReduction(Min);
         CaseTensorOpWithFnAndReduction(Max);
+        CaseTensorOpWithFnAndReduction(ElementwiseProduct);
     default:
         LogicError("Specified ElementWiseOperator op %d not suported as reduction operation.", (int)reductionOp);
     }
@@ -6358,7 +6362,8 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     if (reductionOp != ElementWiseOperator::opSum    &&
         reductionOp != ElementWiseOperator::opLogSum &&
         reductionOp != ElementWiseOperator::opMin    &&
-        reductionOp != ElementWiseOperator::opMax)
+        reductionOp != ElementWiseOperator::opMax    &&
+        reductionOp != ElementWiseOperator::opElementwiseProduct)
         InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
 
 // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.

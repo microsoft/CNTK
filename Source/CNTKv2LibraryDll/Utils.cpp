@@ -16,6 +16,8 @@
 #include <fcntl.h>
 #include "PrimitiveFunction.h"
 #include "RecurrentNodes.h"
+#include "Value.h"
+#include "CompositeFunction.h"
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -241,7 +243,7 @@ namespace CNTK
 
     template <typename T>
     TrainingParameterSchedule<T>::TrainingParameterSchedule(T value, UnitType unit) 
-        : m_schedule({ make_pair(0, value) }), m_unit(unit), m_epochSize(EntireSweep)
+        : m_schedule({ make_pair(0, value) }), m_unit(unit), m_epochSize(FullDataSweep)
     {
     }
 
@@ -268,13 +270,9 @@ namespace CNTK
     template <typename T>
     void TrainingParameterSchedule<T>::ConstructSchedule(const std::vector<std::pair<size_t, T>>& schedule)
     {
-        if (m_epochSize == EntireSweep)
-        {
-            //Sweep based schedules are currently not functional (learners don't have sweep info).
-            NOT_IMPLEMENTED;
-        }
-
-        const auto epochSize = (m_epochSize == EntireSweep) ? 1 : m_epochSize;
+        // In case of the FullDataSweep, the scheduling unit is just 1 sweep, 
+        // otherwise, it's the epoch size in samples.
+        const auto unitSize = (m_epochSize == FullDataSweep) ? 1 : m_epochSize;
 
         if (schedule.size() == 0)
             RuntimeError("TrainingParameterSchedule::ConstructSchedule : schedule is empty.");
@@ -288,7 +286,7 @@ namespace CNTK
                 RuntimeError("TrainingParameterSchedule::ConstructSchedule : unit count in the 'schedule' argument cannot be 0.");
 
             unitCount += (pair.first != 0) ? pair.first : 1;
-            m_schedule[epochSize * unitCount] = pair.second;
+            m_schedule[unitSize * unitCount] = pair.second;
         }
     }
 
@@ -456,35 +454,102 @@ namespace CNTK
 #endif
     }
 
-    template <typename ElementType>
-    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
+    std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
+    {
+        std::vector<Axis> inputVarDynamicAxes;
+        if (internalDynamicAxisName.substr(0, CompositeFunction::InternalDefaultDynamicAxisName.length()) == CompositeFunction::InternalDefaultDynamicAxisName)
+            inputVarDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
+        else if (internalDynamicAxisName.substr(0, CompositeFunction::InternalNoSequenceAxisName.length()) == CompositeFunction::InternalNoSequenceAxisName)
+            inputVarDynamicAxes = { Axis::DefaultBatchAxis() };
+        else
+            inputVarDynamicAxes = { Axis(internalDynamicAxisName), Axis::DefaultBatchAxis() };
+
+        return inputVarDynamicAxes;
+    }
+
+    // Construct the dynamic axis name to be used internally for the CNTK InputNodes
+    std::wstring InternalDynamicAxisNameFromDynamicAxes(const std::vector<Axis>& dynamicAxes)
+    {
+        if (dynamicAxes.empty())
+            LogicError("Empty dynamic axes set");
+
+        if (dynamicAxes == std::vector<Axis>({ Axis::DefaultBatchAxis() }))
+            return CompositeFunction::InternalNoSequenceAxisName;
+        else if (dynamicAxes == std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }))
+            return CompositeFunction::InternalDefaultDynamicAxisName;
+        else
+            return dynamicAxes[0].Name();
+    }
+
+    std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
+    {
+        size_t maxNumTimeSteps = 1;
+        size_t numSequences = 1;
+        if (maskShape.Rank() > 1)
+        {
+            // since only 2 axes are supported at the moment, sequence axis should be the first and batch axis -- the second.
+            // sequence axis dimension determines the maximum number of time steps (= maximum sequence length),
+            // batch axis dimension -- the number of sequences (= 'training units') in a batch.
+            maxNumTimeSteps = maskShape[0];
+            numSequences = maskShape[1];
+        }
+        else if (maskShape.Rank() > 0)
+        {
+            if (numDynamicAxes > 1)
+            {
+                maxNumTimeSteps = maskShape[0];
+            }
+            else
+            {
+                // there's only one axis (the default batch axis).
+                numSequences = maskShape[0];
+            }
+        }
+
+        return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
+    }
+    /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value)
     {
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        if (AsDataType<ElementType>() != value->GetDataType())
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
+        bool isPackedValue = (dynamic_cast<PackedValue*>(value.get()) != nullptr);
 
-        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error?
-        if (IsSparseInput(var) && !value->IsSparse())
-            InvalidArgument("Dense input data supplied for a sparse input Variable");
+        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
+        if (!isPackedValue)
+        {
+            if (IsSparseInput(var) && !value->IsSparse())
+                InvalidArgument("Dense input data supplied for a sparse input Variable");
 
-        if (IsSparseInput(var) && (value->GetStorageFormat() != StorageFormat::SparseCSC))
-            InvalidArgument("Sparse Input data must be in SparseCSC format");
+            if (IsSparseInput(var) && (value->GetStorageFormat() != StorageFormat::SparseCSC))
+                InvalidArgument("Sparse Input data must be in SparseCSC format");
+        }
 
         auto varShape = var.Shape();
         auto valueShape = value->Shape();
 
-        if (valueShape.Rank() < varShape.Rank())
-            InvalidArgument("Value's rank should be >= the Variable's rank");
-
         auto numDynamicAxes = var.DynamicAxes().size();
+        if (numDynamicAxes > 2)
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
-        size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
         // max(2, numDynamicAxes) is needed for some backcompat scenarios, where even when there are no sequence axes
         // the user can pass a value object with a dim of 1 for the sequence axis.
         // TODO: try and remove support for this in the future, change the condition below to
         // valueShape.Rank() - varShape.Rank() <=  var.DynamicAxes().size()
+        size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
+
+        // For packed values, we sometimes have the reader return the matrix with a flatenned sample layout
+        if (isPackedValue && ((valueShape.Rank() < varShape.Rank()) || (valueShape.SubShape(0, varShape.Rank()) != varShape)))
+        {
+            // If the leading dim of the value shape is same as the total size of the varShape,
+            // lets expand the leading dim to varShape for the purposes of the rest of the validation
+            if ((valueShape[0] == varShape.TotalSize()) && (valueShape.SubShape(1).Rank() <= (varShape.Rank() + maxAddionalValueAxes)))
+                valueShape = varShape.AppendShape(valueShape.SubShape(1));
+        }
+
+        if (valueShape.Rank() < varShape.Rank())
+            InvalidArgument("Value's rank should be >= the Variable's rank");
+
         if (valueShape.Rank() > (varShape.Rank() + maxAddionalValueAxes))
             InvalidArgument("Value rank should be larger than the Variable%S rank at most by number of dynamic axes", ParanthesizedName(var.Name()).c_str());
 
@@ -495,84 +560,32 @@ namespace CNTK
                 AsStringForErrorReporting(valueShape).c_str(),
                 AsStringForErrorReporting(varShape).c_str());
         }
+    }
 
-        if (numDynamicAxes == 0)
-            return{ value->Data()->GetMatrix<ElementType>(), nullptr };
+    template <typename ElementType>
+    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
+    {
+        VerifyVariableValueCompatibility(var, value);
 
-        if (numDynamicAxes > 2)
-            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
+        if (AsDataType<ElementType>() != value->GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
 
+        auto packedValue = dynamic_cast<PackedValue*>(value.get());
+        if (packedValue)
+            return packedValue->PackedData<ElementType>();
+
+        auto varShape = var.Shape();
+        auto valueShape = value->Shape();
+        auto numDynamicAxes = var.DynamicAxes().size();
         auto mask = value->Mask();
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
         
-        auto getNumTimeStepsAndSequencesFunc = [numDynamicAxes](const NDShape& maskShape, size_t numDynamicAxes) {
-            size_t maxNumTimeSteps = 1;
-            size_t numSequences = 1;
-            if (maskShape.Rank() > 1)
-            {
-                // since only 2 axes are supported at the moment, sequence axis should be the first and batch axis -- the second.
-                // sequence axis dimension determines the maximum number of time steps (= maximum sequence length),
-                // batch axis dimension -- the number of sequences (= 'training units') in a batch.
-                maxNumTimeSteps = maskShape[0];
-                numSequences = maskShape[1];
-            }
-            else if (maskShape.Rank() > 0)
-            {
-                if (numDynamicAxes > 1)
-                {
-                    maxNumTimeSteps = maskShape[0];
-                }
-                else
-                {
-                    // there's only one axis (the default batch axis).
-                    numSequences = maskShape[0];
-                }
-            }
-
-            return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
-        };
+        if (numDynamicAxes == 0)
+            return{ value->Data()->GetMatrix<ElementType>(), nullptr };
 
         size_t maxNumTimeSteps, numSequences;
-        std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
-
-        auto getSequenceStartsAndLengthsFunc = [&getNumTimeStepsAndSequencesFunc](const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes) {
-            auto cpuMask = mask;
-            if (mask->Device() != DeviceDescriptor::CPUDevice())
-                cpuMask = mask->DeepClone(DeviceDescriptor::CPUDevice());
-
-            const MaskKind* maskBuffer = cpuMask->DataBuffer();
-            size_t maxNumTimeSteps, numSequences;
-            std::tie(maxNumTimeSteps, numSequences) = getNumTimeStepsAndSequencesFunc(mask->Shape(), numDynamicAxes);
-
-            for (size_t i = 0; i < numSequences; ++i)
-            {
-                MaskKind firstMaskEntry = maskBuffer[i * maxNumTimeSteps];
-                if (firstMaskEntry == MaskKind::SequenceBegin)
-                    sequenceBeginIndices[i] = 0;
-                else if (firstMaskEntry == MaskKind::Valid)
-                    sequenceBeginIndices[i] = Microsoft::MSR::CNTK::SentinelValueIndicatingUnspecifedSequenceBeginIdx;
-                else
-                    LogicError("The first entry of a mask should be Valid or SequenceBegin");
-
-                size_t currentSequenceLength = 1;
-                bool currentSequenceEndAlreadyFound = false;
-                for (size_t j = 1; j < maxNumTimeSteps; ++j)
-                {
-                    if (maskBuffer[(i * maxNumTimeSteps) + j] == MaskKind::Invalid)
-                        currentSequenceEndAlreadyFound = true;
-                    else
-                    {
-                        if (currentSequenceEndAlreadyFound)
-                            InvalidArgument("Invalid Value object; only trailing steps of a sequence can be masked");
-
-                        currentSequenceLength++;
-                    }
-                }
-
-                sequenceLengths[i] = currentSequenceLength;
-            }
-        };
+        std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
 
         if ((numSequences == 1) || (maxNumTimeSteps == 1))
         {
@@ -595,7 +608,7 @@ namespace CNTK
 
                 std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
                 std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
-                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
+                Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
                 for (size_t i = 0; i < numSequences; ++i)
                     layout->AddSequence(i, i, sequenceBeginIndices[i], sequenceLengths[i]);
@@ -608,7 +621,7 @@ namespace CNTK
             std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
             std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
             if (mask != nullptr)
-                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
+                Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
             bool hasTruncatedSequences = std::find_if(sequenceBeginIndices.begin(), sequenceBeginIndices.end(), [](const int& val) { return (val < 0); }) != sequenceBeginIndices.end();
 
@@ -829,6 +842,7 @@ namespace CNTK
     template void DictionaryValue::FreePtrAsType<NDArrayView>();
 
     template class TrainingParameterSchedule<double>;
+    template class TrainingParameterSchedule<size_t>;
 
     Learners::Learners(const std::vector<LearnerPtr>& learners) :
         m_learners(learners),
@@ -878,14 +892,14 @@ namespace CNTK
         }
     }
 
-    bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t sampleInMinibatch)
+    bool Learners::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, size_t sampleInMinibatch, bool sweepEnd)
     {
         bool anyUpdatesPerformed = false;
         for (auto learner : m_learners)
         {
             std::unordered_map<Parameter, NDArrayViewPtr> learnerGradients;
             GetLearnerGradients(learner, gradientValues, learnerGradients);
-            anyUpdatesPerformed |= learner->Update(learnerGradients, sampleInMinibatch);
+            anyUpdatesPerformed |= learner->Update(learnerGradients, sampleInMinibatch, sweepEnd);
         }
         return anyUpdatesPerformed;
     }

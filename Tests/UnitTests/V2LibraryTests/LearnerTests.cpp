@@ -56,24 +56,24 @@ void TestSGDLearner(size_t numParameters, size_t numMinibatches, const DeviceDes
 }
 
 template <typename ElementType>
-void TestMomentumSGDLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
+void TestMomentumSGDLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
     LearningRatePerMinibatchSchedule learnigRateSchedule = { { 3.0, 2.0, 1.0 }, numMinibatches };
     MomentumPerSampleSchedule momentumValues = { { { 1, 1.0 }, { 3, 0.1 }, { 10, 0.01 } }, 2 };
-    auto learner = MomentumSGDLearner(parameters, learnigRateSchedule, momentumValues);
+    auto learner = MomentumSGDLearner(parameters, learnigRateSchedule, momentumValues, unitGainMomentum);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
     FloatingPointCompare(learner->LearningRate(), 2.0, "Learner::LearningRate does not match expectation");
 }
 
 template <typename ElementType>
-void TestNesterovLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
+void TestNesterovLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
     MomentumAsTimeConstantSchedule momentumValues = { { { 1, 1 }, { 3, 5 }, { 10, 25 } }, 100 };
-    auto learner = NesterovLearner(parameters, LearningRatePerMinibatchSchedule( { { 1, 0.5 }, { 10, 0.25 }, { 20, 0.125 } }, 3 ), momentumValues);
+    auto learner = NesterovLearner(parameters, LearningRatePerMinibatchSchedule( { { 1, 0.5 }, { 10, 0.25 }, { 20, 0.125 } }, 3 ), momentumValues, unitGainMomentum);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -87,11 +87,11 @@ void TestAdaGradLearner(size_t numParameters, size_t numMinibatches, const Devic
 }
 
 template <typename ElementType>
-void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
+void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }));
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -106,10 +106,6 @@ void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const Devic
 
 void TestTrainingParametersSchedule()
 {
-    VerifyException([]() {
-        LearningRatePerMinibatchSchedule({ 3.0, 2.0, 1.0 }, LearningRateSchedule::EntireSweep);
-    }, "Was able to create not-yet-implemented sweep-based schedule.");
-
     LearningRatePerSampleSchedule schedule1 = 0.5;
     assert(schedule1.Unit() == LearningRateSchedule::UnitType::Sample);
     assert(schedule1[0] == 0.5);
@@ -228,28 +224,117 @@ void TestTrainingParametersSchedule()
     assert(schedule16[99999] == exp(-1.0 / 3.0));
 }
 
+void TestDefaultUnitGainGetterAndSetter()
+{
+    assert(DefaultUnitGainValue());
+
+    SetDefaultUnitGainValue(false);
+    assert(!DefaultUnitGainValue());
+
+    SetDefaultUnitGainValue(true);
+    assert(DefaultUnitGainValue());
+}
+
+void TestSweepBasedSchedule()
+{
+    DeviceDescriptor device = DeviceDescriptor::CPUDevice();
+    auto schedule = LearningRatePerSampleSchedule({ 1, 2, 3, 4, 5 }, LearningRateSchedule::FullDataSweep);
+
+    auto learner1 = SGDLearner({}, schedule);
+    assert(1 == learner1->LearningRate());
+
+    
+    for (auto i : {2, 3, 4, 5 })
+    {
+        std::unordered_map<Parameter, NDArrayViewPtr> gradients {};
+        learner1->Update(gradients, 1, true);
+        assert(i == learner1->LearningRate());
+    }
+
+    const size_t inputDim = 2;
+    const size_t numOutputClasses = 2;
+    auto minibatchSource = TextFormatMinibatchSource(L"SimpleDataTest_cntk_text.txt", { { L"features", inputDim }, { L"labels", numOutputClasses } });
+
+    auto sweepSize = 603; // == wc -l SimpleDataTest_cntk_text.txt
+    auto minibatchSize = 400; 
+    auto featureStreamInfo = minibatchSource->StreamInfo(L"features");
+    auto labelStreamInfo = minibatchSource->StreamInfo(L"labels");
+
+    auto input = InputVariable({ inputDim }, DataType::Float, L"features");
+    auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
+
+
+    auto classifierOutput = FullyConnectedLinearLayer(input, numOutputClasses, device);
+    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
+    auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
+    auto learner2 = SGDLearner(classifierOutput->Parameters(), schedule);
+    auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner2 });
+
+    
+    for (auto i = 0; i <= 4000; i+= minibatchSize)
+    {
+        auto sweepIndex1 = i / sweepSize;
+        auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
+
+        if (minibatchData[featureStreamInfo].sweepEnd != minibatchData[labelStreamInfo].sweepEnd) {
+            ReportFailure("TestSweepBasedSchedule failed: "
+                "different streams have different end of sweep flag values.");
+        }
+
+        auto sweepIndex2 = (i + minibatchSize) / sweepSize;
+
+        if ((sweepIndex1 != sweepIndex2) != minibatchData[labelStreamInfo].sweepEnd) {
+            ReportFailure("TestSweepBasedSchedule failed: "
+                "end of sweep flag value is different from expected.");
+        }
+       
+        trainer->TrainMinibatch({ { input, minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
+        auto expectedLR = std::min((sweepIndex2 + 1), 5);
+
+        if (expectedLR != learner2->LearningRate()) {
+            ReportFailure("TestSweepBasedSchedule failed: "
+                "learning rate value is different from expected.");
+        }
+    }
+}
+
 
 void LearnerTests()
 {
     fprintf(stderr, "\nLearnerTests..\n");
 
-    TestTrainingParametersSchedule();
+    TestDefaultUnitGainGetterAndSetter();
 
-    TestSGDLearner<double>(5, 3, DeviceDescriptor::CPUDevice());
-    TestMomentumSGDLearner<float>(3, 4, DeviceDescriptor::CPUDevice());
-    TestNesterovLearner<float>(1, 4, DeviceDescriptor::CPUDevice());
-    TestAdaGradLearner<double>(2, 5, DeviceDescriptor::CPUDevice());
-    TestFSAdaGradLearner<double>(10, 2, DeviceDescriptor::CPUDevice());
-    TestRMSPropLearner<float>(3, 3, DeviceDescriptor::CPUDevice());
+    TestTrainingParametersSchedule();
+    TestSweepBasedSchedule();
+
+    vector<DeviceDescriptor> devices{DeviceDescriptor::CPUDevice()};
 
     if (IsGPUAvailable())
     {
-        TestSGDLearner<double>(1, 1, DeviceDescriptor::CPUDevice());
-        TestMomentumSGDLearner<float>(3, 5, DeviceDescriptor::GPUDevice(0));
-        TestNesterovLearner<float>(1, 4, DeviceDescriptor::GPUDevice(0));
-        TestAdaGradLearner<double>(1, 2, DeviceDescriptor::GPUDevice(0));
-        TestFSAdaGradLearner<double>(2, 2, DeviceDescriptor::GPUDevice(0));
-        TestRMSPropLearner<float>(3, 3, DeviceDescriptor::GPUDevice(0));
+        devices.push_back(DeviceDescriptor::GPUDevice(0));
     }
 
+    srand(1);
+
+    for (auto& device : devices)
+    {
+        auto numParameters = 1 + rand() % 5;
+        auto numMinibatches = 1 + rand() % 5;
+        TestSGDLearner<double>(numParameters, numMinibatches, device);
+        TestAdaGradLearner<double>(numParameters, numMinibatches, device);
+        TestRMSPropLearner<float>(numParameters, numMinibatches, device);
+    }
+
+    for (auto& device : devices)
+    {
+        for (auto unitGain : { true, false })
+        {
+            auto numParameters = 1 + rand() % 5;
+            auto numMinibatches = 1 + rand() % 5;
+            TestMomentumSGDLearner<float>(numParameters, numMinibatches, unitGain, device);
+            TestNesterovLearner<float>(numParameters, numMinibatches, unitGain, device);
+            TestFSAdaGradLearner<double>(numParameters, numMinibatches, unitGain, device);
+        }
+    }
 }
