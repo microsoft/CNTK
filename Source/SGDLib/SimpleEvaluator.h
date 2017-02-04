@@ -39,7 +39,7 @@ class SimpleEvaluator
 {
 public:
     SimpleEvaluator(ComputationNetworkPtr net, const MPIWrapperPtr& mpi, bool enableDistributedMBReading = false, const size_t numMBsToShowResult = 100, const size_t firstMBsToShowResult = 0, const int traceLevel = 0, const size_t maxSamplesInRAM = SIZE_MAX,
-                    const size_t numSubminiBatches = 1, size_t packThresholdSize = 32 * 1024) :
+                    const size_t numSubminiBatches = 1, size_t packThresholdSizeInBytes = (size_t)_DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES) :
         m_net(net), 
         m_numMBsToShowResult(numMBsToShowResult), 
         m_firstMBsToShowResult(firstMBsToShowResult),
@@ -50,7 +50,7 @@ public:
         m_distGradAgg(nullptr),
         m_gradHeader(nullptr),
         m_enableDistributedMBReading(enableDistributedMBReading),
-        m_packThresholdSize(packThresholdSize)
+        m_packThresholdSizeInBytes(packThresholdSizeInBytes)
     {
     }
 
@@ -169,9 +169,9 @@ public:
                     });
 
                     if (Globals::UseV2Aggregator())
-                        m_distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/, ::CNTK::MPICommunicator(), m_packThresholdSize);
+                        m_distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/, ::CNTK::MPICommunicator(), m_packThresholdSizeInBytes);
                     else 
-                        m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/, m_packThresholdSize);
+                        m_distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, false /*useAsyncAggregation*/, m_net->GetDeviceId(), 0 /*syncStatsTrace*/, m_packThresholdSizeInBytes);
                 }
 
                 m_gradHeader->numEvalNode = evalNodes.size();
@@ -279,7 +279,7 @@ public:
             // and recalculate evaluation errors based on accumulators.
             AggregateAccumulatorValuesAndUpdateEpochEvaluation<ElemType>(
                 m_net, evalNodesWhichAccumulateResult, m_gradHeader, m_mpi, evalResults, evalNodes,
-                localEpochEvalErrors, ContainsAccumulatedResult, m_packThresholdSize);
+                localEpochEvalErrors, ContainsAccumulatedResult, m_packThresholdSizeInBytes);
         }
 
         // final statistics
@@ -332,7 +332,7 @@ protected:
     size_t m_firstMBsToShowResult;
     size_t m_maxSamplesInRAM;
     size_t m_numSubminiBatches;
-    size_t m_packThresholdSize;
+    size_t m_packThresholdSizeInBytes;
     MPIWrapperPtr m_mpi;
     bool m_enableDistributedMBReading;
 

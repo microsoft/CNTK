@@ -9,6 +9,7 @@
 #include <future>
 
 #undef _SCL_SECURE_NO_WARNINGS
+#include "Constants.h"
 #include "CNTKLibrary.h"
 #include "IDistGradAggregator.h"
 #include "TimerUtility.h"
@@ -26,9 +27,9 @@ class V2SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
     NcclComm m_nccl;
 
 public:
-    V2SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, ::CNTK::DistributedCommunicatorPtr communicator, size_t packThresholdSize = (32 * 1024))
+    V2SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, ::CNTK::DistributedCommunicatorPtr communicator, size_t packThresholdSizeInBytes = _DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0),
-        m_communicator(communicator), m_nccl(deviceId, mpi), m_packThresholdSize(packThresholdSize)
+        m_communicator(communicator), m_nccl(deviceId, mpi), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
     {}
 
     ~V2SimpleDistGradAggregator()
@@ -74,46 +75,44 @@ public:
         }
 
         std::vector<Matrix<ElemType>*> newGradients;
-        size_t numGradMatrices = gradients.size();
         size_t offset = 0;
         int deviceId = gradients[0]->GetDeviceId();
-        for (size_t i = 0; i < numGradMatrices; i++)
+        // If no additional continous buffer allocated
+        for (size_t i : m_PackedGradientsIndex)
         {
-            if (m_AggregationBuffer == 0)
+            if (m_continousGradients.find(gradients[i]) == m_continousGradients.end() ||
+                m_continousGradients[gradients[i]].second != gradients[i]->GetNumElements())
             {
-                Matrix<ElemType>* bufferedGradientMatrix = m_bufferedGradients[gradients[i]].get();
-                if ((bufferedGradientMatrix == nullptr) ||
-                    (bufferedGradientMatrix->GetNumCols() != gradients[i]->GetNumCols()) ||
-                    (bufferedGradientMatrix->GetNumRows() != gradients[i]->GetNumRows()) ||
-                    (bufferedGradientMatrix->GetDeviceId() != gradients[i]->GetDeviceId()))
-                {
-                    LogicError("No buffered gradient matrix found corresponding to a gradient matrix to be aggregated!");
-                }
-
-                // Swap the gradient matrix contents with the buffered matrices
-                std::swap(*(gradients[i]), *bufferedGradientMatrix);
-
-                newGradients.push_back(bufferedGradientMatrix);
+                LogicError("No buffered gradients matrix found corresponding to a gradient matrix to be aggregated!");
             }
-            else
-            {
-                if (m_continousGradients.find(gradients[i]) == m_continousGradients.end() ||
-                    m_continousGradients[gradients[i]].second != gradients[i]->GetNumElements())
-                {
-                    LogicError("No buffered gradients matrix found corresponding to a gradient matrix to be aggregated!");
-                }
-                offset = m_continousGradients[gradients[i]].first;
-                // Swap the gradient matrix contents with the buffered contents in the continous buffer
-                std::unique_ptr<Matrix<ElemType>> tempGradient;
-                tempGradient.reset(new Matrix<ElemType>(gradients[i]->GetNumRows(), gradients[i]->GetNumCols(), deviceId));
-                tempGradient->AssignValuesOf(m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).Reshaped(gradients[i]->GetNumRows(), gradients[i]->GetNumCols()));
-                m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).AssignValuesOf(gradients[i]->Reshaped(1, gradients[i]->GetNumElements()));
-                gradients[i]->AssignValuesOf(*tempGradient);
-            }
+            offset = m_continousGradients[gradients[i]].first;
+            // Swap the gradient matrix contents with the buffered contents in the continous buffer
+            std::unique_ptr<Matrix<ElemType>> tempGradient;
+            tempGradient.reset(new Matrix<ElemType>(gradients[i]->GetNumRows(), gradients[i]->GetNumCols(), deviceId));
+            tempGradient->AssignValuesOf(m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).Reshaped(gradients[i]->GetNumRows(), gradients[i]->GetNumCols()));
+            m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).AssignValuesOf(gradients[i]->Reshaped(1, gradients[i]->GetNumElements()));
+            gradients[i]->AssignValuesOf(*tempGradient);
         }
         if (m_AggregationBuffer != 0)
         {
             newGradients.push_back(m_AggregationBuffer.get());
+        }
+
+        for (size_t i : m_noPackedGradientsIndex)
+        {
+            Matrix<ElemType>* bufferedGradientMatrix = m_bufferedGradients[gradients[i]].get();
+            if ((bufferedGradientMatrix == nullptr) ||
+                (bufferedGradientMatrix->GetNumCols() != gradients[i]->GetNumCols()) ||
+                (bufferedGradientMatrix->GetNumRows() != gradients[i]->GetNumRows()) ||
+                (bufferedGradientMatrix->GetDeviceId() != gradients[i]->GetDeviceId()))
+            {
+                LogicError("No buffered gradient matrix found corresponding to a gradient matrix to be aggregated!");
+            }
+
+            // Swap the gradient matrix contents with the buffered matrices
+            std::swap(*(gradients[i]), *bufferedGradientMatrix);
+
+            newGradients.push_back(bufferedGradientMatrix);
         }
 
         // Swap the grad header contents with the buffered grad header
@@ -149,30 +148,48 @@ private:
     void Initialize(const std::vector<Matrix<ElemType>*>& gradients, int numEvalNodes)
     {
         int deviceId = gradients[0]->GetDeviceId();
-        size_t totalGradientsSizeInElements = 0;
+        size_t PackedGradientsSizeInElements = 0;
         for (size_t i = 0; i < gradients.size(); i++)
         {
-            totalGradientsSizeInElements += gradients[i]->GetNumElements();
+            if (sizeof(ElemType) * gradients[i]->GetNumElements() <= m_packThresholdSizeInBytes)
+            {
+                PackedGradientsSizeInElements += gradients[i]->GetNumElements();
+                m_PackedGradientsIndex.push_back(i);
+            }
+            else
+            {
+                m_noPackedGradientsIndex.push_back(i);
+            }
+
             // Make sure none of the gradient matrixes are sparse - we currently do not support aggregation of sparse gradient matrices
             if (gradients[i]->GetMatrixType() != DENSE)
                 RuntimeError("Gradient aggregation for sparse gradient matrices is currently unsupported!");
         }
 
         m_AggregationBuffer.reset();
-        if (sizeof(ElemType) * totalGradientsSizeInElements <= m_packThresholdSize)
+        m_AggregationBuffer.reset(new (std::nothrow) Matrix<ElemType>(1, PackedGradientsSizeInElements, deviceId));
+        // Failed to allocate extra continous buffer
+        if (m_AggregationBuffer == 0)
         {
-            m_AggregationBuffer.reset(new (std::nothrow) Matrix<ElemType>(1, totalGradientsSizeInElements, deviceId));
+            m_noPackedGradientsIndex.clear();
+            m_PackedGradientsIndex.clear();
+            PackedGradientsSizeInElements = 0;
+            // Reuse "@param m_noPackedGradientsIndex" for following code, if no continous buffer allocated
+            for (size_t i = 0; i < gradients.size(); i++)
+            {
+                m_noPackedGradientsIndex.push_back(i);
+            }
         }
 
-        size_t offset = 0;
-        for (size_t i = 0; i < gradients.size(); i++)
+        if (m_useAsyncAggregation)
         {
-            if (m_AggregationBuffer != 0)
+            size_t offset = 0;
+            for (size_t i : m_PackedGradientsIndex)
             {
                 m_continousGradients[gradients[i]] = std::make_pair(offset, gradients[i]->GetNumElements());
                 offset += gradients[i]->GetNumElements();
             }
-            else if (m_useAsyncAggregation)
+            for (size_t i : m_noPackedGradientsIndex)
             {
                 m_bufferedGradients[gradients[i]].reset(new Matrix<ElemType>(gradients[i]->GetNumRows(), gradients[i]->GetNumCols(), deviceId));
             }
@@ -236,42 +253,53 @@ private:
         std::vector<::CNTK::NDArrayViewPtr> valuesToAggregate;
         if (!m_nccl.IsSupported())
         {
+            // Pack the gradients to continous buffer
             size_t offset = 0;
-            for (size_t i = 0; i < gradients.size(); ++i)
+            for (size_t i : m_PackedGradientsIndex)
             {
-                if (gradients[i]->Data() == nullptr) // Hack in case of eval.
-                    continue;
-
-                // If failed to initialize a continous buffer or already packed into a buffer
-                if (m_AggregationBuffer == 0 || gradients.size() == 1)
-                {
-                    ::CNTK::NDShape shape{ gradients[i]->GetNumElements() };
-                    auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(), shape, gradients[i]->Data(), gradients[i]->GetNumElements() * sizeof(ElemType), ::CNTK::AsDeviceDescriptor(gradients[i]->GetDeviceId()));
-                    valuesToAggregate.push_back(data);
-                }
-                else
-                {
-                    m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).AssignValuesOf(gradients[i]->Reshaped(1, gradients[i]->GetNumElements()));
-                    offset += gradients[i]->GetNumElements();
-                }
+                m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).AssignValuesOf(gradients[i]->Reshaped(1, gradients[i]->GetNumElements()));
+                offset += gradients[i]->GetNumElements();
             }
-            if (m_AggregationBuffer != 0 && gradients.size() != 1)
+            // Push packed continous buffer to valuesToAggregate
+            if (m_AggregationBuffer != 0)
             {
                 ::CNTK::NDShape shape{ m_AggregationBuffer->GetNumElements() };
                 auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(), shape, m_AggregationBuffer->Data(), m_AggregationBuffer->GetNumElements() * sizeof(ElemType), ::CNTK::AsDeviceDescriptor(m_AggregationBuffer->GetDeviceId()));
                 valuesToAggregate.push_back(data);
             }
-        }
 
-        if (m_nccl.IsSupported()) // nccl is only enabled if all ranks have net on GPUs.
-        {                         // we assume in this case all grad layers are on the GPU too.
-            if (m_AggregationBuffer == 0 || gradients.size() == 1)
+            // Push un-packed gradients to valuesToAggregate
+            for (size_t i : m_noPackedGradientsIndex)
+            {
+                ::CNTK::NDShape shapet{ gradients[i]->GetNumElements() };
+                auto datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::AsDataType<ElemType>(), shapet, gradients[i]->Data(), gradients[i]->GetNumElements() * sizeof(ElemType), ::CNTK::AsDeviceDescriptor(gradients[i]->GetDeviceId()));
+                valuesToAggregate.push_back(datat);
+            }
+        }
+        else
+        {
+            // nccl is only enabled if all ranks have net on GPUs.
+            // we assume in this case all grad layers are on the GPU too.
+            if (m_useAsyncAggregation || m_AggregationBuffer == 0)
             {
                 m_nccl.AllReduce(gradients);
             }
             else
             {
-                m_nccl.AllReduce(m_AggregationBuffer.get());
+                // All reduce the continous buffer
+                size_t offset = 0;
+                for (size_t i : m_PackedGradientsIndex)
+                {
+                    m_AggregationBuffer->ColumnSlice(offset, gradients[i]->GetNumElements()).AssignValuesOf(gradients[i]->Reshaped(1, gradients[i]->GetNumElements()));
+                    offset += gradients[i]->GetNumElements();
+                }
+                std::vector<Matrix<ElemType>*> ncclReduceGradients;
+                ncclReduceGradients.push_back(m_AggregationBuffer.get());
+                for (size_t i : m_noPackedGradientsIndex)
+                {
+                    ncclReduceGradients.push_back(gradients[i]);
+                }
+                m_nccl.AllReduce(ncclReduceGradients);
             }
         }
 
@@ -290,16 +318,18 @@ private:
         auto headerData = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::DataType::Double, ::CNTK::NDShape{ numberOfElements }, headerBuffer.get(), numberOfElements * sizeof(double), ::CNTK::DeviceDescriptor::CPUDevice());
         valuesToAggregate.push_back(headerData);
 
+        // Do the aggregation
         m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());
 
         if (m_nccl.IsSupported())
             m_nccl.Sync();
 
-        // Copy data back to the gradients if packed
-        if (m_AggregationBuffer != 0 && gradients.size() != 1)
+        // Copy data back to the gradients if packed and using Sync Aggregation
+        // The packed gradients are exchanged during AsyncAggregation
+        if (m_AggregationBuffer != 0 && !m_useAsyncAggregation)
         {
             size_t offset = 0;
-            for (size_t i = 0; i < gradients.size(); ++i)
+            for (size_t i : m_PackedGradientsIndex)
             {
                 if (gradients[i]->Data() == nullptr) // Hack in case of eval.
                     continue;
@@ -335,9 +365,11 @@ private:
     std::future<void> m_pendingAsyncAggregation;
 
     // Threshold size to pack all gradients in a continous buffer
-    size_t m_packThresholdSize;
+    size_t m_packThresholdSizeInBytes;
     std::unique_ptr<Matrix<ElemType>> m_AggregationBuffer;
     std::unordered_map<Matrix<ElemType>*, std::pair<size_t, size_t>> m_continousGradients;
+    std::vector<size_t> m_PackedGradientsIndex;
+    std::vector<size_t> m_noPackedGradientsIndex;
 
     // Buffered gradients that we asynchronously aggregate
     std::unordered_map<Matrix<ElemType>*, std::unique_ptr<Matrix<ElemType>>> m_bufferedGradients;

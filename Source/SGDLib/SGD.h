@@ -200,7 +200,7 @@ protected:
     intargvector m_numSamples4Search;
     size_t m_numBestSearchEpoch;
 
-    size_t m_packThresholdSize;
+    size_t m_packThresholdSizeInBytes;
 
     LearningRateSearchAlgorithm m_autoLearnRateSearchType;
 

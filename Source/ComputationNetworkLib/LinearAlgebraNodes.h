@@ -6,6 +6,7 @@
 
 #include "Basics.h"
 #include "ComputationNode.h"
+#include "Constants.h"
 #include "Matrix.h"
 #include "TensorView.h"
 #include <unordered_set>
@@ -1418,7 +1419,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
     set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
     shared_ptr<DistGradHeader> gradHeader,
     shared_ptr<MPIWrapper> mpi,
-    size_t packThresholdSize = (size_t)(32 * 1024));
+    size_t packThresholdSizeInBytes = (size_t)_DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
 
 // -----------------------------------------------------------------------
 // EpochAccumulatorNode calculates mean values of all samples used in forward pass.

@@ -27,7 +27,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
     std::set<std::shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
     std::shared_ptr<DistGradHeader> gradHeader,
     std::shared_ptr<MPIWrapper> mpi,
-    size_t packThresholdSize)
+    size_t packThresholdSizeInBytes)
 {
     // Accumulator stores mean value and number of samples. Aggregation performs simple summation of values,
     // so we transfer sum instead of mean, and calculate mean after aggregation is finished.
@@ -54,14 +54,14 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
             net->GetDeviceId(),
             0 /*syncStatsTrace*/,
             ::CNTK::MPICommunicator(),
-            packThresholdSize);
+            packThresholdSizeInBytes);
     else
         distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(
             mpi,
             false /*useAsyncAggregation*/,
             net->GetDeviceId(),
             0 /*syncStatsTrace*/,
-            packThresholdSize);
+            packThresholdSizeInBytes);
 
     // Prepare header.
     const size_t c_evalNodes = 1;
@@ -131,10 +131,10 @@ void AggregateAccumulatorValuesAndUpdateEpochEvaluation(
     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
     CriterionAccumulator<ElemType> localEpochEvalErrors,
     std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult,
-    size_t packThresholdSize = (size_t)(32 * 1024))
+    size_t packThresholdSizeInBytes = (size_t)_DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
 {
     // Each node contains accumulated values for part of the data set, we have to aggregate accumulated values.
-    AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(net, evalNodesWhichAccumulateResult, gradHeader, mpi, packThresholdSize);
+    AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(net, evalNodesWhichAccumulateResult, gradHeader, mpi, packThresholdSizeInBytes);
 
     // After values of accumulators have been aggregated accross nodes, we have to update evaluation results for
     // evaluation nodes that accumulate results.
