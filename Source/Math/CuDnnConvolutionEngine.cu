@@ -421,7 +421,10 @@ private:
             algo.Algo.memory = 0;
             algo.Algo.status = CUDNN_STATUS_SUCCESS;
             algo.NoWorkspaceAlgo = noMemAlgo;
-            algo.autotuningState = AutotuningState::runState;
+            if (algo.autotuningState == AutotuningState::initState)
+                algo.autotuningState = AutotuningState::pendingTuningState;
+            else 
+                algo.autotuningState = AutotuningState::runState;
             return;
         }
         CUDNN_CALL(err);
