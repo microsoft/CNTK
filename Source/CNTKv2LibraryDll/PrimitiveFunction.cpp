@@ -670,8 +670,6 @@ namespace CNTK
                         assert(m_inputs.size() == 2);
                         auto operand = m_inputs[0];
                         auto layout = m_inputs[1];
-                        if (operand.DynamicAxes().empty())
-                            InvalidArgument("ReconcileDynamicAxis: input must have at least one dynamic axis");
                         if (layout.DynamicAxes().empty())
                             InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
                         outputShape = operand.Shape();

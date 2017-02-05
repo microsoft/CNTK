@@ -1479,20 +1479,7 @@ namespace CNTK
 
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)
         {
-            if (operand.IsSparse())
-            {
-                if (operand.Shape().Rank() > 1)
-                    LogicError("Internal::ZeroesWithDynamicAxesLike: Currently only 1D sparse inputs are supported!");
-
-                // TODO: A matrix multiplication is too expensive for something like this
-                // Replace this with a cheaper operation.
-                return Times(Constant({ 1, operand.Shape()[0] }, operand.GetDataType(), 0.0), operand);
-            }
-            else
-            {
-                auto reduceAllStaticAxesFunc = Internal::ReduceElements(operand, PrimitiveFunction::InternalSumReductionOpName, Axis::AllStaticAxes());
-                return Minus(reduceAllStaticAxesFunc, reduceAllStaticAxesFunc);
-            }
+            return Internal::ReconcileDynamicAxes(Constant::Scalar(0.0f), operand);
         }
 
         FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
@@ -1547,6 +1534,12 @@ namespace CNTK
                 LogicError("Reduction is currently unsupported along the batch axis only");
 
             LogicError("CNTK::ReduceElements: Invalid axis argument provided. To reduce a sequence along its ordered dynamic axis use Sequence::ReduceElements.");
+        }
+
+
+        FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name)
+        {
+            return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
         }
    }
 }
