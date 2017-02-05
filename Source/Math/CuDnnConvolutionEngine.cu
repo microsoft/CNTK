@@ -246,7 +246,7 @@ protected:
                                            m_fwdAlgo.Algo.algo, ptr(workspace), m_fwdAlgo.Algo.memory, &C::Zero, m_outT, ptr(out));
         // There might be a case where cuDNN fails due to workspace being too small, try using no-workspace algo instead.
         // REVIEW alexeyk: NVIDIA is currently reviewing this issue.
-        // chazhang: it seems even the no-workspace algo can fail from time to time. Hence we give it a second change here anyway (and second time it usually succeed)
+        // chazhang: it seems the no-workspace algo can also fail from time to time. Hence we give it a second chance here anyway (and second time it usually succeed)
         // NVIDIA should definitely investigate on this 
         if (CUDNN_STATUS_SUCCESS != err)
         {
@@ -405,14 +405,14 @@ private:
         CuDnnAlgoT algoPerf[MaxAlgoCount];
         int calgo = 0;
         cudnnStatus_t err = finder(calgo, algoPerf);
-        // Alloc failed - usually means cuDNN runtime auto-tuner could not allocate workspace.
+        // in initState, where memory allocation for nodes are not completed, we only run the algorithm with no workspace
+        // or if alloc failed - usually means cuDNN runtime auto-tuner could not allocate workspace.
         // In such case, use static auto-tuner with no workspace.
-        // This should never happen in the deterministic mode because we pick up algorithms with 0 memory workspace.
-        if (err == CUDNN_STATUS_ALLOC_FAILED)
+        if (algo.autotuningState == AutotuningState::initState || err == CUDNN_STATUS_ALLOC_FAILED)
         {
             decltype(CuDnnAlgoT::algo) noMemAlgo;
             CUDNN_CALL(staticFinder(noMemAlgo));
-            if (m_forceDeterministicAlgorithms)
+            if (err == CUDNN_STATUS_ALLOC_FAILED && m_forceDeterministicAlgorithms)
                 RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
 
             algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
@@ -426,18 +426,6 @@ private:
         }
         CUDNN_CALL(err);
         assert(calgo > 0);
-
-        if (algo.autotuningState == AutotuningState::initState)
-        {   // in initState, where memory allocation for nodes are not completed, we only run the algorithm with 0 memory 
-            auto res = std::find_if(algoPerf, algoPerf + calgo,
-                      [=](const CuDnnAlgoT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory == 0; });
-            if (res == algoPerf + calgo)
-                RuntimeError("In initState, cuDNN could not find no-workspace algorithm for the current convolution configuration.");
-            algo.autotuningState = AutotuningState::pendingTuningState;
-            algo.Algo = *res;
-            algo.NoWorkspaceAlgo = (*res).algo;
-            return;
-        }
 
         size_t inputSampleSize = m_geometry->InputShape().GetNumElements();
         size_t maxMem = m_maxTempMemSizeInSamples == 0 ? (std::numeric_limits<size_t>::max)() : inputSampleSize * m_maxTempMemSizeInSamples * sizeof(ElemType);

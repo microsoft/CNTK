@@ -503,6 +503,18 @@ public:
         RequestMatrixFromPool(m_tempMatrix, matrixPool);
     }
 
+    //void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    //{
+    //    Base::ReleaseMatricesAfterForwardProp(matrixPool);
+    //    ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+    //}
+
+    //void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    //{
+    //    Base::RequestMatricesBeforeBackprop(matrixPool);
+    //    RequestMatrixFromPool(m_tempMatrix, matrixPool);
+    //}
+
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
