@@ -516,11 +516,13 @@ public:
                             continue;
                         }
 
+						ElemType scoreDiff = abs(UrlI.m_score - UrlJ.m_score) + (ElemType)0.1;
+
                         // delta DCG
                         lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
 
                         // |delta NDCG|
-                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric));
+                        lambdaIJ = (idealMetric == 0.0 ? (ElemType) 0.0 : abs(lambdaIJ / idealMetric) / scoreDiff);
 
                         // Combine lambda
                         lambdaIJ = lambdas(0, pairsCount++) * lambdaIJ;
