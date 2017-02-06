@@ -150,12 +150,16 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).AssignValuesOf(InputRef(0).ValueFor(fr));
+        auto result = ValueFor(fr);
+        auto inputValue = InputRef(0).ValueFor(fr);
+        result.AssignValuesOf(inputValue.Reshaped(result.GetNumRows(), result.GetNumCols()));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        InputRef(inputIndex).GradientFor(fr) += GradientFor(fr);
+        auto gradient = GradientFor(fr);
+        auto inputGradient = InputRef(inputIndex).GradientFor(fr);
+        inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -246,7 +250,8 @@ private:
 // -----------------------------------------------------------------------
 // ReconcileDynamicAxis (dataInput, layoutInput)
 // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
-// It does perform a runtime check to enforce that the layout of 'dataInput' is compatible (identical content) to that of 'layoutInput'.
+// If 'dataInput' does not have a MBLayout, it broadcasts the dataInput along the MBLayout of the 'layoutInput'.
+// It does perform a runtime check to enforce that the layout of 'dataInput' is compatible to that of 'layoutInput'.
 // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
 // TODO: What to do with sequence-boundary flags?
 // -----------------------------------------------------------------------
@@ -268,22 +273,39 @@ public:
     {
         // enforce compatibility of 'dataInput' with 'layoutInput'
         // TODO: how to deal with boundary flags?
-        if (*m_pMBLayout != *InputRef(0).GetMBLayout()) // this does a deep value-level comparison
+        if (InputRef(0).GetMBLayout() && (*m_pMBLayout != *InputRef(0).GetMBLayout())) // this does a deep value-level comparison
             InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompatible with that of %ls %ls.",
                             NodeName().c_str(), OperationName().c_str(),
                             InputRef(0).NodeName().c_str(), InputRef(0).OperationName().c_str(),
                             InputRef(1).NodeName().c_str(), InputRef(1).OperationName().c_str());
 
         // copy the data from 'dataInput'
-        ValueFor(fr).AssignValuesOf(InputRef(0).ValueFor(fr.WithLayout(InputRef(0).GetMBLayout()))); // just propagate through
-        // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the matrix lib).
+        size_t rank = GetSampleLayout().GetRank();
+        auto result = ValueTensorFor(rank, fr);
+        auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).GetMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
+        result.AssignCopyOf(input0);
+        // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the tensor lib).
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0)
-            InputRef(0).GradientFor(fr.WithLayout(InputRef(0).GetMBLayout())) += GradientFor(fr);
-        // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
+        {
+            size_t rank = GetSampleLayout().GetRank();
+            auto gradient = GradientTensorFor(rank, fr);
+            auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, InputRef(inputIndex).GetMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+                MaskMissingGradientColumnsToZero(fr);
+
+            if (Input(inputIndex)->ParentOverwritesGradient())
+                inputGradient.AssignCopyOf(gradient);
+            else
+                inputGradient.AddCopyOf(gradient);
+
+            // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
+        }
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -292,12 +314,13 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        if (isFinalValidationPass && (!InputRef(0).HasMBLayout() || !InputRef(1).HasMBLayout()))
-            RuntimeError("%ls %ls operation requires two inputs that both have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
+        if (isFinalValidationPass && !InputRef(1).HasMBLayout())
+            RuntimeError("%ls %ls operation requires the 2nd input to have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
+
         m_pMBLayout = InputRef(1).GetMBLayout(); // output layout is that of 'layoutInput'
         // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
-        SetDims(Input(0));
+        SetDims(InputRef(0).GetSampleLayout(), HasMBLayout());
     }
 };
 

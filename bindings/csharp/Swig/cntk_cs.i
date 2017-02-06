@@ -42,6 +42,7 @@
 %template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 %template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;
 %template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
+%template(FunctionPtrVector) std::vector<std::shared_ptr<CNTK::Function>>;
 
 %template() std::vector<bool>;
 %template() std::pair<size_t, double>;
@@ -49,6 +50,10 @@
 
 #define %ignore_function %rename("$ignore", %$isfunction, fullname=1)
 #define %ignore_class %rename("$ignore", %$isclass, fullname=1)
+#define %ignore_namespace %rename("$ignore", %$isnamespace, fullname=1)
+#define %ignore_variable %rename("$ignore", %$isvariable, fullname=1)
+// It seems that SWIG does not understand %$isstruct.
+#define %ignore_struct %rename("$ignore", fullname=1)
 
 // Ignore things in CNTKLibrary.h that are not exposed for C# Eval.
 %ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
@@ -66,7 +71,7 @@
 %ignore_class CNTK::IDictionarySerializable;
 %ignore_class CNTK::DictionaryValue;
 %ignore_class CNTK::Dictionary;
-%ignore CNTK::ParameterInitializer;
+%ignore_class CNTK::ParameterInitializer;
 
 %ignore_function CNTK::ConstantInitializer;
 %ignore_function CNTK::UniformInitializer;
@@ -79,8 +84,8 @@
 %ignore_function CNTK::BilinearInitializer;
 %ignore_function CNTK::RandomInitializerWithRank;
 
-%ignore std::hash<::CNTK::Parameter>;
-%ignore CNTK::hash<::CNTK::Constant>;
+%ignore_struct std::hash<::CNTK::Parameter>;
+%ignore_struct CNTK::hash<::CNTK::Constant>;
 
 %ignore_function CNTK::Value::UnpackVariableValue;
 
@@ -174,24 +179,24 @@
 %ignore_function CNTK::Splice;
 %ignore_function CNTK::AsBlock;
 
-%ignore CNTK::Sequence;
+%ignore_namespace CNTK::Sequence;
 
 %ignore_class CNTK::TrainingParameterSchedule;
 %ignore_class CNTK::TrainingParameterPerUnitSchedule;
-%ignore CNTK::TrainingParameterPerSampleSchedule;
-%ignore CNTK::TrainingParameterPerMinibatchSchedule;
-%ignore CNTK::LearningRateSchedule;
-%ignore CNTK::LearningRatePerSampleSchedule;
-%ignore CNTK::LearningRatePerMinibatchSchedule;
+%ignore_class CNTK::TrainingParameterPerSampleSchedule;
+%ignore_class CNTK::TrainingParameterPerMinibatchSchedule;
+%ignore_class CNTK::LearningRateSchedule;
+%ignore_class CNTK::LearningRatePerSampleSchedule;
+%ignore_class CNTK::LearningRatePerMinibatchSchedule;
 %ignore_class CNTK::MomentumAsTimeConstantSchedule;
-%ignore CNTK::AdditionalLearningOptions;
+%ignore_struct CNTK::AdditionalLearningOptions;
 %ignore_class CNTK::Learner;
 
 %ignore_function CNTK::SGDLearner;
 %ignore_function CNTK::MomentumSGDLearner;
 %ignore_function CNTK::NesterovLearner;
 
-%ignore CNTK::DefaultVarianceMomentum;
+%ignore_variable CNTK::DefaultVarianceMomentum;
 
 %ignore_function CNTK::AdamLearner;
 %ignore_function CNTK::AdaGradLearner;
@@ -205,30 +210,32 @@
 
 %ignore_class CNTK::Trainer;
 %ignore_function CNTK::CreateTrainer;
-%ignore CNTK::StreamInformation;
-%ignore std::hash<::CNTK::StreamInformation>;
+%ignore_struct CNTK::StreamInformation;
+%ignore_struct std::hash<::CNTK::StreamInformation>;
 
-%ignore CNTK::MinibatchData;
-%ignore CNTK::MinibatchSource;
+%ignore_struct CNTK::MinibatchData;
+%ignore_struct CNTK::MinibatchSource;
+%ignore_struct CNTK::MinibatchInfo;
+
 %ignore_function CNTK::CreateCompositeMinibatchSource;
-%ignore CNTK::StreamConfiguration;
+%ignore_struct CNTK::StreamConfiguration;
 %ignore_function CNTK::TextFormatMinibatchSource;
 %ignore_function CNTK::ComputeInputPerDimMeansAndInvStdDevs;
-%ignore CNTK::DistributedWorkerDescriptor;
+%ignore_struct CNTK::DistributedWorkerDescriptor;
 %ignore_class CNTK::DistributedCommunicator;
 %ignore_class CNTK::QuantizedDistributedCommunicator;
 %ignore_function CNTK::MPICommunicator;
 %ignore_function CNTK::QuantizedMPICommunicator;
-%ignore CNTK::MinibatchInfo;
+
 %ignore_class CNTK::TrainingSession;
 %ignore_function CNTK::CreateBasicTrainingSession;
 %ignore_function CNTK::CreateDataParallelDistributedTrainer;
 %ignore_function CNTK::CreateQuantizedDataParallelDistributedTrainer;
 
-%ignore std::hash<::CNTK::DistributedWorkerDescriptor>;
+%ignore_struct std::hash<::CNTK::DistributedWorkerDescriptor>;
 
 // Todo: add correct typemap as they might be useful for C# in future.
-%ignore CNTK::NDMask::DataBuffer() const;
+%ignore_function CNTK::NDMask::DataBuffer;
 
 // Ignore things in CNTKLibraryInternals.h that are not exposed for C# Eval.
 %ignore_class CNTK::Internal::PrimitiveFunction;

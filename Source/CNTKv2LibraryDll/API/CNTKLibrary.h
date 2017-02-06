@@ -2799,7 +2799,7 @@ namespace CNTK
         }
 
         ///
-        /// Returns the set of all Constant variables of 'this' Function.
+        /// Returns the set of all Placeholder variables of 'this' Function.
         ///
         std::vector<Variable> Placeholders() const
         {
@@ -2809,6 +2809,41 @@ namespace CNTK
         }
 
         ///
+        /// Find a function with the given name in the Function graph underlying 'this' Function.
+        /// If more than one function with the same name, an exception is thrown.
+        /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given name.
+        ///
+        FunctionPtr FindByName(const std::wstring& name, bool nestedSearchInsideBlockFunction = false)
+        {
+            FunctionPtr  foundFunction = nullptr;
+            PreorderTraverseFunctions(RootFunction(), [&foundFunction, &name](const FunctionPtr& function) {
+                if (name.compare(function->Name()) == 0)
+                {
+                    if (foundFunction != nullptr)
+                        RuntimeError("Multiple functions with the same name are found in the Function graph underlying 'this' Function.");
+                    else
+                        foundFunction = function;
+                }
+            }, nestedSearchInsideBlockFunction);
+
+            return foundFunction;
+        }
+
+        ///
+        /// Find a list of functions with the given name in the Function graph underlying 'this' Function.
+        /// If nestedSearchInsideBlockFunction is true, all functions inside block functions are also searched for the given name.
+        ///
+        std::vector<FunctionPtr> FindAllWithName(const std::wstring& name, bool nestedSearchInsideBlockFunction = false)
+        {
+            std::vector<FunctionPtr> foundFunctions;
+            PreorderTraverseFunctions(RootFunction(), [&foundFunctions, &name](const FunctionPtr& function) {
+                if (name.compare(function->Name()) == 0)
+                   foundFunctions.push_back(function);
+            }, nestedSearchInsideBlockFunction);
+
+            return foundFunctions;
+        }
+
         /// Returns the dictionary of attributes of 'this' Function
         ///
         const Dictionary& Attributes() const { return m_attributes; }
@@ -2854,6 +2889,38 @@ namespace CNTK
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///
         CNTK_API Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
+
+        template <typename FunctionType>
+        static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, const FunctionType& functor, bool traverseInsideBlockFunction = false)
+        {
+            std::unordered_set<FunctionPtr> visitedFunctions;
+            PreorderTraverseFunctions(rootFunction, visitedFunctions, functor, traverseInsideBlockFunction);
+        }
+
+        // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
+        template <typename FunctionType>
+        static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor, bool traverseInsideBlockFunction = false)
+        {
+            visitedFunctions.insert(rootFunction);
+            functor(rootFunction);
+
+            if (traverseInsideBlockFunction && rootFunction->IsBlock())
+            {
+                PreorderTraverseFunctions(rootFunction->BlockRoot(), visitedFunctions, functor, traverseInsideBlockFunction);
+            }
+            else
+            {
+                std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
+                for (const auto& rootInput : rootFunctionInputs)
+                {
+                    if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                    {
+                        const auto& function = rootInput.Owner();
+                        PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
+                    }
+                }
+            }
+        }
 
         /// Restores the state of the 'this' Function in place using the provided dictionary.
         /// Structurally, 'this' Function graph has to be identical to the state captured in the dictionary.
@@ -3471,7 +3538,10 @@ namespace CNTK
 
         CNTK_API FunctionPtr Where(const Variable& condition, const std::wstring& name = L"");
         CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Gather(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
+
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::wstring& name = L"");
+        CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
 
         CNTK_API FunctionPtr BroadcastAs(const Variable& operand, const Variable& broadcastAs, const std::wstring& name = L"");
     }

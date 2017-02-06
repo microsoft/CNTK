@@ -7,6 +7,7 @@
 from __future__ import print_function
 import numpy as np
 import os
+import sys
 from cntk import Trainer, Axis
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
@@ -140,7 +141,7 @@ def create_inputs(vocab_dim):
     return input_sequence, label_sequence
 
 # Creates and trains a character-level language model
-def train_lm(training_file):
+def train_lm(training_file, max_num_minibatches):
 
     # load the data and vocab
     data, char_to_ix, ix_to_char, data_size, vocab_dim = load_data_and_vocab(training_file)
@@ -171,8 +172,8 @@ def train_lm(training_file):
     sample_freq = 1000
     epochs = 50
     minibatches_per_epoch = int((data_size / minibatch_size))
-    minibatches = epochs * minibatches_per_epoch
-    
+    minibatches = min(epochs * minibatches_per_epoch, max_num_minibatches)
+
     # print out some useful training information
     log_number_of_parameters(z) ; print()
     progress_printer = ProgressPrinter(freq=100, tag='Training')    
@@ -205,7 +206,11 @@ def train_lm(training_file):
             print(sample(z, ix_to_char, vocab_dim, char_to_ix))
 
         p += minibatch_size
-        
+
+    # Do a final save of the model        
+    model_filename = "models/shakespeare_epoch%d.dnn" % e
+    z.save_model(model_filename)
+
 
 def load_and_sample(model_filename, vocab_filename, prime_text='', use_hardmax=False, length=1000, temperature=1.0):
     
@@ -213,21 +218,27 @@ def load_and_sample(model_filename, vocab_filename, prime_text='', use_hardmax=F
     model = load_model(model_filename)
     
     # load the vocab
-    chars = [c[0] for c in open(vocab_filename).readlines()]
+    vocab_filepath = os.path.join(os.path.dirname(os.path.abspath(__file__)), vocab_filename)
+    chars = [c[0] for c in open(vocab_filepath).readlines()]
     char_to_ix = { ch:i for i,ch in enumerate(chars) }
     ix_to_char = { i:ch for i,ch in enumerate(chars) }
         
-    output = sample(model, ix_to_char, len(chars), char_to_ix, prime_text=prime_text, use_hardmax=use_hardmax, length=length, temperature=temperature)
+    return sample(model, ix_to_char, len(chars), char_to_ix, prime_text=prime_text, use_hardmax=use_hardmax, length=length, temperature=temperature)
     
-    ff = open('output.txt', 'w', encoding='utf-8')
-    ff.write(output)
-    ff.close()
-
-if __name__=='__main__':    
-
+def train_and_eval_char_rnn(max_num_minibatches=sys.maxsize):
     # train the LM    
-    train_lm("data/tinyshakespeare.txt")
+    train_lm("data/tinyshakespeare.txt", max_num_minibatches)
 
     # load and sample
     text = "T"
-    load_and_sample("models/shakespeare_epoch0.dnn", "tinyshakespeare.txt.vocab", prime_text=text, use_hardmax=False, length=100, temperature=0.95)
+    return load_and_sample("models/shakespeare_epoch0.dnn", "data/tinyshakespeare.txt.vocab", prime_text=text, use_hardmax=False, length=100, temperature=0.95)
+
+if __name__=='__main__':    
+    # Specify the target device to be used for computing, if you do not want to
+    # use the best available one, e.g.
+    #set_default_device(cpu())
+
+    output = train_and_eval_char_rnn()
+    ff = open('output.txt', 'w', encoding='utf-8')
+    ff.write(output)
+    ff.close()

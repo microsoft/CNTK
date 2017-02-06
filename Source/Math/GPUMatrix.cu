@@ -1525,6 +1525,15 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     if (numElements > GetSizeAllocated() ||                     // grow allocation
         (isForceResize && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
     {
+        // If the buffer exists, free it before allocate
+        if (Buffer())
+        {
+            if (cachedResize)
+                BufferManagement::GetManagerInstance(GetComputeDeviceId()).LogicalReleaseBuffer<ElemType>(Buffer(), GetSizeAllocated());
+            else
+                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+        }
+
         // reallocate buffer if numElements > 0
         ElemType* pArray = nullptr;
         if (numElements > 0)
@@ -1533,15 +1542,6 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
                 pArray = BufferManagement::GetManagerInstance(GetComputeDeviceId()).RequestBuffer<ElemType>(numElements);
             else
                 pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
-        }
-
-        // If the buffer exists, free it
-        if (Buffer())
-        {
-            if(cachedResize)
-                BufferManagement::GetManagerInstance(GetComputeDeviceId()).LogicalReleaseBuffer<ElemType>(Buffer(), GetSizeAllocated());
-            else
-                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
         }
 
         SetBuffer(pArray, numElements * sizeof(ElemType));

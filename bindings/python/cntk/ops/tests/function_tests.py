@@ -252,3 +252,25 @@ def test_input_order():
     assert compare_var_names(t.inputs, ['x', 'w'])
     assert compare_var_names(t_plus_b.inputs, ['x', 'w', 'b'])
 
+def test_combine_duplicated_inputs():
+    input_dim = 1
+    proj_dim = 2
+    x = input_variable((input_dim,), name='x')
+    b = parameter((proj_dim), name='b')
+    w = parameter((input_dim, proj_dim), name='w')
+    func_name = 't_plus_b'
+    t = times(x, w)
+    t_plus_b = plus(t, b, name=func_name)
+
+    duplicated_t_plus_b = combine([t_plus_b, t_plus_b])
+    
+    def compare_var_names(vars, names): 
+        num_vars = len(vars)
+        for i in range(num_vars):
+            if (vars[i].name != names[i]):
+                return False
+
+        return True
+
+    assert compare_var_names(duplicated_t_plus_b.outputs, [func_name, func_name])
+    
