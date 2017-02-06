@@ -150,12 +150,16 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).AssignValuesOf(InputRef(0).ValueFor(fr));
+        auto result = ValueFor(fr);
+        auto inputValue = InputRef(0).ValueFor(fr);
+        result.AssignValuesOf(inputValue.Reshaped(result.GetNumRows(), result.GetNumCols()));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        InputRef(inputIndex).GradientFor(fr) += GradientFor(fr);
+        auto gradient = GradientFor(fr);
+        auto inputGradient = InputRef(inputIndex).GradientFor(fr);
+        inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
