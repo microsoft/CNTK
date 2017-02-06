@@ -164,11 +164,11 @@ private:
     cudnnPoolingDescriptor_t m_pool;
 };
 
-enum AutotuningState
+enum class AutotuningState : int
 {
-    initState = 0,          // initial state 
-    pendingTuningState = 1, // memory of all nodes have been allocated, it's safe to do tuning now 
-    runState = 2            // done tuning, no long performing auto-tuning, code is running normally 
+    Init = 0,          // initial state 
+    PendingTuning = 1, // memory of all nodes have been allocated, it's safe to do tuning now 
+    Running = 2        // done tuning, no long performing auto-tuning, code is running normally 
 };
 
 template <class ElemType>
@@ -393,9 +393,9 @@ private:
     {
         m_inT.UpdateBatchSize(batchSize);
         m_outT.UpdateBatchSize(batchSize); 
-        if (batchSize > algo.MaxAllowedMBSizeForCurrentAlgo && algo.autotuningState == AutotuningState::runState)     // batchSize is bigger, need to re-do auto-tuning 
+        if (batchSize > algo.MaxAllowedMBSizeForCurrentAlgo && algo.autotuningState == AutotuningState::Running)     // batchSize is bigger, need to re-do auto-tuning 
         {
-            algo.autotuningState = AutotuningState::initState;
+            algo.autotuningState = AutotuningState::Init;
         }
 
         if (!algo.NeedAutotuning(batchSize))
@@ -408,7 +408,7 @@ private:
         // in initState, where memory allocation for nodes are not completed, we only run the algorithm with no workspace
         // or if alloc failed - usually means cuDNN runtime auto-tuner could not allocate workspace.
         // In such case, use static auto-tuner with no workspace.
-        if (algo.autotuningState == AutotuningState::initState || err == CUDNN_STATUS_ALLOC_FAILED)
+        if (algo.autotuningState == AutotuningState::Init || err == CUDNN_STATUS_ALLOC_FAILED)
         {
             decltype(CuDnnAlgoT::algo) noMemAlgo;
             CUDNN_CALL(staticFinder(noMemAlgo));
@@ -421,10 +421,10 @@ private:
             algo.Algo.memory = 0;
             algo.Algo.status = CUDNN_STATUS_SUCCESS;
             algo.NoWorkspaceAlgo = noMemAlgo;
-            if (algo.autotuningState == AutotuningState::initState)
-                algo.autotuningState = AutotuningState::pendingTuningState;
+            if (algo.autotuningState == AutotuningState::Init)
+                algo.autotuningState = AutotuningState::PendingTuning;
             else 
-                algo.autotuningState = AutotuningState::runState;
+                algo.autotuningState = AutotuningState::Running;
             return;
         }
         CUDNN_CALL(err);
@@ -440,7 +440,7 @@ private:
 
         algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
         algo.Algo = *res;
-        algo.autotuningState = AutotuningState::runState;
+        algo.autotuningState = AutotuningState::Running;
         if (m_forceDeterministicAlgorithms) // does not allow fallback.
             return;
 
@@ -470,7 +470,7 @@ private:
         using CuDnnAlgoT = decltype(T::algo);
 
         ConvAlgoInfo()
-            : MaxAllowedMBSizeForCurrentAlgo(0), autotuningState(AutotuningState::initState)
+            : MaxAllowedMBSizeForCurrentAlgo(0), autotuningState(AutotuningState::Running)
         {
             Algo.status = CUDNN_STATUS_NOT_INITIALIZED;
             NoWorkspaceAlgo = (CuDnnAlgoT)-1;
@@ -491,7 +491,7 @@ private:
             // We also need to reset auto-tuning status at the beginning of each epoch but ComputationNode currently does not provide such notification.
             // We assume no other dimensions of tensors can change so we don't check it.
             // REVIEW alexeyk: review once we get response from NVIDIA.
-            return (autotuningState != AutotuningState::runState || 
+            return (autotuningState != AutotuningState::Running || 
                     batchSize > MaxAllowedMBSizeForCurrentAlgo);
         }
     };
