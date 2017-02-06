@@ -88,6 +88,7 @@ Makefile text
 *.log text
 
 Dockerfile* text
+.dockerignore text
 
 # Speech data
 mean.363 text
