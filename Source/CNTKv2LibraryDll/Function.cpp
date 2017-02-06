@@ -63,7 +63,7 @@ namespace CNTK
                 inputs = { m_inputs[1], m_inputs[0] };
             }
             else
-                inputs = m_inputs;
+            inputs = m_inputs;
         }
         else
             inputs = compositeFunction->DetermineInputs(pythonOperandOrder);
@@ -1251,7 +1251,7 @@ namespace CNTK
         return AsComposite(
             MakeSharedObject<PrimitiveFunction>(
                 PrimitiveOpType::BatchNormalization, operands, std::move(additionalProperties), name),
-            name);
+                                         name);
     }
 
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)

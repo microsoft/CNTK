@@ -2880,7 +2880,7 @@ namespace CNTK
         CNTK_API void PrintGraph() const;
 
         ///
-        /// Maimum number of outputs that is currently supported.
+        /// Maximum number of outputs that is currently supported.
         ///
         static const int MaxNumOutputs = 64;
 
