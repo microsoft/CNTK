@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
 import cntk as C
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk
+from ...utils import sanitize_dtype_cntk, one_hot
 from .. import constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
@@ -395,3 +395,39 @@ def test_op_gather_derived_dynamic_axes_equivalence(device_id, precision):
     res = z.eval({a: input_data1, b: input_data2})
     expected_forward = [[[3.]]]
     assert np.array_equal(res, expected_forward)
+
+
+def test_op_gather_sparse(device_id):
+    from .. import sequence, times
+
+    input_sparse_indices = [[1, 3, 5], [2, 4]]
+    vocab_size = 6
+    input_data = one_hot(input_sparse_indices, vocab_size)
+
+    a = I(shape=(vocab_size,), is_sparse=True, name='a')
+
+    a_last = sequence.last(a)
+    a_last_dense = times(a_last, np.eye(vocab_size))
+    res = a_last_dense.eval({a : input_data})
+    assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1]], [[0, 0, 0, 0, 1, 0]]])
+
+    a_last_2 = sequence.slice(a, -2, 0)
+    a_last_2_dense = times(a_last_2, np.eye(vocab_size))
+    res = a_last_2_dense.eval({a : input_data})
+    assert np.array_equal(res, [[[0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1]], [[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0]]])
+
+
+def test_op_scatter_sparse(device_id):
+    from .. import sequence, times
+
+    input_sparse_indices = [[1, 3, 5], [2, 4]]
+    vocab_size = 6
+    input_data = one_hot(input_sparse_indices, vocab_size)
+
+    a = I(shape=(vocab_size,), is_sparse=True, name='a')
+
+    a_last_scatter = sequence.scatter(sequence.last(a), sequence.is_first(a))
+    a_last_scatter_dense = times(a_last_scatter, np.eye(vocab_size))
+    res = a_last_scatter_dense.eval({a : input_data})
+    assert np.array_equal(res[0], np.asarray([[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
+    assert np.array_equal(res[1], np.asarray([[0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0]]))

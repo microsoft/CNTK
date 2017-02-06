@@ -647,11 +647,7 @@ class UserFunction(Function):
 
     '''
     def __init__(self, inputs, name=''):
-        # FIXME we need to save a reference here so that the function does not
-        # disappear
-        self.var_inputs = inputs
-
-        super(Function, self).__init__(inputs, name)
+        super(UserFunction, self).__init__(inputs, name)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -753,10 +749,21 @@ class UserFunction(Function):
         outputs.extend(self.infer_outputs())
 
     def infer_outputs(self):
-        raise NotImplementedError('infer_outputs has to be overridden')
+        '''
+        Returns a list of all output variables this user-defined function
+        outputs.
+
+        Output variables are created by
+        :meth:`~cntk.ops.functions.output_variable`.
+        '''
+        raise NotImplementedError('infer_outputs has to be overwritten')
 
     def op_name(self):
+        '''
+        Returns the operator name.
+        '''
         return 'UserFunction'
+
 
 @typemap
 def load_model(filename, device=None):

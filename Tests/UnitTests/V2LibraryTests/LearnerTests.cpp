@@ -98,6 +98,15 @@ void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, bool unit
 }
 
 template <typename ElementType>
+void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99), false);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
 void TestRMSPropLearner(size_t numParameters, size_t numMinibatches, const DeviceDescriptor& device)
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
@@ -267,12 +276,11 @@ void TestSweepBasedSchedule()
 
 
     auto classifierOutput = FullyConnectedLinearLayer(input, numOutputClasses, device);
-    auto trainingLoss = ::CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
-    auto prediction = ::CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
+    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
+    auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
     auto learner2 = SGDLearner(classifierOutput->Parameters(), schedule);
     auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner2 });
 
-    
     for (auto i = 0; i <= 4000; i += minibatchSize)
     {
         auto sweepIndex1 = i / sweepSize;
@@ -337,12 +345,12 @@ BOOST_AUTO_TEST_CASE(TrainingParametersSchedule)
 }
 
 BOOST_AUTO_TEST_CASE(CreateAndUpdateSGDLearner)
-{
+    {
     for (auto& device : devices)
     {
         TestSGDLearner<double>(numParameters, numMinibatches, device);
     }
-}
+    }
 
 BOOST_AUTO_TEST_CASE(CreateAndUpdateAdaGradLearner)
 {
@@ -389,6 +397,18 @@ BOOST_AUTO_TEST_CASE(CreateAndUpdateFSAdaGradLearner)
         for (auto& gain : unitGain)
         {
             TestFSAdaGradLearner<double>(numParameters, numMinibatches, gain, device);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamLearner)
+{
+    for (auto& device : devices)
+    {
+        for (auto& gain : unitGain)
+        {
+            TestAdamLearner<float>(numParameters, numMinibatches, gain, device);
+            TestAdamLearner<double>(numParameters, numMinibatches, gain, device);
         }
     }
 }

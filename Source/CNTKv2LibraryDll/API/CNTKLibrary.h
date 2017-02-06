@@ -3880,7 +3880,9 @@ namespace CNTK
     static MomentumSchedule DefaultVarianceMomentum = MomentumAsTimeConstantSchedule(2 * 3600 * 100);
 
     ///
-    /// Create an instance of the CNTK built-in Adam learner (only the low-memory variant is supported at the moment).
+    /// Create an instance of Adam learner as the original paper.
+    /// Due to history reason, the legacy implementation of AdamLearner is FSAdaGrad. To keep compitability on the interface, we
+    /// will switch to the original Adam only when lowMemory = false, while keep the legacy logic when it leaves default, aka. true.
     ///
     CNTK_API LearnerPtr AdamLearner(const std::vector<Parameter>& parameters,
                                     const LearningRateSchedule& learningRateSchedule,

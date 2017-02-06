@@ -34,6 +34,8 @@ def sanitize_precision(precision):
         return np.float32
     elif precision in [cntk_py.DataType_Double, 'double', 'float64', np.float64]:
         return np.float64
+    elif precision in [cntk_py.DataType_Unknown]:
+        return None
     else:
         raise ValueError('precision value: "%s" is not supported' % precision)
 
@@ -112,6 +114,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
       ``arg`` is a number or NumPy array. Variable otherwise.
     """
 
+    from cntk.ops.functions import UserFunction
     from cntk.ops.variables import Constant, Variable, Parameter
     from cntk.ops.functions import Function
     from cntk.ops import constant
@@ -483,6 +486,8 @@ def sanitize_dtype_cntk(dtype):
         return cntk_py.DataType_Float
     elif dtype == np.float64:
         return cntk_py.DataType_Double
+    elif dtype == object:
+        return cntk_py.DataType_Unknown
     else:
         raise ValueError('data type "%s" is not supported' % dtype)
 

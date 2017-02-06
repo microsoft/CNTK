@@ -76,7 +76,7 @@
         "name":  "Fast R-CNN",
         "url":  "https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN",
         "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"]
     },
     {
@@ -204,7 +204,7 @@
         "name":  "VGG",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/VGG",
         "description":  "Deep CNN from University of Oxford. This was the winning model for the ILSVRC2014 localization task.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"]
     },
     {
