@@ -5672,13 +5672,11 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
 }
 
 template<class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore_m(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
     Matrix<ElemType>& phoneSeq, Matrix<ElemType>& phoneBound, ElemType &totalScore, std::vector<size_t> & extraUttMp,
     std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum, std::vector<size_t> & uttPhoneNum,
     size_t samplesInRecurrentStep, size_t & mbsize, int& delayConstraint, const bool isColWise)
 {
-    if (prob.IsEmpty())
-        throw std::logic_error("AssignCTCScore: Matrix a is empty.");
     DecideAndMoveToRightDevice(prob, *this);
     alpha.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
     beta.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
@@ -5691,8 +5689,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore_m(const Matrix<ElemType>& pro
 
     DISPATCH_MATRIX_ON_FLAG(&prob,
         this,
-        NOT_IMPLEMENTED,
-        this->m_GPUMatrix->AssignCTCScore_m(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, totalScore,
+        this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, totalScore,
+            extraUttMp, uttBeginFrame, uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, delayConstraint, isColWise),
+        this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, totalScore,
             extraUttMp, uttBeginFrame, uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, delayConstraint, isColWise),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED

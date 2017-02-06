@@ -5197,7 +5197,7 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
 // calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 >>>>>>> CTC: Further refactoring
 template<class ElemType>
-__global__ void _assignAlphaScore_m(
+__global__ void _assignAlphaScore(
     const ElemType *prob,
     ElemType *alphaScore,
     ElemType *phoneSeq,
@@ -5209,15 +5209,15 @@ __global__ void _assignAlphaScore_m(
     size_t numChannels,
     const size_t uttNum,
     const size_t  t,
-    const size_t maxPhoneNum,
-    const size_t totalPhoneNum,
+    const size_t maxPhoneNum, // Maximum length of utterance in this MB
+    const size_t totalPhoneNum, // Total number of phones
     const int delayConstraint)
 {
     LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
     // Index of the label in the sequence
     LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
 
-    // Number of phones and frames in this sequence
+    // Number of phones and frames in this utterance
     LONG64 phoneNum = uttPhoneNum[uttId]; 
     LONG64 frameNum = uttFrameNum[uttId];
 
@@ -5301,7 +5301,7 @@ __global__ void _assignAlphaScore_m(
 
 // Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
 template<class ElemType>
-__global__ void _assignBetaScore_m(
+__global__ void _assignBetaScore(
     const ElemType *prob,
     ElemType *betaScore,
     ElemType *phoneSeq,
@@ -5390,7 +5390,7 @@ __global__ void _assignBetaScore_m(
 
 // calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 template<class ElemType>
-__global__ void _assignCTCScore_m(
+__global__ void _assignCTCScore(
     ElemType *CTCscore,
     ElemType *prob,
     ElemType *alphaScore,

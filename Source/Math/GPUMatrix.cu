@@ -4265,7 +4265,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
 // numChannels (input): channel number in this minibatch
 // maxFrameNum (input): the maximum channel frame number
 template<class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemType>& prob,
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemType>& prob,
     GPUMatrix<ElemType>& alpha,
     GPUMatrix<ElemType>& beta,
     const GPUMatrix<ElemType> phoneSeq,
@@ -4281,8 +4281,11 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemT
     if (isColWise)
     {
         PrepareDevice();
+        // Total number of phones
         long totalPhoneNum = prob.GetNumRows();
         size_t uttNum = uttFrameNum.size();
+
+        // Max number of phones in utterances in this minibatch
         size_t maxPhoneNum = phoneSeq.GetNumRows();
 
         size_t *gpuFrameNum;
@@ -4312,20 +4315,20 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore_m(const GPUMatrix<ElemT
         for (long t = 0; t < maxFrameNum; t++)
         {
 
-            _assignAlphaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
+            _assignAlphaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
                 gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numChannels, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
         }
         for (long t = maxFrameNum - 1; t >= 0; t--)
         {
-            _assignBetaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
+            _assignBetaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
                 gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numChannels, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
         }
 
-        _assignTotalScore_m << <uttNum, 1, 0, t_stream >> > (beta.Data(), gpuScores, uttNum, gpuUttToChanInd, gpuBeginFrame, numChannels, maxPhoneNum);
+        _assignTotalScore << <uttNum, 1, 0, t_stream >> > (beta.Data(), gpuScores, uttNum, gpuUttToChanInd, gpuBeginFrame, numChannels, maxPhoneNum);
 
         dim3 block_tail_2((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
-        _assignCTCScore_m << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, gpuUttToChanInd,
+        _assignCTCScore << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, gpuUttToChanInd,
             gpuBeginFrame, gpuPhoneNum, gpuFrameNum, numChannels, maxPhoneNum, totalPhoneNum);
 
         ElemType *scores;

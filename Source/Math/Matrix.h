@@ -381,7 +381,7 @@ public:
     Matrix<ElemType>& DropFrame(const Matrix<ElemType>& label, const Matrix<ElemType>& gamma, const ElemType& threshhold);
     Matrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const Matrix<ElemType>& label, const Matrix<ElemType>& dnnoutput, const Matrix<ElemType>& gamma, ElemType alpha);
 
-    Matrix<ElemType>& AssignCTCScore_m(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& phoneSeq, Matrix<ElemType>& phoneBound, ElemType &totalScore,
+    Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, Matrix<ElemType>& phoneSeq, Matrix<ElemType>& phoneBound, ElemType &totalScore,
         std::vector<size_t> & extraUttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum, std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep,
         size_t & mbSize, int& delayConstraint, const bool isColWise);
 

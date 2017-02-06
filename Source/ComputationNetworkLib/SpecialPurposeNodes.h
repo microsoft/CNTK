@@ -781,11 +781,6 @@ public:
     {
     }
 
-    //CTCWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name) :
-    //    Base(deviceId, name)
-    //{
-    //}
-
     // Compute gradients to input observations, the weights to the observations, and the class log posterior probabilites
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
@@ -830,7 +825,8 @@ public:
         gradientValues.Print("CTCWithSoftmaxNode Partial-gradientValues");
         inputGradientValues.Print("CTCWithSoftmaxNode Partial-Right-in");
 #endif  
-        Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues);
+        // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
+        Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues); 
 
 #if DUMPOUTPUT
         inputGradientValues.Print("CTCWithSoftmaxNode Partial-Right");
@@ -846,11 +842,12 @@ public:
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
 
-        size_t sequenceNum = Input(1)->GetNumParallelSequences();
         m_CTCposterior->SwitchToMatrixType(m_softmaxOfRight->GetMatrixType(), m_softmaxOfRight->GetFormat(), false);
         m_CTCposterior->Resize(m_softmaxOfRight->GetNumRows(), m_softmaxOfRight->GetNumCols());
 
-        m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_CTCposterior, m_boundaries, sequenceNum, Input(0)->GetMBLayout(), m_extraUttMap, m_delayConstraint);
+        FrameRange fr(InputRef(0).GetMBLayout());
+        InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
+        m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, Input(0)->GetMBLayout(), m_delayConstraint);
 
 #if NANCHECK
         functionValues.HasNan("CTCWithSoftmaxNode");
@@ -889,6 +886,8 @@ public:
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
             node->m_CTCposterior->SetValue(*m_CTCposterior);
+            node->m_maxIndexes->SetValue(*m_maxIndexes);
+            node->m_maxValues->SetValue(*m_maxValues);
             node->m_blankNum = m_blankNum;
             node->m_delayConstraint = m_delayConstraint;
         }
@@ -901,6 +900,8 @@ public:
         RequestMatrixFromPool(m_logSoftmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_softmaxOfRight, matrixPool);
         RequestMatrixFromPool(m_CTCposterior, matrixPool);
+        RequestMatrixFromPool(m_maxIndexes, matrixPool);
+        RequestMatrixFromPool(m_maxValues, matrixPool);
     }
 
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
@@ -909,15 +910,17 @@ public:
         ReleaseMatrixToPool(m_logSoftmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_softmaxOfRight, matrixPool);
         ReleaseMatrixToPool(m_CTCposterior, matrixPool);
+        ReleaseMatrixToPool(m_maxIndexes, matrixPool);
+        ReleaseMatrixToPool(m_maxValues, matrixPool);
     }
 
-    std::vector<size_t> * GetBoundary()
+    virtual void UpdateFunctionMBSize() override
     {
-        return &m_boundaries;
-    }
-    std::vector<size_t> * GetExtraUttMap()
-    {
-        return &m_extraUttMap;
+        Base::UpdateFunctionMBSize();
+
+        size_t cols = Input(0)->Value().GetNumCols();
+        m_maxIndexes->Resize(1, cols);
+        m_maxValues->Resize(1, cols);
     }
 
 protected:
@@ -925,11 +928,10 @@ protected:
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_softmaxOfRight;
     shared_ptr<Matrix<ElemType>> m_CTCposterior;
+    shared_ptr<Matrix<ElemType>> m_maxIndexes;
+    shared_ptr<Matrix<ElemType>> m_maxValues;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
-    //std::vector<size_t> m_uids;
-    std::vector<size_t> m_boundaries;
-    std::vector<size_t> m_extraUttMap;
     size_t m_blankNum;
     int m_delayConstraint;
 };
