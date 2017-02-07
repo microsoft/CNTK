@@ -116,7 +116,7 @@ void FaceFileByteReader::CropAndScaleFaceImage(const cv::Mat &input_image, int i
     const int RAND_NUM = 4;
     float uniform_rand[RAND_NUM];
     for (int i = 0; i < RAND_NUM; i++)
-    	uniform_rand[i] = (rand() / (float)RAND_MAX) * 2.f - 1.f;
+        uniform_rand[i] = (rand() / (float)RAND_MAX) * 2.f - 1.f;
     float center_x, center_y, scale_x, scale_y;
     if (m_rand_flip && uniform_rand[0] >= 0)
     {
