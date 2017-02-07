@@ -516,7 +516,7 @@ public:
                             continue;
                         }
 
-						ElemType scoreDiff = abs(UrlI.m_score - UrlJ.m_score) + (ElemType)0.1;
+                        ElemType scoreDiff = abs(UrlI.m_score - UrlJ.m_score) + (ElemType)0.1;
 
                         // delta DCG
                         lambdaIJ = (gainI - UrlJ.m_gain) * (discountI - discountJ) / (discountI * discountJ);
