@@ -53,7 +53,7 @@ def mpiexec_test(device_id, script, params, expected_test_error, match_exactly=T
             os.kill(p.pid, signal.CTRL_C_EVENT)
             raise RuntimeError('Timeout in mpiexec, possibly hang')
     str_out = out.decode(sys.getdefaultencoding())
-    results = re.findall("Final Results: Minibatch\[.+?\]: errs = (.+?)%", str_out)
+    results = re.findall("Cross Validation \[.+?\]: Minibatch\[.+?\]: errs = (.+?)%", str_out)
 
     assert len(results) == 2
 
@@ -66,14 +66,14 @@ def mpiexec_test(device_id, script, params, expected_test_error, match_exactly=T
 
 def test_cifar_convnet_distributed(device_id):
     params = [ "-e", "2",
-               "-d", data_set_directory(),
+               "-datadir", data_set_directory(),
                "-q", "32",
                "-device", "0" ]
     mpiexec_test(device_id, script_under_test, params, 0.617)
 
 def test_cifar_convnet_distributed_1bitsgd(device_id):
     params = [ "-e", "2",
-               "-d", data_set_directory(),
+               "-datadir", data_set_directory(),
                "-q", "1",
                "-device", "0" ]
     mpiexec_test(device_id, script_under_test, params, 0.617)
@@ -81,7 +81,7 @@ def test_cifar_convnet_distributed_1bitsgd(device_id):
 
 def test_cifar_convnet_distributed_block_momentum(device_id):
     params = [ "-e", "2",
-               "-d", data_set_directory(),
+               "-datadir", data_set_directory(),
                "-b", "3200",
                "-device", "0" ]
     mpiexec_test(device_id, script_under_test, params, 0.6457, False, 10)

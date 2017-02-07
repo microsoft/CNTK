@@ -21,7 +21,7 @@ script_under_test = os.path.join(example_dir, "TrainResNet_CIFAR10_Distributed.p
 
 def test_cifar_resnet_distributed(device_id):
     params = [ "-e", "2",
-               "-d", data_set_directory(),
+               "-datadir", data_set_directory(),
                "-q", "32",
                "-es", "512",
                "-device", "0" ]
@@ -29,7 +29,7 @@ def test_cifar_resnet_distributed(device_id):
 
 def test_cifar_resnet_distributed_1bitsgd(device_id):
     params = [ "-e", "2",
-               "-d", data_set_directory(),
+               "-datadir", data_set_directory(),
                "-q", "1",
                "-es", "512",
                "-device", "0" ]
@@ -38,7 +38,7 @@ def test_cifar_resnet_distributed_1bitsgd(device_id):
 
 def test_cifar_resnet_distributed_block_momentum(device_id):
     params = [ "-e", "2",
-               "-d", data_set_directory(),
+               "-datadir", data_set_directory(),
                "-b", "3200",
                "-es", "512",
                "-device", "0" ]

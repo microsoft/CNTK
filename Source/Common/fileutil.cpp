@@ -25,6 +25,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <glob.h>
+#include <dirent.h>
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -1952,6 +1953,54 @@ void msra::files::make_intermediate_dirs(const wstring& filepath)
             subpath += L"/";
         subpath += p;
     }
+}
+
+std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::wstring& directory)
+{
+    std::vector<std::wstring> result;
+#ifdef _WIN32
+    WIN32_FIND_DATA ffd = {};
+    HANDLE hFind = FindFirstFile(directory.c_str(), &ffd);
+    if (INVALID_HANDLE_VALUE == hFind)
+        RuntimeError("Cannot get information about directory '%ls'.", directory.c_str());
+
+    do
+    {
+        if (!(ffd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        {
+            result.push_back(ffd.cFileName);
+        }
+    } while (FindNextFile(hFind, &ffd) != 0);
+
+    auto dwError = GetLastError();
+    FindClose(hFind);
+
+    if (dwError != ERROR_NO_MORE_FILES)
+        RuntimeError("Error iterating directory '%ls'", directory.c_str());
+#else
+    std::string d = msra::strfun::utf8(directory);
+    auto dirp = opendir(d.c_str());
+    dirent *dp = nullptr;
+    struct stat st = {};
+    while ((dp = readdir(dirp)) != NULL)
+    {
+        const std::string fileName = dp->d_name;
+        const std::string fullFileName = d + "/" + fileName;
+
+        if (fileName == "." || fileName == "..")
+            continue;
+
+        if (stat(fullFileName.c_str(), &st) == -1)
+            continue;
+
+        if ((st.st_mode & S_IFDIR) != 0)
+            continue;
+
+        result.push_back(msra::strfun::utf16(fileName));
+    }
+    closedir(dirp);
+#endif
+    return result;
 }
 
 // ----------------------------------------------------------------------------

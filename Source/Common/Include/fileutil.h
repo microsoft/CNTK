@@ -628,6 +628,9 @@ void expand_wildcards(const std::wstring& path, std::vector<std::wstring>& paths
 namespace msra { namespace files {
 
 void make_intermediate_dirs(const std::wstring& filepath);
+
+std::vector<std::wstring> get_all_files_from_directory(const std::wstring& directory);
+
 };
 };
 

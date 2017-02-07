@@ -1,29 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
-    <!-- Note: SolutionDir / RepoRootPath are the same in current setup -->
-    <RepoRootPath>$(MSBuildThisFileDirectory)</RepoRootPath>
-    <RelativeProjectPath>$(MSBuildProjectDirectory.Substring($(MSBuildThisFileDirectory.Length)))</RelativeProjectPath>
-
-    <OutDir>$(RepoRootPath)$(Platform)\$(Configuration)\</OutDir>
-    <IntDir>$(RepoRootPath)$(Platform)\.build\$(Configuration)\$(RelativeProjectPath)\</IntDir>
-
-    <DebugBuild>false</DebugBuild>
-    <DebugBuild Condition="$(Configuration.StartsWith('Debug'))">true</DebugBuild>
-
-    <ReleaseBuild>false</ReleaseBuild>
-    <ReleaseBuild Condition="!$(DebugBuild)">true</ReleaseBuild>
-
-    <GpuBuild>true</GpuBuild>
-    <GpuBuild Condition="$(Configuration.EndsWith('_CpuOnly'))">false</GpuBuild>
-
-    <CpuOnlyBuild>true</CpuOnlyBuild>
-    <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
-
-    <NoOptBuild>false</NoOptBuild>
-    <NoOptBuild Condition="$(Configuration.Contains('NoOpt'))">true</NoOptBuild>
-
-    <CudaVersion/>
+    <CudaVersion />
     <CudaVersion Condition="Exists('$(CUDA_PATH_V8_0)') And '$(CudaVersion)' == ''">8.0</CudaVersion>
     <CudaVersion Condition="Exists('$(CUDA_PATH_V7_5)') And '$(CudaVersion)' == ''">7.5</CudaVersion>
 
@@ -49,9 +28,6 @@
 
     <HasMultiverso>false</HasMultiverso>
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
-
-    <HasSwig>false</HasSwig>
-    <HasSwig Condition="Exists('$(SWIG_PATH)\swig.exe')">true</HasSwig>
 
     <!-- If an executable links ReaderLib.lib, it has dependency on Common.dll, Math.dll and PerformanceProfilerDll.dll -->
     <ReaderLibs>ReaderLib.lib;Common.lib;Math.lib;PerformanceProfilerDll.lib</ReaderLibs>
