@@ -51,7 +51,7 @@ function Download(
     $func = $table["Function"]
     $source = $table["Source"]
     $method = GetTableDefaultString -table $table -entryName "Method" -defaultValue "WebRequest"
-    $userAgent = GetTableDefaultString -table $table -entryName "UserAgent" -defaultValue = "InternetExplorer";
+    $userAgent = GetTableDefaultString -table $table -entryName "UserAgent" -defaultValue = "InternetExplorer"
     $destination = $table["Destination"]
     $expectedHash = GetTableDefaultInt -table $table -entryName "expectedHash" -defaultValue ""
 
