@@ -1337,6 +1337,35 @@ namespace CNTK
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"LeakyReLU", name);
     }
 
+    FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name)
+    {
+        /*
+        auto operandPlaceholder = PlaceholderVariable();
+        auto positive = ReLU(operandPlaceholder);
+        auto negative = ElementTimes(alpha, 
+                                     ElementTimes(Minus(operandPlaceholder, Abs(operandPlaceholder)),
+                                                  Constant::Scalar(operand.GetDataType(), 0.5)));
+        auto result = Plus(positive, negative);
+        */
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero,
+            ElementTimes(alpha, operandPlaceholder),
+            operandPlaceholder);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"PReLU", name);
+    }
+
+    FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, axis, name);
+    }
+
+    FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMinReductionOpName, axis, name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)

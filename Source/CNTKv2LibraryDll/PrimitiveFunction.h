@@ -186,6 +186,8 @@ namespace CNTK
         static const std::wstring InternalMinReductionOpName;
         static const std::wstring InternalAllReductionOpName;
         static const std::wstring InternalAnyReductionOpName;
+        static const std::wstring InternalArgmaxReductionOpName;
+        static const std::wstring InternalArgminReductionOpName;
 
         static const std::wstring AttributeNameAxis;
         static const std::wstring AttributeNameAxis1;

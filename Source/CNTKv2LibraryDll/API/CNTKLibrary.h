@@ -3451,6 +3451,22 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of the CNTK built-in elementwise parametric rectified linear Unit operation 
+    /// with the specified input operand and learning parameter alpha.
+    ///
+    CNTK_API FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
     namespace Sequence
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");

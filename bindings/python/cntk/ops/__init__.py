@@ -1321,6 +1321,30 @@ def leaky_relu(x, name=''):
     return leaky_re_lu(x, name)
 
 @typemap
+def param_relu(alpha, x, name=''):
+    '''
+    Parametric rectified linear operation. Computes the element-wise parameteric rectified linear
+    of ``x``: ``max(x, 0)`` for ``x >= 0`` and ``x``: ``alpha*x`` otherwise.
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> alpha = C.constant(value=[[0.5, 0.5, 0.5, 0.5, 0.5]])
+        >>> C.param_relu(alpha, [[-1, -0.5, 0, 1, 2]]).eval()
+        array([[-0.5 , -0.25,  0.  ,  1.  ,  2.  ]], dtype=float32)
+
+    Args:
+        alpha: tensor same shape as x
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import pre_lu
+    x = sanitize_input(x)
+    return pre_lu(alpha, x, name)
+
+@typemap
 def sigmoid(x, name=''):
     '''
     Computes the element-wise sigmoid of ``x``:

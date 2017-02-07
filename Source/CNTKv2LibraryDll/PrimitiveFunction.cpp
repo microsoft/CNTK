@@ -30,6 +30,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::InternalMinReductionOpName = L"Min";
     /*static*/ const std::wstring PrimitiveFunction::InternalAllReductionOpName = L"All";
     /*static*/ const std::wstring PrimitiveFunction::InternalAnyReductionOpName = L"Any";
+    /*static*/ const std::wstring PrimitiveFunction::InternalArgmaxReductionOpName = L"Argmax";
+    /*static*/ const std::wstring PrimitiveFunction::InternalArgminReductionOpName = L"Argmin";
 
     // Names of the various attributes of CNTK primitive Functions
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis = L"axis";
