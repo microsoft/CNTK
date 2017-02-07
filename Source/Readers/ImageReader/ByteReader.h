@@ -100,7 +100,7 @@ public:
 
 private:
 
-    void CacheFaceFileInfo(__out vector<FaceFileInfo> &container, const string& faceFile,
+    void CacheFaceFileInfo(vector<FaceFileInfo> &container, const string& faceFile,
         const string& landmarkFile, int pointsCount);
     void CropAndScaleFaceImage(const cv::Mat &input_image, int input_width, int input_height,
         int input_channels, const float *facial_points, int points_num, cv::Mat &output_image);
