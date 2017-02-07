@@ -121,42 +121,20 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         network['label']: train_source.streams.labels
     }
 
-    training_session = cntk.training_session(train_source, trainer,
-                                             cntk.minibatch_size_schedule(64),
-                                             progress_printer, input_map,
-                                             os.path.join(model_path, "ConvNet_CIFAR10_DataAug_"),
-                                             epoch_size)
+    training_session = cntk.training_session(
+        training_minibatch_source = train_source,
+        trainer = trainer,
+        model_inputs_to_mb_source_mapping = input_map, 
+        mb_size_schedule = cntk.minibatch_size_schedule(64),
+        progress_printer = progress_printer, 
+        checkpoint_filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
+        progress_frequency=epoch_size,
+        cv_source = test_source,
+        cv_mb_size_schedule=cntk.minibatch_size_schedule(16),
+        restore=False)
+
     # Train all minibatches 
     training_session.train()
-
-    ### TODO: Stay tuned for an upcoming simpler EvalSession API for test/validation.    
-
-    ### Evaluation action
-    minibatch_size = 16
-
-    # process minibatches and evaluate the model
-    metric_numer    = 0
-    metric_denom    = 0
-    minibatch_index = 0
-
-    # Test minibatch loop
-    while True:
-        data = test_source.next_minibatch(minibatch_size, input_map=input_map)
-        if not data: break
-        local_mb_samples=data[network['label']].num_samples
-        metric_numer += trainer.test_minibatch(data) * local_mb_samples
-        metric_denom += local_mb_samples
-        minibatch_index += 1
-
-    fin_msg = "Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom)
-    progress_printer.end_progress_print(fin_msg)
-
-    print("")
-    print(fin_msg)
-    print("")
-
-    return metric_numer/metric_denom
-
 
 # Train and evaluate the network.
 def convnet_cifar10_dataaug(train_data, test_data, mean_data, epoch_size=50000, num_quantization_bits=32, 
@@ -184,9 +162,9 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 
-    parser.add_argument('-d', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
-    parser.add_argument('-o', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
-    parser.add_argument('-l', '--log', help='Log file', required=False, default=None)
+    parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
+    parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
+    parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
     parser.add_argument('-e', '--epochs', help='Total number of epochs to train', type=int, required=False, default='160')
     parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int, required=False, default='32')
     parser.add_argument('-a', '--distributed_after', help='Number of samples to train with before running distributed', type=int, required=False, default='0')
@@ -196,7 +174,7 @@ if __name__=='__main__':
     args = vars(parser.parse_args())
 
     if args['outputdir'] is not None:
-        model_path = args['o'] + "/models"
+        model_path = args['outputdir'] + "/models"
     if args['device'] is not None:
         cntk.device.set_default_device(cntk.device.gpu(args['device']))
     if args['datadir'] is not None:
@@ -213,7 +191,7 @@ if __name__=='__main__':
                                 block_size=args['block_samples'],
                                 warm_up=args['distributed_after'],
                                 max_epochs=args['epochs'],
-                                log_to_file=args['log'],
+                                log_to_file=args['logdir'],
                                 num_mbs_per_log=10,
                                 gen_heartbeat=True)
     finally:
