@@ -121,6 +121,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Base64ImageDeserializer.cpp" />
+    <ClCompile Include="FaceFileReader.cpp" />
     <ClCompile Include="ImageConfigHelper.cpp" />
     <ClCompile Include="ImageDataDeserializer.cpp" />
     <ClCompile Include="dllmain.cpp" />

@@ -11,6 +11,7 @@
     <ClCompile Include="ZipByteReader.cpp" />
     <ClCompile Include="Base64ImageDeserializer.cpp" />
     <ClCompile Include="ImageDeserializerBase.cpp" />
+    <ClCompile Include="FaceFileReader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

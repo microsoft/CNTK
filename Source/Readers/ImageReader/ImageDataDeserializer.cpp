@@ -240,6 +240,56 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
     // Is it container or plain image file?
     if (atPos == std::string::npos)
         return;
+
+#ifdef USE_FACE_FILE
+
+    auto suffixPos = path.find_last_of(".big@");
+
+    auto isFaceFile = suffixPos != std::string::npos;
+
+    if (isFaceFile)
+    {
+        auto tmpPath = path.substr(0, suffixPos);
+        std::replace(begin(tmpPath), end(tmpPath), '/', '\\');
+        auto lastSlashPos = tmpPath.find_last_of('\\');
+        auto directory = tmpPath.substr(0, lastSlashPos + 1);
+
+        std::shared_ptr<ByteReader> reader;
+        auto r = knownReaders.find(FACE_FILE_BYTE_READER_NAME);
+        if (r == knownReaders.end())
+        {
+            reader = std::make_shared<FaceFileByteReader>();
+            knownReaders[FACE_FILE_BYTE_READER_NAME] = reader;
+
+            if (lastSlashPos != std::string::npos)
+            {
+                ((FaceFileByteReader*) reader.get())->SetDirectory(directory);
+            }
+        }
+        else
+        {
+            reader = (*r).second;
+        }
+
+        size_t bigFileId, imageId;
+        imageId = stoi(path.substr(suffixPos + 1));
+
+        if (lastSlashPos != std::string::npos)
+        {
+            bigFileId = stoi(tmpPath.substr(lastSlashPos + 1));
+        }
+        else
+        {
+            bigFileId = stoi(tmpPath);
+        }
+
+        ((FaceFileByteReader*) reader.get())->SetBigFileId(bigFileId);
+        m_readers[seqId] = reader;
+        return;
+    }
+
+#endif
+
     // REVIEW alexeyk: only .zip container support for now.
 #ifdef USE_ZIP
     assert(atPos > 0);
