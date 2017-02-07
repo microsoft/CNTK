@@ -581,6 +581,7 @@ public:
         {
             auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
             node->m_firstIndices = m_firstIndices;
+            node->m_spliceDim = m_spliceDim; 
         }
     }
 
