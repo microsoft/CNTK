@@ -10,6 +10,7 @@
 #include "MinibatchSource.h"
 #include "HeapMemoryProvider.h"
 #include "ReaderShim.h"
+#include "ReaderConstants.h"
 #include <tuple>
 #include "Value.h"
 #include "MPIWrapper.h"
@@ -18,6 +19,8 @@ using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    const size_t MinibatchSource::DefaultRandomizationWindowInChunks = g_4GB / g_32MB;
+
     const std::unordered_map<StreamInformation, MinibatchData>& MinibatchSource::GetNextMinibatch(size_t minibatchSizeInSamples, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         return GetNextMinibatch(0, minibatchSizeInSamples, device);

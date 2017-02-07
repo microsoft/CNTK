@@ -4227,6 +4227,8 @@ namespace CNTK
         static const size_t InfiniteSamples  = SIZE_MAX;
         static const size_t DefaultRandomizationWindow = SIZE_MAX - 2;
 
+        CNTK_API static const size_t DefaultRandomizationWindowInChunks;
+
     public:
         ///
         /// Describes the streams 'this' MinibatchSource produces.
@@ -4321,13 +4323,21 @@ namespace CNTK
     /// 
     /// Instantiate the CNTK built-in text format minibatch source
     ///
-    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true)
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs,
+                                                        size_t epochSize = MinibatchSource::InfinitelyRepeat, 
+                                                        bool randomize = true,
+                                                        size_t randomizationWindow = MinibatchSource::DefaultRandomizationWindowInChunks,
+                                                        bool sampleBasedRandomizationWindow = false)
     {
         ::CNTK::Dictionary minibatchSourceConfiguration;
         minibatchSourceConfiguration[L"epochSize"] = epochSize;
 
         if (randomize)
+        {
             minibatchSourceConfiguration[L"randomize"] = true;
+            minibatchSourceConfiguration[L"randomizationWindow"] = randomizationWindow;
+            minibatchSourceConfiguration[L"sampleBasedRandomizationWindow"] = sampleBasedRandomizationWindow;
+        }
 
         ::CNTK::Dictionary deserializerConfiguration;
         deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";

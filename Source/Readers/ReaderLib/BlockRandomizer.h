@@ -38,11 +38,12 @@ class BlockRandomizer : public SequenceEnumerator
 public:
     BlockRandomizer(
         int verbosity,
-        size_t randomizationRangeInSamples,
+        size_t randomizationRange,
         IDataDeserializerPtr deserializer,
         bool shouldPrefetch,
         bool multithreadedGetNextSequences = false,
-        size_t maxNumberOfInvalidSequences = 0); // per worker
+        size_t maxNumberOfInvalidSequences = 0, // per worker
+        bool sampleBasedRandomizationWindow = true);
 
     // Starts a new epoch.
     virtual void StartEpoch(const EpochConfiguration& config) override;

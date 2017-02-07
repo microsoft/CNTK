@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// EvalWrapperAssemblyInfo.cpp -- Provides Strong Name for EvalWrapper assembly.
+// CNTKLibraryManagedDll-CPUONly-AssemblyInfo.cpp -- Provides Strong Name for CNTKLibraryManagedDll (CPUOnly flavor) assembly.
 // 
 // Note that the key pair (including secret key) is stored in the same folder as this source file.
 // The Strong Name serves for identity puposes and for the applications that require it.
@@ -11,9 +11,7 @@
 // https://github.com/Microsoft/CNTK/releases
 //
 
-#include "stdafx.h"
+using System;
+using System.Reflection;
 
-using namespace System;
-using namespace System::Reflection;
-
-[assembly:AssemblyKeyFile("EvalWrapperKeyPair.snk")];
+[assembly:AssemblyKeyFileAttribute("CNTKLibraryManagedDll-CPUOnly-KeyPair.snk")]
