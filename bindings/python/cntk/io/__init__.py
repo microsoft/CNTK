@@ -345,6 +345,87 @@ class Deserializer(dict):
         self['type'] = type
 
 
+class HtkFeatureInfo(dict):
+    '''
+    A dictionary to store htk features info. Needs feature dim, scp file path
+    Eg see HTKFeatureDeserializer in https://github.com/Microsoft/CNTK/wiki/Understanding-and-Extending-Readers
+    '''
+
+    def __init__(self, dim, scp_file_path):
+        super(HtkFeatureInfo, self).__init__()
+        self['dim'] = dim
+        self['scpFile '] = scp_file_path
+
+class HTKFeatureDeserializer(Deserializer):
+    '''
+    This class configures an htk feature reader that reads speech HTK format scp(script) files.
+
+    This creates a dictionary of following structure
+    { "type" = "HTKFeatureDeserializer"
+      "module" = "HTKDeserializers"
+      "input" = {
+                "features " = {
+                    "dim" = 132
+                    "scpFile" = "$DataDir$/glob_0000.scp"
+                }
+            }
+    }
+
+    Args:
+        htk_feature_info(dict) :  a dictionary of type HtkFeatureInfo
+    '''
+
+    def __init__(self, htk_feature_info):
+        super(HTKFeatureDeserializer, self).__init__('HTKFeatureDeserializer')
+        self['module'] = "HTKDeserializers"
+        self['input'] = self.input = {}
+
+        if htk_feature_info is not None:
+            feature_dict = dict(features=dict(htk_feature_info))
+            self['input'] = feature_dict
+
+class HtkMlfLabelInfo(dict):
+    '''
+    A dictionary to store htk mlf label info. Needs label dim, htk label mlf file, htk label mapping file
+    Eg see HTKMLFDeserializer in https://github.com/Microsoft/CNTK/wiki/Understanding-and-Extending-Readers
+    '''
+
+    def __init__(self, dim, mlf_file_path, label_mapping_file_path):
+        super(HtkMlfLabelInfo, self).__init__()
+        self['dim'] = dim
+        self['mlfFile'] = mlf_file_path
+        self['labelMappingFile'] = label_mapping_file_path
+
+class HTKMLFDeserializer(Deserializer):
+    '''
+    This class configures an htk label reader that reads speech HTK format mlf(master label format) files.
+    This creates a dictionary of following structure
+    { "type" = "HTKMLFDeserializer"
+      "module" = "HTKDeserializers"
+      "input" = {
+
+                "labels" = {
+                    "dim" = 132
+                    "mlfFile" = "$DataDir$/glob_0000.mlf"
+                    "labelMappingFile" = "$DataDir$/state.list"
+                }
+            }
+    }
+
+    Args:
+        htkmlf_label_info(dict) :  a dictionary of type HtkMlfLabelInfo
+    '''
+
+    def __init__(self, htkmlf_label_info):
+        super(HTKMLFDeserializer, self).__init__('HTKMLFDeserializer')
+        self['module'] = "HTKDeserializers"
+        self['input'] = self.input = {}
+
+        if htkmlf_label_info is not None:
+            labelDict = dict(labels=dict(htkmlf_label_info))
+            self['input'] = labelDict
+
+
 class ImageDeserializer(Deserializer):
     '''
     This class configures the image reader that reads images and corresponding
