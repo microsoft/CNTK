@@ -23,14 +23,15 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
         FaceFileInfo info;
 
         // read big file
-        int n_file_name;
+        int n_file_name, ret_value;
         if (!fread(&n_file_name, sizeof(int), 1, pf)) break;
-        (void) fseek(pf, n_file_name, SEEK_CUR);
+        fseek(pf, n_file_name, SEEK_CUR);
         info.Offset = ftell(pf);
 
         int content_length;
-        (void) fread(&content_length, sizeof(int), 1, pf);
-        (void) fseek(pf, content_length, SEEK_CUR);
+        if (!fread(&content_length, sizeof(int), 1, pf)) content_length = 0;
+
+        fseek(pf, content_length, SEEK_CUR);
 
         // read points data
         fin >> tmp;
@@ -43,7 +44,7 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
         // serialize
         container.push_back(std::move(info));
     }
-    (void) fclose(pf);
+    fclose(pf);
     fin.close();
 }
 
@@ -184,9 +185,9 @@ cv::Mat FaceFileByteReader::Read(size_t seqId, const std::string& path, bool gra
     FILE *pFile = fopen(bigFilePath.c_str(), "rb");
     fseek(pFile, (long) info.Offset, SEEK_SET);
     int content_length;
-    fread(&content_length, sizeof(int), 1, pFile);
+    if (!fread(&content_length, sizeof(int), 1, pFile)) content_length = 1;
     vector<int8_t> content(content_length);
-    fread(&content[0], content_length, 1, pFile);
+    if (!fread(&content[0], content_length, 1, pFile)) content[0] = 0;
     fclose(pFile);
 
     cv::Mat inImg;
