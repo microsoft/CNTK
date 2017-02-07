@@ -25,12 +25,12 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
         // read big file
         int n_file_name;
         if (!fread(&n_file_name, sizeof(int), 1, pf)) break;
-        fseek(pf, n_file_name, SEEK_CUR);
+        (void) fseek(pf, n_file_name, SEEK_CUR);
         info.Offset = ftell(pf);
 
         int content_length;
-        fread(&content_length, sizeof(int), 1, pf);
-        fseek(pf, content_length, SEEK_CUR);
+        (void) fread(&content_length, sizeof(int), 1, pf);
+        (void) fseek(pf, content_length, SEEK_CUR);
 
         // read points data
         fin >> tmp;
@@ -43,7 +43,7 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
         // serialize
         container.push_back(std::move(info));
     }
-    fclose(pf);
+    (void) fclose(pf);
     fin.close();
 }
 
