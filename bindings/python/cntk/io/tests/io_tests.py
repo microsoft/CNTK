@@ -106,6 +106,7 @@ def test_image():
 
     assert rc['epochSize'].value == epoch_size
     assert rc['randomize'] == False
+    assert rc['sampleBasedRandomizationWindow'] == False
     assert len(rc['deserializers']) == 1
     d = rc['deserializers'][0]
     assert d['type'] == 'ImageDeserializer'
@@ -132,10 +133,12 @@ def test_image():
     t2['type'] == 'mean'
     t2['meanFile'] == mean_file
     
-    rc = ReaderConfig(image, randomize=False, randomization_window = 100, epoch_size=epoch_size)
+    rc = ReaderConfig(image, randomize=False, randomization_window = 100, 
+        sample_based_randomization_window = True, epoch_size=epoch_size)
     
     assert rc['epochSize'].value == epoch_size
     assert rc['randomize'] == False
+    assert rc['sampleBasedRandomizationWindow'] == True
     assert len(rc['deserializers']) == 1
     d = rc['deserializers'][0]
     assert d['type'] == 'ImageDeserializer'
@@ -145,10 +148,12 @@ def test_image():
     l = d['input'][label_name]
     assert l['labelDim'] == num_classes
     
-    rc = ReaderConfig(image, randomize=True, randomization_window = 100, epoch_size=epoch_size)
+    rc = ReaderConfig(image, randomize=True, randomization_window = 100,
+        sample_based_randomization_window = True, epoch_size=epoch_size)
     
     assert rc['epochSize'].value == epoch_size
     assert rc['randomize'] == True
+    assert rc['sampleBasedRandomizationWindow'] == True
     assert len(rc['deserializers']) == 1
     d = rc['deserializers'][0]
     assert d['type'] == 'ImageDeserializer'
