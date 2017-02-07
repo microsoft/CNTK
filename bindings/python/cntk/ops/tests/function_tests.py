@@ -290,3 +290,13 @@ def test_combine_duplicated_inputs():
 
     assert compare_var_names(duplicated_t_plus_b.outputs, [func_name, func_name])
     
+
+def test_extra_arguments_in_eval():
+    x1 = input_variable((1,), name='x1')
+    x2 = input_variable((1,), name='x2')
+    x1_plus_1 = x1 + 1
+    x1_plus_1_plus_x2 = x1_plus_1 + x2
+
+    result = x1_plus_1.eval({x1 : np.asarray([[1]]), x2 : np.asarray([[1]])})
+    assert np.allclose(result, [[[2]]])
+    

@@ -1355,10 +1355,14 @@ namespace CNTK
 
         // We should have argument values supplied for all required argument dependencies for the requested outputs
         std::vector<Variable> missingRequiredArguments;
+        std::unordered_map<Variable, ValuePtr> requiredArgumentValues;
         for (auto requiredArgument : requiredArguments)
         {
-            if (arguments.find(requiredArgument) == arguments.end())
+            auto iter = arguments.find(requiredArgument);
+            if (iter == arguments.end())
                 missingRequiredArguments.push_back(requiredArgument);
+            else
+                requiredArgumentValues.insert(*iter);
         }
 
         if (!missingRequiredArguments.empty())
@@ -1367,9 +1371,12 @@ namespace CNTK
             InvalidArgument("Function::Forward: Values for %d required arguments (%S), that the requested output(s) depend on, have not been provided", (int)missingRequiredArgumentNames.size(), missingRequiredArgumentNames.c_str());
         }
 
+        if (requiredArgumentValues.size() < arguments.size())
+            fprintf(stderr, "WARNING: Function::Forward provided values for (%d) extra arguments which are not required for evaluating the specified Function outputs!\n", (int)(arguments.size() - requiredArgumentValues.size()));
+
         // Feed data into the arguments of the network
         // TODO: Avoid copying the data when possible
-        PopulateNetworkInputs(arguments);
+        PopulateNetworkInputs(requiredArgumentValues);
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
         // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
@@ -1421,10 +1428,10 @@ namespace CNTK
 
         // TODO: How to deal with the specified 'computeDevice'
         Variable evalTimeStampVariable;
-        if (arguments.empty())
+        if (requiredArgumentValues.empty())
             evalTimeStampVariable = Inputs()[0];
         else
-            evalTimeStampVariable = arguments.begin()->first;
+            evalTimeStampVariable = requiredArgumentValues.begin()->first;
 
         BackPropStatePtr backpropStatePtr;
         if (outputsToRetainBackwardStateFor.size() > 0)

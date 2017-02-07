@@ -168,10 +168,10 @@ def test_op_reshape_parameter():
 
     expected_forward = np.copy(param_value).reshape(param_new_shape)
     state, result = param_reshaped.forward({}, [param_reshaped.output], [param_reshaped.output])
-    np.allclose(result[param_reshaped.output], expected_forward)
+    assert np.allclose(result[param_reshaped.output], expected_forward)
     
     grad = param_reshaped.backward(state, np.ones(param_new_shape), [param])
-    np.allclose(grad[param], np.ones(param_shape))
+    assert np.allclose(grad[param], np.ones(param_shape))
 
 
 SLICE_TEST_CASES_STATIC = [
