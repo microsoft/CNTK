@@ -6,6 +6,16 @@
 
 $image = 'cntk:installtest'
 
+$serverInfo = docker version --format '{{json .Server}}' | ConvertFrom-Json
+if ($LASTEXITCODE -ne 0) {
+  throw "Fail"
+}
+
+$expectedOsArch = 'windows/amd64'
+if (("{0}/{1}" -f $serverInfo.Os, $serverInfo.Arch) -ne $expectedOsArch) {
+  throw "docker server OS/Arch is different from $expectedOsArch. Make sure to switch to Windows Containers."
+}
+
 docker build -t $image .
 if ($LASTEXITCODE -ne 0) {
   throw "Fail"

@@ -18,7 +18,7 @@ Move-Item -Path Anaconda3-4.1.1-Windows-x86_64.exe -Destination $installCache
 # Mock host input for installation
 function Read-Host { if ($global:readHostMockCtr++) { 'y' } else { '1' } }
 
-& ".\BinaryDrop\cntk\Scripts\install\windows\install.ps1" -Execute
+.\BinaryDrop\cntk\Scripts\install\windows\install.ps1 -Execute
 
 Set-Location BinaryDrop
 ..\test-install.bat cntk\scripts\cntkpy35.bat
