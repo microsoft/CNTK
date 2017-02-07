@@ -3,8 +3,12 @@
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
     <ProjectGuid>{50EF9EE6-5018-453E-A063-F77044EF1A97}</ProjectGuid>
+    <GpuBuild>true</GpuBuild>
+    <GpuBuild Condition="$(Configuration.EndsWith('_CpuOnly'))">false</GpuBuild>
+    <CpuOnlyBuild>true</CpuOnlyBuild>
+    <CpuOnlyBuild Condition="$(GpuBuild)">false</CpuOnlyBuild>
     <IntermediateOutputPath>$(SolutionDir)\$(Platform)\.build\$(Configuration)\$(MSBuildProjectDirectory.Substring($(SolutionDir.Length)))\obj\</IntermediateOutputPath>
     <BaseIntermediateOutputPath>$(SolutionDir)\$(Platform)\.build\$(Configuration)\$(MSBuildProjectDirectory.Substring($(SolutionDir.Length)))\obj\</BaseIntermediateOutputPath>
     <OutputPath>$(SolutionDir)\$(Platform)\$(Configuration)\</OutputPath>
@@ -59,6 +63,16 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
+  </PropertyGroup>
+  <!-- PropertyGroup>
+    <BuildFlavor>
+    </BuildFlavor>
+    <BuildFlavor Condition="$(CpuOnlyBuild)">CPUOnly</BuildFlavor>
+    <BuildFlavor Condition="$(GpuBuild)">GPU</BuildFlavor>
+    <AssemblyOriginatorKeyFile>CNTKLibraryManagedDll-$(BuildFlavor)-KeyPair.snk</AssemblyOriginatorKeyFile>
+  </PropertyGroup -->
   <ItemGroup>
     <Reference Include="System" />
   </ItemGroup>
@@ -97,6 +111,16 @@
     <Compile Include="SwigProxyClasses\VariableKind.cs" />
     <Compile Include="SwigProxyClasses\VariableVector.cs" />
     <Compile Include="SwigProxyClasses\FunctionPtrVector.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="$(CpuOnlyBuild)">
+    <Compile Include="CNTKLibraryManagedDll-CPUOnly-AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="$(GpuBuild)">
+    <Compile Include="CNTKLibraryManagedDll-GPU-AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CNTKLibraryManagedDll-CPUOnly-KeyPair.snk" />
+    <None Include="CNTKLibraryManagedDll-GPU-KeyPair.snk" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="Build" Condition="Exists('$(SWIG_PATH)\swig.exe')" DependsOnTargets="$(BuildDependsOn)" />
