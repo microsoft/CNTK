@@ -83,7 +83,7 @@ public:
     }
 };
 
-MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize, bool randomize, size_t chunkSizeInBytes)
+MinibatchSourcePtr CreateTextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize, bool randomize, size_t chunkSizeInBytes)
 {
     ::CNTK::Dictionary minibatchSourceConfiguration;
     minibatchSourceConfiguration[L"epochSize"] = epochSize;
@@ -133,7 +133,7 @@ void TestMinibatchSourceWarmStart(size_t minibatchSize, size_t warmStartSamples,
     const size_t numberOfSamplesInSweep = 10000;
 
     // Let's create two workers.
-    auto minibatchSource = TextFormatMinibatchSource(
+    auto minibatchSource = CreateTextFormatMinibatchSource(
         L"SimpleDataTrain_cntk_text.txt",
         { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },
         numberOfSamplesInSweep,
@@ -143,7 +143,7 @@ void TestMinibatchSourceWarmStart(size_t minibatchSize, size_t warmStartSamples,
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
-    auto minibatchSource2 = TextFormatMinibatchSource(
+    auto minibatchSource2 = CreateTextFormatMinibatchSource(
         L"SimpleDataTrain_cntk_text.txt",
         { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },
         numberOfSamplesInSweep,

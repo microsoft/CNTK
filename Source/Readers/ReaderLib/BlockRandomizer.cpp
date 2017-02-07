@@ -18,11 +18,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 BlockRandomizer::BlockRandomizer(
     int verbosity,
-    size_t randomizationRangeInSamples,
+    size_t randomizationRange,
     IDataDeserializerPtr deserializer,
     bool shouldPrefetch,
     bool multithreadedGetNextSequence,
-    size_t maxNumberOfInvalidSequences)
+    size_t maxNumberOfInvalidSequences,
+    bool sampleBasedRandomizationWindow)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
       m_sweep(SIZE_MAX),
@@ -30,7 +31,7 @@ BlockRandomizer::BlockRandomizer(
       m_globalSamplePosition(SIZE_MAX),
       m_epochStartPosition(0),
       m_sweepSizeInSamples(0),
-      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples)),
+      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRange, sampleBasedRandomizationWindow)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence),
       m_prefetchedChunk(CHUNKID_MAX),
       m_cleaner(maxNumberOfInvalidSequences)
