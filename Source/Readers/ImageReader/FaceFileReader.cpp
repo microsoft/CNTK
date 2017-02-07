@@ -12,7 +12,7 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-void FaceFileByteReader::CacheFaceFileInfo(__out vector<FaceFileInfo> &container, const string& faceFile, const string &landmarkFile, int pointsCount = LANDMARK_POINTS_NUMBER)
+void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, const string& faceFile, const string &landmarkFile, int pointsCount = LANDMARK_POINTS_NUMBER)
 {
     FILE *pf = fopen(faceFile.c_str(), "rb");
     std::ifstream fin(landmarkFile.c_str());
