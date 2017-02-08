@@ -146,8 +146,8 @@ def test_evaluating_multiple_outputs():
 
     expected_forward_out1 = [[[4.]]]
     expected_forward_out2 = [[[7.]]]
-    assert np.array_equal(res[out1.output], expected_forward_out1)
-    assert np.array_equal(res[out2.output], expected_forward_out2)
+    assert np.array_equal(res[z.outputs[0]], expected_forward_out1)
+    assert np.array_equal(res[z.outputs[1]], expected_forward_out2)
 
 def test_set_name():
     x = input_variable((1,))

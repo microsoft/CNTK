@@ -1631,7 +1631,7 @@ private:
 
         void SetOwner(Function* ownerFunction);
 
-        Variable CompositePreservingCopy() const;
+        Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
 
     private:
 #ifdef SWIGCSHARP
@@ -2569,6 +2569,7 @@ namespace CNTK
         friend class PrimitiveFunction;
         friend class BlockFunction;
         friend class Trainer;
+        friend class Variable;
 
         friend Variable GetCorrespondingOutputVariableFromClone(const Variable&, const FunctionPtr&, const FunctionPtr&);
 

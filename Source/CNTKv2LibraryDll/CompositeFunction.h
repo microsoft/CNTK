@@ -39,6 +39,7 @@ namespace CNTK
         friend class Trainer;
         friend class CompositeMinibatchSource;
         friend class PackedValue;
+        friend class Variable;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
@@ -221,6 +222,9 @@ namespace CNTK
                                                                           const std::unordered_set<Variable>& inputsToExcludeGradientsFor,
                                                                           bool allocateNetworkMatrices);
 
+        static Variable GetMappingForCombineOutput(const Variable& variable, bool recursive = false);
+        static Variable GetMappingVariable(const Variable& variable, bool recursive = false);
+
         template <typename ElementType>
         static Microsoft::MSR::CNTK::ComputationNodeBasePtr CreateComputationNode(const Variable& variable,
                                                                                   Function* function,
@@ -278,13 +282,6 @@ namespace CNTK
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
-
-        // The outputs specified in the most recent 'Forward' call on 'this' Function.
-        // This indicates for which outputs has the memory sharing structure of the cached
-        // computation network object been setup for. Asking for outputs in subsequent
-        // 'Forward' calls that do not belong to the current set requires redoing the 
-        // network memory sharing structure.
-        std::unordered_set<Variable> m_currentOutputs;
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 

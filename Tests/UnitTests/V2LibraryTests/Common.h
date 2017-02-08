@@ -120,7 +120,7 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
 
     for (auto varPtr : variables)
     {
-        auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Owner()->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
+        auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
         if (!retVal.second)
            throw std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
@@ -142,13 +142,11 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
     }
 
     auto outputs = functionPtr->Outputs();
-    for (auto outputVarInfo : outputVarNames)
+    for (size_t i = 0; i < outputs.size(); ++i)
     {
-        auto newOutputVar = *(std::find_if(outputs.begin(), outputs.end(), [outputVarInfo](const CNTK::Variable& var) {
-            return (var.Owner()->Name() == outputVarInfo.first);
-        }));
-
-        *(outputVarInfo.second) = newOutputVar;
+        auto outputVarInfo = outputVarNames.find(outputs[i].Name());
+        if (outputVarInfo != outputVarNames.end())
+            *(outputVarInfo->second) = (outputs[i].Owner()->OpName() == L"Combine") ? outputs[i].Owner()->Inputs()[i] : outputs[i];
     }
 }
 

@@ -24,7 +24,7 @@ void TestLoadLegacyModelWithPrecompute(const DeviceDescriptor& device)
             if (variables[i].Name() == name)
                 return variables[i];
 
-        throw std::runtime_error("No output foudn with teh given name");
+        throw std::runtime_error("No output found with the given name");
     };
 
     auto arguments = modelFuncPtr->Arguments();

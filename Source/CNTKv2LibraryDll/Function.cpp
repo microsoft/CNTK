@@ -78,15 +78,16 @@ namespace CNTK
     std::shared_ptr<std::vector<Variable>> Function::OutputsImpl() const
     {
         std::vector<Variable> outputs;
+        std::shared_ptr<const Function> composite = IsComposite() ? this->shared_from_this() : AsComposite(const_cast<Function*>(this)->shared_from_this());
         for (auto& v : RawOutputs())
-        {
-            outputs.push_back(v.CompositePreservingCopy());
-        }
+            outputs.push_back(v.CompositePreservingCopy(composite));
+
         return std::shared_ptr<std::vector<Variable>>(new std::vector<Variable>(std::move(outputs)), [](std::vector<Variable>* ptr) { delete ptr; });
     }
 
-    Function::Function(const std::vector<Variable>& inputs, const std::wstring& name, const std::wstring& uid) :
-        Function(inputs, Dictionary(), name, uid) {}
+    Function::Function(const std::vector<Variable>& inputs, const std::wstring& name, const std::wstring& uid) 
+        : Function(inputs, Dictionary(), name, uid) 
+    {}
 
     Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const FunctionPtr& rootFunction, const std::wstring& name, const std::wstring& uid)
         : m_rootFunction(rootFunction), m_name(name), m_uid(uid), m_attributes(std::move(functionConfig))
@@ -235,15 +236,6 @@ namespace CNTK
                 if (inputVar.IsOutput() && (visitedFunctions.find(inputVar.Owner().get()) == visitedFunctions.end()))
                     inputVar.Owner()->ReplacePlaceholdersInPlace(placeholderReplacements, visitedFunctions, replacedPlaceholders);
             }
-        }
-
-        auto primitiveRootFunctionPtr = dynamic_cast<const PrimitiveFunction*>(primitiveRootFunction.get());
-        if (primitiveRootFunctionPtr && (primitiveRootFunctionPtr->OpType() == PrimitiveOpType::Combine))
-        {
-            // Combine's outputs are just a copy of its inputs and any replacements need to be properly 
-            // reflected in the outputs as well
-            for (auto& outputVar : InitOutputs())
-                ReplacePlaceholderInPlace(outputVar, placeholderReplacements, replacedPlaceholders);
         }
 
         OnPlaceholdersReplaced(placeholderReplacements, replacedPlaceholders);
@@ -1283,9 +1275,9 @@ namespace CNTK
 
     FunctionPtr Alias(const Variable& operand, const std::wstring& name)
     {
-        // TODO: This is a temporary and expensive hack until we have a real alias implementation
-        // that does not waste memory and compute cycles
-        return UnaryOp(PrimitiveOpType::Pass, operand, Dictionary(), name);
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeRenameOutputs] = true;
+        return UnaryOp(PrimitiveOpType::Combine, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName)
