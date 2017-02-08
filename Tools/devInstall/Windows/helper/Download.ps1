@@ -51,6 +51,7 @@ function Download(
     $func = $table["Function"]
     $source = $table["Source"]
     $method = GetTableDefaultString -table $table -entryName "Method" -defaultValue "WebRequest"
+    $userAgent = GetTableDefaultString -table $table -entryName "UserAgent" -defaultValue = "InternetExplorer"
     $destination = $table["Destination"]
     $expectedHash = GetTableDefaultInt -table $table -entryName "expectedHash" -defaultValue ""
 
@@ -60,7 +61,7 @@ function Download(
     }
 
     if ($method -eq "WebRequest") {
-        DownloadFileWebRequest -SourceFile $source -OutFile $destination -expectedHash $expectedHash
+        DownloadFileWebRequest -SourceFile $source -OutFile $destination -UserAgent $userAgent -expectedHash $expectedHash
     }
     else {
         DownloadFileWebClient -SourceFile $source -OutFile $destination -expectedHash $expectedHash
@@ -122,6 +123,7 @@ function DownloadAndExtract(
 function DownloadFileWebRequest (
     [string] $SourceFile,
     [string] $OutFile,
+    [string] $userAgent,
     [string] $expectedHash)
 {
     Write-Host "Downloading [$SourceFile], please be patient...."
@@ -137,7 +139,7 @@ function DownloadFileWebRequest (
 
     $TempFile = [System.IO.Path]::GetTempFileName()
     try {
-        $response = Invoke-WebRequest -Uri $SourceFile -OutFile $TempFile -TimeoutSec 120 
+        $response = Invoke-WebRequest -Uri $SourceFile -OutFile $TempFile -UserAgent $userAgent -TimeoutSec 120 
     } 
     catch {
       $errorCode = $_.Exception.Response.StatusCode.Value__

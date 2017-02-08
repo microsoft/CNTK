@@ -213,16 +213,8 @@
   <ItemGroup>
     <Xml Include="BrainScript\CNTKCoreLib\CNTK.core.bs">
       <FileType>Document</FileType>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">true</DeploymentContent>
-      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">true</DeploymentContent>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_NoOpt|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release_CpuOnly|x64'">false</ExcludedFromBuild>
+      <DeploymentContent>true</DeploymentContent>
+      <ExcludedFromBuild>false</ExcludedFromBuild>
     </Xml>
     <None Include="BrainScript\Doc\BrainScript--extending the CNTK config language, Frank Seide August 2015.pptx" />
     <None Include="prebuild.bat" />

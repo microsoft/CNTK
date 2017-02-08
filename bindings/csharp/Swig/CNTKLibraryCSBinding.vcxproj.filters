@@ -35,5 +35,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\common\CNTKValueExtend.i" />
+    <None Include="..\..\common\CNTK_ExceptionHandling.i" />
   </ItemGroup>
 </Project>

@@ -157,6 +157,13 @@ namespace CNTK
 
     double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
+        size_t sampleCount = 0;
+        auto accumulatedError = TestMinibatch(arguments, computeDevice, sampleCount);
+        return accumulatedError / sampleCount;
+    }
+
+    double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, size_t& sampleCount)
+    {
         if (!m_aggregatedEvaluationFunction)
             InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
 
@@ -164,9 +171,8 @@ namespace CNTK
         std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
 
         m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
-
-        auto sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
-        return (GetScalarValue(outputs[m_aggregatedEvaluationFunction]) / sampleCount);
+        sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
+        return GetScalarValue(outputs[m_aggregatedEvaluationFunction]);
     }
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
@@ -337,6 +343,7 @@ namespace CNTK
 
         state.Save(tempCheckpointFile);
 
+        // The return value is ignored here.
         _wunlink(modelFilePath.c_str());
         _wunlink(trainerStateCheckpointFilePath.c_str());
 
@@ -374,6 +381,9 @@ namespace CNTK
 
     double Trainer::PreviousMinibatchLossAverage() const
     {
+        if (m_prevMinibatchNumSamples == 0)
+            RuntimeError("There was no preceeding call to TrainMinibatch or the minibatch was empty.");
+
         return (GetScalarValue(m_prevMinibatchAggregateTrainingLossValue) / m_prevMinibatchNumSamples);
     }
 
@@ -381,6 +391,9 @@ namespace CNTK
     {
         if (!m_evaluationFunction)
             InvalidArgument("Trainer::PreviousMinibatchEvaluationAverage: Cannot get evaluation criterion value when no evaluation function was specified during 'this' trainer's construction");
+
+        if (m_prevMinibatchNumSamples == 0)
+            RuntimeError("There was no preceeding call to TrainMinibatch or the minibatch was empty.");
 
         return (GetScalarValue(m_prevMinibatchAggregateEvalCriterionValue) / m_prevMinibatchNumSamples);
     }

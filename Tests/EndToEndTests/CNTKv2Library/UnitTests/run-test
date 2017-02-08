@@ -44,6 +44,20 @@ DeleteModelsAfterTest=0
 cntkrun 01_OneHidden.cntk "stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]" || exit $?
 cp $OutputDir/Models/01_OneHidden $TestDataDir || exit $?
 
+
+# Train model that is used by LoadLegacyModel tests.
+# Setup predefined variables $DataDir, $ConfigDir, and $OutputDir that are required by cntkrun
+ConfigDir=$TEST_ROOT_DIR/../../Examples/Speech/AN4/Config
+OutputDir=$ConfigDir/../Output
+DataDir=$ConfigDir/../Data
+
+[ -d $OutputDir ] || mkdir $OutputDir || exit $?
+[ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
+DeleteModelsAfterTest=0
+[ -f $ConfigDir/FeedForward.cntk ] || exit 1
+cntkrun FeedForward.cntk "stderr=- command=speechTrain parallelTrain=false speechTrain=[SGD=[maxEpochs=1]]" || exit $?
+cp $OutputDir/Models/cntkSpeechFF.dnn $TestDataDir || exit $?
+
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
 if [ "$TEST_DEVICE" == "cpu" ]; then
   export CUDA_VISIBLE_DEVICES=-1

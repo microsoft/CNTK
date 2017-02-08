@@ -184,6 +184,7 @@ namespace CNTK
         static const std::wstring InternalMeanReductionOpName;
         static const std::wstring InternalMaxReductionOpName;
         static const std::wstring InternalMinReductionOpName;
+        static const std::wstring InternalProdReductionOpName;
         static const std::wstring InternalAllReductionOpName;
         static const std::wstring InternalAnyReductionOpName;
 
@@ -669,13 +670,14 @@ namespace CNTK
         static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
         {
             NDShape mainOperandShape = operands[0].Shape();
-            for (size_t i = 1; i < operands.size(); i++)
+            for (size_t i = 1; i < operands.size() - 1; i++) // all but first and last arguments must match the first; last one must be a [1]
             {
                 if (!operands[i].DynamicAxes().empty())
                     InvalidArgument("BatchNormalization: Input[%d] has a dynamic axis that is not allowed!", (int)i);
 
                 // Infer dimensions of learnable parameters
                 auto paramShape = operands[i].Shape();
+              
                 if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
                 {
                     size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
@@ -689,6 +691,13 @@ namespace CNTK
                                     (int)i,
                                     AsStringForErrorReporting(paramShape).c_str(),
                                     AsStringForErrorReporting(operands[1].Shape()).c_str());
+                
+            }
+            const auto& runCount = operands[operands.size() - 1];
+            auto runCountRank = runCount.Shape().Rank();
+            if (runCountRank > 1 || (runCountRank == 1 && runCount.Shape()[0] != 1)) // last arguments is count, must be a scalar
+            {
+                InvalidArgument("BatchNormalization: Input[%d] (running mean sample count) must be a scalar.", (int)(operands.size() - 1));
             }
 
             return UnaryElementwiseOpOutputShape(mainOperandShape);
@@ -699,13 +708,17 @@ namespace CNTK
         static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
         static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig);
 
-        virtual std::vector<Variable> InferOutputs() override;
+        void InferOutputs(std::vector<Variable>& outputs) override;
 
     private:
         PrimitiveOpType m_op;
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
-        static const size_t s_serializationVersion = 3;
+        // version 1: initial version.
+        // version 2: changed in 7af3a7c0e46cb12f873f1289400a9c5d86746662. TODO(n17s): add description.
+        // version 3: changed in df0ab4e58186738931968e806b61bc80d7b6e20e. TODO(pkrannen): add description.
+        // version 4: added extra parameter (#6) for the running mean sample count in BatchNormalization.
+        static const size_t s_serializationVersion = 4;
     };
 }

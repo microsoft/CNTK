@@ -106,7 +106,8 @@ Windows Server 2012 R2, and Windows Server 2016.
     }
 }
 
-function DisplayStart()
+function DisplayStart(
+    [bool] $NoConfirmation)
 {
     Write-Host $(DisplayStartMessage)
 
@@ -124,6 +125,10 @@ function DisplayStart()
         Write-Warning $(DisplayWarningNoExecuteMessage)
     }
     
+    if ($NoConfirmation) {
+        return $true
+    }
+
     Write-Host $(DisplayStartContinueMessage)
     $choice = GetKey '^[1qQ]+$'
 
@@ -144,6 +149,7 @@ Installation finished.
 }
 
 function DisplayAfterVerify(
+    [bool] $NoConfirmation,
     [array] $list = @())
 {
     Write-Host 
@@ -159,6 +165,10 @@ function DisplayAfterVerify(
            Write-Warning $(DisplayWarningNoExecuteMessage)
         }
     
+        if ($NoConfirmation) {
+            return $true
+        }
+
         Write-Host 
         Write-Host "Do you want to continue? (y/n)"
         

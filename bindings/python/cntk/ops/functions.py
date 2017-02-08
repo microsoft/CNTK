@@ -362,7 +362,7 @@ class Function(cntk_py.Function):
             at (dict) : mapping of the Function's arguments to values
             wrt (list optional): list of Variables with respect to which the
              gradient will be computed. If omitted, the gradients with
-             respect to all arguments will be computed. If a variable
+             respect to all arguments that need gradient will be computed. If a variable
              is repeated in this list, the gradient will be repeated
              in the output as a shallow copy.
 
@@ -376,7 +376,7 @@ class Function(cntk_py.Function):
             raise InvalidArgumentException('function must return a single tensor')
 
         if wrt is None:
-            wrt = self.arguments
+            wrt = [arg for arg in self.arguments if arg.needs_gradient]
 
         unique_wrt = set(wrt)
         output = [self.output]
@@ -391,11 +391,7 @@ class Function(cntk_py.Function):
         '''
         List of all input variables of this function.
         '''
-        input_nodes = super(Function, self).inputs()
-        if self.is_primitive and self.root_function.op_name in ['Times', 'TransposeTimes']:
-            input_nodes = tuple(reversed(input_nodes))
-
-        return input_nodes
+        return super(Function, self).inputs(True)
 
     @property
     def name(self):
@@ -752,6 +748,9 @@ class UserFunction(Function):
                 raise ValueError('gradients were not provided for all variables')
 
             variables[k] = sanitize_batch(k, v, None, state.device())
+
+    def _infer_outputs(self, outputs):
+        outputs.extend(self.infer_outputs())
 
     def infer_outputs(self):
         raise NotImplementedError('infer_outputs has to be overridden')

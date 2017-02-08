@@ -112,6 +112,9 @@ class NDArrayView(cntk_py.NDArrayView):
         if isinstance(data, cntk_py.NDArrayView):
             return data
 
+        if isinstance(data, np.number):
+            data = np.asarray(data)
+
         if isinstance(data, np.ndarray):
             ndav = NDArrayView.from_dense(data, device)
         elif sparse.issparse(data):
@@ -230,7 +233,7 @@ class Value(cntk_py.Value):
                         'of NumPy arrays')
 
             # FIXME if not seq_starts: directly pass it to Value constructor
-            data = list(data)
+            data = list(np.atleast_1d(data))
 
         if not isinstance(data, list):
             raise ValueError('batch has to be a list of NumPy arrays or '

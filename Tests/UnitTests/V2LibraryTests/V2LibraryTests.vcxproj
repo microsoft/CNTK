@@ -120,6 +120,7 @@
     <ClCompile Include="Common.cpp" />
     <ClCompile Include="DeviceSelectionTests.cpp" />
     <ClCompile Include="LearnerTests.cpp" />
+    <ClCompile Include="LoadLegacyModelTests.cpp" />
     <ClCompile Include="MinibatchSourceTest.cpp" />
     <ClCompile Include="Seq2Seq.cpp" />
     <ClCompile Include="SerializationTests.cpp" />
@@ -140,6 +141,8 @@
     <ClInclude Include="Image.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="data\batch.norm.no.sample.count.v1.bin" />
+    <None Include="data\batch.norm.no.sample.count.v2.bin" />
     <None Include="data\future.dictionary.proto.bin" />
     <None Include="data\past.dictionary.proto.bin" />
     <None Include="data\v2.0.beta1.0.dictionary.proto.bin" />

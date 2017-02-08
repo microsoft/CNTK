@@ -15,6 +15,7 @@ INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
 INFINITE_SAMPLES = cntk_py.MinibatchSource.infinite_samples
 DEFAULT_RANDOMIZATION_WINDOW = cntk_py.MinibatchSource.default_randomization_window
+DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS = cntk_py.MinibatchSource.default_randomization_window_in_chunks
 
 class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     '''
@@ -90,18 +91,32 @@ class MinibatchSource(cntk_py.MinibatchSource):
     Args:
         deserializers ('list', default is empty): list of deserializers
         randomize (bool, default True): randomize before every epoch
-        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
+        randomization_window (int): size of window that reader will shuffle, ignored if ``randomize`` 
+        is False
+        sample_based_randomization_window (bool, default False): specifies how to interpret
+        ``randomization_range``. If True, the size of the randomization window is interpreted as a certain
+        number of samples, otherwise -- as a number of chunks. Similarly to ``randomization_window``,
+        this parameter is ignored, when ``randomize`` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which minibatch source becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
+    def __init__(self, 
+        deserializers=None, 
+        randomize=True, 
+        randomization_window=DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS, 
+        sample_based_randomization_window=False,
+        epoch_size=INFINITELY_REPEAT, 
+        distributed_after=INFINITE_SAMPLES, 
+        multithreaded_deserializer=None):
+
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
         reader_config = ReaderConfig(
             deserializers=deserializers,
             randomize=randomize,
             randomization_window=randomization_window,
+            sample_based_randomization_window=sample_based_randomization_window,
             epoch_size=epoch_size,
             distributed_after=distributed_after,
             multithreaded_deserializer=multithreaded_deserializer)
@@ -143,7 +158,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
     @typemap
     def next_minibatch(self, minibatch_size_in_samples,
-            input_map=None, device=None):
+            input_map=None, device=None, num_data_partitions=None, partition_index=None):
         '''
         Reads a minibatch that contains data for all input streams.  The
         minibatch size is specified in terms of #samples and/or #sequences for the
@@ -159,17 +174,26 @@ class MinibatchSource(cntk_py.MinibatchSource):
              to :class:`StreamInformation` which will be used to convert the
              returned data.
             device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
+            num_data_partitions: Used for distributed training, indicates into how many partitions
+             the source should split the data.
+            partition_index: Used for distributed training, indicates data from which partition to take.
 
         Returns:
-            A mapping of :class:`StramInformation` to :class:`MinibatchData` if
+            a mapping of :class:`StreamInformation` to :class:`MinibatchData` if
             ``input_map`` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`~cntk.ops.variabls.Variable` to class:`MinibatchData`.
+            be a mapping of :class:`~cntk.ops.variables.Variable` to class:`MinibatchData`.
         '''
         if device is None:
             device = use_default_device()
 
-        mb = super(MinibatchSource, self).get_next_minibatch(
-                minibatch_size_in_samples, device)
+        if num_data_partitions is None:
+            num_data_partitions = 1
+
+        if partition_index is None:
+            partition_index = 0
+
+        mb = super(MinibatchSource, self).get_next_minibatch(0,
+                minibatch_size_in_samples, num_data_partitions, partition_index, device)
 
         if input_map:
             if not mb:
@@ -253,18 +277,31 @@ class ReaderConfig(dict):
         deserializers ('list', default is empty): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (bool, default True): randomize images before every epoch
-        randomization_window (int) : size of window that reader will shuffle, ignored if `randomize` is False
+        randomization_window (int): size of window that reader will shuffle, ignored if ``randomize`` 
+        is False
+        sample_based_randomization_window (bool, default False): specifies how to interpret
+        ``randomization_range``. If True, the size of the randomization window is interpreted as a certain
+        number of samples, otherwise -- as a number of chunks. Similarly to ``randomization_window``,
+        this parameter is ignored, when ``randomize`` is False
         epoch_size (int): epoch size
         distributed_after (int): sample count after which reader becomes distributed
         multithreaded_deserializer (bool): using multi threaded deserializer
     '''
-    def __init__(self, deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None):
+    def __init__(self, 
+        deserializers=None, 
+        randomize=True, 
+        randomization_window=DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS, 
+        sample_based_randomization_window=False,
+        epoch_size=INFINITELY_REPEAT, 
+        distributed_after=INFINITE_SAMPLES, 
+        multithreaded_deserializer=None):
         self['epochSize'] = cntk_py.SizeTWrapper(epoch_size) # force to store in size_t
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
         self['deserializers'] = self.deserializers = deserializers or []
         self['randomize'] = randomize
         self['randomizationWindow'] = cntk_py.SizeTWrapper(randomization_window)
+        self['sampleBasedRandomizationWindow'] = sample_based_randomization_window
         self['distributedAfterSampleCount'] = cntk_py.SizeTWrapper(distributed_after)
         if multithreaded_deserializer != None:
             self['multiThreadedDeserialization'] = multithreaded_deserializer

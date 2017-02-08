@@ -58,7 +58,11 @@ namespace
             { { classifier.features, featureStreamInfo }, { classifier.labels, labelStreamInfo } },
             MinibatchSizeSchedule(minibatchSize),
             checkpointFrequency,
-            L"test");
+            L"test",
+            nullptr,
+            MinibatchSizeSchedule(1),
+            0,
+            false);
 
         session->Train(device);
     }

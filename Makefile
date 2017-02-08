@@ -506,6 +506,7 @@ CNTKLIBRARY_TESTS_SRC =\
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/BlockTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/ValueTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/LoadLegacyModelTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/TrainerTests.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/CifarResNet.cpp \
 	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
@@ -1132,6 +1133,7 @@ $(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS)
 
 UNITTEST_NETWORK_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/AccumulatorNodeTests.cpp \
+	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/BatchNormalizationTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/CropNodeTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/OperatorEvaluation.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/stdafx.cpp \

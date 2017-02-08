@@ -78,6 +78,9 @@
     <ClCompile Include="..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalExamples\EvalMultithreads.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="LoadLegacyModelTests.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h">
@@ -95,6 +98,12 @@
       <Filter>Input Files</Filter>
     </None>
     <None Include="data\v2.0.beta1.0.dictionary.proto.bin">
+      <Filter>Input Files</Filter>
+    </None>
+    <None Include="data\batch.norm.no.sample.count.v2.bin">
+      <Filter>Input Files</Filter>
+    </None>
+    <None Include="data\batch.norm.no.sample.count.v1.bin">
       <Filter>Input Files</Filter>
     </None>
   </ItemGroup>
