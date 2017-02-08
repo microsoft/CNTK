@@ -647,7 +647,7 @@ class UserFunction(Function):
 
     '''
     def __init__(self, inputs, name=''):
-        super(UserFunction, self).__init__(var_inputs, name)
+        super(UserFunction, self).__init__(inputs, name)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -764,13 +764,6 @@ class UserFunction(Function):
         '''
         return 'UserFunction'
 
-    def compose(self):
-        '''
-        Wraps the passed Function to create a composite representing the
-        composite Function graph rooted at the passed root Function.
-        '''
-        from . import as_composite
-        return as_composite(self)
 
 @typemap
 def load_model(filename, device=None):
