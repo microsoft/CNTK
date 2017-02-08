@@ -91,7 +91,7 @@ namespace CNTK
 
         static void PopulateNodeDef(const std::wstring& scope, const FunctionPtr& src, tensorflow::NodeDef& dst)
         {
-            PopulateNodeDef(GetScopedName(scope, src), src->OpName(), src->Output().GetDataType(), src->Outputs(), dst);
+            PopulateNodeDef(GetScopedName(scope, src), src->OpName(), src->Outputs()[0].GetDataType(), src->Outputs(), dst);
         }
 
         static void PopulateNodeDef(const std::wstring& scope, const Variable& src, tensorflow::NodeDef& dst)
@@ -137,9 +137,9 @@ namespace CNTK
             {
                 result = dst.add_node();
                 PopulateNodeDef(scope, src, *result);
+                variableNodes.emplace(src, result);
             }
 
-            variableNodes.emplace(src, result);
             return result;
         }
 
