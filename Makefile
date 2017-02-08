@@ -105,6 +105,7 @@ endif
 SEPARATOR = "=-----------------------------------------------------------="
 ALL:=
 ALL_LIBS:=
+PYTHON_LIBS:=
 LIBS_FULLPATH:=
 SRC:=
 
@@ -293,7 +294,8 @@ PP_SRC =\
 PP_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(PP_SRC))
 
 PERF_PROFILER_LIB:= $(LIBDIR)/lib$(PERF_PROFILER).so
-ALL += $(PERF_PROFILER_LIB)
+ALL_LIBS += $(PERF_PROFILER_LIB)
+PYTHON_LIBS += $(PERF_PROFILER_LIB)
 SRC += $(PP_SRC)
 
 $(PERF_PROFILER_LIB): $(PP_OBJ)
@@ -385,6 +387,7 @@ MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(M
 
 CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
 ALL_LIBS += $(CNTKMATH_LIB)
+PYTHON_LIBS += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
 $(CNTKMATH_LIB): $(MATH_OBJ) | $(PERF_PROFILER_LIB)
@@ -482,6 +485,7 @@ CNTKLIBRARY_OBJ:=\
 
 CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL_LIBS+=$(CNTKLIBRARY_LIB)
+PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
@@ -707,6 +711,7 @@ COMPOSITEDATAREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(COMPOSITEDATAREADE
 
 COMPOSITEDATAREADER:=$(LIBDIR)/CompositeDataReader.so
 ALL_LIBS+=$(COMPOSITEDATAREADER)
+PYTHON_LIBS+=$(COMPOSITEDATAREADER)
 SRC+=$(COMPOSITEDATAREADER_SRC)
 
 $(LIBDIR)/CompositeDataReader.so: $(COMPOSITEDATAREADER_OBJ) | $(CNTKMATH_LIB)
@@ -730,6 +735,7 @@ HTKDESERIALIZERS_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(HTKDESERIALIZERS_SRC)
 
 HTKDESERIALIZERS:=$(LIBDIR)/HTKDeserializers.so
 ALL_LIBS+=$(HTKDESERIALIZERS)
+PYTHON_LIBS+=$(HTKDESERIALIZERS)
 SRC+=$(HTKDESERIALIZERS_SRC)
 
 $(LIBDIR)/HTKDeserializers.so: $(HTKDESERIALIZERS_OBJ) | $(CNTKMATH_LIB)
@@ -845,7 +851,8 @@ CNTKBINARYREADER_SRC =\
 CNTKBINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKBINARYREADER_SRC))
 
 CNTKBINARYREADER:=$(LIBDIR)/CNTKBinaryReader.so
-ALL += $(CNTKBINARYREADER)
+ALL_LIBS += $(CNTKBINARYREADER)
+PYTHON_LIBS += $(CNTKBINARYREADER)
 SRC+=$(CNTKBINARYREADER_SRC)
 
 $(CNTKBINARYREADER): $(CNTKBINARYREADER_OBJ) | $(CNTKMATH_LIB)
@@ -867,6 +874,7 @@ CNTKTEXTFORMATREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKTEXTFORMATREA
 
 CNTKTEXTFORMATREADER:=$(LIBDIR)/CNTKTextFormatReader.so
 ALL_LIBS += $(CNTKTEXTFORMATREADER)
+PYTHON_LIBS += $(CNTKTEXTFORMATREADER)
 SRC+=$(CNTKTEXTFORMATREADER_SRC)
 
 $(CNTKTEXTFORMATREADER): $(CNTKTEXTFORMATREADER_OBJ) | $(CNTKMATH_LIB)
@@ -935,6 +943,7 @@ IMAGEREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(IMAGEREADER_SRC))
 
 IMAGEREADER:=$(LIBDIR)/ImageReader.so
 ALL_LIBS += $(IMAGEREADER)
+PYTHON_LIBS += $(IMAGEREADER)
 SRC+=$(IMAGEREADER_SRC)
 
 INCLUDEPATH += $(OPENCV_PATH)/include
@@ -1240,23 +1249,24 @@ ifeq ("$(PYTHON_SUPPORT) $(BUILDTYPE)","true release")
 
 # Libraries needed for the run-time (i.e., excluding test binaries)
 # TODO MPI doesn't appear explicitly here, hidden by mpic++ usage (but currently, it should be user installed)
-RUNTIME_LIBS_LIST := $(LIBS_LIST) $(IMAGEREADER_LIBS_LIST) $(KALDI_LIBS_LIST)
-RUNTIME_LIBS_EXCLUDE_LIST := m pthread nvidia-ml
-EXTRA_LIBS_BASENAMES:=$(addsuffix .so,$(addprefix lib,$(filter-out $(RUNTIME_LIBS_EXCLUDE_LIST),$(RUNTIME_LIBS_LIST))))
+PYTHON_LIBS_LIST := $(LIBS_LIST) $(IMAGEREADER_LIBS_LIST)
+PYTHON_LIBS_EXCLUDE_LIST := m pthread nvidia-ml
+PYTHON_EXTRA_LIBS_BASENAMES:=$(addsuffix .so,$(addprefix lib,$(filter-out $(PYTHON_LIBS_EXCLUDE_LIST),$(PYTHON_LIBS_LIST))))
 
 # TODO dependencies
 # TODO intermediate build results should go below $OBJDIR
 .PHONY: python
-python: $(ALL_LIBS)
+python: $(PYTHON_LIBS)
 	@bash -c '\
             set -x -e; \
             declare -A py_paths; \
             py_paths[27]=$(PYTHON27_PATH); \
             py_paths[34]=$(PYTHON34_PATH); \
             py_paths[35]=$(PYTHON35_PATH); \
-            export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$$(echo $(GDK_NVML_LIB_PATH) $(LIBPATH) $(KALDI_LIBPATH) | tr " " :); \
+            export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$$(echo $(GDK_NVML_LIB_PATH) $(LIBPATH) | tr " " :); \
             ldd $(LIBDIR)/* | grep "not found" && false; \
-            export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(EXTRA_LIBS_BASENAMES) | xargs -n1)); \
+            export CNTK_LIBRARIES="$(PYTHON_LIBS)"; \
+            export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(PYTHON_EXTRA_LIBS_BASENAMES) | xargs -n1)); \
             test -x $(SWIG_PATH); \
             export CNTK_LIB_PATH=$$(readlink -f $(LIBDIR)); \
             PYTHONDIR=$$(readlink -f $(PYTHONDIR)); \
