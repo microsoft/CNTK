@@ -69,6 +69,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
+            node->m_beginDimParameter = m_beginDimParameter;
+            node->m_endDimParameter = m_endDimParameter;
             node->m_replacementSampleLayout = m_replacementSampleLayout;
         }
     }
