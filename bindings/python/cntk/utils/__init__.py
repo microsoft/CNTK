@@ -309,6 +309,9 @@ def sanitize_function(arg):
     from cntk.ops import combine
 
     if isinstance(arg, cntk_py.Variable):
+      if arg.owner is not None:
+        arg = arg.owner
+      else:
         arg = combine([arg])
 
     if not isinstance(arg, cntk_py.Function):

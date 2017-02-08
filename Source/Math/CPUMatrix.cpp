@@ -683,6 +683,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
 
     // pre-scale with beta upfront
     // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
+    // TODO: There might be a bug if we want to scatter multiple groups of columns to the same target with beta = 0, aka, the second operation will ease the first result
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.

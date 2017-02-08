@@ -3515,6 +3515,15 @@ namespace CNTK
     CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
 
     ///
+    /// Create a new Funciton instance with CNTK built-in ContractiveReward loss.
+    /// Inputs: Label label sequence of the instances
+    /// predictionAndStop: pair of prediction and stop probability
+    ///     The prediction probability must be softmax normalized
+    ///     The stop probability must be broadcast as the predition sequence
+    ///
+    CNTK_API FunctionPtr ContractiveReward(const Variable& label, const std::vector<std::pair<Variable, Variable>>& predictionAndStop, const std::wstring& name = L"");
+
+    ///
     /// Creates a composite Function that has the specified rootFunction as its root.
     /// The composite denotes a higher-level Function encapsulating the entire graph
     /// of Functions underlying the specified rootFunction.

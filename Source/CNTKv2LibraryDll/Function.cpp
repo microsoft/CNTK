@@ -1311,6 +1311,18 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::OptimizedRNNStack, operand, weights, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ContractiveReward(const Variable& label, const std::vector<std::pair<Variable, Variable>>& predictionAndStop, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { label };
+        for (auto& p : predictionAndStop)
+        {
+            operands.push_back(p.first);
+            operands.push_back(p.second);
+        }
+
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ContractiveReward, operands, Dictionary(), name), name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)

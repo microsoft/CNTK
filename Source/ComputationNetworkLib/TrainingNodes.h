@@ -2905,4 +2905,228 @@ private:
     bool m_convertRunningVariancePending;
 };
 
+///
+// Input: Label, action prob, stop prob, action prob, stop prob
+// Stop prob is broadcast over the time steps of action prob
+//
+///
+template <class ElemType>
+class ContractiveRewardNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"ContractiveReward";
+    }
+
+public:
+    DeclareConstructorFromConfig(ContractiveRewardNode);
+    ContractiveRewardNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        if (inputIndex == 0)
+            InvalidArgument("%ls %ls operation cannot compute the gradient for its first input.", NodeName().c_str(), OperationName().c_str());
+        auto mbLayout = InputRef(0).GetMBLayout();
+        auto gradient = InputRef(inputIndex).GradientFor(fr);
+        if (inputIndex % 2 == 1) // Backprop to action prob
+        {
+            const auto& stopT = InputRef(inputIndex + 1).ValueFor(fr);
+            auto& base = m_sumLoss[(inputIndex - 1) / 2];
+            // gradient = stopT * (labelT*m_base-1)
+            m_temp->AssignElementProductOf(stopT, *base);
+            MaskMissingColumnsToZero(*m_temp, mbLayout, fr);
+        }
+        else // Backprop to stop prob
+        {
+            const auto& predT = InputRef(inputIndex - 1).ValueFor(fr);
+            auto& base = m_sumLoss[(inputIndex - 1) / 2];
+            // gradient = (labelT*m_base-1)*predT
+            m_temp->AssignElementProductOf(predT, *base);
+            MaskMissingColumnsToZero(*m_temp, mbLayout, fr);
+        }
+
+        Matrix<ElemType>::Multiply1x1AndWeightedAdd(-1.0f, Gradient().ColumnSlice(0,1) /*1x1*/, *m_temp, 1.0f, gradient);
+    }
+
+    // sum(lable*prob*terminiteProb)
+    virtual void ForwardPropNonLooping() override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        const Matrix<ElemType>& classOneLabels = InputRef(0).ValueFor(fr);
+        //ElemType loss = 0;
+        m_temp->SetValue((ElemType)0);
+        for (int i = 1; i < GetNumInputs(); i += 2)
+        {
+            auto& sum = m_sumLoss[(i-1)/2];
+            const auto& labelT = InputRef(0).ValueFor(fr);
+            const auto& predT = InputRef(i).ValueFor(fr);
+            const auto& stopT = InputRef(i + 1).ValueFor(fr);
+            sum->AssignElementProductOf(labelT, predT);
+            sum->AssignElementProductOf(stopT, *sum);
+            MaskMissingColumnsToZero(*sum, InputRef(0).GetMBLayout(), fr);
+            *m_temp += *sum;
+            //loss += sum->SumOfElements();
+        }
+
+        auto mbLayout = InputRef(0).GetMBLayout();
+        // Compute the avg reward
+        Value().SetValue(*m_temp);
+
+        m_base->SetValue(0);
+
+        // Compute baseline rewars via gather/scatter on the sequence
+        const auto sequences = mbLayout->GetAllSequences();
+        int step = (sequences.size() + 15)/ 16;
+        #pragma omp parallel for
+        for (int j=0; j< 16; j++ )
+        {
+            auto start = step*j;
+            auto end = sequences.size() > (start + step) ? (start + step) : sequences.size();
+            for (int i = start; i < end; i++)
+            {
+                const auto& sequence = sequences[i];
+                if (sequence.seqId == GAP_SEQUENCE_ID)
+                    continue;
+                const auto& columnIndices = mbLayout->GetColumnIndices(sequence);
+                vector<ElemType> index(columnIndices.begin(), columnIndices.end());
+                m_columIndex[j]->Resize(1, columnIndices.size());
+                m_columIndex[j]->SetValue(1, columnIndices.size(), m_temp->GetDeviceId(), index.data(), matrixFormatRowMajor);
+                m_sequenceColumn[j]->DoGatherColumnsOf(0, *m_columIndex[j], *m_temp, 1);
+                ElemType b = m_sequenceColumn[j]->SumOfElements();
+                m_sequenceColumn[j]->SetValue(1 / b);
+                m_base->DoScatterColumnsOf(1, *m_columIndex[j], *m_sequenceColumn[j], 1);
+            }
+        }
+
+        for (int i = 1; i < GetNumInputs(); i += 2)
+        {
+            auto& sum = m_sumLoss[(i - 1) / 2];
+            const auto& labelT = InputRef(0).ValueFor(fr);
+            sum->AssignElementProductOf(labelT, *m_base);
+            *sum -= 1;
+            MaskMissingColumnsToZero(*sum, mbLayout, fr);
+        }
+    }
+
+    virtual void Validate(bool isFinalValidationPass) override
+    {
+        if (m_inputs.size() <3 || m_inputs.size()%2 !=1 )
+            InvalidArgument("%ls %ls operation requires at least 3 inputs.", NodeName().c_str(), OperationName().c_str());
+        // Input: Label, Pred, termProb, Pred, termProb, Pred, TermProb
+        Base::Validate(isFinalValidationPass);
+        m_pMBLayout = Input(0)->GetMBLayout();
+        /* Note that this is the same as ValidateInferBinaryInputDims, but done for the 3rd child if it exists */
+        for(int i=1; i<m_inputs.size(); i+=2)
+        {
+            auto pred = Input(i);
+            auto prob = Input(i+1);
+
+            if (isFinalValidationPass &&
+                !(Input(0)->GetSampleMatrixNumRows() == pred->GetSampleMatrixNumRows() &&
+                Input(0)->HasMBLayout() && pred->HasMBLayout() && Input(0)->GetMBLayout() == pred->GetMBLayout() &&
+                    prob->HasMBLayout() && Input(0)->GetMBLayout() == prob->GetMBLayout()))
+            {
+                LogicError("The Matrix dimensions of the label and pred inputs do not match (%ls %ls).", NodeName().c_str(), OperationName().c_str());
+            }
+        }
+
+        SetDims(TensorShape(1), Input(0)->HasMBLayout());
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override
+    {
+        return false;
+    }
+
+    virtual void UpdateFunctionMBSize() override
+    {
+        m_base->Resize(InputRef(0).Value());
+        m_temp->Resize(InputRef(0).Value());
+        for (int i = 0; i < m_sumLoss.size(); i++)
+        {
+            m_sumLoss[i]->Resize(InputRef(0).Value());
+        }
+
+        for (int i = 0; i < 16; i++)
+        {
+            m_columIndex[i]->Resize(1, InputRef(0).GetNumTimeSteps());
+            m_sequenceColumn[i]->Resize(1, InputRef(0).GetNumTimeSteps());
+        }
+    }
+
+    // request matrices needed to do node function value evaluation
+    virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_base, matrixPool);
+        RequestMatrixFromPool(m_temp, matrixPool);
+        int rlSteps = (this->GetNumInputs() - 1) / 2;
+        m_sumLoss.resize(rlSteps);
+        for (int i = 0; i < m_sumLoss.size(); i++)
+        {
+            RequestMatrixFromPool(m_sumLoss[i], matrixPool);
+        }
+
+        for (int i = 0; i < 16; i++)
+        {
+            RequestMatrixFromPool(m_columIndex[i], matrixPool);
+            RequestMatrixFromPool(m_sequenceColumn[i], matrixPool);
+        }
+    }
+
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
+    virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_base, matrixPool);
+        ReleaseMatrixToPool(m_temp, matrixPool);
+        for (int i = 0; i < m_sumLoss.size(); i++)
+        {
+            ReleaseMatrixToPool(m_sumLoss[i], matrixPool);
+        }
+
+        for (int i = 0; i < 16; i++)
+        {
+            ReleaseMatrixToPool(m_columIndex[i], matrixPool);
+            ReleaseMatrixToPool(m_sequenceColumn[i], matrixPool);
+        }
+    }
+
+    virtual void CopyTo(const ComputationNodePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const
+    {
+        Base::CopyTo(nodeP, newName, flags);
+        if (flags & CopyNodeFlags::copyNodeValue)
+        {
+            auto node = dynamic_pointer_cast<ContractiveRewardNode<ElemType>>(nodeP);
+            node->m_base->SetValue(*m_base);
+            node->m_temp->SetValue(*m_temp);
+            for (int i = 0; i < 16; i++)
+            {
+                node->m_columIndex[i]->SetValue(*m_columIndex[i]);
+                node->m_sequenceColumn[i]->SetValue(*m_sequenceColumn[i]);
+            }
+
+            for (int i = 0; i < m_sumLoss.size(); i++)
+            {
+                node->m_sumLoss[i]->SetValue(*(m_sumLoss[i]));
+            }
+        }
+    }
+
+private:
+    shared_ptr<Matrix<ElemType>> m_base;
+    shared_ptr<Matrix<ElemType>> m_temp;
+    shared_ptr<Matrix<ElemType>> m_columIndex[16];
+    shared_ptr<Matrix<ElemType>> m_sequenceColumn[16];
+    vector<shared_ptr<Matrix<ElemType>>> m_sumLoss;
+};
+
+template class ContractiveRewardNode<float>;
+template class ContractiveRewardNode<double>;
 }}}
