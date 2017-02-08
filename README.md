@@ -5,7 +5,11 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
-***2017-02-01.* V 2.0 Beta 10 Release**
+***2017-02-08.* V 2.0 Beta 10 Release available at Docker Hub**  
+CNTK V 2.0 Beta 10 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
+See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
+
+***2017-02-01.* V 2.0 Beta 10 Release**  
 * New and updated core and Python API features ([Operators with UserFunctions](https://www.cntk.ai/pythondocs/extend.html), [Tensorboard support](https://github.com/Microsoft/CNTK/wiki/Using-TensorBoard-for-Visualization), [Python API Fast R CNN](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN)).
 * Improved speed of CrossEntropyWithSoftmax and ClassificationError for sparse labels.
 * New Tutorials and Examples:
@@ -41,10 +45,6 @@ Highlights of this Release:
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_9_Release_Notes).  
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-01-19.* V 2.0 Beta 8 Release available at Docker Hub**  
-CNTK V 2.0 Beta 8 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
-See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
