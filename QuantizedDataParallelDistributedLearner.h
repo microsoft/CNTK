@@ -11,6 +11,7 @@
 #include <vector>
 #include "CNTKLibrary.h"
 #include "DistributedLearnerBase.h"
+#include "PerformanceProfiler.h"
 
 namespace CNTK
 {
@@ -32,6 +33,8 @@ namespace CNTK
         {
             if (m_sampleCount >= m_distributeAfterSamples)
             {
+                auto profGradientAgg = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGradient);
+
                 if (info.IsEmpty())
                     PrepaireZeroGradients(gradientValues, info);
 
@@ -59,6 +62,8 @@ namespace CNTK
                     m_stripeResiduals,
                     m_communicator->Workers());
             }
+
+            auto profWeights = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainWeights);
 
             m_sampleCount += info.numberOfSamples;
             if (info.IsEmpty())
