@@ -51,7 +51,7 @@ This can now be used as a normal operator like::
     s = user_function(MySigmoid(prev_node))
 
 Note that we cannot pass the `UserFunction` instance directly into the graph. 
-It is representing a pure function, which we have to pass through `user_function()`.
+It is representing a primitive function, which we have to pass through `user_function()`.
 
 In case, the operator is initialized with multiple inputs, ``forward()`` 's
 ``argument`` will be a list of those inputs::
