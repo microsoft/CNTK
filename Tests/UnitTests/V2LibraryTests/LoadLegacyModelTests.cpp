@@ -2,29 +2,31 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// EvalMultithreads.cpp : Sample application shows how to evaluate a model in multiple threading environment. 
-//
+
+#include "stdafx.h"
 #include <functional>
-#include <thread>
 #include <iostream>
 #include "CNTKLibrary.h"
 #include "Common.h"
 
 using namespace CNTK;
 
+namespace CNTK { namespace Test {
+
 void TestLoadLegacyModelWithPrecompute(const DeviceDescriptor& device)
 {
     const size_t baseFeaturesDim = 363;
     const size_t numOutputClasses = 132;
 
-    auto modelFuncPtr = CNTK::Function::LoadModel(L"cntkSpeechFF.dnn", device);
+    auto modelFuncPtr = Function::LoadModel(L"cntkSpeechFF.dnn", device);
 
     auto FindVariableByName = [](const std::vector<Variable>& variables, const std::wstring& name) {
         for (size_t i = 0; i < variables.size(); ++i)
             if (variables[i].Name() == name)
                 return variables[i];
 
-        throw std::runtime_error("No output foudn with teh given name");
+        BOOST_ERROR("No output found with the given name");
+        return Variable();
     };
 
     auto arguments = modelFuncPtr->Arguments();
@@ -62,12 +64,19 @@ void TestLoadLegacyModelWithPrecompute(const DeviceDescriptor& device)
     }
 }
 
-void LoadLegacyModelTests()
+BOOST_AUTO_TEST_SUITE(LoadLegacyModelSuite)
+
+BOOST_AUTO_TEST_CASE(LoadLegacyModelWithPrecomputeInCPU)
 {
-    fprintf(stderr, "\nLoadLegacyModelTests..\n");
-
     TestLoadLegacyModelWithPrecompute(DeviceDescriptor::CPUDevice());
+}
 
+BOOST_AUTO_TEST_CASE(LoadLegacyModelWithPrecomputeInGPU)
+{
     if (IsGPUAvailable())
         TestLoadLegacyModelWithPrecompute(DeviceDescriptor::GPUDevice(0));
 }
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

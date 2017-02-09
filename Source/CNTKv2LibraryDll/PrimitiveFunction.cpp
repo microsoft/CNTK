@@ -823,7 +823,7 @@ namespace CNTK
             inputs.push_back(runCount);
         }
         
-        return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
-                                                  [](PrimitiveFunction* ptr) { delete ptr; });
+            return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
+                                                      [](PrimitiveFunction* ptr) { delete ptr; });
     }
 }

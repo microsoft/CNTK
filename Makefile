@@ -495,71 +495,6 @@ $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
 	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKMATH) $(PROTOBUF_PATH)/lib/libprotobuf.a -fopenmp
 
 ########################################
-# CNTKLibrary tests
-########################################
-
-CNTKLIBRARY_TESTS_SRC_PATH =\
-    Tests/UnitTests/V2LibraryTests
-
-CNTKLIBRARY_TESTS_SRC =\
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/FeedForwardTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/Main.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/Common.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/NDArrayViewTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/RecurrentFunctionTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/BlockTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/ValueTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/LoadLegacyModelTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/TrainerTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/CifarResNet.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/LearnerTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/FunctionTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/SequenceClassification.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/Seq2Seq.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/TruncatedLSTMAcousticModel.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/DeviceSelectionTests.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/MinibatchSourceTest.cpp \
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/UserDefinedFunctionTests.cpp \
-	Examples/Evaluation/CNTKLibraryCPPEvalExamples/EvalMultithreads.cpp \
-
-CNTKLIBRARY_TESTS:=$(BINDIR)/v2librarytests
-CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
-
-ALL+=$(CNTKLIBRARY_TESTS)
-SRC+=$(CNTKLIBRARY_TESTS_SRC)
-
-$(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB) $(READER_LIBS)
-	@echo $(SEPARATOR)
-	@mkdir -p $(dir $@)
-	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) $(L_READER_LIBS)
-
-########################################
-# CNTKLibrary distribution tests
-########################################
-
-CNTKLIBRARY_DISTRIBUTION_TESTS_SRC =\
-	$(CNTKLIBRARY_TESTS_SRC_PATH)/Common.cpp \
-	Tests/UnitTests/V2LibraryDistributionTests/Main.cpp \
-	Tests/UnitTests/V2LibraryDistributionTests/FrameModeTests.cpp \
-
-CNTKLIBRARY_DISTRIBUTION_TESTS:=$(BINDIR)/v2librarydistributiontests
-CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)))
-
-ALL+=$(CNTKLIBRARY_DISTRIBUTION_TESTS)
-SRC+=$(CNTKLIBRARY_DISTRIBUTION_TESTS_SRC)
-
-INCLUDEPATH+=$(CNTKLIBRARY_TESTS_SRC_PATH)
-
-$(CNTKLIBRARY_DISTRIBUTION_TESTS): $(CNTKLIBRARY_DISTRIBUTION_TESTS_OBJ) | $(CNTKLIBRARY_LIB) $(READER_LIBS)
-	@echo $(SEPARATOR)
-	@mkdir -p $(dir $@)
-	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) $(L_READER_LIBS)
-
-########################################
 # LibEval
 ########################################
 
@@ -1067,6 +1002,42 @@ $(CNTK_CORE_BS): $(SOURCEDIR)/CNTK/BrainScript/CNTKCoreLib/CNTK.core.bs
 	cp -f $^ $@
 
 ########################################
+# V2Library EndToEndTests
+########################################
+CNTKLIBRARY_END_TO_END_TESTS_PATH =\
+	Tests/EndToEndTests/CNTKv2Library
+
+CNTKLIBRARY_END_TO_END_COMMON_SRC_PATH =\
+	$(CNTKLIBRARY_END_TO_END_TESTS_PATH)/Common
+
+INCLUDEPATH+=$(CNTKLIBRARY_END_TO_END_COMMON_SRC_PATH)
+
+CNTKLIBRARY_END_TO_END_TESTS_SRC_PATH =\
+	$(CNTKLIBRARY_END_TO_END_TESTS_PATH)/EndToEndTests
+
+CNTKLIBRARY_END_TO_END_TESTS_SRC =\
+	$(CNTKLIBRARY_END_TO_END_COMMON_SRC_PATH)/Common.cpp \
+	$(CNTKLIBRARY_END_TO_END_TESTS_SRC_PATH)/Main.cpp \
+	$(CNTKLIBRARY_END_TO_END_TESTS_SRC_PATH)/CifarResNet.cpp \
+	$(CNTKLIBRARY_END_TO_END_TESTS_SRC_PATH)/MNISTClassifier.cpp \
+	$(CNTKLIBRARY_END_TO_END_TESTS_SRC_PATH)/Seq2Seq.cpp \
+	$(CNTKLIBRARY_END_TO_END_TESTS_SRC_PATH)/SequenceClassification.cpp \
+	$(CNTKLIBRARY_END_TO_END_TESTS_SRC_PATH)/TruncatedLSTMAcousticModel.cpp \
+	$(CNTKLIBRARY_END_TO_END_TESTS_SRC_PATH)/FrameMode.cpp \
+
+CNTKLIBRARY_END_TO_END_TESTS:=$(BINDIR)/V2LibraryEndToEndTests
+CNTKLIBRARY_END_TO_END_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_END_TO_END_TESTS_SRC)))
+
+ALL+=$(CNTKLIBRARY_END_TO_END_TESTS)
+SRC+=$(CNTKLIBRARY_END_TO_END_TESTS_SRC)
+
+$(CNTKLIBRARY_END_TO_END_TESTS): $(CNTKLIBRARY_END_TO_END_TESTS_OBJ) | $(CNTKLIBRARY_LIB) $(READER_LIBS)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) $(L_READER_LIBS)
+
+########################################
 # Unit Tests
 ########################################
 
@@ -1220,7 +1191,42 @@ $(UNITTEST_BRAINSCRIPT): $(UNITTEST_BRAINSCRIPT_OBJ) | $(READER_LIBS)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl $(L_READER_LIBS) -fopenmp
 
-unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MATH) $(UNITTEST_BRAINSCRIPT)
+########################################
+# CNTKLibrary tests
+########################################
+CNTKLIBRARY_TESTS_SRC_PATH =\
+	Tests/UnitTests/V2LibraryTests
+
+CNTKLIBRARY_TESTS_SRC =\
+	$(CNTKLIBRARY_END_TO_END_COMMON_SRC_PATH)/Common.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/FeedForwardTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/NDArrayViewTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/RecurrentFunctionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/BlockTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/TensorTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/ValueTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/SerializationTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/LearnerTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/FunctionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/DeviceSelectionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/MinibatchSourceTest.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/UserDefinedFunctionTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/LoadLegacyModelTests.cpp \
+	$(CNTKLIBRARY_TESTS_SRC_PATH)/stdafx.cpp
+
+CNTKLIBRARY_TESTS := $(BINDIR)/v2librarytests
+CNTKLIBRARY_TESTS_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_TESTS_SRC)))
+
+ALL += $(CNTKLIBRARY_TESTS)
+SRC += $(CNTKLIBRARY_TESTS_SRC)
+
+$(CNTKLIBRARY_TESTS): $(CNTKLIBRARY_TESTS_OBJ) | $(CNTKLIBRARY_LIB) $(READER_LIBS)
+	@echo $(SEPARATOR)
+	@mkdir -p $(dir $@)
+	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(LIBS) -ldl -l$(CNTKLIBRARY) $(L_READER_LIBS)
+
+unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MATH) $(UNITTEST_BRAINSCRIPT) $(CNTKLIBRARY_TESTS)
 
 endif
 

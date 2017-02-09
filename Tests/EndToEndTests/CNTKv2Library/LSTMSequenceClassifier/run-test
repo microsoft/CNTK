@@ -1,0 +1,48 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+set -x
+
+# This test uses a large dataset which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image
+else
+    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image
+fi
+
+# Copy the test data to the test run directory
+TestDataDir=$TEST_RUN_DIR/TestData
+mkdir $TestDataDir
+cp -R $TEST_DIR/../../Text/SequenceClassification/Data/Train.ctf $TestDataDir || exit $?
+
+# Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  export CUDA_VISIBLE_DEVICES=-1
+fi
+
+pushd $TestDataDir
+
+if [ "$OS" == "Windows_NT" ]; then
+  $TEST_BIN_DIR/V2LibraryEndToEndTests.exe LSTMSequenceClassifier
+else
+  $TEST_BIN_DIR/V2LibraryEndToEndTests LSTMSequenceClassifier
+fi
+
+ExitCode=$?
+
+# Delete the test data
+popd
+rm -rf $TestDataDir
+
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  unset CUDA_VISIBLE_DEVICES
+fi
+
+exit $ExitCode
