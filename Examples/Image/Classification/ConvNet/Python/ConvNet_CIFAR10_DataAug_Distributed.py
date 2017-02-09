@@ -128,10 +128,13 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         model_inputs_to_mb_source_mapping = input_map, 
         mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
         progress_printer = progress_printer, 
+#        checkpoint_frequency = epoch_size, 
         checkpoint_filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
+#        save_all_checkpoints = False, 
         progress_frequency=epoch_size,
         cv_source = test_source,
         cv_mb_size_schedule=cntk.minibatch_size_schedule(minibatch_size),
+#        cv_frequency = epoch_size,
         restore=restore)
 
     # Train all minibatches 
@@ -200,8 +203,8 @@ if __name__=='__main__':
                                 max_epochs=args['num_epochs'],
                                 restore=not args['restart'],
                                 log_to_file=args['logdir'],
-                                num_mbs_per_log=10,
-                                gen_heartbeat=True)
+                                num_mbs_per_log=100,
+                                gen_heartbeat=False)
     finally:
         cntk.distributed.Communicator.finalize()
 

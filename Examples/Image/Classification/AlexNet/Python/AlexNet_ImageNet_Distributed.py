@@ -174,10 +174,13 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         model_inputs_to_mb_source_mapping = input_map, 
         mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size), 
         progress_printer = progress_printer, 
+#        checkpoint_frequency = epoch_size,
         checkpoint_filename = os.path.join(model_path, model_name), 
+#        save_all_checkpoints = True,
         progress_frequency = epoch_size, 
         cv_source = test_source, 
         cv_mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
+#        cv_frequency = epoch_size,
         restore = restore)
 
     # Train all minibatches 
