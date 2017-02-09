@@ -1690,6 +1690,40 @@ void Matrix<ElemType>::FSAdagradUpdate(size_t mbSize,
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
+///
+// Implement the original adam algorithm according to the paper
+// Ref: ADAM: A METHOD FOR STOCHASTIC OPTIMIZATION, https://arxiv.org/pdf/1412.6980.pdf
+///
+template <class ElemType>
+void Matrix<ElemType>::AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
+    const double learnRatePerSample, const double meanMomentum, const double varMomentum, bool unitGainMomentum)
+{
+    smoothedCount++;
+    // Bias correction
+    let biasCorrection = (ElemType)(sqrt(1- pow(varMomentum, smoothedCount))/(1- pow(meanMomentum, smoothedCount)));
+
+    DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
+    {
+        m_CPUMatrix->Adam(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix,
+        (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+        biasCorrection, unitGainMomentum);
+        SetDataLocation(CPU);
+    },
+    {
+        m_GPUMatrix->Adam(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix,
+        (ElemType)learnRatePerSample, (ElemType)meanMomentum, (ElemType)varMomentum,
+        biasCorrection, unitGainMomentum);
+        SetDataLocation(GPU);
+    },
+    { NOT_IMPLEMENTED; },
+    { gradients.m_GPUSparseMatrix->Adam(*m_GPUMatrix, *functionValues.m_GPUMatrix, 
+        (ElemType)learnRatePerSample, (ElemType)meanMomentum, 
+        (ElemType)varMomentum, biasCorrection, unitGainMomentum); 
+        SetDataLocation(GPU); });
+
+    // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
+}
+
 template <class ElemType>
 ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
                                    ElemType RMS_GAMMA,
