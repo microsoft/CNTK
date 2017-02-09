@@ -140,6 +140,7 @@ def _window(x, axis, begin, end, step, stride, initial_state=None):
     return r
 
 
+# BUGBUG: Can one pass a numpy array as initial values? TODO: add a test case
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape)  )
 #    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape)  )

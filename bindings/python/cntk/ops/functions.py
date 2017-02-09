@@ -142,6 +142,8 @@ class Function(cntk_py.Function):
                     for arg in args:
                         Function._placeholders_under_construction.add(arg)
                     out = f(*fun_args)
+                    if out is None:
+                        raise TypeError("CNTK Function '{}' must return a value".format(f_name))
                     #if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
                     #    print('trying to print args for', f_name)
                     #    print('out args:', [arg.name for arg in out.arguments])
