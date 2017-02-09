@@ -18,79 +18,88 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
     fprintf(stderr, "CacheFaceFileInfo faceFile %s\n", faceFile.c_str());
     fprintf(stderr, "CacheFaceFileInfo landmarkFile %s\n", landmarkFile.c_str());
 
+    ////
+    //FILE *pf1 = fopen(faceFile.c_str(), "rb");
+    //std::ifstream fin1(landmarkFile.c_str());
+
+    //fprintf(stderr, "CacheFaceFileInfo fopen(faceFile.c_str(), \"rb\") %d\n", feof(pf1));
+    //fprintf(stderr, "CacheFaceFileInfo std::ifstream fin(landmarkFile.c_str()) %d %d\n", (int) fin1.is_open(), (int) fin1.good());
+
+    //fclose(pf1);
+    //fin1.close();
+
+    ////
+    //FILE *pf2 = fopen("\\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big", "rb");
+    //std::ifstream fin2("\\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big.pts");
+
+    //fprintf(stderr, "CacheFaceFileInfo fopen \\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big %d\n", feof(pf2));
+    //fprintf(stderr, "CacheFaceFileInfo std::ifstream \\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big.pts %d %d\n", (int) fin2.is_open(), (int) fin2.good());
+
+    //fclose(pf2);
+    //fin2.close();
     //
-    FILE *pf1 = fopen(faceFile.c_str(), "rb");
-    std::ifstream fin1(landmarkFile.c_str());
+    ////
+    //FILE *pf3 = fopen("/hdfs/pnrsy/sanjeevm/ImageNet/train.cntk.txt", "rb");
+    //std::ifstream fin3("\\hdfs\\pnrsy\\sanjeevm\\ImageNet\\train.cntk.txt");
 
-    fprintf(stderr, "CacheFaceFileInfo fopen(faceFile.c_str(), \"rb\") %d\n", feof(pf1));
-    fprintf(stderr, "CacheFaceFileInfo std::ifstream fin(landmarkFile.c_str()) %d %d\n", (int) fin1.is_open(), (int) fin1.good());
+    //fprintf(stderr, "CacheFaceFileInfo fopen /hdfs/pnrsy/sanjeevm/ImageNet/train.cntk.txt %d\n", feof(pf3));
+    //fprintf(stderr, "CacheFaceFileInfo std::ifstream \\hdfs\\pnrsy\\sanjeevm\\ImageNet\\train.cntk.txt %d %d\n", (int) fin3.is_open(), (int) fin3.good());
 
-    fclose(pf1);
-    fin1.close();
+    //fclose(pf3);
+    //fin3.close();
 
-    //
-    FILE *pf2 = fopen("\\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big", "rb");
-    std::ifstream fin2("\\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big.pts");
+    ////
+    //FILE *pf4 = fopen("/hdfs/public/cifar-10/test_map_fullpath.txt", "rb");
+    //std::ifstream fin4("\\hdfs\\public\\cifar-10\\test_map_fullpath.txt");
 
-    fprintf(stderr, "CacheFaceFileInfo fopen \\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big %d\n", feof(pf2));
-    fprintf(stderr, "CacheFaceFileInfo std::ifstream \\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big.pts %d %d\n", (int) fin2.is_open(), (int) fin2.good());
+    //fprintf(stderr, "CacheFaceFileInfo fopen /hdfs/public/cifar-10/test_map_fullpath.txt %d\n", feof(pf4));
+    //fprintf(stderr, "CacheFaceFileInfo std::ifstream \\hdfs\\public\\cifar-10\\test_map_fullpath.txt %d %d\n", (int) fin4.is_open(), (int) fin4.good());
 
-    fclose(pf2);
-    fin2.close();
-    
-    //
-    FILE *pf3 = fopen("/hdfs/pnrsy/sanjeevm/ImageNet/train.cntk.txt", "rb");
-    std::ifstream fin3("\\hdfs\\pnrsy\\sanjeevm\\ImageNet\\train.cntk.txt");
+    //fclose(pf4);
+    //fin4.close();
 
-    fprintf(stderr, "CacheFaceFileInfo fopen /hdfs/pnrsy/sanjeevm/ImageNet/train.cntk.txt %d\n", feof(pf3));
-    fprintf(stderr, "CacheFaceFileInfo std::ifstream \\hdfs\\pnrsy\\sanjeevm\\ImageNet\\train.cntk.txt %d %d\n", (int) fin3.is_open(), (int) fin3.good());
+    ////
+    //FILE *pf5 = fopen("//hdfs/public/cifar-10/test_map_fullpath.txt", "rb");
+    //std::ifstream fin5("\\\\hdfs\\public\\cifar-10\\test_map_fullpath.txt");
 
-    fclose(pf3);
-    fin3.close();
+    //fprintf(stderr, "CacheFaceFileInfo fopen //hdfs/public/cifar-10/test_map_fullpath.txt %d\n", feof(pf5));
+    //fprintf(stderr, "CacheFaceFileInfo std::ifstream \\\\hdfs\\public\\cifar-10\\test_map_fullpath.txt %d %d\n", (int) fin5.is_open(), (int) fin5.good());
 
-    //
-    FILE *pf4 = fopen("/hdfs/public/cifar-10/test_map_fullpath.txt", "rb");
-    std::ifstream fin4("\\hdfs\\public\\cifar-10\\test_map_fullpath.txt");
+    //fclose(pf5);
+    //fin5.close();
 
-    fprintf(stderr, "CacheFaceFileInfo fopen /hdfs/public/cifar-10/test_map_fullpath.txt %d\n", feof(pf4));
-    fprintf(stderr, "CacheFaceFileInfo std::ifstream \\hdfs\\public\\cifar-10\\test_map_fullpath.txt %d %d\n", (int) fin4.is_open(), (int) fin4.good());
+    string tmpFaceFileName = faceFile.c_str(), tmpLandmarkFileName = landmarkFile.c_str();
 
-    fclose(pf4);
-    fin4.close();
+    std::replace(begin(tmpFaceFileName), end(tmpFaceFileName), '\\', '/');
+    std::replace(begin(tmpLandmarkFileName), end(tmpLandmarkFileName), '\\', '/');
 
-    //
-    FILE *pf5 = fopen("//hdfs/public/cifar-10/test_map_fullpath.txt", "rb");
-    std::ifstream fin5("\\\\hdfs\\public\\cifar-10\\test_map_fullpath.txt");
 
-    fprintf(stderr, "CacheFaceFileInfo fopen //hdfs/public/cifar-10/test_map_fullpath.txt %d\n", feof(pf5));
-    fprintf(stderr, "CacheFaceFileInfo std::ifstream \\\\hdfs\\public\\cifar-10\\test_map_fullpath.txt %d %d\n", (int) fin5.is_open(), (int) fin5.good());
+    fprintf(stderr, "CacheFaceFileInfo faceFile %s\n", tmpFaceFileName.c_str());
+    fprintf(stderr, "CacheFaceFileInfo landmarkFile %s\n", tmpLandmarkFileName.c_str());
 
-    fclose(pf5);
-    fin5.close();
-
-    FILE *pf = fopen(faceFile.c_str(), "rb");
-    std::ifstream fin(landmarkFile.c_str());
+    FILE *pf = fopen(tmpFaceFileName.c_str(), "rb");
+    std::ifstream fin(tmpLandmarkFileName.c_str());
     int tmp;
     fin >> tmp;
 
-    fprintf(stderr, "CacheFaceFileInfo i m prepare in %s\n", faceFile.c_str());
+    fprintf(stderr, "CacheFaceFileInfo i m prepare in %s\n", tmpFaceFileName.c_str());
 
     while (!feof(pf))
     {
         FaceFileInfo info;
 
-        fprintf(stderr, "CacheFaceFileInfo i m in 1 %s\n", faceFile.c_str());
+        fprintf(stderr, "CacheFaceFileInfo i m in 1 %s\n", tmpFaceFileName.c_str());
 
         // read big file
         int n_file_name;
         if (!fread(&n_file_name, sizeof(int), 1, pf)) break;
 
-        fprintf(stderr, "CacheFaceFileInfo i m in 2 %s\n", faceFile.c_str());
+        fprintf(stderr, "CacheFaceFileInfo i m in 2 %s\n", tmpFaceFileName.c_str());
 
         fseek(pf, n_file_name, SEEK_CUR);
         info.Offset = ftell(pf);
 
-        fprintf(stderr, "CacheFaceFileInfo i m in 3 %s\n", faceFile.c_str());
+        fprintf(stderr, "CacheFaceFileInfo i m in 3 %s\n", tmpFaceFileName.c_str());
 
         int content_length;
         if (!fread(&content_length, sizeof(int), 1, pf)) content_length = 0;
