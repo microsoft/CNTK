@@ -12,16 +12,18 @@ from TransferLearning import *
 
 
 # define base model location and characteristics
-_base_model_file = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
-_feature_node_name = "features"
-_last_hidden_node_name = "z.x"
-_image_height = 224
-_image_width = 224
-_num_channels = 3
+base_folder = os.path.dirname(os.path.abspath(__file__))
+base_model_file = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
+new_model_file = os.path.join(base_folder, "Output", "TransferLearning.model")
+feature_node_name = "features"
+last_hidden_node_name = "z.x"
+image_height = 224
+image_width = 224
+num_channels = 3
 
 # define data location and characteristics
-train_image_folder = "c:/Data/Animals/Train"
-test_image_folder = "c:/Data/Animals/Test"
+train_image_folder = os.path.join(base_folder, "..", "DataSets", "Animals", "Train")
+test_image_folder = os.path.join(base_folder, "..", "DataSets", "Animals", "Test")
 file_endings = ['.jpg', '.JPG', '.jpeg', '.JPEG', '.png', '.PNG']
 
 
@@ -66,28 +68,33 @@ def format_output_line(img_name, true_class, probs, class_mapping, top_n=3):
 
 
 if __name__ == '__main__':
+    # check for model and data existence
+    if not (os.path.exists(base_model_file) and os.path.exists(train_image_folder) and os.path.exists(test_image_folder)):
+        print("Please run 'python install_data_and_model.py' first to get the required data and model.")
+        exit(0)
+
     # get class mapping and map files from train and test image folder
     class_mapping = create_class_mapping_from_folder(train_image_folder)
     train_map_file = create_map_file_from_folder(train_image_folder, class_mapping)
     test_map_file = create_map_file_from_folder(test_image_folder, class_mapping, include_unknown=True)
 
     # train
-    trained_model = train_model(_base_model_file, _feature_node_name, _last_hidden_node_name,
-                                _image_width, _image_height, _num_channels,
+    trained_model = train_model(base_model_file, feature_node_name, last_hidden_node_name,
+                                image_width, image_height, num_channels,
                                 len(class_mapping), train_map_file, num_epochs=30, freeze=True)
-    trained_model.save_model(tl_model_file)
+    trained_model.save_model(new_model_file)
     print("Stored trained model at %s" % tl_model_file)
 
     # evaluate test images
-    # trained_model = load_model(tl_model_file)
-    results_file = os.path.join(train_image_folder, "..", "predictions.txt")
+    # trained_model = load_model(new_model_file)
+    results_file = os.path.join(base_folder, "Output", "predictions.txt")
     with open(results_file, 'w') as output_file:
         with open(test_map_file, "r") as input_file:
             for line in input_file:
                 tokens = line.rstrip().split('\t')
                 img_file = tokens[0]
                 true_label = int(tokens[1])
-                probs = eval_single_image(trained_model, img_file, _image_width, _image_height)
+                probs = eval_single_image(trained_model, img_file, image_width, image_height)
 
                 formatted_line = format_output_line(img_file, true_label, probs, class_mapping)
                 output_file.write(formatted_line)
