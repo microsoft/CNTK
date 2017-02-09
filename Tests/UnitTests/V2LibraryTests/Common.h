@@ -150,7 +150,7 @@ inline void SaveAndReloadModel(FunctionPtr& functionPtr, const std::vector<Varia
 
     for (auto varPtr : variables)
     {
-        auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Owner()->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
+        auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
         if (!retVal.second)
            BOOST_ERROR("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
@@ -175,9 +175,8 @@ inline void SaveAndReloadModel(FunctionPtr& functionPtr, const std::vector<Varia
     auto outputs = functionPtr->Outputs();
     for (auto outputVarInfo : outputVarNames)
     {
-        auto newOutputVar = *(std::find_if(outputs.begin(), outputs.end(), [outputVarInfo](const Variable& var)
-        {
-            return (var.Owner()->Name() == outputVarInfo.first);
+        auto newOutputVar = *(std::find_if(outputs.begin(), outputs.end(), [outputVarInfo](const Variable& var) {
+            return (var.Name() == outputVarInfo.first);
         }));
 
         *(outputVarInfo.second) = newOutputVar;
