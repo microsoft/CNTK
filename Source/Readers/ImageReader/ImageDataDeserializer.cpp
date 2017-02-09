@@ -135,6 +135,8 @@ void ImageDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vecto
 
 void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath, size_t labelDimension, bool isMultiCrop)
 {
+    fprintf(stderr, "CreateSequenceDescriptions mapPath %s\n", mapPath.c_str());
+
     std::ifstream mapFile(mapPath);
     if (!mapFile)
     {
@@ -246,7 +248,7 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
     auto suffixPos = path.find_last_of(".big@");
     auto isFaceFile = suffixPos != std::string::npos;
 
-    bool tag1 = true, tag2 = true;
+    static bool tag1 = true, tag2 = true;
 
     if (tag1)
     {
