@@ -292,3 +292,10 @@ class Value(cntk_py.Value):
         '''
         return self.shape[0]
 
+def user_function(user_func):
+    '''
+    Wraps the passed Function to create a composite representing the
+    composite Function graph rooted at the passed root Function.
+    '''
+    from . import as_composite
+    return as_composite(user_func)
