@@ -690,6 +690,7 @@ def _as_tuple(x):
 def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_profiler_buffer_size):
     '''
     Start profiler to prepare performance statistics gathering. Note that profiler is not enabled after start.
+	[Example](https://github.com/Microsoft/CNTK/wiki/Performance-Profiler#for-python)
 
     Args:
         dir: directory for profiler output
