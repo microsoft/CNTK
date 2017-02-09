@@ -14,6 +14,7 @@
 #include <tuple>
 #include "Value.h"
 #include "MPIWrapper.h"
+#include "PerformanceProfiler.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -193,6 +194,8 @@ namespace CNTK
                                                size_t workerRank,
                                                const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/) /*override*/
     {
+        auto profGetMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGetMinibatch);
+
         m_minibatchData.clear();
 
         if (!m_epochEndReached)

@@ -7,6 +7,7 @@
 #include "DataParallelDistributedLearner.h"
 #include "DistributedCommunicator.h"
 #include "Learner.h"
+#include "PerformanceProfiler.h"
 
 #ifdef CNTK_PARALLEL_TRAINING_SUPPORT
 #include "QuantizedDistributedCommunicator.h"
@@ -124,6 +125,8 @@ namespace CNTK
     {
         if (m_sampleCount >= m_distributeAfterSamples)
         {
+            auto profGradientAgg = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGradient);
+
             if (info.IsEmpty())
                 PrepaireZeroGradients(gradientValues, info);
             ConvertToOrdered(gradientValues, m_gradientBuffer);
@@ -140,6 +143,8 @@ namespace CNTK
             m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());
             info.numberOfSamples = static_cast<size_t>(*valuesToAggregate.back()->WritableDataBuffer<double>());
         }
+
+        auto profWeights = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainWeights);
 
         m_sampleCount += info.numberOfSamples;
         m_gradientBuffer.clear();

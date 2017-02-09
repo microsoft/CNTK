@@ -8,6 +8,7 @@
 
 #include "CNTKLibrary.h"
 #include "fileutil.h"
+#include "PerformanceProfiler.h"
 
 namespace CNTK
 {
@@ -120,7 +121,13 @@ namespace CNTK
         // Fill-in required actions.
         if (checkpointFrequencyInSamples != 0)
             m_actions.push_back({ checkpointFrequencyInSamples, 0, 0,
-                [this](size_t currentIndex, const DeviceDescriptor&) { SaveCheckpoint(currentIndex); } });
+                [this](size_t currentIndex, const DeviceDescriptor&)
+                {
+                    SaveCheckpoint(currentIndex); 
+                    // enable profiler after the first checkpoint
+                    // This has effect only if the profiler is globally enabled by StartProfiler()
+                    Microsoft::MSR::CNTK::ProfilerEnable(true);
+                } });
 
         if(crossValidationFrequencyInSamples != 0)
             m_actions.push_back({ crossValidationFrequencyInSamples, 0, 0,
@@ -157,6 +164,8 @@ namespace CNTK
             OnMinibatchStart();
             shouldTrain = m_trainer->TrainMinibatch(minibatch, computeDevice);
             OnMinibatchEnd();
+
+            auto profMisc = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainPost);
 
             // Peform actions if required.
             size_t totalNumberOfSamples = m_trainer->TotalNumberOfSamplesSeen();
