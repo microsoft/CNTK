@@ -1342,6 +1342,52 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
         return 1;
 }
 
+template <class ElementType>
+void CPUMatrix<ElementType>::RmsPropGraves(Matrix<ElementType>& gradients, Matrix<ElementType>& functionValues, 
+                       const double learningRatePerSample, const double momentum, 
+                       ElementType alpha, bool unitGainMomentum)
+{
+    const ElemType eps = 1e-4f;
+
+    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+
+    size_t numColsNeeded = 4 * gradients.GetNumCols();
+
+    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    {
+        RequireSize(gradients.GetNumRows(), numColsNeeded);
+        SetValue(0.0);
+    }
+
+    assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+    size_t n = gradients.GetNumElements();
+    ElemType* val = functionValues.Data();
+    ElemType* grads = gradients.Data();
+    ElemType* n = Data() + n;
+    ElementType* g = Data() + 2 * n;
+    ElementType* deltas = Data() + 3 * n;
+
+     for (long i = 0; i < n; i++)
+     {
+        ElementType grad = grads[i];
+        ElementType ni = n[i];
+        ElementType gi = g[i];
+        ElementType delta = deltas[i];
+        
+        // Update params
+        ni = ni * alpha + (1 - alpha) * grad * grad;
+        gi = g * alpha + (1 - alpha) * grad;
+        delta = momentum * delta - unitGainMomentum * eps * (grad / sqrt(ni - gi * gi + eps));
+        
+        // Store for next iterations
+        n[i] = ni; g[i] = gi; deltas[i] = delta
+
+        // Update model
+        val[i] += delta
+     }
+}
+
 template <class ElemType>
 void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {

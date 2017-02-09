@@ -104,6 +104,9 @@ public:
                      ElemType RMS_WGT_MIN,
                      const bool needAveMultiplier);
 
+    void RmsPropGraves(Matrix<ElementType>& gradients, Matrix<ElementType>& functionValues, 
+                       const double learningRatePerSample, const double momentum, 
+                       ElementType alpha, bool unitGainMomentum)
 
     void Reshape(const size_t numRows, const size_t numCols);
 

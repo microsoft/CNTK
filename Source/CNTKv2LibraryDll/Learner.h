@@ -258,4 +258,23 @@ namespace CNTK
         template <typename ElementType>
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
     };
+
+	class LearnerRmsPropGraves : public LearnerMomentumSGD 
+	{
+	public:
+		LearnerRmsPropGraves(const std::vector<Parameter>& parameters,
+			const LearningRateSchedule& learningRateSchedule,
+			const MomentumSchedule& momentumSchedule,
+			double alpha,
+			bool unitGain,
+			AdditionalLearningOptions additionalOptions)
+	
+	protected:
+		const double m_alpha;
+
+		virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+		template <typename ElementType>
+		void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+	};
 }

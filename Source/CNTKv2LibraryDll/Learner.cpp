@@ -591,6 +591,47 @@ namespace CNTK
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
+    LearnerRmsPropGraves::LearnerRmsPropGraves(onst vector<Parameter>& parameters,
+                                   const LearningRateSchedule& learningRateSchedule,
+                                   const MomentumSchedule& momentumSchedule,
+                                   double alpha,
+                                   bool unitGain, 
+                                   AdditionalLearningOptions additionalOptions)
+                                   : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions, true),
+                                   m_alpha(alpha)
+    {
+        for (const auto& parameter : parameters)
+        {
+            const auto shape = GetMatrixShape(parameter);
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], shape[1] });
+            m_smoothedGradientValues.emplace(parameter, view);
+        }
+    }
+
+    LearnerRmsPropGraves::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
+                                            const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+    {
+        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    template <typename ElementType>
+    void LearnerRmsPropGraves::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, 
+                                const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        GET_WRITABLE_MATRICES;
+
+        const auto learningRate = LearningRate(trainingSampleCount);
+        const auto momentum = MomentumValueForMB(trainingSampleCount);
+
+        double& smoothedCount = m_smoothedCounts.at(parameter);
+
+        smoothedGradientValue.RmsPropGravesUpdate(*gradientMatrix, *parameterMatrix, 
+                                                  learningRate, momentum,
+                                                  ElementType(m_alpha),
+                                                  UseUnitGainMomentum()
+                                                  );
+    }
+
     // Explicit template instantiations
     template shared_ptr<Matrix<float>> LearnerBase::GetWritableMatrix<float>(const NDArrayViewPtr& arrayView);
     template shared_ptr<Matrix<double>> LearnerBase::GetWritableMatrix<double>(const NDArrayViewPtr& arrayView);
@@ -651,4 +692,14 @@ namespace CNTK
     {
         return MakeSharedObject<LearnerRMSProp>(parameters, learningRateSchedule, gamma, inc, dec, max, min, needAveMultiplier, additionalOptions);
     }
+
+	LearnerPtr RmsPropGravesLearner(const vector<Parameter>& parameters,
+									const LearningRateSchedule& learningRateSchedule,
+									const MomentumSchedule& momentumSchedule,
+									double alpha,
+									bool unitGain,
+									AdditionalLearningOptions additionalOptions)
+	{
+		return MakeSharedObject<LearnerRmsPropGraves>(parameters, learningRateSchedule, momentumSchedule, alpha, unitGain, additionalOption)
+	}
 }

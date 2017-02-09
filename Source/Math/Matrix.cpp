@@ -1691,6 +1691,25 @@ ElemType Matrix<ElemType>::RmsProp(Matrix<ElemType>& gradients,
     // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
 }
 
+
+template <class ElementType>
+ElementType Matrix<ElementType>::RmsPropGravesUpdate(Matrix<ElementType>& gradients, Matrix<ElementType>& functionValues, 
+                                               const double learningRatePerSample, const double momentum, 
+                                               ElementType alpha, bool unitGainMomentum=True)
+{
+    DecideAndMoveToRightDevice(*this, gradients);
+    DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
+        {   return m_CPUMatrix->RmsPropGravesUpdate(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, 
+                                                   learningRatePerSample, momentum,
+                                                   alpha, unitGainMomentum); 
+            SetDataLocation(CPU); 
+        },
+        { NOT_IMPLEMENTED; },
+        { NOT_IMPLEMENTED; },
+        { NOT_IMPLEMENTED; }
+    // Note: Since both 'this' and gradients are changed, we must call SetDataLocation() on 'this' as well.
+}
+
 template <class ElemType>
 void Matrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
