@@ -438,6 +438,9 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                     raise ValueError('you have %i sequences, but only %i '
                             'sequence begin markers' % (sample_size, len(seq_starts)))
 
+        if seq_starts is not None and isinstance(batch, cntk_py.Value):
+            raise ValueError('for directly passed Value objects sequence '
+                    'starts cannot be used yet.')
 
         if isinstance(batch, MinibatchData) and extract_values_from_minibatch_data:
             batch = batch.data
