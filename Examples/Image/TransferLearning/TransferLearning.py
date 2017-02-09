@@ -154,7 +154,7 @@ def eval_single_image(loaded_model, image_path, image_width, image_height):
 
 
 # Evaluates an image set using the provided model
-def eval_test_images(loaded_model, output_file, test_map_file, image_width, image_height, max_images=-1):
+def eval_test_images(loaded_model, output_file, test_map_file, image_width, image_height, max_images=-1, column_offset=0):
     num_images = sum(1 for line in open(test_map_file))
     if max_images > 0:
         num_images = min(num_images, max_images)
@@ -167,11 +167,11 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
         with open(test_map_file, "r") as input_file:
             for line in input_file:
                 tokens = line.rstrip().split('\t')
-                img_file = tokens[0]
+                img_file = tokens[0 + column_offset]
                 probs = eval_single_image(loaded_model, img_file, image_width, image_height)
 
                 pred_count += 1
-                true_label = int(tokens[1])
+                true_label = int(tokens[1 + column_offset])
                 predicted_label = np.argmax(probs)
                 if predicted_label == true_label:
                     correct_count += 1

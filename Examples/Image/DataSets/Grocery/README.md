@@ -3,7 +3,7 @@
 The Grocery dataset is a small toy data set that contains images of food items in a fridge. 
 
 The Grocery dataset is not included in the CNTK distribution but can be easily
-downloaded by cd to this directory, Examples/Image/DataSets/grocery and running the following Python command:
+downloaded by cd to this directory, Examples/Image/DataSets/Grocery and running the following Python command:
 
 `python install_grocery.py`
 

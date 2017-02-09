@@ -45,8 +45,8 @@ if __name__ == '__main__':
     # define location of model and data and check existence
     base_folder = os.path.dirname(os.path.abspath(__file__))
     model_file  = os.path.join(base_folder, "..", "PretrainedModels", "ResNet_18.model")
-    map_file    = os.path.join(base_folder, "..", "DataSets", "grocery", "test.txt")
-    os.chdir(os.path.join(base_folder, "..", "DataSets", "grocery"))
+    map_file    = os.path.join(base_folder, "..", "DataSets", "Grocery", "test.txt")
+    os.chdir(os.path.join(base_folder, "..", "DataSets", "Grocery"))
     if not (os.path.exists(model_file) and os.path.exists(map_file)):
         print("Please run 'python install_data_and_model.py' first to get the required data and model.")
         exit(0)
