@@ -97,14 +97,6 @@
     },
     {
         "category": ["Image"],
-        "name":  "MLP",
-        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/MLP#cntk-examples-imageclassificationmlp",
-        "description":  "Training a multilayer perceptron (MLP) network for image classification.",
-        "language":  ["Python", "BrainScript"],
-        "type":  ["Recipe"]
-    },
-    {
-        "category": ["Image"],
         "name":  "MNIST Feed Forward OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb",
         "description":  "Use Feed Forward networks on an OCR problem.",
@@ -391,7 +383,7 @@
         "language":  ["Python"],
         "type":  ["Recipe"]
     },
-	{
+    {
         "category": ["Text"],
         "name":  "Training with Sampled Softmax",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb",
