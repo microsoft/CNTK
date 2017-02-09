@@ -660,26 +660,6 @@ $(CNTKLIBRARY_CPP_EVAL_EXAMPLES): $(CNTKLIBRARY_CPP_EVAL_EXAMPLES_OBJ) | $(CNTKL
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) $(L_READER_LIBS)
 
 ########################################
-# BinaryReader plugin
-########################################
-
-BINARYREADER_SRC =\
-	$(SOURCEDIR)/Readers/BinaryReader/BinaryFile.cpp \
-	$(SOURCEDIR)/Readers/BinaryReader/BinaryReader.cpp \
-	$(SOURCEDIR)/Readers/BinaryReader/BinaryWriter.cpp \
-
-BINARYREADER_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(BINARYREADER_SRC))
-
-BINARY_READER:= $(LIBDIR)/BinaryReader.so
-
-#ALL_LIBS += $(BINARY_READER)
-#SRC+=$(BINARYREADER_SRC)
-
-$(BINARY_READER): $(BINARYREADER_OBJ) | $(CNTKMATH_LIB)
-	@echo $(SEPARATOR)
-	$(CXX) $(LDFLAGS) -shared $(patsubst %,-L%, $(LIBDIR) $(LIBPATH)) $(patsubst %,$(RPATH)%, $(ORIGINDIR) $(LIBPATH)) -o $@ $^ -l$(CNTKMATH)
-
-########################################
 # HTKMLFReader plugin
 ########################################
 
