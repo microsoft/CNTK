@@ -2,7 +2,7 @@ import os
 import xml.etree.ElementTree as ET
 import csv
 
-filepath = "C:/Users/mishar/Desktop/test2/" # set path of Labelme XML Files here include slash at end of path
+filepath = "C:/Your/Folder/Labelme/Files/" # set path of Labelme XML Files here include slash at end of path
 
 for filename in os.listdir(filepath):
     try:
