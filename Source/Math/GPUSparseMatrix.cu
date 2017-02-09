@@ -1148,6 +1148,7 @@ void GPUSparseMatrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const GPU
             {
                 RuntimeError("Only support c += alpha * a operation");
             }
+
             int blocksPerGrid = (int) ceil(1.0 * cRows / GridDim::maxThreadsPerBlock);
             SyncGuard syncGuard;
             for (int rowInB = 0; rowInB < l; rowInB++)
