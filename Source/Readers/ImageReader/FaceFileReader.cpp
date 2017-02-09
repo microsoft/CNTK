@@ -15,91 +15,28 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, const string& faceFile, const string &landmarkFile, int pointsCount = LANDMARK_POINTS_NUMBER)
 {
-    fprintf(stderr, "CacheFaceFileInfo faceFile %s\n", faceFile.c_str());
-    fprintf(stderr, "CacheFaceFileInfo landmarkFile %s\n", landmarkFile.c_str());
-
-    ////
-    //FILE *pf1 = fopen(faceFile.c_str(), "rb");
-    //std::ifstream fin1(landmarkFile.c_str());
-
-    //fprintf(stderr, "CacheFaceFileInfo fopen(faceFile.c_str(), \"rb\") %d\n", feof(pf1));
-    //fprintf(stderr, "CacheFaceFileInfo std::ifstream fin(landmarkFile.c_str()) %d %d\n", (int) fin1.is_open(), (int) fin1.good());
-
-    //fclose(pf1);
-    //fin1.close();
-
-    ////
-    //FILE *pf2 = fopen("\\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big", "rb");
-    //std::ifstream fin2("\\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big.pts");
-
-    //fprintf(stderr, "CacheFaceFileInfo fopen \\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big %d\n", feof(pf2));
-    //fprintf(stderr, "CacheFaceFileInfo std::ifstream \\\\hdfs\\facevc\\BigFiles_Fang\\train\\99991.big.pts %d %d\n", (int) fin2.is_open(), (int) fin2.good());
-
-    //fclose(pf2);
-    //fin2.close();
-    //
-    ////
-    //FILE *pf3 = fopen("/hdfs/pnrsy/sanjeevm/ImageNet/train.cntk.txt", "rb");
-    //std::ifstream fin3("\\hdfs\\pnrsy\\sanjeevm\\ImageNet\\train.cntk.txt");
-
-    //fprintf(stderr, "CacheFaceFileInfo fopen /hdfs/pnrsy/sanjeevm/ImageNet/train.cntk.txt %d\n", feof(pf3));
-    //fprintf(stderr, "CacheFaceFileInfo std::ifstream \\hdfs\\pnrsy\\sanjeevm\\ImageNet\\train.cntk.txt %d %d\n", (int) fin3.is_open(), (int) fin3.good());
-
-    //fclose(pf3);
-    //fin3.close();
-
-    ////
-    //FILE *pf4 = fopen("/hdfs/public/cifar-10/test_map_fullpath.txt", "rb");
-    //std::ifstream fin4("\\hdfs\\public\\cifar-10\\test_map_fullpath.txt");
-
-    //fprintf(stderr, "CacheFaceFileInfo fopen /hdfs/public/cifar-10/test_map_fullpath.txt %d\n", feof(pf4));
-    //fprintf(stderr, "CacheFaceFileInfo std::ifstream \\hdfs\\public\\cifar-10\\test_map_fullpath.txt %d %d\n", (int) fin4.is_open(), (int) fin4.good());
-
-    //fclose(pf4);
-    //fin4.close();
-
-    ////
-    //FILE *pf5 = fopen("//hdfs/public/cifar-10/test_map_fullpath.txt", "rb");
-    //std::ifstream fin5("\\\\hdfs\\public\\cifar-10\\test_map_fullpath.txt");
-
-    //fprintf(stderr, "CacheFaceFileInfo fopen //hdfs/public/cifar-10/test_map_fullpath.txt %d\n", feof(pf5));
-    //fprintf(stderr, "CacheFaceFileInfo std::ifstream \\\\hdfs\\public\\cifar-10\\test_map_fullpath.txt %d %d\n", (int) fin5.is_open(), (int) fin5.good());
-
-    //fclose(pf5);
-    //fin5.close();
-
     string tmpFaceFileName = faceFile.c_str(), tmpLandmarkFileName = landmarkFile.c_str();
 
+#ifndef _WIN32
     std::replace(begin(tmpFaceFileName), end(tmpFaceFileName), '\\', '/');
     std::replace(begin(tmpLandmarkFileName), end(tmpLandmarkFileName), '\\', '/');
-
-
-    fprintf(stderr, "CacheFaceFileInfo faceFile %s\n", tmpFaceFileName.c_str());
-    fprintf(stderr, "CacheFaceFileInfo landmarkFile %s\n", tmpLandmarkFileName.c_str());
+#endif
 
     FILE *pf = fopen(tmpFaceFileName.c_str(), "rb");
     std::ifstream fin(tmpLandmarkFileName.c_str());
     int tmp;
     fin >> tmp;
 
-    fprintf(stderr, "CacheFaceFileInfo i m prepare in %s\n", tmpFaceFileName.c_str());
-
     while (!feof(pf))
     {
         FaceFileInfo info;
-
-        fprintf(stderr, "CacheFaceFileInfo i m in 1 %s\n", tmpFaceFileName.c_str());
 
         // read big file
         int n_file_name;
         if (!fread(&n_file_name, sizeof(int), 1, pf)) break;
 
-        fprintf(stderr, "CacheFaceFileInfo i m in 2 %s\n", tmpFaceFileName.c_str());
-
         fseek(pf, n_file_name, SEEK_CUR);
         info.Offset = ftell(pf);
-
-        fprintf(stderr, "CacheFaceFileInfo i m in 3 %s\n", tmpFaceFileName.c_str());
 
         int content_length;
         if (!fread(&content_length, sizeof(int), 1, pf)) content_length = 0;
@@ -256,8 +193,11 @@ cv::Mat FaceFileByteReader::Read(size_t seqId, const std::string& seqPath, bool 
 
     const auto &info = m_cacheInfo[m_bigFileIds[bigFileId]][imageId-1];
 
-    fprintf(stderr, "FaceFileByteReader::Read bigFileId %d\n", (int) bigFileId);
-    fprintf(stderr, "FaceFileByteReader::Read bigFilePath %s, %s, %s\n", bigFilePath.c_str(), seqPath.c_str(), m_expendDirectory.c_str());
+    string tmpbigFilePathName = bigFilePath.c_str();
+
+#ifndef _WIN32
+    std::replace(begin(tmpbigFilePathName), end(tmpbigFilePathName), '\\', '/');
+#endif
 
     FILE *pFile = fopen(bigFilePath.c_str(), "rb");
     fseek(pFile, (long) info.Offset, SEEK_SET);
