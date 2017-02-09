@@ -188,7 +188,7 @@ cv::Mat FaceFileByteReader::Read(size_t seqId, const std::string& seqPath, bool 
 
     const auto &info = m_cacheInfo[m_bigFileIds[bigFileId]][imageId-1];
 
-    fprintf(stderr, "FaceFileByteReader::Read bigFileId %llu\n", bigFileId);
+    fprintf(stderr, "FaceFileByteReader::Read bigFileId %d\n", (int) bigFileId);
     fprintf(stderr, "FaceFileByteReader::Read bigFilePath %s, %s, %s\n", bigFilePath.c_str(), seqPath.c_str(), m_expendDirectory.c_str());
 
     FILE *pFile = fopen(bigFilePath.c_str(), "rb");

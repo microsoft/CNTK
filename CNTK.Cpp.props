@@ -44,9 +44,11 @@
     <HasBoost>false</HasBoost>
     <HasBoost Condition="Exists('$(BOOST_INCLUDE_PATH)') And Exists('$(BOOST_LIB_PATH)')">true</HasBoost>
 
+	<UseFaceFile>true</UseFaceFile>
+	
     <UseZip>false</UseZip>
     <UseZip Condition="Exists('$(ZLIB_PATH)')">true</UseZip>
-
+	
     <HasMultiverso>false</HasMultiverso>
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
@@ -87,6 +89,10 @@
     <ZipDefine>USE_ZIP</ZipDefine>
     <ZipLibPath>$(ZLIB_PATH)\lib;</ZipLibPath>
     <ZipLibs>zlib.lib;zip.lib;</ZipLibs>
+  </PropertyGroup>
+  
+  <PropertyGroup Condition="$(UseFaceFile)">
+    <FaceFileDefine>USE_FACE_FILE</FaceFileDefine>
   </PropertyGroup>
 
   <PropertyGroup Condition="Exists('$(OPENCV_PATH)')">
