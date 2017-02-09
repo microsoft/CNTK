@@ -40,7 +40,6 @@ public:
 };
 
 
-#define USE_FACE_FILE
 #ifdef USE_FACE_FILE
 
 static const auto FACE_FILE_BYTE_READER_NAME = "FaceFileByteReader";
