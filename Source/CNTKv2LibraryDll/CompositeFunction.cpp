@@ -342,6 +342,34 @@ namespace CNTK
     // when the new CNTK v2 model serialization format is ready.
     /*static*/ const std::wstring CompositeFunction::InternalDefaultDynamicAxisName = L"*";
     /*static*/ const std::wstring CompositeFunction::InternalNoSequenceAxisName = L"__noSequenceAxis";
+	
+		void DumpInputsTree(const Variable &var, const int &level)
+		{
+			auto owner = var.Owner();
+			if(level>20)
+				return;
+
+			if(owner == nullptr)
+				return;
+			auto p_inputs = owner->Inputs();
+					
+			if(p_inputs.size() == 0)
+				return;
+			
+			fprintf(stderr, ">>>\n");
+			for(auto iter = p_inputs.begin(); iter != p_inputs.end(); iter++)
+			{
+				fprintf(stderr, "%d|%S<=Input %S with shape %S!\n", level, ParanthesizedName(owner->Name()).c_str(), ParanthesizedName(iter->Name()).c_str(), iter->Shape().AsString().c_str());
+			}
+			fprintf(stderr, "===\n");
+			for(auto iter = p_inputs.begin(); iter != p_inputs.end(); iter++)
+			{
+				if(iter->Shape().IsUnknown())
+				{
+					DumpInputsTree(*iter, level+1);
+				}
+			}
+		}
 
     // Recursively create a sub-network of ComputationNode instances corresponding to the graph of Functions 
     // underlying the specified 'variable' and return the ComputationNode instance that corresponds to the 
@@ -366,7 +394,13 @@ namespace CNTK
             InvalidArgument("Variable%S with unknown DataType detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
 
         if (variable.Shape().IsUnknown())
-            InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+				{
+
+					fprintf(stderr, "Variable%S with unknown shape detected when compiling the Function graph, owner: %S!\n", ParanthesizedName(variable.Name()).c_str(), ParanthesizedName(variable.Owner()->Name()).c_str());
+					DumpInputsTree(variable, 0);
+					fprintf(stderr, "Quit\n");
+					InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+				}
 
         if (variable.Shape().HasInferredDimension())
             InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
