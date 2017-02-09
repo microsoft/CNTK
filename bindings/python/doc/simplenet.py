@@ -40,7 +40,7 @@ def ffnet():
 
     # Instantiate the trainer object to drive the model training
     lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
-    trainer = C.Trainer(z, ce, pe, [sgd(z.parameters, lr=lr_per_minibatch)])
+    trainer = C.Trainer(z, (ce, pe), [sgd(z.parameters, lr=lr_per_minibatch)])
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25

@@ -62,7 +62,7 @@ def deconv_mnist(max_epochs=3):
 
     # Instantiate the trainer object to drive the model training
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=True)
-    trainer = cntk.Trainer(z, rmse_loss, rmse_eval, learner)
+    trainer = cntk.Trainer(z, (rmse_loss, rmse_eval), learner)
 
     # define mapping from reader streams to network inputs
     input_map = {

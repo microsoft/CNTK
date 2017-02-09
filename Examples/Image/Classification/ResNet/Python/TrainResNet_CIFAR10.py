@@ -88,7 +88,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     # trainer object
     learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                                l2_regularization_weight = l2_reg_weight)
-    trainer     = Trainer(z, ce, pe, learner)
+    trainer     = Trainer(z, (ce, pe), learner)
 
     # define mapping from reader streams to network inputs
     input_map = {

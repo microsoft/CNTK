@@ -65,7 +65,7 @@ def simple_mnist(debug_output=False):
 
     lr_per_minibatch=learning_rate_schedule(0.2, UnitType.minibatch)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(z, ce, pe, sgd(z.parameters, lr=lr_per_minibatch))
+    trainer = Trainer(z, (ce, pe), sgd(z.parameters, lr=lr_per_minibatch))
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 64

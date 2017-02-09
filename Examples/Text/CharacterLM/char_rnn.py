@@ -167,7 +167,7 @@ def train_lm(training_file, max_num_minibatches):
     learner = momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-    trainer = Trainer(z, ce, errs, learner)
+    trainer = Trainer(z, (ce, errs), learner)
 
     sample_freq = 1000
     epochs = 50

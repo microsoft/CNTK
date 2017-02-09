@@ -112,7 +112,7 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
     lr_schedule = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch)
     mm_schedule = momentum_schedule(momentum_per_mb)
     learner = momentum_sgd(tl_model.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    trainer = Trainer(tl_model, ce, pe, learner)
+    trainer = Trainer(tl_model, (ce, pe), learner)
 
     # Get minibatches of images and perform model training
     print("Training transfer learning model for {0} epochs (epoch_size = {1}).".format(num_epochs, epoch_size))

@@ -996,7 +996,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
         array([[ 17.],
                [ 39.]], dtype=float32)
 
-        >>> C.times(1.*np.reshape(np.arange(8), (2.,2.,2.)),1.*np.reshape(np.arange(8), (2.,2.,2.)), output_rank=1).eval()
+        >>> C.times(1.*np.reshape(np.arange(8), (2,2,2)),1.*np.reshape(np.arange(8), (2,2,2)), output_rank=1).eval()
         array([[ 28.,  34.],
                [ 76.,  98.]])
 

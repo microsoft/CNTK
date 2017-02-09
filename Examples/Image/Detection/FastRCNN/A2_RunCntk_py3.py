@@ -160,7 +160,7 @@ def train_fast_rcnn(debug_output=False):
 
     # Instantiate the trainer object
     learner = momentum_sgd(frcn_output.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    trainer = Trainer(frcn_output, ce, pe, learner)
+    trainer = Trainer(frcn_output, (ce, pe), learner)
 
     # Get minibatches of images and perform model training
     print("Training Fast R-CNN model for %s epochs." % max_epochs)
