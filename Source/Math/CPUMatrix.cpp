@@ -6438,6 +6438,25 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     }
 }
 
+template <class ElemType>
+void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+                                      const array<size_t, 2>& offsets,
+                                      const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                      const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    if (reductionOp != ElementWiseOperator::opArgmin &&
+        reductionOp != ElementWiseOperator::opArgmax)
+        InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
+
+    aShape;
+    a;
+    offsets;
+    regularOpDims;
+    regularStrides;
+    reducingOpDims;
+    reducingStrides;
+}
+
 // =======================================================================
 // explicit instantiations
 // =======================================================================

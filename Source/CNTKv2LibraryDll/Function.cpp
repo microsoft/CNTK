@@ -1339,14 +1339,6 @@ namespace CNTK
 
     FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name)
     {
-        /*
-        auto operandPlaceholder = PlaceholderVariable();
-        auto positive = ReLU(operandPlaceholder);
-        auto negative = ElementTimes(alpha, 
-                                     ElementTimes(Minus(operandPlaceholder, Abs(operandPlaceholder)),
-                                                  Constant::Scalar(operand.GetDataType(), 0.5)));
-        auto result = Plus(positive, negative);
-        */
         auto operandPlaceholder = PlaceholderVariable();
         auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
         auto result = ElementSelect(lessThanZero,
@@ -1358,12 +1350,12 @@ namespace CNTK
 
     FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMaxReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgmaxReductionOpName, axis, name);
     }
 
     FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
-        return Internal::ReduceElements(operand, PrimitiveFunction::InternalMinReductionOpName, axis, name);
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgminReductionOpName, axis, name);
     }
 
     namespace Sequence

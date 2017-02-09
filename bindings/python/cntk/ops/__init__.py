@@ -2197,6 +2197,46 @@ def reduce_min(x, axis=None, name=''):
     axis = sanitize_axis(axis)
     return reduce_min(x, axis, name)
 
+@typemap
+def argmax(x, axis=None, name=''):
+    '''
+    Computes the argmax of the input tensor's elements across the specified axis.
+
+    Example:
+
+    Args:
+        x: input tensor
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import argmax
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return argmax(x, axis, name)
+
+@typemap
+def argmin(x, axis=None, name=''):
+    '''
+    Computes the argmin of the input tensor's elements across the specified axis.
+
+    Example:
+
+    Args:
+        x: input tensor
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import argmin
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return argmin(x, axis, name)
+
 #######################################################################
 # training ops
 #######################################################################

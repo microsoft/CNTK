@@ -378,6 +378,9 @@ public:
     ElemType SumOfElements() const;    // sum of all elements
     GPUMatrix<ElemType>& AssignSumOfElements(const GPUMatrix<ElemType>& a);
 
+    int Argmin() const;
+    int Argmax() const;
+    ElemType Min() const;
     ElemType Max() const;
     bool IsEqualTo(const GPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
@@ -544,6 +547,11 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+    void TensorArgOp(const TensorShape& aShape, const GPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+                     const std::array<size_t, 2>& offsets,
+                     const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                     const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
     static void CreateCurandObject(unsigned long seed, const char* caller);
     static void ResetCurandObject(unsigned long seed, const char* caller);

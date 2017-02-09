@@ -92,7 +92,7 @@ enum ElementWiseOperator
     opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
     // binary
     opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
-    opMax, opMin,
+    opMax, opMin, opArgmax, opArgmin,
     opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
     opAnd, opOr, opXor, opMaskNegative,
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,

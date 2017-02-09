@@ -439,6 +439,11 @@ public:
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
 
+    void TensorArgOp(const TensorShape& aShape, const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+                     const std::array<size_t, 2>& offsets,
+                     const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                     const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
+
     static CPUMatrix<ElemType> Ones(const size_t rows, const size_t cols);
     static CPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols);
     static CPUMatrix<ElemType> Eye(const size_t rows);
