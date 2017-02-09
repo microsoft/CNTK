@@ -304,3 +304,17 @@ def test_not_replaced_placeholders():
     x0 = [[1, 1],[2, 2]]
     with pytest.raises(RuntimeError):
         model.forward({x : x0}, model.outputs)
+
+def test_disallow_seq_starts_with_Value_objects():
+    one_hot_batch = [[2,5], [0,1,6]]
+    dim = 10
+
+    in1 = input_variable(shape=(dim,), is_sparse=True)
+    z = times(in1, np.eye(dim))
+    batch = one_hot(one_hot_batch, num_classes=dim)
+
+    with pytest.raises(ValueError):
+        result = z.eval(({in1: batch}, len(batch)*[True]))
+
+    with pytest.raises(ValueError):
+        result = z.eval({in1: (batch, len(batch)*[True])})
