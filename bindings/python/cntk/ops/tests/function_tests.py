@@ -21,6 +21,17 @@ def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
     assert op.shape == (3,4)
 
+def test_eval_by_node_name():
+    i = input_variable(shape=(1,),
+                       needs_gradient=True,
+                       name='i')
+    res = i + 3
+
+    assert res.eval({i: [[3]]}) == [6]
+    assert res.eval({'i': [[3]]}) == [6]
+    assert res.eval({u'i': [[3]]}) == [6]
+
+    
 def test_replace_placeholders():
     p = placeholder_variable(shape=(1,))
     i = input_variable(shape=(1,),
