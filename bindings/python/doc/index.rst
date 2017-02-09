@@ -25,6 +25,7 @@ them on sample data in real time. Please give feedback through these `channels`_
    Examples <examples>
    Layers Library Reference  <layerref>
    Python API Reference <apireference>
+   Readers, Multi-GPU, Profiling...<readersprofetc>
    Extending CNTK <extend>
    Known Issues <knownissues>
 
