@@ -88,24 +88,8 @@ namespace CNTK
 #endif
 
     template <class E>
-    __declspec_noreturn inline void ThrowFormatted(const char* format, ...)
-    {
-        va_list args;
-        va_start(args, format);
+    CNTK_API __declspec_noreturn void ThrowFormatted(const char* format, ...);
 
-        char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
-        int written = vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
-        // TODO: In case of EILSEQ error, choose between just outputting the raw format itself vs. continuing the half-completed buffer
-        //if (written < 0) // an invalid wide-string conversion may lead to EILSEQ
-        //    strncpy(buffer, format, _countof(buffer)
-        UNUSED(written); // pre-VS2015 vsnprintf() returns -1 in case of overflow, instead of the #characters written
-        if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
-            sprintf(buffer + _countof(buffer) - 4, "...");
-
-        // TODO: Should use ExceptionWithCallStack; temporarily using std::exception to avoid duplicating headers
-        //throw ExceptionWithCallStack<E>(buffer, ExceptionWithCallStack<E>::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true));
-        throw E(buffer);
-    }
 #pragma warning(pop)
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
