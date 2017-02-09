@@ -73,8 +73,11 @@ else:
     libname_rt_ext = '.so'
 
 
-rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
-                                                      '*' + libname_rt_ext))]
+if 'CNTK_LIBRARIES' in os.environ:
+  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split()]
+else:
+  rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
+                                                        '*' + libname_rt_ext))]
 
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set
