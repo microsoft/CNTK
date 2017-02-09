@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include <opencv2/opencv.hpp>
 #include "ByteReader.h"
+#include "ConfigUtil.h"
 
 #ifdef USE_FACE_FILE
 #include <File.h>
@@ -14,6 +15,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, const string& faceFile, const string &landmarkFile, int pointsCount = LANDMARK_POINTS_NUMBER)
 {
+    fprintf(stderr, "CacheFaceFileInfo faceFile %s\n", faceFile.c_str());
+    fprintf(stderr, "CacheFaceFileInfo landmarkFile %s\n", landmarkFile.c_str());
     FILE *pf = fopen(faceFile.c_str(), "rb");
     std::ifstream fin(landmarkFile.c_str());
     int tmp;
@@ -23,10 +26,12 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
         FaceFileInfo info;
 
         // read big file
-        int n_file_name, ret_value;
+        int n_file_name;
         if (!fread(&n_file_name, sizeof(int), 1, pf)) break;
         fseek(pf, n_file_name, SEEK_CUR);
         info.Offset = ftell(pf);
+
+        fprintf(stderr, "CacheFaceFileInfo i m in %s\n", faceFile.c_str());
 
         int content_length;
         if (!fread(&content_length, sizeof(int), 1, pf)) content_length = 0;
@@ -154,12 +159,13 @@ void FaceFileByteReader::CropAndScaleFaceImage(const cv::Mat &input_image, int i
     }
 }
 
-cv::Mat FaceFileByteReader::Read(size_t seqId, const std::string& path, bool grayscale)
+cv::Mat FaceFileByteReader::Read(size_t seqId, const std::string& seqPath, bool grayscale)
 {
     UNUSED(seqId);
     UNUSED(grayscale);
 
-    assert(!path.empty());
+    assert(!seqPath.empty());
+    auto path = Expand3Dots(seqPath, m_expendDirectory);
 
     auto atPos = path.find_last_of('@');
     auto bigFilePath = path.substr(0, atPos);

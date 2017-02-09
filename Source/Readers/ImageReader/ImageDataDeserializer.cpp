@@ -264,6 +264,7 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
             if (lastSlashPos != std::string::npos)
             {
                 ((FaceFileByteReader*) reader.get())->SetDirectory(directory);
+                ((FaceFileByteReader*) reader.get())->SetExpandDirectory(expandDirectory);
             }
         }
         else

@@ -77,7 +77,7 @@ public:
     }
 
     void Register(const std::map<std::string, size_t>&) override;
-    cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
+    cv::Mat Read(size_t seqId, const std::string& seqPath, bool grayscale) override;
 
     void SetBigFileId(size_t id)
     {
@@ -90,6 +90,10 @@ public:
     void SetDirectory(std::string str)
     {
         m_directory = str;
+    }
+    void SetExpandDirectory(std::string str)
+    {
+        m_expendDirectory = str;
     }
 
     struct FaceFileInfo
@@ -116,6 +120,7 @@ private:
 
     int m_bigFilesCount;
     std::string m_directory;
+    std::string m_expendDirectory;
 
     std::unordered_map<size_t, int> m_bigFileIds;
     std::vector<std::vector<FaceFileInfo>> m_cacheInfo;
