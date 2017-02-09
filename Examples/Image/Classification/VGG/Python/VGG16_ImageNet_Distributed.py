@@ -16,9 +16,7 @@ from cntk.utils import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.blocks import Placeholder, Block
-from cntk.layers import Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options
-from cntk.models import Sequential, LayerStack
+from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential, LayerStack
 from cntk.initializer import normal
 
 # default Paths relative to current python file.

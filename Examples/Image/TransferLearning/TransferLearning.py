@@ -9,7 +9,7 @@ import numpy as np
 import os
 from PIL import Image
 from cntk import load_model, Trainer, UnitType
-from cntk.blocks import Placeholder, Constant
+from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, get_node_outputs
 from cntk.io import MinibatchSource, ImageDeserializer
 from cntk.layers import Dense

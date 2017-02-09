@@ -29,7 +29,6 @@ you can use the alternative :ref:`sequential` notation:
 ::
 
     from layers import *
-    from models import *
     my_model = Sequential ([
         Dense(1024, activation=relu),
         Dense(9000, activation=softmax)
@@ -153,7 +152,6 @@ it with a recurrent LSTM, and then classifies each word:
 ::
 
     from layers import *
-    from models import *
     tagging_model = Sequential ([
         Embedding(150),         # embed into a 150-dimensional vector
         Recurrence(LSTM(300)),  # forward LSTM

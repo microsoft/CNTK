@@ -6,7 +6,7 @@
 
 from __future__ import print_function
 from cntk import Trainer, UnitType, load_model
-from cntk.blocks import Placeholder, Constant
+from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, plot
 from cntk.initializer import glorot_uniform
 from cntk.io import ReaderConfig, ImageDeserializer, CTFDeserializer

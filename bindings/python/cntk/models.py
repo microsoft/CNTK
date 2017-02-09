@@ -14,7 +14,6 @@ import os
 import time
 
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
-#from cntk.layers import *
 from .utils import Record
 from cntk import combine
 from .blocks import identity, Block
