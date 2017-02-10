@@ -6146,6 +6146,63 @@ struct TensorOpReduction<ElemType, OPFN, ReductionOp, N, -1>
     }
 };
 
+// perform loop over reduction index m
+// This function is declared inside a wrapper struct to allow partial specialization (m = -1).
+template <class ElemType, size_t N, int m>
+struct TensorArgOpReduction
+{
+    // reduction case (non-reduction case is specialized)
+    static inline ElemType Loop(array<ElemType*, N> pointers, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides,
+        ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+    {
+        array<ptrdiff_t, N - 1> strides;   // N-1 because last one is the result pointer, which is unused in reduction
+        for (size_t i = 0; i < N - 1; i++) // N = a small constant, this will be unrolled
+            strides[i] = reducingStrides[i][(size_t)m];
+
+        ElemType aggregate = TensorArgOpReduction<ElemType, N, m - 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+        for (size_t dim = reducingOpDims[(size_t)m] - 1; dim-- > 0;)
+        {
+            // advance the pointers
+            for (size_t i = 0; i < N - 1; i++)
+                pointers[i] += strides[i]; // note: last pointer (result) is unused and untouched here
+
+            ElemType val = TensorArgOpReduction<ElemType, N, m - 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+
+            bool update = false;
+            switch (reductionOp)
+            {
+            case ElementWiseOperator::opArgmin:
+                update = (aggregate > val);
+                break;
+            case ElementWiseOperator::opArgmax:
+                update = (aggregate < val);
+                break;
+            }
+
+            if (update)
+            {
+                aggregate = val;
+                index = counter - 1;
+            }
+        }
+
+        return aggregate;
+    }
+};
+
+// perform loop over reduction index m
+// This is the specialized version for m = -1, which terminates the recursion.
+template <class ElemType, size_t N>
+struct TensorArgOpReduction<ElemType, N, -1>
+{
+    static inline ElemType Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&, ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+    {
+        counter++;
+        return *pointers[0]; // finally we are doing some work!!!
+    }
+};
+
 // -----------------------------------------------------------------------
 // perform loop over regular index k for N-nary operations (N counting the output)
 // -----------------------------------------------------------------------
@@ -6439,6 +6496,109 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
 }
 
 template <class ElemType>
+int CPUMatrix<ElemType>::Argmin() const
+{
+    int minArg = -1;
+    ElemType minValue = std::numeric_limits<ElemType>::max();
+
+#pragma omp parallel 
+    {
+        int localMinArg = -1;
+        ElemType localMinValue = std::numeric_limits<ElemType>::max();
+
+        #pragma omp for
+        for (int index = 0; index < (int)GetNumElements(); ++index)
+        {
+            if (localMinValue > Data()[index])
+            {
+                localMinArg = index;
+                localMinValue = Data()[index];
+            }
+            // If we have more then one min value, select the one with lower index.
+            else if ((localMinValue == Data()[index]) && (localMinArg > index))
+            {
+                localMinArg = index;
+            }
+        }
+
+        #pragma omp critical
+        {
+            if (minValue > localMinValue)
+            {
+                minArg = localMinArg;
+                minValue = localMinValue;
+            }
+            // If we have more then one min value, select the one with lower index.
+            else if ((minValue == localMinValue) && (minArg > localMinArg))
+            {
+                minArg = localMinArg;
+            }
+        }
+    }
+    return minArg;
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::Argmax() const
+{
+    int maxArg = -1;
+    ElemType maxValue = std::numeric_limits<ElemType>::min();
+
+#pragma omp parallel 
+    {
+        int localMaxArg = -1;
+        ElemType localMaxValue = std::numeric_limits<ElemType>::min();
+
+#pragma omp for
+        for (int index = 0; index < (int)GetNumElements(); ++index)
+        {
+            if (localMaxValue < Data()[index])
+            {
+                localMaxArg = index;
+                localMaxValue = Data()[index];
+            }
+            // If we have more then one max value, select the one with lower index.
+            else if ((localMaxValue == Data()[index]) && (localMaxArg > index))
+            {
+                localMaxArg = index;
+            }
+        }
+
+#pragma omp critical
+        {
+            if (maxValue < localMaxValue)
+            {
+                maxArg = localMaxArg;
+                maxValue = localMaxValue;
+            }
+            // If we have more then one max value, select the one with lower index.
+            else if ((maxValue == localMaxValue) && (maxArg > localMaxArg))
+            {
+                maxArg = localMaxArg;
+            }
+        }
+    }
+    return maxArg;
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::ArgOp(ElementWiseOperator reductionOp) const
+{
+    switch (reductionOp)
+    {
+        case ElementWiseOperator::opArgmin:
+            return Argmin();
+            break;
+        case ElementWiseOperator::opArgmax:
+            return Argmax();
+            break;
+    }
+
+    InvalidArgument("ArgOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
+    return -1;
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
                                       const array<size_t, 2>& offsets,
                                       const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
@@ -6448,13 +6608,93 @@ void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix
         reductionOp != ElementWiseOperator::opArgmax)
         InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
 
+    if (GetNumElements() == 1)
+    {
+        Data()[0] = (ElemType) a.ArgOp(reductionOp);
+    }
+    else
+    {
+        const size_t N = 2;
+        array<ElemType*, N> pointers = { a.Data(), Data() };
+        for (size_t i = 0; i < N; i++)
+            pointers[i] += offsets[i];
+
+        array<ElemType*, N> currentPtrs = { pointers[0], pointers[1] };
+        for (size_t k = 1; k <= regularOpDims.size(); k++)
+        {
+            size_t regularDimCount = 0;
+            if ((k == regularOpDims.size()) && (regularOpDims.size() == 1))
+                regularDimCount = 1;
+            else if (k < regularOpDims.size())
+                regularDimCount = regularOpDims[k];
+
+            for (size_t regularDim = regularDimCount; regularDim-- > 0;)
+            {
+                for (size_t regularDim2 = regularOpDims[k-1]; regularDim2-- > 0;)
+                {
+                    size_t counter = 0;
+                    size_t index = 0;
+
+                    switch (reducingOpDims.size())
+                    {
+                    case 3:
+                        TensorArgOpReduction<ElemType, N, 2>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+                        break;
+                    case 2:
+                        TensorArgOpReduction<ElemType, N, 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+                        break;
+                    case 1:
+                        TensorArgOpReduction<ElemType, N, 0>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+                        break;
+                    }
+
+                    /*
+                    ElemType *inputPtr = pointers[0];
+                    ElemType aggregate = *inputPtr;
+                    counter++;
+
+                    for (size_t m = 0; m < reducingOpDims.size(); m++)
+                    {
+                        for (size_t reducingDim = reducingOpDims[m] - 1; reducingDim-- > 0;)
+                        {
+                            counter++;
+                            inputPtr += reducingStrides[0][m];
+
+                            bool update = false;
+                            switch (reductionOp)
+                            {
+                            case ElementWiseOperator::opArgmin:
+                                update = (aggregate > *inputPtr);
+                                break;
+                            case ElementWiseOperator::opArgmax:
+                                update = (aggregate < *inputPtr);
+                                break;
+                            }
+
+                            if (update)
+                            {
+                                aggregate = *inputPtr;
+                                index = counter - 1;
+                            }
+                        }
+                    }
+                    */
+
+                    *pointers[1] = (ElemType) index;
+                     for (size_t i = 0; i < N; i++)
+                         currentPtrs[i] += regularStrides[i][k - 1];
+                }
+            }
+
+            if (k < regularOpDims.size())
+            {
+                for (size_t i = 0; i < N; i++)
+                    currentPtrs[i] = pointers[i] + regularStrides[i][k];
+            }
+        }
+    }
+
     aShape;
-    a;
-    offsets;
-    regularOpDims;
-    regularStrides;
-    reducingOpDims;
-    reducingStrides;
 }
 
 // =======================================================================
