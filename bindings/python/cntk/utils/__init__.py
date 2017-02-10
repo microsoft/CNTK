@@ -19,6 +19,12 @@ from .progress_print import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
+def is_string(s):
+    '''
+    Tests whether ``s`` is a string in a way that works on Python 2 and 3.
+    '''
+    return isinstance(s, ("".__class__, u"".__class__))
+
 def sanitize_precision(precision):
     '''
     Converts precision to NumPy precision
@@ -406,7 +412,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
     var_map = {}
     for var, batch in arguments.items():
-        if isinstance(var, str):
+        if is_string(var):
             if name_counter[var] == 0:
                 raise ValueError('variable with name "%s" does not exist in the network. Available variable names: %s' % (
                     var, ", ".join(var_name_map)))
@@ -438,6 +444,9 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                     raise ValueError('you have %i sequences, but only %i '
                             'sequence begin markers' % (sample_size, len(seq_starts)))
 
+        if seq_starts is not None and isinstance(batch, cntk_py.Value):
+            raise ValueError('for directly passed Value objects sequence '
+                    'starts cannot be used yet.')
 
         if isinstance(batch, MinibatchData) and extract_values_from_minibatch_data:
             batch = batch.data
@@ -462,7 +471,7 @@ def _ones_like(batch, precision):
 
 def sanitize_dtype_numpy(dtype):
     is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
-    is_str = isinstance(dtype, str)
+    is_str = is_string(dtype)
     if is_type and dtype in (int, np.float32) or \
             hasattr(dtype, 'kind') and dtype.kind in 'iu' \
             or is_str and dtype in ('float', 'float32'):
