@@ -364,11 +364,11 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     with pytest.warns(Warning):
         op = batch_normalization(a, scale, bias, run_mean, run_variance, False,
-            #no running_sample_count here, 
+            #no running_count here, 
             epsilon=epsilon, use_cudnn_engine=use_cudnn)
 
-    op_node = batch_normalization(a, scale, bias, run_mean, run_variance, False,
-        running_sample_count=run_count, epsilon=epsilon, use_cudnn_engine=use_cudnn)
+    op_node = batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=False,
+        epsilon=epsilon, use_cudnn_engine=use_cudnn)
 
     forward_input = {a: t}
 

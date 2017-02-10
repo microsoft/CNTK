@@ -321,7 +321,7 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
     input_data2.shape = (1, 1) + input_data2.shape
 
     # splice using the operator
-    root_op = C.splice((a, b), axis, name='splice_ab')
+    root_op = C.splice(a, b, axis=axis, name='splice_ab')
 
     forward_input = {a: input_data1, b: input_data2}
 

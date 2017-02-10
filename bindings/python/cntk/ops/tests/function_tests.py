@@ -227,7 +227,7 @@ def test_clone_with_function_in_substitution_map():
 def test_clone_with_slice(): 
     i1 = input_variable((2,2), name='i1')
     i2 = input_variable((2,2), name='i2')
-    x = splice((i1,i2), 0) 
+    x = splice(i1, i2, axis=0) 
     W = constant(1, (4,1), name='W') 
     y = convolution(W, x)
     assert(y.shape == (4,2)) 

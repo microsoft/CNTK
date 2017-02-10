@@ -151,6 +151,13 @@ class Function(cntk_py.Function):
         Returns:
             :class:`~cntk.ops.functions.Function`: the cloned Function
         '''
+        # C++ clone() can only clone composites. If we are not a composite, make it one using combine()
+        if not self.is_composite:
+            from cntk import combine
+            #return combine([self]).clone(method, substitutions).root_function.arguments[0].owner
+            # BUGBUG: This ^^ does not give me the correct .arguments, so we leave the extra combine() in for now.
+            return combine([self]).clone(method, substitutions)
+
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         substitutions = substitutions or {}

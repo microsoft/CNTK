@@ -719,7 +719,7 @@ dimension compared to above), use this:
 
     h_fwd = Recurrence(LSTM(150))(e)
     h_bwd = Recurrence(LSTM(150), go_backwards=True)(e)
-    h = splice ([h_fwd, h_bwd])
+    h = splice (h_fwd, h_bwd)
 
 .. _lstm:
 
@@ -847,8 +847,8 @@ vector:
 
     x  = ...                   # input value, e.g. a N-dimensional one-hot vector
     xp = Delay()(x)            # previous value
-    xn = Delay(T=-1)(x)         # next value (negative delay)
-    tg = splice ([xp, x, xn])  # concatenate all into a 3N-dimensional three-hot vector
+    xn = Delay(T=-1)(x)        # next value (negative delay)
+    tg = splice (xp, x, xn)    # concatenate all into a 3N-dimensional three-hot vector
 
 BatchNormalization(), LayerNormalization(), Stabilizer()
 --------------------------------------------------------
