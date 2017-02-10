@@ -94,28 +94,32 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         size_t globalSamplesRead = 0, localSamplesRead = 0;
         while (m_currentChunkCursor < m_randomizedChunks.size() &&
-               (localSamplesRead < localSampleCount && globalSamplesRead < globalSampleCount))
+               localSamplesRead < localSampleCount &&
+               globalSamplesRead < globalSampleCount)
         {
             size_t sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
             const RandomizedSequenceDescription* sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
             int sequenceLength = (int)sequence->m_numberOfSamples;
             bool isLocal = isLocalSequence(sequence);
+            bool enoughData = !sequences.empty() || !atLeastOneSequenceNeeded;
 
-            // Let's check whether we need to return this sequence or skip it.
-            if ((sequences.empty() && atLeastOneSequenceNeeded) ||
-                ((localSamplesRead + sequenceLength <= localSampleCount) && (globalSamplesRead + sequenceLength <= globalSampleCount)))
-            {
-                if (isLocal) // Ok good to add it to the result.
-                {
-                    sequences.push_back(*sequence);
-                    localSamplesRead += sequenceLength;
-                }
-                // even when the next sequence is not local, somebody else would return it, so
-                // we need to ivalidate the 'atLeastOneSequenceNeeded' flag.
-                atLeastOneSequenceNeeded = false; 
-            }
-            else // otherwise there is no room, return what we have.
+            // Let's check whether we need to break because we exceeded global counter.
+            if (enoughData && globalSamplesRead + sequenceLength > globalSampleCount)
                 break;
+
+            // Let's check whether we need to break because we exceeded local counter.
+            if (enoughData && isLocal && localSamplesRead + sequenceLength > localSampleCount)
+                break;
+
+            if (isLocal) // Ok good to add it to the result.
+            {
+                sequences.push_back(*sequence);
+                localSamplesRead += sequenceLength;
+            }
+
+            // even when the next sequence is not local, somebody else would return it, so
+            // we need to ivalidate the 'atLeastOneSequenceNeeded' flag.
+            atLeastOneSequenceNeeded = false; 
 
             globalSamplesRead += sequenceLength;
 
