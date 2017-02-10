@@ -684,9 +684,9 @@ def load_model(filename, device=None):
 
 @typemap
 def save_model(model, filename): # legacy name
-     import warnings
-     warnings.warn('This will be removed in future versions. Please use '
-             'model.save(...) instead', DeprecationWarning)
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'model.save(...) instead', DeprecationWarning)
     return model.save(filename)
 
 
