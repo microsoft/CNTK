@@ -40,6 +40,8 @@ Tutorials
 #.  *Training with Sampled Softmax*
      CNTK 207: `Training with Sampled Softmax`_
 
+Try these notebooks pre-installed on `CNTK Azure Notebooks`_ for free. 
+
 For our Japanese users, you can find some of the `tutorials in Japanese`_.
 
 .. _`Logistic Regression`: https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_101_LogisticRegression.ipynb
@@ -58,4 +60,5 @@ For our Japanese users, you can find some of the `tutorials in Japanese`_.
 .. _`Basic Generative Adversarial Networks (GAN)`: https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_206_Basic_GAN.ipynb
 .. _`Training with Sampled Softmax`: https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb
 
+.. _`CNTK Azure Notebooks`: https://notebooks.azure.com/cntk/libraries/tutorials
 .. _`tutorials in Japanese`: https://notebooks.azure.com/library/cntkbeta2_ja
