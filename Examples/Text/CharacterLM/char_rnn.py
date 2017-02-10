@@ -12,7 +12,7 @@ from cntk import Trainer, Axis
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.ops.functions import load_model
-from cntk.layers import LSTM, Stabilizer, Recurrence, Dense, LayerStack, Sequential
+from cntk.layers import LSTM, Stabilizer, Recurrence, Dense, For, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
@@ -122,7 +122,7 @@ def load_data_and_vocab(training_file):
 def create_model(output_dim):
     
     return Sequential([        
-        LayerStack(num_layers, lambda: 
+        For(range(num_layers), lambda: 
                    Sequential([Stabilizer(), Recurrence(LSTM(hidden_dim), go_backwards=False)])),
         Dense(output_dim)
     ])
