@@ -8,6 +8,7 @@
 #include "ByteReader.h"
 #include "ConfigUtil.h"
 #include <ProgressTracing.h>
+#include <ExceptionCapture.h>
 
 #ifdef USE_FACE_FILE
 #include <File.h>
@@ -72,20 +73,43 @@ void FaceFileByteReader::Register(const std::map<std::string, size_t>& sequences
 
     int count = 0, size = (int) m_bigFileIds.size();
 
-    std::stringstream tmpNameBuf;
-    for (auto &pair : m_bigFileIds)
+    bool multithreadedReadFaceFileInfo = true;
+    if (multithreadedReadFaceFileInfo)
     {
-        if (count % 100 == 0)
+        ExceptionCapture capture;
+#pragma omp parallel for schedule(dynamic)
+        for (int i = 0; i < m_bigFileIds.bucket_count(); i++)
         {
-            LOGPRINTF(stderr, "FaceFileByteReader::Register Cached %d/%d\n", count, size);
+            for (auto iter = m_bigFileIds.begin(i); iter != m_bigFileIds.end(i); ++iter)
+            {
+                auto process = [&]() -> void
+                {
+                    std::stringstream tmpNameBuf;
+                    tmpNameBuf << m_directory << iter->first << ".big";
+                    CacheFaceFileInfo(m_cacheInfo[iter->second], tmpNameBuf.str(), tmpNameBuf.str() + ".pts");
+                };
+                capture.SafeRun(process);
+            }
         }
+        capture.RethrowIfHappened();
+    }
+    else
+    {
+        std::stringstream tmpNameBuf;
+        for (auto &pair : m_bigFileIds)
+        {
+            if (count % 100 == 0)
+            {
+                LOGPRINTF(stderr, "FaceFileByteReader::Register Cached %d/%d\n", count, size);
+            }
 
-        tmpNameBuf.str("");
-        tmpNameBuf << m_directory << pair.first << ".big";
+            tmpNameBuf.str("");
+            tmpNameBuf << m_directory << pair.first << ".big";
 
-        CacheFaceFileInfo(m_cacheInfo[pair.second], tmpNameBuf.str(), tmpNameBuf.str() + ".pts");
+            CacheFaceFileInfo(m_cacheInfo[pair.second], tmpNameBuf.str(), tmpNameBuf.str() + ".pts");
 
-        count++;
+            count++;
+        }
     }
 
     LOGPRINTF(stderr, "FaceFileByteReader::Register Ends, %lf seconds\n", timer.ElapsedSeconds());
