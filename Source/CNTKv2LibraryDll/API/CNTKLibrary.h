@@ -1631,7 +1631,7 @@ private:
 
         void SetOwner(Function* ownerFunction);
 
-        Variable CompositePreservingCopy() const;
+        Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
 
     private:
 #ifdef SWIGCSHARP

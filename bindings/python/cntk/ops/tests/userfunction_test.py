@@ -287,4 +287,4 @@ def test_udf_plus_and_last():
     _, result = func.forward({x : operand1, y : operand2}, [func.output])
     
     expected_forward = AA([[[5., 6.]]], dtype=dt_precision)
-    np.allclose(result[func.output], expected_forward)
+    assert np.allclose(result[func.output], expected_forward)

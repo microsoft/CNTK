@@ -62,3 +62,14 @@ def test_op_combine(left_operand, right_operand, operations, expected_results, d
     results = list(forward_results.values())
 
     assert compare_lists_of_np_arrays(results, expected_forward_results)
+
+
+def test_op_combine_input_var():
+    from .. import combine, input_variable
+
+    x = input_variable(shape=(2))
+    func = combine([x])
+    value = [[1, 2]]
+    res = func.eval({x : value})
+    
+    assert np.allclose(res, [[1, 2]])
