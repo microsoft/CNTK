@@ -1457,7 +1457,7 @@ def softmax(x, axis=None, name=''):
 
         >>> C.softmax([[[1, 1], [2, 3]]], axis=-1).eval()
         array([[[ 0.5     ,  0.5     ],
-                [ 0.268941,  0.731058]]], dtype=float32)
+                [ 0.268941,  0.731059]]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
