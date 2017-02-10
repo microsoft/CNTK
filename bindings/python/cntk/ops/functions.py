@@ -621,7 +621,7 @@ class Function(cntk_py.Function):
         return graph.find_by_name(self, name)
 
     @typemap
-    def save_model(self, filename):
+    def save(self, filename):
         '''
         Save this function graph into a model file using protobuf-based
         serialization.
@@ -631,8 +631,11 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).save_model(filename)
 
+    def save_model(self, filename): # legacy name
+        return self.save(filename)
+
     @typemap
-    def restore_model(self, filename):
+    def restore(self, filename):
         '''
         Restore the models parameters (in-place) from a saved model file
 
@@ -643,6 +646,39 @@ class Function(cntk_py.Function):
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
         return super(Function, self).restore_model(filename)
+
+    def restore_model(self, filename): # legacy name
+        return self.restore(filename)
+
+    @staticmethod
+    @typemap
+    def load(filename, device=None):
+        '''
+        Load the model in ``filename``, that has been saved using
+        :func:`~cntk.ops.functions.Function.save`.
+
+        Args:
+            filename (str): filename to load the model from
+            device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
+             instance of DeviceDescriptor
+
+        Returns:
+            root node
+        '''
+        if not device:
+            device = DeviceDescriptor.use_default_device()
+        return cntk_py.Function.load_model(filename, device)
+
+@typemap
+def load_model(filename, device=None):
+    '''
+    Alias for :func:`~cntk.ops.functions.Function.load`.
+    '''
+    return Function.load(filename, device)
+
+@typemap
+def save_model(model, filename): # legacy name
+    return model.save(filename)
 
 
 class UserFunction(Function):
@@ -770,22 +806,3 @@ class UserFunction(Function):
         Returns the operator name.
         '''
         return 'UserFunction'
-
-
-@typemap
-def load_model(filename, device=None):
-    '''
-    Load the model in ``filename``, that has been saved using
-    :func:`~cntk.ops.functions.Function.save_model`.
-
-    Args:
-        filename (str): filename to load the model from
-        device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
-         instance of DeviceDescriptor
-
-    Returns:
-        root node
-    '''
-    if not device:
-        device = DeviceDescriptor.use_default_device()
-    return cntk_py.Function.load_model(filename, device)

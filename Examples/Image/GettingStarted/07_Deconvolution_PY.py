@@ -82,7 +82,7 @@ def deconv_mnist(max_epochs=3):
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
         progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, "07_Deconvolution_PY_{}.model".format(epoch)))
+        z.save(os.path.join(model_path, "07_Deconvolution_PY_{}.model".format(epoch)))
 
     # rename final model
     last_model_name = os.path.join(model_path, "07_Deconvolution_PY_{}.model".format(max_epochs - 1))

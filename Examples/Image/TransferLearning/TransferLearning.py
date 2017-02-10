@@ -203,7 +203,7 @@ if __name__ == '__main__':
         trained_model = train_model(_base_model_file, _feature_node_name, _last_hidden_node_name,
                                     _image_width, _image_height, _num_channels, _num_classes, _train_map_file,
                                     max_epochs, freeze=freeze_weights)
-        trained_model.save_model(tl_model_file)
+        trained_model.save(tl_model_file)
         print("Stored trained model at %s" % tl_model_file)
 
     # Evaluate the test set

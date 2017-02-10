@@ -112,7 +112,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        z.save(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
         enable_profiler() # begin to collect profiler data after first epoch
         
     if profiler_dir:

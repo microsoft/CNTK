@@ -82,7 +82,7 @@ if __name__ == '__main__':
     trained_model = train_model(base_model_file, feature_node_name, last_hidden_node_name,
                                 image_width, image_height, num_channels,
                                 len(class_mapping), train_map_file, num_epochs=30, freeze=True)
-    trained_model.save_model(new_model_file)
+    trained_model.save(new_model_file)
     print("Stored trained model at %s" % tl_model_file)
 
     # evaluate test images

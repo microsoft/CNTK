@@ -184,7 +184,7 @@ def train_lm(training_file, max_num_minibatches):
             p = 0
             e += 1
             model_filename = "models/shakespeare_epoch%d.dnn" % e
-            z.save_model(model_filename)
+            z.save(model_filename)
             print("Saved model to '%s'" % model_filename)
 
         # get the data            
@@ -207,7 +207,7 @@ def train_lm(training_file, max_num_minibatches):
 
     # Do a final save of the model        
     model_filename = "models/shakespeare_epoch%d.dnn" % e
-    z.save_model(model_filename)
+    z.save(model_filename)
 
 
 def load_and_sample(model_filename, vocab_filename, prime_text='', use_hardmax=False, length=1000, temperature=1.0):

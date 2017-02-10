@@ -107,7 +107,7 @@ def convnet_cifar10_dataaug(reader_train, reader_test, epoch_size = 50000, max_e
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
         progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
+        z.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
     
     ### Evaluation action
     epoch_size     = 10000

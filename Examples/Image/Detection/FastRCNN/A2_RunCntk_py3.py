@@ -176,7 +176,7 @@ def train_fast_rcnn(debug_output=False):
 
         progress_printer.epoch_summary(with_metric=True)
         if debug_output:
-            frcn_output.save_model(os.path.join(abs_path, "Output", "frcn_py_%s.model" % (epoch+1)))
+            frcn_output.save(os.path.join(abs_path, "Output", "frcn_py_%s.model" % (epoch+1)))
 
     return frcn_output
 
@@ -217,7 +217,7 @@ if __name__ == '__main__':
         trained_model = load_model(model_path)
     else:
         trained_model = train_fast_rcnn()
-        trained_model.save_model(model_path)
+        trained_model.save(model_path)
         print("Stored trained model at %s" % model_path)
 
     # Evaluate the test set
