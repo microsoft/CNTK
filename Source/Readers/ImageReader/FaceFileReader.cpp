@@ -61,29 +61,34 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
 
 void FaceFileByteReader::Register(const std::map<std::string, size_t>& sequences)
 {
+    Timer timer;
+    timer.Start();
+
     LOGPRINTF(stderr, "FaceFileByteReader::Register Begins, m_bigFileIds.size() %llu\n", (unsigned long long) m_bigFileIds.size());
 
     UNUSED(sequences);
 
     m_cacheInfo.resize(m_bigFileIds.size());
 
-    int count = 0;
+    int count = 0, size = (int) m_bigFileIds.size();
+
     std::stringstream tmpNameBuf;
     for (auto &pair : m_bigFileIds)
     {
+        if (count % 100 == 0)
+        {
+            LOGPRINTF(stderr, "FaceFileByteReader::Register Cached %d/%d\n", count, size);
+        }
+
         tmpNameBuf.str("");
         tmpNameBuf << m_directory << pair.first << ".big";
 
         CacheFaceFileInfo(m_cacheInfo[pair.second], tmpNameBuf.str(), tmpNameBuf.str() + ".pts");
 
-        if (count % 100 == 0)
-        {
-            LOGPRINTF(stderr, "FaceFileByteReader::Register Cached %d\n", count);
-            count++;
-        }
+        count++;
     }
 
-    LOGPRINTF(stderr, "FaceFileByteReader::Register Ends\n");
+    LOGPRINTF(stderr, "FaceFileByteReader::Register Ends, %lf seconds\n", timer.ElapsedSeconds());
 }
 
 static void Bilinear(const float* pInput, int iWidth, int iHeight, int iChannels, int iStrideW, int iStrideH, int iStrideC,
