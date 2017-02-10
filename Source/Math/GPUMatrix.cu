@@ -2914,7 +2914,31 @@ void GPUMatrix<ElemType>::Print(const char* /*matrixName*/, size_t /*rowStart*/,
 template <class ElemType>
 void GPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
 {
-    Print(matrixName, 0, GetNumRows() - 1, 0, GetNumCols() - 1);
+	size_t elemCount = GetNumRows() * GetNumCols();
+	vector<ElemType> localCopy(elemCount);
+	cudaMemcpy(localCopy.data(), Data(), elemCount * sizeof(ElemType), cudaMemcpyDeviceToHost);
+
+	fprintf(stderr, "\n###### ");
+	if (matrixName != nullptr)
+		fprintf(stderr, "%s ", matrixName);
+	fprintf(stderr, "(%lu, %lu) ######\n\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
+
+	if (IsEmpty())
+	{
+		fprintf(stderr, "(empty)\n");
+		return;
+	}
+
+	// CNTK is using column-major storage
+	for (size_t i = 0; i < GetNumRows(); i++)
+	{
+		for (size_t j = 0; j < GetNumCols(); j++)
+		{
+			fprintf(stderr, "%.10f\t", localCopy[i + j * GetNumRows()]);
+		}
+		fprintf(stderr, "\n");
+	}
+
 }
 
 //helpfer function used for convolution neural network
@@ -4326,6 +4350,7 @@ template<class ElemType>
             //printf("delay: %d\n", delayConstraint);
             
             //calculate alpha in forward-backward calculation. 
+			prob.Print("Prob");
             for (long t = 0; t < maxframenum; t++)
             {
                 
@@ -4333,6 +4358,7 @@ template<class ElemType>
                     gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
                 //_assignSigmoidOf << <blocksPerGrid, threadsPerBlock, 0, t_stream >> >(prob.Data(), alpha.Data(), N);
             }
+			alpha.Print("alpha");
 
             //calculate beta in forward-backward calculation. 
             for (long t = maxframenum - 1; t >= 0; t--)
@@ -4340,15 +4366,19 @@ template<class ElemType>
                 _assignBetaScore_m << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneseq.Data(), phonebound.Data(), gpuuttmap,
                     gpuframenum, gpubeginframe, gpuphonenum, samplesInRecurrentStep, uttnum, t, maxphonenum, totalphonenum, delayConstraint);
             }
+			beta.Print("beta");
 
             //calculate CTC score. 
             _assigntotalscore_m << <uttnum, 1, 0, t_stream >> > (beta.Data(), gpuscores, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
             
+			beta.Print("beta2");
+
             dim3 block_tail_2((uttnum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxframenum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
             
             //calculate derivative. 
             _assignCTCScore_m << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneseq.Data(), uttnum, gpuuttmap,
                 gpubeginframe, gpuphonenum, gpuframenum, samplesInRecurrentStep, maxframenum*samplesInRecurrentStep, maxphonenum, totalphonenum);
+			Print("CTCScore");
             _assigntotaluttscore_m << <1, 1, 0, t_stream >> > (beta.Data(), totalscore, uttnum, gpuuttmap, gpubeginframe, samplesInRecurrentStep, maxphonenum);
 
             //sum scores for all utterances
