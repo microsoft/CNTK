@@ -4,10 +4,10 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
-# Latest news
-***2017-02-10.* V 2.0 Beta 11 Release**  
+# Latest news 
+***2017-01-20.* V 2.0 Beta 11 Release**  
 Highlights of this Release:
-* New and updated features: reduce_prod, reductions across all axes, denominator sharing, memory improvement, & more...
+* New and updated core and Python API features.
 * New Tutorials and Examples:
   * [Transfer learning example to train custom image classifiers](https://github.com/Microsoft/CNTK/tree/v2.0.beta11.0/Examples/Image/TransferLearning).
 * New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
@@ -43,19 +43,6 @@ This news is related to users who are working with CNTK code base. If you use Bi
 Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) and [BlockMomentumSGD](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd) code is moved to a new Repository in GitHub.
 
 If you cloned CNTK Repository with [1bit-SGD enabled](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) *prior to January 25, 2017* you need to update git submodule configuration as described in [this Wiki article](https://github.com/Microsoft/CNTK/wiki/Update-1bit-SGD-Submodule-Location).
-
-***2017-01-20.* V 2.0 Beta 9 Release**  
-Highlights of this Release:
-* Default Python version is now 3.5 (relates to default parameters in client installations as well as [Runtime Images at Docker Hub](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers)).
-* New and updated core and Python API features.
-* New Tutorials and Examples:
-  * Deconvolution layer and image auto encoder example using deconvolution and unpooling ([Example **07_Deconvolution** in *Image - Getting Started*](https://github.com/Microsoft/CNTK/tree/v2.0.beta9.0/Examples/Image/GettingStarted)).
-  * [Basic autoencoder with MNIST data](https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb).
-  * [LSTM Timeseries with Simulated Data (Part A)](https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb). (More will come in the next Releases)
-* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_9_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
