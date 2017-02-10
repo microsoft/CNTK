@@ -14,6 +14,7 @@
 #include "TimerUtility.h"
 #include "ImageTransformers.h"
 #include "ImageUtil.h"
+#include <ProgressTracing.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -135,6 +136,8 @@ void ImageDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vecto
 
 void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpus, std::string mapPath, size_t labelDimension, bool isMultiCrop)
 {
+    LOGPRINTF(stderr, "ImageDataDeserializer::CreateSequenceDescriptions Begins\n");
+
     std::ifstream mapFile(mapPath);
     if (!mapFile)
     {
@@ -222,6 +225,8 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     {
         fprintf(stderr, "ImageDeserializer: Read information about %d images in %.6g seconds\n", (int)m_imageSequences.size(), timer.ElapsedSeconds());
     }
+
+    LOGPRINTF(stderr, "ImageDataDeserializer::CreateSequenceDescriptions Ends\n");
 }
 
 ChunkPtr ImageDataDeserializer::GetChunk(ChunkIdType chunkId)

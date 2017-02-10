@@ -7,6 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include "ByteReader.h"
 #include "ConfigUtil.h"
+#include <ProgressTracing.h>
 
 #ifdef USE_FACE_FILE
 #include <File.h>
@@ -60,10 +61,13 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
 
 void FaceFileByteReader::Register(const std::map<std::string, size_t>& sequences)
 {
+    LOGPRINTF(stderr, "FaceFileByteReader::Register Begins, m_bigFileIds.size() %llu\n", (unsigned long long) m_bigFileIds.size());
+
     UNUSED(sequences);
 
     m_cacheInfo.resize(m_bigFileIds.size());
 
+    int count = 0;
     std::stringstream tmpNameBuf;
     for (auto &pair : m_bigFileIds)
     {
@@ -71,7 +75,14 @@ void FaceFileByteReader::Register(const std::map<std::string, size_t>& sequences
         tmpNameBuf << m_directory << pair.first << ".big";
 
         CacheFaceFileInfo(m_cacheInfo[pair.second], tmpNameBuf.str(), tmpNameBuf.str() + ".pts");
+
+        if (count++ % 100 == 0)
+        {
+            LOGPRINTF(stderr, "FaceFileByteReader::Register Cached %d\n", count * 100);
+        }
     }
+
+    LOGPRINTF(stderr, "FaceFileByteReader::Register Ends\n");
 }
 
 static void Bilinear(const float* pInput, int iWidth, int iHeight, int iChannels, int iStrideW, int iStrideH, int iStrideC,
