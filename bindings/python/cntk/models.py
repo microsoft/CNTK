@@ -44,7 +44,7 @@ def Sequential(layers):
 
 # For(range(3), lambda i: Dense(3))
 # For(range(3), lambda: Dense(3))
-def For(range, constructor):
+def For(rng, constructor):
     '''
     Layer factory function to create a composite that applies a sequence of layers constructed with a constructor lambda(layer).
     E.g.
@@ -59,6 +59,6 @@ def For(range, constructor):
             return constructor(i)  # takes an arg: pass it
         else:
             return constructor()   # takes no arg: call without, that's fine too
-    layers = [call(i) for i in range]
+    layers = [call(i) for i in rng]
     apply_x = Sequential(layers)
     return Block(apply_x, 'For', members=Record(layers=layers))

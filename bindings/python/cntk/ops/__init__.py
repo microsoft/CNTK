@@ -9,7 +9,7 @@ import numpy as np
 import numbers
 from numbers import Number
 from . import sequence
-from .functions import CloneMethod, Function
+from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
 from ..axis import Axis
@@ -1471,13 +1471,11 @@ def softmax(x, axis=None, name=''):
     # softmax over a specific axis: implemented explicitly
     if axis is not None:
         from cntk.cntk_py import reduce_log_sum, exp, minus
-        # BUGBUG: axis=0 does not work; but axis=-X to denote the same axis does work.
         axis = sanitize_axis(axis)
         Z = reduce_log_sum(x, axis)  # log denominator
-        exponent = minus(x, Z.output())
-        # TODO: use -
         # TODO: use as_block()
-        return exp(exponent.output(), name) # this is the softmax
+        return exp(x - Z.output(), name) # this is the softmax
+        # (note: we need .output() here since the automatisms available outside are not available in here)
     # softmax over all elements
     return softmax(x, name)
 
@@ -2114,7 +2112,7 @@ def reduce_sum(x, axis=None, name=''):
 
 
 @typemap
-def reduce_log_add_exp(x, axis=None, name=''):
+def reduce_log_sum_exp(x, axis=None, name=''):
     '''
     Computes the log of the sum of the exponentiations of the input tensor's
     elements across the specified axis.
@@ -2122,7 +2120,7 @@ def reduce_log_add_exp(x, axis=None, name=''):
     Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
-        >>> lse = C.reduce_log_add_exp(x)
+        >>> lse = C.reduce_log_sum_exp(x)
         >>> lse.eval({x:[val]})
         array([[ 5.456193]], dtype=float32)
         >>> np.log(np.sum(np.exp(val)))
@@ -2139,7 +2137,7 @@ def reduce_log_add_exp(x, axis=None, name=''):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    # TODO: rename V2 API function as well from reduce_log_sum() to reduce_log_add_exp()
+    # TODO: rename V2 API function as well from reduce_log_sum() to reduce_log_sum_exp()
     from cntk.cntk_py import reduce_log_sum
     x = sanitize_input(x)
     axis = sanitize_axis(axis)
@@ -2539,8 +2537,8 @@ def parameter(shape=None, init=None, dtype=None, device=None, name=''):
          :mod:`cntk.initializer` it will be used to initialize the tensor at
          the first forward pass. If `None`, the tensor will be initialized
          with 0.
-        dtype (optional): data type of the constant. If both a NumPy array and ``dtype``,
-         are given, then their types must match. If none given, it will default to ``np.float32``.
+        dtype (optional): data type of the constant. If a NumPy array and ``dtype``,
+         are given, then data will be converted if needed. If none given, it will default to ``np.float32``.
         device (:class:`~cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
         name (str, optional): the name of the Parameter instance in the network
 
@@ -2586,9 +2584,9 @@ def constant(value=None, shape=None, dtype=None, device=None, name=''):
          If ``None``, the tensor will be initialized uniformly random.
         shape (tuple or int, optional): the shape of the input tensor. If not provided, it will
          be inferred from ``value``.
-        dtype (optional): data type of the constant. If both a NumPy array and ``dtype``,
-         are given, then their types must match. If none given, it will default to ``np.float32``.
-        device (:class:`cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
+        dtype (optional): data type of the constant. If a NumPy array and ``dtype``,
+         are given, then data will be converted if needed. If none given, it will default to ``np.float32``.
+        device (:class:`~cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.variables.Constant`

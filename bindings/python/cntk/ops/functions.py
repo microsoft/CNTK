@@ -632,6 +632,9 @@ class Function(cntk_py.Function):
         return super(Function, self).save_model(filename)
 
     def save_model(self, filename): # legacy name
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'save(...) instead', DeprecationWarning)
         return self.save(filename)
 
     @typemap
@@ -648,6 +651,9 @@ class Function(cntk_py.Function):
         return super(Function, self).restore_model(filename)
 
     def restore_model(self, filename): # legacy name
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'restore(...) instead', DeprecationWarning)
         return self.restore(filename)
 
     @staticmethod
@@ -678,6 +684,9 @@ def load_model(filename, device=None):
 
 @typemap
 def save_model(model, filename): # legacy name
+     import warnings
+     warnings.warn('This will be removed in future versions. Please use '
+             'model.save(...) instead', DeprecationWarning)
     return model.save(filename)
 
 
