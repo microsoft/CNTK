@@ -216,6 +216,28 @@ BOOST_AUTO_TEST_CASE(ImageReaderZip)
         1);
 }
 
+BOOST_AUTO_TEST_CASE(ImageReaderZipDuplicate)
+{
+    HelperRunReaderTest<float>(
+        testDataPath() + "/Config/ImageDeserializers.cntk",
+        testDataPath() + "/Control/ImageReaderZipDuplicate_Control.txt",
+        testDataPath() + "/Control/ImageReaderZipDuplicate_Output.txt",
+        "SimpleZip",
+        "reader",
+        4,
+        4,
+        1,
+        1,
+        0,
+        0,
+        1,
+        false,
+        false,
+        true,
+        { L"MapFile=\"$RootDir$/ImageReaderZipDuplicate_map.txt\"" });
+}
+
+
 BOOST_AUTO_TEST_CASE(ImageReaderZipMissingFile)
 {
     BOOST_REQUIRE_EXCEPTION(
