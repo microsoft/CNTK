@@ -810,6 +810,19 @@ class UserFunction(Function):
         '''
         raise NotImplementedError('infer_outputs has to be overwritten')
 
+    def clone(self, cloned_inputs):
+        '''
+        Creates a clone of this user-defined function.
+
+        Args:
+            cloned_inputs: list of cloned inputs to the new user-defined
+             Function clone to be created.
+
+        Returns:
+            A cloned instance of this user-defined function.
+        '''
+        raise NotImplementedError('clone has to be overwritten')
+
     def op_name(self):
         '''
         Returns the operator name.

@@ -510,10 +510,6 @@ namespace CNTK
                                 std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
                                 std::unordered_map<Variable, Variable>& placeholderReplacements)
     {
-        const PrimitiveFunction* primitiveFunction = dynamic_cast<const PrimitiveFunction*>(clonee.get());
-        if (primitiveFunction == nullptr)
-            LogicError("Currently cloning of user defined Functions is unsupported");
-
         if (cloneMap.find(clonee.get()) != cloneMap.end())
             LogicError("Cloning an already visited Function");
 
@@ -608,13 +604,11 @@ namespace CNTK
             cloneeToClonedInputMap.insert({cloneeInput, clonedInput});
         }
 
-        Dictionary attributesCopy(primitiveFunction->Attributes());
         FunctionPtr clonedFunction;
-        if (primitiveFunction->OpType() != PrimitiveOpType::Block)
-            clonedFunction = MakeSharedObject<PrimitiveFunction>(primitiveFunction->OpType(), inputs, std::move(attributesCopy), primitiveFunction->Name());
-        else
+        const BlockFunction* blockFunction = dynamic_cast<const BlockFunction*>(clonee.get());
+        if (blockFunction)
         {
-            auto cloneeComposite = dynamic_cast<const BlockFunction*>(primitiveFunction)->Composite();
+            auto cloneeComposite = blockFunction->Composite();
             auto clonedComposite = cloneeComposite->Clone(parameterCloneMethod, replacements);
 
             auto cloneeBlockCompositeArguments = cloneeComposite->Arguments();
@@ -623,16 +617,17 @@ namespace CNTK
             for (size_t i = 0; i < cloneeBlockCompositeArguments.size(); ++i)
                 cloneeToClonedBlockCompositeArgumentsMap.insert({ cloneeBlockCompositeArguments[i], clonedBlockCompositeArguments[i] });
 
-            auto cloneeBlockCompositeArgumentsMap = primitiveFunction->BlockArgumentsMapping();
+            auto cloneeBlockCompositeArgumentsMap = blockFunction->BlockArgumentsMapping();
             std::vector<std::pair<Variable, Variable>> clonedBlockCompositeArgumentsMap;
             for (auto cloneeArgumentMapping : cloneeBlockCompositeArgumentsMap)
                 clonedBlockCompositeArgumentsMap.push_back({ cloneeToClonedBlockCompositeArgumentsMap.at(cloneeArgumentMapping.first), cloneeToClonedInputMap.at(cloneeArgumentMapping.second) });
 
-            clonedFunction = MakeSharedObject<BlockFunction>(std::move(clonedComposite), clonedBlockCompositeArgumentsMap, primitiveFunction->OpName(), std::move(attributesCopy), primitiveFunction->Name());
+            clonedFunction = MakeSharedObject<BlockFunction>(std::move(clonedComposite), clonedBlockCompositeArgumentsMap, blockFunction->OpName(), Dictionary(blockFunction->Attributes()), blockFunction->Name());
         }
+        else
+            clonedFunction = clonee->Clone(inputs);
 
-        cloneMap[primitiveFunction] = clonedFunction;
-
+        cloneMap[clonee.get()] = clonedFunction;
         return clonedFunction;
     }
 

@@ -711,6 +711,11 @@ namespace CNTK
 
         void InferOutputs(std::vector<Variable>& outputs) override;
 
+        FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override
+        {
+            return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
+        }
+
     private:
         PrimitiveOpType m_op;
 
