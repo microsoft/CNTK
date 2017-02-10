@@ -314,15 +314,16 @@ public:
                 int prevPhoneId = -1;
                 size_t startFrameInd = seq.tBegin*numChannels + seq.s;
                 size_t endFrameInd = seq.tEnd*numChannels + seq.s;
-                for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numChannels) {
+				size_t frameCounter = 0;
+                for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numChannels, frameCounter++) {
                     if (m_maxValues(0, frameInd) == 2) 
                     {
                         prevPhoneId = (size_t)m_maxIndexes(0, frameInd);
 
                         phoneSeq.push_back(blankid);
-                        phoneBound.push_back(frameInd);
+                        phoneBound.push_back(frameCounter);
                         phoneSeq.push_back(prevPhoneId);
-                        phoneBound.push_back(frameInd);
+                        phoneBound.push_back(frameCounter);
                     }
                 }
                 phoneSeq.push_back(blankid);

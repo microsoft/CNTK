@@ -776,7 +776,7 @@ class CTCWithSoftmaxNode : public  ComputationNodeNonLooping<ElemType>, public N
     }
 public:
     DeclareConstructorFromConfigWithNumInputs(CTCWithSoftmaxNode);
-    CTCWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankNum=1, int delayConstraint=-1) :
+    CTCWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankNum=1, int delayConstraint=3) :
         Base(deviceId, name), m_blankNum(blankNum), m_delayConstraint(delayConstraint)
     {
     }

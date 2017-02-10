@@ -2945,13 +2945,37 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemTy
 template <class ElemType>
 void GPUMatrix<ElemType>::Print(const char* /*matrixName*/, size_t /*rowStart*/, size_t /*rowEnd*/, size_t /*colStart*/, size_t /*colEnd*/) const
 {
-    NOT_IMPLEMENTED;
+	NOT_IMPLEMENTED;
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
 {
-    Print(matrixName, 0, GetNumRows() - 1, 0, GetNumCols() - 1);
+	size_t elemCount = GetNumRows() * GetNumCols();
+	vector<ElemType> localCopy(elemCount);
+	cudaMemcpy(localCopy.data(), Data(), elemCount * sizeof(ElemType), cudaMemcpyDeviceToHost);
+
+	fprintf(stderr, "\n###### ");
+	if (matrixName != nullptr)
+		fprintf(stderr, "%s ", matrixName);
+	fprintf(stderr, "(%lu, %lu) ######\n\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
+
+	if (IsEmpty())
+	{
+		fprintf(stderr, "(empty)\n");
+		return;
+	}
+
+	// CNTK is using column-major storage
+	for (size_t i = 0; i < GetNumRows(); i++)
+	{
+		for (size_t j = 0; j < GetNumCols(); j++)
+		{
+			fprintf(stderr, "%.10f\t", localCopy[i + j * GetNumRows()]);
+		}
+		fprintf(stderr, "\n");
+	}
+
 }
 
 //helpfer function used for convolution neural network
@@ -4318,6 +4342,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
             _assignAlphaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
                 gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numChannels, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
         }
+		alpha.Print();
         for (long t = maxFrameNum - 1; t >= 0; t--)
         {
             _assignBetaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
