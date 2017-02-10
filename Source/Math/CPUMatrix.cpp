@@ -6151,6 +6151,29 @@ struct TensorOpReduction<ElemType, OPFN, ReductionOp, N, -1>
 template <class ElemType, size_t N, int m>
 struct TensorArgOpReduction
 {
+    static inline std::pair<ElemType, size_t> ReduceAll(array<ElemType*, N> pointers, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides,
+        ElementWiseOperator reductionOp)
+    {
+        size_t counter = 0;
+        size_t index = 0;
+        ElemType val = (ElemType)0;
+
+        switch (reducingOpDims.size())
+        {
+        case 3:
+            val = TensorArgOpReduction<ElemType, N, 2>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        case 2:
+            val = TensorArgOpReduction<ElemType, N, 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        case 1:
+            val = TensorArgOpReduction<ElemType, N, 0>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        }
+
+        return make_pair(val, index);
+    }
+
     // reduction case (non-reduction case is specialized)
     static inline ElemType Loop(array<ElemType*, N> pointers, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides,
         ElementWiseOperator reductionOp, size_t& counter, size_t& index)
@@ -6604,6 +6627,8 @@ void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix
                                       const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                       const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
+    aShape;
+
     if (reductionOp != ElementWiseOperator::opArgmin &&
         reductionOp != ElementWiseOperator::opArgmax)
         InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
@@ -6620,81 +6645,45 @@ void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix
             pointers[i] += offsets[i];
 
         array<ElemType*, N> currentPtrs = { pointers[0], pointers[1] };
-        for (size_t k = 1; k <= regularOpDims.size(); k++)
+
+        if (regularOpDims.size() == 1)
         {
-            size_t regularDimCount = 0;
-            if ((k == regularOpDims.size()) && (regularOpDims.size() == 1))
-                regularDimCount = 1;
-            else if (k < regularOpDims.size())
-                regularDimCount = regularOpDims[k];
-
-            for (size_t regularDim = regularDimCount; regularDim-- > 0;)
+            for (size_t k = 0; k < regularOpDims.size(); k++)
             {
-                for (size_t regularDim2 = regularOpDims[k-1]; regularDim2-- > 0;)
+                for (size_t regularDim = regularOpDims[k]; regularDim-- > 0;)
                 {
-                    size_t counter = 0;
-                    size_t index = 0;
+                    auto best = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(currentPtrs, reducingOpDims, reducingStrides, reductionOp);
+                    *currentPtrs[1] = (ElemType) best.second;
 
-                    switch (reducingOpDims.size())
-                    {
-                    case 3:
-                        TensorArgOpReduction<ElemType, N, 2>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
-                        break;
-                    case 2:
-                        TensorArgOpReduction<ElemType, N, 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
-                        break;
-                    case 1:
-                        TensorArgOpReduction<ElemType, N, 0>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
-                        break;
-                    }
-
-                    /*
-                    ElemType *inputPtr = pointers[0];
-                    ElemType aggregate = *inputPtr;
-                    counter++;
-
-                    for (size_t m = 0; m < reducingOpDims.size(); m++)
-                    {
-                        for (size_t reducingDim = reducingOpDims[m] - 1; reducingDim-- > 0;)
-                        {
-                            counter++;
-                            inputPtr += reducingStrides[0][m];
-
-                            bool update = false;
-                            switch (reductionOp)
-                            {
-                            case ElementWiseOperator::opArgmin:
-                                update = (aggregate > *inputPtr);
-                                break;
-                            case ElementWiseOperator::opArgmax:
-                                update = (aggregate < *inputPtr);
-                                break;
-                            }
-
-                            if (update)
-                            {
-                                aggregate = *inputPtr;
-                                index = counter - 1;
-                            }
-                        }
-                    }
-                    */
-
-                    *pointers[1] = (ElemType) index;
-                     for (size_t i = 0; i < N; i++)
-                         currentPtrs[i] += regularStrides[i][k - 1];
+                    for (size_t i = 0; i < N; i++)
+                        currentPtrs[i] += regularStrides[i][k];
                 }
             }
-
-            if (k < regularOpDims.size())
+        }
+        else if (regularOpDims.size() == 2)
+        {
+            for (size_t k = 1; k < regularOpDims.size(); k++)
             {
+                for (size_t regularDim = regularOpDims[k]; regularDim-- > 0;)
+                {
+                    for (size_t l = 0; l < k; l++)
+                    {
+                        for (size_t regularDim2 = regularOpDims[l]; regularDim2-- > 0;)
+                        {
+                            auto best = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(currentPtrs, reducingOpDims, reducingStrides, reductionOp);
+                            *currentPtrs[1] = (ElemType) best.second;
+
+                            for (size_t i = 0; i < N; i++)
+                                currentPtrs[i] += regularStrides[i][l];
+                        }
+                    }
+                }
+
                 for (size_t i = 0; i < N; i++)
                     currentPtrs[i] = pointers[i] + regularStrides[i][k];
             }
         }
     }
-
-    aShape;
 }
 
 // =======================================================================
