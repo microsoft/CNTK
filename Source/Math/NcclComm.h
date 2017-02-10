@@ -5,8 +5,6 @@
 // Encapsulates NCCLs dependencies
 #pragma once
 
-#pragma warning ( disable : 4100 ) // Disable warning 4100 in Broadcast function
-
 #include "Matrix.h"
 #include "MPIWrapper.h"
 
@@ -57,6 +55,9 @@ public:
 #endif
     }
 
+#pragma warning( push )
+#pragma warning ( disable : 4100 ) // Disable warning 4100 in Broadcast function
+
     void Broadcast(void* buffer, size_t count, MPI_Datatype dtype, int root)
     {
 #ifdef USE_NCCL
@@ -66,5 +67,7 @@ public:
 #endif
     }
 };
+
+#pragma warning( pop )
 
 }}}

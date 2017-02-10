@@ -131,7 +131,7 @@ void AggregateAccumulatorValuesAndUpdateEpochEvaluation(
     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
     CriterionAccumulator<ElemType> localEpochEvalErrors,
     std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult,
-    size_t packThresholdSizeInBytes = (size_t)_DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
+    size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
 {
     // Each node contains accumulated values for part of the data set, we have to aggregate accumulated values.
     AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(net, evalNodesWhichAccumulateResult, gradHeader, mpi, packThresholdSizeInBytes);
