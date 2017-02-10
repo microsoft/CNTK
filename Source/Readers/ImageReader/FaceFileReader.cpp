@@ -76,9 +76,10 @@ void FaceFileByteReader::Register(const std::map<std::string, size_t>& sequences
 
         CacheFaceFileInfo(m_cacheInfo[pair.second], tmpNameBuf.str(), tmpNameBuf.str() + ".pts");
 
-        if (count++ % 100 == 0)
+        if (count % 100 == 0)
         {
-            LOGPRINTF(stderr, "FaceFileByteReader::Register Cached %d\n", count * 100);
+            LOGPRINTF(stderr, "FaceFileByteReader::Register Cached %d\n", count);
+            count++;
         }
     }
 
