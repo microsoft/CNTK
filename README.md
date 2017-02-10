@@ -4,7 +4,7 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
-# Latest news 
+# Latest news
 ***2017-01-20.* V 2.0 Beta 11 Release**  
 Highlights of this Release:
 * New and updated core and Python API features.
@@ -63,7 +63,15 @@ Blogs:
 
 ## Performance
 
-The figure below compares processing speed (frames processed per second) of CNTK to that of four other well-known toolkits. The configuration uses a fully connected 4-layer neural network (see our benchmark [scripts](https://github.com/Alexey-Kamenev/Benchmarks)) and an effective mini batch size (8192). All results were obtained on the same hardware with the respective latest public software versions as of Dec 3, 2015.
+Cognitive Toolkit (CNTK) provides significant performance gains compared to other toolkits [click here for details](https://arxiv.org/pdf/1608.07249.pdf). Here is a summary of findings by researchers at HKBU.
+
+> * CNTK’s LSTM performance is 5-10x faster than the other toolkits.
+> * For convolution (image tasks), CNTK is comparable, but note the authors were using CNTK 1.7.2, and current CNTK 2.0 beta 10 is over 30% faster than 1.7.2.
+> * For all networks, CTNK's performance was superior to TensorFlow performance.
+
+Historically, CNTK has been a pioneer in optimizing performance on multi-GPU systems. We continue to maintain the edge ([NVidia news at SuperComputing 2016](http://nvidianews.nvidia.com/news/nvidia-and-microsoft-accelerate-ai-together) and [CRAY at NIPS 2016](https://www.onmsft.com/news/microsoft-and-cray-announce-partnership-to-speed-up-deep-learning-on-supercomputers)).
+
+ CNTK was a pioneer in introducing scalability across multi-server multi-GPU systems. The figure below compares processing speed (frames processed per second) of CNTK to that of four other well-known toolkits. The configuration uses a fully connected 4-layer neural network (see our benchmark [scripts](https://github.com/Alexey-Kamenev/Benchmarks)) and an effective mini batch size (8192). All results were obtained on the same hardware with the respective latest public software versions as of Dec 3, 2015.
 
 ![Performance chart](Documentation/Documents/PerformanceChart.png)
 
