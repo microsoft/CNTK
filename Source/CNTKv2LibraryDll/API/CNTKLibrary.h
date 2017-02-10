@@ -647,7 +647,7 @@ namespace CNTK
         template <typename ElementType>
         CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
-    private:
+    public:
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;
 
@@ -792,6 +792,7 @@ namespace CNTK
 
         Microsoft::MSR::CNTK::Matrix<char>* GetMatrix() const;
 
+    public:
         // Disallow copy and move construction and assignment
         NDMask(const NDMask&) = delete; NDMask& operator=(const NDMask&) = delete; NDMask& operator=(NDMask&&) = delete; NDMask(NDMask&& other) = delete;
 
@@ -2478,6 +2479,7 @@ namespace CNTK
             }
         }
 
+    public:
         // Disallow copy and move construction and assignment
         Value(const Value&) = delete; Value& operator=(const Value&) = delete; Value(Value&&) = delete; Value& operator=(Value&&) = delete;
 
@@ -2982,10 +2984,10 @@ namespace CNTK
                                  std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
                                  std::unordered_map<Variable, Variable>& placeholderReplacements);
 
+    public:
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
-    public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
     private:
@@ -3983,6 +3985,7 @@ namespace CNTK
         const DistributedCommunicatorPtr m_communicator;
         const size_t m_distributeAfterSamples;
 
+    public:
         // Disallow copy and move construction and assignment
         DistributedLearner(const DistributedLearner&) = delete; DistributedLearner& operator=(const DistributedLearner&) = delete; DistributedLearner& operator=(DistributedLearner&&) = delete; DistributedLearner(DistributedLearner&&) = delete;
     };
@@ -4612,7 +4615,7 @@ namespace CNTK
 
         MinibatchSourcePtr TrainingMinibatchSource() const { return m_trainingSource; }
 
-    private:
+    public:
         /// Disallow copy and move construction and assignment
         TrainingSession(const TrainingSession&) = delete; TrainingSession& operator=(const TrainingSession&) = delete; TrainingSession& operator=(TrainingSession&&) = delete; TrainingSession(TrainingSession&&) = delete;
 
