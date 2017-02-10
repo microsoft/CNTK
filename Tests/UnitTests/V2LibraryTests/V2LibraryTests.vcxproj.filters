@@ -18,9 +18,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FeedForwardTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -33,12 +30,6 @@
     <ClCompile Include="RecurrentFunctionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="TrainerTests.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="SequenceClassification.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="FunctionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -48,19 +39,10 @@
     <ClCompile Include="LearnerTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Seq2Seq.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="TruncatedLSTMAcousticModel.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DeviceSelectionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Common.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="CifarResNet.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="MinibatchSourceTest.cpp">
@@ -75,11 +57,20 @@
     <ClCompile Include="BlockTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\..\Examples\Evaluation\CNTKLibraryCPPEvalExamples\EvalMultithreads.cpp">
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="LoadLegacyModelTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -95,6 +86,12 @@
       <Filter>Input Files</Filter>
     </None>
     <None Include="data\v2.0.beta1.0.dictionary.proto.bin">
+      <Filter>Input Files</Filter>
+    </None>
+    <None Include="data\batch.norm.no.sample.count.v2.bin">
+      <Filter>Input Files</Filter>
+    </None>
+    <None Include="data\batch.norm.no.sample.count.v1.bin">
       <Filter>Input Files</Filter>
     </None>
   </ItemGroup>

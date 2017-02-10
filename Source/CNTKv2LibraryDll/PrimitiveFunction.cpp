@@ -28,6 +28,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::InternalMeanReductionOpName = L"Mean";
     /*static*/ const std::wstring PrimitiveFunction::InternalMaxReductionOpName = L"Max";
     /*static*/ const std::wstring PrimitiveFunction::InternalMinReductionOpName = L"Min";
+    /*static*/ const std::wstring PrimitiveFunction::InternalProdReductionOpName = L"Prod";
     /*static*/ const std::wstring PrimitiveFunction::InternalAllReductionOpName = L"All";
     /*static*/ const std::wstring PrimitiveFunction::InternalAnyReductionOpName = L"Any";
 
@@ -131,11 +132,11 @@ namespace CNTK
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||
+            (op == PrimitiveOpType::ReduceElements && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>() == Axis::AllAxes()) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::Logistic) ||
-            (op == PrimitiveOpType::CosDistance) || 
             (op == PrimitiveOpType::LambdaRank) ||
             (op == PrimitiveOpType::NDCG))
         {
@@ -214,10 +215,13 @@ namespace CNTK
         return outputDynamicAxes;
     }
 
-    /*virtual*/ std::vector<Variable> PrimitiveFunction::InferOutputs() /*override*/
+    void PrimitiveFunction::InferOutputs(std::vector<Variable>& outputs)
     {
         if (m_op == PrimitiveOpType::Combine)
-            return m_inputs;
+        {
+            outputs.assign(m_inputs.begin(), m_inputs.end());
+            return;
+        }
 
         DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
         std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, m_attributes);
@@ -556,7 +560,7 @@ namespace CNTK
                     {
                         assert(m_inputs.size() == 1);
                         auto reductionAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape());
-                        if (reductionAxis == Axis::AllStaticAxes())
+                        if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                             outputShape = {};
                         else
                         {
@@ -567,7 +571,7 @@ namespace CNTK
                     }
                     case PrimitiveOpType::BatchNormalization:
                     {
-                        assert(m_inputs.size() == 5);
+                        assert(m_inputs.size() == 6);
                         auto spatial = m_attributes[PrimitiveFunction::AttributeNameSpatial].Value<bool>();
                         outputShape = BatchNormalizationOutputShape(m_inputs, spatial, true);
                         break;
@@ -665,8 +669,6 @@ namespace CNTK
                         assert(m_inputs.size() == 2);
                         auto operand = m_inputs[0];
                         auto layout = m_inputs[1];
-                        if (operand.DynamicAxes().empty())
-                            InvalidArgument("ReconcileDynamicAxis: input must have at least one dynamic axis");
                         if (layout.DynamicAxes().empty())
                             InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
                         outputShape = operand.Shape();
@@ -680,7 +682,7 @@ namespace CNTK
             }
         }
 
-        return{ OutputVariable(outputShape, outputDataType, outputDynamicAxes, Name().empty() ? L"" : Name()) };
+        outputs.push_back({ OutputVariable(outputShape, outputDataType, outputDynamicAxes, Name().empty() ? L"" : Name()) });
     }
 
     static const std::wstring s_primitiveFunctionTypeValue = L"PrimitiveFunction";
@@ -801,7 +803,26 @@ namespace CNTK
             return std::shared_ptr<BlockFunction>(new BlockFunction(std::move(composite), argumentsMap, blockOpName, std::move(attributes), name, uid),
                                                   [](BlockFunction* ptr) { delete ptr; });
         }
-        else
+
+
+        if (version < 4 && op == PrimitiveOpType::BatchNormalization)
+        {
+            if (Internal::GetComputationNetworkTraceLevel() > 0)
+            {
+                // TODO: all logging functionality should be refactored to live in a logging utility class. 
+                fprintf(stderr, "WARNING: the dictionary (version=%zu) does not contain a required "
+                    "BatchNormalization parameter for the running mean sample count. "
+                    "Injected a new parameter with a value of '0'.", version);
+            }
+
+            // patch up old the model by adding an extra input
+            auto runCount = Constant::Scalar(0.0f, device);
+            // HACK: uid has to be changed (by adding some unique prefix to the auto-generated "Constant"+ID_counter) 
+            // to avoid conflicts with uids recorded in the function graph, which we are deserializing.
+            runCount.m_dataFields->m_uid = L"BatchNormSampleCount" + runCount.m_dataFields->m_uid;
+            inputs.push_back(runCount);
+        }
+        
             return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
                                                       [](PrimitiveFunction* ptr) { delete ptr; });
     }

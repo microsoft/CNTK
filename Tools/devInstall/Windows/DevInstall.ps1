@@ -20,6 +20,9 @@
  .PARAMETER Execute
  You need to supply this optional parameter to have the install script perform any changes to your machine. 
  Without this parameter NO CHANGES will be done to your machine.
+
+ .PARAMETER NoConfirmation
+ If you supply this optional parameter, the install script will perform operations without asking for user confirmation.
  
  .PARAMETER localCache
  This optional parameter can be used to specify the directory downloaded components will be stored in
@@ -66,6 +69,7 @@ Param(
     [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
     [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
     [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
+    [parameter(Mandatory=$false)] [switch] $NoConfirmation,
     [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
     [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [string] $PyEnvironmentName = "",
     [parameter(Mandatory=$true, ParameterSetName = "PythonNoEnvironment")] [switch] $NoPythonEnvironment)
@@ -110,7 +114,7 @@ if (-not (Test-Path -Path $solutionFile -PathType Leaf)) {
 
 Function main
 {
-    try { if (-not (DisplayStart)) {
+    try { if (-not (DisplayStart -NoConfirmation $NoConfirmation)) {
             Write-Host 
             Write-Host " ... Quitting ... "
             Write-Host
@@ -152,7 +156,7 @@ Function main
 
         PreReqOperations $operationList
 
-        if (DisplayAfterVerify $operationList) {
+        if (DisplayAfterVerify -NoConfirmation $NoConfirmation -list $operationList) {
 
             DownloadOperations $operationList
 

@@ -12,6 +12,7 @@
 #include "Config.h"
 #include "Reader.h"
 #include "ConvolutionEngine.h"
+#include "ReshapingNodes.h"
 
 namespace CNTK
 {
@@ -305,11 +306,15 @@ namespace CNTK
         }
     }
 
-    static size_t const CNTKInternalIdxValueForAllStaticAxes = 0;
+    static int const CNTKInternalIdxValueForAllStaticAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllStaticAxes;
+    static int const CNTKInternalIdxValueForAllAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllAxes;
     inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllStaticAxes)
             return Axis::AllStaticAxes();
+
+        if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllAxes)
+            return Axis::AllAxes();
 
         return Axis(CNTKInternalAxisIdx - 1);
     }
@@ -318,6 +323,9 @@ namespace CNTK
     {
         if (axis == Axis::AllStaticAxes())
             return CNTKInternalIdxValueForAllStaticAxes;
+
+        if (axis == Axis::AllAxes())
+            return CNTKInternalIdxValueForAllAxes;
 
         if (!axis.IsStaticAxis())
             LogicError("Only Axis that represent static indices can be converted to a CNTK internal axis index");
@@ -465,7 +473,7 @@ namespace CNTK
 
     inline Axis& NormalizeStaticAxis(Axis& axis, const NDShape& operandShape)
     {
-        if (axis != Axis::AllStaticAxes())
+        if (axis != Axis::AllStaticAxes() && axis != Axis::AllAxes())
         {
             assert(axis.IsStaticAxis());
             assert(operandShape != NDShape::Unknown);
@@ -498,6 +506,8 @@ namespace CNTK
 
     std::string ToString(const std::wstring& wstring);
     std::wstring ToWString(const std::string& string);
+
+
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes);
 
     // Helper class to manage a collection of learners.
@@ -545,7 +555,6 @@ namespace CNTK
     class Utils
     {
     public:
-        template <typename ElementType>
         static void VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value);
 
         template <typename ElementType>

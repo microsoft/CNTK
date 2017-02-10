@@ -16,11 +16,11 @@ def test_cntk_106B_lstm_timeseries_with_iot_data_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedEvalErrorByDeviceId = {-1: 0.00007, 0: 0.00007}
+expectedEvalErrorByDeviceId = {-1: 0.000085, 0: 0.000085}
 
 def test_cntk_106B_lstm_timeseries_with_iot_data_evalCorrect(nb, device_id):
     testCell = [cell for cell in nb.cells
-                if cell.cell_type == 'code' and re.search('# Print validate and test error', cell.source)]
+                if cell.cell_type == 'code' and re.search('# Print the test error', cell.source)]
     assert len(testCell) == 1
     m = re.match(r"mse for test: (?P<actualEvalError>\d+\.\d+)\r?$", testCell[0].outputs[0]['text'])
-    assert np.isclose(float(m.group('actualEvalError')), expectedEvalErrorByDeviceId[device_id], atol=0.00005)
+    assert np.isclose(float(m.group('actualEvalError')), expectedEvalErrorByDeviceId[device_id], atol=0.00001)

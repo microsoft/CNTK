@@ -42,23 +42,6 @@ missing_trailing_newline = [
     ]
 ]
 
-missing_trailing_newline_ignored = [
-    precision = "double"
-    reader = [
-        readerType = "CNTKTextFormatReader"
-        file = "missing_trailing_newline.txt"
-
-        maxErrors = 2 # a missing newline will trigger 2 errors
-
-        input = [
-             features = [
-                dim = 1 
-                format = "dense"
-            ]
-        ]
-    ]
-]
-
 blank_lines = [
     precision = "double"
     reader = [

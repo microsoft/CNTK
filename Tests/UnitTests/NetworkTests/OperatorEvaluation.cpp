@@ -29,4 +29,7 @@ BOOST_AUTO_TEST_CASE(NetworkOperatorPlus)
         "../Output/out.txt.v2" /*output*/);
 };
 
-}}}}}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}}}

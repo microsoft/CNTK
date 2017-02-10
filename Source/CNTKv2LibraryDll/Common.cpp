@@ -14,6 +14,8 @@
 #include <thread>
 #include "GPUMatrix.h"
 #include "Globals.h"
+#include "PerformanceProfiler.h"
+#include "MPIWrapper.h"
 
 extern bool g_shareNodeValueMatrices;
 
@@ -99,6 +101,37 @@ namespace CNTK
         void DisableGradientAccumulationOptimization()
         {
             Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ false);
+        }
+
+        void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
+        {
+            std::wstring logSuffix = L"";
+            auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
+            if (mpi)
+            {
+                logSuffix = std::to_wstring(mpi->CurrentNodeRank());
+            }
+
+            Microsoft::MSR::CNTK::ProfilerInit(
+                profilerDir,
+                profilerBufferSize,
+                logSuffix,
+                profilerSyncGpu);
+        }
+
+        void EnableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(true);
+        }
+
+        void DisableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(false);
+        }
+
+        void StopProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerClose();
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -471,6 +504,7 @@ namespace CNTK
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
     
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
 
@@ -537,6 +571,12 @@ namespace CNTK
     {
         static const Axis s_allStaticAxes(SentinelStaticAxisIndexValueForAllStaticAxes);
         return s_allStaticAxes;
+    }
+
+    /*static*/ const Axis& Axis::AllAxes()
+    {
+        static const Axis s_allAxes(SentinelStaticAxisIndexValueForAllAxes);
+        return s_allAxes;
     }
 
     void Axis::RegisterAxisName(const std::wstring& axisName)

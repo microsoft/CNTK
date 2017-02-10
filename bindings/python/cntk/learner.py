@@ -564,9 +564,6 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         <http://arxiv.org/abs/1412.6980>`_. International Conference for
         Learning Representations, 2015. 
     '''
-    if not low_memory:
-        raise NotImplementedError('adam: low_memory=True currently required')
-
     _verify_learning_rate_type(lr)
     _verify_momentum_type(momentum)
     _verify_momentum_type(variance_momentum)

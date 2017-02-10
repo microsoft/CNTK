@@ -101,7 +101,7 @@
   </ItemDefinitionGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
-  <ItemGroup Condition="$(HasSwig)">
+  <ItemGroup>
     <CustomBuild Include="cntk_cs.i">
       <FileType>Document</FileType>
       <Command>$(SWIG_PATH)\swig.exe -c++ -csharp -DMSC_VER -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -namespace CNTK -outdir  $(SolutionDir)bindings\csharp\CNTKLibraryManagedDll\SwigProxyClasses -dllimport CNTKLibraryCSBinding cntk_cs.i</Command>
@@ -109,20 +109,22 @@
       <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;std_unordered_map.i</AdditionalInputs>
     </CustomBuild>
   </ItemGroup>
-  <ItemGroup Condition="$(HasSwig)">
+  <ItemGroup>
     <ClCompile Include="cntk_cs_wrap.cxx" />
   </ItemGroup>
-  <ItemGroup Condition="$(HasSwig)">
+  <ItemGroup>
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h" />
     <ClInclude Include="cntk_cs_wrap.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\common\CNTKValueExtend.i" />
+    <None Include="..\..\common\CNTK_ExceptionHandling.i" />
   </ItemGroup>
-  <Target Name="CheckDependencies" Condition="!$(HasSwig)">
-    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed." />
+  <Target Name="CheckDependencies">
+    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-cntk-cnet-library-for-evaluation for installation instructions." />
   </Target>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="Build" Condition="$(HasSwig)" Outputs="$(TargetPath)" DependsOnTargets="$(BuildDependsOn)" />
   <ImportGroup Label="ExtensionTargets" />
 </Project>

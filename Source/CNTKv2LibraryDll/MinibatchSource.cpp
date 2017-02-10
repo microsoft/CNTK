@@ -10,14 +10,18 @@
 #include "MinibatchSource.h"
 #include "HeapMemoryProvider.h"
 #include "ReaderShim.h"
+#include "ReaderConstants.h"
 #include <tuple>
 #include "Value.h"
 #include "MPIWrapper.h"
+#include "PerformanceProfiler.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    const size_t MinibatchSource::DefaultRandomizationWindowInChunks = g_4GB / g_32MB;
+
     const std::unordered_map<StreamInformation, MinibatchData>& MinibatchSource::GetNextMinibatch(size_t minibatchSizeInSamples, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         return GetNextMinibatch(0, minibatchSizeInSamples, device);
@@ -81,7 +85,8 @@ namespace CNTK
           m_randomizedWindow(MinibatchSource::DefaultRandomizationWindow),
           m_truncationLength(0),
           m_numWorkers(1),
-          m_workerRank(0)
+          m_workerRank(0),
+          m_restorePosition(0)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
@@ -189,6 +194,8 @@ namespace CNTK
                                                size_t workerRank,
                                                const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/) /*override*/
     {
+        auto profGetMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGetMinibatch);
+
         m_minibatchData.clear();
 
         if (!m_epochEndReached)
@@ -250,12 +257,13 @@ namespace CNTK
                 }
 
                 m_shim->StartEpoch(epochConfig, inputs);
+
                 m_prevMinibatchSize = minibatchSizeInSamples;
                 m_workerRank = workerRank;
                 m_numWorkers = numberOfWorkers;
             }
 
-            if (minibatchSizeInSamples != m_prevMinibatchSize || m_workerRank != workerRank || m_numWorkers != numberOfWorkers)
+            if (minibatchSizeInSamples != m_prevMinibatchSize || m_workerRank != workerRank || m_numWorkers != numberOfWorkers || m_restorePosition != 0)
             {
                 std::map<std::wstring, int> inputDescriptions;
                 for (const auto& s : m_streamInfos)
@@ -267,6 +275,12 @@ namespace CNTK
                 newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 newConfig.m_truncationSize = m_truncationLength;
                 newConfig.m_allowMinibatchesToCrossSweepBoundaries = true;
+
+                if (m_restorePosition != 0)
+                {
+                    m_shim->SetCurrentSamplePosition(m_restorePosition);
+                    m_restorePosition = 0;
+                }
 
                 m_shim->SetConfiguration(newConfig, inputDescriptions);
 
@@ -327,5 +341,12 @@ namespace CNTK
     {
         auto checkpointedMinibatchSourcePosition = checkpoint[PositionAttributeName].Value<size_t>();
         m_shim->SetCurrentSamplePosition(checkpointedMinibatchSourcePosition);
+
+        // Need to reinitialize, we also have to remember the current position because StartEpoch
+        // effectively resets it.
+        // TODO: Remove call to StartEpoch - this API is legacy.
+        m_restorePosition = checkpointedMinibatchSourcePosition;
+        m_epochEndReached = false;
+        m_prevMinibatchSize = 0;
     }
 }

@@ -543,6 +543,48 @@ namespace CNTK
                                                 s_targetAdagradAvDenom, momentum, varMomentum, UseUnitGainMomentum());
     }
 
+    LearnerAdam::LearnerAdam(const vector<Parameter>& parameters,
+        const LearningRateSchedule& learningRateSchedule,
+        const MomentumSchedule& momentumSchedule,
+        bool unitGain,
+        const MomentumSchedule& varianceMomentumSchedule,
+        AdditionalLearningOptions additionalOptions)
+        : LearnerMomentumSGD(parameters, learningRateSchedule, momentumSchedule,
+            unitGain, additionalOptions, /*allocateSmoothGradients*/ false),
+        m_varianceMomentumSchedule(varianceMomentumSchedule)
+    {
+        for (const auto& parameter : parameters)
+        {
+            const auto shape = GetMatrixShape(parameter);
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
+            m_smoothedGradientValues.emplace(parameter, view);
+            m_smoothedCounts.emplace(parameter, 0.0);
+        }
+    }
+
+    /*virtual*/ void LearnerAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+    {
+        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    template <typename ElementType>
+    void LearnerAdam::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        GET_WRITABLE_MATRICES;
+
+        const auto learningRate = LearningRate(trainingSampleCount);
+        const auto momentum = MomentumValueForMB(trainingSampleCount);
+
+        const auto varMomentum = VarianceMomentumValueForMB(trainingSampleCount);
+
+        double& smoothedCount = m_smoothedCounts.at(parameter);
+
+        smoothedGradientMatrix->AdamUpdate(*gradientMatrix, *parameterMatrix, smoothedCount, learningRate,
+            momentum, varMomentum, UseUnitGainMomentum());
+    }
+
     LearnerRMSProp::LearnerRMSProp(const vector<Parameter>& parameters,
                                    const LearningRateSchedule& learningRateSchedule,
                                    double gamma, double inc, double dec, double max, double min,
@@ -623,16 +665,21 @@ namespace CNTK
     LearnerPtr AdamLearner(const vector<Parameter>& parameters,
                            const LearningRateSchedule& learningRateSchedule,
                            const MomentumSchedule& momentumSchedule,
-                           bool unitGain,
+                           bool unitGain, /*=true*/
                            const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
                            bool lowMemory, /*= true*/
                            AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
+        // TODO: Due to history reason, the legacy AdamLearner using FSAdaGrad implementation instead of the original paper implementation.
+        //      To keep interface backward compatible, the new adam will be enabled only when lowMemory is false.
         if (!lowMemory)
         {
-            LogicError("AdamLearner: only the low-memory variant is supported at the moment.");
+            return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
         }
-        return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+        else
+        {
+            return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+        }
     }
 
     LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,

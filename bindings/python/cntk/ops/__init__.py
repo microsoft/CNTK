@@ -49,14 +49,8 @@ def combine(operands, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import combine
-    converted_operands = list()
-    for o in operands:
-        if isinstance(o, Function):
-            converted_operands.append(o.output)
-        else:
-            converted_operands.append(o)
+    return combine(operands, name)
 
-    return combine(converted_operands, name)
 
 @typemap
 def as_block(composite, block_arguments_map, block_op_name, block_instance_name=''):
@@ -614,10 +608,10 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
         >>> x = C.input_variable(img.shape)
         >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
         >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
-	array([[[[[  0.,   0.,   0.,   0.],
-		  [  0.,   5.,   0.,   7.],
-		  [  0.,   0.,   0.,   0.],
-		  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
+        array([[[[[  0.,   0.,   0.,   0.],
+                  [  0.,   5.,   0.,   7.],
+                  [  0.,   0.,   0.,   0.],
+                  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
 
     Args:
         operand: unpooling input
@@ -643,11 +637,11 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
                      unpooling_window_shape, strides, auto_padding,
                      lower_pad, upper_pad, name)
 
-
 @typemap
 def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
                         normalization_time_constant=5000, blend_time_constant=0,
-                        epsilon=0.00001, use_cudnn_engine=False, name=''):
+                        epsilon=0.00001, use_cudnn_engine=False, name='',
+                        running_sample_count=None):
     '''
     Normalizes layer outputs for every minibatch for each output (feature) independently
     and applies affine transformation to preserve representation of the layer.
@@ -659,7 +653,7 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
          dimensions which must be equal to the input dimensions in case of ``spatial`` = False or
          number of output convolution feature maps in case of ``spatial`` = True
         running_mean: running mean which is used during evaluation phase and might be used during
-         training as well. You must pass a parameter tensor with initial value 0 and the same dimensions
+         training as well. You must pass a constant tensor with initial value 0 and the same dimensions
          as ``scale`` and ``bias``
         running_inv_std: running variance. Represented as ``running_mean``
         spatial(bool): flag that indicates whether to compute mean/var for each feature in a minibatch
@@ -671,13 +665,24 @@ def batch_normalization(operand, scale, bias, running_mean, running_inv_std, spa
         epsilon: conditioner constant added to the variance when computing the inverse standard deviation
         use_cudnn_engine(bool, default True):
         name (str, optional): the name of the Function instance in the network
+        running_sample_count: Denotes the total number of samples that have been used so far to compute 
+         the ``running_mean`` and ``running_inv_std`` parameters. When defining a new model from scratch, 
+         the value for this parameter should be a scalar (either rank-0 ``constant(val)`` or
+         rank-1 ``constant(val, shape=(1,))``)
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    if running_sample_count is None:
+        running_sample_count = constant(0)
+        import warnings
+        warnings.warn("batch_normalization requires an additional "
+            "'running_sample_count' parameter, which can be "
+            "instantiated as 'constant(0)'", Warning)
+
     from cntk.cntk_py import batch_normalization
     operand = sanitize_input(operand)
-    return batch_normalization(operand, scale, bias, running_mean, running_inv_std, spatial,
-                               normalization_time_constant, blend_time_constant,
+    return batch_normalization(operand, scale, bias, running_mean, running_inv_std, running_sample_count, 
+                               spatial, normalization_time_constant, blend_time_constant,
                                epsilon, use_cudnn_engine, name)
 
 ##########################################################################
@@ -1941,7 +1946,7 @@ def splice(inputs, axis=-1, name=''):
                 [ 50.,  60.]]], dtype=float32)
 
     Args:
-        inputs (list): tuple of input tensors
+        inputs (iterable): a list or tuple of input tensors
         axis (int or :class:`~cntk.axis.Axis`): axis along which the
          concatenation will be performed
         name (str, optional): the name of the Function instance in the network
@@ -1967,37 +1972,52 @@ def splice(inputs, axis=-1, name=''):
 def reduce_sum(x, axis=None, name=''):
     '''
     Computes the sum of the input tensor's elements across one axis. If the axis parameter
-    is not specified then the sum will be computed over all axes, that is, the output is a scalar,
-    which is the sum of tensor's elements.
+    is not specified then the sum will be computed over all static axes, which is 
+    equivalent with specifying ``axis=Axis.all_static_axes()``. If 
+    ``axis=Axis.all_axes()``, the output is a scalar which is the sum of all the 
+    elements in the minibatch.
 
     Example:
-        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
-
-        >>> # reduce over the first axis
-        >>> C.reduce_sum(data, 0).eval()
-        array([[  90.,  120.]], dtype=float32)
-
-        >>> # reduce over the second axis
-        >>> C.reduce_sum(data, 1).eval()
-        array([[  30.],
-               [  70.],
-               [ 110.]], dtype=float32)
-
-        >>> # Negative axis is counted from last to first. So -1 retrieves same
-        >>> # result as 1 on a matrix of rank 2.
-        >>> C.reduce_sum(data, -1).eval()
-        array([[  30.],
-               [  70.],
-               [ 110.]], dtype=float32)
-
-        >>> # And -2 retrieves the same result as 0 on a matrix of rank 2.
-        >>> C.reduce_sum(data, -2).eval()
-        array([[  90.,  120.]], dtype=float32)
-
-        >>> # reduce over the all axes
-        >>> C.reduce_sum(data).eval()
-        array(210.0, dtype=float32)
+        >>> x = C.input_variable((2,2))
+        >>> # create a batch of 2 sequences each containing 2 2x2 matrices 
+        >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
+        >>> # reduce over all static axes
+        >>> C.reduce_mean(x).eval({x:x0})
+        array([[  1.5,   5.5],
+               [  9.5,  13.5]], dtype=float32)
+        >>> # reduce over specified axes
+        >>> C.reduce_mean(x,axis=0).eval({x:x0})
+        array([[[[  1.,   2.]],
+        <BLANKLINE>
+                [[  5.,   6.]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[  9.,  10.]],
+        <BLANKLINE>
+                [[ 13.,  14.]]]], dtype=float32)
+        >>> C.reduce_mean(x,axis=1).eval({x:x0})
+        array([[[[  0.5],
+                 [  2.5]],
+        <BLANKLINE>
+                [[  4.5],
+                 [  6.5]]],
+        <BLANKLINE>
+        <BLANKLINE>
+               [[[  8.5],
+                 [ 10.5]],
+        <BLANKLINE>
+                [[ 12.5],
+                 [ 14.5]]]], dtype=float32)
+        >>> # reduce over all axes
+        >>> np.round(C.reduce_mean(x, axis=C.Axis.all_axes()).eval({x:x0}),5)
+        7.5
+        >>> # reduce over all axes when the batch has sequences of different length
+        >>> x1 = np.arange(4,dtype=np.float32).reshape(1,2,2)
+        >>> x2 = np.arange(12,dtype=np.float32).reshape(3,2,2)
+        >>> np.round(C.reduce_mean(x, axis=C.Axis.all_axes()).eval({x:[x1,x2]}),5)
+        4.5
+        >>> (np.sum(x1)+np.sum(x2))/(x1.size+x2.size)
+        4.5
 
     Args:
         x: input tensor
@@ -2033,6 +2053,9 @@ def reduce_log_sum(x, axis=None, name=''):
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
 
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
+
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -2063,6 +2086,9 @@ def reduce_mean(x, axis=None, name=''):
         x: input tensor
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str, optional): the name of the Function instance in the network
+
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -2095,6 +2121,9 @@ def reduce_max(x, axis=None, name=''):
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
 
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
+
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -2126,6 +2155,9 @@ def reduce_min(x, axis=None, name=''):
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
         name (str): the name of the Function instance in the network
 
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
+
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
@@ -2133,6 +2165,39 @@ def reduce_min(x, axis=None, name=''):
     x = sanitize_input(x)
     axis = sanitize_axis(axis)
     return reduce_min(x, axis, name)
+
+@typemap
+def reduce_prod(x, axis=None, name=''):
+    '''
+    Computes the min of the input tensor's elements across the specified axis.
+
+    Example:
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[1, 2],[3, 4],[5, 6]]
+
+        >>> C.reduce_prod(data, 0).eval()
+        array([[ 15.,  48.]], dtype=float32)
+
+        >>> C.reduce_prod(data, 1).eval()
+        array([[  2.],
+               [ 12.],
+               [ 30.]], dtype=float32)
+
+    Args:
+        x: input tensor
+        axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
+        name (str): the name of the Function instance in the network
+
+    See also:
+        :func:`~cntk.ops.reduce_sum` for more details and examples.
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import reduce_prod
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return reduce_prod(x, axis, name)
 
 #######################################################################
 # training ops
