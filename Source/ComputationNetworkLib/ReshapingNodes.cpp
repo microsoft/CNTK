@@ -71,7 +71,7 @@ template <class ElemType>
     {
     case ElementWiseOperator::opArgmin:
     case ElementWiseOperator::opArgmax:
-        result.DoArgReductionOpOf(input, m_reductionOp);
+        result.DoArgReductionOpOf(input, m_axis, m_reductionOp);
         break;
     default:
         // the actual operation is a Copy with reduction, where the magic is in the reduction op

@@ -4572,7 +4572,7 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const GPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+void GPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const GPUMatrix<ElemType>& a, int reductionAxis, ElementWiseOperator reductionOp,
     const array<size_t, 2>& offsets,
     const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
     const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
@@ -4586,6 +4586,7 @@ void GPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const GPUMatrix
         InvalidArgument("All matrices must be on the same GPU");
 
     aShape;
+    reductionAxis;
     offsets;
     regularOpDims;
     regularStrides;

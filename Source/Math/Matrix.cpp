@@ -5683,7 +5683,7 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                             NOT_IMPLEMENTED);
 }
 template <class ElemType>
-void Matrix<ElemType>::TensorArgOp(const TensorShape& aShape, const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
+void Matrix<ElemType>::TensorArgOp(const TensorShape& aShape, const Matrix<ElemType>& a, int reductionAxis, ElementWiseOperator reductionOp,
                                    const array<size_t, 2>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
@@ -5694,8 +5694,8 @@ void Matrix<ElemType>::TensorArgOp(const TensorShape& aShape, const Matrix<ElemT
 
     DISPATCH_MATRIX_ON_FLAG(this,
         this,
-        m_CPUMatrix->TensorArgOp(aShape, *a.m_CPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
-        m_GPUMatrix->TensorArgOp(aShape, *a.m_GPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        m_CPUMatrix->TensorArgOp(aShape, *a.m_CPUMatrix, reductionAxis, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        m_GPUMatrix->TensorArgOp(aShape, *a.m_GPUMatrix, reductionAxis, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED);
 }

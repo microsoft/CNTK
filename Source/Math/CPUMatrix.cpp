@@ -6146,6 +6146,45 @@ struct TensorOpReduction<ElemType, OPFN, ReductionOp, N, -1>
     }
 };
 
+// perform loop over regular index k and reducing index m for N operands (counting the output)
+template <class ElemType, size_t N, int k>
+struct TensorArgOpIteration
+{
+    static inline void Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
+        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
+    {
+        // non-scalar case: still nested result loops left
+        array<ptrdiff_t, N> strides;
+        for (size_t i = 0; i < N; i++) // N = a small constant, this will be unrolled
+            strides[i] = regularStrides[i][(size_t)k];
+        for (size_t dim = regularOpDims[(size_t)k]; dim-- > 0;)
+        {
+            // need to descend into one loop deeper
+            TensorArgOpIteration<ElemType, N, k - 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+            // advance the pointers
+            for (size_t i = 0; i < N; i++)
+                pointers[i] += strides[i];
+        }
+    }
+};
+
+template <class ElemType, size_t N>
+struct TensorArgOpIteration<ElemType, N, -1>
+{
+    static inline void Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&,
+        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
+    {
+        // we are at element level for the result: perform the op (there may still be reduction)
+        auto val = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(pointers, reducingOpDims, reducingStrides, reductionOp);
+
+        auto* pout = pointers.back();
+        *pout = (ElemType) val.second;
+        return;
+    }
+};
+
 // perform loop over reduction index m
 // This function is declared inside a wrapper struct to allow partial specialization (m = -1).
 template <class ElemType, size_t N, int m>
@@ -6169,6 +6208,8 @@ struct TensorArgOpReduction
         case 1:
             val = TensorArgOpReduction<ElemType, N, 0>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
             break;
+        default:
+            LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)reducingOpDims.size());
         }
 
         return make_pair(val, index);
@@ -6622,12 +6663,13 @@ int CPUMatrix<ElemType>::ArgOp(ElementWiseOperator reductionOp) const
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix<ElemType>& a, int reductionAxis, ElementWiseOperator reductionOp,
                                       const array<size_t, 2>& offsets,
                                       const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                       const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
     aShape;
+    reductionAxis;
 
     if (reductionOp != ElementWiseOperator::opArgmin &&
         reductionOp != ElementWiseOperator::opArgmax)
@@ -6644,44 +6686,16 @@ void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix
         for (size_t i = 0; i < N; i++)
             pointers[i] += offsets[i];
 
-        array<ElemType*, N> currentPtrs = { pointers[0], pointers[1] };
-
-        if (regularOpDims.size() == 1)
+        switch (regularOpDims.size())
         {
-            for (size_t k = 0; k < regularOpDims.size(); k++)
-            {
-                for (size_t regularDim = regularOpDims[k]; regularDim-- > 0;)
-                {
-                    auto best = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(currentPtrs, reducingOpDims, reducingStrides, reductionOp);
-                    *currentPtrs[1] = (ElemType) best.second;
-
-                    for (size_t i = 0; i < N; i++)
-                        currentPtrs[i] += regularStrides[i][k];
-                }
-            }
-        }
-        else if (regularOpDims.size() == 2)
-        {
-            for (size_t k = 1; k < regularOpDims.size(); k++)
-            {
-                for (size_t regularDim = regularOpDims[k]; regularDim-- > 0;)
-                {
-                    for (size_t l = 0; l < k; l++)
-                    {
-                        for (size_t regularDim2 = regularOpDims[l]; regularDim2-- > 0;)
-                        {
-                            auto best = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(currentPtrs, reducingOpDims, reducingStrides, reductionOp);
-                            *currentPtrs[1] = (ElemType) best.second;
-
-                            for (size_t i = 0; i < N; i++)
-                                currentPtrs[i] += regularStrides[i][l];
-                        }
-                    }
-                }
-
-                for (size_t i = 0; i < N; i++)
-                    currentPtrs[i] = pointers[i] + regularStrides[i][k];
-            }
+            case 2:
+                TensorArgOpIteration<ElemType, N, 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            case 1:
+                TensorArgOpIteration<ElemType, N, 0>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            default:
+                LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)regularOpDims.size());
         }
     }
 }

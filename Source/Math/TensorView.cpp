@@ -286,7 +286,7 @@ void TensorView<ElemType>::DoTernaryOpOf(ElemType beta, const TensorView& a, con
 }
 
 template <class ElemType>
-void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOperator reductionOp)
+void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, int reductionAxis, ElementWiseOperator reductionOp)
 {
     // prepare all tensor descriptor information as needed for execution
     array<size_t, 2> offsets;
@@ -299,7 +299,7 @@ void TensorView<ElemType>::DoArgReductionOpOf(const TensorView& a, ElementWiseOp
         CheckDifferentObject(a, *this);
 
     // now perform the operation
-    GetSOB().TensorArgOp(a.GetShape(), a.GetSOB(), reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
+    GetSOB().TensorArgOp(a.GetShape(), a.GetSOB(), reductionAxis, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // -------------------------------------------------------------------
