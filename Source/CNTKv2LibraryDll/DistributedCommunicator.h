@@ -48,7 +48,8 @@ namespace CNTK
         // A collective communication API to aggregate values across each worker of this communicator. The aggregated values are only sent to the specified workers; for all others the returned Values are null
         virtual void AggregateInPlace(
             const std::vector<NDArrayViewPtr>& values,
-            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers,
+            const size_t packThresholdSize) override;
 
         virtual void Aggregate(
             const std::vector<NDArrayViewPtr>& inValues,
@@ -81,6 +82,8 @@ namespace CNTK
 
         // TODO: these two are always parallel, merge them together?
         std::vector<std::shared_ptr<Microsoft::MSR::CNTK::GPUDataTransferer>> m_gpuDataTransferers;
+
+        size_t m_packThresholdSizeInBytes;
 
     protected:
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
