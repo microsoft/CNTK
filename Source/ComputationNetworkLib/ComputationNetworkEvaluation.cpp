@@ -943,31 +943,41 @@ void ComputationNetwork::PrintMemorySharingStructure(const vector<ComputationNod
     size_t numUnshared = 0;
     for (const auto& item : memSharingStructure)
     {
-        if (item.second.size() < 2) // only print actually shared matrices
+        if (item.second.size() < 2) // unshared matrices
             numUnshared++;
-        else
+        else                        // shared matrices
             numShared++;
     }
 
-    fprintf(stderr, "\nMemory Sharing: Out of %d matrices, %d are shared as %d, and %d are not shared.\n\n", (int)numMatrices, (int)(numMatrices - numUnshared), (int)numShared, (int)numUnshared);
+    fprintf(stderr, "\nMemory Sharing: Out of %d matrices, %d are shared as %d, and %d are not shared.\n", (int)numMatrices, (int)(numMatrices - numUnshared), (int)numShared, (int)numUnshared);
+
+    fprintf(stderr, "\nHere are the ones that share memory:\n"); 
     for (const auto& item : memSharingStructure)
     {
-        if (item.second.size() < 2) // only print actually shared matrices
-            continue;
-        // Format:
-        // { node1
-        //   node2 }
-        // { node3
-        //   node4
-        //   node5 }
-        // where unshared nodes are not printed.
-        const char* delim = "\t{ ";
-        for (const auto& memShareInfo : item.second)
+        if (item.second.size() >= 2)
         {
-            fprintf(stderr, "%s%ls", delim, memShareInfo.c_str());
-            delim = "\n\t  ";
+            // Format:
+            // { node1
+            //   node2 }
+            // { node3
+            //   node4
+            //   node5 }
+            const char* delim = "\t{ ";
+            for (const auto& memShareInfo : item.second)
+            {
+                fprintf(stderr, "%s%ls", delim, memShareInfo.c_str());
+                delim = "\n\t  ";
+            }
+            fprintf(stderr, " }\n");
         }
-        fprintf(stderr, " }\n");
+    }
+    fprintf(stderr, "\nHere are the ones that don't share memory:\n");
+    for (const auto& item : memSharingStructure)
+    {
+        if (item.second.size() < 2)
+        {
+            fprintf(stderr, "\t{%ls}\n", item.second.begin()->c_str()); 
+        }
     }
     fprintf(stderr, "\n");
 }

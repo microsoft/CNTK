@@ -611,7 +611,7 @@ public:
         RequestMatrixFromPool(m_gammaFromLattice, matrixPool);
     }
 
-    // request matrices needed to do node function value evaluation
+    // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
