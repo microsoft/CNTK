@@ -861,6 +861,9 @@ def associative_multi_arg(f):
         >>> C.plus([-5, -4, -3, -2, -1], [10], [3, 2, 3, 2, 3], [-13], [+42], 'multi_arg_example').eval()
         array([ 37.,  37.,  39.,  39.,  41.], dtype=float32)
 
+        >>> C.element_times([5., 10., 15., 30.], [2.], [1., 2., 1., 2.]).eval()
+        array([  10.,   40.,   30.,  120.], dtype=float32)
+
         >>> a = np.arange(3,dtype=np.float32)
         >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
         array([ 2.,  4.,  8.], dtype=float32)
@@ -872,6 +875,8 @@ def associative_multi_arg(f):
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
+    from functools import wraps
+    @wraps(f)
     def associative_binary_operation(arg1, arg2, *more_args, **name_kwarg):
         name = (lambda name='': name)(**name_kwarg) # Python 2.7 does not allow (arg1, arg2, *more, name='')
         # in case name is specified without keyword
@@ -891,7 +896,7 @@ def associative_multi_arg(f):
 @typemap
 def plus(left, right, name=''):
     '''
-    The output of this operation is the sum of the two input tensors. It supports broadcasting.
+    The output of this operation is the sum of the two or more input tensors. It supports broadcasting.
 
     Example:
         >>> C.plus([1, 2, 3], [4, 5, 6]).eval()
@@ -900,12 +905,16 @@ def plus(left, right, name=''):
         >>> C.plus([-5, -4, -3, -2, -1], [10]).eval()
         array([ 5.,  6.,  7.,  8.,  9.], dtype=float32)
 
+        >>> C.plus([-5, -4, -3, -2, -1], [10], [3, 2, 3, 2, 3], [-13], [+42], 'multi_arg_example').eval()
+        array([ 37.,  37.,  39.,  39.,  41.], dtype=float32)
+
         >>> C.plus([-5, -4, -3, -2, -1], [10], [3, 2, 3, 2, 3]).eval()
         array([  8.,   8.,  10.,  10.,  12.], dtype=float32)
 
     Args:
-        left: left side tensor
-        right: right side tensor
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -949,19 +958,23 @@ def minus(left, right, name=''):
 @typemap
 def element_times(left, right, name=''):
     '''
-    The output of this operation is the element-wise product of the two input
+    The output of this operation is the element-wise product of the two or more input
     tensors. It supports broadcasting.
 
     Example:
         >>> C.element_times([1., 1., 1., 1.], [0.5, 0.25, 0.125, 0.]).eval()
         array([ 0.5  ,  0.25 ,  0.125,  0.   ], dtype=float32)
 
+        >>> C.element_times([5., 10., 15., 30.], [2.]).eval()
+        array([ 10.,  20.,  30.,  60.], dtype=float32)
+
         >>> C.element_times([5., 10., 15., 30.], [2.], [1., 2., 1., 2.]).eval()
-        array([ 10.,  40.,  30.,  120.], dtype=float32)
+        array([  10.,   40.,   30.,  120.], dtype=float32)
 
     Args:
-        left: left side tensor
-        right: right side tensor
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -977,12 +990,13 @@ def element_times(left, right, name=''):
 @typemap
 def element_max(left, right, name=''):
     '''
-    The output of this operation is the element-wise max of the two input
+    The output of this operation is the element-wise max of the two or more input
     tensors. It supports broadcasting.
 
     Args:
-        left: left side tensor
-        right: right side tensor
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -996,12 +1010,13 @@ def element_max(left, right, name=''):
 @typemap
 def element_min(left, right, name=''):
     '''
-    The output of this operation is the element-wise min of the two input
+    The output of this operation is the element-wise min of the two or more input
     tensors. It supports broadcasting.
 
     Args:
-        left: left side tensor
-        right: right side tensor
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -1043,7 +1058,7 @@ def element_divide(left, right, name=''):
 def log_add_exp(left, right, name=''):
     '''
     Calculates the log of the sum of the exponentials
-    of the two input tensors. It supports broadcasting.
+    of the two or more input tensors. It supports broadcasting.
 
     Example:
         >>> a = np.arange(3,dtype=np.float32)
@@ -1053,9 +1068,9 @@ def log_add_exp(left, right, name=''):
         array([ 2.,  3.,  4.], dtype=float32)
 
     Args:
-        left: left side tensor
-        right: right side tensor
-        *more: additional summands
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
