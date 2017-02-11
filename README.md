@@ -5,6 +5,17 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-02-10.* V 2.0 Beta 11 Release**  
+Highlights of this Release:
+* New and updated core and Python API features.
+* New Tutorials and Examples:
+  * [Transfer learning example to train custom image classifiers](https://github.com/Microsoft/CNTK/tree/v2.0.beta11.0/Examples/Image/TransferLearning).
+* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
+  * Note a *breaking change* due to Assembly Strong Name enabling. See [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_11_Release_Notes).
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_11_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
 ***2017-02-08.* V 2.0 Beta 10 Release available at Docker Hub**  
 CNTK V 2.0 Beta 10 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
@@ -33,19 +44,6 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 
 If you cloned CNTK Repository with [1bit-SGD enabled](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) *prior to January 25, 2017* you need to update git submodule configuration as described in [this Wiki article](https://github.com/Microsoft/CNTK/wiki/Update-1bit-SGD-Submodule-Location).
 
-***2017-01-20.* V 2.0 Beta 9 Release**  
-Highlights of this Release:
-* Default Python version is now 3.5 (relates to default parameters in client installations as well as [Runtime Images at Docker Hub](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers)).
-* New and updated core and Python API features.
-* New Tutorials and Examples:
-  * Deconvolution layer and image auto encoder example using deconvolution and unpooling ([Example **07_Deconvolution** in *Image - Getting Started*](https://github.com/Microsoft/CNTK/tree/v2.0.beta9.0/Examples/Image/GettingStarted)).
-  * [Basic autoencoder with MNIST data](https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb).
-  * [LSTM Timeseries with Simulated Data (Part A)](https://github.com/Microsoft/CNTK/blob/v2.0.beta9.0/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb). (More will come in the next Releases)
-* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_9_Release_Notes).  
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
 # What is The Microsoft Cognitive Toolkit
@@ -65,7 +63,15 @@ Blogs:
 
 ## Performance
 
-The figure below compares processing speed (frames processed per second) of CNTK to that of four other well-known toolkits. The configuration uses a fully connected 4-layer neural network (see our benchmark [scripts](https://github.com/Alexey-Kamenev/Benchmarks)) and an effective mini batch size (8192). All results were obtained on the same hardware with the respective latest public software versions as of Dec 3, 2015.
+Cognitive Toolkit (CNTK) provides significant performance gains compared to other toolkits [click here for details](https://arxiv.org/pdf/1608.07249.pdf). Here is a summary of findings by researchers at HKBU.
+
+> * CNTK’s LSTM performance is 5-10x faster than the other toolkits.
+> * For convolution (image tasks), CNTK is comparable, but note the authors were using CNTK 1.7.2, and current CNTK 2.0 beta 10 is over 30% faster than 1.7.2.
+> * For all networks, CTNK's performance was superior to TensorFlow performance.
+
+Historically, CNTK has been a pioneer in optimizing performance on multi-GPU systems. We continue to maintain the edge ([NVidia news at SuperComputing 2016](http://nvidianews.nvidia.com/news/nvidia-and-microsoft-accelerate-ai-together) and [CRAY at NIPS 2016](https://www.onmsft.com/news/microsoft-and-cray-announce-partnership-to-speed-up-deep-learning-on-supercomputers)).
+
+ CNTK was a pioneer in introducing scalability across multi-server multi-GPU systems. The figure below compares processing speed (frames processed per second) of CNTK to that of four other well-known toolkits. The configuration uses a fully connected 4-layer neural network (see our benchmark [scripts](https://github.com/Alexey-Kamenev/Benchmarks)) and an effective mini batch size (8192). All results were obtained on the same hardware with the respective latest public software versions as of Dec 3, 2015.
 
 ![Performance chart](Documentation/Documents/PerformanceChart.png)
 

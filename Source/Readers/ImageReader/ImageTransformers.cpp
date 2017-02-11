@@ -417,8 +417,6 @@ MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransfor
     else
     {
         cv::FileStorage fs;
-        // REVIEW alexeyk: this sort of defeats the purpose of using wstring at
-        // all...  [fseide] no, only OpenCV has this problem.
         fs.open(msra::strfun::utf8(meanFile).c_str(), cv::FileStorage::READ);
         if (!fs.isOpened())
             RuntimeError("Could not open file: %ls", meanFile.c_str());
@@ -449,6 +447,11 @@ void MeanTransformer::Apply(size_t id, cv::Mat &mat)
         // If matrix has not been converted to the right type, do it now as maen requires floating point type.
         ConvertToFloatingPointIfRequired(mat);
         mat = mat - m_meanImg;
+    }
+    else
+    {
+        fprintf(stderr, "WARNING: Mean file does not match the size of the input image, will be ignored.\n"
+            "Please remove mean transformation from the config.\n");
     }
 }
 

@@ -102,17 +102,21 @@ void NoRandomizer::GetNextSequenceDescriptions(size_t globalSampleCount, size_t 
 
         // Let's check whether we need to return this sequence or skip it.
         bool isLocal = m_globalSequencePosition % m_config.m_numberOfWorkers == m_config.m_workerRank;
-        if (result.empty() ||
-            ((localSampleCount - numLocalSamplesLoaded >= sequenceLength) && (globalSampleCount - numGlobalSamplesLoaded >= sequenceLength)))
-        {
-            if (isLocal) // Ok good to add it to the result.
-            {
-                result.push_back(sequence);
-                numLocalSamplesLoaded += sequence.m_numberOfSamples;
-            }
-        }
-        else // otherwise there is no room, return what we have.
+        bool enoughData = !result.empty();
+
+        // Let's check whether we need to break because we exceeded global counter.
+        if (enoughData && globalSampleCount - numGlobalSamplesLoaded < sequenceLength)
             break;
+
+        // Let's check whether we need to break because we exceeded local counter.
+        if (enoughData && isLocal && localSampleCount - numLocalSamplesLoaded < sequenceLength)
+            break;
+
+        if (isLocal) // Ok good to add it to the result.
+        {
+            result.push_back(sequence);
+            numLocalSamplesLoaded += sequence.m_numberOfSamples;
+        }
 
         numGlobalSamplesLoaded += sequence.m_numberOfSamples;
         m_globalSamplePosition += sequence.m_numberOfSamples;
