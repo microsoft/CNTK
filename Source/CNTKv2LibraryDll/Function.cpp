@@ -22,9 +22,9 @@ namespace CNTK
             for (auto outputVar : outputs)
             {
                 if (outputVar.IsOutput() && !outputVar.Owner())
-                    outputVar.SetOwner(this);
+                    outputVar.SetOwner(shared_from_this());
 
-                if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.m_dataFields->m_ownerFunction == this)
+                if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.m_dataFields->m_ownerFunction.lock().get() == this)
                 {
                     // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
                     outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(m_outputs.size());

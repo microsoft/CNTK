@@ -72,8 +72,9 @@ namespace CNTK
 
     FunctionPtr Variable::Owner() const 
     {
-        if (m_dataFields->m_ownerFunction != nullptr)
-            return m_dataFields->m_ownerFunction->shared_from_this();
+        auto ownerFunctionPtr = m_dataFields->m_ownerFunction.lock();
+        if (ownerFunctionPtr != nullptr)
+            return ownerFunctionPtr->shared_from_this();
         else
             return nullptr;
     }
@@ -87,12 +88,12 @@ namespace CNTK
         return result;
     }
 
-    void Variable::SetOwner(Function* ownerFunction)
+    void Variable::SetOwner(const std::weak_ptr<Function>& ownerFunction)
     {
         if (Kind() != VariableKind::Output)
             LogicError("Variable::SetOwner: Owner can only be set for Output Variables!");
 
-        if (m_dataFields->m_ownerFunction != nullptr)
+        if (m_dataFields->m_ownerFunction.lock() != nullptr)
             LogicError("Variable::SetOwner: An Output Variable whose owner has previously been set, cannot be reset!");
 
         m_dataFields->m_ownerFunction = ownerFunction;
@@ -312,7 +313,7 @@ namespace CNTK
     }
 
     Variable::Variable(const NDShape& shape, VariableKind varType, CNTK::DataType dataType, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
-        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, nullptr, value, needsGradient, dynamicAxes, isSparse, name, uid))
+        : m_dataFields(MakeSharedObject<VariableFields>(shape, varType, dataType, std::weak_ptr<Function>(), value, needsGradient, dynamicAxes, isSparse, name, uid))
     {}
 
     template <typename ElementType>
