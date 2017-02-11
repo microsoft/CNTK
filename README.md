@@ -5,7 +5,7 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
-***2017-01-20.* V 2.0 Beta 11 Release**  
+***2017-02-10.* V 2.0 Beta 11 Release**  
 Highlights of this Release:
 * New and updated core and Python API features.
 * New Tutorials and Examples:
