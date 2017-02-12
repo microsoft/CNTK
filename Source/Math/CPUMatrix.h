@@ -419,6 +419,12 @@ public:
 
     static void MinusOneAt(CPUMatrix<ElemType>& c, const size_t position);
 
+    static void CosSimilarityDeriv(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& rnorm2A,
+        const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& rnorm2B, const CPUMatrix<ElemType>& o,
+        const CPUMatrix<ElemType>& derivO, CPUMatrix<ElemType>& derivA, const bool isColWise);
+    static void CosSimilarity(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& rnorm2A, 
+        CPUMatrix<ElemType>& rnorm2B, const bool isColWise);
+
     static void Scale(ElemType alpha, CPUMatrix<ElemType>& a);
     static void Scale(CPUMatrix<ElemType> alpha, CPUMatrix<ElemType>& a); // In this case Matrix alpha must be 1x1
     static void Scale(ElemType alpha, const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c);

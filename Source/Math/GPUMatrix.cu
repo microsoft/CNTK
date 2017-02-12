@@ -4606,6 +4606,128 @@ static shared_ptr<GPUMatrix<ElemType>> GetOnesVector(size_t N, DEVICEID_TYPE dev
     return p;
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::CosSimilarityDeriv(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& rnorm2A, 
+    const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& rnorm2B, const GPUMatrix<ElemType>& o, 
+    const GPUMatrix<ElemType>& derivO, GPUMatrix<ElemType>& derivA, const bool isColWise)
+{
+    if (a.GetComputeDeviceId() != o.GetComputeDeviceId() || o.GetComputeDeviceId() != derivA.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("All matrices must be on the same GPU");
+
+    if (a.IsEmpty() || o.IsEmpty() || b.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+    // converting from size_t to int may cause overflow
+    const int m = (int)a.GetNumRows();
+    const int n = (int)a.GetNumCols();
+    const int k = (int)o.GetNumRows();
+    const int l = (int)o.GetNumCols();
+    const int f = (int)b.GetNumRows();
+    const int g = (int)b.GetNumCols();
+
+    assert(m > 0 && n > 0 && k > 0 && l > 0);
+
+    if (isColWise)
+    {
+        // Ensure l >= n and l times n
+        assert(k == 1 && l%n == 0);
+        if (k != 1 || l%n != 0)
+            InvalidArgument("Matrices a and o should have same dimension.");
+    }
+    else
+    {
+        // Ensure k >= m && k times m
+        assert(k%m == 0 && 1 == l);
+        if (k%m != 0 || 1 != l)
+            InvalidArgument("Matrices a and o should have same dimension.");
+    }
+
+    derivA.PrepareDevice();
+
+    int vectorSize = m;
+    int numA = n;
+    int numB = g;
+    if (!isColWise) // col-wise
+    {
+        numA = m;
+        numB = f;
+        vectorSize = n;
+    }
+
+    // Due to the column major storage, make row direction to align with the threads direction to speed memory access
+    int maxWidth = max(m, k);
+    int maxHight = max(n, l);
+    int numOfThreadsPerBlock = min(GridDim::maxThreadsPerBlock, maxWidth);
+    int blockDimY = (maxWidth + numOfThreadsPerBlock -1) / numOfThreadsPerBlock;
+    int blockDimX = maxHight;
+    dim3 blocksPerGrid(blockDimX, blockDimY);
+    SyncGuard syncGuard;
+    _cosSimDeriv<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, 0, t_stream >> >(derivA.Data(), o.Data(), derivO.Data(),
+        a.Data(), rnorm2A.Data(), b.Data(), rnorm2B.Data(), vectorSize, numA, numB, isColWise);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::CosSimilarity(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& pa, GPUMatrix<ElemType>& pb, const bool isColWise)
+{
+    if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("All matrices must be on the same GPU");
+
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+
+    // converting from size_t to int may cause overflow
+    const int m = (int)a.GetNumRows();
+    const int n = (int)a.GetNumCols();
+    const int k = (int)b.GetNumRows();
+    const int l = (int)b.GetNumCols();
+
+    assert(m > 0 && n > 0 && k > 0 && l > 0); 
+    if (isColWise)
+    { // Ensure l >= n and l times n
+        assert(m == k && l%n == 0);                 // converting from size_t to int may cause overflow
+        if (m != k || l%n != 0)
+            InvalidArgument("Matrices a and b should have same dimension.");
+    }
+    else
+    {
+        // Ensure k >= m && k times m
+        assert(k%m == 0 && n == l);                 // converting from size_t to int may cause overflow
+        if (k%m != 0 || n != l)
+            InvalidArgument("Matrices a and b should have same dimension.");
+    }
+
+    c.PrepareDevice();
+    pa.PrepareDevice();
+    pb.PrepareDevice();
+    int blocksPerGrid = 0;
+    int vectorSize = m;
+    int bElements = l;
+    int aElements = n;
+    int shareMem = 0;
+    if (isColWise) // col-wise
+    {
+        c.RequireSize(1, l);
+        pa.RequireSize(1, n);
+        pb.RequireSize(1, l);
+    }
+    else
+    {
+        vectorSize = n;
+        bElements = k;
+        aElements = m;
+        c.RequireSize(k, 1);
+        pa.RequireSize(m, 1);
+        pb.RequireSize(k, 1);
+    }
+
+    int outElements = aElements > bElements ? aElements : bElements;
+    blocksPerGrid = outElements;
+    int numOfThreadsPerBlock = min(GridDim::maxThreadsPerBlock, vectorSize);
+    shareMem = numOfThreadsPerBlock * 3 * sizeof(ElemType);
+
+    SyncGuard syncGuard;
+    _cosSim<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, shareMem, t_stream >> > (c.Data(), pa.Data(), pb.Data(), a.Data(), b.Data(), vectorSize, aElements, bElements, isColWise);
+}
+
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
 template <class ElemType>

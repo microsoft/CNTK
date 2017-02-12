@@ -146,7 +146,7 @@ namespace CNTK
     /*static*/ std::shared_ptr<Matrix<ElementType>> NDArrayView::GetMatrixImpl(const TensorView<ElementType>* tensorView, size_t rowColSplitPoint)
     {
         auto tensorShape = tensorView->GetShape();
-        if (tensorShape.GetRank() <= 2)
+        if (tensorShape.GetRank() < 2 || (tensorShape.GetRank()==2 && rowColSplitPoint==1))
             return tensorView->AsMatrix();
 
         size_t splitPoint = rowColSplitPoint;

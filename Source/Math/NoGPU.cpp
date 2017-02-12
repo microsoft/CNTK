@@ -2191,6 +2191,19 @@ template <class ElemType>
 void GPUMatrix<ElemType>::AssignNCEUnnormalizedEval(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c)
 {
 }
+
+template <class ElemType>
+void GPUMatrix<ElemType>::CosSimilarityDeriv(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& rnorm2A,
+    const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& rnorm2B, const GPUMatrix<ElemType>& o,
+    const GPUMatrix<ElemType>& derivO, GPUMatrix<ElemType>& derivA, const bool isColWise)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::CosSimilarity(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& pa, GPUMatrix<ElemType>& pb, const bool isColWise)
+{
+}
+
 #pragma endregion Static BLAS Functions
 
 #pragma region MatrixQuantizerGPU functions

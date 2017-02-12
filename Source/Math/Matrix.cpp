@@ -5160,6 +5160,51 @@ void Matrix<ElemType>::Scale(const Matrix<ElemType>& alpha, Matrix<ElemType>& a)
 }
 
 template <class ElemType>
+void Matrix<ElemType>::CosSimilarityDeriv(const Matrix<ElemType>& a, const Matrix<ElemType>& rnorm2A,
+    const Matrix<ElemType>& b, const Matrix<ElemType>& rnorm2B, const Matrix<ElemType>& o,
+    const Matrix<ElemType>& derivO, Matrix<ElemType>& derivA, const bool isColWise)
+{
+    if (a.IsEmpty() || o.IsEmpty() || derivO.IsEmpty())
+        LogicError("CosSimilarity:  one of the input matrix is empty.");
+    DecideAndMoveToRightDevice(a, o, derivO);
+    DecideAndMoveToRightDevice(a, o, rnorm2A);
+    DecideAndMoveToRightDevice(a, o, derivA);
+    if (o.GetMatrixType() != DENSE || a.GetMatrixType() != DENSE) // only support a being sparse/dense. Both b and c should be dense
+        NOT_IMPLEMENTED;
+    derivA.SwitchToMatrixType(a.GetMatrixType(), a.GetFormat(), true);
+    DISPATCH_MATRIX_ON_FLAG(&a,
+        &a,
+        CPUMatrix<ElemType>::CosSimilarityDeriv(*a.m_CPUMatrix, *rnorm2A.m_CPUMatrix,
+            *b.m_CPUMatrix, *rnorm2B.m_CPUMatrix, *o.m_CPUMatrix, *derivO.m_CPUMatrix, *derivA.m_CPUMatrix, isColWise),
+        GPUMatrix<ElemType>::CosSimilarityDeriv(*a.m_GPUMatrix, *rnorm2A.m_GPUMatrix,
+            *b.m_GPUMatrix, *rnorm2B.m_GPUMatrix, *o.m_GPUMatrix, *derivO.m_GPUMatrix, *derivA.m_GPUMatrix, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::CosSimilarity(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, Matrix<ElemType>& pa, Matrix<ElemType>& pb, const bool isColWise)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("CosSimilarity:  one of the input matrix is empty.");
+
+    DecideAndMoveToRightDevice(a, b, c);
+    DecideAndMoveToRightDevice(a, b, pa);
+    DecideAndMoveToRightDevice(a, b, pb);
+    if (b.GetMatrixType() != DENSE || a.GetMatrixType() != DENSE) // only support a being sparse/dense. Both b and c should be dense
+        NOT_IMPLEMENTED;
+    c.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
+    pa.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
+    pb.SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
+    DISPATCH_MATRIX_ON_FLAG(&a,
+        &a,
+        CPUMatrix<ElemType>::CosSimilarity(*a.m_CPUMatrix, *b.m_CPUMatrix, *c.m_CPUMatrix, *pa.m_CPUMatrix, *pb.m_CPUMatrix, isColWise),
+        GPUMatrix<ElemType>::CosSimilarity(*a.m_GPUMatrix, *b.m_GPUMatrix, *c.m_GPUMatrix, *pa.m_GPUMatrix, *pb.m_GPUMatrix, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise)
 {
     if (a.IsEmpty() || b.IsEmpty())

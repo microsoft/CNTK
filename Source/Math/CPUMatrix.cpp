@@ -472,6 +472,156 @@ void CPUMatrix<ElemType>::MinusOneAt(CPUMatrix<ElemType>& c, const size_t positi
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::CosSimilarityDeriv(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& rnorm2A,
+    const CPUMatrix<ElemType>& b, const CPUMatrix<ElemType>& rnorm2B, const CPUMatrix<ElemType>& o,
+    const CPUMatrix<ElemType>& derivO, CPUMatrix<ElemType>& derivA, const bool isColWise)
+{
+    if (a.IsEmpty() || o.IsEmpty() || b.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+    // converting from size_t to int may cause overflow
+    const int m = (int)a.GetNumRows();
+    const int n = (int)a.GetNumCols();
+    const int k = (int)o.GetNumRows();
+    const int l = (int)o.GetNumCols();
+    const int f = (int)b.GetNumRows();
+    const int g = (int)b.GetNumCols();
+
+    assert(m > 0 && n > 0 && k > 0 && l > 0); 
+
+    if (isColWise)
+    { 
+        assert(k == 1 && l==n);
+        if (k != 1 || l!=n)
+            InvalidArgument("Matrices a and o should have same dimension.");
+    }
+    else
+    {
+        assert(k == m && 1 == l);
+        if (k != m || 1 != l)
+            InvalidArgument("Matrices a and o should have same dimension.");
+    }
+    
+    auto ptrA = a.Data();
+    auto ptrRNormA = rnorm2A.Data();
+    auto ptrB = b.Data();
+    auto ptrRNormB = rnorm2B.Data();
+    auto ptrO = o.Data();
+    auto ptrDerivO = derivO.Data();
+    auto ptrDerivA = derivA.Data();
+
+    if (isColWise)
+    {
+#pragma omp parallel for
+        foreach_column(j, a)
+        {
+            int colOffset = j*m;
+            ElemType left = (ElemType)(ptrRNormA[j] * ptrRNormB[j]*ptrDerivO[j]);
+            ElemType right = (ElemType)(ptrRNormA[j] * ptrRNormA[j] * ptrDerivO[j]*ptrO[j]);
+            for (int i = 0; i < m; i++)
+            {
+                ptrDerivA[colOffset + i] +=(ElemType)(left*ptrB[colOffset + i] - ptrA[colOffset + i] * right);
+            }
+        }
+    }
+    else
+    {
+#pragma omp parallel for
+        foreach_row(j, a)
+        {
+            ElemType left = (ElemType)(ptrRNormA[j] * ptrRNormB[j] * ptrDerivO[j]);
+            ElemType right = (ElemType)(ptrRNormA[j] * ptrRNormA[j] * ptrDerivO[j] * ptrO[j]);
+            int colOffset = 0;
+            for (int i = 0; i < n; i++)
+            {
+                ptrDerivA[colOffset + j] += (ElemType)(left*ptrB[colOffset + j] - ptrA[colOffset + j] * right);
+                colOffset += m;
+            }
+        }
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::CosSimilarity(const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& rnorm2A,
+    CPUMatrix<ElemType>& rnorm2B, const bool isColWise)
+{
+    if (a.IsEmpty() || b.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+
+    const int m = (int)a.GetNumRows();
+    const int n = (int)a.GetNumCols();
+    const int k = (int)b.GetNumRows();
+    const int l = (int)b.GetNumCols();
+    assert(m > 0 && n > 0 && k > 0 && l > 0);
+    assert(m==k > 0 && n==l);
+    if (isColWise) // col-wise
+    {
+        c.RequireSize(1, l);
+        rnorm2A.RequireSize(1, n);
+        rnorm2B.RequireSize(1, l);
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+#pragma omp parallel for
+            foreach_column(j, a)
+            {
+                double norma = cblas_dnrm2(m, reinterpret_cast<double*>(a.Data() + a.LocateColumn(j)), 1);
+                double normb = cblas_dnrm2(k, reinterpret_cast<double*>(b.Data() + b.LocateColumn(j)), 1);
+                rnorm2A(0, j) = (ElemType)(1/sqrt(norma + 1e-8));
+                rnorm2B(0, j) = (ElemType)(1/sqrt(normb + 1e-8));
+                c(0, j) = (ElemType)cblas_ddot(m, reinterpret_cast<double*>(a.Data() + a.LocateColumn(j)), 1, reinterpret_cast<double*>(b.Data() + b.LocateColumn(j)), 1);
+                c(0, j) = (ElemType)(c(0, j)*rnorm2A(0, j)*rnorm2B(0, j));
+            }
+        }
+        else
+        {
+#pragma omp parallel for
+            foreach_column(j, a)
+            {
+                double norma = cblas_snrm2(m, reinterpret_cast<float*>(a.Data() + a.LocateColumn(j)), 1);
+                double normb = cblas_snrm2(k, reinterpret_cast<float*>(b.Data() + b.LocateColumn(j)), 1);
+                rnorm2A(0, j) = (ElemType)(1 / sqrt(norma + 1e-8));
+                rnorm2B(0, j) = (ElemType)(1 / sqrt(normb + 1e-8));
+                c(0, j) = (ElemType)cblas_sdot(m, reinterpret_cast<float*>(a.Data() + a.LocateColumn(j)), 1, reinterpret_cast<float*>(b.Data() + b.LocateColumn(j)), 1);
+                c(0, j) = (ElemType)(c(0, j)*rnorm2A(0, j)*rnorm2B(0, j));
+            }
+        }
+    }
+    else
+    {
+        c.RequireSize(k, 1);
+        rnorm2A.RequireSize(m, 1);
+        rnorm2B.RequireSize(k, 1);
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+#pragma omp parallel for
+            foreach_row(j, a)
+            {
+                double norma = (ElemType)cblas_dnrm2(n, reinterpret_cast<double*>(a.Data() + j), m);
+                double normb = (ElemType)cblas_dnrm2(l, reinterpret_cast<double*>(b.Data() + j), k);
+                rnorm2A(j, 0) = (ElemType)(1 / sqrt(norma + 1e-8));
+                rnorm2B(j, 0) = (ElemType)(1 / sqrt(normb + 1e-8));
+                c(j, 0) = (ElemType)cblas_ddot(n, reinterpret_cast<double*>(a.Data() + j), m, reinterpret_cast<double*>(b.Data() + j), k);
+                c(j, 0) = (ElemType)(c(j, 0)*rnorm2A(j, 0)*rnorm2B(j, 0));
+            }
+        }
+        else
+        {
+#pragma omp parallel for
+            foreach_row(j, a)
+            {
+                double norma = (ElemType)cblas_snrm2(n, reinterpret_cast<float*>(a.Data() + j), m);
+                double normb = (ElemType)cblas_snrm2(l, reinterpret_cast<float*>(b.Data() + j), k);
+                rnorm2A(j, 0) = (ElemType)(1 / sqrt(norma + 1e-8));
+                rnorm2B(j, 0) = (ElemType)(1 / sqrt(normb + 1e-8));
+                c(j, 0) = (ElemType)cblas_sdot(n, reinterpret_cast<float*>(a.Data() + j), m, reinterpret_cast<float*>(b.Data() + j), k);
+                c(j, 0) = (ElemType)(c(j, 0)*rnorm2A(j, 0)*rnorm2B(j, 0));
+            }
+        }
+    }
+}
+
+template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignRepeatOf(const CPUMatrix<ElemType>& a, const size_t numRowRepeats, const size_t numColRepeats)
 {
     if (this == &a)

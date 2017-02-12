@@ -528,6 +528,11 @@ public:
     // minus one at a specific position
     static void MinusOneAt(GPUMatrix<ElemType>& c, const size_t position);
 
+    static void CosSimilarityDeriv(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& rnorm2A,
+        const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& rnorm2B, const GPUMatrix<ElemType>& o,
+        const GPUMatrix<ElemType>& derivO, GPUMatrix<ElemType>& derivA, const bool isColWise);
+    static void CosSimilarity(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& rnorm2A, GPUMatrix<ElemType>& rnorm2B, const bool isColWise);
+
     static void Scale(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
     static void Scale(GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& a); // In this case matrix alpha must be 1x1
     static void Scale(ElemType alpha, GPUMatrix<ElemType>& a);

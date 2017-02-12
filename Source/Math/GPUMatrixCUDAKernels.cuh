@@ -5265,6 +5265,7 @@ __global__ void _assignAlphaScore(
         if (phoneSeqId == 1 || phoneSeqId == 2)
         {
             alphaScore[alphaId] = prob[probId];
+
         }
     }
     else
@@ -5477,6 +5478,162 @@ __global__ void _assignTotalScore(ElemType *betaScore,
     }
 }
 
+template <class ElemType>
+__global__ void _cosSimDeriv(
+    ElemType* deriv,
+    const ElemType* sim,        // Cos similarity
+    const ElemType* simDeriv,   // Drivative of cos similarity
+    const ElemType* inputA,     // Input variable to compute derivative for.
+    const ElemType* rnom2A,     // rnorm2 of the input variable
+    const ElemType* inputB,     // The other input variable 
+    const ElemType* rnom2B,     // rnorm2 of the other input variable
+    const CUDA_LONG vectorSize, // size of vector
+    const CUDA_LONG numA, // Number of vectors in A
+    const CUDA_LONG numB, // Number of vectors in B
+    const bool isColWise
+)
+{
+    CUDA_LONG vector_id = blockIdx.x;
+    CUDA_LONG element_id = blockIdx.y*blockDim.x + threadIdx.x;
+    if (!isColWise)
+    {
+        vector_id = element_id;
+        element_id = blockIdx.x;
+    }
+
+    CUDA_LONG N = numA > numB ? numA : numB;
+    if (vector_id >= N || element_id >= vectorSize)
+        return;
+    CUDA_LONG indexA = 0;
+    CUDA_LONG indexB = 0;
+    CUDA_LONG index = 0;
+    CUDA_LONG idA = vector_id%numA;
+    CUDA_LONG idB = vector_id%numB;
+    ElemType rightFactor = simDeriv[vector_id] * sim[vector_id] * rnom2A[idA] * rnom2A[idA];
+    ElemType leftFactor = simDeriv[vector_id] * rnom2A[idA] * rnom2B[idB];
+    if (isColWise)
+    {
+        indexA = idA*vectorSize + element_id;
+        indexB = idB*vectorSize + element_id;
+        index = vector_id*vectorSize + element_id;
+    }
+    else
+    {
+        // TODO: Due to the memory storage of matrix is column major, this mode is much faster in GPU
+        indexA = idA + element_id*numA;
+        indexB = idB + element_id*numB;
+        index = vector_id + vector_id*N;
+    }
+
+    deriv[index] += leftFactor*inputB[indexB] - rightFactor*inputA[indexA];
+}
+
+template <class ElemType>
+__global__ void _cosSim(
+    ElemType* c,
+    ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
+    ElemType* rnorm2B,           // 1/sqrt(Sum(B^2))
+    const ElemType* a,
+    const ElemType* b,
+    const CUDA_LONG vectorSize, // size of vector
+    const CUDA_LONG numA, // Number of vectors in A
+    const CUDA_LONG numB, // Number of vectors in B
+    const bool isColWise)
+{
+    CUDA_LONG id = blockIdx.x;
+    CUDA_LONG N = numA > numB ? numA : numB;
+    //TODO: this path should never be actived, else there will be dead lock
+    if (id >= N || threadIdx.x >= vectorSize)
+        return;
+    extern __shared__ char sharePtr[];
+    ElemType* dot = (ElemType*)sharePtr;
+    ElemType* aSquare = dot + blockDim.x;
+    ElemType* bSquare = aSquare + blockDim.x;
+
+    ElemType sum = 0;
+    CUDA_LONG indexA = 0;
+    CUDA_LONG indexB = 0;
+    CUDA_LONG idA = id%numA;
+    CUDA_LONG idB = id%numB;
+    ElemType squareSumA = 0;
+    ElemType squareSumB = 0;
+
+    if (isColWise)
+    {
+        indexA = idA*vectorSize + threadIdx.x;
+        indexB = idB*vectorSize + threadIdx.x;
+        for (CUDA_LONG i = threadIdx.x; i < vectorSize; )
+        {
+            sum += a[indexA] * b[indexB];
+            squareSumA += a[indexA] * a[indexA];
+            squareSumB += b[indexB] * b[indexB];
+            indexA += blockDim.x;
+            indexB += blockDim.x;
+            i += blockDim.x;
+        }
+    }
+    else
+    {
+        for (CUDA_LONG i = threadIdx.x; i < vectorSize; )
+        {
+            indexA = idA + i*numA;
+            indexB = idB + i*numB;
+            sum += a[indexA] * b[indexB];
+            squareSumA += a[indexA] * a[indexA];
+            squareSumB += b[indexB] * b[indexB];
+            i += blockDim.x;
+        }
+    }
+
+    dot[threadIdx.x] = sum;
+    aSquare[threadIdx.x] = squareSumA;
+    bSquare[threadIdx.x] = squareSumB;
+    __syncthreads();
+
+    // DO aggregation
+    // 64-ways aggregation log_2(n)/log_2(ways)
+    int pof2 = 6;
+    int ways = 1 << pof2;
+    int step = blockDim.x;
+    while (step > ways)
+    {
+        step = min((step + ways-1) >> pof2, step);
+        if (threadIdx.x < step)
+        {
+            for (int i = threadIdx.x + step; i < blockDim.x; )
+            {
+                dot[threadIdx.x] += dot[i];
+                aSquare[threadIdx.x] += aSquare[i];
+                bSquare[threadIdx.x] += bSquare[i];
+                i += step;
+            }
+        }
+        __syncthreads();
+    }
+
+    if (threadIdx.x == 0)
+    {
+        for (int i = 1; i < step; i++)
+        {
+            dot[threadIdx.x] += dot[i];
+            aSquare[threadIdx.x] += aSquare[i];
+            bSquare[threadIdx.x] += bSquare[i];
+        }
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            rnorm2A[idA] = aSquare[0] < EPS_IN_INVERSE? 0 : rsqrt(aSquare[0]);
+            rnorm2B[idB] = bSquare[0] < EPS_IN_INVERSE ? 0 : rsqrt(bSquare[0]);
+        }
+        else
+        {
+            rnorm2A[idA] = aSquare[0] < EPS_IN_INVERSE ? 0 : rsqrtf(aSquare[0]);
+            rnorm2B[idB] = bSquare[0] < EPS_IN_INVERSE ? 0 : rsqrtf(bSquare[0]);
+        }
+
+        c[id] = (ElemType)(dot[0]*rnorm2A[idA] * rnorm2B[idB]);
+    }
+}
 }
 }
 }

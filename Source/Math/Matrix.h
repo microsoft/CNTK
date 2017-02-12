@@ -580,7 +580,10 @@ public:
     static void InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise);
     static ElemType InnerProductOfMatrices(const Matrix<ElemType>& a, const Matrix<ElemType>& b);
     static void ElementWisePower(ElemType alpha, const Matrix<ElemType>& a, Matrix<ElemType>& c);
-
+    static void CosSimilarityDeriv(const Matrix<ElemType>& a, const Matrix<ElemType>& rnorm2A,
+        const Matrix<ElemType>& b, const Matrix<ElemType>& rnorm2B, const Matrix<ElemType>& o,
+        const Matrix<ElemType>& derivO, Matrix<ElemType>& derivA, const bool isColWise);
+    static void CosSimilarity(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, Matrix<ElemType>& pa, Matrix<ElemType>& pb, const bool isColWise);
     static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
     static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 

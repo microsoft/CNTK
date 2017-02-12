@@ -245,8 +245,8 @@ public:
             AddSequence(inputSequences[i].seqId, s, (ptrdiff_t)tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
         }
         // need to fill the gaps as well
-        for (size_t s = 0; s < rowAllocations.size(); s++)
-            AddGap(s, (size_t)rowAllocations[s], width);
+        for (size_t pid = 0; pid < rowAllocations.size(); pid++)
+            AddGap(pid, (size_t)rowAllocations[pid], width);
     }
 
     // -------------------------------------------------------------------
@@ -352,7 +352,7 @@ public:
 
     // mark a range of frames in a parallel sequence as one sentence
     // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
-    void AddSequence(UniqueSequenceId seqId, size_t s, ptrdiff_t beginTime, size_t endTime)
+    void AddSequence(UniqueSequenceId seqId, size_t pid, ptrdiff_t beginTime, size_t endTime)
     {
         // old readers can just pass this to get an auto-assigned id (which is fine as long as we only have one MBLayout per minibatch)
         if (seqId == NEW_SEQUENCE_ID)
@@ -363,7 +363,7 @@ public:
                 LogicError("AddSequence: ran out of bits..."); // (will never happen anyway)
         }
 
-        AddSequence(SequenceInfo{seqId, s, beginTime, endTime});
+        AddSequence(SequenceInfo{seqId, pid, beginTime, endTime});
     }
 
     // version that passes a SequenceInfo record directly
