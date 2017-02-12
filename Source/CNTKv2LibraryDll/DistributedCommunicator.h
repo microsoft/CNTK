@@ -48,8 +48,7 @@ namespace CNTK
         // A collective communication API to aggregate values across each worker of this communicator. The aggregated values are only sent to the specified workers; for all others the returned Values are null
         virtual void AggregateInPlace(
             const std::vector<NDArrayViewPtr>& values,
-            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers,
-            const size_t packThresholdSize) override;
+            const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers) override;
 
         virtual void Aggregate(
             const std::vector<NDArrayViewPtr>& inValues,

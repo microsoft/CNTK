@@ -269,11 +269,10 @@ namespace CNTK
 
     void MPICommunicatorImpl::AggregateInPlace(
         const std::vector<NDArrayViewPtr>& values,
-        const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers,
-        size_t packThresholdSize = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
+        const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers)
+        // size_t packThresholdSize = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
     {
         auto device = GetNonCPUDevice(values);
-        m_packThresholdSizeInBytes = packThresholdSize;
         if (device.Type() != DeviceKind::CPU)
         {
             // Since we will be copying the gradients asynchronously, let us
@@ -293,6 +292,8 @@ namespace CNTK
         const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers)
     {
         CheckWorkers(sendToWorkers);
+
+        m_packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
 
         if (m_mpi->NumNodesInUse() == 1) // No need to aggregate anything.
             return;
@@ -321,19 +322,19 @@ namespace CNTK
             }
         }
 
-        class Elemtype;
-        if (inputValues[0]->GetDataType() == DataType::Float)
-            typedef float Elemtype;
-        else if (inputValues[0]->GetDataType() == DataType::Double)
-            typedef double Elemtype;
-        else
-            LogicError("Unknown DataType");
-        std::unique_ptr<Matrix<Elemtype>> m_aggregationBuffer;
+        std::unique_ptr<Matrix<float>> m_aggregationBufferFloat;
+        std::unique_ptr<Matrix<double>> m_aggregationBufferDouble;
         if (packedGradientsSizeInBytes > 0)
         {
-            
-            m_aggregationBuffer.reset(new (std::nothrow) Matrix<Elemtype>(1, packedGradientsSizeInBytes / sizeof(inputValues[0]->GetDataType()), CPUDEVICE));
-            if (m_aggregationBuffer == nullptr)
+            if (inputValues[0]->GetDataType() == DataType::Float)
+            {
+                m_aggregationBufferFloat.reset(new (std::nothrow) Matrix<float>(1, packedGradientsSizeInBytes / sizeof(float), CPUDEVICE));
+            }
+            else
+            {
+                m_aggregationBufferDouble.reset(new (std::nothrow) Matrix<double>(1, packedGradientsSizeInBytes / sizeof(double), CPUDEVICE));
+            }
+            if (m_aggregationBufferFloat == nullptr && m_aggregationBufferDouble == nullptr)
             {
                 packedGradientsSizeInBytes = 0;
                 packedGradientsIndex.clear();
@@ -344,19 +345,38 @@ namespace CNTK
             }
             else
             {
-                size_t offset = 0;
-                for (size_t i : packedGradientsIndex)
+                if (inputValues[0]->GetDataType() == DataType::Float)
                 {
-                    auto gradient = GetWritableMatrix<Elemtype>(inputValues[i]);
-                    m_aggregationBuffer->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
-                    offset += gradient->GetNumElements();
+                    size_t offset = 0;
+                    for (size_t i : packedGradientsIndex)
+                    {
+                        auto gradient = GetWritableMatrix<float>(inputValues[i]);
+                        m_aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
+                        offset += gradient->GetNumElements();
+                    }
+                    ::CNTK::NDShape shape{ m_aggregationBufferFloat->GetNumElements() };
+                    auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(inputValues[0]->GetDataType(), shape, m_aggregationBufferFloat->Data(),
+                        packedGradientsSizeInBytes, inputValues[0]->Device());
+                    valuesToAggregate.insert(valuesToAggregate.begin(), 1, data);
+                    numValues = valuesToAggregate.size();
+                    valuesAfterAggregate.insert(valuesAfterAggregate.begin(), 1, data);
                 }
-                ::CNTK::NDShape shape{ m_aggregationBuffer->GetNumElements() };
-                auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(inputValues[0]->GetDataType(), shape, m_aggregationBuffer->Data(),
-                    packedGradientsSizeInBytes, inputValues[0]->Device());
-                valuesToAggregate.insert(valuesToAggregate.begin(), 1, data);
-                numValues = valuesToAggregate.size();
-                valuesAfterAggregate.insert(valuesAfterAggregate.begin(), 1, data);
+                else
+                {
+                    size_t offset = 0;
+                    for (size_t i : packedGradientsIndex)
+                    {
+                        auto gradient = GetWritableMatrix<double>(inputValues[i]);
+                        m_aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
+                        offset += gradient->GetNumElements();
+                    }
+                        ::CNTK::NDShape shape{ m_aggregationBufferDouble->GetNumElements() };
+                        auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(inputValues[0]->GetDataType(), shape, m_aggregationBufferDouble->Data(),
+                            packedGradientsSizeInBytes, inputValues[0]->Device());
+                        valuesToAggregate.insert(valuesToAggregate.begin(), 1, data);
+                        numValues = valuesToAggregate.size();
+                        valuesAfterAggregate.insert(valuesAfterAggregate.begin(), 1, data);
+                }
             }
         }
 
@@ -442,19 +462,31 @@ namespace CNTK
             }
         }
 
-        // Unpack the continous buffer
+        // Unpack the continuous buffer
         if (packedGradientsSizeInBytes > 0)
         {
             size_t offset = 0;
-            for (size_t i : packedGradientsIndex)
+            if (inputValues[0]->GetDataType() == DataType::Float)
             {
-                auto gradient = GetWritableMatrix<Elemtype>(inputValues[i]);
-                gradient->AssignValuesOf(m_aggregationBuffer->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
-                offset += gradient->GetNumElements();
-                ::CNTK::NDShape shapet{ gradient->GetNumElements() };
-                NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, m_aggregationBuffer->Data(),
-                    packedGradientsSizeInBytes, outputValues[i]->Device());
-                // Assign the values back to outputValues
+                for (size_t i : packedGradientsIndex)
+                {
+                    auto gradient = GetWritableMatrix<float>(outputValues[i]);
+                    gradient->AssignValuesOf(m_aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
+                    offset += gradient->GetNumElements();
+                    ::CNTK::NDShape shapet{ gradient->GetNumElements() };
+                    NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, gradient->Data(), gradient->GetNumElements(), outputValues[i]->Device());
+                }
+            }
+            else
+            {
+                for (size_t i : packedGradientsIndex)
+                {
+                    auto gradient = GetWritableMatrix<double>(outputValues[i]);
+                    gradient->AssignValuesOf(m_aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
+                    offset += gradient->GetNumElements();
+                    ::CNTK::NDShape shapet{ gradient->GetNumElements() };
+                    NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, gradient->Data(), gradient->GetNumElements(), outputValues[i]->Device());
+                }
             }
         }
 

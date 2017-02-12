@@ -224,7 +224,7 @@ private:
         auto headerData = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(::CNTK::DataType::Double, ::CNTK::NDShape{ numberOfElements }, headerBuffer.get(), numberOfElements * sizeof(double), ::CNTK::DeviceDescriptor::CPUDevice());
         valuesToAggregate.push_back(headerData);
 
-        m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers(), m_packThresholdSizeInBytes);
+        m_communicator->AggregateInPlace(valuesToAggregate, m_communicator->Workers());
 
         if (m_nccl.IsSupported())
             m_nccl.Sync();
@@ -258,9 +258,9 @@ private:
     std::unordered_map<Matrix<ElemType>*, std::unique_ptr<Matrix<ElemType>>> m_bufferedGradients;
     DistGradHeader* m_bufferedGradHeader;
 
-	// Packing small gradients (size not larger than threshold size) into a continous buffer to reduce MPI calls.
-	// Threshold size to pack a gradient into the continous buffer, default 32KB (tunable by define "packThresholdSizeInKB=[value]")
-	size_t m_packThresholdSizeInBytes;
+    // Packing small gradients (size not larger than threshold size) into a continous buffer to reduce MPI calls.
+    // Threshold size to pack a gradient into the continous buffer, default 32KB (tunable by define "packThresholdSizeInKB=[value]")
+    size_t m_packThresholdSizeInBytes;
 
     // Only used for controlling frequency of measuring/showing gradient aggregation perf stats
     int m_syncStatsTrace;
