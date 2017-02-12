@@ -83,6 +83,122 @@ void ComputationNode<ElemType>::Backprop(const FrameRange& fr, bool childrenInTh
     }
 }
 
+template<class ElemType>
+/*static*/ TensorView<ElemType> ComputationNode<ElemType>::Unpack(const TensorShape& sampleShape,
+                                                                  const Matrix<ElemType>& packedData,
+                                                                  const MBLayoutPtr& layout,
+                                                                  const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
+                                                                  const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                                                  bool batchMajor,
+                                                                  bool maskGaps)
+{
+    size_t maxNumTimeSteps = 1;
+    size_t numSequences = 1;
+    TensorShape unpackedShape = sampleShape;
+    if (layout != nullptr)
+    {
+        maxNumTimeSteps = layout->GetNumTimeSteps();
+        numSequences = layout->GetNumSequences();
+        size_t i = unpackedShape.GetRank();
+        unpackedShape = unpackedShape.AppendInPlace(i++, batchMajor ? numSequences : maxNumTimeSteps);
+        unpackedShape = unpackedShape.AppendInPlace(i++, batchMajor ? maxNumTimeSteps : numSequences);
+    }
+
+    std::shared_ptr<Matrix<ElemType>> unpackedData;
+    if ((maxNumTimeSteps == 1) || (numSequences == 1))
+        unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
+    else
+    {
+        unpackedData = unpackedDataStorage;
+        if (!unpackedData)
+            unpackedData = std::make_shared<Matrix<ElemType>>(packedData.GetNumRows(), maxNumTimeSteps * numSequences, packedData.GetDeviceId(), packedData.GetMatrixType(), packedData.GetFormat());
+        else
+            unpackedData->Resize(packedData.GetNumRows(), maxNumTimeSteps * numSequences);
+
+        if (maskGaps)
+            unpackedData->SetValue(0.0f);
+
+        size_t i = 0;
+        auto& layoutSequences = layout->GetAllSequences();
+        int numLayoutSequences = (int)layoutSequences.size();
+        std::vector<ElemType> scatterIndicesVector(layout->GetNumCols(), -1);
+
+        // 2-way thread parallelism is sufficient for the memory bound
+        // operation of just setting the values of an array.
+        const unsigned NUM_THREADS = 2;
+        UNUSED(NUM_THREADS); // in case OMP is turned off.
+#pragma omp parallel for num_threads(NUM_THREADS)
+        for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
+        {
+            auto sequenceInfo = layoutSequences[layoutSequenceIdx];
+            if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+            {
+                size_t targetParallelStreamIdx = sequenceInfo.s;
+                auto currentSequenceBeginIdx = std::max<ptrdiff_t>(0, sequenceInfo.tBegin);
+                auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
+                size_t currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
+
+                for (size_t j = 0; j < currentSequenceLength; ++j)
+                {
+                    auto targetIdx = (ElemType)(batchMajor ? ((j * numSequences) + i) : ((i * maxNumTimeSteps) + j));
+                    scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = targetIdx;
+                }
+
+                i++;
+            }
+        }
+
+        auto scatterIdxMatrix = tempIndicesStorage;
+        if (!scatterIdxMatrix)
+            scatterIdxMatrix = std::make_shared<Matrix<ElemType>>(1, layout->GetNumCols(), scatterIndicesVector.data(), packedData.GetDeviceId());
+        else
+            scatterIdxMatrix->SetValue(1, layout->GetNumCols(), packedData.GetDeviceId(), scatterIndicesVector.data());
+
+        unpackedData->DoScatterColumnsOf(0, *scatterIdxMatrix, packedData, 1);
+    }
+
+    return TensorView<ElemType>(unpackedData, unpackedShape);
+}
+
+template<class ElemType>
+/*static*/ void ComputationNode<ElemType>::BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
+                                                             const MBLayoutPtr& inputLayout,
+                                                             Matrix<ElemType>& broadcastTo,
+                                                             const MBLayoutPtr& targetLayout,
+                                                             const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage)
+{
+    // Generate the gather indices
+    std::vector<ElemType> gatherIndicesVector(targetLayout->GetNumCols(), -1);
+    auto& layoutSequences = targetLayout->GetAllSequences();
+    int numLayoutSequences = (int)layoutSequences.size();
+
+    // 2-way thread parallelism is sufficient for the memory bound
+    // operation of just setting the values of an array.
+    const unsigned NUM_THREADS = 2;
+    UNUSED(NUM_THREADS); // in case OMP is turned off.
+#pragma omp parallel for num_threads(NUM_THREADS)
+    for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
+    {
+        auto sequenceInfo = layoutSequences[layoutSequenceIdx];
+        if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+        {
+            auto srcSequenceInfo = inputLayout->FindSequence(sequenceInfo.seqId);
+            auto gatherFromIndex = inputLayout->GetColumnIndex(srcSequenceInfo, 0);
+            auto currentSequenceColumnIndices = targetLayout->GetColumnIndices(sequenceInfo);
+            for (auto i : currentSequenceColumnIndices)
+                gatherIndicesVector[i] = (ElemType)gatherFromIndex;
+        }
+    }
+
+    auto gatherIdxMatrix = tempIndicesStorage;
+    if (!gatherIdxMatrix)
+        gatherIdxMatrix = std::make_shared<Matrix<ElemType>>(1, targetLayout->GetNumCols(), gatherIndicesVector.data(), broadcastTo.GetDeviceId());
+    else
+        gatherIdxMatrix->SetValue(1, targetLayout->GetNumCols(), broadcastTo.GetDeviceId(), gatherIndicesVector.data());
+
+    broadcastTo.DoGatherColumnsOf(0, *gatherIdxMatrix, dataToBroadcast, 1);
+}
+
 // -----------------------------------------------------------------------
 // subroutines for Validate() implementations
 // -----------------------------------------------------------------------
