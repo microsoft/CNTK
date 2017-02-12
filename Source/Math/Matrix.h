@@ -215,6 +215,10 @@ public:
                          Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
                          const double learnRatePerSample, const double targetAdagradAvDenom,
                          const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
+
+    void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
+        const double learnRatePerSample, const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
+
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow

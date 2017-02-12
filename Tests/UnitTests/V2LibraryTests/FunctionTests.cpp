@@ -2,10 +2,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
 
 using namespace CNTK;
+
+namespace CNTK { namespace Test {
 
 void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 {
@@ -397,7 +400,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
         transposeInputFuncs[i] = TransposeAxes(inputVars[i], Axis(0), Axis((int)spliceAxis));
         transposedInputs[i] = transposeInputFuncs[i];
     }
-    
+
     auto spliceTransposedFunc = Splice(transposedInputs, Axis(0));
     spliceUsingTransposeFunc = TransposeAxes(spliceTransposedFunc, Axis(0), Axis((int)spliceAxis));
     std::unordered_map<Variable, ValuePtr> spliceUsingTransposeOutputs = { { spliceUsingTransposeFunc->Output(), nullptr } };
@@ -408,7 +411,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
     auto automaticUnpackingOfPackedValuesDisabled = Internal::IsAutomaticUnpackingOfPackedValuesDisabled();
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ false);
 
-    if (!CNTK::Internal::AreEqual(*spliceOutputs.begin()->second, *spliceUsingTransposeOutputs.begin()->second, relativeTolerance, absoluteTolerance))
+    if (!Internal::AreEqual(*spliceOutputs.begin()->second, *spliceUsingTransposeOutputs.begin()->second, relativeTolerance, absoluteTolerance))
         ReportFailure("Splice actual output does not match expectation");
 
     // Test backprop
@@ -429,7 +432,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
     {
         auto actualInputGradientValue = sliceInputGradients[inputVars[i]];
         auto expectedInputGradientValue = sliceUsingTransposeInputGradients[inputVars[i]];
-        if (!CNTK::Internal::AreEqual(*actualInputGradientValue, *expectedInputGradientValue, relativeTolerance, absoluteTolerance))
+        if (!Internal::AreEqual(*actualInputGradientValue, *expectedInputGradientValue, relativeTolerance, absoluteTolerance))
             ReportFailure("Splice actual gradient does not match expectation");
     }
 
@@ -455,7 +458,7 @@ void TestSplice()
 void TestTimesNodeShapeInference()
 {
     auto timesNodeShapeInferenceTest = [](size_t inputRank, size_t outputRank, int inputRankToMap) {
-        
+
         auto device = DeviceDescriptor::CPUDevice();
 
         size_t maxDimSize = 15;
@@ -525,7 +528,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
 
     auto param = Parameter(shape, AsDataType<ElementType>(), GlorotUniformInitializer(), device);
     auto plus = Plus(param, param);
-    
+
 
     std::vector<ElementType> outputData(numElements);
     ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, outputData, false));
@@ -536,9 +539,9 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     NDArrayViewPtr cpuView;
     auto getParameterData = [&cpuView](const Parameter& p) -> const ElementType*
     {
-          cpuView = (p.Value()->Device() != DeviceDescriptor::CPUDevice()) ?
-                     p.Value()->DeepClone(DeviceDescriptor::CPUDevice()) : p.Value();
-          return cpuView->DataBuffer<ElementType>();
+        cpuView = (p.Value()->Device() != DeviceDescriptor::CPUDevice()) ?
+        p.Value()->DeepClone(DeviceDescriptor::CPUDevice()) : p.Value();
+        return cpuView->DataBuffer<ElementType>();
     };
 
     auto parameterData = getParameterData(param);
@@ -587,9 +590,9 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     for (int i = 0; i < numElements; i++)
     {
         auto denom = (i + ElementType(1.0));
-        FloatingPointCompare<ElementType>(parameterData[i], ElementType(1.0) / denom, 
+        FloatingPointCompare<ElementType>(parameterData[i], ElementType(1.0) / denom,
                                           "Parameter valued does not match the expected value.");
-        FloatingPointCompare<ElementType>(outputData[i], ElementType(2.0) / denom, 
+        FloatingPointCompare<ElementType>(outputData[i], ElementType(2.0) / denom,
                                           "Function output does not match the expected value.");
     }
 }
@@ -701,15 +704,15 @@ void TestOuputVariableName(const DeviceDescriptor& device)
     const std::wstring combineFuncName = L"CombineFunc";
     const std::wstring outputName = L"ModelOutput";
 
-    auto inputVar = InputVariable({inputDim}, DataType::Float, L"features");
+    auto inputVar = InputVariable({ inputDim }, DataType::Float, L"features");
 
-    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({inputDim}, -0.05, 0.05, 1, device));
-    auto plusFunc = CNTK::Plus(plusParam, inputVar, plusFuncName);
+    auto plusParam = Parameter(NDArrayView::RandomUniform<float>({ inputDim }, -0.05, 0.05, 1, device));
+    auto plusFunc = Plus(plusParam, inputVar, plusFuncName);
 
-    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({outputDim, inputDim}, -0.05, 0.05, 1, device));
-    auto timesFunc = CNTK::Times(timesParam, plusFunc, timesFuncName);
+    auto timesParam = Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+    auto timesFunc = Times(timesParam, plusFunc, timesFuncName);
 
-    auto combineFunc = CNTK::Combine({timesFunc, plusFunc}, combineFuncName);
+    auto combineFunc = Combine({ timesFunc, plusFunc }, combineFuncName);
 
     FunctionPtr output = Alias(combineFunc->Outputs()[0], outputName);
 
@@ -748,7 +751,7 @@ void TestOuputVariableName(const DeviceDescriptor& device)
 
     // Change the output order of combine function.
     // Todo: it is allowed to have duplicated function name?
-    combineFunc = CNTK::Combine({plusFunc, timesFunc}, combineFuncName);
+    combineFunc = Combine({ plusFunc, timesFunc }, combineFuncName);
 
     // Make sure that the alias maps to the correct output variable when the output order changes
     output = Alias(combineFunc->Outputs()[1], outputName);
@@ -770,40 +773,265 @@ void TestOuputVariableName(const DeviceDescriptor& device)
     // Check the output variable has correct shape size.
     if (output->Output().Shape().TotalSize() != outputDim)
         ReportFailure("The output variable does not have expected shape size. exptected = %ld, actual = %ld\n",
-        static_cast<unsigned long>(outputDim),
-        static_cast<unsigned long>(output->Output().Shape().TotalSize()));
+            static_cast<unsigned long>(outputDim),
+            static_cast<unsigned long>(output->Output().Shape().TotalSize()));
 }
 
-void FunctionTests()
+void CheckFindByNameResult(FunctionPtr actual, FunctionPtr expected)
 {
-    fprintf(stderr, "\nFunctionTests..\n");
+    if (actual == nullptr)
+    {
+        if (expected != nullptr)
+            ReportFailure("The expected function '%S' has not been found.", expected->Name().c_str());
+    }
+    else 
+    {
+        if (expected == nullptr)
+            ReportFailure("Found a function '%S', but null is expected.", actual->Name().c_str());
+        else if (expected->Name().compare(actual->Name()) != 0)
+            ReportFailure("The found function '%S' does have the same name as the exepected one '%S'", actual->Name().c_str(), expected->Name().c_str());
+    }
+}
 
+void CheckFindAllWithNameResult(std::vector<FunctionPtr> actual, std::wstring expectedName, size_t expectedSize)
+{
+    if (actual.size() != expectedSize)
+        ReportFailure("The number of found functions does not match the expected number.");
+    else
+    {
+        for (size_t i = 0; i < actual.size(); i++)
+        {
+            if (actual[i]->Name().compare(expectedName) != 0)
+                ReportFailure("The found function '%S' does have the same name as the exepected one '%S'", actual[i]->Name().c_str(), expectedName.c_str());
+        }
+    }
+}
+
+void TestFindName(const DeviceDescriptor& device)
+{
+    size_t inputDim = 10;
+    size_t outputDim = 20;
+    const std::wstring timesFuncName = L"TimesFunc";
+    const std::wstring plusFuncName = L"PlusFunc";
+    const std::wstring anotherPlusFuncName = L"AnotherPlusFunc";
+    const std::wstring minusFuncName = L"MinusFunc";
+    const std::wstring anotherMinusFuncName = L"AnotherMinusFunc";
+    const std::wstring blockFuncName = L"BlockFunc";
+    const std::wstring nonExistingFuncName = L"NonExistingFunc";
+    const std::wstring nestedBlockFuncName = L"NestedBlockFunc";
+    const std::wstring emptyFuncName = L"";
+    const std::wstring placeholderName = L"inputPlaceholder";
+    const std::wstring variableName = L"features";
+    const std::wstring aliasFuncName = L"aliasFunc";
+
+    auto inputVar1 = InputVariable({ inputDim }, DataType::Float, L"features");
+
+    auto inputPlaceholder1 = PlaceholderVariable(L"inputPlaceholder");
+    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+    auto timesFunc1 = CNTK::Times(timesParam, inputPlaceholder1, timesFuncName);
+    auto plusFunc1 = CNTK::Plus(Constant::Scalar(2.0f), timesFunc1, plusFuncName);
+    auto plusFunc2 = CNTK::Plus(Constant::Scalar(2.0f), plusFunc1, plusFuncName);
+    auto emptyNameFunc1 = CNTK::Plus(plusFunc1, plusFunc2);
+    auto minusFunc1 = CNTK::Minus(plusFunc2, emptyNameFunc1, minusFuncName);
+
+    // Test FindByName for the case without any block function
+    CheckFindByNameResult(minusFunc1->FindByName(timesFuncName), timesFunc1);
+    CheckFindByNameResult(minusFunc1->FindByName(minusFuncName), minusFunc1);
+    CheckFindByNameResult(minusFunc1->FindByName(emptyFuncName), emptyNameFunc1);
+    CheckFindByNameResult(minusFunc1->FindByName(nonExistingFuncName), nullptr);
+    CheckFindByNameResult(minusFunc1->FindByName(placeholderName), nullptr);
+    VerifyException([&minusFunc1, &plusFuncName]() {
+        minusFunc1->FindByName(plusFuncName);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+
+    // Test FindAllWithName for the case without any block function
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(timesFuncName), timesFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(minusFuncName), minusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(emptyFuncName), emptyFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(nonExistingFuncName), nonExistingFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(placeholderName), placeholderName, 0);
+    CheckFindAllWithNameResult(minusFunc1->FindAllWithName(plusFuncName), plusFuncName, 2);
+
+    // Build a block function
+    auto blockFunc = CNTK::AsBlock(std::move(minusFunc1), { { inputPlaceholder1, inputVar1 } }, L"TimesPlusMinus", blockFuncName);
+
+    // Build a nested block function
+    auto inputPlaceholder2 = PlaceholderVariable(L"inputPlaceholder");
+    auto inputPlaceholder3 = PlaceholderVariable(L"inputPlaceholder");
+    auto inputVar2 = InputVariable({ outputDim }, DataType::Float, L"features");
+    auto anotherMinusFunc1 = CNTK::Minus(inputPlaceholder2, Constant::Scalar(3.0f), anotherMinusFuncName);
+    auto plusFunc3 = CNTK::Plus(Constant::Scalar(3.0f), anotherMinusFunc1, plusFuncName);
+    auto cloneBlockFunc = blockFunc->Clone(ParameterCloningMethod::Clone, { { inputVar1, inputPlaceholder3 } });
+    auto minusFunc2 = CNTK::Minus(cloneBlockFunc, plusFunc3, minusFuncName);
+    auto plusFunc4 = CNTK::Plus(minusFunc2, Constant::Scalar(3.0f), plusFuncName);
+    auto nestedBlockFunc = CNTK::AsBlock(std::move(plusFunc4), { { inputPlaceholder2, inputVar2 },{ inputPlaceholder3, inputVar1 } }, L"NestedBlock", nestedBlockFuncName);
+
+    // Build a function having both block and nested block functions
+    auto inputVar3 = InputVariable({ outputDim }, DataType::Float, variableName);
+    auto plusFunc5 = CNTK::Plus(inputVar3, blockFunc, plusFuncName);
+    auto anotherPlusFunc1 = CNTK::Plus(plusFunc5, nestedBlockFunc, anotherPlusFuncName);
+    auto minusFunc3 = CNTK::Minus(anotherPlusFunc1, Constant::Scalar(3.0f), minusFuncName);
+
+    // Test FindByName with block functions, nestedSearchInsideBlockFunction is false.
+    CheckFindByNameResult(minusFunc3->FindByName(anotherPlusFuncName), anotherPlusFunc1);
+    CheckFindByNameResult(minusFunc3->FindByName(anotherMinusFuncName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(nonExistingFuncName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(variableName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(nestedBlockFuncName), nestedBlockFunc);
+    CheckFindByNameResult(minusFunc3->FindByName(plusFuncName), plusFunc5);
+    CheckFindByNameResult(minusFunc3->FindByName(timesFuncName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(emptyFuncName), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(minusFuncName), minusFunc3);
+    CheckFindByNameResult(minusFunc3->FindByName(blockFuncName), blockFunc);
+
+    // Test FindByName with block funcitons, nestedSearchInsideBlockFunction is true
+    CheckFindByNameResult(minusFunc3->FindByName(anotherPlusFuncName, true), anotherPlusFunc1);
+    CheckFindByNameResult(minusFunc3->FindByName(anotherMinusFuncName, true), anotherMinusFunc1);
+    CheckFindByNameResult(minusFunc3->FindByName(nonExistingFuncName, true), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(variableName, true), nullptr);
+    CheckFindByNameResult(minusFunc3->FindByName(nestedBlockFuncName, true), nestedBlockFunc);
+    VerifyException([&minusFunc3, &plusFuncName]() {
+        minusFunc3->FindByName(plusFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+    VerifyException([&minusFunc3, &timesFuncName]() {
+        minusFunc3->FindByName(timesFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+    VerifyException([&minusFunc3, &emptyFuncName]() {
+        minusFunc3->FindByName(emptyFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+    VerifyException([&minusFunc3, &minusFuncName]() {
+        minusFunc3->FindByName(minusFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+    VerifyException([&minusFunc3, &blockFuncName]() {
+        minusFunc3->FindByName(blockFuncName, true);
+    }, "The expected exception has not been caugth: multiple functions with the same name.");
+
+    // Test FindAllWithName with block functions, nestedSearchInsideBlockFunction is false.
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName), anotherPlusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName), anotherMinusFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nonExistingFuncName), nonExistingFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(variableName), variableName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nestedBlockFuncName), nestedBlockFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(plusFuncName), plusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(timesFuncName), timesFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(emptyFuncName), emptyFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(minusFuncName), minusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(blockFuncName), blockFuncName, 1);
+
+    // Test FindAllWithName with block funcitons, nestedSearchInsideBlockFunction is true
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherPlusFuncName, true), anotherPlusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(anotherMinusFuncName, true), anotherMinusFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nonExistingFuncName, true), nonExistingFuncName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(variableName, true), variableName, 0);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(nestedBlockFuncName, true), nestedBlockFuncName, 1);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(plusFuncName, true), plusFuncName, 7);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(timesFuncName, true), timesFuncName, 2);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(emptyFuncName,true), emptyFuncName, 2);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(minusFuncName, true), minusFuncName, 4); 
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(blockFuncName, true), blockFuncName, 2);
+
+    // Test alias
+    auto aliasFunc1 = Alias(anotherPlusFunc1, aliasFuncName);
+    // The Alias does not really create an alias for the function, but indeed create a new function having alias as name.
+    // The new function is not a part of existing graph, except it is explicitly referenced in the graph.
+    // TODO: change the tests when Alias is a real alias of a function.
+    CheckFindByNameResult(minusFunc3->FindByName(aliasFuncName), nullptr);
+    CheckFindAllWithNameResult(minusFunc3->FindAllWithName(aliasFuncName, true), aliasFuncName, 0);
+    auto minusFunc4 = CNTK::Minus(aliasFunc1, minusFunc3, minusFuncName);
+    CheckFindByNameResult(minusFunc4->FindByName(aliasFuncName), aliasFunc1);
+    CheckFindAllWithNameResult(minusFunc4->FindAllWithName(aliasFuncName, true), aliasFuncName, 1);
+}
+
+BOOST_AUTO_TEST_SUITE(FunctionSuite)
+
+BOOST_AUTO_TEST_CASE(FindNameInCPU)
+{
+    TestFindName(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(FindNameInGPU)
+{
+    if (IsGPUAvailable())
+        TestFindName(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(Splice)
+{
     TestSplice();
+}
 
+BOOST_AUTO_TEST_CASE(ChangingParameterValuesInCPU)
+{
     TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
+    TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
+{
     if (IsGPUAvailable())
         TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
-    else
-        TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+}
 
+BOOST_AUTO_TEST_CASE(TimesNodeShapeInference)
+{
     TestTimesNodeShapeInference();
-    TestRecurrenceShapeInference();
+}
 
+BOOST_AUTO_TEST_CASE(RecurrenceShapeInference)
+{
+    TestRecurrenceShapeInference();
+}
+
+BOOST_AUTO_TEST_CASE(SliceInCPU)
+{
     TestSlice(2, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(SliceInGPU)
+{
     if (IsGPUAvailable())
         TestSlice(1, DeviceDescriptor::GPUDevice(0));
+}
 
+BOOST_AUTO_TEST_CASE(ReduceSumInCPU)
+{
     TestReduceSum(1, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ReduceSumInGPU)
+{
     if (IsGPUAvailable())
         TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
+}
 
+BOOST_AUTO_TEST_CASE(RecurrentFunctionCloning)
+{
     TestRecurrentFunctionCloning();
+}
 
+BOOST_AUTO_TEST_CASE(TransposeInCPU)
+{
     TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(TransposeInGPU)
+{
     if (IsGPUAvailable())
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
+}
 
+BOOST_AUTO_TEST_CASE(OutputVariableNameInCPU)
+{
     TestOuputVariableName(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(FunctionOutputs)
+{
     TestFunctionOutputs(DeviceDescriptor::CPUDevice());
 }
 
+
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

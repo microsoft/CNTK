@@ -266,6 +266,8 @@ struct TensorOps
 //----------------------------------------------------------------------------
 // For reductions we need the neutral elements of the corresponding binary ops
 //----------------------------------------------------------------------------
+
+// NeutralValue seems to be dead code
 template <typename ElemType> __device__ ElemType NeutralValue(ElementWiseOperator op)
 {
     return 0; // error, only the explicit instantiations below should be used.
@@ -275,13 +277,14 @@ template<> __device__ float NeutralValue<float>(ElementWiseOperator op)
 {
     switch (op)
     {
-    case ElementWiseOperator::opSum:    return 0;
-    case ElementWiseOperator::opLogSum: return -INFINITY;
-    case ElementWiseOperator::opMin:    return FLT_MAX;
-    case ElementWiseOperator::opMax:    return FLT_MIN;
-    case ElementWiseOperator::opArgmin: return FLT_MAX;
-    case ElementWiseOperator::opArgmax: return FLT_MIN;
-    default:                            return 0; // error
+    case ElementWiseOperator::opSum:                return 0;
+    case ElementWiseOperator::opLogSum:             return -INFINITY;
+    case ElementWiseOperator::opMin:                return FLT_MAX;
+    case ElementWiseOperator::opMax:                return -FLT_MAX;
+    case ElementWiseOperator::opElementwiseProduct: return 1.0f;
+    case ElementWiseOperator::opArgmin:             return FLT_MAX;
+    case ElementWiseOperator::opArgmax:             return FLT_MIN;
+    default:                                        return 0; // error
     }
 };
 
@@ -289,13 +292,14 @@ template<> __device__ double NeutralValue<double>(ElementWiseOperator op)
 {
     switch (op)
     {
-    case ElementWiseOperator::opSum:    return 0;
-    case ElementWiseOperator::opLogSum: return -INFINITY;
-    case ElementWiseOperator::opMin:    return DBL_MAX;
-    case ElementWiseOperator::opMax:    return DBL_MIN;
-    case ElementWiseOperator::opArgmin: return DBL_MAX;
-    case ElementWiseOperator::opArgmax: return DBL_MIN;
-    default:                            return 0; // error
+    case ElementWiseOperator::opSum:                return 0;
+    case ElementWiseOperator::opLogSum:             return -INFINITY;
+    case ElementWiseOperator::opMin:                return DBL_MAX;
+    case ElementWiseOperator::opMax:                return -DBL_MAX;
+    case ElementWiseOperator::opElementwiseProduct: return 1.0;
+    case ElementWiseOperator::opArgmin:             return DBL_MAX;
+    case ElementWiseOperator::opArgmax:             return DBL_MIN;
+    default:                                        return 0; // error
     }
 };
 
@@ -321,6 +325,9 @@ template<typename ReductionType, class ElemType> __device__ void UpdateAggregate
     case ElementWiseOperator::opMax:
         if (val > aggregate)
             aggregate = val;
+        break;
+    case ElementWiseOperator::opElementwiseProduct:
+        aggregate *= val;
         break;
     }
 };

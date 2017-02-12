@@ -88,15 +88,15 @@ public:
     // -----------------------------------------------------------------------
     // (de-)serialization
     // -----------------------------------------------------------------------
-
     template <class ElemType>
-    void ReadPersistableParameters(File& fstream, bool create);
+    void ReadPersistableParameters(size_t modelVersion, File& fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
     template <class ElemType>
     void RereadPersistableParameters(const std::wstring& fileName)
     {
         File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-        ReadPersistableParameters<ElemType>(fstream, false);
+        auto modelVersion = GetModelVersion(fstream);
+        ReadPersistableParameters<ElemType>(modelVersion, fstream, false);
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
@@ -123,6 +123,8 @@ public:
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
+    
+    static size_t GetModelVersion(File& fstream);
 
 public:
 

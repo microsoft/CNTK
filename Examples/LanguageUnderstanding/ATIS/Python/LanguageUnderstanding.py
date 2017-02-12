@@ -29,12 +29,12 @@ hidden_dim = 300
 # define the reader    #
 ########################
 
-def create_reader(path):
+def create_reader(path, is_training=True):
     return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(path, cntk.io.StreamDefs(
         query = cntk.io.StreamDef(field='S0', shape=input_dim,   is_sparse=True),
         intent_unused = cntk.io.StreamDef(field='S1', shape=num_intents, is_sparse=True),  # BUGBUG: unused, and should infer dim
         slot_labels = cntk.io.StreamDef(field='S2', shape=label_dim,   is_sparse=True)
-    )))
+    )), randomize=is_training, epoch_size = cntk.io.INFINITELY_REPEAT if is_training else cntk.io.FULL_DATA_SWEEP)
 
 ########################
 # define the model     #
@@ -82,7 +82,7 @@ def train(reader, model, max_epochs):
                                     low_memory=True,
                                     gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
-    trainer = cntk.Trainer(z, ce, pe, [learner])
+    trainer = cntk.Trainer(z, (ce, pe), [learner])
 
     # define mapping from reader streams to network inputs
     input_map = {

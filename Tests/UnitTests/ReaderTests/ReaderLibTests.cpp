@@ -464,6 +464,95 @@ void TestRandomization(EpochConfiguration& epochConfiguration, IDataDeserializer
     }
 }
 
+BOOST_AUTO_TEST_CASE(TestChunkBasedRandomization)
+{
+    auto num_chunks = 10;
+    auto num_sequences = 100;
+    vector<float> input(num_sequences * num_chunks);
+    iota(input.begin(), input.end(), 0.0f);
+    auto mockDeserializer = make_shared<MockDeserializer>(num_chunks, num_sequences, input);
+
+    for (int k = 0; k <= 20; k++) 
+    {
+        ChunkRandomizer randomizer1(mockDeserializer, k * num_sequences, true);
+        ChunkRandomizer randomizer2(mockDeserializer, k, false);
+
+        randomizer1.Randomize(k);
+        randomizer2.Randomize(k);
+
+        auto& randomizedChunks1 = randomizer1.GetRandomizedChunks();
+        auto& randomizedChunks2 = randomizer2.GetRandomizedChunks();
+
+        BOOST_ASSERT(randomizedChunks1.size() == randomizedChunks2.size());
+
+        for (int i = 0; i < randomizedChunks1.size(); i++)
+        {
+            auto& a = randomizedChunks1[i];
+            auto& b = randomizedChunks2[i];
+            BOOST_CHECK(a.m_chunkId == b.m_chunkId);
+            BOOST_CHECK(a.m_original->m_id == b.m_original->m_id);
+            BOOST_CHECK(a.m_samplePositionStart == b.m_samplePositionStart);
+            BOOST_CHECK(a.m_sequencePositionStart == b.m_sequencePositionStart);
+
+            BOOST_CHECK(b.m_randomizationWindow.m_end > b.m_randomizationWindow.m_begin);
+
+            BOOST_CHECK(a.m_randomizationWindow.m_begin >= b.m_randomizationWindow.m_begin);
+            BOOST_CHECK(a.m_randomizationWindow.m_end <= b.m_randomizationWindow.m_end);
+
+            auto window = size_t(std::min(num_chunks, std::max(k, 1)));
+            BOOST_CHECK(b.m_randomizationWindow.m_end - b.m_randomizationWindow.m_begin == window);
+        }
+    }
+}
+
+
+BOOST_AUTO_TEST_CASE(TestChunkBasedRandomizationQuality)
+{
+    auto num_chunks = 10;
+    auto num_sequences = 100;
+    vector<float> input(num_sequences * num_chunks);
+    iota(input.begin(), input.end(), 0.0f);
+    auto mockDeserializer = make_shared<MockDeserializer>(num_chunks, num_sequences, input);
+
+    auto randomizationRange = 3;
+
+    BlockRandomizer randomizer(0, randomizationRange, 
+        mockDeserializer, /*prefetch =*/ false,
+        /*multithreadedGetNextSequences =*/ false,
+        /*maxNumberOfInvalidSequences =*/ 0,
+        /*sampleBasedRandomizationWindow =*/ false);
+
+    EpochConfiguration epochConfiguration;
+    epochConfiguration.m_numberOfWorkers = 1;
+    epochConfiguration.m_workerRank = 0;
+    epochConfiguration.m_minibatchSizeInSamples = num_sequences;
+    epochConfiguration.m_totalEpochSizeInSamples = input.size();
+    epochConfiguration.m_epochIndex = 0;
+
+    randomizer.StartEpoch(epochConfiguration);
+
+    for (int i = 0; i < num_chunks; i++)
+    {
+        Sequences sequences = randomizer.GetNextSequences(num_sequences, num_sequences);
+        BOOST_ASSERT(sequences.m_data.size() == 1); // 1 stream
+        BOOST_ASSERT(sequences.m_data[0].size() == num_sequences); // 100 sequences, each containing 1 sample
+        
+        std::set<int> chunkIds;
+
+        for (int j = 0; j < num_sequences; j++)
+        {
+            // make sure that not all 100 consecutive samples belong to the same chunk
+            auto& sample = reinterpret_cast<DenseSequenceData&>(*sequences.m_data[0][j]);
+            float value = *((float*)sample.GetDataBuffer());
+            chunkIds.insert(int(value / num_sequences));
+        }
+        
+        // TODO: actually, each chunk-worth of sequences should contain data from 
+        // randomizationRange different chunks!
+        BOOST_CHECK(chunkIds.size() > 1);
+    }
+}
+
 BOOST_AUTO_TEST_CASE(TestRandomization_FirstEpoch)
 {
     vector<float> data(10);

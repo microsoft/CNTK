@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
 import cntk as C
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk
+from ...utils import sanitize_dtype_cntk, one_hot
 from .. import constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
@@ -157,12 +157,28 @@ def test_op_reshape_gradient_accumulation(device_id, precision):
                     device_id=device_id, precision=precision)
 
 
+def test_op_reshape_parameter():
+    from .. import reshape, parameter
+
+    param_shape = (4,2)
+    param_value = np.random.random(param_shape)
+    param = parameter(init=param_value)
+    param_new_shape = (8,1)
+    param_reshaped = reshape(param, param_new_shape)
+
+    expected_forward = np.copy(param_value).reshape(param_new_shape)
+    state, result = param_reshaped.forward({}, [param_reshaped.output], [param_reshaped.output])
+    assert np.allclose(result[param_reshaped.output], expected_forward)
+    
+    grad = param_reshaped.backward(state, np.ones(param_new_shape), [param])
+    assert np.allclose(grad[param], np.ones(param_shape))
+
+
 SLICE_TEST_CASES_STATIC = [
     #(input_data, slice_params(beg_index, end_index, axis), expected_result)
     ([[1, 2], [-3, 4]], (1, 2, 0), [[-3, 4]]),
     ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
 ]
-
 
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
                          SLICE_TEST_CASES_STATIC)
@@ -305,7 +321,7 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
     input_data2.shape = (1, 1) + input_data2.shape
 
     # splice using the operator
-    root_op = C.splice((a, b), axis, name='splice_ab')
+    root_op = C.splice(a, b, axis=axis, name='splice_ab')
 
     forward_input = {a: input_data1, b: input_data2}
 
@@ -352,3 +368,66 @@ def test_op_gather_dynamic_axes_equivalence(device_id, precision):
     res = z.eval({a: input_data1, b: input_data2})
     expected_forward = [[[3.]]]
     assert np.array_equal(res, expected_forward)
+
+
+def test_op_gather_derived_dynamic_axes_equivalence(device_id, precision):
+    from .. import sequence
+
+    input_data1 = AA([1], dtype=PRECISION_TO_TYPE[precision])
+    input_data2 = AA([2], dtype=PRECISION_TO_TYPE[precision])
+
+    a = I(shape=input_data1.shape,
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          name='a')
+    b = I(shape=input_data2.shape,
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          name='b')
+
+    a_last = sequence.gather(a, sequence.is_last(a), new_sequence_axis_typeinfo=(0, 1))
+    b_last = sequence.gather(b, sequence.is_last(b), new_sequence_axis_typeinfo=(0, 1))
+
+    z = a_last + b_last
+
+    # create batch
+    input_data1.shape = (1, 1) + input_data1.shape
+    input_data2.shape = (1, 1) + input_data2.shape
+
+    res = z.eval({a: input_data1, b: input_data2})
+    expected_forward = [[[3.]]]
+    assert np.array_equal(res, expected_forward)
+
+
+def test_op_gather_sparse(device_id):
+    from .. import sequence, times
+
+    input_sparse_indices = [[1, 3, 5], [2, 4]]
+    vocab_size = 6
+    input_data = one_hot(input_sparse_indices, vocab_size)
+
+    a = I(shape=(vocab_size,), is_sparse=True, name='a')
+
+    a_last = sequence.last(a)
+    a_last_dense = times(a_last, np.eye(vocab_size))
+    res = a_last_dense.eval({a : input_data})
+    assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1]], [[0, 0, 0, 0, 1, 0]]])
+
+    a_last_2 = sequence.slice(a, -2, 0)
+    a_last_2_dense = times(a_last_2, np.eye(vocab_size))
+    res = a_last_2_dense.eval({a : input_data})
+    assert np.array_equal(res, [[[0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1]], [[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0]]])
+
+
+def test_op_scatter_sparse(device_id):
+    from .. import sequence, times
+
+    input_sparse_indices = [[1, 3, 5], [2, 4]]
+    vocab_size = 6
+    input_data = one_hot(input_sparse_indices, vocab_size)
+
+    a = I(shape=(vocab_size,), is_sparse=True, name='a')
+
+    a_last_scatter = sequence.scatter(sequence.last(a), sequence.is_first(a))
+    a_last_scatter_dense = times(a_last_scatter, np.eye(vocab_size))
+    res = a_last_scatter_dense.eval({a : input_data})
+    assert np.array_equal(res[0], np.asarray([[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
+    assert np.array_equal(res[1], np.asarray([[0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0]]))

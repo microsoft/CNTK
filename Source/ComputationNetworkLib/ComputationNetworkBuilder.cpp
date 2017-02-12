@@ -880,12 +880,13 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Looku
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input,
-                                                                                              const ComputationNodePtr scale, const ComputationNodePtr bias, const ComputationNodePtr runMean, const ComputationNodePtr runVariance,
+                                                                                              const ComputationNodePtr scale, const ComputationNodePtr bias,
+                                                                                              const ComputationNodePtr runMean, const ComputationNodePtr runVariance, const ComputationNodePtr runSampleCount,
                                                                                               bool spatial, double normalizationTimeConstant, double blendTimeConstant, double epsilon, bool useCntkEngine,
                                                                                               ImageLayoutKind imageLayoutKind,
                                                                                               const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runVariance });
+    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runVariance, runSampleCount });
 }
 
 template class ComputationNetworkBuilder<float>;

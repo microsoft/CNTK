@@ -10,6 +10,7 @@ from cntk.ops import *
 from cntk.debug import save_as_legacy_model
 from cntk.ops.functions import load_model
 
+# TODO: a test for restore_model?
 
 def test_load_save_constant(tmpdir):
     c = constant(value=[1,3])
@@ -20,19 +21,19 @@ def test_load_save_constant(tmpdir):
     assert np.allclose(result, expected)
 
     filename = str(tmpdir / 'c_plus_c.mod')
-    root_node.save_model(filename)
+    root_node.save(filename)
 
-    loaded_node = load_model(filename)
+    loaded_node = Function.load(filename)
     loaded_result = loaded_node.eval()
     assert np.allclose(loaded_result, expected)
 
     filename = filename + '.legacy'
     save_as_legacy_model(root_node, filename)
-    loaded_node = load_model(filename)
+    loaded_node = Function.load(filename)
     loaded_result = loaded_node.eval()
     assert np.allclose(loaded_result, expected)
 
-def test_load_save_input(tmpdir):
+def test_load_save_input_legacy_names(tmpdir):
     i1 = input_variable((1,2), name='i1')
     root_node = abs(i1)
     input1 = [[[-1,2]]]
@@ -68,9 +69,9 @@ def test_load_save_inputs(tmpdir):
     assert np.allclose(result, expected)
 
     filename = str(tmpdir / 'i_plus_i_0.mod')
-    root_node.save_model(filename)
+    root_node.save(filename)
 
-    loaded_node = load_model(filename)
+    loaded_node = Function.load(filename)
 
     # Test specifying the input nodes by name
     loaded_result = loaded_node.eval({'i1': input1, 'i2': input2})
@@ -78,7 +79,7 @@ def test_load_save_inputs(tmpdir):
 
     filename = filename + '.legacy'
     save_as_legacy_model(root_node, filename)
-    loaded_node = load_model(filename)
+    loaded_node = Function.load(filename)
     loaded_result = loaded_node.eval({'i1': input1, 'i2': input2})
     assert np.allclose(loaded_result, expected)
 
@@ -92,9 +93,9 @@ def test_load_save_unique_input(tmpdir):
     assert np.allclose(result, expected)
 
     filename = str(tmpdir / 'i_plus_0.mod')
-    root_node.save_model(filename)
+    root_node.save(filename)
 
-    loaded_node = load_model(filename)
+    loaded_node = Function.load(filename)
 
     # Test specifying the only value for an unique input
     loaded_result = loaded_node.eval(input1)
@@ -102,6 +103,6 @@ def test_load_save_unique_input(tmpdir):
 
     filename = filename + '.legacy'
     save_as_legacy_model(root_node, filename)
-    loaded_node = load_model(filename)
+    loaded_node = Function.load(filename)
     loaded_result = loaded_node.eval(input1)
     assert np.allclose(loaded_result, expected)

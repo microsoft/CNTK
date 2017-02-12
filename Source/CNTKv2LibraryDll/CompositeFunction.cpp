@@ -391,7 +391,7 @@ namespace CNTK
 
             if (variable.IsParameter() || (valueMatrix->GetDeviceId() == network->GetDeviceId()))
                 computationNodePtr->Value() = valueMatrix->AsReference();
-            else
+            else // Constant: if initialized data lives on wrong device, make a copy to the right one (copy is OK since it's constant)
             {
                 Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
                 clonedMatrix.AssignValuesOf(*valueMatrix);
@@ -452,6 +452,45 @@ namespace CNTK
         return computationNodePtr;
     }
 
+    /*static*/ Variable CompositeFunction::GetMappingForNoOpOutput(const Variable& variable, bool recursive)
+    {
+        Variable mappingVariable = variable;
+
+        auto ownerFunc = variable.IsOutput() ? variable.Owner().get() : nullptr;
+        auto ownerPrimitiveFunc = dynamic_cast<PrimitiveFunction*>(ownerFunc);
+        if (ownerPrimitiveFunc && (ownerPrimitiveFunc->OpType() == PrimitiveOpType::NoOp))
+            mappingVariable = ownerPrimitiveFunc->Inputs()[0];
+
+        if (recursive && (mappingVariable != variable))
+            return GetMappingForNoOpOutput(mappingVariable);
+        else
+            return mappingVariable;
+    }
+
+    /*static*/ Variable CompositeFunction::GetMappingVariable(const Variable& variable, bool recursive)
+    {
+        Variable mappingVariable = variable;
+
+        auto ownerFunc = variable.IsOutput() ? variable.Owner().get() : nullptr;
+        auto ownerPrimitiveFunc = dynamic_cast<PrimitiveFunction*>(ownerFunc);
+        if (ownerPrimitiveFunc)
+        {
+            if (ownerPrimitiveFunc->OpType() == PrimitiveOpType::NoOp)
+                mappingVariable = GetMappingForNoOpOutput(variable);
+            else
+            {
+                auto ownerBlockFunc = dynamic_cast<BlockFunction*>(ownerFunc);
+                if (ownerBlockFunc)
+                    mappingVariable = ownerBlockFunc->CompositeOutputsMap().at(variable);
+            }
+        }
+
+        if (recursive && (mappingVariable != variable))
+            return GetMappingVariable(mappingVariable);
+        else
+            return mappingVariable;
+    }
+
     template <typename ElementType>
     /*static*/ ComputationNodeBasePtr CompositeFunction::CreateComputationNode(const Variable& variable,
                                                                                Function* function,
@@ -459,6 +498,10 @@ namespace CNTK
                                                                                Microsoft::MSR::CNTK::ComputationNetworkPtr& network,
                                                                                std::unordered_map<Variable, ComputationNodeBasePtr>& variableToNodeMap)
     {
+        PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
+        if (primitiveFunction && (primitiveFunction->OpType() == PrimitiveOpType::NoOp))
+            return variableToNodeMap[GetMappingVariable(variable)];
+
         ComputationNodeBasePtr computationNodePtr;
 
         auto internalNodeName = CNTKInternalNodeNameFromUidAndName(function->Uid(), function->Name());
@@ -467,7 +510,6 @@ namespace CNTK
         for (auto inputNode : inputNodes)
             inputNodesBasePtrs.push_back(inputNode);
 
-        PrimitiveFunction* primitiveFunction = dynamic_cast<PrimitiveFunction*>(function);
         if (primitiveFunction)
         {
             auto functionInputs = function->Inputs();
@@ -960,9 +1002,8 @@ namespace CNTK
 
             std::function<bool(const Variable&)> IsVariableRoot;
             IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
-                auto ownerFunc = outputVar.IsOutput() ? outputVar.Owner().get() : nullptr;
-                auto ownerBlockFunc = dynamic_cast<BlockFunction*>(ownerFunc);
-                return (m_isVariableRootMap[outputVar] && (!ownerBlockFunc || IsVariableRoot(ownerBlockFunc->CompositeOutputsMap().at(outputVar))));
+                auto mappingVariable = GetMappingVariable(outputVar);
+                return (m_isVariableRootMap[outputVar] && ((mappingVariable == outputVar) || IsVariableRoot(mappingVariable)));
             };
 
             // If any of the function or requested outputs is not a root node, we need to explicitly
@@ -1071,10 +1112,6 @@ namespace CNTK
             allNetworkRoots.insert(forwardRootNodes.begin(), forwardRootNodes.end());
             allNetworkRoots.insert(forwardOutputNodes.begin(), forwardOutputNodes.end());
             m_allNetworkRootsInGlobalEvalOrder = m_computationNetwork->SortByGlobalEvalOrder(allNetworkRoots);
-
-            m_currentOutputs = outputs;
-            m_currentOutputs.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
-            m_currentOutputs.insert(m_currentBackpropRoots.begin(), m_currentBackpropRoots.end());
         }
         else
         {
@@ -1082,7 +1119,8 @@ namespace CNTK
             // in the cached computation network
             for (auto output : outputs)
             {
-                if (m_currentOutputs.find(output) == m_currentOutputs.end())
+                auto computationNode = m_variableToNodeMap.at(output);
+                if (std::find(m_allNetworkRootsInGlobalEvalOrder.begin(), m_allNetworkRootsInGlobalEvalOrder.end(), computationNode) == m_allNetworkRootsInGlobalEvalOrder.end())
                     LogicError("Changing requested outputs across different Forward calls on a CNTK composite Function is currently unsupported");
             }
         }
@@ -1277,14 +1315,13 @@ namespace CNTK
 
     const std::vector<Variable>& CompositeFunction::GetArgumentDependencies(const Variable& output)
     {
-        assert(output.IsOutput());
-
-        auto iter = m_perOutputVarArgumentDependencies.find(output);
-        if (iter != m_perOutputVarArgumentDependencies.end())
-            return iter->second;
-
-        auto wrappedComposite = AsComposite(output.Owner());
-        m_perOutputVarArgumentDependencies[output] = wrappedComposite->Arguments();
+        if (m_perOutputVarArgumentDependencies.find(output) == m_perOutputVarArgumentDependencies.end())
+        {
+            if (output.IsOutput())
+                m_perOutputVarArgumentDependencies[output] = AsComposite(output.Owner())->Arguments();
+            else
+                m_perOutputVarArgumentDependencies[output] = { output };
+        }
 
         return m_perOutputVarArgumentDependencies[output];
     }
@@ -1355,21 +1392,28 @@ namespace CNTK
 
         // We should have argument values supplied for all required argument dependencies for the requested outputs
         std::vector<Variable> missingRequiredArguments;
+        std::unordered_map<Variable, ValuePtr> requiredArgumentValues;
         for (auto requiredArgument : requiredArguments)
         {
-            if (arguments.find(requiredArgument) == arguments.end())
+            auto iter = arguments.find(requiredArgument);
+            if (iter == arguments.end())
                 missingRequiredArguments.push_back(requiredArgument);
+            else
+                requiredArgumentValues.insert(*iter);
         }
 
         if (!missingRequiredArguments.empty())
         {
             std::wstring missingRequiredArgumentNames = NamedListString(missingRequiredArguments);
-            InvalidArgument("Function::Forward: Values for %d required arguments (%S), that the requested output(s) depend on, have not been provided", (int)missingRequiredArgumentNames.size(), missingRequiredArgumentNames.c_str());
+            InvalidArgument("Function::Forward: Values for %d required arguments (%S), that the requested output(s) depend on, have not been provided", (int)missingRequiredArguments.size(), missingRequiredArgumentNames.c_str());
         }
+
+        if (requiredArgumentValues.size() < arguments.size())
+            fprintf(stderr, "WARNING: Function::Forward provided values for (%d) extra arguments which are not required for evaluating the specified Function outputs!\n", (int)(arguments.size() - requiredArgumentValues.size()));
 
         // Feed data into the arguments of the network
         // TODO: Avoid copying the data when possible
-        PopulateNetworkInputs(arguments);
+        PopulateNetworkInputs(requiredArgumentValues);
 
         // Dropout nodes have an implicit input in the form of the random mask that is applied to its explicit input
         // This mask is regenerated every minibatch and hence dropout nodes with a non-zero dropout rate must me marked outdated
@@ -1421,10 +1465,10 @@ namespace CNTK
 
         // TODO: How to deal with the specified 'computeDevice'
         Variable evalTimeStampVariable;
-        if (arguments.empty())
+        if (requiredArgumentValues.empty())
             evalTimeStampVariable = Inputs()[0];
         else
-            evalTimeStampVariable = arguments.begin()->first;
+            evalTimeStampVariable = requiredArgumentValues.begin()->first;
 
         BackPropStatePtr backpropStatePtr;
         if (outputsToRetainBackwardStateFor.size() > 0)

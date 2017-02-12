@@ -18,7 +18,7 @@ from FeatureExtraction import create_mb_source, eval_and_write
 
 TOLERANCE_ABSOLUTE = 2E-2
 
-def test_feature_extraction(device_id):
+def disabled_fix_data_set_zip___test_feature_extraction(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU') # due to batch normalization in ResNet_18
     set_default_device(cntk_device(device_id))

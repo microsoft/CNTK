@@ -224,9 +224,12 @@ public:
     }
 
     ElemType Adagrad(GPUMatrix<ElemType>& gradients, const bool needAveMultiplier);
-    
-    void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, 
+
+    void FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
                    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+
+    void Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+                  ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
     ElemType RmsProp(GPUMatrix<ElemType>& gradients, 
                      ElemType RMS_GAMMA, 

@@ -25,8 +25,8 @@ Set current path to: /home/philly/jenkins/workspace/CNTK-Test-Linux-SlaveTest/Te
 Running 4 test cases...
 
 Test module "NetworkTests" has passed with:
-  7 test cases out of 7 passed
-  65 assertions out of 65 passed
+  13 test cases out of 13 passed
+  75 assertions out of 75 passed
 
   Test suite "EpochAccumulatorNodeTestSuite" has passed with:
     3 test cases out of 3 passed
@@ -41,6 +41,25 @@ Test module "NetworkTests" has passed with:
     Test case "EpochAccumulatorNodeTestSuite/EpochAccumulatorNodeMultipleForwardWithEpochResetTest" has passed with:
       4 assertions out of 4 passed
 
+  Test suite "BatchNormTestSuite" has passed with:
+    5 test cases out of 5 passed
+    10 assertions out of 10 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromLegacyNDLConfig" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromUpdatedNDLConfig" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromLegacyLegacyNDLModel" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromLegacyBSConfig" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "BatchNormTestSuite/TestLoadingNetworkFromLegacyLegacyBSModel" has passed with:
+      2 assertions out of 2 passed
+
   Test suite "CropNodeTestSuite" has passed with:
     3 test cases out of 3 passed
     54 assertions out of 54 passed
@@ -54,12 +73,11 @@ Test module "NetworkTests" has passed with:
     Test case "CropNodeTestSuite/CropNodeBackwardTest" has passed with:
       40 assertions out of 40 passed
 
-Test suite "EditDistanceTests" has passed with:
-    1 test cases out of 1 passed
-    1 assertions out of 1 passed
+  Test suite "EditDistanceTests" has passed with:
+    1 test case out of 1 passed
 
     Test case "EditDistanceTests/ComputeEditDistanceErrorTest" has passed
-	  
+
   Test suite "NetworkTestSuite" has passed with:
     1 test case out of 1 passed
     1 assertion out of 1 passed

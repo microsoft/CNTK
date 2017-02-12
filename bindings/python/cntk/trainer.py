@@ -17,19 +17,22 @@ using gradients of parameters w.r.t. a training objective.
 
 class Trainer(cntk_py.Trainer):
     '''
-    Trainer to train the specified ``model`` with the specified ``training_loss``
-    as the training criterion, the specified ``evaluation_function`` as the
+    Trainer to train the specified ``model`` according to a specified loss function
+    as the training criterion, a specified metric function as the
     criterion for evaluating the trained model's quality, and using the
     specified set of ``parameter_learners`` for updating the model's parameters
     using computed gradients.
 
     Args:
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
-       loss_function (:class:`~cntk.ops.functions.Function`): loss function
-       eval_function (:class:`~cntk.ops.functions.Function`): evaluation function
+       criteria (Python tuple of :class:`~cntk.ops.functions.Function`, or :class:`~cntk.ops.functions.Function` or ):
+        loss and metric function, given as a either Python tuple or tuple-valued CNTK Function
        parameter_learners (list): list of learners from :mod:`cntk.learner`
     '''
-    def __init__(self, model, loss_function, eval_function, parameter_learners):
+    def __init__(self, model, criteria, parameter_learners):
+        if isinstance(criteria, cntk_py.Function):
+            criteria = criteria.outputs # turn CNTK Function into a tuple
+        loss_function, eval_function = criteria # destructure the tuple
         # TODO sanitizing should be removed once Swig's typemaps are in place
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)

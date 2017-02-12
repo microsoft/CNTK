@@ -19,6 +19,12 @@ from .progress_print import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
+def is_string(s):
+    '''
+    Tests whether ``s`` is a string in a way that works on Python 2 and 3.
+    '''
+    return isinstance(s, ("".__class__, u"".__class__))
+
 def sanitize_precision(precision):
     '''
     Converts precision to NumPy precision
@@ -34,6 +40,8 @@ def sanitize_precision(precision):
         return np.float32
     elif precision in [cntk_py.DataType_Double, 'double', 'float64', np.float64]:
         return np.float64
+    elif precision in [cntk_py.DataType_Unknown]:
+        return None
     else:
         raise ValueError('precision value: "%s" is not supported' % precision)
 
@@ -112,6 +120,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
       ``arg`` is a number or NumPy array. Variable otherwise.
     """
 
+    from cntk.ops.functions import UserFunction
     from cntk.ops.variables import Constant, Variable, Parameter
     from cntk.ops.functions import Function
     from cntk.ops import constant
@@ -403,7 +412,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
     var_map = {}
     for var, batch in arguments.items():
-        if isinstance(var, str):
+        if is_string(var):
             if name_counter[var] == 0:
                 raise ValueError('variable with name "%s" does not exist in the network. Available variable names: %s' % (
                     var, ", ".join(var_name_map)))
@@ -435,6 +444,9 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                     raise ValueError('you have %i sequences, but only %i '
                             'sequence begin markers' % (sample_size, len(seq_starts)))
 
+        if seq_starts is not None and isinstance(batch, cntk_py.Value):
+            raise ValueError('for directly passed Value objects sequence '
+                    'starts cannot be used yet.')
 
         if isinstance(batch, MinibatchData) and extract_values_from_minibatch_data:
             batch = batch.data
@@ -459,7 +471,7 @@ def _ones_like(batch, precision):
 
 def sanitize_dtype_numpy(dtype):
     is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
-    is_str = isinstance(dtype, str)
+    is_str = is_string(dtype)
     if is_type and dtype in (int, np.float32) or \
             hasattr(dtype, 'kind') and dtype.kind in 'iu' \
             or is_str and dtype in ('float', 'float32'):
@@ -483,6 +495,8 @@ def sanitize_dtype_cntk(dtype):
         return cntk_py.DataType_Float
     elif dtype == np.float64:
         return cntk_py.DataType_Double
+    elif dtype == object:
+        return cntk_py.DataType_Unknown
     else:
         raise ValueError('data type "%s" is not supported' % dtype)
 
@@ -583,8 +597,8 @@ def variable_value_to_seq(value, variable):
 
     mask = value.mask()
     if mask:
-        value_sequences = value.unpack_variable_value(variable, cpu())
-        return [np.asarray(seq) for seq in value_sequences]
+        value_sequences = value.unpack_variable_value(variable, True, cpu())
+        return [np.asarray(seq) for seq in value_sequences[0]]
     else:
         return np.asarray(value)
 
@@ -681,3 +695,33 @@ def _as_tuple(x):
     if np.isscalar(x):
         x = (x,)
     return tuple(x)
+
+def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_profiler_buffer_size):
+    '''
+    Start profiler to prepare performance statistics gathering. Note that profiler is not enabled after start.
+	[Example](https://github.com/Microsoft/CNTK/wiki/Performance-Profiler#for-python)
+
+    Args:
+        dir: directory for profiler output
+        sync_gpu: whether profiler syncs CPU with GPU when timing
+        reserve_mem: size in byte for profiler memory reserved
+    '''
+    cntk_py.start_profiler(dir, sync_gpu, reserve_mem)
+    
+def stop_profiler():
+    '''
+    Stop profiler from gathering performance statistics and flush them to file
+    '''
+    cntk_py.stop_profiler()
+    
+def enable_profiler():
+    '''
+    Enable profiler to gather data. Note that in training_session, profiler would be enabled automatically after the first check point
+    '''
+    cntk_py.enable_profiler()
+    
+def disable_profiler():
+    '''
+    Disable profiler from gathering data.
+    '''
+    cntk_py.disable_profiler()

@@ -1,4 +1,4 @@
-# Node: ResNet-50 with ImageNet -- 152 layers bottleneck ResNet for image classification
+# ResNet-152 with ImageNet -- 152 layers bottleneck ResNet for image classification
 # Reference: "Deep Residual Learning for Image Recognition" https://arxiv.org/abs/1512.03385
 
 command = TrainNetwork:BNStatistics:Eval

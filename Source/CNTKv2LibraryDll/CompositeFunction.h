@@ -122,31 +122,6 @@ namespace CNTK
         }
 
         template <typename FunctionType>
-        static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, const FunctionType& functor)
-        {
-            std::unordered_set<FunctionPtr> visitedFunctions;
-            PreorderTraverseFunctions(rootFunction, visitedFunctions, functor);
-        }
-
-        // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
-        template <typename FunctionType>
-        static void PreorderTraverseFunctions(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor)
-        {
-            visitedFunctions.insert(rootFunction);
-            functor(rootFunction);
-
-            std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
-            for (const auto& rootInput : rootFunctionInputs)
-            {
-                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
-                {
-                    const auto& function = rootInput.Owner();
-                    PreorderTraverseFunctions(function, visitedFunctions, functor);
-                }
-            }
-        }
-
-        template <typename FunctionType>
         static void PreorderTraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder = false)
         {
             std::unordered_set<FunctionPtr> visitedFunctions;
@@ -239,6 +214,9 @@ namespace CNTK
         // Copy state info from source function graph into' this' function graph.
         void CopyState(const CompositeFunction& source);
 
+        static Variable GetMappingForNoOpOutput(const Variable& variable, bool recursive = false);
+        static Variable GetMappingVariable(const Variable& variable, bool recursive = false);
+
         template <typename ElementType>
         Microsoft::MSR::CNTK::ComputationNetworkPtr GetComputationNetwork(const DeviceDescriptor& device,
                                                                           const std::unordered_set<Variable>& backpropRoots,
@@ -303,13 +281,6 @@ namespace CNTK
         // states from the previos Forward call to be able to backpropagate gradients backwards from in
         // the next 'Backward' call.
         std::unordered_set<Variable> m_currentBackpropRoots;
-
-        // The outputs specified in the most recent 'Forward' call on 'this' Function.
-        // This indicates for which outputs has the memory sharing structure of the cached
-        // computation network object been setup for. Asking for outputs in subsequent
-        // 'Forward' calls that do not belong to the current set requires redoing the 
-        // network memory sharing structure.
-        std::unordered_set<Variable> m_currentOutputs;
 
         std::unordered_map<Variable, std::vector<Variable>> m_perOutputVarArgumentDependencies;
 

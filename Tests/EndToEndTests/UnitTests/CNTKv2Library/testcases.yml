@@ -1,0 +1,22 @@
+dataDir: .
+
+tags:
+    - bvt-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+    - nightly-e ((build_sku == '1bitsgd') or (build_sku == 'cpu')) and ((device == 'gpu') or (flavor == 'release'))
+
+testCases:
+  Test cases pass:
+    patterns:
+      - "Test case"
+      - "has passed"
+
+  Test suites pass:
+    patterns:
+      - "Test suite"
+      - "has passed with"
+
+  Test module passed:
+    patterns:
+      - "Test module"
+      - "has passed with"
+

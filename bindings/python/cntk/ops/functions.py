@@ -151,6 +151,13 @@ class Function(cntk_py.Function):
         Returns:
             :class:`~cntk.ops.functions.Function`: the cloned Function
         '''
+        # C++ clone() can only clone composites. If we are not a composite, make it one using combine()
+        if not self.is_composite:
+            from cntk import combine
+            #return combine([self]).clone(method, substitutions).root_function.arguments[0].owner
+            # BUGBUG: This ^^ does not give me the correct .arguments, so we leave the extra combine() in for now.
+            return combine([self]).clone(method, substitutions)
+
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         substitutions = substitutions or {}
@@ -362,7 +369,7 @@ class Function(cntk_py.Function):
             at (dict) : mapping of the Function's arguments to values
             wrt (list optional): list of Variables with respect to which the
              gradient will be computed. If omitted, the gradients with
-             respect to all arguments will be computed. If a variable
+             respect to all arguments that need gradient will be computed. If a variable
              is repeated in this list, the gradient will be repeated
              in the output as a shallow copy.
 
@@ -376,7 +383,7 @@ class Function(cntk_py.Function):
             raise InvalidArgumentException('function must return a single tensor')
 
         if wrt is None:
-            wrt = self.arguments
+            wrt = [arg for arg in self.arguments if arg.needs_gradient]
 
         unique_wrt = set(wrt)
         output = [self.output]
@@ -614,7 +621,7 @@ class Function(cntk_py.Function):
         return graph.find_by_name(self, name)
 
     @typemap
-    def save_model(self, filename):
+    def save(self, filename):
         '''
         Save this function graph into a model file using protobuf-based
         serialization.
@@ -624,8 +631,14 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).save_model(filename)
 
+    def save_model(self, filename): # legacy name
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'save(...) instead', DeprecationWarning)
+        return self.save(filename)
+
     @typemap
-    def restore_model(self, filename):
+    def restore(self, filename):
         '''
         Restore the models parameters (in-place) from a saved model file
 
@@ -637,6 +650,45 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).restore_model(filename)
 
+    def restore_model(self, filename): # legacy name
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'restore(...) instead', DeprecationWarning)
+        return self.restore(filename)
+
+    @staticmethod
+    @typemap
+    def load(filename, device=None):
+        '''
+        Load the model in ``filename``, that has been saved using
+        :func:`~cntk.ops.functions.Function.save`.
+
+        Args:
+            filename (str): filename to load the model from
+            device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
+             instance of DeviceDescriptor
+
+        Returns:
+            root node
+        '''
+        if not device:
+            device = DeviceDescriptor.use_default_device()
+        return cntk_py.Function.load_model(filename, device)
+
+@typemap
+def load_model(filename, device=None):
+    '''
+    Alias for :func:`~cntk.ops.functions.Function.load`.
+    '''
+    return Function.load(filename, device)
+
+@typemap
+def save_model(model, filename): # legacy name
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'model.save(...) instead', DeprecationWarning)
+    return model.save(filename)
+
 
 class UserFunction(Function):
     '''
@@ -647,11 +699,7 @@ class UserFunction(Function):
 
     '''
     def __init__(self, inputs, name=''):
-        # FIXME we need to save a reference here so that the function does not
-        # disappear
-        self.var_inputs = inputs
-
-        super(Function, self).__init__(inputs, name)
+        super(UserFunction, self).__init__(inputs, name)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -753,25 +801,17 @@ class UserFunction(Function):
         outputs.extend(self.infer_outputs())
 
     def infer_outputs(self):
-        raise NotImplementedError('infer_outputs has to be overridden')
+        '''
+        Returns a list of all output variables this user-defined function
+        outputs.
+
+        Output variables are created by
+        :meth:`~cntk.ops.functions.output_variable`.
+        '''
+        raise NotImplementedError('infer_outputs has to be overwritten')
 
     def op_name(self):
+        '''
+        Returns the operator name.
+        '''
         return 'UserFunction'
-
-@typemap
-def load_model(filename, device=None):
-    '''
-    Load the model in ``filename``, that has been saved using
-    :func:`~cntk.ops.functions.Function.save_model`.
-
-    Args:
-        filename (str): filename to load the model from
-        device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
-         instance of DeviceDescriptor
-
-    Returns:
-        root node
-    '''
-    if not device:
-        device = DeviceDescriptor.use_default_device()
-    return cntk_py.Function.load_model(filename, device)

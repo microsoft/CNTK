@@ -119,9 +119,11 @@
 %template() std::vector<std::shared_ptr<CNTK::Trainer>>;
 %template() std::pair<size_t, double>;
 %template() std::pair<size_t, size_t>;
+%template() std::pair<size_t, int>;
 %template() std::vector<std::pair<size_t, double>>;
 %template() std::vector<std::pair<size_t, size_t>>;
 %template() std::vector<std::pair<CNTK::Variable, CNTK::Variable>>;
+%template() std::pair<std::vector<std::shared_ptr<CNTK::NDArrayView>>, std::vector<bool>>;
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;
@@ -580,15 +582,7 @@ public:
 //
 // Exception handling
 //
-%exception {
-    try { $action }
-    catch (const Swig::DirectorException &e) { SWIG_exception(SWIG_RuntimeError, e.what()); }
-    catch (const std::runtime_error &e) { SWIG_exception(SWIG_RuntimeError, e.what()); }
-    catch (const std::invalid_argument &e) { SWIG_exception(SWIG_ValueError, e.what()); }
-    catch (const std::logic_error &e) { SWIG_exception(SWIG_RuntimeError, e.what()); }
-    catch (const std::exception &e) { SWIG_exception(SWIG_UnknownError, e.what()); }
-    catch (...) { SWIG_exception(SWIG_UnknownError,"Runtime exception"); }
-}
+%include "CNTK_ExceptionHandling.i"
 
 %feature("director:except") {
     if ($error != NULL) {
