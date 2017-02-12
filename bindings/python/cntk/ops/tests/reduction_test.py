@@ -190,7 +190,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
         for i in range(x.size):
             if xr[i] == f: yr[i] = 1
         return y
-    arg_shape = np.amin(data, axis=(axis), keepdims=True).shape
+
     ops = [ (reduce_sum,         lambda x:AA(sum(np.sum(xi) for xi in x)),                           lambda x,f:[np.ones_like(xi) for xi in x]),
             (reduce_max,         lambda x:AA(max(np.max(xi) for xi in x)),                           lambda x,f:[max_bwd(xi,f) for xi in x]),
             (reduce_min,         lambda x:AA(min(np.min(xi) for xi in x)),                           lambda x,f:[max_bwd(xi,f) for xi in x]),
@@ -206,9 +206,9 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
         binding = {a: value}
         actual_backward = input_op.grad(binding)[0]
         actual_forward  = np.copy(input_op.eval(binding))
+        assert np.allclose(actual_forward, expected_forward)
         for ab,eb in zip (actual_backward, expected_backward):
             assert np.allclose(ab, eb)
-    forward_array = np.asarray(expected_forward, dtype=dt)
 
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_mean_all_constant(input_data, axis, device_id, precision):
