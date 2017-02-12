@@ -742,8 +742,20 @@ __global__ void _launchTensorOp(ElemType beta, FixedArray<ElemType*, N> pointers
                                                                   regularOpStrideDivmod, reducingOpDimDivmod);
 }
 
+template <class ElemType, C_size_t N, C_int M, C_int K>
+__global__ void _launchTensorArgOp(FixedArray<ElemType*, N> pointers, ElementWiseOperator reductionOp,
+    FixedArray<C_unsigned_int, K> regularOpStrides, FixedMatrix<C_int, N, K> regularStrides, CUDA_LONG numElements,
+    FixedArray<C_unsigned_int, M> reducingOpDims, FixedMatrix<C_int, N, M> reducingStrides,
+    FixedArray<fast_divmod, K> regularOpStrideDivmod, FixedArray<fast_divmod, M> reducingOpDimDivmod)
+{
+    CUDA_LONG id = GridDim::GetLinearThreadId();
+    if (id < numElements) // note: there are no __syncthread() calls inside
+        TensorArgOpElement<ElemType, N, M, K, K - 1>::Compute(id, pointers, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, 0, 0,
+            regularOpStrideDivmod, reducingOpDimDivmod);
+}
+
 template <class ElemType, C_size_t N, C_int K>
-static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, ElemType alpha, ElementWiseOperator op,
+static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp,
                            const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrideVectors)
 {
     // copy all parameters to CUDA-compatible data structures
@@ -774,21 +786,20 @@ static void LaunchTensorOp(ElemType beta, array<ElemType*, N> pointerVector, Ele
     CUDA_LONG NN = (CUDA_LONG) numElements; // linear space identifying each individual input element
     SyncGuard syncGuard;
     GridDim grid(NN);
-    _launchTensorOp<ElemType, N, /*M=*/0, K> <<<grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >>>(beta, pointers, alpha, op, (ElementWiseOperator)(-1) /* dummy reductionOp */, regularOpStrides, regularStrides,
-                                                                                                              grid.m_N, reducingOpDims, reducingStrides,
-                                                                                                              regularOpStrideDivmod, reducingOpDimDivmod);
-}
-
-template <class ElemType, C_size_t N, C_int M, C_int K>
-__global__ void _launchTensorArgOp(FixedArray<ElemType*, N> pointers, ElementWiseOperator reductionOp,
-                                   FixedArray<C_unsigned_int, K> regularOpStrides, FixedMatrix<C_int, N, K> regularStrides, CUDA_LONG numElements,
-                                   FixedArray<C_unsigned_int, M> reducingOpDims, FixedMatrix<C_int, N, M> reducingStrides,
-                                   FixedArray<fast_divmod, K> regularOpStrideDivmod, FixedArray<fast_divmod, M> reducingOpDimDivmod)
-{
-    CUDA_LONG id = GridDim::GetLinearThreadId();
-    if (id < numElements) // note: there are no __syncthread() calls inside
-        TensorArgOpElement<ElemType, N, M, K, K - 1>::Compute(id, pointers, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, 0, 0,
-            regularOpStrideDivmod, reducingOpDimDivmod);
+    if ((reductionOp == ElementWiseOperator::opArgmax) ||
+        (reductionOp == ElementWiseOperator::opArgmin))
+    {
+        _launchTensorArgOp<ElemType, N, /*M=*/0, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (pointers, reductionOp,
+                                                                                                                        regularOpStrides, regularStrides, grid.m_N,
+                                                                                                                        reducingOpDims, reducingStrides,
+                                                                                                                        regularOpStrideDivmod, reducingOpDimDivmod);
+    }
+    else
+    {
+        _launchTensorOp<ElemType, N, /*M=*/0, K> << <grid.m_blocksPerGrid, grid.m_threadsPerBlock, 0, t_stream >> > (beta, pointers, alpha, op, (ElementWiseOperator)(-1) /* dummy reductionOp */, regularOpStrides, regularStrides,
+                                                                                                                     grid.m_N, reducingOpDims, reducingStrides,
+                                                                                                                     regularOpStrideDivmod, reducingOpDimDivmod);
+    }
 }
 
 // -----------------------------------------------------------------------
@@ -1165,7 +1176,7 @@ static void TensorOpWithRegularLoop(ElemType beta, const array<ElemType*, N>& po
     case 1:
         return LaunchTensorOpWithReduction<ElemType, N, 1, K>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
     case 0:
-        return LaunchTensorOp<ElemType, N, K>(beta, pointers, alpha, op, regularOpDims, regularStrides);
+        return LaunchTensorOp<ElemType, N, K>(beta, pointers, alpha, op, reductionOp, regularOpDims, regularStrides);
     default:
         LogicError("TensorOp: %d non-flattened reduction dimensions are not supported.", (C_int) dims);
     }

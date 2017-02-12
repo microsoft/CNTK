@@ -6208,6 +6208,9 @@ struct TensorArgOpReduction
         case 1:
             val = TensorArgOpReduction<ElemType, N, 0>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
             break;
+        case 0:
+            val = TensorArgOpReduction<ElemType, N, -1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
         default:
             LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)reducingOpDims.size());
         }
@@ -6693,6 +6696,9 @@ void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix
                 break;
             case 1:
                 TensorArgOpIteration<ElemType, N, 0>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            case 0:
+                TensorArgOpIteration<ElemType, N, -1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
                 break;
             default:
                 LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)regularOpDims.size());
