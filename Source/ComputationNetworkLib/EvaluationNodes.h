@@ -493,7 +493,7 @@ public:
     }
 
     EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : EditDistanceErrorNode(deviceId, name, 0.0f, 0.0f, 0.0f, true, {6012})
+        : EditDistanceErrorNode(deviceId, name, 10.0f, 7.0f, 7.0f, true, {6012})
     {
     }
 

@@ -5230,7 +5230,6 @@ __global__ void _assignAlphaScore(
 
     // Actual current phone label
     LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
-    LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_r]);
 
     // Index of the current frame in minibatch
     LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
@@ -5283,6 +5282,7 @@ __global__ void _assignAlphaScore(
             alphaScore[alphaId] = (ElemType)x + ascore;
             if (delayConstraint != -1)
             {
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_r]);
                 if (phoneId == totalPhoneNum - 1)
                 {
                     //only constraint right side
@@ -5328,11 +5328,9 @@ __global__ void _assignBetaScore(
     LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
     LONG64 labelid_2 = labelid + 2;
     LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
-    LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
     LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
     LONG64 probId = timeId*totalPhoneNum + phoneId;
     LONG64 betaid = maxPhoneNum* timeId + phoneSeqId;
-
     LONG64 timeId_1 = timeId + numChannels;
     LONG64 betaid_0 = maxPhoneNum* timeId_1 + phoneSeqId;
     LONG64 betaid_1 = betaid_0 + 1;
@@ -5373,6 +5371,7 @@ __global__ void _assignBetaScore(
             betaScore[betaid] = (ElemType)x + ascore;
             if (delayConstraint != -1)
             {
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
                 if (phoneId == totalPhoneNum - 1)
                 {
                     if (t > phoneBoundId_r + delayConstraint - 1)
