@@ -146,6 +146,7 @@ def test_op_reduce_log_sum(input_data, axis, device_id, precision):
     from .. import reduce_log_sum_exp
     _test_unary_op(precision, device_id, reduce_log_sum_exp, input_data,
                    expected_forward, expected_backward, {'axis': axis})
+
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_prod(input_data, axis, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
@@ -208,6 +209,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
         for ab,eb in zip (actual_backward, expected_backward):
             assert np.allclose(ab, eb)
     forward_array = np.asarray(expected_forward, dtype=dt)
+
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_mean_all_constant(input_data, axis, device_id, precision):
     # dt = PRECISION_TO_TYPE[precision]
@@ -218,8 +220,11 @@ def test_op_reduce_mean_all_constant(input_data, axis, device_id, precision):
     # actual_forward  = np.copy(input_op.eval())
     dt = np.float32
     value = AA(input_data, dtype=dt)
+    from .. import reduce_mean
     from cntk import Axis, Constant
     a = Constant(value, name='a')
+    input_op = reduce_mean(a, axis=Axis.all_axes())
+    expected_forward = AA(np.mean(value))
     actual_forward  = input_op.eval()
     assert np.allclose(actual_forward, expected_forward)
 
@@ -232,8 +237,6 @@ def test_op_reduce_argmax(input_data, axis, device_id, precision):
     # numpy argmax doesn't support keepdims
     arg_shape = np.amax(data, axis=(axis), keepdims=True).shape
     expected_forward = [[np.argmax(data, axis=(axis)).reshape(arg_shape)]]
-
-    forward_array = np.asarray(expected_forward, dtype=dt)
 
     from .. import argmax
     _test_unary_op(precision, device_id, argmax, input_data,
@@ -248,8 +251,6 @@ def test_op_reduce_argmin(input_data, axis, device_id, precision):
     # numpy argmin doesn't support keepdims
     arg_shape = np.amin(data, axis=(axis), keepdims=True).shape
     expected_forward = [[np.argmin(data, axis=(axis)).reshape(arg_shape)]]
-
-    forward_array = np.asarray(expected_forward, dtype=dt)
 
     from .. import argmin
     _test_unary_op(precision, device_id, argmin, input_data,
