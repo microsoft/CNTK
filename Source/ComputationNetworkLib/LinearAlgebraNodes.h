@@ -969,48 +969,151 @@ public:
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
-        // temp, rightTerm, leftTerm - temporary matrices
-        if (inputIndex == 0) // left derivative
-            m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm0);
-        else // right derivative
-            m_temp->AssignElementProductOf(*m_invNorm1, *m_invNorm1);
+        if (fr.IsAllFrames() && Input(0)->GetMBLayout() && Input(1)->GetMBLayout() && Input(0)->GetMBLayout()->GetNumTimeSteps() == 1)
+        {
+            MBLayoutPtr mb0 = Input(0)->GetMBLayout();
+            MBLayoutPtr mb1 = Input(1)->GetMBLayout();
+            int maxSteps = mb1->GetNumTimeSteps();
+            int step = (maxSteps + 15) / 16;
+            #pragma omp parallel for
+            for (int t = 0; t < 16; t++)
+            {
+                FrameRange frms[2];
+                frms[0] = FrameRange(mb0, 0);
+                int start = t*step;
+                int end = maxSteps > (start + step) ? start + step : maxSteps;
+                for (int i = start; i < end; i++)
+                {
+                    frms[1] = FrameRange(mb1, i);
+                    Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(frms[1]);
+                    m_invNorm1V[t]->AssignVectorNorm2Of(sliceInput1Value, true);
+                    m_invNorm1V[t]->AssignElementInverseOf(*m_invNorm1V[t]);
+                    if (inputIndex == 0) // left derivative
+                        m_tempV[t]->AssignElementProductOf(*m_invNorm0, *m_invNorm0);
+                    else // right derivative
+                        m_tempV[t]->AssignElementProductOf(*m_invNorm1V[t], *m_invNorm1V[t]);
 
-        m_temp->ElementMultiplyWith(ValueFor(fr));
-        m_rightTerm->SetValue(Input(inputIndex)->ValueFor(fr));
-        m_rightTerm->RowElementMultiplyWith(*m_temp);
+                    m_tempV[t]->ElementMultiplyWith(ValueFor(frms[1]));
+                    m_rightTermV[t]->SetValue(Input(inputIndex)->ValueFor(frms[inputIndex]));
+                    m_rightTermV[t]->RowElementMultiplyWith(*m_tempV[t]);
 
-        m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm1);
-        m_leftTerm->SetValue(Input(1 - inputIndex)->ValueFor(fr));
-        m_leftTerm->RowElementMultiplyWith(*m_temp);
+                    m_tempV[t]->AssignElementProductOf(*m_invNorm0, *m_invNorm1V[t]);
+                    m_leftTermV[t]->SetValue(Input(1 - inputIndex)->ValueFor(frms[1 - inputIndex]));
+                    m_leftTermV[t]->RowElementMultiplyWith(*m_tempV[t]);
 
-        *m_leftTerm -= *m_rightTerm;
-        m_leftTerm->RowElementMultiplyWith(GradientFor(fr));
-        Input(inputIndex)->GradientFor(fr) += *m_leftTerm;
+                    *m_leftTermV[t] -= *m_rightTermV[t];
+                    m_leftTermV[t]->RowElementMultiplyWith(GradientFor(frms[1]));
+                    Input(inputIndex)->GradientFor(frms[inputIndex]) += *m_leftTermV[t];
+                }
+            }
+        }
+        else
+        {
+            // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
+            // temp, rightTerm, leftTerm - temporary matrices
+            if (inputIndex == 0) // left derivative
+                m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm0);
+            else // right derivative
+                m_temp->AssignElementProductOf(*m_invNorm1, *m_invNorm1);
+
+            m_temp->ElementMultiplyWith(ValueFor(fr));
+            m_rightTerm->SetValue(Input(inputIndex)->ValueFor(fr));
+            m_rightTerm->RowElementMultiplyWith(*m_temp);
+
+            m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm1);
+            m_leftTerm->SetValue(Input(1 - inputIndex)->ValueFor(fr));
+            m_leftTerm->RowElementMultiplyWith(*m_temp);
+
+            *m_leftTerm -= *m_rightTerm;
+            m_leftTerm->RowElementMultiplyWith(GradientFor(fr));
+            Input(inputIndex)->GradientFor(fr) += *m_leftTerm;
+        }
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
-        Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
-        Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+        if (fr.IsAllFrames() && Input(0)->GetMBLayout() && Input(1)->GetMBLayout() && Input(0)->GetMBLayout()->GetNumTimeSteps() == 1)
+        {
+            MBLayoutPtr mb0 = Input(0)->GetMBLayout();
+            MBLayoutPtr mb1 = Input(1)->GetMBLayout();
+            auto fr0 = FrameRange(mb0, 0);
+            Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr0);
+            m_invNorm0->AssignVectorNorm2Of(sliceInput0Value, true);
+            m_invNorm0->AssignElementInverseOf(*m_invNorm0);
 
-        m_invNorm0->AssignVectorNorm2Of(sliceInput0Value, true);
-        m_invNorm0->AssignElementInverseOf(*m_invNorm0);
+            int maxSteps = mb1->GetNumTimeSteps();
+            int step = (maxSteps+15) / 16;
+            #pragma omp parallel for
+            for (int t = 0; t < 16; t++)
+            {
+                int start = t*step;
+                int end = maxSteps > (start + step) ? start + step : maxSteps;
+                for (int i = start; i < end; i++)
+                {
+                    auto fr1 = FrameRange(mb1, i);
+                    Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr1);
+                    Matrix<ElemType> sliceOutputValue = ValueFor(fr1);
 
-        m_invNorm1->AssignVectorNorm2Of(sliceInput1Value, true);
-        m_invNorm1->AssignElementInverseOf(*m_invNorm1);
+                    m_invNorm1V[t]->AssignVectorNorm2Of(sliceInput1Value, true);
+                    m_invNorm1V[t]->AssignElementInverseOf(*m_invNorm1V[t]);
 
-        sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
-        sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
-        sliceOutputValue.ElementMultiplyWith(*m_invNorm1);
-        // TODO: This formulation above would allow to use the TensorView lib for this, with automatic broadcasting.
+                    sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
+                    sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
+                    sliceOutputValue.ElementMultiplyWith(*m_invNorm1V[t]);
+                }
+            }
+        }
+        else
+        {
+            Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
+            Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+
+            m_invNorm0->AssignVectorNorm2Of(sliceInput0Value, true);
+            m_invNorm0->AssignElementInverseOf(*m_invNorm0);
+
+            m_invNorm1->AssignVectorNorm2Of(sliceInput1Value, true);
+            m_invNorm1->AssignElementInverseOf(*m_invNorm1);
+
+            sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
+            sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
+            sliceOutputValue.ElementMultiplyWith(*m_invNorm1);
+            // TODO: This formulation above would allow to use the TensorView lib for this, with automatic broadcasting.
+        }
+    }
+
+    void InferMBLayoutFromInputs(bool isFinalValidationPass)
+    {
+        ComputationNodeBasePtr firstInputWithMBLayout;
+        for(int i=m_inputs.size()-1; i>=0; i--)        
+        {
+            auto input = m_inputs[i];
+            if (!input) // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
+                ;
+            else if (!input->GetMBLayout()) // NULL layout (typical for parameter nodes)
+                ;
+            //else if (!firstInputWithMBLayout || firstInputWithMBLayout->GetMBLayout()->GetNumTimeSteps() < input->GetMBLayout()->GetNumTimeSteps()) // first input with layout: remember this child
+            else if (!firstInputWithMBLayout)
+                firstInputWithMBLayout = input;
+            else if (isFinalValidationPass) // got a layout--compare whether it is the same
+            {
+                if (firstInputWithMBLayout->GetMBLayout()->GetNumSequences() != input->GetMBLayout()->GetNumSequences())
+                {
+                    LogicError("The tensor dimension in the %ls %ls operation does not match.", NodeName().c_str(), OperationName().c_str());
+                }
+                //ValidateMBLayout(firstInputWithMBLayout, input);
+            }
+        }
+
+        // all are consistent: install it
+        m_pMBLayout = firstInputWithMBLayout ? firstInputWithMBLayout->GetMBLayout() : nullptr;
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        //InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
+        InferMBLayoutFromInputs(isFinalValidationPass);
 
         ValidateInferBinaryInputDims();
 
@@ -1026,10 +1129,13 @@ public:
         {
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
             node->m_invNorm0->SetValue(*m_invNorm0);
-            node->m_invNorm1->SetValue(*m_invNorm1);
-            node->m_leftTerm->SetValue(*m_leftTerm);
-            node->m_rightTerm->SetValue(*m_rightTerm);
-            node->m_temp->SetValue(*m_temp);
+            for (int i = 0; i < 16; i++)
+            {
+                node->m_invNorm1V[i]->SetValue(*m_invNorm1V[i]);
+                node->m_leftTermV[i]->SetValue(*m_leftTermV[i]);
+                node->m_rightTermV[i]->SetValue(*m_rightTermV[i]);
+                node->m_tempV[i]->SetValue(*m_tempV[i]);
+            }
         }
     }
     // request matrices needed to do node function value evaluation
@@ -1037,16 +1143,28 @@ public:
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
         RequestMatrixFromPool(m_invNorm0, matrixPool);
-        RequestMatrixFromPool(m_invNorm1, matrixPool);
+        for (int i = 0; i < 16; i++)
+        {
+            RequestMatrixFromPool(m_invNorm1V[i], matrixPool);
+        }
+
+        m_invNorm1 = m_invNorm1V[0];
     }
 
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_leftTerm, matrixPool);
-        RequestMatrixFromPool(m_rightTerm, matrixPool);
-        RequestMatrixFromPool(m_temp, matrixPool);
+        for (int i = 0; i < 16; i++)
+        {
+            RequestMatrixFromPool(m_leftTermV[i], matrixPool);
+            RequestMatrixFromPool(m_rightTermV[i], matrixPool);
+            RequestMatrixFromPool(m_tempV[i], matrixPool);
+        }
+
+        m_leftTerm = m_leftTermV[0];
+        m_rightTerm = m_rightTermV[0];
+        m_temp = m_tempV[0];
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1054,10 +1172,13 @@ public:
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_invNorm0, matrixPool);
-        ReleaseMatrixToPool(m_invNorm1, matrixPool);
-        ReleaseMatrixToPool(m_leftTerm, matrixPool);
-        ReleaseMatrixToPool(m_rightTerm, matrixPool);
-        ReleaseMatrixToPool(m_temp, matrixPool);
+        for (int i = 0; i < 16; i++)
+        {
+            ReleaseMatrixToPool(m_invNorm1V[i], matrixPool);
+            ReleaseMatrixToPool(m_leftTermV[i], matrixPool);
+            ReleaseMatrixToPool(m_rightTermV[i], matrixPool);
+            ReleaseMatrixToPool(m_tempV[i], matrixPool);
+        }
     }
 
 private:
@@ -1068,6 +1189,12 @@ private:
     shared_ptr<Matrix<ElemType>> m_leftTerm;
     shared_ptr<Matrix<ElemType>> m_rightTerm;
     shared_ptr<Matrix<ElemType>> m_temp;
+
+    shared_ptr<Matrix<ElemType>> m_invNorm1V[16];
+    // the rest are temporaries, values don't need to be maintained
+    shared_ptr<Matrix<ElemType>> m_leftTermV[16];
+    shared_ptr<Matrix<ElemType>> m_rightTermV[16];
+    shared_ptr<Matrix<ElemType>> m_tempV[16];
 };
 
 template class CosDistanceNode<float>;

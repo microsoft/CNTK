@@ -199,7 +199,7 @@ public:
     //  - inputSequences: vector of input SequenceInfo records (only seqId and GetNumTimeSteps() are used)
     //  - placement, rowAllocations: temp buffers (passed in to be able to optimize memory allocations)
     template<typename SequenceInfoVector>
-    void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
+    void InitAsPackedSequences_Old(const SequenceInfoVector& inputSequences,
         /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
         /*temp buffer*/std::vector<size_t> rowAllocations)
     {
@@ -245,8 +245,52 @@ public:
             AddSequence(inputSequences[i].seqId, s, (ptrdiff_t)tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
         }
         // need to fill the gaps as well
-        for (size_t s = 0; s < rowAllocations.size(); s++)
-            AddGap(s, (size_t)rowAllocations[s], width);
+        for (size_t pid = 0; pid < rowAllocations.size(); pid++)
+            AddGap(pid, (size_t)rowAllocations[pid], width);
+    }
+
+    template<typename SequenceInfoVector>
+    void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
+        /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
+        /*temp buffer*/std::vector<size_t> rowAllocations)
+    {
+        placement.resize(inputSequences.size()); // [sequence index] result goes here (entries are invalid for gaps)
+                                                 // determine width of MBLayout
+        size_t width = 0;
+        for (size_t i = 0; i < inputSequences.size(); i++)
+        {
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            else if (width < inputSequences[i].GetNumTimeSteps())
+                width = inputSequences[i].GetNumTimeSteps();
+        }
+        // allocate
+        rowAllocations.clear();             // [row] we build rows one by one
+        size_t pidx = 0;
+        for (size_t i = 0; i < inputSequences.size(); i++)
+        {
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            let len = inputSequences[i].GetNumTimeSteps();
+            rowAllocations.push_back(len);
+            pidx = rowAllocations.size() - 1;
+            // sequence goes to (s, rowAllocations[s])
+            placement[i] = make_pair(pidx, 0);
+        }
+
+        // create MBLayout
+        Init(rowAllocations.size(), width);
+        for (size_t i = 0; i < inputSequences.size(); i++)
+        {
+            if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            size_t s, tBegin; tie
+            (s, tBegin) = placement[i];
+            AddSequence(inputSequences[i].seqId, s, (ptrdiff_t)tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
+        }
+        // need to fill the gaps as well
+        for (size_t pid = 0; pid < rowAllocations.size(); pid++)
+            AddGap(pid, (size_t)rowAllocations[pid], width);
     }
 
     // -------------------------------------------------------------------
@@ -352,7 +396,7 @@ public:
 
     // mark a range of frames in a parallel sequence as one sentence
     // Note that endTime is the last frame +1. Like begin/end as used in STL containers.
-    void AddSequence(UniqueSequenceId seqId, size_t s, ptrdiff_t beginTime, size_t endTime)
+    void AddSequence(UniqueSequenceId seqId, size_t pid, ptrdiff_t beginTime, size_t endTime)
     {
         // old readers can just pass this to get an auto-assigned id (which is fine as long as we only have one MBLayout per minibatch)
         if (seqId == NEW_SEQUENCE_ID)
@@ -363,7 +407,7 @@ public:
                 LogicError("AddSequence: ran out of bits..."); // (will never happen anyway)
         }
 
-        AddSequence(SequenceInfo{seqId, s, beginTime, endTime});
+        AddSequence(SequenceInfo{seqId, pid, beginTime, endTime});
     }
 
     // version that passes a SequenceInfo record directly

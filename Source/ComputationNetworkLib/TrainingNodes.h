@@ -2958,7 +2958,6 @@ public:
     virtual void ForwardPropNonLooping() override
     {
         FrameRange fr(InputRef(0).GetMBLayout());
-        const Matrix<ElemType>& classOneLabels = InputRef(0).ValueFor(fr);
         //ElemType loss = 0;
         m_temp->SetValue((ElemType)0);
         for (int i = 1; i < GetNumInputs(); i += 2)
@@ -2994,7 +2993,12 @@ public:
                 if (sequence.seqId == GAP_SEQUENCE_ID)
                     continue;
                 const auto& columnIndices = mbLayout->GetColumnIndices(sequence);
-                vector<ElemType> index(columnIndices.begin(), columnIndices.end());
+                vector<ElemType> index;
+                for (const auto& id : columnIndices)
+                {
+                    index.push_back((ElemType)id);
+                }
+
                 m_columIndex[j]->Resize(1, columnIndices.size());
                 m_columIndex[j]->SetValue(1, columnIndices.size(), m_temp->GetDeviceId(), index.data(), matrixFormatRowMajor);
                 m_sequenceColumn[j]->DoGatherColumnsOf(0, *m_columIndex[j], *m_temp, 1);

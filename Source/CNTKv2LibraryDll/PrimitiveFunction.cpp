@@ -189,6 +189,8 @@ namespace CNTK
             outputDynamicAxes = inputs[1].DynamicAxes();
         else if (op == PrimitiveOpType::ReconcileDynamicAxis)
             outputDynamicAxes = inputs[1].DynamicAxes();
+        else if (op == PrimitiveOpType::CosDistance)
+            outputDynamicAxes = inputs[1].DynamicAxes();
         else
         {
             auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
