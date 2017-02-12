@@ -6217,7 +6217,7 @@ struct TensorArgOpReduction
 
     // reduction case (non-reduction case is specialized)
     static inline ElemType Loop(array<ElemType*, N> pointers, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides,
-        ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+                                ElementWiseOperator reductionOp, size_t& counter, size_t& index)
     {
         array<ptrdiff_t, N - 1> strides;   // N-1 because last one is the result pointer, which is unused in reduction
         for (size_t i = 0; i < N - 1; i++) // N = a small constant, this will be unrolled
@@ -6260,7 +6260,7 @@ template <class ElemType, size_t N>
 struct TensorArgOpReduction<ElemType, N, -1>
 {
     static inline ElemType Loop(array<ElemType*, N> pointers,
-        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&, ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+                                const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&, ElementWiseOperator reductionOp, size_t& counter, size_t& index)
     {
         counter++;
         return *pointers[0]; // finally we are doing some work!!!

@@ -4573,10 +4573,13 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
 
 template <class ElemType>
 void GPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const GPUMatrix<ElemType>& a, int reductionAxis, ElementWiseOperator reductionOp,
-    const array<size_t, 2>& offsets,
-    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+                                      const array<size_t, 2>& offsets,
+                                      const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                      const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
+    aShape;
+    reductionAxis;
+
     if (reductionOp != ElementWiseOperator::opArgmin &&
         reductionOp != ElementWiseOperator::opArgmax)
         InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
@@ -4584,14 +4587,7 @@ void GPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const GPUMatrix
     a.PrepareDevice();
     if (a.GetComputeDeviceId() != GetComputeDeviceId())
         InvalidArgument("All matrices must be on the same GPU");
-
-    aShape;
-    reductionAxis;
-    offsets;
-    regularOpDims;
-    regularStrides;
-    reducingOpDims;
-    reducingStrides;
+    return TensorOpN<ElemType, 2>((ElemType) 0, array<ElemType*, 2>{a.Data(), Data()}, (ElemType) 1, ElementWiseOperator::opCopy, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides);
 }
 
 // =======================================================================
