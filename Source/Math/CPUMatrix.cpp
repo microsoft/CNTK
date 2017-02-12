@@ -6666,14 +6666,11 @@ int CPUMatrix<ElemType>::ArgOp(ElementWiseOperator reductionOp) const
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const CPUMatrix<ElemType>& a, int reductionAxis, ElementWiseOperator reductionOp,
+void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
                                       const array<size_t, 2>& offsets,
                                       const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                       const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-    aShape;
-    reductionAxis;
-
     if (reductionOp != ElementWiseOperator::opArgmin &&
         reductionOp != ElementWiseOperator::opArgmax)
         InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");

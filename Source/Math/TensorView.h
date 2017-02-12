@@ -137,7 +137,7 @@ public:
     // -------------------------------------------------------------------
     // arg based operations
     // -------------------------------------------------------------------
-    void DoArgReductionOpOf(const TensorView& a, int reductionAxis, ElementWiseOperator reductionOp);
+    void DoArgReductionOpOf(const TensorView& a, ElementWiseOperator reductionOp);
 
     // -------------------------------------------------------------------
     // matrix product -- GEMM for flattened tensors

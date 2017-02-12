@@ -2332,49 +2332,26 @@ DeviceBoundNumber<ElemType> GPUMatrix<ElemType>::Sum_AsDeviceBoundNum() const
 }
 
 template <class ElemType>
-int GPUMatrix<ElemType>::Argmin() const
+ElemType GPUMatrix<ElemType>::AbsoluteMax() const
 {
     cublasHandle_t cuHandle = GetCublasHandle(GetComputeDeviceId());
-    int resInd = 0;
+    ElemType res;
     if (sizeof(ElemType) == sizeof(float))
-        cublasIsamin(cuHandle, (CUDA_LONG)GetNumElements(), reinterpret_cast<float*>(Data()), 1, &resInd);
-    else
-        cublasIdamin(cuHandle, (CUDA_LONG)GetNumElements(), reinterpret_cast<double*>(Data()), 1, &resInd);
-
-    return --resInd;
-}
-
-template <class ElemType>
-int GPUMatrix<ElemType>::Argmax() const
-{
-    cublasHandle_t cuHandle = GetCublasHandle(GetComputeDeviceId());
-    int resInd = 0;
-    if (sizeof(ElemType) == sizeof(float))
+    {
+        int resInd = 0;
         cublasIsamax(cuHandle, (CUDA_LONG)GetNumElements(), reinterpret_cast<float*>(Data()), 1, &resInd);
+        resInd--;
+        CUDA_CALL(cudaMemcpy(reinterpret_cast<float*>(&res), reinterpret_cast<float*>(Data() + resInd), sizeof(float), cudaMemcpyDeviceToHost));
+        return res;
+    }
     else
+    {
+        int resInd = 0;
         cublasIdamax(cuHandle, (CUDA_LONG)GetNumElements(), reinterpret_cast<double*>(Data()), 1, &resInd);
-
-    return --resInd;
-}
-
-template <class ElemType>
-ElemType GPUMatrix<ElemType>::Min() const
-{
-    ElemType res;
-    int resInd = Argmin();
-    CUDA_CALL(cudaMemcpy(reinterpret_cast<ElemType*>(&res), reinterpret_cast<ElemType*>(Data() + resInd), sizeof(ElemType), cudaMemcpyDeviceToHost));
-
-    return res;
-}
-
-template <class ElemType>
-ElemType GPUMatrix<ElemType>::Max() const
-{
-    ElemType res;
-    int resInd = Argmax();
-    CUDA_CALL(cudaMemcpy(reinterpret_cast<ElemType*>(&res), reinterpret_cast<ElemType*>(Data() + resInd), sizeof(ElemType), cudaMemcpyDeviceToHost));
-
-    return res;
+        resInd--;
+        CUDA_CALL(cudaMemcpy(reinterpret_cast<double*>(&res), Data() + resInd, sizeof(double), cudaMemcpyDeviceToHost));
+        return res;
+    }
 }
 
 template <class ElemType>
@@ -4572,14 +4549,11 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::TensorArgOp(const TensorShape& aShape, const GPUMatrix<ElemType>& a, int reductionAxis, ElementWiseOperator reductionOp,
+void GPUMatrix<ElemType>::TensorArgOp(const GPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
                                       const array<size_t, 2>& offsets,
                                       const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                                       const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
-    aShape;
-    reductionAxis;
-
     if (reductionOp != ElementWiseOperator::opArgmin &&
         reductionOp != ElementWiseOperator::opArgmax)
         InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");

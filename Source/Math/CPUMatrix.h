@@ -443,7 +443,7 @@ public:
     int Argmax() const;
     int ArgOp(ElementWiseOperator reductionOp) const;
 
-    void TensorArgOp(const TensorShape& aShape, const CPUMatrix<ElemType>& a, int reductionAxis, ElementWiseOperator reductionOp,
+    void TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
                      const std::array<size_t, 2>& offsets,
                      const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
                      const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
