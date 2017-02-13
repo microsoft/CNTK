@@ -2351,9 +2351,21 @@ def reduce_prod(x, axis=None, name=''):
 @typemap
 def argmax(x, axis=None, name=''):
     '''
-    Computes the argmax of the input tensor's elements across the specified axis.
+    Computes the argmax of the input tensor's elements across the specified axis. 
+    If no axis is specified, it will return the flatten index of the largest element
+    in tensor x.
 
     Example:
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]
+
+        >>> C.argmax(data, 0).eval()
+        array([[ 2.,  2.]], dtype=float32)
+
+        >>> C.argmax(data, 1).eval()
+        array([[ 1.],
+               [ 1.],
+               [ 1.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -2371,9 +2383,21 @@ def argmax(x, axis=None, name=''):
 @typemap
 def argmin(x, axis=None, name=''):
     '''
-    Computes the argmin of the input tensor's elements across the specified axis.
+    Computes the argmin of the input tensor's elements across the specified axis. 
+    If no axis is specified, it will return the flatten index of the smallest element
+    in tensor x.
 
     Example:
+        >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
+        >>> data = [[10, 20],[30, 40],[50, 60]]
+
+        >>> C.argmax(data, 0).eval()
+        array([[ 0.,  0.]], dtype=float32)
+
+        >>> C.argmax(data, 1).eval()
+        array([[ 0.],
+               [ 0.],
+               [ 0.]], dtype=float32)
 
     Args:
         x: input tensor
