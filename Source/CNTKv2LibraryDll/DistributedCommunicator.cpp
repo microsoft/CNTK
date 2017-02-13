@@ -310,7 +310,8 @@ namespace CNTK
         std::vector<size_t> packedGradientsIndex;
         for (auto i = 0; i < numValues; i++)
         {
-            if (GetBufferSize(inputValues[i]) < DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
+            // Push index to packing queue if the gradient's size is less than threshold size and the gradient is not the last one (reserved for header)
+            if (GetBufferSize(inputValues[i]) < DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES && i != numValues - 1)
             {
                 packedGradientsSizeInBytes += GetBufferSize(inputValues[i]);
                 packedGradientsIndex.push_back(i);
@@ -473,8 +474,8 @@ namespace CNTK
                     auto gradient = GetWritableMatrix<float>(outputValues[i]);
                     gradient->AssignValuesOf(m_aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
                     offset += gradient->GetNumElements();
-                    ::CNTK::NDShape shapet{ gradient->GetNumElements() };
-                    NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, gradient->Data(), gradient->GetNumElements(), outputValues[i]->Device());
+                    // ::CNTK::NDShape shapet{ gradient->GetNumElements() };
+                    // NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, gradient->Data(), gradient->GetNumElements(), outputValues[i]->Device());
                 }
             }
             else
@@ -484,8 +485,8 @@ namespace CNTK
                     auto gradient = GetWritableMatrix<double>(outputValues[i]);
                     gradient->AssignValuesOf(m_aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
                     offset += gradient->GetNumElements();
-                    ::CNTK::NDShape shapet{ gradient->GetNumElements() };
-                    NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, gradient->Data(), gradient->GetNumElements(), outputValues[i]->Device());
+                    // ::CNTK::NDShape shapet{ gradient->GetNumElements() };
+                    // NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, gradient->Data(), gradient->GetNumElements(), outputValues[i]->Device());
                 }
             }
         }
