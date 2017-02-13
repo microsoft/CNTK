@@ -15,6 +15,7 @@
 #include "StringUtil.h"
 #include "SequenceData.h"
 #include "ImageUtil.h"
+#include "ImageDeserializerBase.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK 
 {
@@ -27,11 +28,12 @@ SequenceDataPtr ImageTransformerBase::Transform(SequenceDataPtr sequence)
         RuntimeError("Unexpected sequence provided");
 
     auto result = std::make_shared<ImageSequenceData>();
-    Apply(sequence->m_id, inputSequence->m_image);
+    Apply(inputSequence->m_copyIndex, inputSequence->m_image);
 
     result->m_image = inputSequence->m_image;
     result->m_numberOfSamples = inputSequence->m_numberOfSamples;
     result->m_elementType = GetElementTypeFromOpenCVType(inputSequence->m_image.depth());
+    result->m_copyIndex = inputSequence->m_copyIndex;
 
     ImageDimensions outputDimensions(inputSequence->m_image.cols, inputSequence->m_image.rows, inputSequence->m_image.channels());
     result->m_sampleLayout = std::make_shared<TensorShape>(outputDimensions.AsTensorShape(HWC));
@@ -113,11 +115,11 @@ void CropTransformer::StartEpoch(const EpochConfiguration &config)
     ImageTransformerBase::StartEpoch(config);
 }
 
-void CropTransformer::Apply(size_t id, cv::Mat &mat)
+void CropTransformer::Apply(uint8_t copyId, cv::Mat &mat)
 {
     auto seed = GetSeed();
     auto rng = m_rngs.pop_or_create([seed]() { return std::make_unique<std::mt19937>(seed); }); 
-    int viewIndex = m_cropType == CropType::MultiView10 ? (int)(id % 10) : 0;
+    int viewIndex = m_cropType == CropType::MultiView10 ? (int)(copyId % ImageDeserializerBase::NumMultiViewCopies) : 0;
 
     switch (m_cropType)
     {
@@ -353,10 +355,8 @@ StreamDescription ScaleTransformer::Transform(const StreamDescription& inputStre
     return m_outputStream;
 }
 
-void ScaleTransformer::Apply(size_t id, cv::Mat &mat)
+void ScaleTransformer::Apply(uint8_t, cv::Mat &mat)
 {
-    UNUSED(id);
-
     if (m_scaleMode == ScaleMode::Fill)
     { // warp the image to the given target size
         cv::resize(mat, mat, cv::Size((int)m_imgWidth, (int)m_imgHeight), 0, 0, m_interp);
@@ -435,9 +435,8 @@ MeanTransformer::MeanTransformer(const ConfigParameters& config) : ImageTransfor
     }
 }
 
-void MeanTransformer::Apply(size_t id, cv::Mat &mat)
+void MeanTransformer::Apply(uint8_t, cv::Mat &mat)
 {
-    UNUSED(id);
     assert(m_meanImg.size() == cv::Size(0, 0) ||
            (m_meanImg.size() == mat.size() &&
            m_meanImg.channels() == mat.channels()));
@@ -604,10 +603,8 @@ void IntensityTransformer::StartEpoch(const EpochConfiguration &config)
     ImageTransformerBase::StartEpoch(config);
 }
 
-void IntensityTransformer::Apply(size_t id, cv::Mat &mat)
+void IntensityTransformer::Apply(uint8_t, cv::Mat &mat)
 {
-    UNUSED(id);
-
     if (m_eigVal.empty() || m_eigVec.empty() || m_stdDev == 0.0)
         return;
 
@@ -679,10 +676,8 @@ void ColorTransformer::StartEpoch(const EpochConfiguration &config)
     ImageTransformerBase::StartEpoch(config);
 }
 
-void ColorTransformer::Apply(size_t id, cv::Mat &mat)
+void ColorTransformer::Apply(uint8_t, cv::Mat &mat)
 {
-    UNUSED(id);
-
     if (m_brightnessRadius == 0.0 && m_contrastRadius == 0.0 && m_saturationRadius == 0.0)
         return;
 

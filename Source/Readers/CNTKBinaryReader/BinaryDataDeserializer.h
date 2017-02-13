@@ -16,7 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 class BinaryDataDeserialzer {
 public:
-    virtual size_t GetSequenceDataForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result) = 0;
+    virtual size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result) = 0;
 
     StorageType GetStorageType() { return m_storageType; }
     ElementType GetElementType() { return m_elemType; }
@@ -98,7 +98,7 @@ public:
         m_numCols = numCols;
     }
 
-    size_t GetSequenceDataForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result)
+    size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result)
     {
         size_t elemSize = GetElemSizeBytes();
         result.resize(numSequences);
@@ -106,7 +106,6 @@ public:
         {
             shared_ptr<DenseInputStreamBuffer> sequence = make_shared<DenseInputStreamBuffer>();
             sequence->m_data            = (char*)data + c*m_numCols*elemSize;
-            sequence->m_id              = startIndex + c;
             sequence->m_numberOfSamples = 1;
             sequence->m_sampleLayout    = std::make_shared<TensorShape>(m_numCols);
             result[c]                   = sequence;
@@ -164,7 +163,7 @@ public:
     // ElemType[nnz]: the values for the sparse sequences
     // int32_t[nnz]: the row offsets for the sparse sequences
     // int32_t[numSequences]: the column offsets for the sparse sequences
-    size_t GetSequenceDataForChunk(size_t numSequences, size_t startIndex, void* data, std::vector<SequenceDataPtr>& result)
+    size_t GetSequenceDataForChunk(size_t numSequences, void* data, std::vector<SequenceDataPtr>& result)
     {
         size_t elemSize = GetElemSizeBytes();
         result.resize(numSequences);
@@ -188,7 +187,6 @@ public:
         {
             shared_ptr<SparseInputStreamBuffer> sequence = make_shared<SparseInputStreamBuffer>();
             // We can't popuplate sequence->m_chunk here, so delay that for later
-            sequence->m_id = startIndex + colIndex;
 
             // We know the number of elements in all of the samples, it's just this:
             sequence->m_totalNnzCount = colOffsets[colIndex + 1] - colOffsets[colIndex];

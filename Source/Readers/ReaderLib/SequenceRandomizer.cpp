@@ -405,7 +405,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         for (size_t k = 0; k < m_bufferOriginalSequences.size(); k++)
         {
             RandomizedSequenceDescription s;
-            s.m_id = m_bufferOriginalSequences[k].m_id;
+            s.m_indexInOriginalChunk = m_bufferOriginalSequences[k].m_indexInChunk;
             s.m_numberOfSamples = m_bufferOriginalSequences[k].m_numberOfSamples;
             s.m_chunk = &chunk;
             chunkSequences.push_back(s);

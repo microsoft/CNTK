@@ -51,11 +51,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_deserializer.m_corpus->IdToKey(s.m_key.m_sequence);
         }
 
-        void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
+        void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
         {
-            size_t innerSequenceId = m_deserializer.m_multiViewCrop ? sequenceId / ImageDeserializerBase::NumMultiViewCopies : sequenceId;
-            const auto& sequence = m_descriptor.m_sequences[innerSequenceId];
-            size_t offset = sequence.m_fileOffsetBytes - m_chunkOffset;
+            const size_t innerSequenceIndex = m_deserializer.m_multiViewCrop ? sequenceIndex / ImageDeserializerBase::NumMultiViewCopies : sequenceIndex;
+            const size_t copyId = m_deserializer.m_multiViewCrop ? sequenceIndex % ImageDeserializerBase::NumMultiViewCopies : 0;
+
+            const auto& sequence = m_descriptor.m_sequences[innerSequenceIndex];
+            const size_t offset = sequence.m_fileOffsetBytes - m_chunkOffset;
 
             // Let's parse the string
             char* next_token = nullptr;
@@ -108,7 +110,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 image = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
             }
 
-            m_deserializer.PopulateSequenceData(image, classId, sequenceId, result);
+            m_deserializer.PopulateSequenceData(image, classId, copyId, result);
         }
     };
 
@@ -132,18 +134,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
-    Base64ImageDeserializer::Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool isPrimary) : ImageDeserializerBase(corpus, config)
+    Base64ImageDeserializer::Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary) : ImageDeserializerBase(corpus, config, primary)
     {
         auto mapFile = config(L"file");
         bool hasSequenceKeys = HasSequenceKeys(mapFile);
         m_fileName.assign(mapFile.begin(), mapFile.end());
 
-        attempt(5, [this, hasSequenceKeys, corpus, isPrimary]()
+        attempt(5, [this, hasSequenceKeys, corpus]()
         {
             if (!m_dataFile || ferror(m_dataFile.get()) != 0)
                 m_dataFile.reset(fopenOrDie(m_fileName, L"rbS"), [](FILE* f) { if (f) fclose(f); });
 
-            m_indexer = make_unique<Indexer>(m_dataFile.get(), isPrimary, !hasSequenceKeys);
+            m_indexer = make_unique<Indexer>(m_dataFile.get(), m_primary, !hasSequenceKeys);
             m_indexer->Build(corpus);
         });
     }
@@ -170,13 +172,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         const auto& index = m_indexer->GetIndex();
         const auto& chunk = index.m_chunks[chunkId];
-        size_t sequencesPerInitialSequence = m_multiViewCrop ? 10 : 1;
-        result.reserve(sequencesPerInitialSequence * chunk.m_sequences.size());
+        size_t sequenceCopies = m_multiViewCrop ? NumMultiViewCopies : 1;
+        result.reserve(sequenceCopies * chunk.m_sequences.size());
         size_t currentId = 0;
         for (auto const& s : chunk.m_sequences)
         {
-            assert(currentId / sequencesPerInitialSequence == s.m_id);
-            for (size_t i = 0; i < sequencesPerInitialSequence; ++i)
+            assert(currentId / sequenceCopies == s.m_indexInChunk);
+            for (size_t i = 0; i < sequenceCopies; ++i)
             {
                 result.push_back(
                 {
@@ -185,6 +187,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     s.m_chunkId,
                     s.m_key
                 });
+
                 currentId++;
             }
         }
