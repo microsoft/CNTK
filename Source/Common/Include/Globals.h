@@ -19,8 +19,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void       ForceConstantRandomSeed() {        m_forceConstantRandomSeed = true; }
         static bool ShouldForceConstantRandomSeed() { return m_forceConstantRandomSeed; }
 
-		static void              SetrandomSeedOffset(unsigned long randomSeedOffset) { m_randomSeedOffset = randomSeedOffset; }
-		static unsigned long     GetrandomSeedOffset() { return m_randomSeedOffset; }
+        static void              SetrandomSeedOffset(unsigned long randomSeedOffset) { m_randomSeedOffset = randomSeedOffset; }
+        static unsigned long     GetrandomSeedOffset() { return m_randomSeedOffset; }
 
         static void SetGradientAccumulationOptimization(bool enable) { m_optimizeGradientAccumulation = enable; }
         static bool ShouldOptimizeGradientAccumulation() { return m_optimizeGradientAccumulation; }
@@ -42,6 +42,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static std::atomic<bool> m_enableHyperCompressMemory;
         static std::atomic<bool> m_forceConstantRandomSeed;
         static std::atomic<bool> m_optimizeGradientAccumulation;
-		static std::atomic<unsigned long> m_randomSeedOffset;
+        static std::atomic<unsigned long> m_randomSeedOffset;
     };
 }}}
