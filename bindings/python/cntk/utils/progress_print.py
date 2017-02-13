@@ -26,6 +26,7 @@ class ProgressPrinter(object):
          (a log print for minibatch number: ``freq``, a log print for minibatch number: 2*``freq``, a log print for minibatch number: 3*``freq``,...), and a value of None means no per-minibatch log.
         first (int, default 0): Only start logging after the minibatch number is greater or equal to ``first``.
         tag (string, default EmptyString): prepend minibatch log lines with your own string
+        metric_is_pct (bool, default True): treat the trainer metric as a percentage for formatting and output purposes (i.e., multiply by 100.0) if true, otherwise report metric directly.
         log_to_file (string or None, default None): if None, output log data to stdout.  If a string is passed, the string is path to a file for log data.
         gen_heartbeat (bool, default False): If True output a progress message every 10 seconds or so to stdout.
         num_epochs (int, default 300): The total number of epochs to be trained.  Used for some metadata.  This parameter is optional.
@@ -33,7 +34,7 @@ class ProgressPrinter(object):
         model (:class:`~cntk.ops.Function` or None, default None): if a Function is passed and ``tensorboard_log_dir`` is not None, records model graph to a TensorBoard events file.
     '''
 
-    def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300,
+    def __init__(self, freq=None, first=0, tag='', metric_is_pct=True, log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300,
                  tensorboard_log_dir=None, model=None):
         '''
         Constructor. The optional ``freq`` parameter determines how often
@@ -65,6 +66,11 @@ class ProgressPrinter(object):
         self.rank = rank
         self.gen_heartbeat = gen_heartbeat
         self.num_epochs =  num_epochs
+        self.metric_is_pct = metric_is_pct
+        if metric_is_pct:
+            self.metric_multiplier = 100.0
+        else:
+            self.metric_multiplier = 1.0
 
         # Create TensorBoardFileWriter if the path to a log directory was provided.
         self.tensorboard_writer = None
@@ -188,14 +194,18 @@ class ProgressPrinter(object):
                 speed = samples / time_delta
                 self.epoch_start_time = epoch_end_time
             if with_metric:
-                self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples per second);".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, avg_metric*100.0, samples, time_delta, speed))
+                if self.metric_is_pct:
+                    self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.1f}% * {} {:0.3f}s ({:5.1f} samples per second);".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, avg_metric*self.metric_multipleir, samples, time_delta, speed))
+                else:
+                    self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.1f} * {} {:0.3f}s ({:5.1f} samples per second);".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, avg_metric*self.metric_multipleir, samples, time_delta, speed))
+
             else:
                 self.___logprint("Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second);".format(self.epochs, self.num_epochs, self.tag, avg_loss, samples, time_delta, speed))
 
             # For logging to TensorBoard, we use self.total_updates as it does not reset after each epoch.
             self.update_value('epoch_avg_loss', avg_loss, self.epochs)
             if with_metric:
-                self.update_value('epoch_avg_metric', avg_metric * 100.0, self.epochs)
+                self.update_value('epoch_avg_metric', avg_metric * self.metric_multiplier, self.epochs)
 
             return avg_loss, avg_metric, samples  # BUGBUG: for freq=0, we don't return anything here
 
@@ -257,8 +267,13 @@ class ProgressPrinter(object):
                 first_mb = max(self.updates_since_start - self.freq + 1, self.first+1)
 
             if metric is not None:
-                self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}, metric = {:0.1f}% * {:d};'.format(
-                    first_mb, self.updates_since_start, avg_loss, samples, avg_metric*100.0, samples))
+                if metric_is_pct:
+                    self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}, metric = {:0.1f}% * {:d};'.format(
+                        first_mb, self.updates_since_start, avg_loss, samples, avg_metric*metric_multiplier, samples))
+                else:
+                    self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d}, metric = {:0.1f} * {:d};'.format(
+                        first_mb, self.updates_since_start, avg_loss, samples, avg_metric*metric_multiplier, samples))
+
             else:
                 self.___logprint(' Minibatch[{:4d}-{:4d}]: loss = {:0.6f} * {:d};'.format(
                     first_mb, self.updates_since_start, avg_loss, samples))
@@ -267,7 +282,7 @@ class ProgressPrinter(object):
                 # For logging to TensorBoard, we use self.total_updates as it does not reset after each epoch.
                 self.update_value('mb_avg_loss', avg_loss, self.total_updates)
                 if metric is not None:
-                    self.update_value('mb_avg_metric', avg_metric * 100.0, self.total_updates)
+                    self.update_value('mb_avg_metric', avg_metric * metric_multiplier, self.total_updates)
 
     def update_with_trainer(self, trainer, with_metric=False):
         '''
