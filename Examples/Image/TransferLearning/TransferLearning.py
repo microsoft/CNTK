@@ -8,6 +8,7 @@ from __future__ import print_function
 import numpy as np
 import os
 from PIL import Image
+from cntk.device import set_default_device, gpu
 from cntk import load_model, Trainer, UnitType
 from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, get_node_outputs
@@ -193,14 +194,15 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
 
 
 if __name__ == '__main__':
+    set_default_device(gpu(0))
     # check for model and data existence
     if not (os.path.exists(_base_model_file) and os.path.exists(_train_map_file) and os.path.exists(_test_map_file)):
         print("Please run 'python install_data_and_model.py' first to get the required data and model.")
         exit(0)
 
     # You can use the following to inspect the base model and determine the desired node names
-    node_outputs = get_node_outputs(load_model(_base_model_file))
-    for out in node_outputs: print("{0} {1}".format(out.name, out.shape))
+    # node_outputs = get_node_outputs(load_model(_base_model_file))
+    # for out in node_outputs: print("{0} {1}".format(out.name, out.shape))
 
     # Train only if no model exists yet or if make_mode is set to False
     if os.path.exists(tl_model_file) and make_mode:

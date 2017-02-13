@@ -54,7 +54,7 @@ def _simple_dict():
     d['root'] = d['op2']
 
     d['target'] = input_variable((), name='label')
-    d['all'] = combine([d['root'], minus(d['target'], 1)], name='all')
+    d['all'] = combine([d['root'], minus(d['target'], constant(1, name='c2'), name='minus')], name='all')
 
     return d
 
@@ -114,6 +114,6 @@ def test_plot():
 def test_depth_first_search():
     d = _simple_dict()
 
-    found = depth_first_search(d['op2'], lambda x:True)
+    found = depth_first_search(d['all'], lambda x:True)
     found_names = [v.name for v in found]
-    assert found_names == ['op2', 'op1', 'i1', 'c1', 'p1']
+    assert found_names == ['all', 'op2', 'op1', 'i1', 'c1', 'p1', 'minus', 'label', 'c2']
