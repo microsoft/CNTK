@@ -212,7 +212,7 @@ Sequences NoRandomizer::GetNextSequences(size_t globalSampleCount, size_t localS
             LogicError("Invalid chunk requested.");
         }
 
-        it->second->GetSequence(sequenceDescription.m_id, sequence);
+        it->second->GetSequence(sequenceDescription.m_indexInChunk, sequence);
         for (int j = 0; j < m_streams.size(); ++j)
         {
             result.m_data[j][i] = sequence[j];

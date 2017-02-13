@@ -73,9 +73,6 @@ private:
     // Flag that indicates whether a single speech frames should be exposed as a sequence.
     bool m_frameMode;
 
-    // Indicates, whether the deserializers is the "primary" one, the one that drives chunking.
-    bool m_primary;
-
     // Used to correlate a sequence key with the sequence inside the chunk when deserializer is running not in primary mode.
     // Key -> <chunkid, offset inside chunk>
     std::map<size_t, std::pair<size_t, size_t>> m_keyToChunkLocation;
