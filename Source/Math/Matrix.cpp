@@ -5671,11 +5671,23 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
     return *this;
 }
 
+// Calculate CTC score
+// prob (input): the posterior output from the network
+// alpha, beta (output): alpha and beta for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// totalScore (output): total CTC score
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numChannels (input): channel number in this minibatch
+// mbsize (input): the maximum channel frame number
 template<class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
-    Matrix<ElemType>& phoneSeq, Matrix<ElemType>& phoneBound, ElemType &totalScore, std::vector<size_t> & extraUttMp,
+    Matrix<ElemType>& phoneSeq, Matrix<ElemType>& phoneBound, ElemType &totalScore, std::vector<size_t> & uttToChanInd,
     std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum, std::vector<size_t> & uttPhoneNum,
-    size_t samplesInRecurrentStep, size_t & mbsize, int& delayConstraint, const bool isColWise)
+    size_t numChannels, size_t & mbsize, int& delayConstraint, const bool isColWise)
 {
     DecideAndMoveToRightDevice(prob, *this);
     alpha.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
@@ -5690,9 +5702,9 @@ Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob,
     DISPATCH_MATRIX_ON_FLAG(&prob,
         this,
         this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, totalScore,
-            extraUttMp, uttBeginFrame, uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, delayConstraint, isColWise),
+            uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numChannels, mbsize, delayConstraint, isColWise),
         this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, totalScore,
-            extraUttMp, uttBeginFrame, uttFrameNum, uttPhoneNum, samplesInRecurrentStep, mbsize, delayConstraint, isColWise),
+            uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numChannels, mbsize, delayConstraint, isColWise),
         NOT_IMPLEMENTED,
         NOT_IMPLEMENTED
     );

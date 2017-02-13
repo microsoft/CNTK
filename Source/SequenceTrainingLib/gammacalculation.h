@@ -254,12 +254,14 @@ public:
     // Calculate CTC score
     // totalScore (output): total CTC score at element (0,0)
     // prob (input): the posterior output from the network (log softmax of right)
+    // maxIndexes (input): indexes of max elements in label input vectors
+    // maxValues (input): values of max elements in label input vectors
     // labels (input): 1-hot vector with frame-level phone labels
     // CTCPosterior (output): CTC posterior
-    void doCTC_m(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore, 
+    void doCTC(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore, 
         const Microsoft::MSR::CNTK::Matrix<ElemType>& prob, 
-        const Microsoft::MSR::CNTK::Matrix<ElemType>& m_maxIndexes,
-        const Microsoft::MSR::CNTK::Matrix<ElemType>& m_maxValues,
+        const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
+        const Microsoft::MSR::CNTK::Matrix<ElemType>& maxValues,
         Microsoft::MSR::CNTK::Matrix<ElemType>& CTCPosterior, 
         std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
         int delayConstraint = -1)
@@ -287,7 +289,7 @@ public:
 
         size_t mbsize = numCols / numChannels;
 
-        //cal gamma for each utterance
+        // cal gamma for each utterance
         std::vector<size_t> uttBeginFrame;
         std::vector<size_t> uttFrameNum;
         std::vector<size_t> uttPhoneNum;
@@ -314,11 +316,11 @@ public:
                 int prevPhoneId = -1;
                 size_t startFrameInd = seq.tBegin*numChannels + seq.s;
                 size_t endFrameInd = seq.tEnd*numChannels + seq.s;
-				size_t frameCounter = 0;
+                size_t frameCounter = 0;
                 for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numChannels, frameCounter++) {
-                    if (m_maxValues(0, frameInd) == 2) 
+                    if (maxValues(0, frameInd) == 2) 
                     {
-                        prevPhoneId = (size_t)m_maxIndexes(0, frameInd);
+                        prevPhoneId = (size_t)maxIndexes(0, frameInd);
 
                         phoneSeq.push_back(blankid);
                         phoneBound.push_back(frameCounter);

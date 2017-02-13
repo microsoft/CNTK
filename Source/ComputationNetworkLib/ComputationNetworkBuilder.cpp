@@ -500,9 +500,9 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Seque
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CTCWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, size_t blankNum, int delayConstraint, const std::wstring nodeName)
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CTCWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, int delayConstraint, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<CTCWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName, blankNum, delayConstraint), { label, prediction });
+    return net.AddNodeToNetAndAttachInputs(New<CTCWithSoftmaxNode<ElemType>>(net.GetDeviceId(), nodeName, delayConstraint), { label, prediction });
 }
 
 template <class ElemType>

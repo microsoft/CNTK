@@ -765,6 +765,15 @@ public:
 template class DummyCriterionNode<float>;
 template class DummyCriterionNode<double>;
 
+// -----------------------------------------------------------------------
+// CTCWithSoftmaxNode (label, prediction, delayConstraint)
+// CTC training criterion, primarily based on the paper "Connectionist Temporal Classification: Labelling Unsegmented
+// Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
+//
+// delayConstraint -- label output delay constrain introduced during training that allows to have shorter delay during inference. 
+// delayConstraint=-1 means no constraint
+// -----------------------------------------------------------------------
+
 template<class ElemType>
 class CTCWithSoftmaxNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
 {
@@ -776,8 +785,8 @@ class CTCWithSoftmaxNode : public  ComputationNodeNonLooping<ElemType>, public N
     }
 public:
     DeclareConstructorFromConfigWithNumInputs(CTCWithSoftmaxNode);
-    CTCWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankNum=1, int delayConstraint=3) :
-        Base(deviceId, name), m_blankNum(blankNum), m_delayConstraint(delayConstraint)
+    CTCWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name, int delayConstraint=3) :
+        Base(deviceId, name), m_delayConstraint(delayConstraint)
     {
     }
 
@@ -796,7 +805,7 @@ public:
             Input(inputIndex)->MaskMissingGradientColumnsToZero(frameRange);
         }
         else
-            throw std::runtime_error("CTCWithSoftmaxNode criterion expects only two inputs: labels and network output.");
+           RuntimeError("CTCWithSoftmaxNode criterion expects only two inputs: labels and network output.");
     }
 
     void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
@@ -813,7 +822,6 @@ public:
 #if DUMPOUTPUT
         inputGradientValues.Print("CTCWithSoftmaxNode Partial-Left-out");
 #endif
-
     }
 
     void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
@@ -832,10 +840,12 @@ public:
         inputGradientValues.Print("CTCWithSoftmaxNode Partial-Right");
 #endif
     }
+
     virtual bool OutputUsedInComputingInputNodesGradients() const override
     {
         return false;
     }
+
     virtual void ForwardPropNonLooping() override
     {
         m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value(), true);
@@ -847,7 +857,8 @@ public:
 
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
-        m_GammaCal.doCTC_m(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, Input(0)->GetMBLayout(), m_delayConstraint);
+        // compute CTC score
+        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, Input(0)->GetMBLayout(), m_delayConstraint);
 
 #if NANCHECK
         functionValues.HasNan("CTCWithSoftmaxNode");
@@ -862,11 +873,8 @@ public:
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr; // no layout
 
-        if (Input(0)->OperationName() != L"InputValue" && Input(0)->OperationName() != L"SparseInputValue")
-            LogicError("CTCWithSoftmaxNode criterion requires the first input to be the label.");
-
         if (isFinalValidationPass)
-            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match size                  
+            if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match vector dimension
                 Input(0)->HasMBLayout() &&
                 Input(0)->GetMBLayout() == Input(1)->GetMBLayout()))
             {
@@ -888,12 +896,11 @@ public:
             node->m_CTCposterior->SetValue(*m_CTCposterior);
             node->m_maxIndexes->SetValue(*m_maxIndexes);
             node->m_maxValues->SetValue(*m_maxValues);
-            node->m_blankNum = m_blankNum;
             node->m_delayConstraint = m_delayConstraint;
         }
     }
 
-    //request matrices needed to do node function value evaluation
+    // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
@@ -932,7 +939,6 @@ protected:
     shared_ptr<Matrix<ElemType>> m_maxValues;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
-    size_t m_blankNum;
     int m_delayConstraint;
 };
 

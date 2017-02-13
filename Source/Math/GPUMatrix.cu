@@ -2945,37 +2945,36 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignNumOfDiff(const GPUMatrix<ElemTy
 template <class ElemType>
 void GPUMatrix<ElemType>::Print(const char* /*matrixName*/, size_t /*rowStart*/, size_t /*rowEnd*/, size_t /*colStart*/, size_t /*colEnd*/) const
 {
-	NOT_IMPLEMENTED;
+    NOT_IMPLEMENTED;
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::Print(const char* matrixName /*=nullptr*/) const
 {
-	size_t elemCount = GetNumRows() * GetNumCols();
-	vector<ElemType> localCopy(elemCount);
-	cudaMemcpy(localCopy.data(), Data(), elemCount * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    size_t elemCount = GetNumRows() * GetNumCols();
+    vector<ElemType> localCopy(elemCount);
+    cudaMemcpy(localCopy.data(), Data(), elemCount * sizeof(ElemType), cudaMemcpyDeviceToHost);
 
-	fprintf(stderr, "\n###### ");
-	if (matrixName != nullptr)
-		fprintf(stderr, "%s ", matrixName);
-	fprintf(stderr, "(%lu, %lu) ######\n\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
+    fprintf(stderr, "\n###### ");
+    if (matrixName != nullptr)
+        fprintf(stderr, "%s ", matrixName);
+    fprintf(stderr, "(%lu, %lu) ######\n\n", (unsigned long)GetNumRows(), (unsigned long)GetNumCols());
 
-	if (IsEmpty())
-	{
-		fprintf(stderr, "(empty)\n");
-		return;
-	}
+    if (IsEmpty())
+    {
+        fprintf(stderr, "(empty)\n");
+        return;
+    }
 
-	// CNTK is using column-major storage
-	for (size_t i = 0; i < GetNumRows(); i++)
-	{
-		for (size_t j = 0; j < GetNumCols(); j++)
-		{
-			fprintf(stderr, "%.10f\t", localCopy[i + j * GetNumRows()]);
-		}
-		fprintf(stderr, "\n");
-	}
-
+    // CNTK is using column-major storage
+    for (size_t i = 0; i < GetNumRows(); i++)
+    {
+        for (size_t j = 0; j < GetNumCols(); j++)
+        {
+            fprintf(stderr, "%.10f\t", localCopy[i + j * GetNumRows()]);
+        }
+        fprintf(stderr, "\n");
+    }
 }
 
 //helpfer function used for convolution neural network
@@ -4282,6 +4281,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
 // alpha, beta (output): alpha and beta for forward-backward calculation. 
 // phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
 // phoneBoundary (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// totalScore (output): total CTC score
 // uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
 // uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
 // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
