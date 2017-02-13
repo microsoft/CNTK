@@ -53,7 +53,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>SWIG;SWIGCSHARP</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\Common\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>

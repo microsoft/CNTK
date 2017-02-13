@@ -16,6 +16,7 @@
 #include "Globals.h"
 #include "PerformanceProfiler.h"
 #include "MPIWrapper.h"
+#include "Basics.h"
 
 extern bool g_shareNodeValueMatrices;
 
@@ -606,4 +607,18 @@ namespace CNTK
     {
         s_defaultUnitGainValue.store(value);
     }
+
+    template <class E>
+    __declspec_noreturn void ThrowFormatted(const char* format, ...)
+    {
+        va_list args;
+        va_start(args, format);
+        Microsoft::MSR::CNTK::ThrowFormattedVA<E>(format, args);
+        va_end(args);
+    }
+
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::runtime_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::logic_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::invalid_argument>(const char* format, ...);
 }
+
