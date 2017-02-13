@@ -2216,12 +2216,12 @@ void SGD<ElemType>::UpdateWeights(Matrix<ElemType>& functionValues, Matrix<ElemT
     else if (adpType == GradientsUpdateType::FSAdaGrad)
     {
         const double varMomentum = (exp(-1.0 * actualMBSize / m_gradType.varianceTimeConstant));
-#if 0   // BUGBUG!!! This replicates a bug carried over from Alexey's original implementation.
-        static double smoothedCount = 0;
+#if 1   // BUGBUG!!! This replicates a bug carried over from Alexey's original implementation.
+        static double smoothedCount_ = 0;
 #endif
 
         smoothedGradientValues.FSAdagradUpdate(actualMBSize,
-                                         gradientValues, functionValues, smoothedCount,
+                                         gradientValues, functionValues, smoothedCount_,
                                          learnRatePerSample, m_gradType.targetAdagradAvDenom,
                                          momentum, varMomentum);
     }

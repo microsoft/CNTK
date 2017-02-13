@@ -94,7 +94,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         m_initString = initString;
         // TODO: add more randomization types, and use a more meaningful scaling
         // Keras uses "normal" instead of "gaussian". We can use that here too to denote the one with sane scaling, and deprecate "gaussian" with a warning.
-        static unsigned long randomSeed = 1;
+		static unsigned long randomSeed = Globals::GetrandomSeedOffset();
         int forcedRandomSeed = configp->Get(L"randomSeed"); // forcing a specific random seed is useful for testing to get repeatable initialization independent of evaluation order
         m_randomSeed = forcedRandomSeed < 0 ? randomSeed++ : (unsigned long)forcedRandomSeed;
         m_initValueScale = configp->Get(L"initValueScale");
