@@ -135,14 +135,21 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
 
 # Evaluates a single image using the provided model
 def eval_single_image(loaded_model, image_path, image_width, image_height):
-    # load and format image
+    # load and format image (resize, RGB -> BGR, CHW -> HWC)
     img = Image.open(image_path)
     if image_path.endswith("png"):
         temp = Image.new("RGB", img.size, (255, 255, 255))
         temp.paste(img, img)
         img = temp
     resized = img.resize((image_width, image_height), Image.ANTIALIAS)
-    hwc_format = np.ascontiguousarray(np.array(resized, dtype=np.float32).transpose(2, 0, 1))
+    bgr_image = np.asarray(resized, dtype=np.float32)[..., [2, 1, 0]]
+    hwc_format = np.ascontiguousarray(np.rollaxis(bgr_image, 2))
+
+    ## Alternatively: if you want to use opencv-python
+    # cv_img = cv2.imread(image_path)
+    # resized = cv2.resize(cv_img, (image_width, image_height), interpolation=cv2.INTER_NEAREST)
+    # bgr_image = np.asarray(resized, dtype=np.float32)
+    # hwc_format = np.ascontiguousarray(np.rollaxis(bgr_image, 2))
 
     # compute model output
     arguments = {loaded_model.arguments[0]: [hwc_format]}
@@ -177,7 +184,7 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
                     correct_count += 1
 
                 np.savetxt(results_file, probs[np.newaxis], fmt="%.3f")
-                if pred_count % 500 == 0:
+                if pred_count % 100 == 0:
                     print("Processed {0} samples ({1} correct)".format(pred_count, (correct_count / pred_count)))
                 if pred_count >= num_images:
                     break
@@ -192,8 +199,8 @@ if __name__ == '__main__':
         exit(0)
 
     # You can use the following to inspect the base model and determine the desired node names
-    # node_outputs = get_node_outputs(load_model(_base_model_file))
-    # for out in node_outputs: print("{0} {1}".format(out.name, out.shape))
+    node_outputs = get_node_outputs(load_model(_base_model_file))
+    for out in node_outputs: print("{0} {1}".format(out.name, out.shape))
 
     # Train only if no model exists yet or if make_mode is set to False
     if os.path.exists(tl_model_file) and make_mode:
