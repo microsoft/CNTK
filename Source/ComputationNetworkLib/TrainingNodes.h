@@ -2324,9 +2324,17 @@ public:
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
-            // BUGBUG: version 19 (beta11?) saved a boolean m_runCountValid here, which was an outdated version that should not have been merged. Needs to be fixed.
             if (modelVersion >= CNTK_MODEL_VERSION_13)
-                fstream >> m_runCountUntied;
+            {
+                if (modelVersion != CNTK_MODEL_VERSION_19)
+                    fstream >> m_runCountUntied;
+                else // a temp version that saved a flag instead (beta11)
+                {
+                    bool runCountIsZero;
+                    fstream >> runCountIsZero;
+                    m_runCountUntied = runCountIsZero ? 0 : SIZE_MAX; // only used for 0 checks
+                }
+            }
             else
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;

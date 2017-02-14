@@ -8,10 +8,10 @@ import numpy as np
 import pytest
 
 from ..layers import *
-from ..blocks import  init_default_or_glorot_uniform, Parameter, _INFERRED, Placeholder
 from ..utils import _as_tuple
 from ..ops import  sigmoid, times, tanh, element_times, plus, combine, input_variable
 from ..axis import Axis
+from _cntk_py import InferredDimension
 
 def test_layers_name(device_id): 
     from cntk import placeholder_variable, combine
@@ -23,7 +23,7 @@ def test_layers_name(device_id):
     q = Convolution((3,3), 3, name='conv33')(I)
     assert(q.root_function.name == 'conv33')
 
-def gru_cell(shape, init=init_default_or_glorot_uniform, name=''): # (x, (h,c))
+def gru_cell(shape, init=glorot_uniform(), name=''): # (x, (h,c))
   shape = _as_tuple(shape)
 
   if len(shape) != 1 :
@@ -33,6 +33,7 @@ def gru_cell(shape, init=init_default_or_glorot_uniform, name=''): # (x, (h,c))
   cell_shape_stacked = shape * 2  # patched dims with stack_axis duplicated 4 times
 
   # parameters
+  _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
   Wz = Parameter(cell_shape_stacked, init = init, name='Wz')
   Wr = Parameter(cell_shape_stacked, init = init, name='Wr')
   Wh = Parameter(cell_shape_stacked, init = init, name='Wh')

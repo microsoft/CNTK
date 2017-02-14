@@ -48,8 +48,9 @@
 #define CNTK_MODEL_VERSION_16 16 // save/load rng state for Dropout and RandomSample nodes.
 #define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
 #define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
-#define CNTK_MODEL_VERSION_19 19 // batch norm: add an input parameter to store running mean sample count.
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_19
+#define CNTK_MODEL_VERSION_19 19 // batch norm: flag whether running mean count is 0
+#define CNTK_MODEL_VERSION_20 20 // batch norm: running mean count
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_20
 
 
 // helper mode for debugging
