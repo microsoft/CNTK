@@ -7,6 +7,7 @@
 #include "Basics.h"
 #include "ComputationNode.h"
 #include "gammacalculation.h"
+#include "NonlinearityNodes.h"
 
 #include <map>
 #include <string>
@@ -766,26 +767,27 @@ template class DummyCriterionNode<float>;
 template class DummyCriterionNode<double>;
 
 // -----------------------------------------------------------------------
-// CTCWithSoftmaxNode (label, prediction, delayConstraint)
+// ForwardBackwardNode (label, prediction, delayConstraint)
 // CTC training criterion, primarily based on the paper "Connectionist Temporal Classification: Labelling Unsegmented
 // Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 //
-// delayConstraint -- label output delay constrain introduced during training that allows to have shorter delay during inference. 
-// delayConstraint=-1 means no constraint
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      delayConstraint=-1 means no constraint
 // -----------------------------------------------------------------------
 
 template<class ElemType>
-class CTCWithSoftmaxNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+class ForwardBackwardNode : public  ComputationNodeNonLooping<ElemType>, public NumInputs<2>
 {
     typedef ComputationNodeNonLooping<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName()
     {
-        return L"CTCWithSoftmax";
+        return L"ForwardBackward";
     }
 public:
-    DeclareConstructorFromConfigWithNumInputs(CTCWithSoftmaxNode);
-    CTCWithSoftmaxNode(DEVICEID_TYPE deviceId, const wstring & name, int delayConstraint=3) :
+    DeclareConstructorFromConfigWithNumInputs(ForwardBackwardNode);
+    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, int delayConstraint=3) :
         Base(deviceId, name), m_delayConstraint(delayConstraint)
     {
     }
@@ -805,22 +807,22 @@ public:
             Input(inputIndex)->MaskMissingGradientColumnsToZero(frameRange);
         }
         else
-           RuntimeError("CTCWithSoftmaxNode criterion expects only two inputs: labels and network output.");
+           RuntimeError("ForwardBackwardNode criterion expects only two inputs: labels and network output.");
     }
 
     void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
         const Matrix<ElemType>& gradientValues)
     {
 #if DUMPOUTPUT
-        logSoftmaxOfRight.Print("CTCWithSoftmaxNode Partial-logSoftmaxOfRight");
-        gradientValues.Print("CTCWithSoftmaxNode Partial-gradientValues");
-        inputGradientValues.Print("CTCWithSoftmaxNode Partial-Left-in");
+        logSoftmaxOfRight.Print("ForwardBackwardNode Partial-logSoftmaxOfRight");
+        gradientValues.Print("ForwardBackwardNode Partial-gradientValues");
+        inputGradientValues.Print("ForwardBackwardNode Partial-Left-in");
 #endif
 
         Matrix<ElemType>::ScaleAndAdd(-gradientValues.Get00Element(), logSoftmaxOfRight, inputGradientValues);
 
 #if DUMPOUTPUT
-        inputGradientValues.Print("CTCWithSoftmaxNode Partial-Left-out");
+        inputGradientValues.Print("ForwardBackwardNode Partial-Left-out");
 #endif
     }
 
@@ -828,16 +830,16 @@ public:
         const Matrix<ElemType> &CTCposterior)
     {
 #if DUMPOUTPUT
-        softmaxOfRight.Print("CTCWithSoftmaxNode Partial-softmaxOfRight");
-        inputFunctionValues.Print("CTCWithSoftmaxNode Partial-inputFunctionValues");
-        gradientValues.Print("CTCWithSoftmaxNode Partial-gradientValues");
-        inputGradientValues.Print("CTCWithSoftmaxNode Partial-Right-in");
+        softmaxOfRight.Print("ForwardBackwardNode Partial-softmaxOfRight");
+        inputFunctionValues.Print("ForwardBackwardNode Partial-inputFunctionValues");
+        gradientValues.Print("ForwardBackwardNode Partial-gradientValues");
+        inputGradientValues.Print("ForwardBackwardNode Partial-Right-in");
 #endif  
         // inputGradientValues+= gradientValues*(softmaxOfRight - CTCposterior)
         Matrix<ElemType>::AddScaledDifference(gradientValues, softmaxOfRight, CTCposterior, inputGradientValues); 
 
 #if DUMPOUTPUT
-        inputGradientValues.Print("CTCWithSoftmaxNode Partial-Right");
+        inputGradientValues.Print("ForwardBackwardNode Partial-Right");
 #endif
     }
 
@@ -861,10 +863,10 @@ public:
         m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, Input(0)->GetMBLayout(), m_delayConstraint);
 
 #if NANCHECK
-        functionValues.HasNan("CTCWithSoftmaxNode");
+        functionValues.HasNan("ForwardBackwardNode");
 #endif
 #if DUMPOUTPUT
-        functionValues.Print("CTCWithSoftmaxNode");
+        functionValues.Print("ForwardBackwardNode");
 #endif
     }
 
@@ -873,13 +875,18 @@ public:
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr; // no layout
 
-        if (isFinalValidationPass)
+        if (isFinalValidationPass) {
             if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match vector dimension
                 Input(0)->HasMBLayout() &&
                 Input(0)->GetMBLayout() == Input(1)->GetMBLayout()))
             {
-                LogicError("The Matrix dimension in the CTCWithSoftmaxNode operation does not match.");
+                LogicError("The Matrix dimension in the ForwardBackwardNode operation does not match.");
             }
+
+            auto leftNode = dynamic_pointer_cast<LabelsToGraphNode<ElemType>>(Input(0));
+            if (!leftNode)
+                LogicError("ForwardBackwardNode: Please pass LabelsToGraph(labels) for second argument");
+        }
 
         SetDims(TensorShape(1), false);
     }
@@ -889,7 +896,7 @@ public:
         Base::CopyTo(nodeP, newName, flags);
         if (flags & CopyNodeFlags::copyNodeValue)
         {
-            auto node = dynamic_pointer_cast<CTCWithSoftmaxNode<ElemType>>(nodeP);
+            auto node = dynamic_pointer_cast<ForwardBackwardNode<ElemType>>(nodeP);
 
             node->m_logSoftmaxOfRight->SetValue(*m_logSoftmaxOfRight);
             node->m_softmaxOfRight->SetValue(*m_softmaxOfRight);
@@ -942,7 +949,7 @@ protected:
     int m_delayConstraint;
 };
 
-template class CTCWithSoftmaxNode<float>;
-template class CTCWithSoftmaxNode<double>;
+template class ForwardBackwardNode<float>;
+template class ForwardBackwardNode<double>;
 
 } } }

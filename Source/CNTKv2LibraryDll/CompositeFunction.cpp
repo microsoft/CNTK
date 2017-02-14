@@ -813,6 +813,9 @@ namespace CNTK
             case PrimitiveOpType::Pass:
                 computationNodePtr = New<PassNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::LabelsToGraph:
+                computationNodePtr = New<LabelsToGraphNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             default:
                 LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                 break;

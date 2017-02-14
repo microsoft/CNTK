@@ -5133,7 +5133,6 @@ __global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LON
     }
 }
 
-<<<<<<< e5360fb06c7a446117960ef67426e7e2cde27676
 template <class ElemType>
 __global__ void _adam(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothMom, ElemType* val,
     ElemType lr, ElemType mom, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
@@ -5194,10 +5193,7 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     }
 }
 
-=======
 // calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
->>>>>>> CTC: Further refactoring
-=======
 // Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network
@@ -5213,7 +5209,9 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
 // t (input): time stamp to process
 // maxPhoneNum (input): the max number of phones between utterances
 // totalPhoneNum (input): the total number of phones of all utterances
->>>>>>> Add comments and minor refactors for CTC crit node
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      delayConstraint=-1 means no constraint
 template<class ElemType>
 __global__ void _assignAlphaScore(
     const ElemType *prob,

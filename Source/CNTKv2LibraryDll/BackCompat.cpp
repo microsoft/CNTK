@@ -144,6 +144,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Sin;
                 else if (node->OperationName() == OperationNameOf(PassNode))
                     opType = PrimitiveOpType::Pass;
+                else if (node->OperationName() == OperationNameOf(LabelsToGraphNode))
+                    opType = PrimitiveOpType::LabelsToGraph;
                 else if (node->OperationName() == OperationNameOf(RectifiedLinearNode))
                     opType = PrimitiveOpType::ReLU;
                 else if (node->OperationName() == OperationNameOf(ExpNode))
