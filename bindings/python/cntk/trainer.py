@@ -231,3 +231,30 @@ class Trainer(cntk_py.Trainer):
         The number of samples seen globally between all workers from the beginning of training.
         '''
         return super(Trainer, self).total_number_of_samples_seen()
+
+    @property
+    def accumulated_loss_average(self):
+        '''
+        The average training loss per sample since the last reset_accumulation()
+        '''
+        return super(Trainer, self).accumulated_loss_average()
+        
+    @property
+    def accumulated_evaluation_average(self):
+        '''
+        The average evaluation criterion value per sample since the last reset_accumulation()
+        '''
+        return super(Trainer, self).accumulated_evaluation_average()
+
+    @property
+    def accumulated_sample_count(self):
+        '''
+        The number of samples since last reset_accumulation
+        '''
+        return super(Trainer, self).accumulated_sample_count()
+    
+    def reset_accumulation(self):
+        '''
+        Reset accumulated loss and evaluation criterion
+        '''
+        return super(Trainer, self).reset_accumulation()
