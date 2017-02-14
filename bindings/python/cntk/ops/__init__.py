@@ -1395,7 +1395,7 @@ def elu(x, name=''):
 
     Example:
         >>> C.elu([[-1, -0.5, 0, 1, 2]]).eval()
-        array([[ -0.632,  -0.393,  0.,  1.,  2.]], dtype=float32)
+        array([[-0.632121, -0.393469,  0.      ,  1.      ,  2.      ]], dtype=float32)
 
     Args:
         x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
@@ -1420,7 +1420,7 @@ def leaky_relu(x, name=''):
 
     Example:
         >>> C.leaky_relu([[-1, -0.5, 0, 1, 2]]).eval()
-        array([[ -0.01,  -0.005,  0.,  1.,  2.]], dtype=float32)
+        array([[-0.01 , -0.005,  0.   ,  1.   ,  2.   ]], dtype=float32)
 
     Args:
         x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
