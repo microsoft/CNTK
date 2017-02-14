@@ -574,6 +574,7 @@ public:
 
 %feature("director") CNTK::Learner;
 %feature("nodirector") CNTK::Learner::Parameters;
+%feature("nodirector") CNTK::Learner::ResetLearningRate;
 
 %{
     #include "CNTKLibrary.h"

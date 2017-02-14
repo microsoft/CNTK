@@ -212,6 +212,9 @@ class Function(cntk_py.Function):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
+            as_numpy (bool): whether to return the result as a NumPy array. Default True.
+             Specifying this as False returns a CNTK Value which avoids a 
+             costly conversion but returns a somewhat opaque object.
 
         Returns:
            dict or NumPy Array: Dict with keys of ouput variable names and values of
@@ -283,6 +286,9 @@ class Function(cntk_py.Function):
             device (:class:`~cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
+            as_numpy (bool): whether to return the result as a NumPy array. Default True.
+             Specifying this as False returns a CNTK Value which avoids a 
+             costly conversion but returns a somewhat opaque object.
 
         Returns:
              A tuple (BackPropState, map of outputs to NumPy arrays). The

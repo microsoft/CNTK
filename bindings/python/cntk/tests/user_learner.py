@@ -18,13 +18,13 @@ def generate_random_data(sample_size, feature_dim, num_classes):
      Y = np.asarray(np.hstack(class_ind), dtype=np.float32)
      return X, Y
      
-class mysgd(UserLearner):
+class MySgd(UserLearner):
     def __init__(self, parameters, learningRateSchedule):
-        super(mysgd, self).__init__(parameters, learningRateSchedule)
+        super(MySgd, self).__init__(parameters, learningRateSchedule)
     
     def update(self, gradient_values, training_sample_count, sweep_end):
         eta = self.learning_rate() / training_sample_count
-        for p,g in gradient_values.items():
+        for p, g in gradient_values.items():
             newp = p - eta * C.constant(g)
             p.set_value(newp.eval(as_numpy=False).data())
         return True
@@ -75,6 +75,6 @@ def test_user_learner():
     # sort based on shape (this works because all parameters have different shapes)
     p1 = sorted([p.value for p in ffnet(sgd)],   key=lambda x:x.shape)
     np.random.seed(98052)
-    p2 = sorted([p.value for p in ffnet(mysgd)], key=lambda x:x.shape)
+    p2 = sorted([p.value for p in ffnet(MySgd)], key=lambda x:x.shape)
     for a, b in zip(p1, p2):
-        assert np.allclose(a,b)
+        assert np.allclose(a, b)

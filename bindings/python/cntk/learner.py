@@ -106,7 +106,7 @@ class Learner(cntk_py.Learner):
             gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
-            training_sample_count (int): training sample count
+            training_sample_count (int): number of samples in the minibatch
 
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
@@ -144,9 +144,9 @@ class Learner(cntk_py.Learner):
 class UserLearner(cntk_py.Learner):
     '''
     Base class of all user-defined learners. To implement your own learning
-    algorithm derive from this class and override the update method.
+    algorithm, derive from this class and override the :meth:`update`.
 
-    Certain algorithms (such as adagrad) require additional storage.
+    Certain optimizers (such as AdaGrad) require additional storage.
     This can be allocated and initialized during construction.
     '''
 
@@ -182,7 +182,9 @@ class UserLearner(cntk_py.Learner):
             gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
-            training_sample_count (int): training sample count
+            training_sample_count (int): number of samples in the minibatch
+            sweep_end (bool): if the data is fed by a conforming reader, this indicates
+             whether a full pass over the dataset has just occured.
 
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
