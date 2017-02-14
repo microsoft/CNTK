@@ -2440,15 +2440,15 @@ def argmin(x, axis=None, name=''):
 
     Example:
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
-        >>> data = [[10, 20],[30, 40],[50, 60]]
+        >>> data = [[10, 30],[40, 20],[60, 50]]
 
         >>> C.argmin(data, 0).eval()
-        array([[ 0.,  0.]], dtype=float32)
+        array([[ 0.,  1.]], dtype=float32)
 
         >>> C.argmin(data, 1).eval()
         array([[ 0.],
-               [ 0.],
-               [ 0.]], dtype=float32)
+               [ 1.],
+               [ 1.]], dtype=float32)
 
     Args:
         x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
@@ -2463,6 +2463,7 @@ def argmin(x, axis=None, name=''):
     x = sanitize_input(x)
     axis = sanitize_axis(axis)
     return argmin(x, axis, name)
+
 #######################################################################
 # training ops
 #######################################################################
