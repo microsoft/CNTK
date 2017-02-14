@@ -2735,7 +2735,7 @@ namespace CNTK
 
         ///
         /// Returns the root of the Function graph underlying this block Function.
-        /// Throws an exception of this is not a block Function
+        /// Throws an exception ff this is not a block Function
         ///
         CNTK_API FunctionPtr BlockRoot() const;
 
@@ -3790,8 +3790,8 @@ namespace CNTK
     CNTK_API void SetDefaultUnitGainValue(bool value);
 
     ///
-    /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values
-    /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
+    /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values.
+    /// For example momentum, AdaGrad, RMSProp, etc. are different types of learners with their own algorithms for
     /// learning parameter values using first order gradients.
     ///
     class Learner

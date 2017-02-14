@@ -61,7 +61,7 @@ def as_block(composite, block_arguments_map, block_op_name, block_instance_name=
      where details of implementing certain building block operations can be encapsulated away
      such that the actual structure of the block's implementation is not inlined into
      the parent graph where the block is used, and instead the block just appears as an opaque
-     primtive. Users still have the ability to peek at the underlying Function graph that implements
+     primitive. Users still have the ability to peek at the underlying Function graph that implements
      the actual block Function.
 
     Args:

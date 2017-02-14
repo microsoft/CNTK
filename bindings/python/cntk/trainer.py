@@ -57,7 +57,7 @@ class Trainer(cntk_py.Trainer):
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
-             In both cases, every every sample in the data will be interpreted
+             In both cases, every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
              first element will be used as ``arguments``, and the second one will
@@ -129,7 +129,7 @@ class Trainer(cntk_py.Trainer):
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
-             In both cases, every every sample in the data will be interpreted
+             In both cases, every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
              first element will be used as ``arguments``, and the second one will
