@@ -16,9 +16,7 @@ from cntk.utils import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.blocks import Placeholder, Block
-from cntk.layers import Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options
-from cntk.models import Sequential
+from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
 from cntk.initializer import normal
 
 # default Paths relative to current python file.
@@ -157,7 +155,7 @@ def create_trainer(network, epoch_size, num_quantization_bits):
         distributed_after=0)
 
     # Create trainer
-    return cntk.Trainer(network['output'], network['ce'], network['pe'], parameter_learner)
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore):

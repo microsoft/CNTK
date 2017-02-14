@@ -9,7 +9,7 @@ import numpy as np
 import os
 from PIL import Image
 from cntk import load_model, Trainer, UnitType
-from cntk.blocks import Placeholder, Constant
+from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, get_node_outputs
 from cntk.io import MinibatchSource, ImageDeserializer
 from cntk.layers import Dense
@@ -112,7 +112,7 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
     lr_schedule = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch)
     mm_schedule = momentum_schedule(momentum_per_mb)
     learner = momentum_sgd(tl_model.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    trainer = Trainer(tl_model, ce, pe, learner)
+    trainer = Trainer(tl_model, (ce, pe), learner)
 
     # Get minibatches of images and perform model training
     print("Training transfer learning model for {0} epochs (epoch_size = {1}).".format(num_epochs, epoch_size))
@@ -154,7 +154,7 @@ def eval_single_image(loaded_model, image_path, image_width, image_height):
 
 
 # Evaluates an image set using the provided model
-def eval_test_images(loaded_model, output_file, test_map_file, image_width, image_height, max_images=-1):
+def eval_test_images(loaded_model, output_file, test_map_file, image_width, image_height, max_images=-1, column_offset=0):
     num_images = sum(1 for line in open(test_map_file))
     if max_images > 0:
         num_images = min(num_images, max_images)
@@ -167,11 +167,11 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
         with open(test_map_file, "r") as input_file:
             for line in input_file:
                 tokens = line.rstrip().split('\t')
-                img_file = tokens[0]
+                img_file = tokens[0 + column_offset]
                 probs = eval_single_image(loaded_model, img_file, image_width, image_height)
 
                 pred_count += 1
-                true_label = int(tokens[1])
+                true_label = int(tokens[1 + column_offset])
                 predicted_label = np.argmax(probs)
                 if predicted_label == true_label:
                     correct_count += 1
@@ -203,7 +203,7 @@ if __name__ == '__main__':
         trained_model = train_model(_base_model_file, _feature_node_name, _last_hidden_node_name,
                                     _image_width, _image_height, _num_channels, _num_classes, _train_map_file,
                                     max_epochs, freeze=freeze_weights)
-        trained_model.save_model(tl_model_file)
+        trained_model.save(tl_model_file)
         print("Stored trained model at %s" % tl_model_file)
 
     # Evaluate the test set

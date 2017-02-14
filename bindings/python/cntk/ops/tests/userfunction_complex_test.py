@@ -92,7 +92,7 @@ def train(nonlinearity, num_hidden_layers, device_id):
     eval_error = classification_error(z, label)
 
     learner = sgd(z.parameters, lr_schedule)
-    trainer = Trainer(z, loss, eval_error, [learner])
+    trainer = Trainer(z, (loss, eval_error), [learner])
 
 
     minibatch_size = 25

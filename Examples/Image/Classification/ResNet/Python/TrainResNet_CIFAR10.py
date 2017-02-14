@@ -88,7 +88,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     # trainer object
     learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                                l2_regularization_weight = l2_reg_weight)
-    trainer     = Trainer(z, ce, pe, learner)
+    trainer     = Trainer(z, (ce, pe), learner)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -112,7 +112,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        z.save(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
         enable_profiler() # begin to collect profiler data after first epoch
         
     if profiler_dir:

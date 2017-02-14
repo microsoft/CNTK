@@ -12,9 +12,7 @@ from cntk import Trainer, Axis
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.ops.functions import load_model
-from cntk.blocks import LSTM, Stabilizer
-from cntk.layers import Recurrence, Dense
-from cntk.models import LayerStack, Sequential
+from cntk.layers import LSTM, Stabilizer, Recurrence, Dense, For, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
@@ -124,7 +122,7 @@ def load_data_and_vocab(training_file):
 def create_model(output_dim):
     
     return Sequential([        
-        LayerStack(num_layers, lambda: 
+        For(range(num_layers), lambda: 
                    Sequential([Stabilizer(), Recurrence(LSTM(hidden_dim), go_backwards=False)])),
         Dense(output_dim)
     ])
@@ -167,7 +165,7 @@ def train_lm(training_file, max_num_minibatches):
     learner = momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-    trainer = Trainer(z, ce, errs, learner)
+    trainer = Trainer(z, (ce, errs), learner)
 
     sample_freq = 1000
     epochs = 50
@@ -186,7 +184,7 @@ def train_lm(training_file, max_num_minibatches):
             p = 0
             e += 1
             model_filename = "models/shakespeare_epoch%d.dnn" % e
-            z.save_model(model_filename)
+            z.save(model_filename)
             print("Saved model to '%s'" % model_filename)
 
         # get the data            
@@ -209,7 +207,7 @@ def train_lm(training_file, max_num_minibatches):
 
     # Do a final save of the model        
     model_filename = "models/shakespeare_epoch%d.dnn" % e
-    z.save_model(model_filename)
+    z.save(model_filename)
 
 
 def load_and_sample(model_filename, vocab_filename, prime_text='', use_hardmax=False, length=1000, temperature=1.0):

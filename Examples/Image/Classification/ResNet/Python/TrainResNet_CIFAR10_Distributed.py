@@ -94,10 +94,10 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
     else:
         learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
     
-    return Trainer(network['output'], network['ce'], network['pe'], learner)
+    return Trainer(network['output'], (network['ce'], network['pe']), learner)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiler_dir=None):
+def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling=False):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -111,22 +111,23 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
         progress_printer = progress_printer,
         model_inputs_to_mb_source_mapping = input_map, 
+        checkpoint_frequency = epoch_size,
         checkpoint_filename="ResNet_CIFAR10_DataAug", 
         progress_frequency=epoch_size,
         cv_source=test_source,
         cv_mb_size_schedule=cntk.minibatch_size_schedule(16),
         restore=False)
 	
-    if profiler_dir:
-        start_profiler(profiler_dir, True)
+    if profiling:
+        start_profiler(sync_gpu=True)
         
     training_session.train()
     
-    if profiler_dir:
+    if profiling:
         stop_profiler()
 
 # Train and evaluate the network.
-def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=3200, warm_up=0, max_epochs=5, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiler_dir=None):
+def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=3200, warm_up=0, max_epochs=5, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiling=False):
 
     set_computation_network_trace_level(0)
     
@@ -148,7 +149,7 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
     trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiler_dir)
+    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling)
 
 
 if __name__=='__main__':
@@ -167,7 +168,7 @@ if __name__=='__main__':
     parser.add_argument('-b', '--block_samples', type=int, help="Number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", required=False, default=None)
     parser.add_argument('-a', '--distributed_after', help='Number of samples to train with before running distributed', type=int, required=False, default='0')
     parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
-    parser.add_argument('-p', '--profiler_dir', help='directory for saving profiler output', required=False, default=None)
+    parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
 
     args = vars(parser.parse_args())
 
@@ -204,7 +205,7 @@ if __name__=='__main__':
                        max_epochs=epochs,
                        scale_up=scale_up,
                        log_to_file=args['logdir'],
-                       profiler_dir=args['profiler_dir'])
+                       profiling=args['profile'])
     finally:
         # Must call MPI finalize when process exit
         Communicator.finalize()

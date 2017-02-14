@@ -61,6 +61,7 @@ BinaryChunkDeserializer::BinaryChunkDeserializer(const BinaryConfigHelper& helpe
 
 
 BinaryChunkDeserializer::BinaryChunkDeserializer(const std::wstring& filename) : 
+    DataDeserializerBase(true),
     m_filename(filename),
     m_file(nullptr),
     m_offsetStart(0),
@@ -200,7 +201,7 @@ void BinaryChunkDeserializer::GetSequencesForChunk(ChunkIdType chunkId, std::vec
             numSamples = max(numSamples, temp[i]->m_numberOfSamples);
 
         SequenceDescription sd = {};
-        sd.m_id = startId + c;
+        sd.m_indexInChunk = startId + c;
         sd.m_numberOfSamples = numSamples;
         sd.m_chunkId = chunkId;
         sd.m_key.m_sequence = startId + c;

@@ -168,10 +168,10 @@ def test_op_reshape_parameter():
 
     expected_forward = np.copy(param_value).reshape(param_new_shape)
     state, result = param_reshaped.forward({}, [param_reshaped.output], [param_reshaped.output])
-    np.allclose(result[param_reshaped.output], expected_forward)
+    assert np.allclose(result[param_reshaped.output], expected_forward)
     
     grad = param_reshaped.backward(state, np.ones(param_new_shape), [param])
-    np.allclose(grad[param], np.ones(param_shape))
+    assert np.allclose(grad[param], np.ones(param_shape))
 
 
 SLICE_TEST_CASES_STATIC = [
@@ -321,7 +321,7 @@ def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, p
     input_data2.shape = (1, 1) + input_data2.shape
 
     # splice using the operator
-    root_op = C.splice((a, b), axis, name='splice_ab')
+    root_op = C.splice(a, b, axis=axis, name='splice_ab')
 
     forward_input = {a: input_data1, b: input_data2}
 

@@ -15,7 +15,7 @@ except ImportError:
 def download_grocery_data():
     base_folder = os.path.dirname(os.path.abspath(__file__))
     dataset_folder = os.path.join(base_folder, "..")
-    if not os.path.exists(os.path.join(dataset_folder, "grocery", "testImages")):
+    if not os.path.exists(os.path.join(dataset_folder, "Grocery", "testImages")):
         filename = os.path.join(dataset_folder, "Grocery.zip")
         if not os.path.exists(filename):
             url = "https://www.cntk.ai/DataSets/Grocery/Grocery.zip"
@@ -30,7 +30,7 @@ def download_grocery_data():
             os.remove(filename)
         print('Done.')
     else:
-        print('Data already available at ' + dataset_folder + '/grocery')
+        print('Data already available at ' + dataset_folder + '/Grocery')
     
 if __name__ == "__main__":
     download_grocery_data()

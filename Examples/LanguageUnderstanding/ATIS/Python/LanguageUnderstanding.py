@@ -82,7 +82,7 @@ def train(reader, model, max_epochs):
                                     low_memory=True,
                                     gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
-    trainer = cntk.Trainer(z, ce, pe, [learner])
+    trainer = cntk.Trainer(z, (ce, pe), [learner])
 
     # define mapping from reader streams to network inputs
     input_map = {

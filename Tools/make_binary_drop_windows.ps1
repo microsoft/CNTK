@@ -10,14 +10,17 @@
 [CmdletBinding()]
 param
 (
-	# Supposed to be taken from Jenkins BUILD_CONFIGURATION
-	[string]$buildConfig,
-	
-	# Supposed to be taken from Jenkins TARGET_CONFIGURATION
-	[string]$targetConfig,
-	
-	# File share path. Supposed to have sub-folders corresponding to $targetConfig
-	[string]$sharePath
+    # Supposed to be taken from Jenkins BUILD_CONFIGURATION
+    [string]$buildConfig,
+
+    # Supposed to be taken from Jenkins TARGET_CONFIGURATION
+    [string]$targetConfig,
+
+    # File share path. Supposed to have sub-folders corresponding to $targetConfig
+    [string]$sharePath,
+
+    # Output file path.
+    [string]$outputPath = "BinaryDrops.zip"
 )
 
 # Set to Stop on Error
@@ -33,7 +36,7 @@ If (-not $sharePath) {Throw "sharePath" + $usage}
 # Set Verbose mode
 If ($verbose)
 {
-	 $VerbosePreference = "continue"
+     $VerbosePreference = "continue"
 }
 
 Write-Verbose "Making binary drops..."
@@ -41,19 +44,18 @@ Write-Verbose "Making binary drops..."
 # If not a Release build quit
 If ($buildConfig -ne "Release")
 {
-	Write-Verbose "Not a release build. No binary drops generation"
-	Exit
+    Write-Verbose "Not a release build. No binary drops generation"
+    Exit
 }
 
 # Set Paths
 $basePath = "BinaryDrops\ToZip"
 $baseDropPath = Join-Path $basePath -ChildPath cntk
 $baseIncludePath = Join-Path $baseDropPath -ChildPath Include
-$zipFile = "BinaryDrops\BinaryDrops.zip"
 $buildPath = "x64\Release"
 If ($targetConfig -eq "CPU")
 {
-	$buildPath = "x64\Release_CpuOnly"
+    $buildPath = "x64\Release_CpuOnly"
 }
 # Include Files
 $includePath = "Source\Common\Include"
@@ -73,29 +75,18 @@ Write-Verbose "Copying build binaries ..."
 Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 
 # Clean unwanted items
-Remove-Item $baseDropPath\cntk\*test*.exe
+Remove-Item $baseDropPath\cntk\*test*.exe*
 Remove-Item $baseDropPath\cntk\*.pdb
 # Keep EvalDll.lib
 Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
-If (Test-Path $baseDropPath\cntk\CPPEvalClientTest.exe)
-{
-	Remove-Item $baseDropPath\cntk\CPPEvalClientTest.exe
-}
-If (Test-Path $baseDropPath\cntk\CSEvalClientTest.exe)
-{
-	Remove-Item $baseDropPath\cntk\CSEvalClientTest.exe
-}
-If (Test-Path $baseDropPath\cntk\CSEvalClientTest.exe.config)
-{
-	Remove-Item $baseDropPath\cntk\CSEvalClientTest.exe.config
-}
 If (Test-Path $baseDropPath\cntk\CommandEval.exe)
 {
-	Remove-Item $baseDropPath\cntk\CommandEval.exe
+    Remove-Item $baseDropPath\cntk\CommandEval.exe
 }
+Remove-Item $baseDropPath\cntk\Microsoft.VisualStudio.QualityTools.UnitTestFramework.*
 
 # Make Include folder
 New-Item -Path $baseIncludePath -ItemType directory
@@ -104,7 +95,7 @@ New-Item -Path $baseIncludePath -ItemType directory
 Write-Verbose "Copying Include files ..."
 Foreach ($includeFile in $includeFiles)
 {
-	Copy-Item $includeFile -Destination $baseIncludePath
+    Copy-Item $includeFile -Destination $baseIncludePath
 }
 
 # Copy Examples
@@ -113,7 +104,7 @@ Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
 # Include CPPEvalV2Client examples in 2.0 Beta drop
 # If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
 # {
-# 	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
+#     Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
 # }
 
 # Copy Examples
@@ -123,10 +114,14 @@ Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."
 Copy-Item Scripts -Recurse -Destination $baseDropPath\Scripts
-# Remove test related file(s) if exist(s)
+# Remove some files if they exist
 If (Test-Path $baseDropPath\Scripts\pytest.ini)
 {
-	Remove-Item $baseDropPath\Scripts\pytest.ini
+    Remove-Item $baseDropPath\Scripts\pytest.ini
+}
+If (Test-Path $baseDropPath\Scripts\install\linux)
+{
+    Remove-Item -Recurse $baseDropPath\Scripts\install\linux
 }
 
 # Copy all items from the share
@@ -140,19 +135,22 @@ robocopy $sharePath $baseDropPath /s /e /r:2 /w:30
 # See http://ss64.com/nt/robocopy-exit.html
 If ($LastExitCode -gt 7)
 {
-	Throw "Copying from Remote Share failed. Robocopy exit code is " + $LastExitCode
+    Throw "Copying from Remote Share failed. Robocopy exit code is " + $LastExitCode
 }
 
 Write-Verbose "Making ZIP and cleaning up..."
 
 # Make ZIP file
 $source = Join-Path $PWD.Path -ChildPath $basePath
-$destination = Join-Path $PWD.Path -ChildPath $zipFile
+$destination = Join-Path $PWD.Path -ChildPath $outputPath
 Add-Type -assembly "system.io.compression.filesystem"
 [io.compression.zipfile]::CreateFromDirectory($source, $destination)
+
+# Log the file hash
+Get-FileHash -Algorithm SHA256 -Path $destination
 
 # Remove ZIP sources
 If (Test-Path $basePath)
 {
-	Remove-Item $basePath -Recurse
+    Remove-Item $basePath -Recurse
 }

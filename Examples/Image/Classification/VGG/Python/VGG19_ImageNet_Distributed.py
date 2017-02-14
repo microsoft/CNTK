@@ -16,9 +16,7 @@ from cntk.utils import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.blocks import Placeholder, Block
-from cntk.layers import Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options
-from cntk.models import Sequential, LayerStack
+from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential, For
 from cntk.initializer import normal
 
 # default Paths relative to current python file.
@@ -79,31 +77,31 @@ def create_vgg19():
     with default_options(activation=None, pad=True, bias=True):
         z = Sequential([
             # we separate Convolution and ReLU to name the output for feature extraction (usually before ReLU) 
-            LayerStack(2, lambda i: [
+            For(range(2), lambda i: [
                 Convolution2D((3,3), 64, name='conv1_{}'.format(i)), 
                 Activation(activation=relu, name='relu1_{}'.format(i)), 
             ]),
             MaxPooling((2,2), (2,2), name='pool1'),
 
-            LayerStack(2, lambda i: [
+            For(range(2), lambda i: [
                 Convolution2D((3,3), 128, name='conv2_{}'.format(i)), 
                 Activation(activation=relu, name='relu2_{}'.format(i)), 
             ]),
             MaxPooling((2,2), (2,2), name='pool2'),
 
-            LayerStack(4, lambda i: [
+            For(range(4), lambda i: [
                 Convolution2D((3,3), 256, name='conv3_{}'.format(i)), 
                 Activation(activation=relu, name='relu3_{}'.format(i)), 
             ]),
             MaxPooling((2,2), (2,2), name='pool3'),
 
-            LayerStack(4, lambda i: [
+            For(range(4), lambda i: [
                 Convolution2D((3,3), 512, name='conv4_{}'.format(i)), 
                 Activation(activation=relu, name='relu4_{}'.format(i)), 
             ]),
             MaxPooling((2,2), (2,2), name='pool4'),
 
-            LayerStack(4, lambda i: [
+            For(range(4), lambda i: [
                 Convolution2D((3,3), 512, name='conv5_{}'.format(i)), 
                 Activation(activation=relu, name='relu5_{}'.format(i)), 
             ]),
@@ -151,7 +149,7 @@ def create_trainer(network, epoch_size, num_quantization_bits):
         distributed_after=0)
 
     # Create trainer
-    return cntk.Trainer(network['output'], network['ce'], network['pe'], parameter_learner)
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore):
