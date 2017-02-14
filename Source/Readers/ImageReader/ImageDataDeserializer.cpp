@@ -248,12 +248,49 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
 
 #ifdef USE_FACE_FILE
 
-    auto suffixPos = path.find_last_of(".big@");
-    auto isFaceFile = suffixPos != std::string::npos;
+    auto bigSuffixPos = path.find_last_of(".big");
+    auto isFaceFile = bigSuffixPos != std::string::npos;
+
+    auto zipSuffixPos = path.find_last_of(".zip@");
+    auto isZipFile = zipSuffixPos != std::string::npos;
 
     if (isFaceFile)
     {
-        auto tmpPath = path.substr(0, suffixPos);
+        if (isZipFile)
+        {
+#ifdef USE_ZIP
+            assert(atPos > 0);
+            assert(atPos + 1 < path.length());
+            auto containerPath = path.substr(0, atPos);
+            // skip @ symbol and path separator (/ or \)
+            auto itemPath = path.substr(atPos + 2);
+            // zlib only supports / as path separator.
+            std::replace(begin(itemPath), end(itemPath), '\\', '/');
+            std::shared_ptr<ByteReader> reader;
+            auto r = knownReaders.find(containerPath);
+            if (r == knownReaders.end())
+            {
+                reader = std::make_shared<ZipFaceFileReader>(containerPath);
+                knownReaders[containerPath] = reader;
+                readerSequences[containerPath] = std::map<std::string, size_t>();
+            }
+            else
+            {
+                reader = (*r).second;
+            }
+
+            readerSequences[containerPath][itemPath] = seqId;
+            m_readers[seqId] = reader;
+#else
+            UNUSED(seqId);
+            UNUSED(knownReaders);
+            UNUSED(readerSequences);
+            RuntimeError("The code is built without zip container support. Only plain image files are supported.");
+#endif
+            return;
+        }
+
+        auto tmpPath = path.substr(0, bigSuffixPos);
         std::replace(begin(tmpPath), end(tmpPath), '/', '\\');
         auto lastSlashPos = tmpPath.find_last_of('\\');
         auto directory = tmpPath.substr(0, lastSlashPos + 1);
@@ -277,7 +314,7 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
         }
 
         size_t bigFileId, imageId;
-        imageId = stoi(path.substr(suffixPos + 1));
+        imageId = stoi(path.substr(bigSuffixPos + 1));
 
         if (lastSlashPos != std::string::npos)
         {

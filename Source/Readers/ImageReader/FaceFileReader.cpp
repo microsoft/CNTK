@@ -73,7 +73,7 @@ void FaceFileByteReader::Register(const std::map<std::string, size_t>& sequences
 
     int count = 0, size = (int) m_bigFileIds.size();
 
-    bool multithreadedReadFaceFileInfo = true;
+    bool multithreadedReadFaceFileInfo = false;
     if (multithreadedReadFaceFileInfo)
     {
         ExceptionCapture capture;

@@ -125,6 +125,38 @@ private:
     std::vector<std::vector<FaceFileInfo>> m_cacheInfo;
 };
 
+#ifdef USE_ZIP
+class ZipFaceFileReader : public ByteReader
+{
+public:
+    ZipFaceFileReader(const std::string& zipPath);
+
+    void Register(const std::map<std::string, size_t>& sequences) override;
+    cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
+
+private:
+    void CropAndScaleFaceImage(const cv::Mat &input_image, int input_width, int input_height,
+        int input_channels, const float *facial_points, int points_num, cv::Mat &output_image);
+
+    bool m_rand_flip;
+    int m_flip_landmark_id;
+    int m_landmark_id;
+    int m_batch_img_height;
+    int m_batch_img_width;
+    float m_raw_scale;
+    float m_relative_scale;
+    float m_relative_trans;
+
+    using ZipPtr = std::unique_ptr<zip_t, void(*)(zip_t*)>;
+    ZipPtr OpenZip();
+
+    std::string m_zipPath;
+    conc_stack<ZipPtr> m_zips;
+    std::unordered_map<size_t, std::pair<zip_uint64_t, zip_uint64_t>> m_seqIdToIndex;
+    conc_stack<std::vector<unsigned char>> m_workspace;
+};
+#endif
+
 #endif
 
 #ifdef USE_ZIP
