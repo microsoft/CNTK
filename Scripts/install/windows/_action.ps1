@@ -126,8 +126,8 @@ function ExecuteApplication(
     }
 
     if ($Execute) {
-        $application = ResolveApplicationName $appName $appDir $usePath
-        if ($application.Length -eq 0) {
+        $application = ResolveApplicationName -name $appName -directory $appDir -usePath $usePath
+        if (-not $application) {
             throw "ExecuteApplication: Couldn't resolve program [$appName] with location directory [$appDir] and usePath [$usePath]"
         }
 
@@ -396,11 +396,11 @@ function Invoke-DosCommand {
 }
 
 function ResolveApplicationName(
-    [string] $name,
+    [Parameter(Mandatory=$True)][string] $name,
     [string] $directory = "",
     [bool] $usePath = $false)
 {
-    $application = [string]::Empty
+    $application = ""
 
     if ($directory) {
         $application = CallGetCommand (join-path $directory $name)
@@ -414,16 +414,15 @@ function ResolveApplicationName(
         }
     }
     # application will be an empty string if we couldn't resolve the name, otherwise we can execute $application
-
     return $application
 }
 
 function CallGetCommand(
     [Parameter(Mandatory=$True)][string] $application)
 {
-    $matches = @(get-command $application -CommandType Application -ErrorAction SilentlyContinue | Out-Null)
+    $matches = @(get-command $application -CommandType Application -TotalCount 1 -ErrorAction SilentlyContinue)
     if ($matches.Count -eq 0) {
-        return [String]::Empty
+        return ""
     }
 
     return $matches[0].Source
