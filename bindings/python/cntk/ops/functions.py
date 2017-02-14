@@ -173,7 +173,7 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).constants()
 
-    def eval(self, arguments=None, device=None):
+    def eval(self, arguments=None, device=None, as_numpy=True):
         '''
         Evaluate the node using the specified ``arguments`` as input.
 
@@ -218,15 +218,16 @@ class Function(cntk_py.Function):
            output variable. A single NumPy array if there is only one output value.
         '''
 
-        _, output_map = self.forward(arguments, self.outputs, device=device)
+        _, output_map = self.forward(arguments, self.outputs, device=device, as_numpy=as_numpy)
 
         if len(output_map) > 1:
             return output_map
         else:
             return list(output_map.values())[0]
 
+
     @typemap
-    def forward(self, arguments, outputs, keep_for_backward=None, device=None):
+    def forward(self, arguments, outputs, keep_for_backward=None, device=None, as_numpy=True):
         '''
         Computes the values of speficied variables in ``outputs``, using values
         provided in ``arguments`` that correspond to each input `Variable` of
@@ -297,9 +298,9 @@ class Function(cntk_py.Function):
 
         state = super(Function, self)._forward(in_var_map, output_map, device,
                                              keep_for_backward)
-
-        for k in output_map:
-            output_map[k] = variable_value_to_seq(output_map[k], k)
+        if as_numpy:
+            for k in output_map:
+                output_map[k] = variable_value_to_seq(output_map[k], k)
 
         return state, output_map
 

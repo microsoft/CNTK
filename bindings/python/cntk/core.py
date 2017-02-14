@@ -60,6 +60,7 @@ class NDArrayView(cntk_py.NDArrayView):
 
         if not _is_c_contiguous(np_array):
             warnings.warn('data is not C contiguous; rearrange your data/computation to avoid this', RuntimeWarning)
+            np_array = np.ascontiguousarray(np_array)
 
         if device is None:
             device = use_default_device()
