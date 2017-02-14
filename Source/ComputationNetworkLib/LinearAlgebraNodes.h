@@ -951,7 +951,7 @@ template class TransposeDimensionsNode<double>;
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class CosDistanceNode : public ComputationNode<ElemType>, public NumInputs<2>
+class CosDistanceNode: public ComputationNode<ElemType>, public NumInputs<2>
 {
     typedef ComputationNode<ElemType> Base;
     UsingComputationNodeMembersBoilerplate;
@@ -973,60 +973,27 @@ public:
         {
             MBLayoutPtr mb0 = Input(0)->GetMBLayout();
             MBLayoutPtr mb1 = Input(1)->GetMBLayout();
-            int maxSteps = mb1->GetNumTimeSteps();
-            int step = (maxSteps + 15) / 16;
-            #pragma omp parallel for
-            for (int t = 0; t < 16; t++)
-            {
-                FrameRange frms[2];
-                frms[0] = FrameRange(mb0, 0);
-                int start = t*step;
-                int end = maxSteps > (start + step) ? start + step : maxSteps;
-                for (int i = start; i < end; i++)
-                {
-                    frms[1] = FrameRange(mb1, i);
-                    Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(frms[1]);
-                    m_invNorm1V[t]->AssignVectorNorm2Of(sliceInput1Value, true);
-                    m_invNorm1V[t]->AssignElementInverseOf(*m_invNorm1V[t]);
-                    if (inputIndex == 0) // left derivative
-                        m_tempV[t]->AssignElementProductOf(*m_invNorm0, *m_invNorm0);
-                    else // right derivative
-                        m_tempV[t]->AssignElementProductOf(*m_invNorm1V[t], *m_invNorm1V[t]);
+            FrameRange frms[2] = { FrameRange(mb0), FrameRange(mb1) };
 
-                    m_tempV[t]->ElementMultiplyWith(ValueFor(frms[1]));
-                    m_rightTermV[t]->SetValue(Input(inputIndex)->ValueFor(frms[inputIndex]));
-                    m_rightTermV[t]->RowElementMultiplyWith(*m_tempV[t]);
+            Matrix<ElemType> sliceInputValueA = InputRef(inputIndex).ValueFor(frms[inputIndex]);
+            Matrix<ElemType> sliceInputGradientA = Input(inputIndex)->GradientFor(frms[inputIndex]);
+            Matrix<ElemType> sliceInputValueB = InputRef(1-inputIndex).ValueFor(frms[1-inputIndex]);
 
-                    m_tempV[t]->AssignElementProductOf(*m_invNorm0, *m_invNorm1V[t]);
-                    m_leftTermV[t]->SetValue(Input(1 - inputIndex)->ValueFor(frms[1 - inputIndex]));
-                    m_leftTermV[t]->RowElementMultiplyWith(*m_tempV[t]);
-
-                    *m_leftTermV[t] -= *m_rightTermV[t];
-                    m_leftTermV[t]->RowElementMultiplyWith(GradientFor(frms[1]));
-                    Input(inputIndex)->GradientFor(frms[inputIndex]) += *m_leftTermV[t];
-                }
-            }
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+            Matrix<ElemType> sliceNodeGradient = GradientFor(fr);
+            Matrix<ElemType>::CosSimilarityDeriv(sliceInputValueA, *m_rnorm2[inputIndex], sliceInputValueB, *m_rnorm2[1-inputIndex], 
+                sliceOutputValue, sliceNodeGradient, sliceInputGradientA, true);
         }
         else
         {
-            // functionValues, invNorm0, invNorm1 - output from the EvaluateNode() method
-            // temp, rightTerm, leftTerm - temporary matrices
-            if (inputIndex == 0) // left derivative
-                m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm0);
-            else // right derivative
-                m_temp->AssignElementProductOf(*m_invNorm1, *m_invNorm1);
+            Matrix<ElemType> sliceInputValueA = InputRef(inputIndex).ValueFor(fr);
+            Matrix<ElemType> sliceInputGradientA = Input(inputIndex)->GradientFor(fr);
+            Matrix<ElemType> sliceInputValueB = InputRef(1 - inputIndex).ValueFor(fr);
 
-            m_temp->ElementMultiplyWith(ValueFor(fr));
-            m_rightTerm->SetValue(Input(inputIndex)->ValueFor(fr));
-            m_rightTerm->RowElementMultiplyWith(*m_temp);
-
-            m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm1);
-            m_leftTerm->SetValue(Input(1 - inputIndex)->ValueFor(fr));
-            m_leftTerm->RowElementMultiplyWith(*m_temp);
-
-            *m_leftTerm -= *m_rightTerm;
-            m_leftTerm->RowElementMultiplyWith(GradientFor(fr));
-            Input(inputIndex)->GradientFor(fr) += *m_leftTerm;
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+            Matrix<ElemType> sliceNodeGradient = GradientFor(fr);
+            Matrix<ElemType>::CosSimilarityDeriv(sliceInputValueA, *m_rnorm2[inputIndex], sliceInputValueB, *m_rnorm2[1 - inputIndex],
+                sliceOutputValue, sliceNodeGradient, sliceInputGradientA, true);
         }
     }
 
@@ -1036,56 +1003,25 @@ public:
         {
             MBLayoutPtr mb0 = Input(0)->GetMBLayout();
             MBLayoutPtr mb1 = Input(1)->GetMBLayout();
-            auto fr0 = FrameRange(mb0, 0);
+            auto fr0 = FrameRange(mb0);
             Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr0);
-            m_invNorm0->AssignVectorNorm2Of(sliceInput0Value, true);
-            m_invNorm0->AssignElementInverseOf(*m_invNorm0);
-
-            int maxSteps = mb1->GetNumTimeSteps();
-            int step = (maxSteps+15) / 16;
-            #pragma omp parallel for
-            for (int t = 0; t < 16; t++)
-            {
-                int start = t*step;
-                int end = maxSteps > (start + step) ? start + step : maxSteps;
-                for (int i = start; i < end; i++)
-                {
-                    auto fr1 = FrameRange(mb1, i);
-                    Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr1);
-                    Matrix<ElemType> sliceOutputValue = ValueFor(fr1);
-
-                    m_invNorm1V[t]->AssignVectorNorm2Of(sliceInput1Value, true);
-                    m_invNorm1V[t]->AssignElementInverseOf(*m_invNorm1V[t]);
-
-                    sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
-                    sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
-                    sliceOutputValue.ElementMultiplyWith(*m_invNorm1V[t]);
-                }
-            }
+            Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
+            Matrix<ElemType> sliceOutputValue = ValueFor(fr);
+            Matrix<ElemType>::CosSimilarity(sliceInput0Value, sliceInput1Value, sliceOutputValue, *m_rnorm2[0], *m_rnorm2[1], true);
         }
         else
         {
             Matrix<ElemType> sliceInput0Value = InputRef(0).ValueFor(fr);
             Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
-
-            m_invNorm0->AssignVectorNorm2Of(sliceInput0Value, true);
-            m_invNorm0->AssignElementInverseOf(*m_invNorm0);
-
-            m_invNorm1->AssignVectorNorm2Of(sliceInput1Value, true);
-            m_invNorm1->AssignElementInverseOf(*m_invNorm1);
-
-            sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
-            sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
-            sliceOutputValue.ElementMultiplyWith(*m_invNorm1);
-            // TODO: This formulation above would allow to use the TensorView lib for this, with automatic broadcasting.
+            Matrix<ElemType>::CosSimilarity(sliceInput0Value, sliceInput1Value, sliceOutputValue, *m_rnorm2[0], *m_rnorm2[1], true);
         }
     }
 
     void InferMBLayoutFromInputs(bool isFinalValidationPass)
     {
         ComputationNodeBasePtr firstInputWithMBLayout;
-        for(int i=m_inputs.size()-1; i>=0; i--)        
+        for (int i = m_inputs.size() - 1; i >= 0; i--)
         {
             auto input = m_inputs[i];
             if (!input) // node not set yet (DelayedValueNodeBase seems to allow this)--BUGBUG: Then this function won't operate correctly.
@@ -1128,73 +1064,35 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
-            node->m_invNorm0->SetValue(*m_invNorm0);
-            for (int i = 0; i < 16; i++)
-            {
-                node->m_invNorm1V[i]->SetValue(*m_invNorm1V[i]);
-                node->m_leftTermV[i]->SetValue(*m_leftTermV[i]);
-                node->m_rightTermV[i]->SetValue(*m_rightTermV[i]);
-                node->m_tempV[i]->SetValue(*m_tempV[i]);
-            }
+            node->m_rnorm2[0]->SetValue(*m_rnorm2[0]);
+            node->m_rnorm2[1]->SetValue(*m_rnorm2[1]);
         }
     }
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_invNorm0, matrixPool);
-        for (int i = 0; i < 16; i++)
-        {
-            RequestMatrixFromPool(m_invNorm1V[i], matrixPool);
-        }
-
-        m_invNorm1 = m_invNorm1V[0];
+        RequestMatrixFromPool(m_rnorm2[0], matrixPool);
+        RequestMatrixFromPool(m_rnorm2[1], matrixPool);
     }
 
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        for (int i = 0; i < 16; i++)
-        {
-            RequestMatrixFromPool(m_leftTermV[i], matrixPool);
-            RequestMatrixFromPool(m_rightTermV[i], matrixPool);
-            RequestMatrixFromPool(m_tempV[i], matrixPool);
-        }
-
-        m_leftTerm = m_leftTermV[0];
-        m_rightTerm = m_rightTermV[0];
-        m_temp = m_tempV[0];
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
     virtual void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool)
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_invNorm0, matrixPool);
-        for (int i = 0; i < 16; i++)
-        {
-            ReleaseMatrixToPool(m_invNorm1V[i], matrixPool);
-            ReleaseMatrixToPool(m_leftTermV[i], matrixPool);
-            ReleaseMatrixToPool(m_rightTermV[i], matrixPool);
-            ReleaseMatrixToPool(m_tempV[i], matrixPool);
-        }
+        ReleaseMatrixToPool(m_rnorm2[0], matrixPool);
+        ReleaseMatrixToPool(m_rnorm2[1], matrixPool);
     }
 
 private:
     // invNorm nodes tranfer data between ForwardProp and BackpropTo
-    shared_ptr<Matrix<ElemType>> m_invNorm0;
-    shared_ptr<Matrix<ElemType>> m_invNorm1;
-    // the rest are temporaries, values don't need to be maintained
-    shared_ptr<Matrix<ElemType>> m_leftTerm;
-    shared_ptr<Matrix<ElemType>> m_rightTerm;
-    shared_ptr<Matrix<ElemType>> m_temp;
-
-    shared_ptr<Matrix<ElemType>> m_invNorm1V[16];
-    // the rest are temporaries, values don't need to be maintained
-    shared_ptr<Matrix<ElemType>> m_leftTermV[16];
-    shared_ptr<Matrix<ElemType>> m_rightTermV[16];
-    shared_ptr<Matrix<ElemType>> m_tempV[16];
+    shared_ptr<Matrix<ElemType>> m_rnorm2[2];
 };
 
 template class CosDistanceNode<float>;

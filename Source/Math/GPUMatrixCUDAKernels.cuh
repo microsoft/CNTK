@@ -5192,6 +5192,120 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
         val[idx] -= g;
     }
 }
+
+template <class ElemType>
+__global__ void _cosSimDeriv(
+    ElemType* deriv,
+    const ElemType* sim,        // Cos similarity
+    const ElemType* simDeriv,   // Drivative of cos similarity
+    const ElemType* inputA,     // Input variable to compute derivative for.
+    const ElemType* rnom2A,     // rnorm2 of the input variable
+    const ElemType* inputB,     // The other input variable 
+    const ElemType* rnom2B,     // rnorm2 of the other input variable
+    const CUDA_LONG vectorSize, // size of vector
+    const CUDA_LONG numA, // Number of vectors in A
+    const CUDA_LONG numB, // Number of vectors in B
+    const bool isColWise
+    )
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    CUDA_LONG N = numA > numB ? numA : numB;
+    if (id >= N)
+        return;
+    CUDA_LONG indexA = 0;
+    CUDA_LONG indexB = 0;
+    CUDA_LONG idA = id%numA;
+    CUDA_LONG idB = id%numB;
+    ElemType rightFactor = simDeriv[id] * sim[id]* rnom2A[idA]* rnom2A[idA];
+    ElemType leftFactor = simDeriv[id] * rnom2A[idA] * rnom2B[idB];
+    if (isColWise)
+    {
+        indexA = idA*vectorSize;
+        indexB = idB*vectorSize;
+        for (CUDA_LONG i = 0; i < vectorSize; ++i)
+        {
+            deriv[indexA] += leftFactor*inputB[indexB] - rightFactor*inputA[indexA];
+            indexA++;
+            indexB++;
+        }
+    }
+    else
+    {
+        // TODO: Due to the memory storage of matrix is column major, this mode is much faster in GPU
+        indexA = idA;
+        indexB = idB;
+        for (CUDA_LONG i = 0; i < vectorSize; ++i)
+        {
+            deriv[indexA] += leftFactor*inputB[indexB] - rightFactor*inputA[indexA];
+            indexA += vectorSize;
+            indexB += vectorSize;
+        }
+    }
+}
+
+template <class ElemType>
+__global__ void _cosSim(
+    ElemType* c,
+    ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
+    ElemType* rnorm2B,           // 1/sqrt(Sum(B^2))
+    const ElemType* a,
+    const ElemType* b,
+    const CUDA_LONG vectorSize, // size of vector
+    const CUDA_LONG numA, // Number of vectors in A
+    const CUDA_LONG numB, // Number of vectors in B
+    const bool isColWise) {
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    CUDA_LONG N = numA > numB ? numA : numB;
+    if (id >= N)
+        return;
+    ElemType sum = 0;
+    CUDA_LONG indexA = 0;
+    CUDA_LONG indexB = 0;
+    CUDA_LONG idA = id%numA;
+    CUDA_LONG idB = id%numB;
+    ElemType squareSumA = 0;
+    ElemType squareSumB = 0;
+    if (isColWise)
+    {
+        indexA = idA*vectorSize;
+        indexB = idB*vectorSize;
+        for (CUDA_LONG i = 0; i < vectorSize; ++i)
+        {
+            sum += a[indexA] * b[indexB];
+            squareSumA += a[indexA] * a[indexA];
+            squareSumB += b[indexB] * b[indexB];
+            indexA++;
+            indexB++;
+        }
+    }
+    else
+    {
+        // TODO: Due to the memory storage of matrix is column major, this mode is much faster in GPU
+        indexA = idA;
+        indexB = idB;
+        for (CUDA_LONG j = 0; j < vectorSize; ++j)
+        {
+            sum += a[indexA] * b[indexB];
+            squareSumA += a[indexA] * a[indexA];
+            squareSumB += b[indexB] * b[indexB];
+            indexA += vectorSize;
+            indexB += vectorSize;
+        }
+    }
+
+    if (sizeof(ElemType) == sizeof(double))
+    {
+        rnorm2A[idA] = rsqrt(squareSumA + 1e-8);
+        rnorm2B[idB] = rsqrt(squareSumB + 1e-8);
+    }
+    else
+    {
+        rnorm2A[idA] = rsqrtf(squareSumA + 1e-8);
+        rnorm2B[idB] = rsqrtf(squareSumB + 1e-8);
+    }
+
+    c[id] = (ElemType)(sum*rnorm2A[idA] * rnorm2B[idB]);
+}
 }
 }
 }
