@@ -476,42 +476,15 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_space_separated)
 
 
 
-// 1 sequences with 1 sample/input, the last sequence is not well-formed 
-// (trailing '\n' is missing)
+// 1 sequences with 1 sample/input, the last sequence is not terminated
+// with a new line.
 BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_missing_trailing_newline)
 {
-    BOOST_REQUIRE_EXCEPTION(
-        HelperRunReaderTest<double>(
+    HelperRunReaderTest<double>(
         testDataPath() + "/Config/CNTKTextFormatReader/edge_cases.cntk",
         testDataPath() + "/Control/CNTKTextFormatReader/missing_trailing_newline.txt",
         testDataPath() + "/Control/CNTKTextFormatReader/missing_trailing_newline_Output.txt",
         "missing_trailing_newline",
-        "reader",
-        2,  // epoch size
-        2,  // mb size  
-        1,  // num epochs
-        1,
-        0,
-        0,
-        1),
-        std::runtime_error,
-        [](std::runtime_error const& ex)
-    {
-        return string("Reached the maximum number of allowed errors"
-            " while reading the input file (missing_trailing_newline.txt).") == ex.what();
-    });
-};
-
-// 1 sequences with 1 sample/input, the last sequence is not well-formed 
-// (trailing '\n' is missing)
-BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_missing_trailing_newline_ignored)
-{
-    HelperRunReaderTest<double>(
-        testDataPath() + "/Config/CNTKTextFormatReader/edge_cases.cntk",
-        // the output file does not contain the last sample from the malformed line
-        testDataPath() + "/Control/CNTKTextFormatReader/missing_trailing_newline.txt",
-        testDataPath() + "/Control/CNTKTextFormatReader/missing_trailing_newline_Output.txt",
-        "missing_trailing_newline_ignored",
         "reader",
         2,  // epoch size
         2,  // mb size  
@@ -686,6 +659,71 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_invalid_inputs)
     auto control = testDataPath() + "/Control/CNTKTextFormatReader/invalid_inputs_Control.txt";
 
     CheckFilesEquivalent(control, output);
+};
+
+
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_no_trailing_newline_valid_input)
+{
+    vector<StreamDescriptor> streams(1);
+    streams[0].m_alias = "A";
+    streams[0].m_name = L"A";
+    streams[0].m_storageType = StorageType::dense;
+    streams[0].m_sampleDimension = 1;
+
+    string filename = "no_trailing_newline.txt";
+
+    vector<std::pair<string, double>> input{ { "-123", -123. },{ "45.", 45. }, {"6.78", 6.78}, {"9.10e-11", 9.10e-11 } };
+
+    for (const auto& pair : input) 
+    {
+        {
+            boost::filesystem::remove(filename);
+            std::ofstream file;
+            file.open(filename, std::ofstream::out);
+            file << "|A " << pair.first;
+        }
+        CNTKTextFormatReaderTestRunner<double> testRunner(filename, streams, 0);
+
+        testRunner.LoadChunk();
+        vector<SequenceDataPtr> data;
+        testRunner.m_chunk->GetSequence(0, data);
+        double value = *(reinterpret_cast<const double*>(data[0]->GetDataBuffer()));
+
+        BOOST_REQUIRE_CLOSE(value, pair.second, 0.00001);
+
+    }
+
+};
+
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_no_trailing_newline_invalid_input)
+{
+    vector<StreamDescriptor> streams(1);
+    streams[0].m_alias = "A";
+    streams[0].m_name = L"A";
+    streams[0].m_storageType = StorageType::dense;
+    streams[0].m_sampleDimension = 1;
+
+    string filename = "no_trailing_newline.txt";
+
+    for (auto& input : {"", "\t", " ", "     ", " -", " +", " 12.+", " 12.+e", " 1:" })
+    {
+        {
+            boost::filesystem::remove(filename);
+            std::ofstream file;
+            file.open(filename, std::ofstream::out);
+            file << "|A" << input;
+        }
+        CNTKTextFormatReaderTestRunner<double> testRunner(filename, streams, 0);
+        BOOST_REQUIRE_EXCEPTION(
+            testRunner.LoadChunk(),
+            std::runtime_error,
+            [](std::runtime_error const& ex)
+        {
+            return string("Reached the maximum number of allowed errors"
+                " while reading the input file (no_trailing_newline.txt).") == ex.what();
+        });;
+    }
+
 };
 
 // 100 sequences with N samples for each of 3 inputs, where N is chosen at random

@@ -3,6 +3,7 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
+#include "stdafx.h"
 #include <boost/random/uniform_real_distribution.hpp>
 #include "CNTKLibrary.h"
 #include "PrimitiveOpType.h"
@@ -15,11 +16,12 @@
 
 using namespace CNTK;
 using namespace std;
-using namespace Microsoft::MSR::CNTK;
 
 static const size_t maxNDShapeSize = 10;
 static const size_t maxNumAxes = 3;
 static const size_t maxDimSize = 5;
+
+namespace CNTK { namespace Test {
 
 static size_t keyCounter = 0;
 static boost::random::uniform_real_distribution<double> double_dist = boost::random::uniform_real_distribution<double>();
@@ -43,11 +45,11 @@ void AddKeyValuePair(Dictionary& dict, size_t maxSize, size_t maxDepth)
             type = GetType();
         }
     }
-    
+
     dict[L"key" + to_wstring(keyCounter++)] = CreateDictionaryValue(type, maxSize, maxDepth);
 }
 
-Dictionary CreateDictionary(size_t size, size_t depth) 
+Dictionary CreateDictionary(size_t size, size_t depth)
 {
     Dictionary dict;
     for (auto i = 0; i < size; ++i)
@@ -59,7 +61,7 @@ Dictionary CreateDictionary(size_t size, size_t depth)
 }
 
 template <typename ElementType>
-NDArrayViewPtr CreateNDArrayView(size_t numAxes, const DeviceDescriptor& device) 
+NDArrayViewPtr CreateNDArrayView(size_t numAxes, const DeviceDescriptor& device)
 {
     NDShape viewShape(numAxes);
     for (size_t i = 0; i < numAxes; ++i)
@@ -81,7 +83,7 @@ NDArrayViewPtr CreateNDArrayView()
         }
     }
 
-    return (rng() % 2 == 0) ? 
+    return (rng() % 2 == 0) ?
         CreateNDArrayView<float>(numAxes, device) : CreateNDArrayView<double>(numAxes, device);
 }
 
@@ -115,7 +117,7 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t maxSize
         return DictionaryValue(shape);
     }
     case DictionaryValue::Type::Vector:
-    {   
+    {
         auto type2 = GetType();
         size_t size = rng() % maxSize + 1;
         vector<DictionaryValue> vector(size);
@@ -133,14 +135,15 @@ DictionaryValue CreateDictionaryValue(DictionaryValue::Type type, size_t maxSize
     case DictionaryValue::Type::NDArrayView:
         return DictionaryValue(*(CreateNDArrayView()));
     default:
-        NOT_IMPLEMENTED;
+        ReportFailure("Inside File: %s  Line: %d  Function: %s  -> Feature Not Implemented.\n", __FILE__, __LINE__, __FUNCTION__);
+        return 0;
     }
 }
 
-void TestDictionarySerialization(size_t dictSize) 
+void TestDictionarySerialization(size_t dictSize)
 {
     if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
-       throw std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
+       BOOST_ERROR("Error deleting temporary test file 'serialization.tmp'.");
 
     Dictionary originalDict = CreateDictionary(dictSize, dictSize);
     {
@@ -156,37 +159,37 @@ void TestDictionarySerialization(size_t dictSize)
         OpenStream(stream, tempFilePath, true);
         stream >> deserializedDict1;
     }
-    
+
     if (originalDict != deserializedDict1)
-        throw std::runtime_error("TestDictionarySerialization: original and deserialized dictionaries are not identical.");
+        BOOST_ERROR("TestDictionarySerialization: original and deserialized dictionaries are not identical.");
 
     originalDict.Save(tempFilePath);
     Dictionary deserializedDict2 = Dictionary::Load(tempFilePath);
 
      if (originalDict != deserializedDict2)
-        throw std::runtime_error("TestDictionarySerialization: original and deserialized dictionaries are not identical.");
+        BOOST_ERROR("TestDictionarySerialization: original and deserialized dictionaries are not identical.");
 }
 
 template <typename ElementType>
-void TestLargeValueSerialization(size_t numElements) 
+void TestLargeValueSerialization(size_t numElements)
 {
     if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
-      throw std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
+      BOOST_ERROR("Error deleting temporary test file 'serialization.tmp'.");
 
-    DictionaryValue originalValue(*NDArrayView::RandomUniform<ElementType>({ numElements }, -0.5, 0.5, CNTK::SentinelValueForAutoSelectRandomSeed, DeviceDescriptor::CPUDevice()));
+    DictionaryValue originalValue(*NDArrayView::RandomUniform<ElementType>({ numElements }, -0.5, 0.5, SentinelValueForAutoSelectRandomSeed, DeviceDescriptor::CPUDevice()));
     originalValue.Save(tempFilePath);
 
     DictionaryValue deserializedValue = DictionaryValue::Load(tempFilePath);
 
     if (originalValue != deserializedValue)
-        throw std::runtime_error("TestLargeValueSerialization: original and deserialized values are not identical.");
+        BOOST_ERROR("TestLargeValueSerialization: original and deserialized values are not identical.");
 }
 
 template <typename ElementType>
-void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device) 
+void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
 {
     if ((_wunlink(tempFilePath.c_str()) != 0) && (errno != ENOENT))
-       throw std::runtime_error("Error deleting temporary test file 'serialization.tmp'.");
+       BOOST_ERROR("Error deleting temporary test file 'serialization.tmp'.");
 
     NDShape shape = CreateShape(5, maxDimSize);
 
@@ -200,7 +203,7 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
     }
 
     auto learner1 = SGDLearner(parameters, LearningRatePerSampleSchedule(0.05));
-    
+
     learner1->Update(gradientValues, 1);
 
     {
@@ -233,9 +236,9 @@ void TestLearnerSerialization(int numParameters, const DeviceDescriptor& device)
 
      auto checkpoint1 = learner1->CreateCheckpoint();
      auto checkpoint2 = learner2->CreateCheckpoint();
-    
+
     if (checkpoint1 != checkpoint2)
-        throw std::runtime_error("TestLearnerSerialization: original and restored from a checkpoint learners diverge.");
+        BOOST_ERROR("TestLearnerSerialization: original and restored from a checkpoint learners diverge.");
 }
 
 
@@ -247,20 +250,18 @@ void CheckEnumValuesNotModified() {
 
     // The following list of asserts is APPEND ONLY. DO NOT CHANGE existing assert statements.
 
-    
     static_assert(static_cast<size_t>(DataType::Unknown) == 0 &&
                   static_cast<size_t>(DataType::Float) == 1 &&
-                  static_cast<size_t>(DataType::Double) == 2, 
+                  static_cast<size_t>(DataType::Double) == 2,
                   "DataType enum value was modified.");
 
     static_assert(static_cast<size_t>(VariableKind::Input) == 0 &&
                   static_cast<size_t>(VariableKind::Output) == 1 &&
                   static_cast<size_t>(VariableKind::Parameter) == 2 &&
                   static_cast<size_t>(VariableKind::Constant) == 3 &&
-                  static_cast<size_t>(VariableKind::Placeholder) == 4, 
+                  static_cast<size_t>(VariableKind::Placeholder) == 4,
                   "VariableKind enum value was modified.");
 
-    
     static_assert(static_cast<size_t>(PrimitiveOpType::Negate) == 0 &&
                   static_cast<size_t>(PrimitiveOpType::Sigmoid) == 1 &&
                   static_cast<size_t>(PrimitiveOpType::Tanh) == 2 &&
@@ -305,9 +306,9 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Clip) == 41 &&
                   static_cast<size_t>(PrimitiveOpType::Select) == 42 &&
                   static_cast<size_t>(PrimitiveOpType::Splice) == 43 &&
-                  static_cast<size_t>(PrimitiveOpType::Combine) == 44 && 
-                  static_cast<size_t>(PrimitiveOpType::RandomSample) == 45 && 
-                  static_cast<size_t>(PrimitiveOpType::RandomSampleInclusionFrequency) == 46 && 
+                  static_cast<size_t>(PrimitiveOpType::Combine) == 44 &&
+                  static_cast<size_t>(PrimitiveOpType::RandomSample) == 45 &&
+                  static_cast<size_t>(PrimitiveOpType::RandomSampleInclusionFrequency) == 46 &&
                   static_cast<size_t>(PrimitiveOpType::ROIPooling) == 47 &&
                   static_cast<size_t>(PrimitiveOpType::Logistic) == 48 &&
                   static_cast<size_t>(PrimitiveOpType::OptimizedRNNStack) == 49 &&
@@ -322,7 +323,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::Unpooling) == 58 &&
                   static_cast<size_t>(PrimitiveOpType::LambdaRank) == 59 &&
                   static_cast<size_t>(PrimitiveOpType::NDCG) == 60 &&
-                  static_cast<size_t>(PrimitiveOpType::EditDistanceError) == 61,
+                  static_cast<size_t>(PrimitiveOpType::EditDistanceError) == 61 &&
+                  static_cast<size_t>(PrimitiveOpType::NoOp) == 62,
                   "PrimitiveOpType enum value was modified.");
 }
 
@@ -377,7 +379,7 @@ void TestFunctionSaveAndLoad(const FunctionPtr& function, const DeviceDescriptor
 
     if (!AreEqual(function, reloadedFunction))
     {
-        throw std::runtime_error("TestFunctionSaveAndLoad: original and reloaded functions are not identical.");
+        BOOST_ERROR("TestFunctionSaveAndLoad: original and reloaded functions are not identical.");
     }
 }
 
@@ -392,14 +394,14 @@ void TestFunctionsForEquality(const DeviceDescriptor& device)
     auto f2 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 1);
     if (!AreEqual(f1, f2))
     {
-        throw std::runtime_error("TestFunctionsForEquality: two functions built with the same seed values are not identical.");
+        BOOST_ERROR("TestFunctionsForEquality: two functions built with the same seed values are not identical.");
     }
 
     auto f3 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 2);
     auto f4 = BuildFFClassifierNet(inputVar, 3, device, /*seed*/ 3);
     if (AreEqual(f3, f4))
     {
-        throw std::runtime_error("TestFunctionsForEquality: two functions built with different seed values are identical.");
+        BOOST_ERROR("TestFunctionsForEquality: two functions built with different seed values are identical.");
     }
 }
 
@@ -415,12 +417,12 @@ void TestFunctionSerialization(const DeviceDescriptor& device)
     TestFunctionSaveAndLoad(BuildLSTMClassifierNet(inputVar, 5, device), device);
 }
 
-TrainerPtr BuildTrainer(const FunctionPtr& function, const Variable& labels, 
-                     LearningRateSchedule lr = LearningRatePerSampleSchedule(0.005), 
+TrainerPtr BuildTrainer(const FunctionPtr& function, const Variable& labels,
+                     LearningRateSchedule lr = LearningRatePerSampleSchedule(0.005),
                      MomentumSchedule m = MomentumAsTimeConstantSchedule(0.0))
 {
-    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(function, labels, L"lossFunction");
-    auto prediction = CNTK::ClassificationError(function, labels, L"classificationError");
+    auto trainingLoss = CrossEntropyWithSoftmax(function, labels, L"lossFunction");
+    auto prediction = ClassificationError(function, labels, L"classificationError");
     auto learner = MomentumSGDLearner(function->Parameters(), lr, m, /*unitGainMomentum = */true);
     return CreateTrainer(function, trainingLoss, prediction, { learner });
 }
@@ -445,7 +447,7 @@ void TestFunctionSerializationDuringTraining(const FunctionPtr& function, const 
 
     if (AreEqual(classifierOutput1, classifierOutput2))
     {
-        throw std::runtime_error("TestModelSerialization: reloaded function is still identical to the original after it was trained.");
+        BOOST_ERROR("TestModelSerialization: reloaded function is still identical to the original after it was trained.");
     }
 
     for (int i = 0; i < 3; ++i)
@@ -456,9 +458,9 @@ void TestFunctionSerializationDuringTraining(const FunctionPtr& function, const 
 
         if (!AreEqual(classifierOutput1, classifierOutput3))
         {
-            throw std::runtime_error("TestModelSerialization: original and reloaded functions are not identical.");
+            BOOST_ERROR("TestModelSerialization: original and reloaded functions are not identical.");
         }
-      
+
         auto trainer2 = BuildTrainer(classifierOutput3, labels);
 
         for (int j = 0; j < 3; ++j)
@@ -524,21 +526,21 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
     if (!AreEqual(function1, function2))
     {
-        throw std::runtime_error("TestModelSerialization: reloaded function is not identical to the original.");
+        BOOST_ERROR("TestModelSerialization: reloaded function is not identical to the original.");
     }
 
     trainer1->TrainMinibatch({ { function1->Arguments()[0], minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
 
     if (AreEqual(function1, function2))
     {
-        throw std::runtime_error("TestModelSerialization: reloaded function is still identical to the original after it was trained.");
+        BOOST_ERROR("TestModelSerialization: reloaded function is still identical to the original after it was trained.");
     }
 
     trainer2->TrainMinibatch({ { function2->Arguments()[0], minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
 
     if (!AreEqual(function1, function2))
     {
-        throw std::runtime_error("TestModelSerialization: reloaded function is not identical to the original.");
+        BOOST_ERROR("TestModelSerialization: reloaded function is not identical to the original.");
     }
 
     for (int i = 0; i < 3; ++i)
@@ -548,9 +550,9 @@ void TestTrainingWithCheckpointing(const FunctionPtr& function1, const FunctionP
 
         if (!AreEqual(function1, function2))
         {
-            throw std::runtime_error("TestModelSerialization: original and reloaded functions are not identical.");
+            BOOST_ERROR("TestModelSerialization: original and reloaded functions are not identical.");
         }
-      
+
         for (int j = 0; j < 3; ++j)
         {
             trainer1->TrainMinibatch({ { function1->Arguments()[0], minibatchData[featureStreamInfo] }, { labels, minibatchData[labelStreamInfo] } }, device);
@@ -578,14 +580,14 @@ void TestCheckpointing(const DeviceDescriptor& device)
     if (device.Type() == DeviceKind::GPU)
     {
         // TODO: instead of cloning here, reset curand generator to make sure that parameters are initialized to the same state.
-        for (auto& p : net1_1->Parameters()) 
+        for (auto& p : net1_1->Parameters())
         {
             // make sure all parameters are initialized
             assert(p.Value() != nullptr);
         }
         net1_2 = net1_1->Clone();
     }
-    else 
+    else
     {
         net1_2 = BuildFFClassifierNet(features1, numOutputClasses, device, 1);
     }
@@ -604,14 +606,14 @@ void TestCheckpointing(const DeviceDescriptor& device)
     if (device.Type() == DeviceKind::GPU)
     {
         // TODO: instead of cloning here, reset curand generator to make sure that parameters are initialized to the same state.
-        for (auto& p : net2_1->Parameters()) 
+        for (auto& p : net2_1->Parameters())
         {
             // make sure all parameters are initialized
             assert(p.Value() != nullptr);
         }
         net2_2 = net2_1->Clone();
     }
-    else 
+    else
     {
         net2_2 = BuildLSTMClassifierNet(features2, numOutputClasses, device, 1);
     }
@@ -634,8 +636,8 @@ void TestLegacyModelSaving(const DeviceDescriptor& device)
     auto classifierOutput = LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
 
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels", { Axis::DefaultBatchAxis() });
-    auto trainingLoss = CNTK::CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
-    auto prediction = CNTK::ClassificationError(classifierOutput, labels, L"classificationError");
+    auto trainingLoss = CrossEntropyWithSoftmax(classifierOutput, labels, L"lossFunction");
+    auto prediction = ClassificationError(classifierOutput, labels, L"classificationError");
 
     auto minibatchSource = TextFormatMinibatchSource(L"Train.ctf", { { L"features", inputDim, true, L"x" }, { L"labels", numOutputClasses, false, L"y" } }, MinibatchSource::FullDataSweep);
     auto featureStreamInfo = minibatchSource->StreamInfo(features);
@@ -724,18 +726,35 @@ void TestThatExceptionsAreRaisedForNonExistentPaths()
 
 }
 
-void TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos() 
+void TestLoadingAModelWithALoadBatchNormFunction() {
+    {
+        auto model = Function::LoadModel(L"batch.norm.no.sample.count.v2.bin");
+        if (model == nullptr) {
+            ReportFailure("Failed to load a V2 model with a BatchNorm node that has only 5 inputs.");
+        }
+    }
+    
+    {
+        // make sure, we can load legacy V1 model.
+        auto model = Function::LoadModel(L"batch.norm.no.sample.count.v1.bin");
+        if (model == nullptr) {
+            ReportFailure("Failed to load a legacy V1 model with a BatchNorm node.");
+        }
+    } 
+}
+
+void TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos()
 {
     Dictionary presentDict, pastDict, futureDict;
     // load dictionaries from binary protobuf format and make sure we don't barf.
     {
-        auto stream = GetFstream(L"v2.0.beta1.0.dictionary.proto.bin", true); 
+        auto stream = GetFstream(L"v2.0.beta1.0.dictionary.proto.bin", true);
         *stream >> presentDict;
     }
     {
         // this file was generated with a proto that does not define NDArrayView message
         // and for Axis message only defines static axis index (no name and dynamic flag)
-        auto stream = GetFstream(L"past.dictionary.proto.bin", true); 
+        auto stream = GetFstream(L"past.dictionary.proto.bin", true);
         *stream >> pastDict;
 
     }
@@ -767,7 +786,7 @@ void TestCheckpointingWithStatefulNodes(const DeviceDescriptor& device)
 
     const size_t minibatchSize = 50;
     const size_t epochSize = 150;
-    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },  epochSize, false);    
+    auto minibatchSource = TextFormatMinibatchSource(L"Train-28x28_cntk_text.txt", { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },  epochSize, false);
     auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
     auto featureStreamInfo = minibatchSource->StreamInfo(features);
     auto labelStreamInfo = minibatchSource->StreamInfo(labels);
@@ -791,44 +810,118 @@ void TestCheckpointingWithStatefulNodes(const DeviceDescriptor& device)
     }
 }
 
-void SerializationTests()
+BOOST_AUTO_TEST_SUITE(SerializationSuite)
+
+BOOST_AUTO_TEST_CASE(LoadingAModelWithALoadBatchNormFunction)
 {
-    fprintf(stderr, "\nSerializationTests..\n");
+    TestLoadingAModelWithALoadBatchNormFunction();
+}
 
+BOOST_AUTO_TEST_CASE(ExceptionsAreRaisedForNonExistentPaths)
+{
     TestThatExceptionsAreRaisedForNonExistentPaths();
-    TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos();
+}
 
+BOOST_AUTO_TEST_CASE(DictionarySerialization)
+{
     TestDictionarySerialization(1);
     TestDictionarySerialization(2);
     TestDictionarySerialization(4);
     TestDictionarySerialization(8);
     TestDictionarySerialization(16);
+}
 
+BOOST_AUTO_TEST_CASE(LoadingDictionariesGeneratedFromPresentPastAndFutureProtos)
+{
+    TestLoadingDictionariesGeneratedFromPresentPastAndFutureProtos();
+}
+
+BOOST_AUTO_TEST_CASE(LargeValueSerialization)
+{
     TestLargeValueSerialization<double>(10000000);
     TestLargeValueSerialization<float>(100000000);
+}
 
+BOOST_AUTO_TEST_CASE(LargeLernerSerializationInCpu)
+{
     TestLearnerSerialization<float>(5, DeviceDescriptor::CPUDevice());
     TestLearnerSerialization<double>(10, DeviceDescriptor::CPUDevice());
+}
 
+BOOST_AUTO_TEST_CASE(FunctionsForEquality)
+{
     TestFunctionsForEquality(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(FunctionSerializationInCPU)
+{
     TestFunctionSerialization(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ModelSerializationDuringTrainingInCPU)
+{
     TestModelSerializationDuringTraining(DeviceDescriptor::CPUDevice());
-    
+}
+
+BOOST_AUTO_TEST_CASE(CheckpointingInCPU)
+{
     TestCheckpointing(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(LegacyModelSavingInCPU)
+{
     TestLegacyModelSaving(DeviceDescriptor::CPUDevice());
+}
 
+BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesInCPU)
+{
     TestCheckpointingWithStatefulNodes(DeviceDescriptor::CPUDevice());
+}
 
+BOOST_AUTO_TEST_CASE(LearnerSerializationInGPU)
+{
     if (IsGPUAvailable())
     {
         TestLearnerSerialization<float>(5, DeviceDescriptor::GPUDevice(0));
         TestLearnerSerialization<double>(10, DeviceDescriptor::GPUDevice(0));
-        TestFunctionSerialization(DeviceDescriptor::GPUDevice(0));
-        TestModelSerializationDuringTraining(DeviceDescriptor::GPUDevice(0));
-        TestCheckpointing(DeviceDescriptor::GPUDevice(0));
-        TestLegacyModelSaving(DeviceDescriptor::GPUDevice(0));
-
-        TestCheckpointingWithStatefulNodes(DeviceDescriptor::GPUDevice(0));
     }
-
 }
+
+BOOST_AUTO_TEST_CASE(FunctionSerializationInGPU)
+{
+    if (IsGPUAvailable())
+    {
+        TestFunctionSerialization(DeviceDescriptor::GPUDevice(0));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(ModelSerializationDuringTrainingInGPU)
+{
+    if (IsGPUAvailable())
+    {
+        TestModelSerializationDuringTraining(DeviceDescriptor::GPUDevice(0));
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CheckpointingInGPU)
+{
+    if (IsGPUAvailable())
+        TestCheckpointing(DeviceDescriptor::GPUDevice(0));
+}
+
+
+BOOST_AUTO_TEST_CASE(LegacyModelSavingInGPU)
+{
+    if (IsGPUAvailable())
+        TestLegacyModelSaving(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(CheckpointingWithStatefulNodesInGPU)
+{
+    if (IsGPUAvailable())
+        TestCheckpointingWithStatefulNodes(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

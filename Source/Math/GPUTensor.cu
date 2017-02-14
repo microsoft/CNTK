@@ -279,7 +279,7 @@ template<> __device__ float AggregateNeutralValue<float>(ElementWiseOperator op)
     case ElementWiseOperator::opSum:    return 0;
     case ElementWiseOperator::opLogSum: return -FLT_MAX; // log zero  --TODO: unify all those LZERO, LSMALL, LOGZERO, ::infty()
     case ElementWiseOperator::opMin:    return FLT_MAX;
-    case ElementWiseOperator::opMax:    return FLT_MIN;
+    case ElementWiseOperator::opMax:    return -FLT_MAX;
     default:                            return 0;        // error
     }
 };
@@ -291,7 +291,7 @@ template<> __device__ double AggregateNeutralValue<double>(ElementWiseOperator o
     case ElementWiseOperator::opSum:    return 0;
     case ElementWiseOperator::opLogSum: return -DBL_MAX; // log zero
     case ElementWiseOperator::opMin:    return DBL_MAX;
-    case ElementWiseOperator::opMax:    return DBL_MIN;
+    case ElementWiseOperator::opMax:    return -DBL_MAX;
     default:                            return 0;        // error
     }
 };
@@ -314,6 +314,9 @@ template<typename ReductionType, class ElemType> __device__ void Aggregate(Reduc
     case ElementWiseOperator::opMax:
         if (val > aggregate)
             aggregate = val;
+        break;
+    case ElementWiseOperator::opElementwiseProduct:
+        aggregate *= val;
         break;
     }
 };

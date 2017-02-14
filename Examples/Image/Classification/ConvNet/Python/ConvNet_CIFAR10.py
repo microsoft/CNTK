@@ -49,7 +49,7 @@ def convnet_cifar10(debug_output=False):
                 cntk.layers.Convolution2D((3,3), 64), 
                 cntk.layers.MaxPooling((3,3), (2,2))
             ]), 
-            cntk.layers.For(range(2), lambda i: [
+            cntk.models.For(range(2), lambda i: [
                 cntk.layers.Dense([256,128][i]), 
                 cntk.layers.Dropout(0.5)
             ]), 
@@ -97,7 +97,7 @@ def convnet_cifar10(debug_output=False):
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
         progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))
+        z.save(os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))
     
     # Load test data
     reader_test = create_reader(os.path.join(data_path, 'Test_cntk_text.txt'), False, input_dim, num_output_classes)

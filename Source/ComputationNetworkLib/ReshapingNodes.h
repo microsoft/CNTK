@@ -69,6 +69,8 @@ public:
         if (flags & CopyNodeFlags::copyNodeValue)
         {
             auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
+            node->m_beginDimParameter = m_beginDimParameter;
+            node->m_endDimParameter   = m_endDimParameter;
             node->m_replacementSampleLayout = m_replacementSampleLayout;
         }
     }
@@ -150,12 +152,16 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        ValueFor(fr).AssignValuesOf(InputRef(0).ValueFor(fr));
+        auto result     =             ValueFor(fr);
+        auto inputValue = InputRef(0).ValueFor(fr);
+        result.AssignValuesOf(inputValue.Reshaped(result.GetNumRows(), result.GetNumCols()));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        InputRef(inputIndex).GradientFor(fr) += GradientFor(fr);
+        auto gradient      =                      GradientFor(fr);
+        auto inputGradient = InputRef(inputIndex).GradientFor(fr);
+        inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
@@ -196,8 +202,16 @@ class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
     void ValidateOp();
 public:
     ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = 0) :
-        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/)
+        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_reduceAll(false), m_mean(false)
     {
+        // axis==-1 denotes reduction across all axes. 
+        // we achieve this by setting m_axis=0 and m_reduceAll = true
+        // later in forward/backward prop we use this to set the shape of the output  
+        if (axis == -1)
+        {
+            m_axis = 0;
+            m_reduceAll = true;
+        }
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
     }
@@ -220,6 +234,9 @@ public:
     std::wstring ReductionOpName() const { return m_operation; }
     int ReductionAxis() const { return m_axis; }
 
+    static const int  CNTKInternalIdxValueForAllStaticAxes = 0;
+    static const int  CNTKInternalIdxValueForAllAxes = -1;
+
 private:
     // operation attributes
     int m_axis;
@@ -228,14 +245,17 @@ private:
     // things cached during validation
     ElementWiseOperator m_reductionOp; // the reduction operation mapped to our internal opCode
     ElemType m_scale;                  // 1 or, for Mean, 1/number of elements we are reducing over
+    bool m_reduceAll;                  // true iff reducing over all axes (including dynamic ones)
+    bool m_mean;                       // true iff computing the mean
 };
 
 // -----------------------------------------------------------------------
 // ReconcileDynamicAxis (dataInput, layoutInput)
 // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
-// It does perform a runtime check to enforce that the layout of 'dataInput' is compatible (identical content) to that of 'layoutInput'.
-// This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
+// It does perform a runtime check to enforce that the layout of 'dataInput' is compatible to that of 'layoutInput'.
 // 'dataInput' can also be without MBLayout, so that we can implement OnesLike().
+// If 'dataInput' does not have a MBLayout, it broadcasts the dataInput along the MBLayout of the 'layoutInput'.
+// This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
 // TODO: also allow dataInput to have a dynamic axis of length 1, which will broadcast it per sequence. Trickier to do.
 // -----------------------------------------------------------------------
 
@@ -264,17 +284,36 @@ public:
 
         // copy the data from 'dataInput'
         // If Input(0) has no MBLayout, then this will broadcast.
-        size_t rank = DetermineElementwiseTensorRank();
-        ValueTensorFor(rank, fr).AssignCopyOf(InputRef(0).ValueTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout()))); // just propagate through
+        //ValueTensorFor(rank, fr).AssignCopyOf(InputRef(0).ValueTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout()))); // just propagate through
+        size_t rank = GetSampleLayout().GetRank();
+        auto result =             ValueTensorFor(rank, fr);
+        //auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).GetMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
+        // ^^ I don't think the conditional is needed here; it seems the related test in TensorSliceWithMBLayoutFor() can never be True. Can it?
+        auto input0 = InputRef(0).ValueTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout()));
+        result.AssignCopyOf(input0);
+        // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the tensor lib).
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0)
         {
-            // If Input(0) has no MBLayout, then this will reduce.
-            size_t rank = DetermineElementwiseTensorRank();
-            InputRef(0).GradientTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout())).AddCopyOf(GradientTensorFor(rank, fr));
+            size_t rank = GetSampleLayout().GetRank();
+            auto gradient      =                       GradientTensorFor(rank, fr);
+            //auto inputGradient = InputRef(inputIndex)->GradientTensorFor(rank, InputRef(inputIndex).GetMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
+            // ^^ same comment as in ForwardProp()
+            auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.WithLayout(InputRef(inputIndex).GetMBLayout()));
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))
+                MaskMissingGradientColumnsToZero(fr);
+
+            if (InputRef(inputIndex).ParentOverwritesGradient())
+                inputGradient.AssignCopyOf(gradient);
+            else
+                inputGradient.AddCopyOf(gradient);
+
+            // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
     }
 
@@ -549,6 +588,7 @@ public:
         {
             auto node = dynamic_pointer_cast<RowStackNode<ElemType>>(nodeP);
             node->m_firstIndices = m_firstIndices;
+            node->m_spliceDim = m_spliceDim; 
         }
     }
 

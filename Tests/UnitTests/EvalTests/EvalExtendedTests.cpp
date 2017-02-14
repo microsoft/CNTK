@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(CheckModelVersion)
     // This is a watch guard to make sure that any change in the model version will be detected. 
     // If you change the CNTK model version, please do not silently adapt this test. 
     // Instead, please do notify the CNTK release team (AlexeyO, Wolfgang, Zhou, Mark) to prepare required steps for the next release.
-    BOOST_REQUIRE_MESSAGE(CURRENT_CNTK_MODEL_VERSION == 18, "The model version has been changed. Before making changes in this test, please first notify the CNTK release team to prepare required steps in the next release. Thanks!\n");
+    BOOST_REQUIRE_MESSAGE(CURRENT_CNTK_MODEL_VERSION == 19, "The model version has been changed. Before making changes in this test, please first notify the CNTK release team to prepare required steps in the next release. Thanks!\n");
 }
 
 BOOST_AUTO_TEST_CASE(EvalConstantPlusTest)

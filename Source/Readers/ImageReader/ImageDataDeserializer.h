@@ -23,7 +23,7 @@ class ImageDataDeserializer : public ImageDeserializerBase
 public:
     // A new constructor to support new compositional configuration,
     // that allows composition of deserializers and transforms on inputs.
-    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
     // TODO: This constructor should be deprecated in the future. Compositional config should be used instead.
     explicit ImageDataDeserializer(const ConfigParameters& config);
@@ -49,6 +49,7 @@ private:
     {
         std::string m_path;
         size_t m_classId;
+        uint8_t m_copyId;
     };
 
     class ImageChunk;
@@ -58,7 +59,7 @@ private:
 
     // Not using nocase_compare here as it's not correct on Linux.
     using PathReaderMap = std::unordered_map<std::string, std::shared_ptr<ByteReader>>;
-    using ReaderSequenceMap = std::map<std::string, std::map<std::string, size_t>>;
+    using ReaderSequenceMap = std::map<std::string, std::map<std::string, std::vector<size_t>>>;
     void RegisterByteReader(size_t seqId, const std::string& path, PathReaderMap& knownReaders, ReaderSequenceMap& readerSequences, const std::string& expandDirectory);
     cv::Mat ReadImage(size_t seqId, const std::string& path, bool grayscale);
 

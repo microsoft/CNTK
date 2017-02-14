@@ -91,6 +91,7 @@ namespace CNTK
         { PrimitiveOpType::Unpooling, L"Unpooling" },
         { PrimitiveOpType::LambdaRank, L"LambdaRank" },
         { PrimitiveOpType::NDCG, L"NDCG" },
+        { PrimitiveOpType::NoOp, L"NoOp" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -184,6 +185,7 @@ namespace CNTK
         static const std::wstring InternalMeanReductionOpName;
         static const std::wstring InternalMaxReductionOpName;
         static const std::wstring InternalMinReductionOpName;
+        static const std::wstring InternalProdReductionOpName;
         static const std::wstring InternalAllReductionOpName;
         static const std::wstring InternalAnyReductionOpName;
 
@@ -706,13 +708,17 @@ namespace CNTK
         static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
         static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, PrimitiveFunction* owner, Dictionary& functionConfig);
 
-        virtual std::vector<Variable> InferOutputs() override;
+        void InferOutputs(std::vector<Variable>& outputs) override;
 
     private:
         PrimitiveOpType m_op;
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
-        static const size_t s_serializationVersion = 3;
+        // version 1: initial version.
+        // version 2: changed in 7af3a7c0e46cb12f873f1289400a9c5d86746662. TODO(n17s): add description.
+        // version 3: changed in df0ab4e58186738931968e806b61bc80d7b6e20e. TODO(pkrannen): add description.
+        // version 4: added extra parameter (#6) for the running mean sample count in BatchNormalization.
+        static const size_t s_serializationVersion = 5;
     };
 }

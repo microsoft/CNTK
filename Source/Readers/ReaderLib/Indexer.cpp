@@ -14,7 +14,7 @@ const static char ROW_DELIMITER = '\n';
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-Indexer::Indexer(FILE* file, bool isPrimary, bool skipSequenceIds, char streamPrefix, size_t chunkSize, size_t bufferSize) :
+Indexer::Indexer(FILE* file, bool primary, bool skipSequenceIds, char streamPrefix, size_t chunkSize, size_t bufferSize) :
     m_streamPrefix(streamPrefix),
     m_bufferSize(bufferSize),
     m_file(file),
@@ -26,7 +26,7 @@ Indexer::Indexer(FILE* file, bool isPrimary, bool skipSequenceIds, char streamPr
     m_pos(nullptr),
     m_done(false),
     m_hasSequenceIds(!skipSequenceIds),
-    m_index(chunkSize, isPrimary)
+    m_index(chunkSize, primary)
 {
     if (m_file == nullptr)
     {

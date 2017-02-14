@@ -262,7 +262,7 @@ DefTernaryOp(CopyIfEqual, a == b ? c : 0); // CopyIfEqual(a,b)(c) -- if a==b cop
 DefTernaryOp(Clip, c < a ? a : (c > b ? b : c)); // Clip(min,max)(data) => a=min, b=max, c=data
 DefTernaryOp(ElementwiseProductWithLogSumDerivative, a * Sigmoid(c - b));
 DefTernaryOp(ElementwiseProductWithExpOfDiff, a * exp_(b - c));
-
+DefTernaryOp(ElementwiseProductWithQuotient, a * b * OpReciprocal(c));
 
 #pragma pop_macro("DefTernaryOp")
 }}}

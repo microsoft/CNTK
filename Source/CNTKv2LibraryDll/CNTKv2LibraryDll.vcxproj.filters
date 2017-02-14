@@ -64,7 +64,6 @@
     </ClInclude>
     <ClInclude Include="BlockFunction.h" />
     <ClInclude Include="Variable.h" />
-    <ClInclude Include="TrainingSession.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="API">

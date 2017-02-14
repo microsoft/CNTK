@@ -1,4 +1,4 @@
-# ConvNet applied on CIFAR-10 dataset, with data augmentation (translation and flipping).
+# ResNet110 applied on CIFAR-10 dataset, with data augmentation (translation and flipping).
 
 command = TrainConvNet:Eval
 

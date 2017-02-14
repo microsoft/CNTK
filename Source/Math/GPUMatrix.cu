@@ -1414,6 +1414,31 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
+void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients,
+    GPUMatrix<ElemType>& functionValues,
+    ElemType learnRatePerSample,
+    ElemType momentum,
+    ElemType adaWeight,
+    ElemType adaMul,
+    bool unitGainMomentum)
+{
+    size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    {
+        RequireSize(gradients.GetNumRows(), numColsNeeded);
+        SetValue(0.0);
+    }
+
+    assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+
+    size_t n = gradients.GetNumElements();
+    int blocksPerGrid = (n + GridDim::maxThreadsPerBlock - 1) / GridDim::maxThreadsPerBlock;
+    _adam<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock >> >(n, gradients.Data(), Data(), Data() + n, functionValues.Data(),
+        learnRatePerSample, momentum, adaWeight, adaMul, unitGainMomentum);
+}
+
+template <class ElemType>
 ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients,
                                       ElemType RMS_GAMMA,
                                       ElemType RMS_WGT_INC,
@@ -1525,6 +1550,15 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
     if (numElements > GetSizeAllocated() ||                     // grow allocation
         (isForceResize && numElements != GetSizeAllocated()))   // shrink allocation if not growOnly
     {
+        // If the buffer exists, free it before allocate
+        if (Buffer())
+        {
+            if (cachedResize)
+                BufferManagement::GetManagerInstance(GetComputeDeviceId()).LogicalReleaseBuffer<ElemType>(Buffer(), GetSizeAllocated());
+            else
+                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
+        }
+
         // reallocate buffer if numElements > 0
         ElemType* pArray = nullptr;
         if (numElements > 0)
@@ -1533,15 +1567,6 @@ void GPUMatrix<ElemType>::Resize(const size_t numRows, const size_t numCols, boo
                 pArray = BufferManagement::GetManagerInstance(GetComputeDeviceId()).RequestBuffer<ElemType>(numElements);
             else
                 pArray = TracingGPUMemoryAllocator::Allocate<ElemType>(GetComputeDeviceId(), numRows, numCols);
-        }
-
-        // If the buffer exists, free it
-        if (Buffer())
-        {
-            if(cachedResize)
-                BufferManagement::GetManagerInstance(GetComputeDeviceId()).LogicalReleaseBuffer<ElemType>(Buffer(), GetSizeAllocated());
-            else
-                TracingGPUMemoryAllocator::Free<ElemType>(GetComputeDeviceId(), Buffer());
         }
 
         SetBuffer(pArray, numElements * sizeof(ElemType));
@@ -4464,7 +4489,8 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
     if (reductionOp != ElementWiseOperator::opSum    &&
         reductionOp != ElementWiseOperator::opLogSum &&
         reductionOp != ElementWiseOperator::opMin    &&
-        reductionOp != ElementWiseOperator::opMax)
+        reductionOp != ElementWiseOperator::opMax    &&
+        reductionOp != ElementWiseOperator::opElementwiseProduct)
         InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
 
     a.PrepareDevice();

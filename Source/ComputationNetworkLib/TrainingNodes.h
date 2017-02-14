@@ -2263,7 +2263,6 @@ private:
 // -----------------------------------------------------------------------
 template <class ElemType>
 class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public IFreezable,
-    //public NumInputs<6>, // the run_count can be omitted in unshared settings, for backcompat
     public IdentityTransformerNodeOnOneInput<0>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
@@ -2325,6 +2324,7 @@ public:
             fstream >> m_normTimeConst;
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
+            // BUGBUG: version 19 (beta11?) saved a boolean m_runCountValid here, which was an outdated version that should not have been merged. Needs to be fixed.
             if (modelVersion >= CNTK_MODEL_VERSION_13)
                 fstream >> m_runCountUntied;
             else
@@ -2389,6 +2389,8 @@ public:
             m_convertRunningVariancePending = true;
         }
     }
+
+    //void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override;
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
@@ -2483,7 +2485,7 @@ private: // time-constant conversions
         if (!isfinite(m_normTimeConst))                      // infinite
             return 0;                                        // no new contribution from current minibatch (infinitely long memory)
         else if (m_normTimeConst > 0)                        // not zero
-            return 1.0 - exp(-numSamples / m_normTimeConst); // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats
+            return -expm1(-numSamples / m_normTimeConst);    // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats
         else                                                 // zero
             return 1.0;                                      // don't use running stats at all
     }
@@ -2559,7 +2561,6 @@ public:
         m_gradientValid = false;
     }
 
-    // Note: This function assumes that inputIndex=0 is called before the others, unless the DATA input takes no gradient.
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // Must be in training mode.
@@ -2904,8 +2905,5 @@ private:
 
     bool m_convertRunningVariancePending;
 };
-
-template class BatchNormalizationNode<float>;
-template class BatchNormalizationNode<double>;
 
 }}}

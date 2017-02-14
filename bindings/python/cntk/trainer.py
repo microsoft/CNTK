@@ -17,8 +17,8 @@ using gradients of parameters w.r.t. a training objective.
 
 class Trainer(cntk_py.Trainer):
     '''
-    Trainer to train the specified ``model`` with the specified ``training_loss``
-    as the training criterion, the specified ``evaluation_function`` as the
+    Trainer to train the specified ``model`` according to a specified loss function
+    as the training criterion, a specified metric function as the
     criterion for evaluating the trained model's quality, and using the
     specified set of ``parameter_learners`` for updating the model's parameters
     using computed gradients.

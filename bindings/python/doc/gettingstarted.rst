@@ -1,6 +1,6 @@
 Getting started 
 ===============
-You can optionally try the `tutorials <http://notebooks.azure.com/library/cntkbeta2>`__ with pre-installed CNTK running in Azure hosted environment if you have not insalled the toolkit in your own machine.
+You can optionally try the `tutorials <https://notebooks.azure.com/cntk/libraries/tutorials>`__ with pre-installed CNTK running in Azure Notebook hosted environment (for free) if you have not installed the toolkit in your own machine.
 
 If you have installed CNTK on your machine, after going through the `installation steps <https://github.com/Microsoft/CNTK/wiki/CNTK-Binary-Download-and-Configuration>`__, 
 you can start using CNTK from Python right away (don't forget to ``activate`` your Python environment):
