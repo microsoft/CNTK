@@ -864,6 +864,78 @@ public:
     }
 }
 
+//
+// Converting Python list [(Variable, Variable)] to std::vector<std::pair<CNTK::Variable, CNTK::Variable>>
+//
+
+%typecheck(1000) std::vector<std::pair<CNTK::Variable, CNTK::Variable>> const& {
+    // '1000' is the typecheck precedence code. It means: check after basic
+    // types, but before arrays. See: http://www.swig.org/Doc1.3/Typemaps.html#Typemaps_overloading
+    $1 = PyList_Check($input) ? 1 : 0;
+}
+
+%typemap(in) std::vector<std::pair<CNTK::Variable, CNTK::Variable>> const& {
+     //in std::vector<std::pair<CNTK::Variable, CNTK::Variable>>
+     if (PyList_Check($input)) {
+        std::vector<std::pair<CNTK::Variable, CNTK::Variable>>* vec = new std::vector<std::pair<CNTK::Variable, CNTK::Variable>>();
+
+        PyObject *listIterator = PyObject_GetIter($input);
+        if (listIterator == NULL) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to std::pair<CNTK::Variable, CNTK::Variable>");
+        }
+
+        PyObject *listItem;
+        while ((listItem = PyIter_Next(listIterator))) {
+			PyObject *iterator = PyObject_GetIter(listItem);
+			if (iterator == NULL) {
+				SWIG_exception_fail(SWIG_ValueError, "cannot convert tuple element to CNTK::Variable");
+			}
+
+			std::vector<CNTK::Variable> varPair;
+			PyObject *item;
+			while ((item = PyIter_Next(iterator))) {
+				void *raw_var = 0 ;
+				int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__Variable,  SWIG_POINTER_IMPLICIT_CONV);
+				if (!SWIG_IsOK(res1)) {
+					SWIG_exception_fail(SWIG_ArgError(res1), "cannot convert tuple element to CNTK::Variable");
+				}
+				if (!raw_var) {
+					SWIG_exception_fail(SWIG_ValueError, "invalid null reference when converting a tuple element to CNTK::Variable");
+				}
+
+				CNTK::Variable* var = reinterpret_cast<CNTK::Variable*>(raw_var);
+				varPair.push_back(*var);
+
+				Py_DECREF(item);
+			}
+
+			if (varPair.size() != 2) {
+				SWIG_exception_fail(SWIG_ValueError, "tuple element has more than 2 elements");
+			}
+
+			vec->push_back({varPair[0], varPair[1]});
+
+			Py_DECREF(iterator);
+			Py_DECREF(listItem);
+        }
+
+        Py_DECREF(listIterator);
+
+        if (PyErr_Occurred()) {
+            SWIG_exception_fail(SWIG_ValueError, "cannot convert list element to std::pair<CNTK::Variable, CNTK::Variable>");
+        }
+
+        $1 = vec;
+
+     } else {
+         SWIG_exception(SWIG_ValueError, "list expected");
+     }
+}
+
+%typemap(freearg) std::vector<std::pair<CNTK::Variable, CNTK::Variable>> const& {
+    //freearg std::vector<std::pair<CNTK::Variable, CNTK::Variable>>
+    delete $1;
+}
 
 //
 // Converting Python dictionary {StreamInformation: (mbsize, Value)} to std::unordered_map<CNTK::StreamInformation, std::pair<size_t, size_t>>&
