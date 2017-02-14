@@ -6181,46 +6181,7 @@ struct TensorOpReduction<ElemType, OPFN, ReductionOp, N, -1>
     }
 };
 
-// perform loop over regular index k and reducing index m for N operands (counting the output)
-template <class ElemType, size_t N, int k>
-struct TensorArgOpIteration
-{
-    static inline void Loop(array<ElemType*, N> pointers,
-        const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
-        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
-    {
-        // non-scalar case: still nested result loops left
-        array<ptrdiff_t, N> strides;
-        for (size_t i = 0; i < N; i++) // N = a small constant, this will be unrolled
-            strides[i] = regularStrides[i][(size_t)k];
-        for (size_t dim = regularOpDims[(size_t)k]; dim-- > 0;)
-        {
-            // need to descend into one loop deeper
-            TensorArgOpIteration<ElemType, N, k - 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
-            // advance the pointers
-            for (size_t i = 0; i < N; i++)
-                pointers[i] += strides[i];
-        }
-    }
-};
-
-template <class ElemType, size_t N>
-struct TensorArgOpIteration<ElemType, N, -1>
-{
-    static inline void Loop(array<ElemType*, N> pointers,
-        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&,
-        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
-    {
-        // we are at element level for the result: perform the op (there may still be reduction)
-        auto val = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(pointers, reducingOpDims, reducingStrides, reductionOp);
-
-        auto* pout = pointers.back();
-        *pout = (ElemType) val.second;
-        return;
-    }
-};
-
-// perform loop over reduction index m
+// perform loop over reduction index m, while keeping track of the number of elements and their corresponding indices.
 // This function is declared inside a wrapper struct to allow partial specialization (m = -1).
 template <class ElemType, size_t N, int m>
 struct TensorArgOpReduction
@@ -6298,7 +6259,7 @@ template <class ElemType, size_t N>
 struct TensorArgOpReduction<ElemType, N, -1>
 {
     static inline ElemType Loop(array<ElemType*, N> pointers,
-                                const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&, ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&, ElementWiseOperator reductionOp, size_t& counter, size_t& index)
     {
         counter++;
         return *pointers[0]; // finally we are doing some work!!!
@@ -6407,6 +6368,47 @@ struct TensorOpIteration<ElemType, OPFN, ReductionOp, N, vectorizable, m, -1>
             val += beta * *pout;
         // save
         *pout = val;
+        return;
+    }
+};
+
+// perform loop over regular index k and reducing index m for N operands (counting the output), the difference
+// between TensorOpIteration and TensorArgOpIteration, is that the latter store the index of the result, instead of 
+// the result. The reason that they aren't combined is because of performance.
+template <class ElemType, size_t N, int k>
+struct TensorArgOpIteration
+{
+    static inline void Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
+        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
+    {
+        // non-scalar case: still nested result loops left
+        array<ptrdiff_t, N> strides;
+        for (size_t i = 0; i < N; i++) // N = a small constant, this will be unrolled
+            strides[i] = regularStrides[i][(size_t)k];
+        for (size_t dim = regularOpDims[(size_t)k]; dim-- > 0;)
+        {
+            // need to descend into one loop deeper
+            TensorArgOpIteration<ElemType, N, k - 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+            // advance the pointers
+            for (size_t i = 0; i < N; i++)
+                pointers[i] += strides[i];
+        }
+    }
+};
+
+template <class ElemType, size_t N>
+struct TensorArgOpIteration<ElemType, N, -1>
+{
+    static inline void Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&,
+        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
+    {
+        // we are at element level for the result: perform the op (there may still be reduction)
+        auto val = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(pointers, reducingOpDims, reducingStrides, reductionOp);
+
+        auto* pout = pointers.back();
+        *pout = (ElemType)val.second;
         return;
     }
 };

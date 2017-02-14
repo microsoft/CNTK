@@ -2442,10 +2442,10 @@ def argmin(x, axis=None, name=''):
         >>> # create 3x2 matrix in a sequence of length 1 in a batch of one sample
         >>> data = [[10, 20],[30, 40],[50, 60]]
 
-        >>> C.argmax(data, 0).eval()
+        >>> C.argmin(data, 0).eval()
         array([[ 0.,  0.]], dtype=float32)
 
-        >>> C.argmax(data, 1).eval()
+        >>> C.argmin(data, 1).eval()
         array([[ 0.],
                [ 0.],
                [ 0.]], dtype=float32)
