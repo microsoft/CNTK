@@ -96,9 +96,17 @@ template <class ElemType>
     auto input  = InputRef(0).   ValueTensorFor(rank, fr);
     auto result = !m_reduceAll ? ValueTensorFor(rank, fr) : TensorView<ElemType>(ValuePtr(), TensorShape(1));
 
-    // the actual operation is a Copy with reduction, where the magic is in the reduction op
-    // For "Mean", m_scale is 1/#elements, and 1 otherwise.
-    result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+    switch (m_reductionOp)
+    {
+    case ElementWiseOperator::opArgmin:
+    case ElementWiseOperator::opArgmax:
+        result.DoArgReductionOpOf(input, m_reductionOp);
+        break;
+    default:
+        // the actual operation is a Copy with reduction, where the magic is in the reduction op
+        // For "Mean", m_scale is 1/#elements, and 1 otherwise.
+        result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+    }
 }
 
 template <class ElemType>
@@ -129,38 +137,42 @@ template <class ElemType>
             // df / dx = exp(x)/exp(f)
             //         = exp(x – f)
             sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
-    }
+        }
         break;
 
     case ElementWiseOperator::opMin:
     case ElementWiseOperator::opMax:
-    {
-        auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
-        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+        {
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
-        // POTENTIAL PROBLEM:
-        // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
-        // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
-        // In these cases there is no correct gradient.The question is if this could lead to any problems.
-        // Let's look at two scenarios where this might happen:
-        //
-        // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
-        //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
-        //
-        // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
-        //
-        // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
-        // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
-        sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+            // POTENTIAL PROBLEM:
+            // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
+            // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
+            // In these cases there is no correct gradient.The question is if this could lead to any problems.
+            // Let's look at two scenarios where this might happen:
+            //
+            // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
+            //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
+            //
+            // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
+            //
+            // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
+            // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
+            sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+        }
         break;
-    }
-    case ElementWiseOperator::opElementwiseProduct:
+   case ElementWiseOperator::opElementwiseProduct:
     {        
         auto input  = InputRef(inputIndex).ValueTensorFor(rank, fr);
         auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
         sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
         break;
     }
+    case ElementWiseOperator::opArgmin:
+    case ElementWiseOperator::opArgmax:
+        break;
+
         // more coming
     }
 }
@@ -175,6 +187,8 @@ template <class ElemType>
     case ElementWiseOperator::opMin:                   return true;
     case ElementWiseOperator::opMax:                   return true;
     case ElementWiseOperator::opElementwiseProduct:    return true;
+    case ElementWiseOperator::opArgmin:                return false;
+    case ElementWiseOperator::opArgmax:                return false;
     }
     LogicError("Should not get here.");
 }
@@ -189,6 +203,8 @@ template <class ElemType>
     case ElementWiseOperator::opMin:                   return true;
     case ElementWiseOperator::opMax:                   return true;
     case ElementWiseOperator::opElementwiseProduct:    return true;
+    case ElementWiseOperator::opArgmin:                return false;
+    case ElementWiseOperator::opArgmax:                return false;
     }
     LogicError("Should not get here.");
 }
@@ -207,9 +223,11 @@ void ReduceElementsNode<ElemType>::ValidateOp()
     else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
     else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
     else if (m_operation == L"Prod")   m_reductionOp = ElementWiseOperator::opElementwiseProduct;
+    else if (m_operation == L"Argmin") m_reductionOp = ElementWiseOperator::opArgmin;
+    else if (m_operation == L"Argmax") m_reductionOp = ElementWiseOperator::opArgmax;
 
     // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min'.", NodeDescription().c_str(), m_operation.c_str());
+    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min', 'Prod', 'Argmax', 'Argmin'.", NodeDescription().c_str(), m_operation.c_str());
 }
 
 template <class ElemType>
