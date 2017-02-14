@@ -7,6 +7,11 @@ from easydict import EasyDict
 from fastRCNN.nms import nms as nmsPython
 from builtins import range
 
+available_font = "arial.ttf"
+try:
+    dummy = ImageFont.truetype(available_font, 16)
+except:
+    available_font = "FreeMono.ttf"
 
 ####################################
 # Region-of-interest

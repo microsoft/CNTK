@@ -13,10 +13,7 @@ import scipy.sparse
 from builtins import range
 
 import sys
-if sys.version_info[0] < 3: 
-    from utils2_win64.cython_bbox import bbox_overlaps
-else:
-    from .utils3_win64.cython_bbox import bbox_overlaps
+from .utils.cython_bbox import bbox_overlaps
 
 class imdb(object):
     """Image database."""
