@@ -97,7 +97,8 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
     over_function = _sanitize_function(over_function)
 
     # get signature of cell
-    *prev_state_args, _ = over_function.signature
+    #*prev_state_args, _ = over_function.signature  # Python 3
+    prev_state_args = over_function.signature[0:-1]
 
     if len(over_function.outputs) != len(prev_state_args):
         # TODO: better say right here what the requirement is!
@@ -161,7 +162,8 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
     over_function = _sanitize_function(over_function)
 
     # get signature of cell
-    *prev_state_args, _ = over_function.signature
+    #*prev_state_args, _ = over_function.signature  # Python 3
+    prev_state_args = over_function.signature[0:-1]
 
     if len(over_function.outputs) != len(prev_state_args):
         raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
