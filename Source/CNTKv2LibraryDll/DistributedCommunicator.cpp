@@ -270,7 +270,6 @@ namespace CNTK
     void MPICommunicatorImpl::AggregateInPlace(
         const std::vector<NDArrayViewPtr>& values,
         const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers)
-        // size_t packThresholdSize = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
     {
         auto device = GetNonCPUDevice(values);
         if (device.Type() != DeviceKind::CPU)
@@ -473,8 +472,6 @@ namespace CNTK
                     auto gradient = GetWritableMatrix<float>(outputValues[i]);
                     gradient->AssignValuesOf(m_aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
                     offset += gradient->GetNumElements();
-                    // ::CNTK::NDShape shapet{ gradient->GetNumElements() };
-                    // NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, gradient->Data(), gradient->GetNumElements(), outputValues[i]->Device());
                 }
             }
             else
@@ -484,8 +481,6 @@ namespace CNTK
                     auto gradient = GetWritableMatrix<double>(outputValues[i]);
                     gradient->AssignValuesOf(m_aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
                     offset += gradient->GetNumElements();
-                    // ::CNTK::NDShape shapet{ gradient->GetNumElements() };
-                    // NDArrayViewPtr datat = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(outputValues[i]->GetDataType(), shapet, gradient->Data(), gradient->GetNumElements(), outputValues[i]->Device());
                 }
             }
         }

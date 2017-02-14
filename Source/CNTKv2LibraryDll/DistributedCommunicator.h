@@ -82,8 +82,6 @@ namespace CNTK
         // TODO: these two are always parallel, merge them together?
         std::vector<std::shared_ptr<Microsoft::MSR::CNTK::GPUDataTransferer>> m_gpuDataTransferers;
 
-        size_t m_packThresholdSizeInBytes;
-
     protected:
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
         {

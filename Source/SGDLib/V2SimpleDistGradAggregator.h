@@ -9,7 +9,6 @@
 #include <future>
 
 #undef _SCL_SECURE_NO_WARNINGS
-#include "Constants.h"
 #include "CNTKLibrary.h"
 #include "IDistGradAggregator.h"
 #include "TimerUtility.h"
@@ -27,9 +26,9 @@ class V2SimpleDistGradAggregator : public IDistGradAggregator<ElemType>
     NcclComm m_nccl;
 
 public:
-    V2SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, ::CNTK::DistributedCommunicatorPtr communicator, size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
+    V2SimpleDistGradAggregator(const MPIWrapperPtr& mpi, bool useAsyncAggregation, int deviceId, int syncStatsTrace, ::CNTK::DistributedCommunicatorPtr communicator)
         : IDistGradAggregator<ElemType>(mpi), m_useAsyncAggregation(useAsyncAggregation), m_initialized(false), m_bufferedGradHeader(nullptr), m_syncStatsTrace(syncStatsTrace), m_iterationCount(0),
-        m_communicator(communicator), m_nccl(deviceId, mpi), m_packThresholdSizeInBytes(packThresholdSizeInBytes)
+        m_communicator(communicator), m_nccl(deviceId, mpi)
     {}
 
     ~V2SimpleDistGradAggregator()
@@ -257,10 +256,6 @@ private:
     // Buffered gradients that we asynchronously aggregate
     std::unordered_map<Matrix<ElemType>*, std::unique_ptr<Matrix<ElemType>>> m_bufferedGradients;
     DistGradHeader* m_bufferedGradHeader;
-
-    // Packing small gradients (size not larger than threshold size) into a continous buffer to reduce MPI calls.
-    // Threshold size to pack a gradient into the continous buffer, default 32KB (tunable by define "packThresholdSizeInKB=[value]")
-    size_t m_packThresholdSizeInBytes;
 
     // Only used for controlling frequency of measuring/showing gradient aggregation perf stats
     int m_syncStatsTrace;

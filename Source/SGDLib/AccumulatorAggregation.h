@@ -53,8 +53,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
             false /*useAsyncAggregation*/,
             net->GetDeviceId(),
             0 /*syncStatsTrace*/,
-            ::CNTK::MPICommunicator(),
-            packThresholdSizeInBytes);
+            ::CNTK::MPICommunicator());
     else
         distGradAgg = make_shared<SimpleDistGradAggregator<ElemType>>(
             mpi,
