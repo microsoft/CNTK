@@ -61,6 +61,7 @@ class Function(cntk_py.Function):
     _placeholders_under_construction = set()
 
     # helper to get the parameter names and annotations of a Python function
+    @staticmethod
     def _get_param_names(f):
         # Note we only use non-optional params (assume any optional param is not specified).
         # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
@@ -84,6 +85,7 @@ class Function(cntk_py.Function):
     # An input_variable is created if the parameter is annotated with a Tensor(...) type.
     # In this case, CNTK will immediately trigger type inference.
     # Unannotated parameters will yield placeholder_variables instead.
+    @staticmethod
     def _make_arg_variable(name, annotations):
         from .. import placeholder_variable, input_variable
         from .variables import Variable
@@ -102,6 +104,7 @@ class Function(cntk_py.Function):
     #   @Function
     #   def f(x:Tensor(13)): return x * x
     # The latter form will create a CNTK Function over Inputs; the former over Placeholders.
+    @staticmethod
     def to_Function(f, members = {}, make_block=False, op_name=None, name=None):
         from ..default_options import default_options
         # Parameter() creation inside code of a Function def is forbidden. Setting 'pure' blocks it in Parameter().

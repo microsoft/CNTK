@@ -694,7 +694,11 @@ namespace CNTK
                                         AsStringForErrorReporting(paramShape).c_str(),
                                         AsStringForErrorReporting(operands[1].Shape()).c_str());
                 }
-                else if (paramShape != NDShape()) // last arguments is count, must be a scalar
+                else if (paramShape != NDShape()
+#if 1
+                         && paramShape != NDShape({ 1 })  // a beta version wrote it as 1-dim vectors instead
+#endif
+                         ) // last arguments is count, must be a scalar
                 {
                     InvalidArgument("BatchNormalization: Input[%d] must be a scalar.", (int)i);
                 }

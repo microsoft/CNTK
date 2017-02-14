@@ -2308,7 +2308,11 @@ public:
         fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
         RunCount();                   // cache m_runCountUntied, so that someone who inspects the file sees something meaningful (as an FYI)
+#if CURRENT_CNTK_MODEL_VERSION == CNTK_MODEL_VERSION_19
+        fstream << (bool)(m_runCountUntied == 0);  // a temp version that saved a flag instead (beta11)
+#else
         fstream << m_runCountUntied;  // this is really saved as a FYI and for optimizing 0-checks; the primary storage for this value is in the shared Parameter
+#endif
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
     }
