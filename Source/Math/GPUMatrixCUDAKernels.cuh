@@ -5206,45 +5206,45 @@ __global__ void _cosSimDeriv(
     const CUDA_LONG numA, // Number of vectors in A
     const CUDA_LONG numB, // Number of vectors in B
     const bool isColWise
-    )
+)
 {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    CUDA_LONG vector_id = blockIdx.x;
+    CUDA_LONG element_id = blockIdx.y*blockDim.x + threadIdx.x;
+    if (!isColWise)
+    {
+        vector_id = element_id;
+        element_id = blockIdx.x;
+    }
+
     CUDA_LONG N = numA > numB ? numA : numB;
-    if (id >= N)
+    if (vector_id >= N || element_id >= vectorSize)
         return;
     CUDA_LONG indexA = 0;
     CUDA_LONG indexB = 0;
-    CUDA_LONG idA = id%numA;
-    CUDA_LONG idB = id%numB;
-    ElemType rightFactor = simDeriv[id] * sim[id]* rnom2A[idA]* rnom2A[idA];
-    ElemType leftFactor = simDeriv[id] * rnom2A[idA] * rnom2B[idB];
+    CUDA_LONG index = 0;
+    CUDA_LONG idA = vector_id%numA;
+    CUDA_LONG idB = vector_id%numB;
+    ElemType rightFactor = simDeriv[vector_id] * sim[vector_id] * rnom2A[idA] * rnom2A[idA];
+    ElemType leftFactor = simDeriv[vector_id] * rnom2A[idA] * rnom2B[idB];
     if (isColWise)
     {
-        indexA = idA*vectorSize;
-        indexB = idB*vectorSize;
-        for (CUDA_LONG i = 0; i < vectorSize; ++i)
-        {
-            deriv[indexA] += leftFactor*inputB[indexB] - rightFactor*inputA[indexA];
-            indexA++;
-            indexB++;
-        }
+        indexA = idA*vectorSize + element_id;
+        indexB = idB*vectorSize + element_id;
+        index = vector_id*vectorSize + element_id;
     }
     else
     {
         // TODO: Due to the memory storage of matrix is column major, this mode is much faster in GPU
-        indexA = idA;
-        indexB = idB;
-        for (CUDA_LONG i = 0; i < vectorSize; ++i)
-        {
-            deriv[indexA] += leftFactor*inputB[indexB] - rightFactor*inputA[indexA];
-            indexA += vectorSize;
-            indexB += vectorSize;
-        }
+        indexA = idA + element_id*numA;
+        indexB = idB + element_id*numB;
+        index = vector_id + vector_id*N;
     }
+
+    deriv[index] += leftFactor*inputB[indexB] - rightFactor*inputA[indexA];
 }
 
 template <class ElemType>
-__global__ void _cosSim(
+__global__ void _cosSim2(
     ElemType* c,
     ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
     ElemType* rnorm2B,           // 1/sqrt(Sum(B^2))
@@ -5288,8 +5288,8 @@ __global__ void _cosSim(
             sum += a[indexA] * b[indexB];
             squareSumA += a[indexA] * a[indexA];
             squareSumB += b[indexB] * b[indexB];
-            indexA += vectorSize;
-            indexB += vectorSize;
+            indexA += numA;
+            indexB += numB;
         }
     }
 
@@ -5305,6 +5305,169 @@ __global__ void _cosSim(
     }
 
     c[id] = (ElemType)(sum*rnorm2A[idA] * rnorm2B[idB]);
+}
+
+template <class ElemType>
+__global__ void _cosSimColWise(
+    ElemType* c,
+    ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
+    ElemType* rnorm2B,           // 1/sqrt(Sum(B^2))
+    const ElemType* a,
+    const ElemType* b,
+    const CUDA_LONG vectorSize, // size of vector
+    const CUDA_LONG numA, // Number of vectors in A
+    const CUDA_LONG numB) // Number of vectors in B
+{
+    CUDA_LONG id = blockIdx.x;
+    CUDA_LONG N = numA > numB ? numA : numB;
+    //TODO: this path should never be actived, else there will be dead lock
+    if (id >= N || threadIdx.x >= vectorSize)
+        return;
+    extern __shared__ char sharePtr[];
+    ElemType* dot = (ElemType*)sharePtr;
+    ElemType* aSquare = dot + blockDim.x;
+    ElemType* bSquare = aSquare + blockDim.x;
+
+    ElemType sum = 0;
+    CUDA_LONG indexA = 0;
+    CUDA_LONG indexB = 0;
+    CUDA_LONG idA = id%numA;
+    CUDA_LONG idB = id%numB;
+    ElemType squareSumA = 0;
+    ElemType squareSumB = 0;
+
+    indexA = idA*vectorSize + threadIdx.x;
+    indexB = idB*vectorSize + threadIdx.x;
+    for (CUDA_LONG i = threadIdx.x; i < vectorSize; )
+    {
+        sum += a[indexA] * b[indexB];
+        squareSumA += a[indexA] * a[indexA];
+        squareSumB += b[indexB] * b[indexB];
+        indexA += blockDim.x;
+        indexB += blockDim.x;
+        i += blockDim.x;
+    }
+
+    dot[threadIdx.x] = sum;
+    aSquare[threadIdx.x] = squareSumA;
+    bSquare[threadIdx.x] = squareSumB;
+    __syncthreads();
+
+    // DO aggregation
+    int nTotalThreads = blockDim.x;	// Total number of active threads
+
+    while (nTotalThreads > 1)
+    {
+        int halfPoint = (nTotalThreads >> 1);	// divide by two
+        nTotalThreads = ((nTotalThreads+1) >> 1);	// divide by two.
+        // only the first half of the threads will be active.
+        if (threadIdx.x < halfPoint)
+        {
+            // Get the shared value stored by another thread
+            // when calculating the average, sum and divide
+            dot[threadIdx.x] += dot[threadIdx.x + nTotalThreads];
+            aSquare[threadIdx.x] += aSquare[threadIdx.x + nTotalThreads];
+            bSquare[threadIdx.x] += bSquare[threadIdx.x + nTotalThreads];
+        }
+        __syncthreads();
+    }
+
+    if (threadIdx.x == 0)
+    {
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            rnorm2A[idA] = rsqrt(aSquare[0] + 1e-8);
+            rnorm2B[idB] = rsqrt(bSquare[0] + 1e-8);
+        }
+        else
+        {
+            rnorm2A[idA] = rsqrtf(aSquare[0] + 1e-8);
+            rnorm2B[idB] = rsqrtf(bSquare[0] + 1e-8);
+        }
+
+        c[id] = (ElemType)(dot[0]*rnorm2A[idA] * rnorm2B[idB]);
+    }
+}
+
+template <class ElemType>
+__global__ void _cosSimRowWise(
+    ElemType* c,
+    ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
+    ElemType* rnorm2B,           // 1/sqrt(Sum(B^2))
+    const ElemType* a,
+    const ElemType* b,
+    const CUDA_LONG vectorSize, // size of vector
+    const CUDA_LONG numA, // Number of vectors in A
+    const CUDA_LONG numB) // Number of vectors in B
+{
+    CUDA_LONG id = blockIdx.x;
+    CUDA_LONG N = numA > numB ? numA : numB;
+    //TODO: this path should never be actived, else there will be dead lock
+    if (id >= N || threadIdx.x >= vectorSize)
+        return;
+    extern __shared__ char sharePtr[];
+    ElemType* dot = (ElemType*)sharePtr;
+    ElemType* aSquare = dot + blockDim.x;
+    ElemType* bSquare = aSquare + blockDim.x;
+
+    ElemType sum = 0;
+    CUDA_LONG indexA = 0;
+    CUDA_LONG indexB = 0;
+    CUDA_LONG idA = id%numA;
+    CUDA_LONG idB = id%numB;
+    ElemType squareSumA = 0;
+    ElemType squareSumB = 0;
+    for (CUDA_LONG i = threadIdx.x; i < vectorSize; )
+    {
+        indexA = idA + i*numA;
+        indexB = idB + i*numB;
+        sum += a[indexA] * b[indexB];
+        squareSumA += a[indexA] * a[indexA];
+        squareSumB += b[indexB] * b[indexB];
+        i += blockDim.x;
+    }
+
+    dot[threadIdx.x] = sum;
+    aSquare[threadIdx.x] = squareSumA;
+    bSquare[threadIdx.x] = squareSumB;
+    __syncthreads();
+
+    // DO aggregation
+    int nTotalThreads = blockDim.x;	// Total number of active threads
+
+    while (nTotalThreads > 1)
+    {
+        int halfPoint = (nTotalThreads >> 1);	// divide by two
+        nTotalThreads = ((nTotalThreads + 1) >> 1);	// divide by two.
+                                                    // only the first half of the threads will be active.
+        if (threadIdx.x < halfPoint)
+        {
+            // Get the shared value stored by another thread
+            // when calculating the average, sum and divide
+            dot[threadIdx.x] += dot[threadIdx.x + nTotalThreads];
+            aSquare[threadIdx.x] += aSquare[threadIdx.x + nTotalThreads];
+            bSquare[threadIdx.x] += bSquare[threadIdx.x + nTotalThreads];
+        }
+        __syncthreads();
+    }
+
+    if (threadIdx.x == 0)
+    {
+
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            rnorm2A[idA] = rsqrt(aSquare[0] + 1e-8);
+            rnorm2B[idB] = rsqrt(bSquare[0] + 1e-8);
+        }
+        else
+        {
+            rnorm2A[idA] = rsqrtf(aSquare[0] + 1e-8);
+            rnorm2B[idB] = rsqrtf(bSquare[0] + 1e-8);
+        }
+
+        c[id] = (ElemType)(dot[0] * rnorm2A[idA] * rnorm2B[idB]);
+    }
 }
 }
 }

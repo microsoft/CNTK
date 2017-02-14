@@ -4514,28 +4514,25 @@ void GPUMatrix<ElemType>::CosSimilarityDeriv(const GPUMatrix<ElemType>& a, const
 
     derivA.PrepareDevice();
 
-    int blocksPerGrid = 0;
     int vectorSize = m;
-    int elements = l;
     int numA = n;
     int numB = g;
-    if (isColWise) // col-wise
-    {
-        derivA.RequireSize(vectorSize, numA);
-    }
-    else
+    if (!isColWise) // col-wise
     {
         numA = m;
         numB = f;
         vectorSize = n;
-        elements = k;
-        derivA.RequireSize(numA, vectorSize);
     }
 
-    blocksPerGrid = (int)ceil(1.0 * elements / GridDim::maxThreadsPerBlock);
-
+    // Due to the column major storage, make row direction to align with the threads direction to speed memory access
+    int maxWidth = max(m, k);
+    int maxHight = max(n, l);
+    int numOfThreadsPerBlock = min(GridDim::maxThreadsPerBlock, maxWidth);
+    int blockDimY = (maxWidth + numOfThreadsPerBlock -1) / numOfThreadsPerBlock;
+    int blockDimX = maxHight;
+    dim3 blocksPerGrid(blockDimX, blockDimY);
     SyncGuard syncGuard;
-    _cosSimDeriv<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(derivA.Data(), o.Data(), derivO.Data(),
+    _cosSimDeriv<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, 0, t_stream >> >(derivA.Data(), o.Data(), derivO.Data(),
         a.Data(), rnorm2A.Data(), b.Data(), rnorm2B.Data(), vectorSize, numA, numB, isColWise);
 }
 
@@ -4574,28 +4571,39 @@ void GPUMatrix<ElemType>::CosSimilarity(const GPUMatrix<ElemType>& a, const GPUM
     pb.PrepareDevice();
     int blocksPerGrid = 0;
     int vectorSize = m;
-    int elements = l;
+    int bElements = l;
     int aElements = n;
+    int shareMem = 0;
     if (isColWise) // col-wise
     {
         c.RequireSize(1, l);
         pa.RequireSize(1, n);
         pb.RequireSize(1, l);
-        blocksPerGrid = (int)ceil(1.0 * elements / GridDim::maxThreadsPerBlock);
     }
     else
     {
         vectorSize = n;
-        elements = k;
+        bElements = k;
         aElements = m;
         c.RequireSize(k, 1);
         pa.RequireSize(m, 1);
         pb.RequireSize(k, 1);
-        blocksPerGrid = (int)ceil(1.0 * elements / GridDim::maxThreadsPerBlock);
     }
 
+    int outElements = aElements > bElements ? aElements : bElements;
+    blocksPerGrid = outElements;
+    int numOfThreadsPerBlock = min(GridDim::maxThreadsPerBlock, vectorSize);
+    shareMem = numOfThreadsPerBlock * 3 * sizeof(ElemType);
+
     SyncGuard syncGuard;
-    _cosSim<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(c.Data(), pa.Data(), pb.Data(), a.Data(), b.Data(), vectorSize, aElements, elements, isColWise);
+    if (isColWise)
+    {
+        _cosSimColWise<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, shareMem, t_stream >> > (c.Data(), pa.Data(), pb.Data(), a.Data(), b.Data(), vectorSize, aElements, bElements);
+    }
+    else
+    {
+        _cosSimRowWise<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, shareMem, t_stream >> > (c.Data(), pa.Data(), pb.Data(), a.Data(), b.Data(), vectorSize, aElements, bElements);
+    }
 }
 
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides

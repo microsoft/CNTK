@@ -963,7 +963,7 @@ class CosDistanceNode: public ComputationNode<ElemType>, public NumInputs<2>
 public:
     DeclareConstructorFromConfigWithNumInputs(CosDistanceNode);
     CosDistanceNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name)
+        : Base(deviceId, name), m_expandedGrad2(deviceId)
     {
     }
 
@@ -981,8 +981,24 @@ public:
 
             Matrix<ElemType> sliceOutputValue = ValueFor(fr);
             Matrix<ElemType> sliceNodeGradient = GradientFor(fr);
-            Matrix<ElemType>::CosSimilarityDeriv(sliceInputValueA, *m_rnorm2[inputIndex], sliceInputValueB, *m_rnorm2[1-inputIndex], 
-                sliceOutputValue, sliceNodeGradient, sliceInputGradientA, true);
+            if (inputIndex == 0)
+            {
+                m_expandedGrad2.Resize(sliceInputValueB);
+                m_expandedGrad2.SetValue(0);
+                Matrix<ElemType>::CosSimilarityDeriv(sliceInputValueA, *m_rnorm2[inputIndex], sliceInputValueB, *m_rnorm2[1 - inputIndex],
+                    sliceOutputValue, sliceNodeGradient, m_expandedGrad2, true);
+                for (int i = 0; i < mb1->GetNumTimeSteps(); i++)
+                {
+                    auto subFr = FrameRange(mb1, i);
+                    auto subgrad = DataWithMBLayoutFor(m_expandedGrad2, subFr, mb1);
+                    sliceInputGradientA += subgrad;
+                }
+            }
+            else
+            {
+                Matrix<ElemType>::CosSimilarityDeriv(sliceInputValueA, *m_rnorm2[inputIndex], sliceInputValueB, *m_rnorm2[1 - inputIndex],
+                    sliceOutputValue, sliceNodeGradient, sliceInputGradientA, true);
+            }
         }
         else
         {
@@ -1066,6 +1082,7 @@ public:
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
             node->m_rnorm2[0]->SetValue(*m_rnorm2[0]);
             node->m_rnorm2[1]->SetValue(*m_rnorm2[1]);
+            node->m_expandedGrad->SetValue(*m_expandedGrad);
         }
     }
     // request matrices needed to do node function value evaluation
@@ -1080,6 +1097,7 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_expandedGrad, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1088,11 +1106,15 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_rnorm2[0], matrixPool);
         ReleaseMatrixToPool(m_rnorm2[1], matrixPool);
+        ReleaseMatrixToPool(m_expandedGrad, matrixPool);
     }
 
 private:
     // invNorm nodes tranfer data between ForwardProp and BackpropTo
     shared_ptr<Matrix<ElemType>> m_rnorm2[2];
+    shared_ptr<Matrix<ElemType>> m_expandedGrad;
+
+    Matrix<ElemType> m_expandedGrad2;
 };
 
 template class CosDistanceNode<float>;
