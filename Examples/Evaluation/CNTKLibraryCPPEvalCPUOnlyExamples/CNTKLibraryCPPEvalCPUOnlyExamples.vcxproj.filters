@@ -15,14 +15,14 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="CNTKLibraryCPPEvalExamplesTest.cpp">
+    <ClCompile Include="CNTKLibraryCPPEvalCPUOnlyExamples.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="EvalMultithreads.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-	<ClCompile Include="Common.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
 </Project>
