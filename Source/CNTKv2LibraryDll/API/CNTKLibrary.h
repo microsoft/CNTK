@@ -408,6 +408,7 @@ namespace CNTK
         friend class MPICommunicatorImpl;
         friend class BlockMomentumDistributedLearner;
         friend class Internal::VariableResolver;
+        friend class Trainer;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
@@ -4116,6 +4117,26 @@ namespace CNTK
         size_t PreviousMinibatchSampleCount() const { return m_prevMinibatchNumSamples; }
 
         ///
+        /// Returns the average training loss per sample for accumulated training loss.
+        ///
+        CNTK_API double AccumulatedLossAverage() const;
+
+        ///
+        /// Returns the average evaluation criterion value per sample for accumulated eval criterion.
+        ///
+        CNTK_API double AccumulatedEvaluationAverage() const;
+
+        ///
+        /// Returns the number of samples accumulated
+        ///
+        size_t AccumulatedSampleCount() const { return m_accumulatedNumSamples; }
+
+        ///
+        /// Reset the accumulation
+        ///
+        CNTK_API void ResetAccumulation();
+
+        ///
         /// Learners associated with this Trainer for updating the model's parameters using computed gradients.
         ///
         CNTK_API const std::vector<LearnerPtr>& ParameterLearners() const;
@@ -4149,6 +4170,8 @@ namespace CNTK
 
         void Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState);
 
+        void AccumulatePrevMinibatch(const DeviceDescriptor& computeDevice);
+
         FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
         FunctionPtr m_lossFunction;
@@ -4166,6 +4189,10 @@ namespace CNTK
         size_t   m_prevMinibatchNumSamples;
         ValuePtr m_prevMinibatchAggregateTrainingLossValue;
         ValuePtr m_prevMinibatchAggregateEvalCriterionValue;
+
+        size_t   m_accumulatedNumSamples;
+        ValuePtr m_accumulatedTrainingLossValue;
+        ValuePtr m_accumulatedEvalCriterionValue;
     };
 
     ///

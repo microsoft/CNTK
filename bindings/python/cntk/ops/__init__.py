@@ -844,8 +844,57 @@ def less_equal(left, right, name=''):
 # linear ops
 ##########################################################################
 
+# This is a helper to wrap associative operations like plus(left, right) such
+# that they accept multiple arguments.
+def associative_multi_arg(f):
+    '''
+    The output of this operation is the result of an operation (`plus`, `log_add_exp`, `element_times`, `element_max`, `element_min`)
+    of two or more input tensors. Broadcasting is supported.
+
+    Example:
+        >>> C.plus([1, 2, 3], [4, 5, 6]).eval()
+        array([ 5.,  7.,  9.], dtype=float32)
+
+        >>> C.element_times([5., 10., 15., 30.], [2.]).eval()
+        array([ 10.,  20.,  30.,  60.], dtype=float32)
+
+        >>> C.plus([-5, -4, -3, -2, -1], [10], [3, 2, 3, 2, 3], [-13], [+42], 'multi_arg_example').eval()
+        array([ 37.,  37.,  39.,  39.,  41.], dtype=float32)
+
+        >>> C.element_times([5., 10., 15., 30.], [2.], [1., 2., 1., 2.]).eval()
+        array([  10.,   40.,   30.,  120.], dtype=float32)
+
+        >>> a = np.arange(3,dtype=np.float32)
+        >>> np.exp(C.log_add_exp(np.log(1+a), np.log(1+a*a)).eval())
+        array([ 2.,  4.,  8.], dtype=float32)
+
+    Args:
+        left: left side tensor
+        right: right side tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from functools import wraps
+    @wraps(f)
+    def associative_binary_operation(arg1, arg2, *more_args, **name_kwarg):
+        name = (lambda name='': name)(**name_kwarg) # Python 2.7 does not allow (arg1, arg2, *more, name='')
+        # in case name is specified without keyword
+        if not name and more_args and isinstance(more_args[-1], str):
+            name = more_args[-1]
+            more_args = more_args[0:-1]
+        # implement as a tree reduction
+        def tree_reduce(args, name):
+            n = len(args)
+            if   n > 2:  return f(tree_reduce(args[:n//2], name=''),tree_reduce(args[n//2:], name=''), name=name) # only the outer-most op gets the 'name' parameter
+            elif n == 2: return f(args[0],args[1], name=name)
+            else:        return args[0]
+        return tree_reduce((arg1, arg2) + more_args, name=name)
+    return associative_binary_operation
+
+@associative_multi_arg
 @typemap
-def plus(left, right, *more, **kwname):
+def plus(left, right, name=''):
     '''
     The output of this operation is the sum of the two or more input tensors. It supports broadcasting.
 
@@ -856,20 +905,20 @@ def plus(left, right, *more, **kwname):
         >>> C.plus([-5, -4, -3, -2, -1], [10]).eval()
         array([ 5.,  6.,  7.,  8.,  9.], dtype=float32)
 
+        >>> C.plus([-5, -4, -3, -2, -1], [10], [3, 2, 3, 2, 3], [-13], [+42], 'multi_arg_example').eval()
+        array([ 37.,  37.,  39.,  39.,  41.], dtype=float32)
+
         >>> C.plus([-5, -4, -3, -2, -1], [10], [3, 2, 3, 2, 3]).eval()
         array([  8.,   8.,  10.,  10.,  12.], dtype=float32)
 
     Args:
-        left: left side tensor
-        right: right side tensor
-        *more: additional summands
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
-    if more: # if additional operands then recurse
-        return plus(plus(left, right, *more[:-1], name=''), more[-1], name=name)
     from cntk.cntk_py import plus as cntk_py_plus
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
@@ -905,8 +954,9 @@ def minus(left, right, name=''):
     return minus(left, right, name)
 
 
+@associative_multi_arg
 @typemap
-def element_times(left, right, *more, **kwname):
+def element_times(left, right, name=''):
     '''
     The output of this operation is the element-wise product of the two or more input
     tensors. It supports broadcasting.
@@ -918,17 +968,17 @@ def element_times(left, right, *more, **kwname):
         >>> C.element_times([5., 10., 15., 30.], [2.]).eval()
         array([ 10.,  20.,  30.,  60.], dtype=float32)
 
+        >>> C.element_times([5., 10., 15., 30.], [2.], [1., 2., 1., 2.]).eval()
+        array([  10.,   40.,   30.,  120.], dtype=float32)
+
     Args:
-        left: left side tensor
-        right: right side tensor
-        *more: additional factors
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
-    if more: # if additional operands then recurse
-        return element_times(element_times(left, right, *more[:-1], name=''), more[-1], name=name)
     from cntk.cntk_py import element_times as cntk_py_element_times
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)
@@ -936,45 +986,41 @@ def element_times(left, right, *more, **kwname):
     return cntk_py_element_times(left, right, name)
 
 
+@associative_multi_arg
 @typemap
-def element_max(left, right, *more, **kwname):
+def element_max(left, right, name=''):
     '''
     The output of this operation is the element-wise max of the two or more input
     tensors. It supports broadcasting.
 
     Args:
-        left: left side tensor
-        right: right side tensor
-        *more: additional inputs
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
-    if more: # if additional operands then recurse
-        return element_max(element_max(left, right, *more[:-1], name=''), more[-1], name=name)
     gt = greater(left, right)
     # TODO: use as_block()
     return element_select(gt, left, right, name)
 
 
+@associative_multi_arg
 @typemap
-def element_min(left, right, *more, **kwname):
+def element_min(left, right, name=''):
     '''
     The output of this operation is the element-wise min of the two or more input
     tensors. It supports broadcasting.
 
     Args:
-        left: left side tensor
-        right: right side tensor
-        *more: additional inputs
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
-    if more: # if additional operands then recurse
-        return element_min(element_min(left, right, *more[:-1], name=''), more[-1], name=name)
     lt = less(left, right)
     # TODO: use as_block()
     return element_select(lt, left, right, name)
@@ -1007,8 +1053,9 @@ def element_divide(left, right, name=''):
     return element_divide(left, right, name)
 
 
+@associative_multi_arg
 @typemap
-def log_add_exp(left, right, *more, **kwname):
+def log_add_exp(left, right, name=''):
     '''
     Calculates the log of the sum of the exponentials
     of the two or more input tensors. It supports broadcasting.
@@ -1021,16 +1068,13 @@ def log_add_exp(left, right, *more, **kwname):
         array([ 2.,  3.,  4.], dtype=float32)
 
     Args:
-        left: left side tensor
-        right: right side tensor
-        *more: additional summands
+        arg1: left side tensor
+        arg2: right side tensor
+        *more_args: additional inputs
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    name = (lambda name='': name)(**kwname) # Python 2.7 does not allow (left, right, *more, name='')
-    if more: # if additional operands then recurse
-        return log_add_exp(log_add_exp(left, right, *more[:-1], name=''), more[-1], name=name)
     from cntk.cntk_py import log_add_exp as cntk_py_log_add_exp
     dtype = get_data_type(left, right)
     left = sanitize_input(left, dtype)

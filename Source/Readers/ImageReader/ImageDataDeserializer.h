@@ -23,7 +23,7 @@ class ImageDataDeserializer : public ImageDeserializerBase
 public:
     // A new constructor to support new compositional configuration,
     // that allows composition of deserializers and transforms on inputs.
-    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+    ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
     // TODO: This constructor should be deprecated in the future. Compositional config should be used instead.
     explicit ImageDataDeserializer(const ConfigParameters& config);
@@ -49,6 +49,7 @@ private:
     {
         std::string m_path;
         size_t m_classId;
+        uint8_t m_copyId;
     };
 
     class ImageChunk;
