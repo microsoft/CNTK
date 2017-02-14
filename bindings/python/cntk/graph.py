@@ -33,7 +33,8 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
         if node in visited:
             continue
         if max_depth is None or depth < max_depth:
-            try:
+            from cntk import cntk_py
+            if isinstance(node, cntk_py.Function) and node.is_block:
                 # TODO: This is still broken, needs to be cleaned up after debugging/desperate trying-around.
                 composite = node.block_root
                 # BlockFunction node
@@ -48,8 +49,8 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
                     accum.append((node, distance))
                 continue
                 # BlockFunctions are short-circuited until max_depth is hit, and not added to accum[]
-            except:
-                pass
+            #except:
+            #    pass
         try:
             # Function node
             stack = [(input, distance+1, depth) for input in node.root_function.inputs] + stack

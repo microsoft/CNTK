@@ -671,7 +671,7 @@ namespace CNTK
         /*static*/ NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions) const
         {
             NDShape mainOperandShape = operands[0].Shape();
-            for (size_t i = 1; i < operands.size(); i++) // all but first and last arguments must match the first; last one must be a [1]
+            for (size_t i = 1; i < operands.size(); i++) // all but first and last arguments must match the first; last one must be a scalar
             {
                 if (!operands[i].DynamicAxes().empty())
                     InvalidArgument("BatchNormalization: Input[%d] has a dynamic axis that is not allowed!", (int)i);
@@ -694,9 +694,9 @@ namespace CNTK
                                         AsStringForErrorReporting(paramShape).c_str(),
                                         AsStringForErrorReporting(operands[1].Shape()).c_str());
                 }
-                else if (paramShape != NDShape(std::vector<size_t>{ 1 })) // last arguments is count, must be a 1-dim vector
+                else if (paramShape != NDShape()) // last arguments is count, must be a scalar
                 {
-                    InvalidArgument("BatchNormalization: Input[%d] must be a 1-dimensional vector.", (int)i);
+                    InvalidArgument("BatchNormalization: Input[%d] must be a scalar.", (int)i);
                 }
             }
 
