@@ -1398,10 +1398,12 @@ def elu(x, name=''):
         array([[ -0.632,  -0.393,  0.,  1.,  2.]], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        name (str, optional): the name of the Function instance in the network
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
     Returns:
-        :class:`~cntk.ops.functions.Function`
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import elu
     x = sanitize_input(x)
@@ -1421,10 +1423,12 @@ def leaky_relu(x, name=''):
         array([[ -0.01,  -0.005,  0.,  1.,  2.]], dtype=float32)
 
     Args:
-        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        name (str, optional): the name of the Function instance in the network
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
     Returns:
-        :class:`~cntk.ops.functions.Function`
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import leaky_re_lu
     x = sanitize_input(x)
@@ -1444,11 +1448,13 @@ def param_relu(alpha, x, name=''):
         array([[-0.5 , -0.25,  0.  ,  1.  ,  2.  ]], dtype=float32)
 
     Args:
-        alpha: tensor same shape as x
-        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
-        name (str, optional): the name of the Function instance in the network
+        alpha (:class:`~cntk.ops.variables.Parameter`): same shape as x
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
     Returns:
-        :class:`~cntk.ops.functions.Function`
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import pre_lu
     x = sanitize_input(x)
@@ -2412,12 +2418,13 @@ def argmax(x, axis=None, name=''):
                [ 1.]], dtype=float32)
 
     Args:
-        x: input tensor
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
-        name (str): the name of the Function instance in the network
+        name (str, default to ''): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.functions.Function`
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import argmax
     x = sanitize_input(x)
@@ -2444,12 +2451,13 @@ def argmin(x, axis=None, name=''):
                [ 0.]], dtype=float32)
 
     Args:
-        x: input tensor
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
         axis (int or :class:`~cntk.axis.Axis`): axis along which the reduction will be performed
-        name (str): the name of the Function instance in the network
+        name (str, default to ''): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.functions.Function`
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import argmin
     x = sanitize_input(x)
