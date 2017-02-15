@@ -284,8 +284,8 @@ public:
         {
             if (inputSequences[i].seqId == GAP_SEQUENCE_ID)
                 continue;
-            size_t s, tBegin; tie
-            (s, tBegin) = placement[i];
+            size_t s, tBegin;
+            tie(s, tBegin) = placement[i];
             AddSequence(inputSequences[i].seqId, s, (ptrdiff_t)tBegin, tBegin + inputSequences[i].GetNumTimeSteps());
         }
         // need to fill the gaps as well

@@ -4596,14 +4596,61 @@ void GPUMatrix<ElemType>::CosSimilarity(const GPUMatrix<ElemType>& a, const GPUM
     shareMem = numOfThreadsPerBlock * 3 * sizeof(ElemType);
 
     SyncGuard syncGuard;
+    _cosSim<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, shareMem, t_stream >> > (c.Data(), pa.Data(), pb.Data(), a.Data(), b.Data(), vectorSize, aElements, bElements, isColWise);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ReduceSumVector(const GPUMatrix<ElemType>& src, GPUMatrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta, const bool isColWise)
+{
+    if (src.GetComputeDeviceId() != tgt.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("All matrices must be on the same GPU");
+
+    if (src.IsEmpty() || tgt.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+
+    const int m = (int)src.GetNumRows();
+    const int n = (int)src.GetNumCols();
+    const int k = (int)tgt.GetNumRows();
+    const int l = (int)tgt.GetNumCols();
+
+    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
+
     if (isColWise)
-    {
-        _cosSimColWise<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, shareMem, t_stream >> > (c.Data(), pa.Data(), pb.Data(), a.Data(), b.Data(), vectorSize, aElements, bElements);
+    { // Ensure l >= n and l times n
+        assert(m == k && n%l == 0);                 // converting from size_t to int may cause overflow
+        if (m != k || n%l != 0)
+            InvalidArgument("Matrices a and o should have same dimension.");
     }
     else
     {
-        _cosSimRowWise<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, shareMem, t_stream >> > (c.Data(), pa.Data(), pb.Data(), a.Data(), b.Data(), vectorSize, aElements, bElements);
+        // Ensure k >= m && k times m
+        assert(m%k == 0 && n == l);                 // converting from size_t to int may cause overflow
+        if (m%k != 0 || n != l)
+            InvalidArgument("Matrices a and o should have same dimension.");
     }
+
+    tgt.PrepareDevice();
+
+    int vectorSize = m;
+    int numSrc = n;
+    int numTgt = l;
+    if (!isColWise) // col-wise
+    {
+        numSrc = m;
+        numTgt = k;
+        vectorSize = n;
+    }
+
+    // Due to the column major storage, make row direction to align with the threads direction to speed memory access
+    int numOfThreadsPerBlock = min(GridDim::maxThreadsPerBlock, numSrc/numTgt);
+    int blockDimY = numTgt;
+    int blockDimX = vectorSize;
+    int shareMem = numOfThreadsPerBlock * sizeof(ElemType);
+
+    dim3 blocksPerGrid(blockDimX, blockDimY);
+    SyncGuard syncGuard;
+    _reduceSumVector<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, shareMem, t_stream >> >(tgt.Data(), beta, src.Data(), alpha,
+        vectorSize, numTgt, numSrc, isColWise);
 }
 
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides

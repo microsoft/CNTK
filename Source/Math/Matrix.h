@@ -584,7 +584,7 @@ public:
         const Matrix<ElemType>& b, const Matrix<ElemType>& rnorm2B, const Matrix<ElemType>& o,
         const Matrix<ElemType>& derivO, Matrix<ElemType>& derivA, const bool isColWise);
     static void CosSimilarity(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, Matrix<ElemType>& pa, Matrix<ElemType>& pb, const bool isColWise);
-
+    static void ReduceSumVector(const Matrix<ElemType>& src, Matrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta, const bool isColWise);
     static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
     static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 

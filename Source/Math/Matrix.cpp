@@ -5199,6 +5199,18 @@ void Matrix<ElemType>::CosSimilarityDeriv(const Matrix<ElemType>& a, const Matri
 }
 
 template <class ElemType>
+void Matrix<ElemType>::ReduceSumVector(const Matrix<ElemType>& src, Matrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta, const bool isColWise)
+{
+    tgt.SwitchToMatrixType(src.GetMatrixType(), src.GetFormat(), true);
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        NOT_IMPLEMENTED,
+        GPUMatrix<ElemType>::ReduceSumVector(*src.m_GPUMatrix, *tgt.m_GPUMatrix, alpha, beta, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::CosSimilarity(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, Matrix<ElemType>& pa, Matrix<ElemType>& pb, const bool isColWise)
 {
     if (a.IsEmpty() || b.IsEmpty())

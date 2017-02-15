@@ -5308,7 +5308,7 @@ __global__ void _cosSim2(
 }
 
 template <class ElemType>
-__global__ void _cosSimColWise(
+__global__ void _cosSim(
     ElemType* c,
     ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
     ElemType* rnorm2B,           // 1/sqrt(Sum(B^2))
@@ -5316,7 +5316,8 @@ __global__ void _cosSimColWise(
     const ElemType* b,
     const CUDA_LONG vectorSize, // size of vector
     const CUDA_LONG numA, // Number of vectors in A
-    const CUDA_LONG numB) // Number of vectors in B
+    const CUDA_LONG numB, // Number of vectors in B
+    const bool isColWise)
 {
     CUDA_LONG id = blockIdx.x;
     CUDA_LONG N = numA > numB ? numA : numB;
@@ -5336,16 +5337,31 @@ __global__ void _cosSimColWise(
     ElemType squareSumA = 0;
     ElemType squareSumB = 0;
 
-    indexA = idA*vectorSize + threadIdx.x;
-    indexB = idB*vectorSize + threadIdx.x;
-    for (CUDA_LONG i = threadIdx.x; i < vectorSize; )
+    if (isColWise)
     {
-        sum += a[indexA] * b[indexB];
-        squareSumA += a[indexA] * a[indexA];
-        squareSumB += b[indexB] * b[indexB];
-        indexA += blockDim.x;
-        indexB += blockDim.x;
-        i += blockDim.x;
+        indexA = idA*vectorSize + threadIdx.x;
+        indexB = idB*vectorSize + threadIdx.x;
+        for (CUDA_LONG i = threadIdx.x; i < vectorSize; )
+        {
+            sum += a[indexA] * b[indexB];
+            squareSumA += a[indexA] * a[indexA];
+            squareSumB += b[indexB] * b[indexB];
+            indexA += blockDim.x;
+            indexB += blockDim.x;
+            i += blockDim.x;
+        }
+    }
+    else
+    {
+        for (CUDA_LONG i = threadIdx.x; i < vectorSize; )
+        {
+            indexA = idA + i*numA;
+            indexB = idB + i*numB;
+            sum += a[indexA] * b[indexB];
+            squareSumA += a[indexA] * a[indexA];
+            squareSumB += b[indexB] * b[indexB];
+            i += blockDim.x;
+        }
     }
 
     dot[threadIdx.x] = sum;
@@ -5354,36 +5370,44 @@ __global__ void _cosSimColWise(
     __syncthreads();
 
     // DO aggregation
-    int nTotalThreads = blockDim.x;	// Total number of active threads
-
-    while (nTotalThreads > 1)
+    // 64-ways aggregation log_2(n)/log_2(ways)
+    int pof2 = 6;
+    int ways = 1 << pof2;
+    int step = blockDim.x;
+    while (step > ways)
     {
-        int halfPoint = (nTotalThreads >> 1);	// divide by two
-        nTotalThreads = ((nTotalThreads+1) >> 1);	// divide by two.
-        // only the first half of the threads will be active.
-        if (threadIdx.x < halfPoint)
+        step = min((step + ways-1) >> pof2, step);
+        if (threadIdx.x < step)
         {
-            // Get the shared value stored by another thread
-            // when calculating the average, sum and divide
-            dot[threadIdx.x] += dot[threadIdx.x + nTotalThreads];
-            aSquare[threadIdx.x] += aSquare[threadIdx.x + nTotalThreads];
-            bSquare[threadIdx.x] += bSquare[threadIdx.x + nTotalThreads];
+            for (int i = threadIdx.x + step; i < blockDim.x; )
+            {
+                dot[threadIdx.x] += dot[i];
+                aSquare[threadIdx.x] += aSquare[i];
+                bSquare[threadIdx.x] += bSquare[i];
+                i += step;
+            }
         }
         __syncthreads();
     }
 
     if (threadIdx.x == 0)
     {
+        for (int i = 1; i < step; i++)
+        {
+            dot[threadIdx.x] += dot[i];
+            aSquare[threadIdx.x] += aSquare[i];
+            bSquare[threadIdx.x] += bSquare[i];
+        }
 
         if (sizeof(ElemType) == sizeof(double))
         {
-            rnorm2A[idA] = rsqrt(aSquare[0] + 1e-8);
-            rnorm2B[idB] = rsqrt(bSquare[0] + 1e-8);
+            rnorm2A[idA] = aSquare[0] < EPS_IN_INVERSE? 0 : rsqrt(aSquare[0]);
+            rnorm2B[idB] = bSquare[0] < EPS_IN_INVERSE ? 0 : rsqrt(bSquare[0]);
         }
         else
         {
-            rnorm2A[idA] = rsqrtf(aSquare[0] + 1e-8);
-            rnorm2B[idB] = rsqrtf(bSquare[0] + 1e-8);
+            rnorm2A[idA] = aSquare[0] < EPS_IN_INVERSE ? 0 : rsqrtf(aSquare[0]);
+            rnorm2B[idB] = bSquare[0] < EPS_IN_INVERSE ? 0 : rsqrtf(bSquare[0]);
         }
 
         c[id] = (ElemType)(dot[0]*rnorm2A[idA] * rnorm2B[idB]);
@@ -5391,82 +5415,78 @@ __global__ void _cosSimColWise(
 }
 
 template <class ElemType>
-__global__ void _cosSimRowWise(
-    ElemType* c,
-    ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
-    ElemType* rnorm2B,           // 1/sqrt(Sum(B^2))
-    const ElemType* a,
-    const ElemType* b,
-    const CUDA_LONG vectorSize, // size of vector
-    const CUDA_LONG numA, // Number of vectors in A
-    const CUDA_LONG numB) // Number of vectors in B
+__global__ void _reduceSumVector(ElemType* dst, 
+    const ElemType beta,
+    const ElemType* input, 
+    const ElemType alpha,
+    const CUDA_LONG vectorSize, 
+    const CUDA_LONG numDst, 
+    const CUDA_LONG numSrc,
+    const bool isColWise)
 {
-    CUDA_LONG id = blockIdx.x;
-    CUDA_LONG N = numA > numB ? numA : numB;
+    CUDA_LONG eid = blockIdx.x;
+    CUDA_LONG vid = blockIdx.y;
+    CUDA_LONG tid = threadIdx.x;
     //TODO: this path should never be actived, else there will be dead lock
-    if (id >= N || threadIdx.x >= vectorSize)
+    if (eid >= vectorSize || tid*numDst+vid >= numSrc)
         return;
     extern __shared__ char sharePtr[];
-    ElemType* dot = (ElemType*)sharePtr;
-    ElemType* aSquare = dot + blockDim.x;
-    ElemType* bSquare = aSquare + blockDim.x;
-
-    ElemType sum = 0;
-    CUDA_LONG indexA = 0;
-    CUDA_LONG indexB = 0;
-    CUDA_LONG idA = id%numA;
-    CUDA_LONG idB = id%numB;
-    ElemType squareSumA = 0;
-    ElemType squareSumB = 0;
-    for (CUDA_LONG i = threadIdx.x; i < vectorSize; )
+    ElemType* sum = (ElemType*)sharePtr;
+    int colId = vid;
+    int colStep = blockDim.x*numDst;
+    int colStart = vid + tid*numDst;
+    int step = 0;
+    int offset = 0;
+    int dstOffset = 0;
+    if (isColWise)
     {
-        indexA = idA + i*numA;
-        indexB = idB + i*numB;
-        sum += a[indexA] * b[indexB];
-        squareSumA += a[indexA] * a[indexA];
-        squareSumB += b[indexB] * b[indexB];
-        i += blockDim.x;
+        offset = colStart*vectorSize + eid;
+        step = colStep*vectorSize;
+        dstOffset = vid*vectorSize + eid;
+    }
+    else
+    {
+        offset = colStart + vectorSize*eid;
+        step = colStep;
+        dstOffset = vid + vectorSize*eid;
     }
 
-    dot[threadIdx.x] = sum;
-    aSquare[threadIdx.x] = squareSumA;
-    bSquare[threadIdx.x] = squareSumB;
-    __syncthreads();
-
-    // DO aggregation
-    int nTotalThreads = blockDim.x;	// Total number of active threads
-
-    while (nTotalThreads > 1)
+    sum[threadIdx.x] = 0;
+    for (int i = colStart; i < numSrc; )
     {
-        int halfPoint = (nTotalThreads >> 1);	// divide by two
-        nTotalThreads = ((nTotalThreads + 1) >> 1);	// divide by two.
-                                                    // only the first half of the threads will be active.
-        if (threadIdx.x < halfPoint)
+        sum[threadIdx.x] += input[offset];
+        i += colStep;
+        offset += step;
+    }
+
+    __syncthreads();
+    // DO aggregation
+    // 64-ways aggregation log_2(n)/log_2(ways)
+    int pof2 = 6;
+    int ways = 1 << pof2;
+    step = blockDim.x;
+    while (step > ways)
+    {
+        step = min((step + ways - 1) >> pof2, step);
+        if (threadIdx.x < step)
         {
-            // Get the shared value stored by another thread
-            // when calculating the average, sum and divide
-            dot[threadIdx.x] += dot[threadIdx.x + nTotalThreads];
-            aSquare[threadIdx.x] += aSquare[threadIdx.x + nTotalThreads];
-            bSquare[threadIdx.x] += bSquare[threadIdx.x + nTotalThreads];
+            for (int i = threadIdx.x + step; i < blockDim.x; )
+            {
+                sum[threadIdx.x] += sum[i];
+                i += step;
+            }
         }
         __syncthreads();
     }
 
     if (threadIdx.x == 0)
     {
-
-        if (sizeof(ElemType) == sizeof(double))
+        for (int i = 1; i < step; i++)
         {
-            rnorm2A[idA] = rsqrt(aSquare[0] + 1e-8);
-            rnorm2B[idB] = rsqrt(bSquare[0] + 1e-8);
-        }
-        else
-        {
-            rnorm2A[idA] = rsqrtf(aSquare[0] + 1e-8);
-            rnorm2B[idB] = rsqrtf(bSquare[0] + 1e-8);
+            sum[threadIdx.x] += sum[i];
         }
 
-        c[id] = (ElemType)(dot[0] * rnorm2A[idA] * rnorm2B[idB]);
+        dst[dstOffset] = dst[dstOffset] * beta + sum[threadIdx.x] * alpha;
     }
 }
 }

@@ -528,6 +528,7 @@ public:
         const GPUMatrix<ElemType>& b, const GPUMatrix<ElemType>& rnorm2B, const GPUMatrix<ElemType>& o,
         const GPUMatrix<ElemType>& derivO, GPUMatrix<ElemType>& derivA, const bool isColWise);
     static void CosSimilarity(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& rnorm2A, GPUMatrix<ElemType>& rnorm2B, const bool isColWise);
+    static void ReduceSumVector(const GPUMatrix<ElemType>& src, GPUMatrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta, const bool isColWise);
 
     static void Scale(ElemType alpha, const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& c);
     static void Scale(GPUMatrix<ElemType>& alpha, GPUMatrix<ElemType>& a); // In this case matrix alpha must be 1x1

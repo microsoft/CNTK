@@ -987,12 +987,14 @@ public:
                 m_expandedGrad2.SetValue(0);
                 Matrix<ElemType>::CosSimilarityDeriv(sliceInputValueA, *m_rnorm2[inputIndex], sliceInputValueB, *m_rnorm2[1 - inputIndex],
                     sliceOutputValue, sliceNodeGradient, m_expandedGrad2, true);
-                for (int i = 0; i < mb1->GetNumTimeSteps(); i++)
-                {
-                    auto subFr = FrameRange(mb1, i);
-                    auto subgrad = DataWithMBLayoutFor(m_expandedGrad2, subFr, mb1);
-                    sliceInputGradientA += subgrad;
-                }
+                //for (int i = 0; i < mb1->GetNumTimeSteps(); i++)
+                //{
+                //    auto subFr = FrameRange(mb1, i);
+                //    auto subgrad = DataWithMBLayoutFor(m_expandedGrad2, subFr, mb1);
+                //    sliceInputGradientA += subgrad;
+                //}
+                //MaskMissingColumnsToZero(m_expandedGrad2, mb1, fr);
+                Matrix<ElemType>::ReduceSumVector(m_expandedGrad2, sliceInputGradientA, 1, 1, true);
             }
             else
             {

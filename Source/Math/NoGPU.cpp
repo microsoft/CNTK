@@ -2189,6 +2189,11 @@ void GPUMatrix<ElemType>::CosSimilarity(const GPUMatrix<ElemType>& a, const GPUM
 {
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::ReduceSumVector(const GPUMatrix<ElemType>& src, GPUMatrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta, const bool isColWise)
+{
+}
+
 #pragma endregion Static BLAS Functions
 
 #pragma region MatrixQuantizerGPU functions
