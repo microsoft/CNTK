@@ -5,6 +5,7 @@
 # ==============================================================================
 
 import os
+from . import Variable
 
 
 def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
@@ -66,10 +67,11 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
                 pass
 
         if visitor(node):
-            if node.is_parameter:
-                node = node.as_parameter()
-            elif node.is_constant:
-                node = node.as_constant()
+            if isinstance(node, Variable):
+                if node.is_parameter:
+                    node = node.as_parameter()
+                elif node.is_constant:
+                    node = node.as_constant()
 
             accum.append((node, distance))
 

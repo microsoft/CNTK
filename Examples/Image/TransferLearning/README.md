@@ -18,4 +18,4 @@ We use the `Flowers` data set ([Examples/Image/DataSets/Flowers](../DataSets/Flo
 
 ### Details
 
-Run `python TransferLearning.py` to train and evaluate the transfer learning model. The model achieves 93% accuracy on the Flowers data set after training for 20 epochs. A detailed walk through is provided in the [CNTK github wiki](https://github.com/Microsoft/CNTK/wiki/How-do-I-in-Python). 
+Run `python TransferLearning.py` to train and evaluate the transfer learning model. The model achieves 93% accuracy on the Flowers data set after training for 20 epochs. A detailed walk through is provided in the ['Build your own image classifier using Transfer Learning'](https://github.com/Microsoft/CNTK/wiki/Build-your-own-image-classifier-using-Transfer-Learning) tutorial on the CNTK github wiki.

@@ -271,6 +271,67 @@ def test_op_relu(operand, device_id, precision):
     _test_unary_op(precision, device_id, relu, operand,
                    expected_forward, expected_backward)
 
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_elu(operand, device_id, precision):
+    elu_f  = np.vectorize(lambda x: np.exp(x) - 1.0 if x < 0 else x)
+    elu_b  = np.vectorize(lambda x: np.exp(x) if x < 0 else 1.0)
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = [[elu_f(t)]]
+    expected_backward = {
+        'arg': [[elu_b(t)]]
+    }
+
+    from cntk import elu
+
+    #BUGBUG: There is a bug in ElementSelect that cause nan in the output
+    #        for float32.
+    if PRECISION_TO_TYPE[precision] == np.float64:
+        _test_unary_op(precision, device_id, elu, operand,
+                       expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_leaky_relu(operand, device_id, precision):
+    leaky_relu_f  = np.vectorize(lambda x: 0.01 * x if x < 0 else x)
+    leaky_relu_b  = np.vectorize(lambda x: 0.01 if x < 0 else 1.0)
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = [[leaky_relu_f(t)]]
+    expected_backward = {
+        'arg': [[leaky_relu_b(t)]]
+    }
+
+    from cntk import leaky_relu
+
+    _test_unary_op(precision, device_id, leaky_relu, operand,
+                   expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_param_relu(operand, device_id, precision):
+    dev = cntk_device(device_id)
+    param_relu_f  = np.vectorize(lambda x: 0.5 * x if x < 0 else x)
+    param_relu_b  = np.vectorize(lambda x: 0.5 if x < 0 else 1.0)
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+    a = AA(np.ones_like(t)*0.5, dtype=PRECISION_TO_TYPE[precision])
+    alpha = constant(a, device=dev)
+
+    expected_forward = [[param_relu_f(t)]]
+    expected_backward = {
+        'arg': [[param_relu_b(t)]]
+    }
+
+    from cntk import param_relu
+
+    def prelu(x):
+        return param_relu(alpha, x)
+
+    _test_unary_op(precision, device_id, prelu, operand,
+                    expected_forward, expected_backward)
+
+
 SAMPLES = [  # 2 samples having 4 classes
     [1, 1, 2, 3],
     [0, 0, 0, 0],
