@@ -1452,6 +1452,9 @@ namespace CNTK
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
+#if 1       // from master, requires latest update to ReconcileDynamicAxes(), not sure if works correctly inside a recurrent loop
+            return AsBlock(Internal::ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+#else
             // We broadcast using a PastValue() operation that is normally outside of a loop,
             // although it works inside the loop as well.
             // The PastValue() uses an "infinite" delay such that every single time step reaches outside
@@ -1459,6 +1462,7 @@ namespace CNTK
             // PastValue() also requires a data input, which is a dummy since it will never ever be used.
             auto output = PastValue(Internal::ZeroesWithDynamicAxesLike(broadcastAsPlaceholder), /*initialState=*/ operandPlaceholder, /*offset=*/ INT_MAX);
             return AsBlock(std::move(output), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+#endif
         }
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
