@@ -34,10 +34,10 @@ namespace CNTK
     {
         if (device.Type() == DeviceKind::CPU)
             return CPUDEVICE;
-        else if (device.Type() == DeviceKind::GPU)
+        if (device.Type() == DeviceKind::GPU)
             return device.Id();
-        else
-            NOT_IMPLEMENTED;
+
+        LogicError("Invalid device type (%u).", device.Type());
     }
 
     inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKImplMatrixFormat(StorageFormat storageFormat)

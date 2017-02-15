@@ -227,9 +227,9 @@ if __name__=='__main__':
     if args['device'] is not None:
         # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
         if Communicator.rank() == 0:
-            cntk.device.set_default_device(cntk.device.gpu(args['device']))
+            cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
         else:
-            cntk.device.set_default_device(cntk.device.cpu())
+            cntk.device.try_set_default_device(cntk.device.cpu())
 
     data_path = args['datadir']
 

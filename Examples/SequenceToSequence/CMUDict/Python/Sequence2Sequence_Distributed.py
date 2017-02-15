@@ -13,7 +13,7 @@ import _cntk_py
 import cntk
 
 from cntk import Trainer, Axis
-from cntk.device import set_default_device, gpu
+from cntk.device import try_set_default_device, gpu
 from cntk.distributed import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learner import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
@@ -213,7 +213,7 @@ if __name__ == '__main__':
     if args['outputdir'] is not None:
         model_path = args['outputdir'] + "/models"
     if args['device'] is not None:
-        set_default_device(gpu(args['device']))
+        try_set_default_device(gpu(args['device']))
 
     data_path = args['datadir']
 

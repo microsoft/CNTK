@@ -468,6 +468,7 @@ def debug_attention(model, input):
 #############################
 
 if __name__ == '__main__':
+    #try_set_default_device(cpu())
 
     from _cntk_py import set_fixed_random_seed
     set_fixed_random_seed(1)

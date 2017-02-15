@@ -301,6 +301,9 @@
 
 %ignore_class CNTK::Internal::TensorBoardFileWriter;
 
+%ignore_struct CNTK::GPUProperties;
+%ignore_function CNTK::DeviceDescriptor::GetGPUProperties;
+
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }
 %apply double INPUT[]  { double *dataBuffer }

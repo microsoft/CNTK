@@ -111,7 +111,7 @@ namespace CNTK
     ///
     /// Enumeration type denoting the type of a compute device.
     ///
-    enum class DeviceKind
+    enum class DeviceKind : unsigned int
     {
         CPU,
         GPU,
@@ -144,15 +144,33 @@ namespace CNTK
     };
 
     ///
+    /// Additional GPU-specific device information.
+    ///
+    struct GPUProperties final
+    {
+        unsigned int deviceId;
+        int versionMajor;
+        int versionMinor;
+        int cudaCores;
+        std::string name;
+        size_t totalMemory;
+    };
+
+    ///
     /// Denotes a compute device instance.
     ///
     class DeviceDescriptor final
     {
         friend bool operator==(const DeviceDescriptor& first, const DeviceDescriptor& second);
 
-        static std::atomic<bool> s_defaultDeviceFrozen;
-        static std::shared_ptr<DeviceDescriptor> s_defaultDevice;
-        static std::shared_ptr<std::vector<DeviceDescriptor>> s_allDevices;
+        friend struct Test::DeviceSelectionTestFixture;
+
+        static std::mutex s_mutex;
+        static bool s_defaultDeviceFrozen;
+        static std::unique_ptr<DeviceDescriptor> s_defaultDevice;
+        static std::vector<DeviceDescriptor> s_excludedDevices;
+        static std::vector<DeviceDescriptor> s_allDevices;
+        static std::vector<GPUProperties> s_gpuProperties;
     public:
         ///
         /// Returns the Id of 'this' device.
@@ -165,6 +183,11 @@ namespace CNTK
         DeviceKind Type() const { return m_deviceType; }
 
         ///
+        /// Returns true if another CNTK process already holds an exclusive lock on this device.
+        ///
+        CNTK_API bool IsLocked() const;
+
+        ///
         /// Static method to get the descriptor of the CPU device on the local system.
         ///
         static DeviceDescriptor CPUDevice() { return{ 0, DeviceKind::CPU }; }
@@ -174,29 +197,44 @@ namespace CNTK
         ///
         CNTK_API static DeviceDescriptor GPUDevice(unsigned int deviceId);
 
-        ///
-        /// Static method to get the descriptor of the default device for the current process.
-        /// This device is used for all CNTK operations where a device needs to be specified and one is not explicitly specified.
-        ///
-        CNTK_API static DeviceDescriptor DefaultDevice();
-
-        ///
-        /// Static method to get the descriptor of the default device for the current process.
-        /// This device is used for all CNTK operations where a device needs to be specified and one is not explicitly specified.
-        /// Additionally after this method gets executed for the first time, it freezes the default device of the process disallowing
-        /// changing the default device by further calls to SetDefaultDevice.
+        /// 
+        /// This static method freezes the default device of the current CNTK process disallowing further changes
+        /// through calls to TrySetDefaultDevice. This default device will used for all CNTK operations 
+        /// where a device needs to be specified and where none was explicitly provided. If no default device has been specified
+        /// with a call to TrySetDefaultDevice, on the first invocation, this methods will auto-select one 
+        /// of the available (non-locked) devices as the default. Returns a descriptor of the globally default device.
         ///
         CNTK_API static DeviceDescriptor UseDefaultDevice();
 
         ///
-        /// The default device can only be changed if it has not yet been implicitly used by any previous operation in the CNTK library.
+        /// This static method tries to set the specified device as the globally default, optionally acquiring an exclusive 
+        /// (cooperative) lock on the device (GPU). The default device can only be changed if it has not yet been frozen by being 
+        /// implicitly used in any previous CNTK operation.
         ///
-        CNTK_API static void SetDefaultDevice(const DeviceDescriptor& newDefaultDevice);
+        /// CNTK uses a cooperative synchronization for the device access, whereby only a single process can acquire 
+        /// a device lock. However, if exclusivity is not required, the same device can still be accessed without acquiring 
+        /// any locks (in which case, any existing lock corresponding to the device will be ignored).
+        ///
+        /// This methods returns false if  
+        /// * the specified device appears in the list of excluded devices;
+        /// * 'acquireDeviceLock' is true and another process already holds a lock on the device;
+        /// * 'acquireDeviceLock' is true and 'newDefaultDevice' corresponds to a CPU device (which cannot be locked).
+        ///
+        CNTK_API static bool TrySetDefaultDevice(const DeviceDescriptor& newDefaultDevice, bool acquireDeviceLock = false);
 
         ///
-        /// Static method to get the descriptor of the best available device.
+        /// Static method to retrieve additional properties (total memory, number of CUDA cores, etc.) for the specified GPU 
+        /// device. This method will raise an exception if a CPU device is specified as an argument.
         ///
-        CNTK_API static DeviceDescriptor BestDevice();
+        CNTK_API static const GPUProperties& GetGPUProperties(const DeviceDescriptor& device);
+
+        ///
+        /// Static method to specify a list of excluded devices that cannot be used as globally default (neither auto-selected
+        /// nor explicitly specified by 'TrySetDefaultDevice'). For example, to avoid auto-selecting the CPU, invoke 
+        /// 'SetExcludedDevices({DeviceDescriptor::CPUDevice()})'. However, after the default device has been selected and 
+        /// frozen (by a call to UseDefaultDevice()), invoking this methods has no effect, it becomes essentially a no-op.
+        ///
+        CNTK_API static void SetExcludedDevices(const std::vector<DeviceDescriptor>& excluded);
 
         ///
         /// Static method to get a list of descriptors of all available/supported devices.
@@ -216,6 +254,9 @@ namespace CNTK
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
             : m_deviceId(deviceId), m_deviceType(deviceType)
         {}
+        
+        /// Resets static properties, needed for unit-tests.
+        CNTK_API static void Reset();
 
     private:
         unsigned int m_deviceId;
