@@ -5210,6 +5210,7 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
 // maxPhoneNum (input): the max number of phones between utterances
 // totalPhoneNum (input): the total number of phones of all utterances
 // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
 //      Setting this parameter smaller will result in shorted delay between label output during decoding.
 //      delayConstraint=-1 means no constraint
 template<class ElemType>
@@ -5316,6 +5317,7 @@ __global__ void _assignAlphaScore(
 }
 
 // Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 __global__ void _assignBetaScore(
     const ElemType *prob,
@@ -5404,6 +5406,7 @@ __global__ void _assignBetaScore(
 }
 
 // Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// See _assignAlphaScore for the explanation of parameters
 template<class ElemType>
 __global__ void _assignCTCScore(
     ElemType *CTCscore,

@@ -481,8 +481,8 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // samplesToIgnore - list of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, float subPen, float delPen, float insPen, bool squashInputs, std::vector<size_t> samplesToIgnore, const wstring & name)
-        : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 0.0f, float delPen = 0.0f, float insPen = 0.0f, bool squashInputs = false, vector<int> samplesToIgnore = {})
+        : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
     {
     }
 
@@ -490,11 +490,6 @@ public:
         : EditDistanceErrorNode(configp->Get(L"deviceId"), configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), configp->Get(L"samplesToIgnore"), L"<placeholder>")
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
-    }
-
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : EditDistanceErrorNode(deviceId, name, 0.0f, 0.0f, 0.0f, false, {})
-    {
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override

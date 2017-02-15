@@ -723,10 +723,7 @@ public:
         }
     }
 
-    virtual bool OutputUsedInComputingInputNodesGradients() const override
-    {
-        return false;
-    }
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
     virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
     {
@@ -767,12 +764,12 @@ template class DummyCriterionNode<float>;
 template class DummyCriterionNode<double>;
 
 // -----------------------------------------------------------------------
-// ForwardBackwardNode (label, prediction, delayConstraint)
+// ForwardBackwardNode (graph, prediction, delayConstraint)
 // CTC training criterion, primarily based on the paper "Connectionist Temporal Classification: Labelling Unsegmented
 // Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 //
-// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
-//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
 //      delayConstraint=-1 means no constraint
 // -----------------------------------------------------------------------
 
@@ -798,19 +795,19 @@ public:
         // Left node must be a scalar
         if (inputIndex == 0)  //left derivative
         {
-            BackpropToLeft(*m_logSoftmaxOfRight, Input(inputIndex)->Gradient(), Gradient());
+            BackpropToLeft(*m_logSoftmaxOfRight, InputRef(inputIndex).Gradient(), Gradient());
         }
         else if (inputIndex == 1)
         {
-            FrameRange frameRange(Input(0)->GetMBLayout());
-            BackpropToRight(*m_softmaxOfRight, Input(inputIndex)->Gradient(), Gradient(), *m_CTCposterior);
-            Input(inputIndex)->MaskMissingGradientColumnsToZero(frameRange);
+            FrameRange frameRange(InputRef(0).GetMBLayout());
+            BackpropToRight(*m_softmaxOfRight, InputRef(inputIndex).Gradient(), Gradient(), *m_CTCposterior);
+            InputRef(inputIndex).MaskMissingGradientColumnsToZero(frameRange);
         }
         else
            RuntimeError("ForwardBackwardNode criterion expects only two inputs: labels and network output.");
     }
 
-    void WINAPI BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
+    void BackpropToLeft(const Matrix<ElemType>& logSoftmaxOfRight, Matrix<ElemType>& inputGradientValues,
         const Matrix<ElemType>& gradientValues)
     {
 #if DUMPOUTPUT
@@ -826,7 +823,7 @@ public:
 #endif
     }
 
-    void WINAPI BackpropToRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
+    void BackpropToRight(const Matrix<ElemType>& softmaxOfRight, Matrix<ElemType>& inputGradientValues, const Matrix<ElemType>& gradientValues,
         const Matrix<ElemType> &CTCposterior)
     {
 #if DUMPOUTPUT
@@ -850,7 +847,7 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        m_logSoftmaxOfRight->AssignLogSoftmaxOf(Input(1)->Value(), true);
+        m_logSoftmaxOfRight->AssignLogSoftmaxOf(InputRef(1).Value(), true);
         m_softmaxOfRight->SetValue(*m_logSoftmaxOfRight);
         m_softmaxOfRight->InplaceExp();
 
@@ -860,7 +857,7 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
         // compute CTC score
-        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, Input(0)->GetMBLayout(), m_delayConstraint);
+        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, InputRef(0).GetMBLayout(), m_delayConstraint);
 
 #if NANCHECK
         functionValues.HasNan("ForwardBackwardNode");
@@ -875,7 +872,8 @@ public:
         Base::Validate(isFinalValidationPass);
         m_pMBLayout = nullptr; // no layout
 
-        if (isFinalValidationPass) {
+        if (isFinalValidationPass) 
+        {
             if (!(Input(0)->GetSampleMatrixNumRows() == Input(1)->GetSampleMatrixNumRows() && // match vector dimension
                 Input(0)->HasMBLayout() &&
                 Input(0)->GetMBLayout() == Input(1)->GetMBLayout()))

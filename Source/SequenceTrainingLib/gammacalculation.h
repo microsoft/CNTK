@@ -258,18 +258,21 @@ public:
     // maxValues (input): values of max elements in label input vectors
     // labels (input): 1-hot vector with frame-level phone labels
     // CTCPosterior (output): CTC posterior
+    // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+    //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+    //      delayConstraint=-1 means no constraint
     void doCTC(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore, 
         const Microsoft::MSR::CNTK::Matrix<ElemType>& prob, 
         const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
         const Microsoft::MSR::CNTK::Matrix<ElemType>& maxValues,
         Microsoft::MSR::CNTK::Matrix<ElemType>& CTCPosterior, 
-        std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
         int delayConstraint = -1)
     {
-        auto numChannels = pMBLayout->GetNumParallelSequences();
-        auto numSequences = pMBLayout->GetNumSequences();
-        size_t numRows = prob.GetNumRows();
-        size_t numCols = prob.GetNumCols();
+        const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
+        const auto numSequences = pMBLayout->GetNumSequences();
+        const size_t numRows = prob.GetNumRows();
+        const size_t numCols = prob.GetNumCols();
         m_deviceid = prob.GetDeviceId();
         Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
         Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
@@ -278,16 +281,16 @@ public:
         Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
         std::vector<std::vector<size_t>> allUttPhoneSeqs;
         std::vector<std::vector<size_t>> allUttPhoneBounds;
-        size_t maxSizeT = 65535;
+        const size_t maxSizeT = 65535;
         int maxPhoneNum = 0;
         std::vector<size_t> phoneSeq;
         std::vector<size_t> phoneBound;
 
         ElemType finalScore = 0;
 
-        size_t blankid = numRows - 1;
+        const size_t blankid = numRows - 1;
 
-        size_t mbsize = numCols / numChannels;
+        size_t mbsize = numCols / numParallelSequences;
 
         // cal gamma for each utterance
         std::vector<size_t> uttBeginFrame;
@@ -314,10 +317,10 @@ public:
                 phoneBound.clear();
                 phoneBound.push_back(0);
                 int prevPhoneId = -1;
-                size_t startFrameInd = seq.tBegin*numChannels + seq.s;
-                size_t endFrameInd = seq.tEnd*numChannels + seq.s;
+                size_t startFrameInd = seq.tBegin*numParallelSequences + seq.s;
+                size_t endFrameInd = seq.tEnd*numParallelSequences + seq.s;
                 size_t frameCounter = 0;
-                for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numChannels, frameCounter++) {
+                for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numParallelSequences, frameCounter++) {
                     if (maxValues(0, frameInd) == 2) 
                     {
                         prevPhoneId = (size_t)maxIndexes(0, frameInd);
@@ -357,10 +360,11 @@ public:
         matrixPhoneBounds.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
 
         CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, finalScore, uttToChanInd, uttBeginFrame,
-            uttFrameNum, uttPhoneNum, numChannels, mbsize, delayConstraint, true);
+            uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, delayConstraint, true);
         
-        rowSum.Resize(1, numChannels*mbsize);
+        rowSum.Resize(1, numCols);
 
+        // Normalize the CTC scores
         CTCPosterior.VectorSum(CTCPosterior, rowSum, true);
         CTCPosterior.RowElementDivideBy(rowSum);
 

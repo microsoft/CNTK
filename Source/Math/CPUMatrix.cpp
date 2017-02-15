@@ -5876,6 +5876,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
     std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxFrameNum, int delayConstraint, const bool isColWise)
 {
+    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
     if (isColWise)
     {
         vector<size_t> curPhoneSeq;
@@ -6010,7 +6011,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
                         if (senoneid != 65535)
                         {
                             ElemType logoccu = alpha(s, t) + beta(s, t) - prob(senoneid, t) - (float)Zt;
-                            if (logoccu < CNMINLOGEXP)
+                            if (logoccu < LOG_OF_EPS_IN_LOG)
                                 us(senoneid, t) += 0.0f;
                             else
                                 us(senoneid, t) += exp(logoccu);

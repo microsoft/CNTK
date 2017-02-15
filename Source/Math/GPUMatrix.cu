@@ -4289,7 +4289,8 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
 // numChannels (input): channel number in this minibatch
 // maxFrameNum (input): the maximum channel frame number
 // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
-//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy
 //      delayConstraint=-1 means no constraint
 template<class ElemType>
 GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemType>& prob,
@@ -4337,6 +4338,9 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
         cudaEvent_t done = nullptr;
         CUDA_CALL(cudaEventCreate(&done));
         dim3 thread_tail(DEFAULT_THREAD_PER_DIM, DEFAULT_THREAD_PER_DIM);
+        // x dimension is for utterances
+        // y dimention is for phone sequence in each utterance
+        // Ensure that we allocate correct number of blocks for given number of utterances and max number of phones in those utterances 
         dim3 block_tail((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxPhoneNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
         for (long t = 0; t < maxFrameNum; t++)
         {
@@ -4357,16 +4361,14 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
         _assignCTCScore << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, gpuUttToChanInd,
             gpuBeginFrame, gpuPhoneNum, gpuFrameNum, numChannels, maxPhoneNum, totalPhoneNum);
 
-        ElemType *scores;
-        scores = (ElemType*)malloc(sizeof(ElemType)*uttNum);
-        CUDA_CALL(cudaMemcpyAsync(scores, gpuScores, sizeof(ElemType) * uttNum, cudaMemcpyDeviceToHost, t_stream));
+        vector<ElemType>scores(uttNum);
+        CUDA_CALL(cudaMemcpyAsync(scores.data(), gpuScores, sizeof(ElemType) * uttNum, cudaMemcpyDeviceToHost, t_stream));
 
         for (size_t utt = 0; utt < uttFrameNum.size(); utt++)
         {
             totalScore += scores[utt];
         }
 
-        free(scores);
         CUDA_CALL(cudaFree(gpuFrameNum));
         CUDA_CALL(cudaFree(gpuPhoneNum));
         CUDA_CALL(cudaFree(gpuBeginFrame));
