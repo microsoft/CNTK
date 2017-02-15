@@ -110,3 +110,19 @@ def test_block_with_duplicate_inputs():
     plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, input), (right_operand_placeholder, input)], 'plus')
 
     plus_block_clone = plus_block.clone('share')
+
+
+def test_as_block_with_function_in_arguments_map():
+    from .. import placeholder_variable, as_block, input_variable
+    input = input_variable((1,), name='input')
+    input_plus_2 = input + 2
+    
+    left_operand_placeholder = placeholder_variable(name='left_placeholder')
+    right_operand_placeholder = placeholder_variable()
+    plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, input_plus_2), (right_operand_placeholder, input)], 'plus')
+
+    # evaluate
+    res = plus_block.eval({plus_block.arguments[0]: [[1.0]]})
+
+    expected_forward = [[[4.]]]
+    assert np.array_equal(res, expected_forward)

@@ -256,7 +256,6 @@ private:
 // 'dataInput' can also be without MBLayout, so that we can implement OnesLike().
 // If 'dataInput' does not have a MBLayout, it broadcasts the dataInput along the MBLayout of the 'layoutInput'.
 // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
-// TODO: also allow dataInput to have a dynamic axis of length 1, which will broadcast it per sequence. Trickier to do.
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -276,44 +275,81 @@ public:
     {
         // enforce compatibility of 'dataInput' with 'layoutInput'
         // TODO: how to deal with boundary flags?
-        if (InputRef(0).HasMBLayout() && *m_pMBLayout != *InputRef(0).GetMBLayout()) // this does a deep value-level comparison
+
+        // this does a deep value-level comparison
+        m_layoutsMatch = InputRef(0).HasMBLayout() && *m_pMBLayout == *InputRef(0).GetMBLayout();
+        if (InputRef(0).GetMBLayout() && !m_layoutsMatch &&
+            ((InputRef(0).GetMBLayout()->GetNumTimeSteps() != 1) || (InputRef(0).GetMBLayout()->GetNumSequences() != m_pMBLayout->GetNumSequences()) || !fr.IsAllFrames()))
+        {
             InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompatible with that of %ls %ls.",
                             NodeName().c_str(), OperationName().c_str(),
                             InputRef(0).NodeName().c_str(), InputRef(0).OperationName().c_str(),
                             InputRef(1).NodeName().c_str(), InputRef(1).OperationName().c_str());
+        }
 
-        // copy the data from 'dataInput'
-        // If Input(0) has no MBLayout, then this will broadcast.
-        //ValueTensorFor(rank, fr).AssignCopyOf(InputRef(0).ValueTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout()))); // just propagate through
-        size_t rank = GetSampleLayout().GetRank();
-        auto result =             ValueTensorFor(rank, fr);
-        //auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).GetMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
-        // ^^ I don't think the conditional is needed here; it seems the related test in TensorSliceWithMBLayoutFor() can never be True. Can it?
-        auto input0 = InputRef(0).ValueTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout()));
-        result.AssignCopyOf(input0);
-        // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the tensor lib).
+        if (!InputRef(0).GetMBLayout() || m_layoutsMatch)
+        {
+            // copy the data from 'dataInput'
+            size_t rank = GetSampleLayout().GetRank();
+            auto result =             ValueTensorFor(rank, fr);
+#if 1
+            auto input0 = InputRef(0).ValueTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout()));
+#else
+            auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).GetMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
+            // ^^ I don't think the conditional is needed here; it seems the related test in TensorSliceWithMBLayoutFor() can never be True. Can it?
+#endif
+            result.AssignCopyOf(input0);
+            // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the tensor lib).
+        }
+        else
+        {
+            // Broadcast along the sequence
+            auto result = ValueFor(fr);
+            ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), result, m_pMBLayout, m_tempGatherIndices);
+        }
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         if (inputIndex == 0)
         {
-            size_t rank = GetSampleLayout().GetRank();
-            auto gradient      =                       GradientTensorFor(rank, fr);
-            //auto inputGradient = InputRef(inputIndex)->GradientTensorFor(rank, InputRef(inputIndex).GetMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
-            // ^^ same comment as in ForwardProp()
-            auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.WithLayout(InputRef(inputIndex).GetMBLayout()));
+            if (!InputRef(0).GetMBLayout() || m_layoutsMatch)
+            {
+                size_t rank = GetSampleLayout().GetRank();
+                auto gradient      =                      GradientTensorFor(rank, fr);
+#if 1
+                auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.WithLayout(InputRef(inputIndex).GetMBLayout()));
+#else
+                auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, InputRef(inputIndex).GetMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
+#endif
 
-            // if reduction then mask the respective input(s) (zero out the gaps)
-            if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))
-                MaskMissingGradientColumnsToZero(fr);
+                // if reduction then mask the respective input(s) (zero out the gaps)
+                if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))
+                    MaskMissingGradientColumnsToZero(fr);
 
-            if (InputRef(inputIndex).ParentOverwritesGradient())
-                inputGradient.AssignCopyOf(gradient);
+                // TODO: can simplify to DoCopyOf((float)!ParentOverwritesGradient(), gradient)
+                if (InputRef(inputIndex).ParentOverwritesGradient())
+                    inputGradient.AssignCopyOf(gradient);
+                else
+                    inputGradient.AddCopyOf(gradient);
+
+                // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
+            }
             else
-                inputGradient.AddCopyOf(gradient);
+            {
+                assert(fr.IsAllFrames());
+                // BUGBUG: This should also work inside loops.
 
-            // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
+                MaskMissingGradientColumnsToZero(fr);
+                auto unpackedGradientTensor = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, /*batchMajor=*/ true, /*maskGaps=*/ true);
+
+                size_t rank = GetSampleLayout().GetRank();
+                auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
+                if (Input(inputIndex)->ParentOverwritesGradient())
+                    inputGradient.AssignCopyOf(unpackedGradientTensor);
+                else
+                    inputGradient.AddCopyOf(unpackedGradientTensor);
+            }
         }
     }
 
@@ -329,6 +365,38 @@ public:
 
         SetDims(Input(0)->GetSampleLayout(), HasMBLayout());
     }
+
+    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool);
+    }
+
+    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_tempGatherIndices, matrixPool);
+    }
+
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_tempScatterIndices, matrixPool);
+        RequestMatrixFromPool(m_tempUnpackedData, matrixPool);
+    }
+
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_tempScatterIndices, matrixPool);
+        ReleaseMatrixToPool(m_tempUnpackedData, matrixPool);
+    }
+
+private:
+    bool m_layoutsMatch;
+    shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
+    shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
+    shared_ptr<Matrix<ElemType>> m_tempUnpackedData;
 };
 
 template class ReconcileDynamicAxisNode<float>;

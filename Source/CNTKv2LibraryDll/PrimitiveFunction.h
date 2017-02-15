@@ -188,6 +188,8 @@ namespace CNTK
         static const std::wstring InternalProdReductionOpName;
         static const std::wstring InternalAllReductionOpName;
         static const std::wstring InternalAnyReductionOpName;
+        static const std::wstring InternalArgmaxReductionOpName;
+        static const std::wstring InternalArgminReductionOpName;
 
         static const std::wstring AttributeNameAxis;
         static const std::wstring AttributeNameAxis1;
@@ -711,6 +713,11 @@ namespace CNTK
 
         void InferOutputs(std::vector<Variable>& outputs) override;
 
+        FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override
+        {
+            return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
+        }
+
     private:
         PrimitiveOpType m_op;
 
@@ -720,6 +727,7 @@ namespace CNTK
         // version 2: changed in 7af3a7c0e46cb12f873f1289400a9c5d86746662. TODO(n17s): add description.
         // version 3: changed in df0ab4e58186738931968e806b61bc80d7b6e20e. TODO(pkrannen): add description.
         // version 4: added extra parameter (#6) for the running mean sample count in BatchNormalization.
-        static const size_t s_serializationVersion = 5;
+        // Version 6: Add argmax and argmin to ReduceElement.
+        static const size_t s_serializationVersion = 6;
     };
 }

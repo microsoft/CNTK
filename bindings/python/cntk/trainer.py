@@ -109,7 +109,7 @@ class Trainer(cntk_py.Trainer):
             if contains_minibatch_data:
                 updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
                     arguments, device)
-            else:    
+            else:
                 updated = super(Trainer, self).train_minibatch(arguments,
                     device)
 

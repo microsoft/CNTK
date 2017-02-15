@@ -2554,6 +2554,11 @@ namespace CNTK
         /// (e.g. for use as a fixed feature extractor)
         ///
         Freeze,
+
+        ///
+        /// Internal use only
+        ///
+        Invalid,
     };
 
     ///
@@ -2641,6 +2646,8 @@ namespace CNTK
         /// crossing of dll boundary.
         ///
         CNTK_API virtual void InferOutputs(std::vector<Variable>& outputs) = 0;
+
+        CNTK_API virtual FunctionPtr Clone(const std::vector<Variable>& /*clonedInputs*/) { NOT_IMPLEMENTED; }
 
     public:
 
@@ -3521,6 +3528,32 @@ namespace CNTK
     /// of Functions underlying the specified rootFunction.
     ///
     CNTK_API FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise parametric rectified linear Unit operation 
+    /// with the specified input operand and learning parameter alpha.
+    ///
+    CNTK_API FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
 
     namespace Sequence
     {

@@ -5734,6 +5734,23 @@ void Matrix<ElemType>::TensorOp(ElemType beta, const Matrix<ElemType>& a, const 
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }
+template <class ElemType>
+void Matrix<ElemType>::TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
+                                   const array<size_t, 2>& offsets,
+                                   const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                   const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    VerifyIsDense(*this) && VerifyIsDense(a);
+
+    DecideAndMoveToRightDevice(*this, a);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+        this,
+        m_CPUMatrix->TensorArgOp(*a.m_CPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        m_GPUMatrix->TensorArgOp(*a.m_GPUMatrix, reductionOp, offsets, regularOpDims, regularStrides, reducingOpDims, reducingStrides),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
 
 //template class Matrix<short>;
 template class Matrix<float>;
