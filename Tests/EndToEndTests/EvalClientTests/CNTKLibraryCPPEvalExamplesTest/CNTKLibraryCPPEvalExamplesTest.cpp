@@ -19,7 +19,7 @@ int main()
     }
     else
     {
-        fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on GPU device. #####\n");
+        fprintf(stderr, "\n##### Test CNTKLibraryCPPEvalExamples on CPU device. #####\n");
         MultiThreadsEvaluation(false);
     }
 

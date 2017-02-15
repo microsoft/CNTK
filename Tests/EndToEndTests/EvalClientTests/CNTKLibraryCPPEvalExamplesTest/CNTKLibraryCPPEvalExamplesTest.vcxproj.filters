@@ -21,7 +21,7 @@
     <ClCompile Include="EvalMultithreads.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-	<ClCompile Include="Common.cpp">
+    <ClCompile Include="Common.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
