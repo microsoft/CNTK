@@ -2720,7 +2720,7 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     // the total number of epochs to run.
     m_maxEpochs = configSGD(L"maxEpochs");
 
-    m_useRandomDropout = configSGD(L"useRandomDropout");
+    m_useRandomDropout = configSGD(L"useRandomDropout", false);
 
 
     // Note: Momentum is best specified as a MB-size agnostic fashion.
