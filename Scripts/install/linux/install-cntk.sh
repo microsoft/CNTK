@@ -6,28 +6,32 @@
 # for full license information.
 # ==============================================================================
 
-PY_VERSION=35
+SCRIPT_NAME="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"
+PARSED_ARGS=`getopt -o '' --long py-version:,anaconda-prefix: -n "$SCRIPT_NAME" -- "$@"`
 
-while [ $# -gt 0 ]; do
+if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+
+eval set -- "$PARSED_ARGS"
+PY_VERSION=35
+ANACONDA_PREFIX="$HOME/anaconda3"
+
+while true; do
   case "$1" in
-    --py-version)
+    --py-version) 
       case "$2" in
         27 | 34 | 35)
           PY_VERSION="$2"
           ;;
         *)
-          echo Invalid or missing value for --py-version option, please specify 27, 34, or 35.
+          echo Invalid value for --py-version option, please specify 27, 34, or 35.
           exit 1
           ;;
       esac
-      shift # extra shift
-      ;;
-    *)
-      echo Unknown option $1
-      exit 1
-      ;;
+      shift 2 ;;
+    --anaconda-prefix) ANACONDA_PREFIX="$2"; shift 2 ;;
+    -- ) shift; break ;;
+    * ) break ;;
   esac
-  shift
 done
 
 # Log steps, stop on error
@@ -122,7 +126,6 @@ fi
 # Anaconda install and environment setup
 # TODO consider miniconda
 
-ANACONDA_PREFIX="$HOME/anaconda3"
 if [ -d "$ANACONDA_PREFIX" ]; then
   printf "Path '%s' already exists, skipping Anaconda install\n" "$ANACONDA_PREFIX"
 else
@@ -135,11 +138,11 @@ else
   "./$ANACONDA" -b -p "$ANACONDA_PREFIX"
 fi
 
-CONDA="$HOME/anaconda3/bin/conda"
+CONDA="$ANACONDA_PREFIX/bin/conda"
 [ -x "$CONDA" ]
-PY_ACTIVATE="$HOME/anaconda3/bin/activate"
+PY_ACTIVATE="$ANACONDA_PREFIX/bin/activate"
 [ -x "$PY_ACTIVATE" ]
-PY_DEACTIVATE="$HOME/anaconda3/bin/deactivate"
+PY_DEACTIVATE="$ANACONDA_PREFIX/bin/deactivate"
 [ -x "$PY_DEACTIVATE" ]
 
 CNTK_PY_ENV_NAME="cntk-py$PY_VERSION"
