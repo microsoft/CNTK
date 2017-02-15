@@ -29,9 +29,9 @@ namespace CNTK
         }
     }
 
-    DistributedCommunicatorPtr MPICommunicator()
+    DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes)
     {
-        return std::make_shared<MPICommunicatorImpl>();
+        return std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes);
     }
 
     void DistributedCommunicator::Finalize()
@@ -65,7 +65,7 @@ namespace CNTK
         return nullptr; // Make compiler happy.
     }
 
-    MPICommunicatorImpl::MPICommunicatorImpl()
+    MPICommunicatorImpl::MPICommunicatorImpl(size_t packThresholdSizeInBytes)
     {
         m_mpi = MPIWrapper::GetInstance();
         if (m_mpi == nullptr)
@@ -82,6 +82,7 @@ namespace CNTK
                 // TOOD: Nodes have to exchange their names.
                 m_workers.insert({ i,  L"" });
         }
+        m_packThresholdSizeInBytes = packThresholdSizeInBytes;
     }
 
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
@@ -303,15 +304,22 @@ namespace CNTK
 
         std::vector<NDArrayViewPtr> valuesToAggregate; // Corresponding to inputValues
         std::vector<NDArrayViewPtr> valuesAfterAggregate; // Corresponding to outputValues
-        size_t packedGradientsSizeInBytes = 0;
-        std::vector<size_t> packedGradientsIndex;
+        size_t packedFloatGradientsSizeInBytes = 0;
+        size_t packedDoubleGradientsSizeInBytes = 0;
+        std::vector<size_t> packedFloatGradientsIndex;
+        std::vector<size_t> packedDoubleGradientsIndex;
         for (auto i = 0; i < numValues; i++)
         {
-            // Push index to packing queue if the gradient's size is less than threshold size and the gradient is not the last one (reserved for header)
-            if (GetBufferSize(inputValues[i]) < DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES && (i != numValues - 1))
+            // Push index to packing queue if the gradient's size is less than threshold size
+            if (GetBufferSize(inputValues[i]) < m_packThresholdSizeInBytes && (inputValues[i]->GetDataType() == DataType::Float))
             {
-                packedGradientsSizeInBytes += GetBufferSize(inputValues[i]);
-                packedGradientsIndex.push_back(i);
+                packedFloatGradientsSizeInBytes += GetBufferSize(inputValues[i]);
+                packedFloatGradientsIndex.push_back(i);
+            }
+            else if (GetBufferSize(inputValues[i]) < m_packThresholdSizeInBytes && (inputValues[i]->GetDataType() == DataType::Double))
+            {
+                packedDoubleGradientsSizeInBytes += GetBufferSize(inputValues[i]);
+                packedDoubleGradientsIndex.push_back(i);
             }
             else
             {
@@ -320,61 +328,63 @@ namespace CNTK
             }
         }
 
-        std::unique_ptr<Matrix<float>> m_aggregationBufferFloat;
-        std::unique_ptr<Matrix<double>> m_aggregationBufferDouble;
+        std::unique_ptr<Matrix<float>> aggregationBufferFloat;
+        std::unique_ptr<Matrix<double>> aggregationBufferDouble;
         // Do the packing to reduce the number of MPI requests.
-        if (packedGradientsSizeInBytes > 0)
+        if (packedFloatGradientsIndex.size() > 1)
         {
-            if (inputValues[0]->GetDataType() == DataType::Float)
-            {
-                m_aggregationBufferFloat.reset(new (std::nothrow) Matrix<float>(1, packedGradientsSizeInBytes / sizeof(float), inputValues[0]->Device().Id()));
-            }
-            else
-            {
-                m_aggregationBufferDouble.reset(new (std::nothrow) Matrix<double>(1, packedGradientsSizeInBytes / sizeof(double), inputValues[0]->Device().Id()));
-            }
+            aggregationBufferFloat.reset(new (std::nothrow) Matrix<float>(1, packedFloatGradientsSizeInBytes / sizeof(float),
+                inputValues[packedFloatGradientsIndex[0]]->Device().Id()));
+        }
+        if (packedDoubleGradientsIndex.size() > 1)
+        {
+            aggregationBufferDouble.reset(new (std::nothrow) Matrix<double>(1, packedDoubleGradientsSizeInBytes / sizeof(double),
+                inputValues[packedDoubleGradientsIndex[0]]->Device().Id()));
+        }
 
-            if (m_aggregationBufferFloat == nullptr && m_aggregationBufferDouble == nullptr)
-            {
-                packedGradientsSizeInBytes = 0;
-                packedGradientsIndex.clear();
-                valuesToAggregate.clear();
-                valuesAfterAggregate.clear();
-                valuesToAggregate = inputValues;
-                valuesAfterAggregate = outputValues;
-            }
-            else
+        if (aggregationBufferFloat == nullptr && aggregationBufferDouble == nullptr)
+        {
+            packedFloatGradientsSizeInBytes = 0;
+            packedFloatGradientsIndex.clear();
+            packedDoubleGradientsSizeInBytes = 0;
+            packedDoubleGradientsIndex.clear();
+            valuesToAggregate.clear();
+            valuesAfterAggregate.clear();
+            valuesToAggregate = inputValues;
+            valuesAfterAggregate = outputValues;
+        }
+        else
+        {
+            if (aggregationBufferFloat != nullptr)
             {
                 size_t offset = 0;
-                if (inputValues[0]->GetDataType() == DataType::Float)
+                for (size_t i : packedFloatGradientsIndex)
                 {
+                    auto gradient = GetWritableMatrix<float>(inputValues[i]);
+                    aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
+                    offset += gradient->GetNumElements();
+                }
+                ::CNTK::NDShape shape{ aggregationBufferFloat->GetNumElements() };
+                auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(DataType::Float, shape, aggregationBufferFloat->Data(),
+                    packedFloatGradientsSizeInBytes, inputValues[packedFloatGradientsIndex[0]]->Device());
+                valuesToAggregate.push_back(data);
+                valuesAfterAggregate.push_back(data);
+            }
 
-                    for (size_t i : packedGradientsIndex)
-                    {
-                        auto gradient = GetWritableMatrix<float>(inputValues[i]);
-                        m_aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
-                        offset += gradient->GetNumElements();
-                    }
-                    ::CNTK::NDShape shape{ m_aggregationBufferFloat->GetNumElements() };
-                    auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(DataType::Float, shape, m_aggregationBufferFloat->Data(),
-                        packedGradientsSizeInBytes, inputValues[0]->Device());
-                    valuesToAggregate.insert(valuesToAggregate.begin(), 1, data);
-                    valuesAfterAggregate.insert(valuesAfterAggregate.begin(), 1, data);
-                }
-                else
+            if (aggregationBufferDouble != nullptr)
+            {
+                size_t offset = 0;
+                for (size_t i : packedDoubleGradientsIndex)
                 {
-                    for (size_t i : packedGradientsIndex)
-                    {
-                        auto gradient = GetWritableMatrix<double>(inputValues[i]);
-                        m_aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
-                        offset += gradient->GetNumElements();
-                    }
-                    ::CNTK::NDShape shape{ m_aggregationBufferDouble->GetNumElements() };
-                    auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(DataType::Double, shape, m_aggregationBufferDouble->Data(),
-                        packedGradientsSizeInBytes, inputValues[0]->Device());
-                    valuesToAggregate.insert(valuesToAggregate.begin(), 1, data);
-                    valuesAfterAggregate.insert(valuesAfterAggregate.begin(), 1, data);
+                    auto gradient = GetWritableMatrix<double>(inputValues[i]);
+                    aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
+                    offset += gradient->GetNumElements();
                 }
+                ::CNTK::NDShape shape{ aggregationBufferDouble->GetNumElements() };
+                auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(DataType::Float, shape, aggregationBufferDouble->Data(),
+                    packedDoubleGradientsSizeInBytes, inputValues[packedDoubleGradientsIndex[0]]->Device());
+                valuesToAggregate.push_back(data);
+                valuesAfterAggregate.push_back(data);
             }
         }
         numValues = valuesToAggregate.size();
@@ -462,26 +472,22 @@ namespace CNTK
         }
 
         // Unpack the continuous buffer
-        if (packedGradientsSizeInBytes > 0)
+        if (aggregationBufferFloat == nullptr || aggregationBufferDouble == nullptr)
         {
             size_t offset = 0;
-            if (inputValues[0]->GetDataType() == DataType::Float)
+            for (size_t i : packedFloatGradientsIndex)
             {
-                for (size_t i : packedGradientsIndex)
-                {
-                    auto gradient = GetWritableMatrix<float>(outputValues[i]);
-                    gradient->AssignValuesOf(m_aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
-                    offset += gradient->GetNumElements();
-                }
+                auto gradient = GetWritableMatrix<float>(outputValues[i]);
+                gradient->AssignValuesOf(aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
+                offset += gradient->GetNumElements();
             }
-            else
+
+            offset = 0;
+            for (size_t i : packedDoubleGradientsIndex)
             {
-                for (size_t i : packedGradientsIndex)
-                {
-                    auto gradient = GetWritableMatrix<double>(outputValues[i]);
-                    gradient->AssignValuesOf(m_aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
-                    offset += gradient->GetNumElements();
-                }
+                auto gradient = GetWritableMatrix<double>(outputValues[i]);
+                gradient->AssignValuesOf(aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
+                offset += gradient->GetNumElements();
             }
         }
 

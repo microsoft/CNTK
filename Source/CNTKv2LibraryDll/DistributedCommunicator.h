@@ -6,6 +6,7 @@
 #pragma once
 
 #include "CNTKLibrary.h"
+#include "Constants.h"
 #include <MatrixQuantizerImpl.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
@@ -20,7 +21,7 @@ namespace CNTK
     class MPICommunicatorImpl : public DistributedCommunicator, public std::enable_shared_from_this<MPICommunicatorImpl>
     {
     public:
-        MPICommunicatorImpl();
+        MPICommunicatorImpl(size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
 
         virtual const std::unordered_set<DistributedWorkerDescriptor>& Workers() const override;
 
@@ -81,6 +82,9 @@ namespace CNTK
 
         // TODO: these two are always parallel, merge them together?
         std::vector<std::shared_ptr<Microsoft::MSR::CNTK::GPUDataTransferer>> m_gpuDataTransferers;
+
+        // Threshold size of a gradient to be packed
+        size_t m_packThresholdSizeInBytes;
 
     protected:
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
