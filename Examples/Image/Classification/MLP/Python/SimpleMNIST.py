@@ -7,6 +7,7 @@
 import numpy as np
 import sys
 import os
+import cntk
 from cntk import Trainer, training_session, minibatch_size_schedule
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
@@ -88,7 +89,10 @@ def simple_mnist():
         progress_frequency = num_samples_per_sweep,
         max_training_samples = num_samples_per_sweep * num_sweeps_to_train_with)
 	
+    cntk.start_profiler()
+    cntk.enable_profiler()
     session.train()
+    cntk.stop_profiler()
     
     # Load test data
     path = os.path.normpath(os.path.join(data_dir, "Test-28x28_cntk_text.txt"))

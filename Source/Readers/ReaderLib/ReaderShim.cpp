@@ -282,9 +282,15 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // Let's update the current data transferer.
     m_currentDataTransferIndex = (m_currentDataTransferIndex + 1) % 2;
 
+    auto profRecordSync = ProfilerTimeBegin();
+
     // Record an event that prefetch can wait on to ensure that prior compute has finished.
     if (m_dataTransferers[m_currentDataTransferIndex])
         m_dataTransferers[m_currentDataTransferIndex]->RecordComputeStreamSyncPoint();
+
+    ProfilerTimeEnd(profRecordSync, m_currentDataTransferIndex ? "Record Sync 1" : "Record Sync 0");
+
+    auto profSwapMatrix = ProfilerTimeBegin();
 
     // We have some data - let's swap the matrices.
     // We cannot simply change pointers because it seems they are remembered deeper in the network.
@@ -295,6 +301,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         // Resetting layouts.
         i->second.pMBLayout->Init(1, 0);
     }
+
+    ProfilerTimeEnd(profSwapMatrix, m_currentDataTransferIndex ? "Swap Matrix 1" : "Swap Matrix 0");
 
     // a map to generate error messages when checking layout constraints.
     map<wstring, wstring> layoutToInputMap;
@@ -323,6 +331,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // So pick up the first one.
     m_numParallelSequences = matrices.begin()->second.pMBLayout->GetNumParallelSequences();
 
+    auto profLaunchAsync = ProfilerTimeBegin();
+
     // It is time to issue the next prefetch.
     if (!m_endOfEpoch)
     {
@@ -332,6 +342,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
         m_prefetchTask = std::async(m_launchType, [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); });
     }
+
+    ProfilerTimeEnd(profLaunchAsync, m_currentDataTransferIndex ? "Launch Async 1" : "Launch Async 0");
 
     auto profPrefetchGPUCopyWait = ProfilerTimeBegin();
 
