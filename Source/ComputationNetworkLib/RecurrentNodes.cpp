@@ -407,7 +407,7 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
-    // input 1 (initial state) can be done in bulk
+    // input 1 (initial state) is done in bulk
     if (inputIndex == 1)    
     {
         size_t rank = DetermineElementwiseTensorRank();
@@ -437,27 +437,28 @@ template<class ElemType, int direction>
             init.DoScatterColumnsOf(/*beta=*/1, idx, src, /*alpha=*/1);
         }
     }
-
-    // move the target matrix to the target device, since below it is accessed as slices which cannot move
-    // TODO: change below accesses to TensorView, then this is no longer needed. This is now the case, but need to test it.
-    // TODO: we seem to already use TensorView, so this thing may no longer be needed. Too scary to remove.
-    if (InputRef(0).NeedsGradient()) // (if not needs gradient then gradient matrix does not exist and therefore cannot be moved)
-        InputRef(0).Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
-
-    // special case: DelayedValueNodes may be used outside of loops
-    // TODO: this should be a bulk operation; this implementation is a quick hack
-    if (fr.IsAllFrames())
+    else if (inputIndex == 0)
     {
-        // recursive call to ourselves
-        int dir = direction; // (this avoids a 'conditional expression is constant' warning)
-        FrameRangeIteration range(m_pMBLayout, -dir);
-        for (auto t = range.rbegin(); t != range.rend(); t++) // note: reverse iterator
-            BackpropTo(inputIndex, t);
-        return;
-    }
+        // special case: DelayedValueNodes may be used outside of loops
+        // TODO: this should be a bulk operation; this implementation is a quick hack
+        if (fr.IsAllFrames())
+        {
+            // recursive call to ourselves
+            int dir = direction; // (this avoids a 'conditional expression is constant' warning)
+            FrameRangeIteration range(m_pMBLayout, -dir);
+            for (auto t = range.rbegin(); t != range.rend(); t++) // note: reverse iterator
+                BackpropTo(inputIndex, t);
+            return;
+        }
 
-    if (inputIndex == 0)
-    {
+#if 0   // this should be removed; keep it around for a while in case we find it fail
+        // move the target matrix to the target device, since below it is accessed as slices which cannot move
+        // TODO: change below accesses to TensorView, then this is no longer needed. This is now the case, but need to test it.
+        // TODO: we seem to already use TensorView, so this thing may no longer be needed. Too scary to remove.
+        if (InputRef(0).NeedsGradient()) // (if not needs gradient then gradient matrix does not exist and therefore cannot be moved)
+            InputRef(0).Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+#endif
+
         // if delayed input is within valid time range then add its gradient
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep); // target frame
         if (!m_pMBLayout->IsBeyondMinibatch(frDelayed)) // only propagate if our target is inside the minibatch

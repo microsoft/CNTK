@@ -9,6 +9,28 @@ from ...utils import sanitize_input, get_data_type, typemap
 # sequence ops
 ##########################################################################
 
+def delay(x, initial_state=None, time_step=1, name=''):
+    '''
+    This function combines ``past_value`` and ``future_value`` into a single function.
+    This is useful when the time_step can be specified as positive or negative.
+
+    Args:
+        x: the tensor (or its name) from which the past value is obtained
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
+        time_step (int): the number of time steps to look into the past, where negative values mean to look into the future, and 0 means a no-op (default 1).
+        name (str, optional): the name of the Function instance in the network
+    '''
+    from ...ops import alias, past_value, future_value
+    if time_step > 0:
+        return past_value  (x, time_step= time_step, initial_state=initial_state, name=name)
+    elif time_step < 0:
+        return future_value(x, time_step=-time_step, initial_state=initial_state, name=name)
+    else:
+        if name:
+            return alias(x, name)
+        else:
+            return x
+
 
 @typemap
 def is_first(seq, name=''):

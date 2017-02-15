@@ -257,7 +257,7 @@ namespace CNTK
 
                         // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
                         if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
-                            LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
+                            LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axes (1 sequence axis and 1 batch axis)");
                     }
 
                     outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], true, true);
