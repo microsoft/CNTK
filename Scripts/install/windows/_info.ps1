@@ -89,7 +89,7 @@ function CheckOSVersion
         return
     }
 
-    Write-Host "
+    Write-Warning "
 You are running the this install script on [$runningOn].
 The Microsoft Cognitive Toolkit is designed and tested on Windows 8.1, Windows 10, 
 and Windows Server 2012 R2. 
@@ -97,7 +97,8 @@ and Windows Server 2012 R2.
     return
 }
 
-function DisplayStart()
+function DisplayStart(
+    [bool] $NoConfirm)
 {
     Write-Host $(DisplayStartMessage)
 
@@ -110,7 +111,9 @@ function DisplayStart()
     if (-not $Execute) {
         Write-Warning $(DisplayWarningNoExecuteMessage)
     }
-    
+    if ($NoConfirm) {
+        return $true
+    }
     Write-Host $(DisplayStartContinueMessage)
     $choice = GetKey '^[1qQ]+$'
 

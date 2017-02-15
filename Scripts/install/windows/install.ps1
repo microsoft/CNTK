@@ -25,9 +25,11 @@
  - A CNTK-PY<version> environment will be created or updated in [<AnacondaBasePath>\envs]
  - CNTK will be installed or updated in the CNTK-PY<version> environment
  
- .PARAMETER Execute
- You need to supply this optional parameter to have the install script perform any changes to your machine. 
- Without this parameter NO CHANGES will be done to your machine.
+  .PARAMETER Execute
+ You can set this switch to false to prevent Install from performing any physical changes to the machine.
+
+ .PARAMETER NoConfirm
+ If you supply this optional parameter, the install script will execute operations without asking for user confirmation.
 
  .PARAMETER AnacondaBasePath
  This optional parameter allows you to specify the location of an Anaconda installation to be used or created on your 
@@ -57,7 +59,8 @@
 Param(
     [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
     [parameter(Mandatory=$false)] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
-    [parameter(Mandatory=$false)] [switch] $Execute)
+    [parameter(Mandatory=$false)] [switch] $Execute = $true,
+    [parameter(Mandatory=$false)] [switch] $NoConfirm)
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
 
@@ -77,7 +80,7 @@ $localCache     = "$MyDir\InstallCache"
 Function main
 {
     try {
-        if (-not (DisplayStart)) {
+        if (-not (DisplayStart -NoConfirm $NoConfirm)) {
             Write-Host 
             Write-Host " ... Quitting ... "
             Write-Host
@@ -89,7 +92,7 @@ Function main
         }
 
         $Script:operationList  = @()
-        if (VerifyOperations) {
+        if (VerifyOperations -NoConfirm $NoConfirm) {
 
             DownloadOperations
 
