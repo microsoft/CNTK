@@ -302,7 +302,7 @@ template <class ElemType>
             continue;
         auto& indexSequence = indexSequences[i];
         // create index map for one sequence
-        // this is the condition check that this node performs; the meat
+        // this is the condition check that this node performs; the meat (or tofu if you're vegeterian)
         indexSequence.clear();
         double desiredCount = 0.0;
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
