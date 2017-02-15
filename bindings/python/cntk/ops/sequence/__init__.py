@@ -162,8 +162,12 @@ def last(seq, name=''):
 @typemap
 def where(condition, name=''):
     '''
-    Given a symbolic sequence ``condition`` of boolean-like values, it will return
+    Given a symbolic sequence ``condition`` of boolean-like (1/0) values, it will return
     a new sequence containing the indices for which the values were true.
+
+    If ``condition`` has a value other than 0 or 1, it will denote a repeat factor.
+    If a repeat factor is fractional, it will round up but deduct the overshoot from the
+    next repeat factor.
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
@@ -177,11 +181,20 @@ def where(condition, name=''):
                 [ 1.]]], dtype=float32)
         >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
-        array([[[ 2.],
-                [ 3.]]], dtype=float32)
+        array([[ 2.,  3.]], dtype=float32)
+
+        >>> # repeat frame[1] twice, frame[3] three times, and frame[4] twice
+        >>> C.sequence.where(C.input_variable(1)).eval([[[1], [2], [1], [3], [2]]])
+        array([[ 0.,  1.,  1.,  2.,  3.,  3.,  3.,  4.,  4.]], dtype=float32)
+        >>> # note that the above are the indices that are passed to 
+
+        >>> # repeat frames with a fractional factor
+        >>> C.sequence.where(C.input_variable(1)).eval([[[1.2]]*10])
+        array([[ 0.,  0.,  1.,  2.,  3.,  4.,  5.,  5.,  6.,  7.,  8.,  9.]], dtype=float32)
+        >>> # as a result, a 1.2 times stretch is realized by duplicating frame[0] and frame[5]
 
     Args:
-        condition: the symbolic sequence of booleans
+        condition: sequence of 0 or 1 values for filtering, or other positive values for repetition (also fractional)
         name (str): the name of the node in the network
 
     Returns:
