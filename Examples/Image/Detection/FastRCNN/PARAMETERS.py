@@ -6,7 +6,7 @@ from fastRCNN.pascal_voc import pascal_voc # as nmsPython
 print (datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H:%M:%S'))
 
 # dataset name
-datasetName = "grocery"
+datasetName = "Grocery"
 # datasetName = "pascalVoc"
 # datasetName = "pascalVoc_aeroplanesOnly"
 
@@ -58,7 +58,7 @@ cntk_momentum_time_constant = -1    # set per data set below
 ############################
 # project-specific parameters
 ############################
-if datasetName.startswith("grocery"):
+if datasetName.startswith("Grocery"):
     classes = ('__background__',  # always index 0
                'avocado', 'orange', 'butter', 'champagne', 'eggBox', 'gerkin', 'joghurt', 'ketchup',
                'orangeJuice', 'onion', 'pepper', 'tomato', 'water', 'milk', 'tabasco', 'mustard')

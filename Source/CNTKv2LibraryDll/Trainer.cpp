@@ -27,7 +27,8 @@ namespace CNTK
           m_evaluationFunction(evaluationFunction),
           m_parameterLearners(std::make_shared<Learners>(parameterLearners)),
           m_prevMinibatchNumSamples(1),
-          m_distributed(false)
+          m_distributed(false),
+          m_accumulatedNumSamples(0)
     {
         // By default we set the number of threads to hardware concurrency.
         if (!Internal::MaxNumCPUThreadsSet())
@@ -217,6 +218,8 @@ namespace CNTK
         std::unordered_map<Variable, ValuePtr> parameterGradients;
         ExecuteForwardBackward(arguments, outputsToFetch, computeDevice, parameterGradients);
 
+        AccumulatePrevMinibatch(computeDevice);
+
         auto profWeights = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainWeights);
 
         std::unordered_map<Parameter, NDArrayViewPtr> gradients;
@@ -262,7 +265,86 @@ namespace CNTK
             m_prevMinibatchAggregateEvalCriterionValue = std::make_shared<Value>(info.evalCriterionValue);
             m_prevMinibatchAggregateTrainingLossValue = std::make_shared<Value>(info.trainingLossValue);
         }
+
+        // must accumulate after aggregation
+        AccumulatePrevMinibatch(computeDevice);
+
         return updated;
+    }
+
+    double Trainer::AccumulatedLossAverage() const
+    {
+        return m_accumulatedNumSamples == 0 ? 0 : (GetScalarValue(m_accumulatedTrainingLossValue) / m_accumulatedNumSamples);
+    }
+
+    double Trainer::AccumulatedEvaluationAverage() const
+    {
+        if (!m_evaluationFunction)
+            InvalidArgument("Trainer::AccumulatedEvaluationAverage: Cannot get evaluation criterion value when no evaluation function was specified during 'this' trainer's construction");
+
+        return m_accumulatedNumSamples == 0 ? 0 : (GetScalarValue(m_accumulatedEvalCriterionValue) / m_accumulatedNumSamples);
+    }
+
+    static void ResetToZero(ValuePtr& v)
+    {
+        if (v == nullptr) return;
+
+        if (v->GetDataType() == DataType::Float)
+            v->Data()->SetValue(0.0f);
+        else
+            v->Data()->SetValue(0.0);
+    }
+
+    void Trainer::ResetAccumulation()
+    {
+        ResetToZero(m_accumulatedTrainingLossValue);
+        ResetToZero(m_accumulatedEvalCriterionValue);
+        m_accumulatedNumSamples = 0;
+    }
+
+    void Trainer::AccumulatePrevMinibatch(const DeviceDescriptor& computeDevice)
+    {
+        if (m_prevMinibatchNumSamples == 0) return;
+
+        auto CreateIfDifferent_Add = [computeDevice](ValuePtr& accumulated, const ValuePtr& value) -> bool
+        {
+            bool created = false;
+
+            if (!accumulated ||
+                accumulated->GetDataType() != value->GetDataType() ||
+                accumulated->Shape() != value->Shape() ||
+                accumulated->Device() != computeDevice ||
+                accumulated->Mask() != value->Mask())
+            {
+                created = true;
+                accumulated = MakeSharedObject<Value>(
+                    MakeSharedObject<NDArrayView>(
+                        value->GetDataType(),
+                        value->Shape(),
+                        computeDevice),
+                    value->Mask());
+
+                ResetToZero(accumulated);
+            }
+
+            if (accumulated->GetDataType() == DataType::Float)
+                accumulated->Data()->GetWritableTensorView<float>()->AddCopyOf(*value->Data()->GetTensorView<float>());
+            else
+                accumulated->Data()->GetWritableTensorView<double>()->AddCopyOf(*value->Data()->GetTensorView<double>());
+
+            return created;
+        };
+
+        bool createdLoss = CreateIfDifferent_Add(m_accumulatedTrainingLossValue, m_prevMinibatchAggregateTrainingLossValue);
+        bool createdEval =
+            m_aggregatedEvaluationFunction ?
+            CreateIfDifferent_Add(m_accumulatedEvalCriterionValue, m_prevMinibatchAggregateEvalCriterionValue) :
+            false;
+
+        if ((createdLoss || createdEval) && m_accumulatedNumSamples != 0)
+            RuntimeError("Accumulation values are created when accumulated num samples not zero");
+
+        m_accumulatedNumSamples += m_prevMinibatchNumSamples;
     }
 
     void Trainer::ExecuteForwardBackward(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, std::unordered_map<Variable, ValuePtr>& parameterGradients)

@@ -308,6 +308,7 @@ namespace CNTK
 
     static int const CNTKInternalIdxValueForAllStaticAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllStaticAxes;
     static int const CNTKInternalIdxValueForAllAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllAxes;
+
     inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllStaticAxes)

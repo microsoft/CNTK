@@ -31,6 +31,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::InternalProdReductionOpName = L"Prod";
     /*static*/ const std::wstring PrimitiveFunction::InternalAllReductionOpName = L"All";
     /*static*/ const std::wstring PrimitiveFunction::InternalAnyReductionOpName = L"Any";
+    /*static*/ const std::wstring PrimitiveFunction::InternalArgmaxReductionOpName = L"Argmax";
+    /*static*/ const std::wstring PrimitiveFunction::InternalArgminReductionOpName = L"Argmin";
 
     // Names of the various attributes of CNTK primitive Functions
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis = L"axis";
@@ -824,7 +826,7 @@ namespace CNTK
             inputs.push_back(runCount);
         }
         
-            return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
-                                                      [](PrimitiveFunction* ptr) { delete ptr; });
+        return std::shared_ptr<PrimitiveFunction>(new PrimitiveFunction(op, inputs, std::move(attributes), name, uid), 
+                                                  [](PrimitiveFunction* ptr) { delete ptr; });
     }
 }

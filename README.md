@@ -1,11 +1,15 @@
 **The [CNTK Wiki](https://github.com/Microsoft/CNTK/wiki) has all information on CNTK including [setup](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine), [examples](https://github.com/Microsoft/CNTK/wiki/Examples), etc.**
 
-Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) and [BlockMomentumSGD](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd) code is moved to a new Repository in GitHub.
+Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) and [BlockMomentumSGD](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd) code is moved to a new Repository in GitHub. Read [this article](https://github.com/Microsoft/CNTK/wiki/Update-1bit-SGD-Submodule-Location) for details.
 
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
-***2017-01-20.* V 2.0 Beta 11 Release**  
+***2017-02-13.* V 2.0 Beta 11 Release available at Docker Hub**  
+CNTK V 2.0 Beta 11 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
+See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
+
+***2017-02-10.* V 2.0 Beta 11 Release**  
 Highlights of this Release:
 * New and updated core and Python API features.
 * New Tutorials and Examples:
@@ -36,13 +40,6 @@ Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/
 ***2017-01-25.* V 2.0 Beta 9 Release available at Docker Hub**  
 CNTK V 2.0 Beta 9 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
-
-***2017-01-25.* 1bit-SGD Code is relocated to GitHub. Submodule configuration update is required for affected users**  
-This news is related to users who are working with CNTK code base. If you use Binary or Docker Runtime Images installation you may ignore it.
-
-Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) and [BlockMomentumSGD](https://github.com/Microsoft/CNTK/wiki/Multiple-GPUs-and-machines#22-block-momentum-sgd) code is moved to a new Repository in GitHub.
-
-If you cloned CNTK Repository with [1bit-SGD enabled](https://github.com/Microsoft/CNTK/wiki/Enabling-1bit-SGD) *prior to January 25, 2017* you need to update git submodule configuration as described in [this Wiki article](https://github.com/Microsoft/CNTK/wiki/Update-1bit-SGD-Submodule-Location).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
