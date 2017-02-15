@@ -36,7 +36,7 @@ namespace CNTK
 
         std::vector<Variable> combinedFunctionArgs;
         if (m_model) // model is optional, since it may not be adding any information on top of lossFunction
-            combinedFunctionArgs.push_back(m_model);
+            combinedFunctionArgs = m_model->Outputs();
         combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
