@@ -2,14 +2,15 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
 #include <numeric>
 
-using namespace CNTK;
-
 static unsigned long seed = 1;
+
+namespace CNTK { namespace Test {
 
 FunctionPtr LinearLayerBlock(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
 {
@@ -115,11 +116,19 @@ void TestBlocksWithRecurrence(size_t inputDim, size_t outputDim, const DeviceDes
         ReportFailure("Output value shape's leading dimensions does not match expected output dim (%d)", (int)outputDim);
 }
 
-void BlockTests()
-{
-    fprintf(stderr, "\nBlockTests..\n");
+BOOST_AUTO_TEST_SUITE(BlockSuite)
 
+BOOST_AUTO_TEST_CASE(BlocksWithRecurrence)
+{
     TestBlocksWithRecurrence(7, 5, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
+{
     if (IsGPUAvailable())
         TestBlocksWithRecurrence(11, 15, DeviceDescriptor::GPUDevice(0));
 }
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

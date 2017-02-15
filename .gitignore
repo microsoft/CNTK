@@ -155,6 +155,8 @@ ModelManifest.xml
 # Python
 *.pyc
 __pycache__/
+Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
+Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
 
 # =========================
 # Windows detritus
@@ -206,7 +208,7 @@ Dependencies/CNTKCustomMKL/CNTKCustomMKL-Linux-*.tgz
 Dependencies/CNTKCustomMKL/CNTKCustomMKL-Windows-*.zip
 
 # Python bindings
-bindings/python/_cntk_py.pyd
+bindings/python/_cntk_py*.pyd
 bindings/python/cntk.egg-info/
 bindings/python/cntk/cntk_py.py
 bindings/python/cntk/libs/
@@ -243,13 +245,18 @@ Examples/Image/DataSets/CIFAR-10/train_map.txt
 Examples/Image/DataSets/CIFAR-10/train_regrLabels.txt
 Examples/Image/DataSets/MNIST/Test-28x28_cntk_text.txt
 Examples/Image/DataSets/MNIST/Train-28x28_cntk_text.txt
-Examples/Image/DataSets/grocery/negative/
-Examples/Image/DataSets/grocery/positive/
-Examples/Image/DataSets/grocery/testImages/
-Examples/Image/DataSets/grocery/*.txt
+Examples/Image/DataSets/Animals/Train/
+Examples/Image/DataSets/Animals/Test/
+Examples/Image/DataSets/Grocery/negative/
+Examples/Image/DataSets/Grocery/positive/
+Examples/Image/DataSets/Grocery/testImages/
+Examples/Image/DataSets/Grocery/*.txt
+Examples/Image/DataSets/Flowers/jpg/
+Examples/Image/DataSets/Flowers/*.txt
 Examples/Image/PretrainedModels/*.model
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
+Examples/Image/TransferLearning/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt
 Tutorials/HelloWorld-LogisticRegression/LR.txt.p
 Tutorials/HelloWorld-LogisticRegression/Models/
@@ -264,3 +271,4 @@ Tutorials/slots.wl
 /packages
 /CNTK.VC.db
 /CNTK.VC.VC.opendb
+.cache

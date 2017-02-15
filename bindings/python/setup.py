@@ -73,8 +73,11 @@ else:
     libname_rt_ext = '.so'
 
 
-rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
-                                                      '*' + libname_rt_ext))]
+if 'CNTK_LIBRARIES' in os.environ:
+  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split()]
+else:
+  rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
+                                                        '*' + libname_rt_ext))]
 
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set
@@ -161,7 +164,7 @@ else:
     kwargs = dict(package_data = package_data)
 
 setup(name="cntk",
-      version="2.0.beta10.0",
+      version="2.0.beta11.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,

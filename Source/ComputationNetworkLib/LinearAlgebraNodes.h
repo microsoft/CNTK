@@ -263,7 +263,7 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
 
 public:
     TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1)
-        : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap)
+        : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap), m_beingUnrolled(false)
     {
     }
 
@@ -379,9 +379,11 @@ public:
             // recursively call ourselves for each individual time and sequence
             auto timeRange     = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();
+            m_beingUnrolled = true;
             for (auto t = timeRange.first; t < timeRange.second; t++)
                 for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
                     ForwardProp(fr.WithTimeStep(t).Sequence(s));
+            m_beingUnrolled = false;
             return;
         }
 
@@ -424,9 +426,16 @@ public:
 
             auto timeRange     = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();
+            // when unroll, parent overwrite gradient should be ignored
+            m_beingUnrolled = true;
+            if (Input(inputIndex)->ParentOverwritesGradient())
+            {
+                Input(inputIndex)->Gradient().SetValue(0);
+            }
             for (auto t = timeRange.first; t < timeRange.second; t++) // step left to right to allow to build a sparse matrix
                 for (auto s = sequenceRange.first; s < sequenceRange.second; s++)
                     BackpropTo(inputIndex, fr.WithTimeStep(t).Sequence(s));
+            m_beingUnrolled = false;
             return;
         }
 
@@ -441,7 +450,7 @@ public:
             auto input0Gradient = OneSampleTensorFor(0,  /*gradient=*/true,  fr.AllowBroadcast());
             auto input1         = OneSampleTensorFor(1,  /*gradient=*/false, fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true,  fr);
-            if (Input(inputIndex)->ParentOverwritesGradient())
+            if (Input(inputIndex)->ParentOverwritesGradient() && !m_beingUnrolled)
                 input0Gradient.AssignMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
             else
                 input0Gradient.AddMatrixProductOf(m_transpose/*transC*/, outputGradient, false/*transA*/, input1, true/*transB*/);
@@ -451,7 +460,7 @@ public:
             auto input0         = OneSampleTensorFor(0,  /*gradient=*/false, fr.AllowBroadcast());
             auto input1Gradient = OneSampleTensorFor(1,  /*gradient=*/true,  fr.AllowBroadcast());
             auto outputGradient = OneSampleTensorFor(-1, /*gradient=*/true, fr);
-            if (Input(inputIndex)->ParentOverwritesGradient())
+            if (Input(inputIndex)->ParentOverwritesGradient() && !m_beingUnrolled)
                 input1Gradient.AssignMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
             else
                 input1Gradient.AddMatrixProductOf(false/*transC*/, input0, !m_transpose/*transA*/, outputGradient, false/*transB*/);
@@ -613,6 +622,7 @@ protected:
 private:
     size_t m_outputRank;
     int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
+    bool m_beingUnrolled;
 };
 
 // -----------------------------------------------------------------------

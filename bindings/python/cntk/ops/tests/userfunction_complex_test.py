@@ -46,7 +46,8 @@ def linear_layer(input_var, output_dim):
 
 def dense_layer(input, output_dim, nonlinearity):
     r = linear_layer(input, output_dim)
-    r = nonlinearity(r)
+    if isinstance(nonlinearity, UserFunction):
+        r = user_function(nonlinearity(r))
     return r
 
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim,
@@ -91,7 +92,7 @@ def train(nonlinearity, num_hidden_layers, device_id):
     eval_error = classification_error(z, label)
 
     learner = sgd(z.parameters, lr_schedule)
-    trainer = Trainer(z, loss, eval_error, [learner])
+    trainer = Trainer(z, (loss, eval_error), [learner])
 
 
     minibatch_size = 25

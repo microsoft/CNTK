@@ -45,7 +45,7 @@ ZipByteReader::ZipPtr ZipByteReader::OpenZip()
     });
 }
 
-void ZipByteReader::Register(const std::map<std::string, size_t>& sequences)
+void ZipByteReader::Register(const MultiMap& sequences)
 {
     auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
     zip_stat_t stat;
@@ -58,33 +58,35 @@ void ZipByteReader::Register(const std::map<std::string, size_t>& sequences)
         if (ZIP_ER_OK != err)
             RuntimeError("Failed to get file info for index %d, zip library error: %s", (int)i, GetZipError(err).c_str());
 
-        auto sequenceId = sequences.find(std::string(stat.name));
-        if (sequenceId == sequences.end())
+        auto sequenceInfo = sequences.find(std::string(stat.name));
+        if (sequenceInfo == sequences.end())
         {
             continue;
         }
-        else
-        {
-            m_seqIdToIndex[sequenceId->second] = std::make_pair(stat.index, stat.size);
-            numberOfEntries++;
-        }
+
+        for (auto sid : sequenceInfo->second)
+            m_seqIdToIndex[sid] = std::make_pair(stat.index, stat.size);
+        numberOfEntries++;
     }
     m_zips.push(std::move(zipFile));
 
-    if (numberOfEntries != sequences.size())
+    if (numberOfEntries == sequences.size())
+        return;
+
+    // Not all sequences have been found. Let's print them out and throw.
+    for (const auto& s : sequences)
     {
-        // Not all sequences have been found. Let's print them out and throw.
-        for (const auto& s : sequences)
+        for (const auto& id : s.second)
         {
-            auto index = m_seqIdToIndex.find(s.second);
-            if (index == m_seqIdToIndex.end())
+            if (m_seqIdToIndex.find(id) == m_seqIdToIndex.end())
             {
                 fprintf(stderr, "Sequence %s is not found in container %s.\n", s.first.c_str(), m_zipPath.c_str());
+                break;
             }
         }
-
-        RuntimeError("Cannot retrieve image data for some sequences. For more detail, please see the log file.");
     }
+
+    RuntimeError("Cannot retrieve image data for some sequences. For more detail, please see the log file.");
 }
 
 cv::Mat ZipByteReader::Read(size_t seqId, const std::string& path, bool grayscale)

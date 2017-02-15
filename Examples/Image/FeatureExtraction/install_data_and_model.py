@@ -11,7 +11,7 @@ import os.path
     
 base_folder = os.path.dirname(os.path.abspath(__file__))
 
-sys.path.append(os.path.join(base_folder, "..", "DataSets", "grocery"))
+sys.path.append(os.path.join(base_folder, "..", "DataSets", "Grocery"))
 from install_grocery import download_grocery_data
 download_grocery_data()
    

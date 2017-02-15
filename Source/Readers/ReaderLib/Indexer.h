@@ -54,9 +54,9 @@ struct Index
     std::vector<ChunkDescriptor> m_chunks;                                  // chunks
     std::map<size_t, std::pair<size_t, size_t>> m_keyToSequenceInChunk;     // sequence key -> sequence location in chunk
     const size_t m_maxChunkSize;                                            // maximum chunk size in bytes
-    bool m_isPrimary;                                                       // index for primary deserializer
+    bool m_primary;                                                         // index for primary deserializer
 
-    Index(size_t chunkSize, bool isPrimary) : m_maxChunkSize(chunkSize), m_isPrimary(isPrimary)
+    Index(size_t chunkSize, bool primary) : m_maxChunkSize(chunkSize), m_primary(primary)
     {}
 
     // Adds sequence (metadata) to the index. Additionally, it
@@ -84,10 +84,10 @@ struct Index
         chunk->m_numberOfSequences++;
         chunk->m_numberOfSamples += sd.m_numberOfSamples;
         sd.m_chunkId = chunk->m_id;
-        sd.m_id = chunk->m_sequences.size();
-        if (!m_isPrimary)
+        sd.m_indexInChunk = chunk->m_sequences.size();
+        if (!m_primary)
         {
-            auto location = std::make_pair(chunk->m_id, sd.m_id);
+            auto location = std::make_pair(chunk->m_id, sd.m_indexInChunk);
             auto sequenceId = sd.m_key.m_sequence;
             m_keyToSequenceInChunk.insert(std::make_pair(sequenceId, location));
         }

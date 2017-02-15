@@ -2,10 +2,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
 
 using namespace CNTK;
+
+namespace CNTK { namespace Test {
 
 void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
 {
@@ -397,7 +400,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
         transposeInputFuncs[i] = TransposeAxes(inputVars[i], Axis(0), Axis((int)spliceAxis));
         transposedInputs[i] = transposeInputFuncs[i];
     }
-    
+
     auto spliceTransposedFunc = Splice(transposedInputs, Axis(0));
     spliceUsingTransposeFunc = TransposeAxes(spliceTransposedFunc, Axis(0), Axis((int)spliceAxis));
     std::unordered_map<Variable, ValuePtr> spliceUsingTransposeOutputs = { { spliceUsingTransposeFunc->Output(), nullptr } };
@@ -408,7 +411,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
     auto automaticUnpackingOfPackedValuesDisabled = Internal::IsAutomaticUnpackingOfPackedValuesDisabled();
     Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ false);
 
-    if (!CNTK::Internal::AreEqual(*spliceOutputs.begin()->second, *spliceUsingTransposeOutputs.begin()->second, relativeTolerance, absoluteTolerance))
+    if (!Internal::AreEqual(*spliceOutputs.begin()->second, *spliceUsingTransposeOutputs.begin()->second, relativeTolerance, absoluteTolerance))
         ReportFailure("Splice actual output does not match expectation");
 
     // Test backprop
@@ -429,7 +432,7 @@ void TestSplice(size_t numInputs, size_t maxNumInputAxes, size_t spliceAxis, con
     {
         auto actualInputGradientValue = sliceInputGradients[inputVars[i]];
         auto expectedInputGradientValue = sliceUsingTransposeInputGradients[inputVars[i]];
-        if (!CNTK::Internal::AreEqual(*actualInputGradientValue, *expectedInputGradientValue, relativeTolerance, absoluteTolerance))
+        if (!Internal::AreEqual(*actualInputGradientValue, *expectedInputGradientValue, relativeTolerance, absoluteTolerance))
             ReportFailure("Splice actual gradient does not match expectation");
     }
 
@@ -455,7 +458,7 @@ void TestSplice()
 void TestTimesNodeShapeInference()
 {
     auto timesNodeShapeInferenceTest = [](size_t inputRank, size_t outputRank, int inputRankToMap) {
-        
+
         auto device = DeviceDescriptor::CPUDevice();
 
         size_t maxDimSize = 15;
@@ -525,7 +528,7 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
 
     auto param = Parameter(shape, AsDataType<ElementType>(), GlorotUniformInitializer(), device);
     auto plus = Plus(param, param);
-    
+
 
     std::vector<ElementType> outputData(numElements);
     ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(shape, outputData, false));
@@ -536,9 +539,9 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     NDArrayViewPtr cpuView;
     auto getParameterData = [&cpuView](const Parameter& p) -> const ElementType*
     {
-          cpuView = (p.Value()->Device() != DeviceDescriptor::CPUDevice()) ?
-                     p.Value()->DeepClone(DeviceDescriptor::CPUDevice()) : p.Value();
-          return cpuView->DataBuffer<ElementType>();
+        cpuView = (p.Value()->Device() != DeviceDescriptor::CPUDevice()) ?
+        p.Value()->DeepClone(DeviceDescriptor::CPUDevice()) : p.Value();
+        return cpuView->DataBuffer<ElementType>();
     };
 
     auto parameterData = getParameterData(param);
@@ -587,9 +590,9 @@ void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
     for (int i = 0; i < numElements; i++)
     {
         auto denom = (i + ElementType(1.0));
-        FloatingPointCompare<ElementType>(parameterData[i], ElementType(1.0) / denom, 
+        FloatingPointCompare<ElementType>(parameterData[i], ElementType(1.0) / denom,
                                           "Parameter valued does not match the expected value.");
-        FloatingPointCompare<ElementType>(outputData[i], ElementType(2.0) / denom, 
+        FloatingPointCompare<ElementType>(outputData[i], ElementType(2.0) / denom,
                                           "Function output does not match the expected value.");
     }
 }
@@ -701,15 +704,15 @@ void TestOuputVariableName(const DeviceDescriptor& device)
     const std::wstring combineFuncName = L"CombineFunc";
     const std::wstring outputName = L"ModelOutput";
 
-    auto inputVar = InputVariable({inputDim}, DataType::Float, L"features");
+    auto inputVar = InputVariable({ inputDim }, DataType::Float, L"features");
 
-    auto plusParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({inputDim}, -0.05, 0.05, 1, device));
-    auto plusFunc = CNTK::Plus(plusParam, inputVar, plusFuncName);
+    auto plusParam = Parameter(NDArrayView::RandomUniform<float>({ inputDim }, -0.05, 0.05, 1, device));
+    auto plusFunc = Plus(plusParam, inputVar, plusFuncName);
 
-    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({outputDim, inputDim}, -0.05, 0.05, 1, device));
-    auto timesFunc = CNTK::Times(timesParam, plusFunc, timesFuncName);
+    auto timesParam = Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
+    auto timesFunc = Times(timesParam, plusFunc, timesFuncName);
 
-    auto combineFunc = CNTK::Combine({timesFunc, plusFunc}, combineFuncName);
+    auto combineFunc = Combine({ timesFunc, plusFunc }, combineFuncName);
 
     FunctionPtr output = Alias(combineFunc->Outputs()[0], outputName);
 
@@ -748,7 +751,7 @@ void TestOuputVariableName(const DeviceDescriptor& device)
 
     // Change the output order of combine function.
     // Todo: it is allowed to have duplicated function name?
-    combineFunc = CNTK::Combine({plusFunc, timesFunc}, combineFuncName);
+    combineFunc = Combine({ plusFunc, timesFunc }, combineFuncName);
 
     // Make sure that the alias maps to the correct output variable when the output order changes
     output = Alias(combineFunc->Outputs()[1], outputName);
@@ -770,8 +773,8 @@ void TestOuputVariableName(const DeviceDescriptor& device)
     // Check the output variable has correct shape size.
     if (output->Output().Shape().TotalSize() != outputDim)
         ReportFailure("The output variable does not have expected shape size. exptected = %ld, actual = %ld\n",
-        static_cast<unsigned long>(outputDim),
-        static_cast<unsigned long>(output->Output().Shape().TotalSize()));
+            static_cast<unsigned long>(outputDim),
+            static_cast<unsigned long>(output->Output().Shape().TotalSize()));
 }
 
 void CheckFindByNameResult(FunctionPtr actual, FunctionPtr expected)
@@ -804,7 +807,7 @@ void CheckFindAllWithNameResult(std::vector<FunctionPtr> actual, std::wstring ex
     }
 }
 
-void TestFindName()
+void TestFindName(const DeviceDescriptor& device)
 {
     size_t inputDim = 10;
     size_t outputDim = 20;
@@ -824,7 +827,7 @@ void TestFindName()
     auto inputVar1 = InputVariable({ inputDim }, DataType::Float, L"features");
 
     auto inputPlaceholder1 = PlaceholderVariable(L"inputPlaceholder");
-    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, DeviceDescriptor::DefaultDevice()));
+    auto timesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.05, 0.05, 1, device));
     auto timesFunc1 = CNTK::Times(timesParam, inputPlaceholder1, timesFuncName);
     auto plusFunc1 = CNTK::Plus(Constant::Scalar(2.0f), timesFunc1, plusFuncName);
     auto plusFunc2 = CNTK::Plus(Constant::Scalar(2.0f), plusFunc1, plusFuncName);
@@ -939,38 +942,96 @@ void TestFindName()
     CheckFindAllWithNameResult(minusFunc4->FindAllWithName(aliasFuncName, true), aliasFuncName, 1);
 }
 
-void FunctionTests()
+BOOST_AUTO_TEST_SUITE(FunctionSuite)
+
+BOOST_AUTO_TEST_CASE(FindNameInCPU)
 {
-    fprintf(stderr, "\nFunctionTests..\n");
+    TestFindName(DeviceDescriptor::CPUDevice());
+}
 
+BOOST_AUTO_TEST_CASE(FindNameInGPU)
+{
+    if (IsGPUAvailable())
+        TestFindName(DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(Splice)
+{
     TestSplice();
+}
 
-    TestFindName();
-
+BOOST_AUTO_TEST_CASE(ChangingParameterValuesInCPU)
+{
     TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
+    TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
+{
     if (IsGPUAvailable())
         TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
-    else
-        TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+}
 
+BOOST_AUTO_TEST_CASE(TimesNodeShapeInference)
+{
     TestTimesNodeShapeInference();
-    TestRecurrenceShapeInference();
+}
 
+BOOST_AUTO_TEST_CASE(RecurrenceShapeInference)
+{
+    TestRecurrenceShapeInference();
+}
+
+BOOST_AUTO_TEST_CASE(SliceInCPU)
+{
     TestSlice(2, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(SliceInGPU)
+{
     if (IsGPUAvailable())
         TestSlice(1, DeviceDescriptor::GPUDevice(0));
+}
 
+BOOST_AUTO_TEST_CASE(ReduceSumInCPU)
+{
     TestReduceSum(1, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(ReduceSumInGPU)
+{
     if (IsGPUAvailable())
         TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
+}
 
+BOOST_AUTO_TEST_CASE(RecurrentFunctionCloning)
+{
     TestRecurrentFunctionCloning();
+}
 
+BOOST_AUTO_TEST_CASE(TransposeInCPU)
+{
     TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(TransposeInGPU)
+{
     if (IsGPUAvailable())
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
+}
 
+BOOST_AUTO_TEST_CASE(OutputVariableNameInCPU)
+{
     TestOuputVariableName(DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(FunctionOutputs)
+{
     TestFunctionOutputs(DeviceDescriptor::CPUDevice());
 }
 
+
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

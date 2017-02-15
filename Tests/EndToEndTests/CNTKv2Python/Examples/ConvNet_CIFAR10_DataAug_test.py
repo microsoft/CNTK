@@ -30,8 +30,7 @@ def test_cifar_convnet_error(device_id):
     # change dir to locate data.zip correctly
     os.chdir(base_path)
 
-    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
-    set_computation_network_trace_level(1)
+    from _cntk_py import set_fixed_random_seed, force_deterministic_algorithms
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     #force_deterministic_algorithms()
     # TODO: do the above; they lead to slightly different results, so not doing it for now

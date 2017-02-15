@@ -87,3 +87,25 @@ reader = [
         })
     }
 }
+
+SimpleZip = {
+    # Parameter values for the reader
+    reader = {
+        randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$MapFile$"
+
+            input = {
+                features = {
+                    transforms (
+                        { type = "Crop" ; cropType = "center"; sideRatio=1.0 ; jitterType="UniRatio" } :
+                        { type = "Scale" ; width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" } :
+                        { type = "Transpose" }
+                    )
+                }
+                lables = { labelDim = 4 }
+            }
+        })
+    }
+}
