@@ -255,9 +255,13 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         }
     }
 
+    auto profPrefetchWait = ProfilerTimeBegin();
+
     // Make sure the prefetch has finished.
     assert(m_prefetchTask.valid());
     auto result = m_prefetchTask.get();
+
+    ProfilerTimeEnd(profPrefetchWait, m_currentDataTransferIndex ? "Prefetch Wait 1" : "Prefetch Wait 0");
 
     // Ok, prefetch is done.
 
@@ -329,9 +333,13 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         m_prefetchTask = std::async(m_launchType, [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); });
     }
 
+    auto profPrefetchGPUCopyWait = ProfilerTimeBegin();
+
     // Let's wait till the previous memcopy has finished.
     if (m_dataTransferers[currentDataTransferIndex])
         m_dataTransferers[currentDataTransferIndex]->WaitForCopyCPUToGPU();
+
+    ProfilerTimeEnd(profPrefetchGPUCopyWait, currentDataTransferIndex ? "GPU Copy Wait 1" : "GPU Copy Wait 0");
 
     return result.m_isDataAvailable;
 }
@@ -368,9 +376,13 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
         FillMatrixFromStream(m_streams[streamId]->m_storageType, mx.second.m_matrix.get(), sampleSize, stream, m_dataTransferers[currentDataTransferIndex].get());
     }
 
+    auto profRecordCopy = ProfilerTimeBegin();
+
     // Let's record that we started the copy, so that the main thread can wait afterwards.
     if (m_dataTransferers[currentDataTransferIndex])
         m_dataTransferers[currentDataTransferIndex]->RecordCPUToGPUCopy();
+
+    ProfilerTimeEnd(profRecordCopy, currentDataTransferIndex ? "Record Copy 1" : "Record Copy 0");
 
     return PrefetchResult{ minibatch.m_endOfSweep, minibatch.m_endOfEpoch, true };
 }
