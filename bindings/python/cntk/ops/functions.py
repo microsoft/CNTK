@@ -1,8 +1,7 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
 from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
-        sanitize_dtype_cntk, value_to_seq, _as_tuple, variable_value_to_seq, \
-        sanitize_var_substitution_map, sanitize_substitution_var, Record
+        sanitize_dtype_cntk, value_to_seq, _as_tuple, variable_value_to_seq, Record
 from cntk.utils.swig_helper import map_if_possible
 from cntk.ops.variables import Variable
 from enum import Enum, unique
@@ -62,6 +61,7 @@ class Function(cntk_py.Function):
     _placeholders_under_construction = set()
 
     # helper to get the parameter names and annotations of a Python function
+    @staticmethod
     def _get_param_names(f):
         # Note we only use non-optional params (assume any optional param is not specified).
         # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
@@ -85,6 +85,7 @@ class Function(cntk_py.Function):
     # An input_variable is created if the parameter is annotated with a Tensor(...) type.
     # In this case, CNTK will immediately trigger type inference.
     # Unannotated parameters will yield placeholder_variables instead.
+    @staticmethod
     def _make_arg_variable(name, annotations):
         from .. import placeholder_variable, input_variable
         from .variables import Variable
@@ -103,6 +104,7 @@ class Function(cntk_py.Function):
     #   @Function
     #   def f(x:Tensor(13)): return x * x
     # The latter form will create a CNTK Function over Inputs; the former over Placeholders.
+    @staticmethod
     def to_Function(f, members = {}, make_block=False, op_name=None, name=None):
         from ..default_options import default_options
         # Parameter() creation inside code of a Function def is forbidden. Setting 'pure' blocks it in Parameter().
@@ -433,7 +435,7 @@ class Function(cntk_py.Function):
         # variable, if it has only one.
         if name.startswith('_') or name in ['outputs', 'output', 'this']:
             # These should not be looked up in self's output.
-            # 'outputs' and 'output' are required to fetch the attribute for 
+            # 'outputs' and 'output' are required to fetch the attribute for
             # in the Variable.
             # 'this' is required for Swig and needs to be thrown if the
             # object is created the first time.
@@ -507,7 +509,9 @@ class Function(cntk_py.Function):
 
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
-        substitutions = sanitize_var_substitution_map(substitutions)
+        substitutions = substitutions or {}
+        if not isinstance(substitutions, dict):
+            raise TypeError("Variable substitution map must be a dictionary")
         return super(Function, self).clone(method, substitutions)
 
     @property
@@ -518,7 +522,7 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).constants()
 
-    def eval(self, arguments=None, device=None):
+    def eval(self, arguments=None, device=None, as_numpy=True):
         '''
         Evaluate the node using the specified ``arguments`` as input.
 
@@ -557,21 +561,25 @@ class Function(cntk_py.Function):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
+            as_numpy (bool): whether to return the result as a NumPy array. Default True.
+             Specifying this as False returns a CNTK Value which avoids a 
+             costly conversion but returns a somewhat opaque object.
 
         Returns:
            dict or NumPy Array: Dict with keys of ouput variable names and values of
            output variable. A single NumPy array if there is only one output value.
         '''
 
-        _, output_map = self.forward(arguments, self.outputs, device=device)
+        _, output_map = self.forward(arguments, self.outputs, device=device, as_numpy=as_numpy)
 
         if len(output_map) > 1:
             return output_map
         else:
             return list(output_map.values())[0]
 
+
     @typemap
-    def forward(self, arguments, outputs, keep_for_backward=None, device=None):
+    def forward(self, arguments, outputs, keep_for_backward=None, device=None, as_numpy=True):
         '''
         Computes the values of speficied variables in ``outputs``, using values
         provided in ``arguments`` that correspond to each input `Variable` of
@@ -627,6 +635,9 @@ class Function(cntk_py.Function):
             device (:class:`~cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
+            as_numpy (bool): whether to return the result as a NumPy array. Default True.
+             Specifying this as False returns a CNTK Value which avoids a 
+             costly conversion but returns a somewhat opaque object.
 
         Returns:
              A tuple (BackPropState, map of outputs to NumPy arrays). The
@@ -642,9 +653,9 @@ class Function(cntk_py.Function):
 
         state = super(Function, self)._forward(in_var_map, output_map, device,
                                              keep_for_backward)
-
-        for k in output_map:
-            output_map[k] = variable_value_to_seq(output_map[k], k)
+        if as_numpy:
+            for k in output_map:
+                output_map[k] = variable_value_to_seq(output_map[k], k)
 
         return state, output_map
 
@@ -714,7 +725,7 @@ class Function(cntk_py.Function):
             at (dict) : mapping of the Function's arguments to values
             wrt (list optional): list of Variables with respect to which the
              gradient will be computed. If omitted, the gradients with
-             respect to all arguments will be computed. If a variable
+             respect to all arguments that need gradient will be computed. If a variable
              is repeated in this list, the gradient will be repeated
              in the output as a shallow copy.
 
@@ -728,7 +739,7 @@ class Function(cntk_py.Function):
             raise InvalidArgumentException('function must return a single tensor')
 
         if wrt is None:
-            wrt = self.arguments
+            wrt = [arg for arg in self.arguments if arg.needs_gradient]
 
         unique_wrt = set(wrt)
         output = [self.output]
@@ -743,11 +754,7 @@ class Function(cntk_py.Function):
         '''
         List of all input variables of this function.
         '''
-        input_nodes = super(Function, self).inputs()
-        if self.is_primitive and self.root_function.op_name in ['Times', 'TransposeTimes']:
-            input_nodes = tuple(reversed(input_nodes))
-
-        return input_nodes
+        return super(Function, self).inputs(True)
 
     @property
     def name(self):
@@ -881,7 +888,9 @@ class Function(cntk_py.Function):
         Returns:
             :class:`Function`: itself
         '''
-        substitutions = sanitize_var_substitution_map(substitutions)
+        substitutions = substitutions or {}
+        if not isinstance(substitutions, dict):
+            raise TypeError("Variable substitution map must be a dictionary")
         return super(Function, self).replace_placeholders(substitutions)
 
     @typemap
@@ -899,7 +908,8 @@ class Function(cntk_py.Function):
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        substitution = sanitize_substitution_var(substitution)
+        # TODO: was this removed on master, or never merged?
+        #substitution = sanitize_substitution_var(substitution)
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap
@@ -980,10 +990,13 @@ class Function(cntk_py.Function):
         return super(Function, self).save_model(filename)
 
     def save_model(self, filename): # legacy name
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'save(...) instead', DeprecationWarning)
         return self.save(filename)
 
     @typemap
-    def restore_model(self, filename):
+    def restore(self, filename):
         '''
         Restore the models parameters (in-place) from a saved model file
 
@@ -994,6 +1007,12 @@ class Function(cntk_py.Function):
             `None`: this method only has the side-effect of loading the model parameters from the file
         '''
         return super(Function, self).restore_model(filename)
+
+    def restore_model(self, filename): # legacy name
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'restore(...) instead', DeprecationWarning)
+        return self.restore(filename)
 
     @staticmethod
     @typemap
@@ -1012,18 +1031,20 @@ class Function(cntk_py.Function):
         '''
         if not device:
             device = DeviceDescriptor.use_default_device()
-        function = cntk_py.Function.load_model(filename, device)
-        return function
+        return cntk_py.Function.load_model(filename, device)
 
 @typemap
 def load_model(filename, device=None):
     '''
-    Alias for `Function.load`.
+    Alias for :func:`~cntk.ops.functions.Function.load`.
     '''
     return Function.load(filename, device)
 
 @typemap
 def save_model(model, filename): # legacy name
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'model.save(...) instead', DeprecationWarning)
     return model.save(filename)
 
 
@@ -1036,21 +1057,7 @@ class UserFunction(Function):
 
     '''
     def __init__(self, inputs, name=''):
-        var_inputs = []
-        # TODO: this should be done in Swig
-        for i in inputs:
-            if isinstance(i, cntk_py.Variable):
-                var_inputs.append(i)
-            elif isinstance(i, cntk_py.Function):
-                var_inputs.append(i.output)
-            else:
-                raise ValueError('expected Variable, but got "%s"'%type(i))
-
-        # FIXME we need to save a reference here so that the function does not
-        # disappear
-        self.var_inputs = var_inputs
-
-        super(UserFunction, self).__init__(var_inputs, name)
+        super(UserFunction, self).__init__(inputs, name)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -1148,8 +1155,34 @@ class UserFunction(Function):
 
             variables[k] = sanitize_batch(k, v, None, state.device())
 
+    def _infer_outputs(self, outputs):
+        outputs.extend(self.infer_outputs())
+
     def infer_outputs(self):
+        '''
+        Returns a list of all output variables this user-defined function
+        outputs.
+
+        Output variables are created by
+        :meth:`~cntk.ops.functions.output_variable`.
+        '''
         raise NotImplementedError('infer_outputs has to be overwritten')
 
+    def clone(self, cloned_inputs):
+        '''
+        Creates a clone of this user-defined function.
+
+        Args:
+            cloned_inputs: list of cloned inputs to the new user-defined
+             Function clone to be created.
+
+        Returns:
+            A cloned instance of this user-defined function.
+        '''
+        raise NotImplementedError('clone has to be overwritten')
+
     def op_name(self):
+        '''
+        Returns the operator name.
+        '''
         return 'UserFunction'

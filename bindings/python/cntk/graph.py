@@ -5,6 +5,7 @@
 # ==============================================================================
 
 import os
+from . import Variable
 
 
 def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
@@ -33,7 +34,8 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
         if node in visited:
             continue
         if max_depth is None or depth < max_depth:
-            try:
+            from cntk import cntk_py
+            if isinstance(node, cntk_py.Function) and node.is_block:
                 # TODO: This is still broken, needs to be cleaned up after debugging/desperate trying-around.
                 composite = node.block_root
                 # BlockFunction node
@@ -48,8 +50,8 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
                     accum.append((node, distance))
                 continue
                 # BlockFunctions are short-circuited until max_depth is hit, and not added to accum[]
-            except:
-                pass
+            #except:
+            #    pass
         try:
             # Function node
             stack = [(input, distance+1, depth) for input in node.root_function.inputs] + stack
@@ -65,6 +67,12 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
                 pass
 
         if visitor(node):
+            if isinstance(node, Variable):
+                if node.is_parameter:
+                    node = node.as_parameter()
+                elif node.is_constant:
+                    node = node.as_constant()
+
             accum.append((node, distance))
 
         visited.add(node)
@@ -352,6 +360,7 @@ def plot(root, filename=None):
 
     return model
 
+
 def output_function_graph(node, dot_file_path=None, png_file_path=None):
     import warnings
     warnings.warn('This will be removed in future versions. Please use '
@@ -364,3 +373,26 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
             result = result2
 
     return result
+
+
+def get_node_outputs(node):
+    '''
+    Walks through every node of the graph starting at ``node``
+    and returns a list of all node outputs.
+
+    Args:
+        node (graph node): the node to start the journey from
+
+    Returns:
+        A list of all node outputs
+    '''
+    node_list = depth_first_search(node, lambda x: True)
+    node_outputs = []
+    for node in node_list:
+        try:
+            for out in node.outputs:
+                node_outputs.append(out)
+        except AttributeError:
+            pass
+
+    return node_outputs

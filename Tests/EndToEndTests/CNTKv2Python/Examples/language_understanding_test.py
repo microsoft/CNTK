@@ -15,29 +15,18 @@ from cntk.layers import *
 from cntk.utils import *
 from cntk.ops import splice
 
-# TODO: what is this?
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "LanguageUnderstanding", "ATIS", "Python"))
 sys.path.append("../LanguageUnderstanding/ATIS/Python")
-from LanguageUnderstanding import data_dir, create_reader, create_model_function, train, emb_dim, hidden_dim, num_labels
+from LanguageUnderstanding import data_dir, create_reader, create_model, train, emb_dim, hidden_dim, label_dim
 
-def test_a_model(what, model, expected_train, expected_test=None):
+def run_model_test(what, model, expected_train):
     print("--- {} ---".format(what))
     # train
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
     loss, metric = train(reader, model, max_epochs=1)
     print("-->", metric, loss)
     assert np.allclose([metric, loss], expected_train, atol=TOLERANCE_ABSOLUTE)
-    # save and load--test this for as many configs as possible
-    path = data_dir + "/model.cmf"
-    #save_model(model, path)
-    #model = load_model(path)
-    # test
-    reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
-    loss, metric = evaluate(reader, model)
-    print("-->", metric, loss)
-    if expected_test is not None:
-        assert np.allclose(metric, expected_test, atol=TOLERANCE_ABSOLUTE)
 
 def create_test_model():
     # this selects additional nodes and alternative paths
@@ -48,7 +37,7 @@ def create_test_model():
             BatchNormalization(),
             Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
             BatchNormalization(map_rank=1),
-            Dense(num_labels)
+            Dense(label_dim)
         ])
 
 def with_lookahead():
@@ -95,40 +84,40 @@ def test_language_understanding(device_id):
         #with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
         #    select_last = slice(Placeholder(), Axis.default_dynamic_axis(), -1, 0)
         #    # BUGBUG: Fails with "RuntimeError: The specified dynamic axis named defaultDynamicAxis does not match any of the dynamic axes of the operand"
-        #    test_a_model('change to intent classifier', Sequential([
+        #    run_model_test('change to intent classifier', Sequential([
         #        Embedding(emb_dim),
         #        with_lookahead(),
         #        BatchNormalization(),
         #        BiRecurrence(LSTM(hidden_dim)),
         #        BatchNormalization(),
         #        select_last,  # fails here with an axis problem
-        #        Dense(num_labels)
+        #        Dense(label_dim)
         #    ]), [0.084, 0.407364])
 
 
         # replace lookahead by bidirectional model
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-            test_a_model('replace lookahead by bidirectional model', Sequential([
+            run_model_test('replace lookahead by bidirectional model', Sequential([
                 Embedding(emb_dim),
                 BatchNormalization(),
                 BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
                 BatchNormalization(),
-                Dense(num_labels)
-            ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
+                Dense(label_dim)
+            ]), [0.0579573500457558, 0.3214986774820327])
 
         # replace lookahead by bidirectional model
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
           #with default_options(dtype=np.float64):  # test this with double precision since single precision is too little for reproducable aggregation
           # ^^ This test requires to change the #if 1 in Functions.cpp PopulateNetworkInputs() to be changed to #if 0.
-            test_a_model('replace lookahead by bidirectional model, with shared BN', Sequential([
+            run_model_test('replace lookahead by bidirectional model, with shared BN', Sequential([
                 Embedding(emb_dim),
                 BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim), test_dual=True),
                 #BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim), test_dual=False),
                 BatchNormalization(normalization_time_constant=-1),
-                Dense(num_labels)
-            ]), [0.0579573500457558, 0.3214986774820327], 0.028495994173343045)
+                Dense(label_dim)
+            ]), [0.0579573500457558, 0.3214986774820327])
             # values with normalization_time_constant=-1 and double precision:
-            # [0.0583178503091983, 0.3199431143304898], 0.03168244719592134
+            # [0.0583178503091983, 0.3199431143304898]
             """ with normalization_time_constant=-1:
              Minibatch[   1-   1]: loss = 5.945220 * 67, metric = 100.0% * 67
              Minibatch[   2-   2]: loss = 4.850601 * 63, metric = 79.4% * 63
@@ -163,13 +152,13 @@ def test_language_understanding(device_id):
 
         # BatchNorm test case for global-corpus aggregation
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-            test_a_model('BatchNorm global-corpus aggregation', Sequential([
+            run_model_test('BatchNorm global-corpus aggregation', Sequential([
                 Embedding(emb_dim),
                 BatchNormalization(normalization_time_constant=-1),
                 Recurrence(LSTM(hidden_dim), go_backwards=False),
                 BatchNormalization(normalization_time_constant=-1),
-                Dense(num_labels)
-            ]), [0.05662627214996811, 0.2968516879905391], 0.035050983248361256)
+                Dense(label_dim)
+            ]), [0.05662627214996811, 0.2968516879905391])
             """
              Minibatch[   1-   1]: loss = 5.745576 * 67, metric = 100.0% * 67
              Minibatch[   2-   2]: loss = 4.684151 * 63, metric = 90.5% * 63
@@ -205,50 +194,50 @@ def test_language_understanding(device_id):
 
         # plus BatchNorm
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-            test_a_model('plus BatchNorm', Sequential([
+            run_model_test('plus BatchNorm', Sequential([
                 Embedding(emb_dim),
                 BatchNormalization(),
                 Recurrence(LSTM(hidden_dim), go_backwards=False),
                 BatchNormalization(),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.05662627214996811, 0.2968516879905391])
 
         # plus lookahead
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-            test_a_model('plus lookahead', Sequential([
+            run_model_test('plus lookahead', Sequential([
                 Embedding(emb_dim),
                 with_lookahead(),
                 BatchNormalization(),
                 Recurrence(LSTM(hidden_dim), go_backwards=False),
                 BatchNormalization(),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.057901888466764646, 0.3044637752807047])
 
         # replace lookahead by bidirectional model
         with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-            test_a_model('replace lookahead by bidirectional model', Sequential([
+            run_model_test('replace lookahead by bidirectional model', Sequential([
                 Embedding(emb_dim),
                 BatchNormalization(),
                 BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
                 BatchNormalization(),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.0579573500457558, 0.3214986774820327])
 
         # test of a config like in the example but with additions to test many code paths
-    with default_options(enable_self_stabilization=True, use_peepholes=True):
-            test_a_model('alternate paths', Sequential([
-            Stabilizer(),
-            Embedding(emb_dim),
-            BatchNormalization(),
-            Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
-            BatchNormalization(map_rank=1),
-                Dense(num_labels)
-            ]), [0.08574360112032389, 0.41847621578367716])
+        with default_options(enable_self_stabilization=True, use_peepholes=True):
+                run_model_test('alternate paths', Sequential([
+                Stabilizer(),
+                Embedding(emb_dim),
+                BatchNormalization(),
+                Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
+                BatchNormalization(map_rank=1),
+                    Dense(label_dim)
+                ]), [0.08574360112032389, 0.41847621578367716])
 
     # test of the example itself
     # this emulates the main code in the PY file
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-    model = create_model_function()
+    model = create_model()
     loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
     expected_avg = [0.15570838301766451, 0.7846451368305728]
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)

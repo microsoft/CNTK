@@ -17,8 +17,8 @@ using gradients of parameters w.r.t. a training objective.
 
 class Trainer(cntk_py.Trainer):
     '''
-    Trainer to train the specified ``model`` with the specified ``training_loss``
-    as the training criterion, the specified ``evaluation_function`` as the
+    Trainer to train the specified ``model`` according to a specified loss function
+    as the training criterion, a specified metric function as the
     criterion for evaluating the trained model's quality, and using the
     specified set of ``parameter_learners`` for updating the model's parameters
     using computed gradients.
@@ -153,7 +153,7 @@ class Trainer(cntk_py.Trainer):
             if contains_minibatch_data:
                 updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
                     arguments, device)
-            else:    
+            else:
                 updated = super(Trainer, self).train_minibatch(arguments,
                     device)
 
@@ -286,6 +286,33 @@ class Trainer(cntk_py.Trainer):
         The number of samples seen globally between all workers from the beginning of training.
         '''
         return super(Trainer, self).total_number_of_samples_seen()
+
+    @property
+    def accumulated_loss_average(self):
+        '''
+        The average training loss per sample since the last reset_accumulation()
+        '''
+        return super(Trainer, self).accumulated_loss_average()
+        
+    @property
+    def accumulated_evaluation_average(self):
+        '''
+        The average evaluation criterion value per sample since the last reset_accumulation()
+        '''
+        return super(Trainer, self).accumulated_evaluation_average()
+
+    @property
+    def accumulated_sample_count(self):
+        '''
+        The number of samples since last reset_accumulation
+        '''
+        return super(Trainer, self).accumulated_sample_count()
+    
+    def reset_accumulation(self):
+        '''
+        Reset accumulated loss and evaluation criterion
+        '''
+        return super(Trainer, self).reset_accumulation()
 
 
 def Evaluator(model, criterion):

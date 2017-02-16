@@ -25,6 +25,22 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+//----------------------------------------------------------------------------
+// For reductions we need the neutral elements of the corresponding binary ops
+//----------------------------------------------------------------------------
+template <typename ElemType> ElemType NeutralValue(ElementWiseOperator op)
+{
+    switch (op)
+    {
+    case ElementWiseOperator::opSum:                return  0;
+    case ElementWiseOperator::opLogSum:             return -std::numeric_limits<ElemType>::infinity();
+    case ElementWiseOperator::opMin:                return  std::numeric_limits<ElemType>::max();
+    case ElementWiseOperator::opMax:                return  std::numeric_limits<ElemType>::lowest();
+    case ElementWiseOperator::opElementwiseProduct: return 1;
+    default:                                        return 0; // error
+    }
+};
+
 // -----------------------------------------------------------------------
 // ReduceElements (op, axis=, input)
 // -----------------------------------------------------------------------
@@ -43,6 +59,7 @@ template <class ElemType>
     }
 }
 
+// TODO: load and save are ignoring m_reduceAll for now. 
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Load(File& fstream, size_t modelVersion) /*override*/
 {
@@ -61,14 +78,35 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
+    if (m_reduceAll)
+    {
+        // When operating on all axes we need to mask the invalid parts of the minibatch
+        auto mbLayout = InputRef(0).GetMBLayout();
+        InputRef(0).MaskMissingValueColumnsTo(fr.WithLayout(mbLayout), NeutralValue<ElemType>(m_reductionOp));
+        if (m_mean)
+        {
+            //for mean reduction and all axes we need to carefully compute the scaling factor
+            auto actual_samples = mbLayout != nullptr ? mbLayout->GetActualNumSamples() : 1;
+            m_scale = ElemType((1.0 / GetInputSampleLayout(0).GetNumElements()) / actual_samples);
+        }
+    }
+
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
-    auto result =             ValueTensorFor(rank, fr);
-    auto input  = InputRef(0).ValueTensorFor(rank, fr);
+    auto input  = InputRef(0).   ValueTensorFor(rank, fr);
+    auto result = !m_reduceAll ? ValueTensorFor(rank, fr) : TensorView<ElemType>(ValuePtr(), TensorShape(1));
 
-    // the actual operation is a Copy with reduction, where the magic is in the reduction op
-    // For "Mean", m_scale is 1/#elements, and 1 otherwise.
-    result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+    switch (m_reductionOp)
+    {
+    case ElementWiseOperator::opArgmin:
+    case ElementWiseOperator::opArgmax:
+        result.DoArgReductionOpOf(input, m_reductionOp);
+        break;
+    default:
+        // the actual operation is a Copy with reduction, where the magic is in the reduction op
+        // For "Mean", m_scale is 1/#elements, and 1 otherwise.
+        result.DoUnaryOpOf(0, input, m_scale, ElementWiseOperator::opCopy, m_reductionOp);
+    }
 }
 
 template <class ElemType>
@@ -78,8 +116,8 @@ template <class ElemType>
 
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
-    auto sliceOutputGrad =             GradientTensorFor(rank, fr); // propagate from this one...
-    auto sliceInputGrad  = InputRef(0).GradientTensorFor(rank, fr); // ...to this one
+    auto sliceOutputGrad = !m_reduceAll ? GradientTensorFor(rank, fr) : TensorView<ElemType>(GradientPtr(), TensorShape(1)); // propagate from this one...
+    auto sliceInputGrad  = InputRef(0).   GradientTensorFor(rank, fr); // ...to this one
 
     // gradients are not as simple as passing an op-code, unfortunately
     switch (m_reductionOp)
@@ -99,28 +137,40 @@ template <class ElemType>
             // df / dx = exp(x)/exp(f)
             //         = exp(x – f)
             sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
-    }
+        }
         break;
 
     case ElementWiseOperator::opMin:
     case ElementWiseOperator::opMax:
-        auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
-        auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+        {
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
+            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
-        // POTENTIAL PROBLEM:
-        // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
-        // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
-        // In these cases there is no correct gradient.The question is if this could lead to any problems.
-        // Let's look at two scenarios where this might happen:
-        //
-        // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
-        //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
-        //
-        // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
-        //
-        // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
-        // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
-        sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+            // POTENTIAL PROBLEM:
+            // For ReduceMin/Max there are combinations of input values where the gradient is not defined because the function has an edge at these points.
+            // E.g. for ReduceMin this is the case when the minimum input value is attained by several inputs at the same time.
+            // In these cases there is no correct gradient.The question is if this could lead to any problems.
+            // Let's look at two scenarios where this might happen:
+            //
+            // * Scenario 1: The input comes from a layer of nodes like e.g. ReLU and some of them might operate in the regime where they clip to a constant value.
+            //   In this case it's not a problem that the input gradient is kind of bad as the derivative of the concerning input nodes will be zero anyway.
+            //
+            // * Scenario 2: The input data is directly coming from training data. Here bad gradients don't matter as we wouldn't wan't to propagate gradients to the training data.
+            //
+            // So as we don't have a better solution yet and it probably doesn't have impact let's stay with the current solution.
+            // Also note that for Clip , Min, Max and ReLU we have the same kind of problem.
+            sliceInputGrad.AddCopyIfEqualOf(input, output, sliceOutputGrad);
+        }
+        break;
+   case ElementWiseOperator::opElementwiseProduct:
+    {        
+        auto input  = InputRef(inputIndex).ValueTensorFor(rank, fr);
+        auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
+        sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
+        break;
+    }
+    case ElementWiseOperator::opArgmin:
+    case ElementWiseOperator::opArgmax:
         break;
 
         // more coming
@@ -132,10 +182,13 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum:    return false;
-    case ElementWiseOperator::opLogSum: return true;
-    case ElementWiseOperator::opMin:    return true;
-    case ElementWiseOperator::opMax:    return true;
+    case ElementWiseOperator::opSum:                   return false;
+    case ElementWiseOperator::opLogSum:                return true;
+    case ElementWiseOperator::opMin:                   return true;
+    case ElementWiseOperator::opMax:                   return true;
+    case ElementWiseOperator::opElementwiseProduct:    return true;
+    case ElementWiseOperator::opArgmin:                return false;
+    case ElementWiseOperator::opArgmax:                return false;
     }
     LogicError("Should not get here.");
 }
@@ -145,10 +198,13 @@ template <class ElemType>
 {
     switch (m_reductionOp)
     {
-    case ElementWiseOperator::opSum:    return false;
-    case ElementWiseOperator::opLogSum: return true;
-    case ElementWiseOperator::opMin:    return true;
-    case ElementWiseOperator::opMax:    return true;
+    case ElementWiseOperator::opSum:                   return false;
+    case ElementWiseOperator::opLogSum:                return true;
+    case ElementWiseOperator::opMin:                   return true;
+    case ElementWiseOperator::opMax:                   return true;
+    case ElementWiseOperator::opElementwiseProduct:    return true;
+    case ElementWiseOperator::opArgmin:                return false;
+    case ElementWiseOperator::opArgmax:                return false;
     }
     LogicError("Should not get here.");
 }
@@ -166,43 +222,53 @@ void ReduceElementsNode<ElemType>::ValidateOp()
     else if (m_operation == L"LogSum") m_reductionOp = ElementWiseOperator::opLogSum;
     else if (m_operation == L"Min")    m_reductionOp = ElementWiseOperator::opMin;
     else if (m_operation == L"Max")    m_reductionOp = ElementWiseOperator::opMax;
+    else if (m_operation == L"Prod")   m_reductionOp = ElementWiseOperator::opElementwiseProduct;
+    else if (m_operation == L"Argmin") m_reductionOp = ElementWiseOperator::opArgmin;
+    else if (m_operation == L"Argmax") m_reductionOp = ElementWiseOperator::opArgmax;
 
     // more here
-    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min'.", NodeDescription().c_str(), m_operation.c_str());
+    else InvalidArgument("%ls was given an invalid operation code '%ls'. Allowed are: 'Sum', 'Max', 'Min', 'Prod', 'Argmax', 'Argmin'.", NodeDescription().c_str(), m_operation.c_str());
 }
 
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::Validate(bool isFinalValidationPass) /*override*/
 {
-    Base::Validate(isFinalValidationPass);
-    InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-
-    // validate the opcode (in case we got instantiated empty and never updated)
-    ValidateOp();
-
-    let shape = Input(0)->GetSampleLayout();
-    auto dims = shape.GetDims();
-    size_t reducedDim = 0; // (init to keep compiler happy)
-    if (m_axis == 0)
-    {
-        reducedDim = shape.GetNumElements();
-        dims = { 1 };                       // entire sample is reduced to a scalar
-    }
-    else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
-    {
-        reducedDim = dims[m_axis - 1];
-        dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
-    }
-    else if (isFinalValidationPass)
-        InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
-
-    // for "Mean", we must divide by #elements
-    if (isFinalValidationPass && m_operation == L"Mean")
-        m_scale = (ElemType)(1.0 / reducedDim);
+    if (m_operation == L"Mean")
+        m_mean = true;
+    m_scale = (ElemType)1;
+    if (m_reduceAll)
+        Base::ValidateUnaryReduce(isFinalValidationPass);
     else
-        m_scale = (ElemType)1;
+    {
+        Base::Validate(isFinalValidationPass);
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
-    SetDims(TensorShape(dims), Input(0)->HasMBLayout());
+        // validate the opcode (in case we got instantiated empty and never updated)
+        ValidateOp();
+
+        let shape = Input(0)->GetSampleLayout();
+        auto dims = shape.GetDims();
+        size_t reducedDim = 0; // (init to keep compiler happy)
+        if (m_axis == 0)
+        {
+            reducedDim = shape.GetNumElements();
+            dims = { 1 };                       // entire sample is reduced to a scalar
+        }
+        else if (m_axis - 1 >= 0 && m_axis - 1 < dims.size())
+        {
+            reducedDim = dims[m_axis - 1];
+            dims[m_axis - 1] = 1;               // one axis is reduced to a scalar
+        }
+        else if (isFinalValidationPass)
+            InvalidArgument("The shape of %ls [%s] has no axis %d", NodeDescription().c_str(), string(shape).c_str(), m_axis);
+
+        // for "Mean", we must divide by #elements
+        if (isFinalValidationPass && m_mean)
+            m_scale = (ElemType)(1.0 / reducedDim);
+
+        SetDims(TensorShape(dims), Input(0)->HasMBLayout());
+    }
+
 }
 
 template class ReduceElementsNode<float>;
@@ -254,7 +320,7 @@ template <class ElemType>
             continue;
         auto& indexSequence = indexSequences[i];
         // create index map for one sequence
-        // this is the condition check that this node performs; the meat
+        // this is the condition check that this node performs; the meat (or tofu if you're vegeterian)
         indexSequence.clear();
         double desiredCount = 0.0;
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
@@ -345,7 +411,6 @@ template <class ElemType>
         let& sourceSeq = sourceSequences[i];
         if (sourceSeq.seqId == GAP_SEQUENCE_ID)
             continue;
-        //let& indexSeq = indexMBLayout->FindSequence(sourceSeq.seqId);          // find corresponding entry in indexMBLayout
         let& indexSeq = indexMBLayout->FindMatchingSequence(sourceSequences, i); // find corresponding entry in indexMBLayout
         for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++)   // map all index values in index sequence
         {
@@ -397,7 +462,20 @@ template <class ElemType>
     InputRef(INDEXDATA).MaskMissingValueColumnsTo(FrameRange(InputRef(INDEXDATA).GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
     let&  index  = InputRef(INDEXDATA) .Value(); // column indices to copy from
     let&  source = InputRef(SOURCEDATA).Value(); // source data to copy
-    auto& output =                      Value(); // output goes here
+
+#ifdef _MSC_VER
+    auto& outputValuePtrRef = ValuePtrRef();
+#else
+    auto& outputValuePtrRef = this->template ValuePtrRef();
+#endif
+    if ((source.GetMatrixType() == SPARSE) && (outputValuePtrRef->GetMatrixType() != SPARSE))
+        outputValuePtrRef = std::make_shared<Matrix<ElemType>>(outputValuePtrRef->GetNumRows(),
+                                                               outputValuePtrRef->GetNumCols(),
+                                                               outputValuePtrRef->GetPreferredDeviceId(),
+                                                               source.GetMatrixType(),
+                                                               source.GetFormat());
+
+    auto& output = Value(); // output goes here
     output.DoGatherColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
 }
 
@@ -458,6 +536,19 @@ template <class ElemType>
     InputRef(INDEXDATA).MaskMissingValueColumnsTo(FrameRange(InputRef(INDEXDATA).GetMBLayout()), -1); // indicates an invalid column to Gather/Scatter
     let&  index  = InputRef(INDEXDATA) .Value(); // column indices to copy from
     let&  source = InputRef(SOURCEDATA).Value(); // source data to copy
+
+#ifdef _MSC_VER
+    auto& outputValuePtrRef = ValuePtrRef();
+#else
+    auto& outputValuePtrRef = this->template ValuePtrRef();
+#endif
+    if ((source.GetMatrixType() == SPARSE) && (outputValuePtrRef->GetMatrixType() != SPARSE))
+        outputValuePtrRef = std::make_shared<Matrix<ElemType>>(outputValuePtrRef->GetNumRows(),
+                                                               outputValuePtrRef->GetNumCols(),
+                                                               outputValuePtrRef->GetPreferredDeviceId(),
+                                                               source.GetMatrixType(),
+                                                               source.GetFormat());
+
     auto& output =                      Value(); // output goes here
     output.DoScatterColumnsOf(/*beta=*/0, index, source, /*alpha=*/1);
 }

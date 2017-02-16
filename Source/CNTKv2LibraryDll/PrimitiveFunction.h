@@ -91,6 +91,7 @@ namespace CNTK
         { PrimitiveOpType::Unpooling, L"Unpooling" },
         { PrimitiveOpType::LambdaRank, L"LambdaRank" },
         { PrimitiveOpType::NDCG, L"NDCG" },
+        { PrimitiveOpType::NoOp, L"NoOp" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -184,8 +185,11 @@ namespace CNTK
         static const std::wstring InternalMeanReductionOpName;
         static const std::wstring InternalMaxReductionOpName;
         static const std::wstring InternalMinReductionOpName;
+        static const std::wstring InternalProdReductionOpName;
         static const std::wstring InternalAllReductionOpName;
         static const std::wstring InternalAnyReductionOpName;
+        static const std::wstring InternalArgmaxReductionOpName;
+        static const std::wstring InternalArgminReductionOpName;
 
         static const std::wstring AttributeNameAxis;
         static const std::wstring AttributeNameAxis1;
@@ -669,7 +673,7 @@ namespace CNTK
         /*static*/ NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions) const
         {
             NDShape mainOperandShape = operands[0].Shape();
-            for (size_t i = 1; i < operands.size(); i++) // all but first and last arguments must match the first; last one must be a [1]
+            for (size_t i = 1; i < operands.size(); i++) // all but first and last arguments must match the first; last one must be a scalar
             {
                 if (!operands[i].DynamicAxes().empty())
                     InvalidArgument("BatchNormalization: Input[%d] has a dynamic axis that is not allowed!", (int)i);
@@ -692,9 +696,13 @@ namespace CNTK
                                         AsStringForErrorReporting(paramShape).c_str(),
                                         AsStringForErrorReporting(operands[1].Shape()).c_str());
                 }
-                else if (paramShape != NDShape(std::vector<size_t>{ 1 })) // last arguments is count, must be a 1-dim vector
+                else if (paramShape != NDShape()
+#if 1
+                         && paramShape != NDShape({ 1 })  // a beta version wrote it as 1-dim vectors instead
+#endif
+                         ) // last arguments is count, must be a scalar
                 {
-                    InvalidArgument("BatchNormalization: Input[%d] must be a 1-dimensional vector.", (int)i);
+                    InvalidArgument("BatchNormalization: Input[%d] must be a scalar.", (int)i);
                 }
             }
 
@@ -706,13 +714,23 @@ namespace CNTK
         static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
         static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, PrimitiveFunction* owner, Dictionary& functionConfig);
 
-        virtual std::vector<Variable> InferOutputs() override;
+        void InferOutputs(std::vector<Variable>& outputs) override;
+
+        FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override
+        {
+            return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
+        }
 
     private:
         PrimitiveOpType m_op;
 
         // Increasing s_serializationVersion every time we add more ops allows us to print 
         // a more meaningful message when trying to load a new model with a stale binary. 
-        static const size_t s_serializationVersion = 3;
+        // version 1: initial version.
+        // version 2: changed in 7af3a7c0e46cb12f873f1289400a9c5d86746662. TODO(n17s): add description.
+        // version 3: changed in df0ab4e58186738931968e806b61bc80d7b6e20e. TODO(pkrannen): add description.
+        // version 4: added extra parameter (#6) for the running mean sample count in BatchNormalization.
+        // Version 6: Add argmax and argmin to ReduceElement.
+        static const size_t s_serializationVersion = 6;
     };
 }

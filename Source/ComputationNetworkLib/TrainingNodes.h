@@ -2263,7 +2263,6 @@ private:
 // -----------------------------------------------------------------------
 template <class ElemType>
 class BatchNormalizationNode : public ComputationNodeNonLooping<ElemType>, public IFreezable,
-    //public NumInputs<6>, // the run_count can be omitted in unshared settings, for backcompat
     public IdentityTransformerNodeOnOneInput<0>
 {
     typedef ComputationNodeNonLooping<ElemType> Base; UsingComputationNodeMembersBoilerplate;
@@ -2309,7 +2308,11 @@ public:
         fstream << m_blendTimeConst;
         fstream << (int32_t)m_imageLayoutKind;
         RunCount();                   // cache m_runCountUntied, so that someone who inspects the file sees something meaningful (as an FYI)
+#if CURRENT_CNTK_MODEL_VERSION == CNTK_MODEL_VERSION_19
+        fstream << (bool)(m_runCountUntied == 0);  // a temp version that saved a flag instead (beta11)
+#else
         fstream << m_runCountUntied;  // this is really saved as a FYI and for optimizing 0-checks; the primary storage for this value is in the shared Parameter
+#endif
         fstream << m_epsilon;
         fstream << m_useCntkEngine;
     }
@@ -2326,7 +2329,16 @@ public:
             fstream >> m_blendTimeConst;
             fstream >> m_imageLayoutKind;
             if (modelVersion >= CNTK_MODEL_VERSION_13)
-                fstream >> m_runCountUntied;
+            {
+                if (modelVersion != CNTK_MODEL_VERSION_19)
+                    fstream >> m_runCountUntied;
+                else // a temp version that saved a flag instead (beta11)
+                {
+                    bool runCountIsZero;
+                    fstream >> runCountIsZero;
+                    m_runCountUntied = runCountIsZero ? 0 : SIZE_MAX; // only used for 0 checks
+                }
+            }
             else
                 fstream >> mbCount; // converted below
             fstream >> m_epsilon;
@@ -2389,6 +2401,8 @@ public:
             m_convertRunningVariancePending = true;
         }
     }
+
+    //void AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs) override;
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
@@ -2483,7 +2497,7 @@ private: // time-constant conversions
         if (!isfinite(m_normTimeConst))                      // infinite
             return 0;                                        // no new contribution from current minibatch (infinitely long memory)
         else if (m_normTimeConst > 0)                        // not zero
-            return 1.0 - exp(-numSamples / m_normTimeConst); // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats
+            return -expm1(-numSamples / m_normTimeConst);    // interpolate expAvgFactor * MB stats + (1-expAvgFactor) * prev running stats
         else                                                 // zero
             return 1.0;                                      // don't use running stats at all
     }
@@ -2559,7 +2573,6 @@ public:
         m_gradientValid = false;
     }
 
-    // Note: This function assumes that inputIndex=0 is called before the others, unless the DATA input takes no gradient.
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
         // Must be in training mode.
@@ -2904,8 +2917,5 @@ private:
 
     bool m_convertRunningVariancePending;
 };
-
-template class BatchNormalizationNode<float>;
-template class BatchNormalizationNode<double>;
 
 }}}

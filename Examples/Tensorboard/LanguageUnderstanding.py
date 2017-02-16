@@ -7,8 +7,7 @@
 from __future__ import print_function
 import os
 import math
-from cntk.layers import *  # layer-like stuff such as Linear()
-from cntk.models import *  # higher abstraction level, e.g. entire standard models and also operators like Sequential()
+from cntk.layers import *  # Layers library
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from cntk import Trainer
@@ -86,7 +85,7 @@ def train(reader, model, max_epochs):
                        low_memory=True,
                        gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
-    trainer = Trainer(z, ce, pe, [learner])
+    trainer = Trainer(z, (ce, pe), [learner])
 
     # define mapping from reader streams to network inputs
     input_map = {

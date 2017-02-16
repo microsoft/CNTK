@@ -21,7 +21,7 @@ def _make_tensor_meta(cls_name, **kwargs):
     return TensorMeta(cls_name, (), {})
 
 # Tensor and SparseTensor contain only a batch axis.
-# If you want a sequence, say Sequence[Tensor].
+# If you want a sequence, say Sequence[tensor].
 # ParameterTensor has no axis.
 Tensor          = _make_tensor_meta('Tensor',       is_sparse=False, dynamic_axes=Axis.default_batch_axis())
 SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=Axis.default_batch_axis())

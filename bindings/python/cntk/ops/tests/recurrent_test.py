@@ -9,6 +9,8 @@ Unit tests for recurrent operations, each operation is tested for
 the forward and the backward pass
 """
 
+# BUGBUG: These are not testing actual execution in a loop.
+
 from __future__ import division
 import numpy as np
 import pytest
@@ -68,9 +70,6 @@ def test_op_past_value(input_size, time_step, initial_state, device_id, precisio
     dt = PRECISION_TO_TYPE[precision]
     total_elements = np.product(input_size)
 
-    elem_shape = input_size[2:]
-
-    elements_to_roll = np.product(elem_shape) * time_step
     x = np.arange(total_elements, dtype=dt).reshape(input_size)
 
     expected_forward = np.zeros_like(x, dtype=dt)
@@ -79,6 +78,7 @@ def test_op_past_value(input_size, time_step, initial_state, device_id, precisio
         expected_forward[seq_idx] = np.roll(AA(x[seq_idx], dtype=dt), time_step, axis=0)
         expected_forward[seq_idx,0:time_step] = initial_state
 
+    elem_shape = input_size[2:]
     a = I(shape=elem_shape,
       dtype=sanitize_dtype_cntk(precision),
       needs_gradient=True,
@@ -100,4 +100,70 @@ def test_op_past_value(input_size, time_step, initial_state, device_id, precisio
 
     unittest_helper(input_op_input,
                 x, expected_forward, expected_backward,
+                device_id=device_id, precision=precision)
+
+SEQUENCES1 = [
+    # (shape of batch (sample num, seq len, rows, cols), time step, initial state size)
+    ((1, 4, 3, 2),  1, (1, 1, 3, 2)),  # 1 step, initial state has len 1
+    ((1, 4, 3, 2),  1, (1, 3, 3, 2)),  # 1 step, initial state has len 3, must pick out last
+    ((1, 4, 3, 2), -1, (1, 1, 3, 2)),  # 1 step, initial state has len 1
+    ((1, 4, 3, 2), -1, (1, 2, 3, 2)),  # 1 step, initial state has len 2, must pick out first
+    ((2, 4, 4, 1), -2, (2, 1, 4, 1)),  # 2 seqs of 4 steps each, initial state will broadcast temporally  --note: broadcasting shape-wise at the same time is not supported presently by gather()
+    ((2, 4, 4, 3),  2, (2, 3, 4, 3))   # 2 seqs of 4 steps each, initial state has different length and will not broadcast
+    # note: not tested yet: if time_step > length of initial_state (and initial_state > 1 frame i.e. not broadcasting), it should throw
+]
+
+@pytest.mark.parametrize("input_size, time_step, initial_state_size", SEQUENCES1)
+def test_op_delay_with_initial_state(input_size, time_step, initial_state_size, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    x             = np.arange(np.product(input_size),         dtype=dt).reshape(input_size)
+    initial_state = np.arange(np.product(initial_state_size), dtype=dt).reshape(initial_state_size) + 3
+
+    expected_forward = np.zeros_like(x, dtype=dt)
+    for seq_idx in range(input_size[0]):
+        expected_forward[seq_idx] = np.roll(AA(x[seq_idx], dtype=dt), time_step, axis=0)
+        if time_step > 0:
+            expected_forward[seq_idx,:time_step] = initial_state[seq_idx,-1 if time_step == 1 else -time_step:,...]
+        else:
+            expected_forward[seq_idx,time_step:] = initial_state[seq_idx,:1 if time_step == -1 else -time_step,...]
+
+    a = I(shape=input_size[2:],
+      dtype=sanitize_dtype_cntk(precision),
+      needs_gradient=True,
+      name='a')
+    from ...axis import Axis
+    i = I(shape=initial_state_size[2:],
+      dtype=sanitize_dtype_cntk(precision),
+      needs_gradient=True,
+      dynamic_axes=[Axis.default_batch_axis(), Axis('initial_state_axis')],
+      name='i')
+
+    backward = np.ones_like(x, dtype=dt)
+    initial_state_backward = np.zeros_like(initial_state, dtype=dt)
+    for seq_idx in range(input_size[0]):
+        for t in range(abs(time_step)):
+            initial_state_bw_val = 1.0 if initial_state_size[1] > 1 else abs(time_step)
+            if time_step > 0:
+                backward[seq_idx,-1-t] = 0.0
+                if t < initial_state_size[1]:
+                    initial_state_backward[seq_idx,-1-t] = initial_state_bw_val
+            else:
+                backward[seq_idx,t] = 0.0
+                if t < initial_state_size[1]:
+                    initial_state_backward[seq_idx,t] = initial_state_bw_val
+
+    print(initial_state_size)
+    print(initial_state_backward)
+
+    expected_backward = {
+        a: backward,
+        i: initial_state_backward
+    }
+
+    from .. import sequence
+    input_op_input = sequence.delay(a, i, time_step)
+
+    unittest_helper(input_op_input,
+                {a: x, i: initial_state}, expected_forward, expected_backward,
                 device_id=device_id, precision=precision)

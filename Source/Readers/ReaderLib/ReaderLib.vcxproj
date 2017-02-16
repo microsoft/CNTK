@@ -52,6 +52,7 @@
     <ClInclude Include="ExceptionCapture.h" />
     <ClInclude Include="Indexer.h" />
     <ClInclude Include="ReaderBase.h" />
+    <ClInclude Include="ReaderConstants.h" />
     <ClInclude Include="SequenceData.h" />
     <ClInclude Include="TransformBase.h" />
     <ClInclude Include="TransformController.h" />

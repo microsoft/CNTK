@@ -2,11 +2,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
 
 using namespace CNTK;
+
+namespace CNTK { namespace Test {
 
 // Mock communicator to simulate MPI run
 class MockCommunicator : public DistributedCommunicator
@@ -83,7 +85,7 @@ public:
     }
 };
 
-MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize, bool randomize, size_t chunkSizeInBytes)
+MinibatchSourcePtr CreateTextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize, bool randomize, size_t chunkSizeInBytes)
 {
     ::CNTK::Dictionary minibatchSourceConfiguration;
     minibatchSourceConfiguration[L"epochSize"] = epochSize;
@@ -133,7 +135,7 @@ void TestMinibatchSourceWarmStart(size_t minibatchSize, size_t warmStartSamples,
     const size_t numberOfSamplesInSweep = 10000;
 
     // Let's create two workers.
-    auto minibatchSource = TextFormatMinibatchSource(
+    auto minibatchSource = CreateTextFormatMinibatchSource(
         L"SimpleDataTrain_cntk_text.txt",
         { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },
         numberOfSamplesInSweep,
@@ -143,7 +145,7 @@ void TestMinibatchSourceWarmStart(size_t minibatchSize, size_t warmStartSamples,
     auto featureStreamInfo = minibatchSource->StreamInfo(featureStreamName);
     auto labelStreamInfo = minibatchSource->StreamInfo(labelsStreamName);
 
-    auto minibatchSource2 = TextFormatMinibatchSource(
+    auto minibatchSource2 = CreateTextFormatMinibatchSource(
         L"SimpleDataTrain_cntk_text.txt",
         { { featureStreamName, inputDim }, { labelsStreamName, numOutputClasses } },
         numberOfSamplesInSweep,
@@ -220,9 +222,9 @@ void TestMinibatchSourceWarmStart(size_t minibatchSize, size_t warmStartSamples,
 void TestEndOfSweepFlag(size_t maxSamples, size_t mbSize, bool randomize)
 {
     const size_t sweepSize = 603;
-    auto ctfInput = L"SimpleDataTest_cntk_text.txt"; 
-    std::vector<StreamConfiguration> streamConfig { { L"features", 2 } };
-    auto cpuDevice = DeviceDescriptor::CPUDevice();    
+    auto ctfInput = L"SimpleDataTest_cntk_text.txt";
+    std::vector<StreamConfiguration> streamConfig{ { L"features", 2 } };
+    auto cpuDevice = DeviceDescriptor::CPUDevice();
     auto src = TextFormatMinibatchSource(ctfInput, streamConfig, maxSamples, randomize);
 
     maxSamples = (maxSamples == MinibatchSource::FullDataSweep) ? sweepSize : maxSamples;
@@ -246,10 +248,8 @@ void TestEndOfSweepFlag(size_t maxSamples, size_t mbSize, bool randomize)
             bool expectedEndOfSweep = ((sampleCount + numSamplesInMinibatch) % sweepSize) == 0;
             expectedEndOfSweep |= ((sampleCount) / sweepSize) < ((sampleCount + numSamplesInMinibatch) / sweepSize);
 
-
             reachedEndOfEpoch = (sampleCount + mbSize >= maxSamples);
             size_t expectedNumSamples = reachedEndOfEpoch ? (maxSamples - sampleCount) : mbSize;
-            
 
             if (streamData.second.sweepEnd != expectedEndOfSweep)
             {
@@ -288,28 +288,42 @@ void TestThatEndOfSweepFlagIsSetCorrectly()
     }
 }
 
-void MinibatchSourceTests()
+BOOST_AUTO_TEST_SUITE(MinibatchSourceSuite)
+
+BOOST_AUTO_TEST_CASE(EndOfSweepFlagIsSetCorrectly)
 {
     TestThatEndOfSweepFlagIsSetCorrectly();
+}
 
-    // Test no-randomize minibatch source with small data chunks
+BOOST_AUTO_TEST_CASE(NoRandomizedMinibatchSourceWarmStart)
+{
     TestMinibatchSourceWarmStart(64, 128, false, 1024);
     TestMinibatchSourceWarmStart(64, 0, false, 1024);
     TestMinibatchSourceWarmStart(64, 100, false, 1024);
+}
 
-    // Test no-randomized minibatch source with a single chunk
+BOOST_AUTO_TEST_CASE(NoRandomizedMinibatchSourceWithSingleChunk)
+{
     size_t chunk32MB = 1024 * 1024 * 32;
     TestMinibatchSourceWarmStart(64, 128, false, chunk32MB);
     TestMinibatchSourceWarmStart(64, 0, false, chunk32MB);
     TestMinibatchSourceWarmStart(64, 100, false, chunk32MB);
+}
 
-    // Test randomized minibatch source with small data chunks
+BOOST_AUTO_TEST_CASE(RandomizedMinibatchSourceWithSmallChunks)
+{
     TestMinibatchSourceWarmStart(64, 0, true, 1024);
     TestMinibatchSourceWarmStart(64, 128, true, 1024);
+}
 
-    // Test randomized minibatch source with no data for one of the workers 
-    // due to decimation based on chunks
+BOOST_AUTO_TEST_CASE(RandomizedMinibatchSourceWithNoData)
+{
+    size_t chunk32MB = 1024 * 1024 * 32;
     bool expectNoData = true;
     TestMinibatchSourceWarmStart(64, 0, true, chunk32MB, expectNoData);
     TestMinibatchSourceWarmStart(64, 128, true, chunk32MB, expectNoData);
 }
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

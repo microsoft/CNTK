@@ -1,4 +1,11 @@
+//
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+//
+
 #pragma once
+#include <boost/test/unit_test.hpp>
+
 #include <exception>
 #include <algorithm>
 #include "CNTKLibrary.h"
@@ -13,6 +20,8 @@
 #define NDEBUG
 #endif
 
+using namespace CNTK;
+
 #ifdef _MSC_VER
 // In case of asserts in debug mode, print the message into stderr and throw exception
 int HandleDebugAssert(int /* reportType */,
@@ -20,23 +29,41 @@ int HandleDebugAssert(int /* reportType */,
                       int *returnValue); // returnValue - retVal value of zero continues execution
 #endif
 
+struct V2LibraryTestFixture
+{
+    V2LibraryTestFixture()
+    {
+#if defined(_MSC_VER)
+        // in case of asserts in debug mode, print the message into stderr and throw exception
+        if (_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, HandleDebugAssert) == -1) {
+            fprintf(stderr, "_CrtSetReportHook2 failed.\n");
+        }
+#endif
+
+        // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking
+        // which will have a silent performance degradation otherwise
+        Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
+    }
+};
+
+BOOST_GLOBAL_FIXTURE(V2LibraryTestFixture);
+
 #pragma warning(push)
 #pragma warning(disable : 4996)
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
-__declspec_noreturn inline void ReportFailure(const char* format, ...) __attribute__((format(printf, 1, 2)));
+inline void ReportFailure(const char* format, ...) __attribute__((format(printf, 1, 2)));
 #endif
 
-__declspec_noreturn inline void ReportFailure(const char* format, ...)
+inline void ReportFailure(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
 
-    char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
-    vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
+    char buffer[1024] = { 0 };
+    vsnprintf(buffer, _countof(buffer) - 1, format, args);
     if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
         sprintf(buffer + _countof(buffer) - 4, "...");
-
-    throw std::runtime_error(buffer);
+    BOOST_ERROR(buffer);
 }
 #pragma warning(pop)
 
@@ -50,32 +77,35 @@ inline void FloatingPointCompare(ElementType actual, ElementType expected, const
 {
     ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * actual));
     if (std::abs(actual - expected) > allowedTolerance)
+    {
         ReportFailure((message + std::string("; Expected=%g, Actual=%g")).c_str(), expected, actual);
+    }
 }
 
 template <typename ElementType>
 inline void FloatingPointVectorCompare(const std::vector<ElementType>& actual, const std::vector<ElementType>& expected, const char* message)
 {
     if (actual.size() != expected.size())
+    {
         ReportFailure((message + std::string("; actual data vector size (%d) and expected data vector size (%d) are not equal")).c_str(), (int)actual.size(), (int)expected.size());
+    }
 
     for (size_t i = 0; i < actual.size(); ++i)
         FloatingPointCompare(actual[i], expected[i], message);
 }
 
 inline void VerifyException(const std::function<void()>& functionToTest, std::string errorMessage) {
-    bool error = false;
+    bool exceptionWasThrown = false;
     try
     {
         functionToTest();
     }
     catch (const std::exception&)
     {
-        error = true;
+        exceptionWasThrown = true;
     }
 
-    if (!error)
-        throw std::runtime_error(errorMessage);
+    BOOST_TEST(exceptionWasThrown, errorMessage);
 };
 
 static std::mt19937_64 rng(0);
@@ -108,33 +138,34 @@ static inline FILE *_wfopen(const wchar_t *path, const wchar_t *mode)
 #endif
 
 template <typename ElementType>
-inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector<CNTK::Variable*>& variables, const CNTK::DeviceDescriptor& device, size_t rank = 0)
+inline void SaveAndReloadModel(FunctionPtr& functionPtr, const std::vector<Variable*>& variables, const DeviceDescriptor& device, size_t rank = 0)
 {
     const std::wstring tempModelPath = L"feedForward.net" + std::to_wstring((int)rank);
 
     if ((_wunlink(tempModelPath.c_str()) != 0) && (errno != ENOENT))
-       throw std::runtime_error("Error deleting temp model file 'feedForward.net'");
+        BOOST_ERROR("Error deleting temp model file 'feedForward.net'");
 
-    std::unordered_map<std::wstring, CNTK::Variable*> inputVarUids;
-    std::unordered_map<std::wstring, CNTK::Variable*> outputVarNames;
+    std::unordered_map<std::wstring, Variable*> inputVarUids;
+    std::unordered_map<std::wstring, Variable*> outputVarNames;
 
     for (auto varPtr : variables)
     {
-        auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Owner()->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
+        auto retVal = varPtr->IsOutput() ? outputVarNames.insert({ varPtr->Name(), varPtr }) : inputVarUids.insert({ varPtr->Uid(), varPtr });
         if (!retVal.second)
-           throw std::runtime_error("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
+           BOOST_ERROR("SaveAndReloadModel: Multiple variables having same name cannot be restored after save and reload");
     }
 
     functionPtr->SaveModel(tempModelPath);
-    functionPtr = CNTK::Function::LoadModel(tempModelPath, device);
+    functionPtr = Function::LoadModel(tempModelPath, device);
 
     if (_wunlink(tempModelPath.c_str()) != 0)
-         throw std::runtime_error("Error deleting temp model file 'feedForward.net'");
+         BOOST_ERROR("Error deleting temp model file 'feedForward.net'");
 
     auto inputs = functionPtr->Inputs();
     for (auto inputVarInfo : inputVarUids)
     {
-        auto newInputVar = *(std::find_if(inputs.begin(), inputs.end(), [inputVarInfo](const CNTK::Variable& var) {
+        auto newInputVar = *(std::find_if(inputs.begin(), inputs.end(), [inputVarInfo](const Variable& var)
+        {
             return (var.Uid() == inputVarInfo.first);
         }));
 
@@ -144,37 +175,38 @@ inline void SaveAndReloadModel(CNTK::FunctionPtr& functionPtr, const std::vector
     auto outputs = functionPtr->Outputs();
     for (auto outputVarInfo : outputVarNames)
     {
-        auto newOutputVar = *(std::find_if(outputs.begin(), outputs.end(), [outputVarInfo](const CNTK::Variable& var) {
-            return (var.Owner()->Name() == outputVarInfo.first);
+        auto newOutputVar = *(std::find_if(outputs.begin(), outputs.end(), [outputVarInfo](const Variable& var) {
+            return (var.Name() == outputVarInfo.first);
         }));
 
         *(outputVarInfo.second) = newOutputVar;
     }
 }
 
-inline CNTK::FunctionPtr FullyConnectedLinearLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::wstring& outputName = L"")
+inline FunctionPtr FullyConnectedLinearLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::wstring& outputName = L"")
 {
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
 
-    auto timesParam = CNTK::Parameter({ outputDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(CNTK::DefaultParamInitScale, CNTK::SentinelValueForInferParamInitRank, CNTK::SentinelValueForInferParamInitRank, 1), device, L"timesParam");
-    auto timesFunction = CNTK::Times(timesParam, input, L"times");
+    auto timesParam = Parameter({ outputDim, inputDim }, DataType::Float, GlorotUniformInitializer(DefaultParamInitScale,
+                                SentinelValueForInferParamInitRank, SentinelValueForInferParamInitRank, 1), device, L"timesParam");
+    auto timesFunction = Times(timesParam, input, L"times");
 
-    auto plusParam = CNTK::Parameter({ outputDim }, 0.0f, device, L"plusParam");
-    return CNTK::Plus(plusParam, timesFunction, outputName);
+    auto plusParam = Parameter({ outputDim }, 0.0f, device, L"plusParam");
+    return Plus(plusParam, timesFunction, outputName);
 }
 
-inline CNTK::FunctionPtr FullyConnectedDNNLayer(CNTK::Variable input, size_t outputDim, const CNTK::DeviceDescriptor& device, const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
+inline FunctionPtr FullyConnectedDNNLayer(Variable input, size_t outputDim, const DeviceDescriptor& device, const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity, const std::wstring& outputName = L"")
 {
     return nonLinearity(FullyConnectedLinearLayer(input, outputDim, device, outputName));
 }
 
-inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable input,
+inline FunctionPtr FullyConnectedFeedForwardClassifierNet(Variable input,
                                                    size_t numOutputClasses,
                                                    size_t hiddenLayerDim,
                                                    size_t numHiddenLayers,
-                                                   const CNTK::DeviceDescriptor& device,
-                                                   const std::function<CNTK::FunctionPtr(const CNTK::FunctionPtr&)>& nonLinearity,
+                                                   const DeviceDescriptor& device,
+                                                   const std::function<FunctionPtr(const FunctionPtr&)>& nonLinearity,
                                                    const std::wstring& outputName)
 {
     assert(numHiddenLayers >= 1);
@@ -182,77 +214,77 @@ inline CNTK::FunctionPtr FullyConnectedFeedForwardClassifierNet(CNTK::Variable i
     for (size_t i = 1; i < numHiddenLayers; ++i)
         classifierRoot = FullyConnectedDNNLayer(classifierRoot, hiddenLayerDim, device, nonLinearity);
 
-    auto outputTimesParam = CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
+    auto outputTimesParam = Parameter(NDArrayView::RandomUniform<float>({ numOutputClasses, hiddenLayerDim }, -0.5, 0.5, 1, device));
     return Times(outputTimesParam, classifierRoot, 1, outputName);
 }
 
 template <typename ElementType>
-inline CNTK::FunctionPtr Stabilize(const CNTK::Variable& x, const CNTK::DeviceDescriptor& device)
+inline FunctionPtr Stabilize(const Variable& x, const DeviceDescriptor& device)
 {
     ElementType scalarConstant = 4.0f;
-    auto f = CNTK::Constant::Scalar(scalarConstant);
-    auto fInv = CNTK::Constant::Scalar(f.GetDataType(), 1.0 / scalarConstant);
+    auto f = Constant::Scalar(scalarConstant);
+    auto fInv = Constant::Scalar(f.GetDataType(), 1.0 / scalarConstant);
 
-    auto beta = CNTK::ElementTimes(fInv, CNTK::Log(CNTK::Constant::Scalar(f.GetDataType(), 1.0) + CNTK::Exp(CNTK::ElementTimes(f, CNTK::Parameter({}, f.GetDataType(), 0.99537863 /* 1/f*ln (e^f-1) */, device)))));
-    return CNTK::ElementTimes(beta, x);
+    auto beta = ElementTimes(fInv, Log(Constant::Scalar(f.GetDataType(), 1.0) + Exp(ElementTimes(f, Parameter({}, f.GetDataType(), 0.99537863 /* 1/f*ln (e^f-1) */, device)))));
+    return ElementTimes(beta, x);
 }
 
 template <typename ElementType>
-std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPCellWithSelfStabilization(CNTK::Variable input, CNTK::Variable prevOutput, CNTK::Variable prevCellState, const CNTK::DeviceDescriptor& device)
+std::pair<FunctionPtr, FunctionPtr> LSTMPCellWithSelfStabilization(Variable input, Variable prevOutput, Variable prevCellState, const DeviceDescriptor& device)
 {
     size_t outputDim = prevOutput.Shape()[0];
     size_t cellDim = prevCellState.Shape()[0];
 
     auto createBiasParam = [device](size_t dim) {
-        return CNTK::Parameter({ dim }, (ElementType)0.0, device);
+        return Parameter({ dim }, (ElementType)0.0, device);
     };
 
     unsigned long seed2 = 1;
     auto createProjectionParam = [device, &seed2](size_t outputDim) {
-        return CNTK::Parameter({ outputDim, CNTK::NDShape::InferredDimension }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
+        return Parameter({ outputDim, NDShape::InferredDimension }, AsDataType<ElementType>(), GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
     };
 
     auto createDiagWeightParam = [device, &seed2](size_t dim) {
-        return CNTK::Parameter({ dim }, CNTK::AsDataType<ElementType>(), CNTK::GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
+        return Parameter({ dim }, AsDataType<ElementType>(), GlorotUniformInitializer(1.0, 1, 0, seed2++), device);
     };
 
     auto stabilizedPrevOutput = Stabilize<ElementType>(prevOutput, device);
     auto stabilizedPrevCellState = Stabilize<ElementType>(prevCellState, device);
 
     auto projectInput = [input, cellDim, createBiasParam, createProjectionParam]() {
-        return createBiasParam(cellDim) + CNTK::Times(createProjectionParam(cellDim), input);
+        return createBiasParam(cellDim) + Times(createProjectionParam(cellDim), input);
     };
 
     // Input gate
-    auto it = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim), stabilizedPrevOutput) + CNTK::ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
-    auto bit = CNTK::ElementTimes(it, CNTK::Tanh(projectInput() + CNTK::Times(createProjectionParam(cellDim), stabilizedPrevOutput)));
+    auto it = Sigmoid(projectInput() + Times(createProjectionParam(cellDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto bit = ElementTimes(it, Tanh(projectInput() + Times(createProjectionParam(cellDim), stabilizedPrevOutput)));
 
     // Forget-me-not gate
-    auto ft = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim), stabilizedPrevOutput) + CNTK::ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
-    auto bft = CNTK::ElementTimes(ft, prevCellState);
+    auto ft = Sigmoid(projectInput() + Times(createProjectionParam(cellDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), stabilizedPrevCellState));
+    auto bft = ElementTimes(ft, prevCellState);
 
     auto ct = bft + bit;
 
     // Output gate
-    auto ot = CNTK::Sigmoid(projectInput() + CNTK::Times(createProjectionParam(cellDim), stabilizedPrevOutput) + CNTK::ElementTimes(createDiagWeightParam(cellDim), Stabilize<ElementType>(ct, device)));
-    auto ht = CNTK::ElementTimes(ot, CNTK::Tanh(ct));
+    auto ot = Sigmoid(projectInput() + Times(createProjectionParam(cellDim), stabilizedPrevOutput) + ElementTimes(createDiagWeightParam(cellDim), Stabilize<ElementType>(ct, device)));
+    auto ht = ElementTimes(ot, Tanh(ct));
 
     auto c = ct;
-    auto h = (outputDim != cellDim) ? CNTK::Times(createProjectionParam(outputDim), Stabilize<ElementType>(ht, device)) : ht;
+    auto h = (outputDim != cellDim) ? Times(createProjectionParam(outputDim), Stabilize<ElementType>(ht, device)) : ht;
 
     return{ h, c };
 }
 
 template <typename ElementType>
-std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPComponentWithSelfStabilization(CNTK::Variable input,
-                                                                                    const CNTK::NDShape& outputShape,
-                                                                                    const CNTK::NDShape& cellShape,
-                                                                                    const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookH,
-                                                                                    const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHookC,
-                                                                                    const CNTK::DeviceDescriptor& device)
+std::pair<FunctionPtr, FunctionPtr> LSTMPComponentWithSelfStabilization(Variable input,
+                                                                                    const NDShape& outputShape,
+                                                                                    const NDShape& cellShape,
+                                                                                    const std::function<FunctionPtr(const Variable&)>& recurrenceHookH,
+                                                                                    const std::function<FunctionPtr(const Variable&)>& recurrenceHookC,
+                                                                                    const DeviceDescriptor& device)
 {
-    auto dh = CNTK::PlaceholderVariable(outputShape, input.DynamicAxes());
-    auto dc = CNTK::PlaceholderVariable(cellShape, input.DynamicAxes());
+    auto dh = PlaceholderVariable(outputShape, input.DynamicAxes());
+    auto dc = PlaceholderVariable(cellShape, input.DynamicAxes());
 
     auto LSTMCell = LSTMPCellWithSelfStabilization<ElementType>(input, dh, dc, device);
 
@@ -266,13 +298,13 @@ std::pair<CNTK::FunctionPtr, CNTK::FunctionPtr> LSTMPComponentWithSelfStabilizat
 }
 
 // This is currently unused
-inline CNTK::FunctionPtr SimpleRecurrentLayer(const  CNTK::Variable& input, const  CNTK::NDShape& outputDim, const std::function<CNTK::FunctionPtr(const CNTK::Variable&)>& recurrenceHook, const CNTK::DeviceDescriptor& device)
+inline FunctionPtr SimpleRecurrentLayer(const  Variable& input, const NDShape& outputDim, const std::function<FunctionPtr(const Variable&)>& recurrenceHook, const DeviceDescriptor& device)
 {
-    auto dh = CNTK::PlaceholderVariable(outputDim, input.DynamicAxes());
+    auto dh = PlaceholderVariable(outputDim, input.DynamicAxes());
 
     unsigned long seed = 1;
     auto createProjectionParam = [device, &seed](size_t outputDim, size_t inputDim) {
-        return CNTK::Parameter(CNTK::NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
+        return Parameter(NDArrayView::RandomUniform<float>({ outputDim, inputDim }, -0.5, 0.5, seed++, device));
     };
 
     auto hProjWeights = createProjectionParam(outputDim[0], outputDim[0]);
@@ -280,6 +312,16 @@ inline CNTK::FunctionPtr SimpleRecurrentLayer(const  CNTK::Variable& input, cons
 
     auto output = Times(hProjWeights, recurrenceHook(dh)) + Times(inputProjWeights, input);
     return output->ReplacePlaceholders({ { dh, output } });
+}
+
+inline std::vector<bool> GenerateSequenceStartFlags(size_t numSequences)
+{
+    std::vector<bool> sequenceStartFlags(numSequences);
+    for (size_t i = 0; i < numSequences; ++i)
+    {
+        sequenceStartFlags[i] = static_cast<int>(rand()) % 2 == 0 ? true : false;
+    }
+    return sequenceStartFlags;
 }
 
 inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t maxAllowedSequenceLength)
@@ -298,7 +340,7 @@ inline std::vector<size_t> GenerateSequenceLengths(size_t numSequences, size_t m
 }
 
 template <typename ElementType>
-inline std::vector<std::vector<ElementType>> GenerateSequences(const std::vector<size_t>& sequenceLengths, const CNTK::NDShape& sampleShape)
+inline std::vector<std::vector<ElementType>> GenerateSequences(const std::vector<size_t>& sequenceLengths, const NDShape& sampleShape)
 {
     size_t numSequences = sequenceLengths.size();
     std::vector<std::vector<ElementType>> sequences;
@@ -334,12 +376,12 @@ inline std::vector<std::vector<size_t>> GenerateOneHotSequences(const std::vecto
 }
 
 template <typename ElementType>
-inline CNTK::ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengths, const CNTK::NDShape& sampleShape, const CNTK::DeviceDescriptor& device, bool oneHot)
+inline ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengths, const NDShape& sampleShape, const DeviceDescriptor& device, bool oneHot)
 {
     if (!oneHot)
     {
         std::vector<std::vector<ElementType>> sequences = GenerateSequences<ElementType>(sequenceLengths, sampleShape);
-        return CNTK::Value::Create(sampleShape, sequences, device, true);
+        return Value::Create(sampleShape, sequences, device, true);
     }
     else
     {
@@ -348,12 +390,12 @@ inline CNTK::ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengt
 
         size_t vocabularySize = sampleShape[0];
         std::vector<std::vector<size_t>> oneHotSequences = GenerateOneHotSequences(sequenceLengths, vocabularySize);
-        return CNTK::Value::Create<ElementType>(vocabularySize, oneHotSequences, device, true);
+        return Value::Create<ElementType>(vocabularySize, oneHotSequences, device, true);
     }
 }
 
 template <typename ElementType>
-inline std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr> GenerateSparseSequence(size_t vocabSize, size_t sequenceLength, size_t maxNumberOfNonZeroValuesPerSparseInputSample)
+inline std::pair<NDArrayViewPtr, NDArrayViewPtr> GenerateSparseSequence(size_t vocabSize, size_t sequenceLength, size_t maxNumberOfNonZeroValuesPerSparseInputSample)
 {
     std::vector<ElementType> inputData(vocabSize * sequenceLength, 0);
     for (size_t j = 0; j < sequenceLength; ++j)
@@ -369,18 +411,18 @@ inline std::pair<CNTK::NDArrayViewPtr, CNTK::NDArrayViewPtr> GenerateSparseSeque
         }
     }
 
-    CNTK::NDShape inputDataShape = CNTK::NDShape({ vocabSize, sequenceLength });
-    CNTK::NDArrayViewPtr inputValueData = CNTK::MakeSharedObject<CNTK::NDArrayView>(inputDataShape, inputData);
-    CNTK::NDArrayViewPtr sparseData = CNTK::MakeSharedObject<CNTK::NDArrayView>(CNTK::AsDataType<ElementType>(), CNTK::StorageFormat::SparseCSC, inputDataShape, CNTK::DeviceDescriptor::CPUDevice());
+    NDShape inputDataShape = NDShape({ vocabSize, sequenceLength });
+    NDArrayViewPtr inputValueData = MakeSharedObject<NDArrayView>(inputDataShape, inputData);
+    NDArrayViewPtr sparseData = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), StorageFormat::SparseCSC, inputDataShape, DeviceDescriptor::CPUDevice());
     sparseData->CopyFrom(*inputValueData);
     return{ inputValueData->DeepClone(), sparseData };
 }
 
 #pragma warning(pop)
 
-inline CNTK::NDShape CreateShape(size_t numAxes, size_t maxDimSize)
+inline NDShape CreateShape(size_t numAxes, size_t maxDimSize)
 {
-    CNTK::NDShape shape(numAxes);
+    NDShape shape(numAxes);
     for (size_t i = 0; i < numAxes; ++i)
     {
         shape[i] = (rng() % maxDimSize) + 1;
@@ -405,7 +447,7 @@ inline void OpenStream(std::fstream& stream, const std::wstring& filename, bool 
     stream.exceptions(std::ios_base::badbit);  
 }
 
-inline void PrintTrainingProgress(const CNTK::TrainerPtr trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
+inline void PrintTrainingProgress(const TrainerPtr trainer, size_t minibatchIdx, size_t outputFrequencyInMinibatches)
 {
     if ((minibatchIdx % outputFrequencyInMinibatches) == 0 && trainer->PreviousMinibatchSampleCount() != 0)
     {
@@ -414,7 +456,7 @@ inline void PrintTrainingProgress(const CNTK::TrainerPtr trainer, size_t minibat
         printf("Minibatch %d: CrossEntropy loss = %.8g, Evaluation criterion = %.8g\n", (int)minibatchIdx, trainLossValue, evaluationValue);
     }
 }
-inline std::vector<size_t> GetStrides(const CNTK::NDShape& shape)
+inline std::vector<size_t> GetStrides(const NDShape& shape)
 {
     if (shape.Rank() == 0)
         return std::vector<size_t>();
@@ -430,9 +472,9 @@ inline std::vector<size_t> GetStrides(const CNTK::NDShape& shape)
     return strides;
 }
 
-inline CNTK::NDShape UnflattenedShape(size_t flatennedIdx, const std::vector<size_t>& strides)
+inline NDShape UnflattenedShape(size_t flatennedIdx, const std::vector<size_t>& strides)
 {
-    CNTK::NDShape unflattenedShape(strides.size() + 1);
+    NDShape unflattenedShape(strides.size() + 1);
     size_t remainder = flatennedIdx;
     for (int i = (int)strides.size() - 1; i >= 0; --i)
     {
@@ -444,7 +486,7 @@ inline CNTK::NDShape UnflattenedShape(size_t flatennedIdx, const std::vector<siz
     return unflattenedShape;
 }
 
-inline size_t FlattenedIndex(const CNTK::NDShape& shape, const std::vector<size_t>& strides)
+inline size_t FlattenedIndex(const NDShape& shape, const std::vector<size_t>& strides)
 {
     if (shape.Rank() == 0)
         return 0;
@@ -456,33 +498,33 @@ inline size_t FlattenedIndex(const CNTK::NDShape& shape, const std::vector<size_
     return flattenedIdx;
 };
 
-inline CNTK::FunctionPtr Embedding(const CNTK::Variable& input, size_t embeddingDim, const CNTK::DeviceDescriptor& device)
+inline FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const DeviceDescriptor& device)
 {
     assert(input.Shape().Rank() == 1);
     size_t inputDim = input.Shape()[0];
-    auto embeddingParameters = CNTK::Parameter({ embeddingDim, inputDim }, CNTK::DataType::Float, CNTK::GlorotUniformInitializer(), device);
+    auto embeddingParameters = Parameter({ embeddingDim, inputDim }, DataType::Float, GlorotUniformInitializer(), device);
     return Times(embeddingParameters, input);
 }
 
-inline CNTK::FunctionPtr LSTMSequenceClassiferNet(const CNTK::Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const CNTK::DeviceDescriptor& device, const std::wstring& outputName)
+inline FunctionPtr LSTMSequenceClassiferNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
 {
     auto embeddingFunction = Embedding(input, embeddingDim, device);
-    auto pastValueRecurrenceHook = [](const CNTK::Variable& x) { return PastValue(x); };
+    auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };
     auto LSTMFunction = LSTMPComponentWithSelfStabilization<float>(embeddingFunction, { LSTMDim }, { cellDim }, pastValueRecurrenceHook, pastValueRecurrenceHook, device).first;
-    auto thoughtVectorFunction = CNTK::Sequence::Last(LSTMFunction);
+    auto thoughtVectorFunction = Sequence::Last(LSTMFunction);
 
     return FullyConnectedLinearLayer(thoughtVectorFunction, numOutputClasses, device, outputName);
 }
 
-inline bool AreEqual(const CNTK::NDArrayViewPtr& view1, const CNTK::NDArrayViewPtr& view2)
+inline bool AreEqual(const NDArrayViewPtr& view1, const NDArrayViewPtr& view2)
 {
-    return CNTK::Internal::AreEqual(*view1, *view2);
+    return Internal::AreEqual(*view1, *view2);
 }
 
-inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
+inline bool AreEqual(const Variable& var1, const Variable& var2)
 {
 
-    if (!CNTK::Internal::AreEquivalent(var1, var2))
+    if (!Internal::AreEquivalent(var1, var2))
     {
         return false;
     }
@@ -492,22 +534,22 @@ inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
         return true;
     }
 
-    CNTK::NDArrayViewPtr ptr1, ptr2;
+    NDArrayViewPtr ptr1, ptr2;
        
     if (var1.IsParameter()) 
     {
-        ptr1 = reinterpret_cast<const CNTK::Parameter&>(var1).Value();
-        ptr2 = reinterpret_cast<const CNTK::Parameter&>(var2).Value();
+        ptr1 = reinterpret_cast<const Parameter&>(var1).Value();
+        ptr2 = reinterpret_cast<const Parameter&>(var2).Value();
     }
 
 
     if (var1.IsConstant()) 
     {
-        ptr1 = reinterpret_cast<const CNTK::Constant&>(var1).Value();
-        ptr2 = reinterpret_cast<const CNTK::Constant&>(var2).Value();
+        ptr1 = reinterpret_cast<const Constant&>(var1).Value();
+        ptr2 = reinterpret_cast<const Constant&>(var2).Value();
     }
 
-    if (!CNTK::Internal::AreEqual(*ptr1, *ptr2, relativeTolerance, absoluteTolerance))
+    if (!Internal::AreEqual(*ptr1, *ptr2, relativeTolerance, absoluteTolerance))
     {
         return false;
     }
@@ -515,14 +557,14 @@ inline bool AreEqual(const CNTK::Variable& var1, const CNTK::Variable& var2)
     return true;
 }
 
-inline bool AreEqual(const CNTK::FunctionPtr& f1, const CNTK::FunctionPtr& f2)
+inline bool AreEqual(const FunctionPtr& f1, const FunctionPtr& f2)
 {
     if (f1 == f2)
     { 
         return true;
     }
 
-    if (!CNTK::Internal::AreEquivalent(f1, f2))
+    if (!Internal::AreEquivalent(f1, f2))
     {
         return false;
     }
@@ -546,9 +588,8 @@ inline bool AreEqual(const CNTK::FunctionPtr& f1, const CNTK::FunctionPtr& f2)
     return true;
 }
 
-using namespace CNTK;
-
-inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod, const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
+inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second, ParameterCloningMethod parameterCloningMethod,
+    const std::unordered_map<Variable, Variable>& replacements, std::unordered_set<FunctionPtr>& visitedFunctions)
 {
     // TODO: try to refactor this some more, using AreEqual functions above.
     if (first->Name() != second->Name())
@@ -614,13 +655,13 @@ inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second
                 NDArrayViewPtr firstFunctionInputValue = firstFunctionInput.IsConstant() ? Constant(firstFunctionInput).Value() : Parameter(firstFunctionInput).Value();
                 NDArrayViewPtr secondFunctionInputValue = secondFunctionInput.IsConstant() ? Constant(secondFunctionInput).Value() : Parameter(secondFunctionInput).Value();
                 if ((parameterCloningMethod == ParameterCloningMethod::Clone) &&
-                    ((firstFunctionInput == secondFunctionInput) || (!CNTK::Internal::AreEqual(*firstFunctionInputValue, *secondFunctionInputValue))))
+                    ((firstFunctionInput == secondFunctionInput) || (!Internal::AreEqual(*firstFunctionInputValue, *secondFunctionInputValue))))
                 {
                     throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
                 }
 
                 if ((parameterCloningMethod == ParameterCloningMethod::Freeze) &&
-                    ((firstFunctionInput == secondFunctionInput) || !secondFunctionInput.IsConstant() || (!CNTK::Internal::AreEqual(*firstFunctionInputValue, *secondFunctionInputValue))))
+                    ((firstFunctionInput == secondFunctionInput) || !secondFunctionInput.IsConstant() || (!Internal::AreEqual(*firstFunctionInputValue, *secondFunctionInputValue))))
                 {
                     throw std::runtime_error("CompareFunctions: The parameters of the functions are not equivalent per the specified cloning method");
                 }
@@ -630,3 +671,5 @@ inline void CompareFunctions(const FunctionPtr& first, const FunctionPtr& second
         }
     }
 }
+
+MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputClasses, const Dictionary& readModeConfig, size_t epochSize, bool randomize = true);

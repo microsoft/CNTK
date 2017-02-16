@@ -1,0 +1,280 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
+    Hardware threads: 24
+    Total Memory: 264172964 kB
+-------------------------------------------------------------------
++ [[ /home/philly/data/CNTKTestData == '' ]]
++ [[ ! -d /home/philly/data/CNTKTestData ]]
++ '[' '' == Windows_NT ']'
++ DataSourceDir=/home/philly/data/CNTKTestData/Image
++ TestDataDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/TestData
++ mkdir /tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/TestData
++ cp -R /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKv2Library/LSTMSequenceClassifier/../../Text/SequenceClassification/Data/Train.ctf /tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/TestData
++ ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted
++ OutputDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output
++ DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST
++ cp /home/philly/data/CNTKTestData/Image/MNIST/v0/Train-28x28_cntk_text.txt /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST
++ '[' -d /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output ']'
++ '[' -d /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output/Models ']'
++ rm -rf /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output/Models
++ DeleteModelsAfterTest=0
++ '[' -f /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/01_OneHidden.cntk ']'
++ cntkrun 01_OneHidden.cntk 'stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
++ configFileName=01_OneHidden.cntk
++ additionalCNTKArgs='stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
++ '[' '' == Windows_NT ']'
++ CNTKArgs='configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/01_OneHidden.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST RunDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted OutputDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]'
++ '[' '' '!=' '' ']'
++ modelsDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/Models
++ [[ 1 == 1 ]]
++ '[' -d /tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/Models ']'
++ mkdir -p /tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/Models
++ [[ 0 == 0 ]]
++ run /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/cpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/01_OneHidden.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST RunDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted OutputDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
++ cmd=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/cpu/release/bin/cntk
++ shift
++ '[' '' == 1 ']'
++ echo === Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/cpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/01_OneHidden.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST RunDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted OutputDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
+=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/cpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/01_OneHidden.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST RunDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted OutputDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork trainNetwork=[SGD=[maxEpochs=1]]
++ /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/cpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/01_OneHidden.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST RunDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted OutputDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output DeviceId=-1 timestamping=true stderr=- command=trainNetwork 'trainNetwork=[SGD=[maxEpochs=1]]'
+CNTK 2.0.beta9.0+ (HEAD 6966a6, Jan 23 2017 11:45:00) on localhost at 2017/01/23 11:56:00
+
+/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/cpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/01_OneHidden.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST  RunDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted  OutputDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output  DeviceId=-1  timestamping=true  stderr=-  command=trainNetwork  trainNetwork=[SGD=[maxEpochs=1]]
+Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST
+01/23/2017 11:56:00: Redirecting stderr to file -_trainNetwork.log
+01/23/2017 11:56:00: -------------------------------------------------------------------
+01/23/2017 11:56:00: Build info: 
+
+01/23/2017 11:56:00: 		Built time: Jan 23 2017 11:45:00
+01/23/2017 11:56:00: 		Last modified date: Sun Jan 22 16:12:11 2017
+01/23/2017 11:56:00: 		Build type: release
+01/23/2017 11:56:00: 		Build target: CPU-only
+01/23/2017 11:56:00: 		With 1bit-SGD: no
+01/23/2017 11:56:00: 		With ASGD: yes
+01/23/2017 11:56:00: 		Math lib: mkl
+01/23/2017 11:56:00: 		Build Branch: HEAD
+01/23/2017 11:56:00: 		Build SHA1: 6966a6742545f134736649ccbdd2d221d101681a
+01/23/2017 11:56:00: 		Built by Source/CNTK/buildinfo.h$$0 on 3165e53f9498
+01/23/2017 11:56:00: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
+01/23/2017 11:56:00: 		MPI distribution: Open MPI
+01/23/2017 11:56:00: 		MPI version: 1.10.3
+01/23/2017 11:56:00: -------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: 01_OneHidden.cntk:command=trainNetwork
+configparameters: 01_OneHidden.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted
+configparameters: 01_OneHidden.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST
+configparameters: 01_OneHidden.cntk:dataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST
+configparameters: 01_OneHidden.cntk:deviceId=-1
+configparameters: 01_OneHidden.cntk:modelPath=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output/Models/01_OneHidden
+configparameters: 01_OneHidden.cntk:outputDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output
+configparameters: 01_OneHidden.cntk:precision=float
+configparameters: 01_OneHidden.cntk:rootDir=..
+configparameters: 01_OneHidden.cntk:RunDir=/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu
+configparameters: 01_OneHidden.cntk:stderr=-
+configparameters: 01_OneHidden.cntk:testNetwork={
+    action = "test"
+minibatchSize = 1024    
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST/Test-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }
+}
+
+configparameters: 01_OneHidden.cntk:timestamping=true
+configparameters: 01_OneHidden.cntk:traceLevel=1
+configparameters: 01_OneHidden.cntk:trainNetwork={
+    action = "train"
+    BrainScriptNetworkBuilder = {
+imageShape = 28:28:1                        
+labelDim = 10                               
+        featScale = 1/256
+        model(x) = {
+            s1 = x * featScale
+            h1 = DenseLayer {200, activation=ReLU} (s1) 
+            z = LinearLayer {labelDim} (h1)
+        }
+        features = Input {imageShape}
+        labels = Input {labelDim}
+        out = model (features)
+        ce   = CrossEntropyWithSoftmax (labels, out.z)
+        errs = ClassificationError (labels, out.z)
+        featureNodes    = (features)
+        labelNodes      = (labels)
+        criterionNodes  = (ce)
+        evaluationNodes = (errs)
+        outputNodes     = (out.z)
+    }
+    SGD = {
+        epochSize = 60000
+        minibatchSize = 64
+        maxEpochs = 10
+        learningRatesPerSample = 0.01*5:0.005
+        momentumAsTimeConstant = 0
+        numMBsToShowResult = 500
+    }
+    reader = {
+        readerType = "CNTKTextFormatReader"
+        file = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/../DataSets/MNIST/Train-28x28_cntk_text.txt"
+        input = {
+            features = { dim = 784 ; format = "dense" }
+            labels =   { dim = 10  ; format = "dense" }
+        }
+    }   
+} [SGD=[maxEpochs=1]]
+
+01/23/2017 11:56:00: Commands: trainNetwork
+01/23/2017 11:56:00: precision = "float"
+
+01/23/2017 11:56:00: ##############################################################################
+01/23/2017 11:56:00: #                                                                            #
+01/23/2017 11:56:00: # trainNetwork command (train action)                                        #
+01/23/2017 11:56:00: #                                                                            #
+01/23/2017 11:56:00: ##############################################################################
+
+01/23/2017 11:56:00: 
+Creating virgin network.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[10 x 0] as glorotUniform later when dimensions are fully known.
+Node '<placeholder>' (LearnableParameter operation): Initializating Parameter[200 x 0] as glorotUniform later when dimensions are fully known.
+
+Post-processing network...
+
+3 roots:
+	ce = CrossEntropyWithSoftmax()
+	errs = ClassificationError()
+	out.z = Plus()
+
+Validating network. 15 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [10 x *]
+Validating --> out.z.W = LearnableParameter() :  -> [10 x 0]
+Validating --> out.h1.arrayOfFunctions[0].W = LearnableParameter() :  -> [200 x 0]
+Validating --> features = InputValue() :  -> [28 x 28 x 1 x *]
+Validating --> _out.s1 = LearnableParameter() :  -> [1]
+Validating --> out.s1 = ElementTimes (features, _out.s1) : [28 x 28 x 1 x *], [1] -> [28 x 28 x 1 x *]
+Node 'out.h1.arrayOfFunctions[0].W' (LearnableParameter operation) operation: Tensor shape was inferred as [200 x 28 x 28 x 1].
+Node 'out.h1.arrayOfFunctions[0].W' (LearnableParameter operation): Initializing Parameter[200 x 28 x 28 x 1] <- glorotUniform(seed=2, init dims=[200 x 784], range=0.078087(0.078087*1.000000), onCPU=true.
+)Validating --> out.h1._.PlusArgs[0] = Times (out.h1.arrayOfFunctions[0].W, out.s1) : [200 x 28 x 28 x 1], [28 x 28 x 1 x *] -> [200 x *]
+Validating --> out.h1.arrayOfFunctions[0].b = LearnableParameter() :  -> [200]
+Validating --> out.h1._ = Plus (out.h1._.PlusArgs[0], out.h1.arrayOfFunctions[0].b) : [200 x *], [200] -> [200 x *]
+Validating --> out.h1 = RectifiedLinear (out.h1._) : [200 x *] -> [200 x *]
+Node 'out.z.W' (LearnableParameter operation) operation: Tensor shape was inferred as [10 x 200].
+Node 'out.z.W' (LearnableParameter operation): Initializing Parameter[10 x 200] <- glorotUniform(seed=1, init dims=[10 x 200], range=0.169031(0.169031*1.000000), onCPU=true.
+)Validating --> out.z.PlusArgs[0] = Times (out.z.W, out.h1) : [10 x 200], [200 x *] -> [10 x *]
+Validating --> out.z.b = LearnableParameter() :  -> [10]
+Validating --> out.z = Plus (out.z.PlusArgs[0], out.z.b) : [10 x *], [10] -> [10 x *]
+Validating --> ce = CrossEntropyWithSoftmax (labels, out.z) : [10 x *], [10 x *] -> [1]
+Validating --> errs = ClassificationError (labels, out.z) : [10 x *], [10 x *] -> [1]
+
+Validating network. 8 nodes to process in pass 2.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+01/23/2017 11:56:00: 
+Model has 15 nodes. Using CPU.
+
+01/23/2017 11:56:00: Training criterion:   ce = CrossEntropyWithSoftmax
+01/23/2017 11:56:00: Evaluation criterion: errs = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 25 matrices, 12 are shared as 5, and 13 are not shared.
+
+	{ out.h1._ : [200 x *] (gradient)
+	  out.h1.arrayOfFunctions[0].W : [200 x 28 x 28 x 1] (gradient)
+	  out.z.PlusArgs[0] : [10 x *] (gradient) }
+	{ out.z : [10 x *] (gradient)
+	  out.z.W : [10 x 200] (gradient) }
+	{ out.h1 : [200 x *]
+	  out.h1._.PlusArgs[0] : [200 x *]
+	  out.h1._.PlusArgs[0] : [200 x *] (gradient) }
+	{ out.h1._ : [200 x *]
+	  out.z.PlusArgs[0] : [10 x *] }
+	{ out.h1 : [200 x *] (gradient)
+	  out.h1.arrayOfFunctions[0].b : [200] (gradient) }
+
+
+01/23/2017 11:56:00: Training 159010 parameters in 4 out of 4 parameter tensors and 10 nodes with gradient:
+
+01/23/2017 11:56:00: 	Node 'out.h1.arrayOfFunctions[0].W' (LearnableParameter operation) : [200 x 28 x 28 x 1]
+01/23/2017 11:56:00: 	Node 'out.h1.arrayOfFunctions[0].b' (LearnableParameter operation) : [200]
+01/23/2017 11:56:00: 	Node 'out.z.W' (LearnableParameter operation) : [10 x 200]
+01/23/2017 11:56:00: 	Node 'out.z.b' (LearnableParameter operation) : [10]
+
+01/23/2017 11:56:00: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
+
+01/23/2017 11:56:00: Starting Epoch 1: learning rate per sample = 0.010000  effective momentum = 0.000000  momentum as time constant = 0.0 samples
+
+01/23/2017 11:56:00: Starting minibatch loop.
+01/23/2017 11:56:03:  Epoch[ 1 of 1]-Minibatch[   1- 500, 53.33%]: ce = 0.30729373 * 32000; errs = 9.516% * 32000; time = 3.2778s; samplesPerSecond = 9762.5
+01/23/2017 11:56:05: Finished Epoch[ 1 of 1]: [Training] ce = 0.22713372 * 60000; errs = 6.970% * 60000; totalSamplesSeen = 60000; learningRatePerSample = 0.0099999998; epochTime=5.15553s
+01/23/2017 11:56:05: SGD: Saving checkpoint model '/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output/Models/01_OneHidden'
+
+01/23/2017 11:56:05: Action "train" complete.
+
+01/23/2017 11:56:05: __COMPLETED__
++ return 0
++ local ExitCode=0
++ [[ 0 == 1 ]]
++ return 0
++ cp /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/../../Examples/Image/GettingStarted/Output/Models/01_OneHidden /tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/TestData
++ '[' cpu == cpu ']'
++ export CUDA_VISIBLE_DEVICES=-1
++ CUDA_VISIBLE_DEVICES=-1
++ pushd /tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/TestData
+/tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/TestData ~/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKv2Library/LSTMSequenceClassifier
++ '[' '' == Windows_NT ']'
++ /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/cpu/release/bin/lstmsequenceclassifiertests
+Run tests using CPU-only build.
+
+TrainLSTMSequenceClassifer..
+Cannot run TestLearningRateControl test on CPU device.
+
+CNTKv2Library-LSTMSequenceClassifier tests: Passed
+Minibatch 0: CrossEntropy loss = 1.6080917, Evaluation criterion = 0.65909091
+Minibatch 1: CrossEntropy loss = 1.6068519, Evaluation criterion = 0.63829787
+Minibatch 2: CrossEntropy loss = 1.6029767, Evaluation criterion = 0.61904762
+Minibatch 3: CrossEntropy loss = 1.6016893, Evaluation criterion = 0.61363636
+Minibatch 4: CrossEntropy loss = 1.5982897, Evaluation criterion = 0.42553191
+Minibatch 5: CrossEntropy loss = 1.5957006, Evaluation criterion = 0.48888889
+Minibatch 6: CrossEntropy loss = 1.5895741, Evaluation criterion = 0.38297872
+Minibatch 7: CrossEntropy loss = 1.592595, Evaluation criterion = 0.52272727
+Minibatch 8: CrossEntropy loss = 1.5757509, Evaluation criterion = 0.36
+Minibatch 9: CrossEntropy loss = 1.5748483, Evaluation criterion = 0.4
+Minibatch 10: CrossEntropy loss = 1.5682885, Evaluation criterion = 0.4047619
+Minibatch 11: CrossEntropy loss = 1.5637256, Evaluation criterion = 0.44680851
+Minibatch 12: CrossEntropy loss = 1.5648745, Evaluation criterion = 0.51162791
+Minibatch 13: CrossEntropy loss = 1.5394387, Evaluation criterion = 0.34693878
+Minibatch 14: CrossEntropy loss = 1.5408554, Evaluation criterion = 0.32608696
+Minibatch 15: CrossEntropy loss = 1.5604918, Evaluation criterion = 0.53061224
+Minibatch 16: CrossEntropy loss = 1.5354777, Evaluation criterion = 0.45454545
+Minibatch 17: CrossEntropy loss = 1.5443025, Evaluation criterion = 0.48888889
+Minibatch 18: CrossEntropy loss = 1.5220974, Evaluation criterion = 0.42857143
+Minibatch 19: CrossEntropy loss = 1.5000959, Evaluation criterion = 0.31914894
+Minibatch 20: CrossEntropy loss = 1.5044688, Evaluation criterion = 0.3877551
+Minibatch 21: CrossEntropy loss = 1.526548, Evaluation criterion = 0.51162791
+Minibatch 22: CrossEntropy loss = 1.4973632, Evaluation criterion = 0.43478261
+Minibatch 23: CrossEntropy loss = 1.4919242, Evaluation criterion = 0.42553191
+Minibatch 24: CrossEntropy loss = 1.5262538, Evaluation criterion = 0.55813953
+Minibatch 25: CrossEntropy loss = 1.4889515, Evaluation criterion = 0.44680851
+Minibatch 26: CrossEntropy loss = 1.5081633, Evaluation criterion = 0.46511628
+Minibatch 27: CrossEntropy loss = 1.523242, Evaluation criterion = 0.55
++ ExitCode=0
++ popd
+~/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/CNTKv2Library/LSTMSequenceClassifier
++ rm -rf /tmp/cntk-test-20170123115553.987645/CNTKv2Library_LSTMSequenceClassifier@release_cpu/TestData
++ '[' cpu == cpu ']'
++ unset CUDA_VISIBLE_DEVICES
++ exit 0

@@ -95,7 +95,10 @@ public:
     
     void FSAdagrad(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, 
                    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
-    
+
+    void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
                      ElemType RMS_WGT_INC,
@@ -438,6 +441,15 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+    int Argmin() const;
+    int Argmax() const;
+    int ArgOp(ElementWiseOperator reductionOp) const;
+
+    void TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+                     const std::array<size_t, 2>& offsets,
+                     const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                     const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
     static CPUMatrix<ElemType> Ones(const size_t rows, const size_t cols);
     static CPUMatrix<ElemType> Zeros(const size_t rows, const size_t cols);
