@@ -24,6 +24,9 @@ set p_CUDNN_PATH=%~5
 set p_CUB_PATH=%~6
 set p_CNTK_ENABLE_ASGD=%~7
 
+echo "running prebuild.bat"
+echo pwd
+
 echo #ifndef _BUILDINFO_H > buildinfo.h$$
 echo #define _BUILDINFO_H >> buildinfo.h$$
 
