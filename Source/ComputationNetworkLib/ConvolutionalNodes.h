@@ -605,7 +605,8 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempMatrix, matrixPool);
+        size_t matrixSize = m_sampleLayout.GetNumElements();
+        RequestMatrixFromPool(m_tempMatrix, matrixPool, matrixSize, true);
     }
 
     // m_tempMatrix cannot be released after Forward Prop because its content (argmax) is used for back prop. 

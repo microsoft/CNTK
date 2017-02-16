@@ -130,11 +130,11 @@ private:
     template <class ElemType>
     void OptimizedMemoryAllocationFunc()
     {
-        if (m_memRequestInfoFloatVec.empty())
+        vector<MemRequestInfo<ElemType>>& memInfoVec = GetMemRequestInfoVec<ElemType>();
+        if (memInfoVec.empty())
             return; 
 
         // sort the memory request from largest size to smallest 
-        vector<MemRequestInfo<ElemType>>& memInfoVec = GetMemRequestInfoVec<ElemType>();
         std::sort(memInfoVec.begin(), memInfoVec.end(), greater_than_mem_req_size<ElemType>());
 
         for (auto&devId : m_deviceIDSet)
@@ -193,7 +193,7 @@ private:
 
                 if (!memAllocInfoVec.empty())
                 {
-                    // the memory requests are sorted by size. We start with the largest buffer, till we find one that doesn't have time overlap
+                    // the memory allocation vector is sorted by size. We find the largest available buffer that doesn't have time overlap
                     auto workingAlloc = memAllocInfoVec.end(); 
                     for (auto iter = memAllocInfoVec.begin(); iter != memAllocInfoVec.end(); iter++)
                     {

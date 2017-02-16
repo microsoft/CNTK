@@ -1141,8 +1141,12 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     m_matrixPool.OptimizedMemoryAllocation(); 
     m_areMatricesAllocated = true;
 
-    // TO DO (chazhang): when some matrices are sparse, one may need to call OptimizedMemoryAllocation multiple times assuming the requests of allocation
-    // and release are re-processed correctly. Future work. 
+    // TO DO: At the time of AllocateAllMatrices we don't know the minibatch size. In theory one may allocate memory again once we start to receive
+    // data from the reader (and the minibatch size is known). For some problems, minibatch size can change constantly, and there needs to be a 
+    // tradeoff in deciding how frequent to run optimized memory allocation. For now, we do it only once at the very beginning for speed concerns. 
+
+    // TO DO: when some matrices are sparse, the memory size request may be wrong. One may need to call OptimizedMemoryAllocation later again 
+    // if the requests of sparse allocation and release are re-processed correctly. Future work. 
 
     // print the memory sharing structure
     if (TraceLevel() > 0)
