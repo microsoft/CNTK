@@ -248,10 +248,10 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
 
 #ifdef USE_FACE_FILE
 
-    auto bigSuffixPos = path.find_last_of(".big");
+    auto bigSuffixPos = path.find(".big");
     auto isFaceFile = bigSuffixPos != std::string::npos;
 
-    auto zipSuffixPos = path.find_last_of(".zip@");
+    auto zipSuffixPos = path.find(".zip@");
     auto isZipFile = zipSuffixPos != std::string::npos;
 
     if (isFaceFile)
