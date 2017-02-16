@@ -209,8 +209,15 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
 
     std::vector<ComputationNodeBasePtr> additionalNodesToEvaluate;
-    auto& outputNodes = net->OutputNodes();
-    additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), outputNodes.cbegin(), outputNodes.cend());
+
+    // Do not include the output nodes in the matrix sharing structure when using forward value matrix
+    // sharing, since the output nodes are only used for AttemptUtteranceDerivativeFeatures functionality
+    // which does not work properly with forward value matrix sharing.
+    if (!Globals::ShouldEnableShareNodeValueMatrices())
+    {
+        auto& outputNodes = net->OutputNodes();
+        additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), outputNodes.cbegin(), outputNodes.cend());
+    }
 
     auto preComputeNodesList = net->GetNodesRequiringPreComputation();
     additionalNodesToEvaluate.insert(additionalNodesToEvaluate.end(), preComputeNodesList.cbegin(), preComputeNodesList.cend());
@@ -2062,6 +2069,10 @@ void SGD<ElemType>::AttemptUtteranceDerivativeFeatures(ComputationNetworkPtr net
         auto& outputNodes = net->OutputNodes();
         if (outputNodes.empty())
             LogicError("no output node was found.");
+
+        if (Globals::ShouldEnableShareNodeValueMatrices())
+            InvalidArgument("AttemptUtteranceDerivativeFeatures cannot be used together with forward value memory sharing. "
+                            "Set 'shareNodeValueMatrices=false' at the top level of your CNTK config file to get around this error");
 
         // BUGBUG (Issue #95): This is no longer correct once we have multiple input layouts.
         trainSetDataReader->CopyMBLayoutTo(net->GetMBLayoutPtrOfNetwork());
