@@ -400,7 +400,7 @@ def test_op_gather_derived_dynamic_axes_equivalence(device_id, precision):
 def test_op_gather_sparse(device_id):
     from .. import sequence, times
 
-    input_sparse_indices = [[1, 3, 5], [2, 4]]
+    input_sparse_indices = [[1, 3, 5, 5], [2, 4], [0, 2]]
     vocab_size = 6
     input_data = one_hot(input_sparse_indices, vocab_size)
 
@@ -409,18 +409,18 @@ def test_op_gather_sparse(device_id):
     a_last = sequence.last(a)
     a_last_dense = times(a_last, np.eye(vocab_size))
     res = a_last_dense.eval({a : input_data})
-    assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1]], [[0, 0, 0, 0, 1, 0]]])
+    assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1]], [[0, 0, 0, 0, 1, 0]], [[0, 0, 1, 0, 0, 0]]])
 
     a_last_2 = sequence.slice(a, -2, 0)
     a_last_2_dense = times(a_last_2, np.eye(vocab_size))
     res = a_last_2_dense.eval({a : input_data})
-    assert np.array_equal(res, [[[0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1]], [[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0]]])
+    assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1]], [[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0]], [[1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]]])
 
 
 def test_op_scatter_sparse(device_id):
     from .. import sequence, times
 
-    input_sparse_indices = [[1, 3, 5], [2, 4]]
+    input_sparse_indices = [[1, 3, 5, 5], [2, 4], [0, 2]]
     vocab_size = 6
     input_data = one_hot(input_sparse_indices, vocab_size)
 
@@ -429,8 +429,9 @@ def test_op_scatter_sparse(device_id):
     a_last_scatter = sequence.scatter(sequence.last(a), sequence.is_first(a))
     a_last_scatter_dense = times(a_last_scatter, np.eye(vocab_size))
     res = a_last_scatter_dense.eval({a : input_data})
-    assert np.array_equal(res[0], np.asarray([[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
+    assert np.array_equal(res[0], np.asarray([[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
     assert np.array_equal(res[1], np.asarray([[0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0]]))
+    assert np.array_equal(res[2], np.asarray([[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
 
 
 def test_op_broadcast_as(device_id, precision):
