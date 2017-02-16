@@ -26,7 +26,7 @@
  - CNTK will be installed or updated in the CNTK-PY<version> environment
  
   .PARAMETER Execute
- You can set this switch to false to prevent Install from performing any physical changes to the machine.
+ You can set this switch to 'false' to prevent Install from performing any physical changes to the machine.
 
  .PARAMETER NoConfirm
  If you supply this optional parameter, the install script will execute operations without asking for user confirmation.
@@ -44,11 +44,11 @@
 .EXAMPLE
  .\install.ps1
  
- Run the installer and see what operations would be performed
-.EXAMPLE
- .\install.ps1 -Execute
- 
  Run the installer and perform the installation operations
+.EXAMPLE
+ .\install.ps1 -Execute:$false
+ 
+ Run the installer and see what operations would be performed, without actually performing these actions
 .EXAMPLE
  .\install.ps1 -Execute -AnacondaBasePath d:\cntkBeta
 

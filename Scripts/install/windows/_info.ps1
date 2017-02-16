@@ -83,16 +83,15 @@ function CheckPowershellVersion
 function CheckOSVersion 
 {
     $runningOn = (Get-WmiObject -class Win32_OperatingSystem).Caption
-    $isMatching = ($runningOn -match "^Microsoft Windows (8\.1|10|Server 2012 R2)") 
-
+    $isMatching = ($runningOn -match "^Microsoft Windows (8\.1|10|Server 2012 R2|Server 2016)") 
     if ($isMatching) {
         return
     }
 
     Write-Warning "
-You are running the this install script on [$runningOn].
+You are running this script on [$runningOn].
 The Microsoft Cognitive Toolkit is designed and tested on Windows 8.1, Windows 10, 
-and Windows Server 2012 R2. 
+Windows Server 2012 R2, and Windows Server 2016.
 "
     return
 }

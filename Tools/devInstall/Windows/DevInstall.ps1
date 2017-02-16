@@ -51,13 +51,12 @@
  .EXAMPLE
  .\devInstall.ps1
  
- Run the installer and see what operations would be performed
- .EXAMPLE
- .\devInstall.ps1 -Execute
- 
  Run the installer and install the development tools
+.EXAMPLE
+ .\devInstall.ps1 -Execute:$false
  
- .EXAMPLE
+ Run the installer and see what operations would be performed, without actually performing these actions
+.EXAMPLE
  .\devInstall.ps1 -Execute -AnacondaBasePath d:\mytools\Anaconda34
 
  If the directory [d:\mytools\Anaconda34] exists, the installer will assume it contains a complete Anaconda installation. 
@@ -69,7 +68,7 @@
 Param(
     [parameter(Mandatory=$false)] [switch] $Execute = $true,
     [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
-    [parameter(Mandatory=$false)] [string] $InstallLocation,
+    [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
     [parameter(Mandatory=$false)] [string] $AnacondaBasePath,
     [parameter(Mandatory=$false)] [switch] $NoConfirm,
     [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
@@ -78,9 +77,6 @@ Param(
     
 $roboCopyCmd = "robocopy.exe"
 
-if (-not $InstallLocation) {
-    $InstallLocation = "c:\local"
-}
 if (-not $AnacondaBasePath) {
     $AnacondaBasePath = Join-Path $InstallLocation Anaconda3-4.1.1-Windows-x86_64
 }
