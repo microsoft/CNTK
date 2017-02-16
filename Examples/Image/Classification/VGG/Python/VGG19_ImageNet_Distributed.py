@@ -32,8 +32,6 @@ num_channels = 3  # RGB
 num_classes  = 1000
 model_name   = "VGG19.model"
 
-cntk.cntk_py.enable_hyper_memory_compress()
-
 # Create a minibatch source.
 def create_image_mb_source(map_file, is_training, total_number_of_samples):
     if not os.path.exists(map_file):
