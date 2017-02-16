@@ -5,23 +5,23 @@
 # ==============================================================================
 
 import numpy as np
-import cntk as C
-from cntk.layers import Input
+from cntk import *
+#from cntk.layers import Input
 
 def test_layers_name(device_id):
     from cntk import placeholder_variable
     I = placeholder_variable(name='input')
-    p = C.layers.Dense(10, name='dense10')(I)
+    p = Dense(10, name='dense10')(I)
     assert(I.name == 'input')
     assert(p.root_function.name == 'dense10')
     
-    q = C.layers.Convolution((3, 3), 3, name='conv33')(I)
+    q = Convolution((3, 3), 3, name='conv33')(I)
     assert(q.root_function.name == 'conv33')
 
-    e = C.layers.Embedding(0, name='emb')(I)
+    e = Embedding(0, name='emb')(I)
     assert(e.root_function.name == 'emb')
 
-    e = C.layers.Embedding(0, name='')(I)
+    e = Embedding(0, name='')(I)
     assert(e.root_function.name == '')
     
 def _getModelParameterDict(model, node_name):
@@ -42,19 +42,21 @@ def test_layers_dense(device_id):
     ####################################################
     # Test 1: no activation
     ####################################################
-    p = C.layers.Dense(2, activation=None, name='foo')(y)
+    p = Dense(2, activation=None, name='foo')(y)
     res = p(y).eval({y: dat})
     
     # Get the network paramters
     fooDict = _getModelParameterDict(p, 'foo')
     
     npout = np.matrix(dat[0]) * fooDict['W'] + fooDict['b']
+    print(res[0])
+    print(npout)
     np.testing.assert_array_equal(res[0], npout, err_msg='Error in dense layer')
     
     ####################################################
     # Test 2: with activation
     ####################################################
-    p = C.layers.Dense(2, activation=C.sigmoid, name='foo')(y)
+    p = Dense(2, activation=sigmoid, name='foo')(y)
     res = p(y).eval({y: dat})
     
     # Get the network paramters
@@ -64,14 +66,16 @@ def test_layers_dense(device_id):
         return 1./(1 + np.exp(-x))
     
     npout = _sigmoid(np.matrix(dat[0]) * fooDict['W'] + fooDict['b'])
+    print(res[0])
+    print(npout)
     
-    np.testing.assert_array_equal(res[0], npout, err_msg='Error in dense layer with sigmoid')
+    np.testing.assert_array_almost_equal(res[0], npout, decimal=7, err_msg='Error in dense layer with sigmoid')
     
     ####################################################
     # Test 3: 2-dense layer
     ####################################################
-    p = C.layers.Dense(3, activation=None, name='foo')(y)
-    q = C.layers.Dense(3, activation=None, name='bar')(p)
+    p = Dense(3, activation=None, name='foo')(y)
+    q = Dense(3, activation=None, name='bar')(p)
     res = q(y).eval({y: dat})
     
     # Get the network paramters for the two layers        
@@ -81,7 +85,7 @@ def test_layers_dense(device_id):
     npout1 = np.matrix(dat[0]) * fooDict['W'] + fooDict['b']
     npout = npout1 * barDict['W'] + barDict['b']
             
-    np.testing.assert_array_equal(res[0], npout, err_msg='Error in 2-dense layer')
+    np.testing.assert_array_almost_equal(res[0], npout, decimal=7, err_msg='Error in 2-dense layer')
 
 ########################################
 # Test Embedding layer for correctness
@@ -90,7 +94,7 @@ def test_layers_embedding(device_id):
     embDim = 3
     
     y = Input(2)
-    e = C.layers.Embedding(shape=embDim, name='foo')
+    e = Embedding(shape=embDim, name='foo')
     
     dat = np.array([[-1., 1.]], dtype=np.float32)
     res = e(y).eval({y: dat})
@@ -139,7 +143,7 @@ def test_layers_convolution_shape(device_id):
     zeropad = False
     in_strides = 1
     
-    model = C.layers.Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape, 
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
@@ -160,7 +164,7 @@ def test_layers_convolution_shape(device_id):
     zeropad = False
     in_strides_t = (2, 3)
     
-    model = C.layers.Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape, 
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
@@ -181,7 +185,7 @@ def test_layers_convolution_shape(device_id):
     zeropad = True
     in_strides = 1
     
-    model = C.layers.Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape, 
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
@@ -202,7 +206,7 @@ def test_layers_convolution_shape(device_id):
     zeropad = True
     in_strides = 2
     
-    model = C.layers.Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape, 
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
@@ -233,7 +237,7 @@ def  test_layers_convolution_value(device_id):
     zeropad = False
     in_strides = 1
 
-    model = C.layers.Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape, 
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
@@ -252,7 +256,7 @@ def  test_layers_convolution_value(device_id):
     zeropad = False
     in_strides = 2
     
-    model = C.layers.Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape, 
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
@@ -271,7 +275,7 @@ def  test_layers_convolution_value(device_id):
     zeropad = True
     in_strides = 1    
     
-    model = C.layers.Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape, 
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
@@ -291,7 +295,7 @@ def  test_layers_convolution_value(device_id):
     zeropad = True
     in_strides = 2
     
-    model = C.layers.Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape, 
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
@@ -314,7 +318,7 @@ def  test_layers_convolution_3d(device_id):
     y = Input((inC,inH, inW, inD))    
     dat = np.ones([1, inC, inH, inW, inD], dtype = np.float32)
     
-    model = C.layers.Convolution3D(rf_shape=(3, 3, 3), 
+    model = Convolution3D(rf_shape=(3, 3, 3), 
                                  num_filters=1,
                                  activation=None,
                                  pad=False,
@@ -341,7 +345,7 @@ def test_layers_convolution_2d(device_id):
     
     dat = np.ones([1, inC, inH, inW], dtype = np.float32)
     
-    model = C.layers.Convolution2D(rf_shape=(3, 3), 
+    model = Convolution2D(rf_shape=(3, 3), 
                                  num_filters=1,
                                  activation=None,
                                  pad=False,
@@ -385,31 +389,31 @@ def test_layers_conv_pool_unpool_deconv(device_id):
 #    cMap =1
 #    
 #    
-#    conv = C.layers.Convolution((2,2), cMap, pad=True, activation=None, name='foo' )(y)
+#    conv = Convolution((2,2), cMap, pad=True, activation=None, name='foo' )(y)
 #    
-#    pool = C.layers.MaxPooling((2,2), (2,2), name='bar')(conv)
+#    pool = MaxPooling((2,2), (2,2), name='bar')(conv)
 #    
-#    unpool = C.layers.MaxUnpooling ((4,4), (4,4), name ='baz')(pool, conv)
+#    unpool = MaxUnpooling ((4,4), (4,4), name ='baz')(pool, conv)
 #    
-#    z = C.layers.Deconvolution((2,2), inC, cMap, 
+#    z = Deconvolution((2,2), inC, cMap, 
 #                                  lower_pad=(0,2,2), 
 #                                  upper_pad=(0,2,2), 
 #                                  bias=False, 
-#                                  init=C.glorot_uniform(0.001))(unpool,
+#                                  init=glorot_uniform(0.001))(unpool,
 #                                  name='faz')
 #    
 #    
 #    print(z.faz.shape)
 #    
 #    dat = np.arange(0,16, dtype=np.float32).reshape(1,1,4,4)
-#    maxpool   = C.layers.MaxPooling   (rf_shape=(2,2), strides=(2,2), name='bar')
+#    maxpool   = MaxPooling   (rf_shape=(2,2), strides=(2,2), name='bar')
 #    print(maxpool(y).shape)
 #    
 #    
 #    res = maxpool(y).eval({y: dat})
 #    print(res)
 #    
-#    maxunpool = C.layers.MaxUnpooling(filter_shape=(2,2), 
+#    maxunpool = MaxUnpooling(filter_shape=(2,2), 
 #                                      strides=(2,2), 
 #                                      name='foo')((maxpool),(y))
 #    
@@ -421,8 +425,8 @@ def test_layers_conv_pool_unpool_deconv(device_id):
 def test_layers_dropout(device_id):
     dat = np.array([[1., 1., 1., 1.]], dtype=np.float32)  
     y = Input(4)  
-    p = C.layers.Dense(1, activation=None, name='foo')(y)                 
-    z = C.layers.Dropout(prob=0.75, name='bar')(p)
+    p = Dense(1, activation=None, name='foo')(y)                 
+    z = Dropout(prob=0.75, name='bar')(p)
     
     # Get the network paramters
     fooDict = {}
@@ -440,16 +444,17 @@ def test_layers_dropout(device_id):
 ##########################################################    
 def test_layers_layer_normalization(device_id):
     y = Input(4) 
-    p = C.layers.LayerNormalization(name='foo')(y)                 
+    p = LayerNormalization(name='foo')(y)                 
     
-    dat = np.array([[1.0,2.0,3.0,4.0]], dtype=np.float32)    
+    dat = np.array([[1.0,2.0,3.0,4.0]], dtype=np.float32)
     res =  p(y).eval({y: dat}) 
     
     mean_dat = np.mean(dat) 
     x = dat-mean_dat
     std = np.sqrt(np.mean(x*x))
-    
-    np.testing.assert_array_almost_equal(res[0], x/std, decimal=7, \
+    epsilon = 0.00001
+
+    np.testing.assert_array_almost_equal(res[0], x/(std + epsilon), decimal=6, \
         err_msg="Error in layer normalization computation") 
     
 ##########################################################
@@ -460,7 +465,7 @@ def test_layers_batch_normalization(device_id):
     pass
 #    dat = np.array([[1.0,0.5,1.0,0.5]], dtype=np.float32)    
 #    y = Input(4) 
-#    p = C.layers.BatchNormalization(init_scale=2
+#    p = BatchNormalization(init_scale=2
 #                                     normalization_time_constant=0,
 #                                     name ='foo')(y)                 
 #
@@ -475,45 +480,8 @@ def test_layers_batch_normalization(device_id):
 #    np.testing.assert_array_almost_equal(res[0], expected_res, decimal=5, \
 #         err_msg="Error in BN computation") 
 
-def gru_cell(shape, init=glorot_uniform(), name=''): # (x, (h,c))
-  shape = _as_tuple(shape)
-
-  if len(shape) != 1 :
-    raise ValueError("gru_cell: shape must be vectors (rank-1 tensors)")
-
-  # determine stacking dimensions
-  cell_shape_stacked = shape * 2  # patched dims with stack_axis duplicated 4 times
-
-  # parameters
-  _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
-  Wz = Parameter(cell_shape_stacked, init = init, name='Wz')
-  Wr = Parameter(cell_shape_stacked, init = init, name='Wr')
-  Wh = Parameter(cell_shape_stacked, init = init, name='Wh')
-  Uz = Parameter( _INFERRED + shape, init = init, name = 'Uz')
-  Ur = Parameter( _INFERRED + shape, init = init, name = 'Ur')
-  Uh = Parameter( _INFERRED + shape, init = init, name = 'Uh')
-
-  def create_s_placeholder():
-    # we pass the known dimensions here, which makes dimension inference easier
-    return Placeholder(shape=shape, name='S') # (h, c)
-
-  # parameters to model function
-  x = Placeholder(name='gru_block_arg')
-  prev_status = create_s_placeholder()
-
-  # formula of model function
-  Sn_1 = prev_status
-
-  z = sigmoid(times(x, Uz, name='x*Uz') + times(Sn_1, Wz, name='Sprev*Wz'), name='z')
-  r = sigmoid(times(x, Ur, name='x*Ur') + times(Sn_1, Wr, name='Sprev*Wr'), name='r')
-  h = tanh(times(x, Uh, name='x*Uh') + times(element_times(Sn_1, r, name='Sprev*r'), Wh), name='h')
-  s = plus(element_times((1-z), h, name='(1-z)*h'), element_times(z, Sn_1, name='z*SPrev'), name=name)
-  apply_x_s = combine([s])
-  apply_x_s.create_placeholder = create_s_placeholder
-  return apply_x_s
-
 def test_recurrence():
-  r = Recurrence(gru_cell(5), go_backwards=False)
+  r = Recurrence(GRU(5), go_backwards=False)
   a = input_variable(shape=(5,), dynamic_axes=[Axis.default_batch_axis(), Axis('Seq')])
   x = np.reshape(np.arange(0,25, dtype=np.float32), (1,5,5))
   rt = r(a).eval({a:x})
