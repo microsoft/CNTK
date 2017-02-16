@@ -8,6 +8,10 @@
     <OutDir>$(RepoRootPath)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(RepoRootPath)$(Platform)\.build\$(Configuration)\$(RelativeProjectPath)\</IntDir>
 
+    <CntkComponentVersion>2.6</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">2.6d</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(Configuration.StartsWith('Release'))">2.6</CntkComponentVersion>
+
     <DebugBuild>false</DebugBuild>
     <DebugBuild Condition="$(Configuration.StartsWith('Debug'))">true</DebugBuild>
 
