@@ -784,7 +784,7 @@ class ForwardBackwardNode : public  ComputationNodeNonLooping<ElemType>, public 
     }
 public:
     DeclareConstructorFromConfigWithNumInputs(ForwardBackwardNode);
-    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, int blankTokenId=INT_MIN, int delayConstraint=3) :
+    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, int blankTokenId=INT_MIN, int delayConstraint=-1) :
         Base(deviceId, name), m_blankTokenId(blankTokenId), m_delayConstraint(delayConstraint)
     {
     }

@@ -353,7 +353,6 @@ Floor                   = CNTK2.Floor
 Log                     = CNTK2.Log
 Minus                   = CNTK2.Minus
 Pass                    = CNTK2.Pass
-LabelsToGraph           = CNTK2.LabelsToGraph
 Plus                    = CNTK2.Plus
 RectifiedLinear         = CNTK2.ReLU # deprecated
 ReLU                    = CNTK2.ReLU
@@ -519,7 +518,7 @@ CNTK2 = [
     // 13. Others
     Pass(_, tag='') = new ComputationNode [ operation = 'Pass' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Identity = Pass
-	LabelsToGraph = Pass
+    LabelsToGraph = Pass
 
     // The value of GetRandomSample(weights /* vector of length nClasses */, numSamples, sampleWithReplacement) randomly samples numSamples using the specified sampling weights. 
     // The result is a sparse matrix of num samples one-hot vectors as columns.
@@ -580,6 +579,7 @@ RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + nu
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 RowStack(inputs, axis=1, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
 EditDistanceError(leftInput, rightInput, subPen=0.0, delPen=0.0, insPen=0.0, squashInputs=false, tokensToIgnore={}, tag='') = new ComputationNode [ operation = 'EditDistanceError' ; inputs = _AsNodes (leftInput : rightInput) /*plus the function args*/ ]
+ForwardBackward(graph, features, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'ForwardBackward' ; inputs = _AsNodes (graph : features) /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
     if axis < 0 then [ # time axis: specify -1
         beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, input)) else                 BS.Loop.IsLastN  (-beginIndex, input)
