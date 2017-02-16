@@ -44,26 +44,26 @@ DataWriter::DataWriter(const ConfigRecordType& config)
 
     // get the name for the writer we want to use, default to BinaryWriter (which is in BinaryReader.dll)
     // TODO: This seems like a find-replace operation?
-    wstring writerType = config(L"writerType", L"BinaryReader");
-    if (writerType == L"HTKMLFWriter" || writerType == L"HTKMLFReader")
+    wstring writerType = config(L"writerType", L"Cntk.Reader.Binary.Deprecated");
+    if (writerType == L"Cntk.Writer.HTKMLF" || writerType == L"Cntk.Reader.HTKMLF")
     {
-        writerType = L"HTKMLFReader";
+        writerType = L"Cntk.Reader.HTKMLF";
     }
-    else if (writerType == L"BinaryWriter" || writerType == L"BinaryReader")
+    else if (writerType == L"Cntk.Writer.Binary.Deprecated" || writerType == L"Cntk.Reader.Binary.Deprecated")
     {
-        writerType = L"BinaryReader";
+        writerType = L"Cntk.Reader.Binary.Deprecated";
     }
-    else if (writerType == L"LUSequenceWriter" || writerType == L"LUSequenceReader")
+    else if (writerType == L"Cntk.Writer.LUSequence" || writerType == L"Cntk.Reader.LUSequence")
     {
-        writerType = L"LUSequenceReader";
+        writerType = L"Cntk.Reader.LUSequence";
     }
-    else if (writerType == L"LMSequenceWriter" || writerType == L"LMSequenceReader")
+    else if (writerType == L"Cntk.Writer.LMSequence" || writerType == L"Cntk.Reader.LMSequence")
     {
-        writerType = L"LMSequenceReader";
+        writerType = L"Cntk.Reader.LMSequence";
     }
-    else if (writerType == L"KaldiReader" || writerType == L"KaldiWriter")
+    else if (writerType == L"Cntk.Writer.Kaldi" || writerType == L"Cntk.Reader.Kaldi")
     {
-        writerType = L"KaldiReader";
+        writerType = L"Cntk.Reader.Kaldi";
     }
 
     string precision = config(L"precision", "float");

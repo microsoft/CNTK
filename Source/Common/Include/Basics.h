@@ -665,6 +665,10 @@ static wstring TypeId()
 // dynamic loading of modules  --TODO: not Basics, should move to its own header
 // ----------------------------------------------------------------------------
 
+#ifndef CNTK_COMPONENT_VERSION
+#error CNTK_COMPONENT_VERSION must be set
+#endif
+
 #ifdef _WIN32
 class Plugin
 {
@@ -679,6 +683,7 @@ public:
     FARPROC Load(const STRING& plugin, const std::string& proc)
     {
         m_dllName = msra::strfun::utf16(plugin);
+        m_dllName += L"-" + msra::strfun::utf16(CNTK_COMPONENT_VERSION);
         m_dllName += L".dll";
         m_hModule = LoadLibrary(m_dllName.c_str());
         if (m_hModule == NULL)
@@ -710,6 +715,7 @@ public:
     void* Load(const STRING& plugin, const std::string& proc)
     {
         string soName = msra::strfun::utf8(plugin);
+        soName += std::string("-") + std::string(CNTK_COMPONENT_VERSION);
         soName = soName + ".so";
         void* handle = dlopen(soName.c_str(), RTLD_LAZY);
         if (handle == NULL)
