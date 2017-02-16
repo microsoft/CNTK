@@ -12,7 +12,7 @@ import numpy as np
 from ..ops.functions import Function
 from ..ops.variables import Variable
 from ..ops import parameter, input_variable, placeholder_variable, combine
-from ..ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum
+from ..ops import times, element_times, convolution, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from ..utils import Record, _as_tuple
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
@@ -403,7 +403,7 @@ def Deconvolution(rf_shape,        # e.g. (3,3)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Deconvolution', name, Record(W=W, b=b), make_block=True)
+    return Block(apply_x, 'Deconvolution', name, Record(W=W, b=b))
 
 # TODO: add sequential mode like Convolution()
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
@@ -474,7 +474,7 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
                  lower_pad=0,
                  upper_pad=0, 
                  name=''):
-    UntestedBranchError("MaxUnpooling not tested after merge to new Layers lib")
+    #UntestedBranchError("MaxUnpooling not tested after merge to new Layers lib")
     @BlockFunction('MaxUnpooling', name)
     def maxunpooling(x, y):
         return unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
@@ -545,7 +545,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     '''
     Layer factory function to create a function that implements layer normalization.
     '''
-    UntestedBranchError("LayerNormalization")
+    #UntestedBranchError("LayerNormalization")
 
     # parameters bound to this Function
     scale = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
@@ -554,7 +554,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     # expression
     @BlockFunction('LayerNormalization', name)
     def layer_normalize(x):
-        mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
+        mean = reduce_mean(x) # normalize w.r.t. actual sample statistics
         x0 = x - mean;
         std = sqrt (reduce_mean (x0 * x0))
         #x_hat = element_divide (x0, std)
