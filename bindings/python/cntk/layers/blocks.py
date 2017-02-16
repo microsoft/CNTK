@@ -67,40 +67,19 @@ def _get_initial_state_or_default(initial_state):
     else:
         return initial_state # already in good shape: return as is
 
-# TODO: this is obsolete; remove
-# turn a Function into a Block, with a new name and an optional dictionary of named parameters
-# If passed function is an actual Python function, it will be executed with Placeholders as inputs.
-# All layers functions call this at the end.
-# BUGBUG: does not actually exist yet, faking it
-# BUGBUG: should create a new object, but does it in-place instead. Works for current usage, but should be fixed.
-# BUGBUG: using combine causes an error ater, so the name actually does not get changed
-# BUGBUG: combine like this won't work for functions with multiple outputs (LSTM)
-def Block(f, op_name, members={}):
-    '''
-    Experimental code. Don't assume it does anything.
-    '''
-    for key in members:   # f.__dict__.update(members)
-        f.__dict__[key] = members[key]
-    return f
-
-
 def BlockFunction(op_name, name):
     '''
     Decorator for defining a @Function as a BlockFunction. Same as @Function, but wrap the content into an as_block().
     '''
     return lambda f: Function(f, make_block=True, op_name=op_name, name=name)
 
-
 def _inject_name(f, name):
     '''
     Call this at the end of any layer or block that takes an optional name argument.
     '''
     if name:
-        #f = combine(f.outputs, name=name)
-        # BUGBUG: will not work for sparse data, and not for tuple-valued Functions
         f = alias(f, name=name)
     return f
-
 
 # TODO: Move this into the lower layer where these are defined.
 # some mappings--these currently exist only so that I can name the nodes for debugging
@@ -190,7 +169,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
     def stabilize(x):
         return beta * x
 
-    return Block(stabilize, 'Stabilizer', Record(beta=beta))
+    return stabilize
 
 
 def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
@@ -349,11 +328,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     }[type]
 
     # return the corresponding lambda as a CNTK Function
-    function = BlockFunction(type, name)(function)
-
-    # return the corresponding lambda as a CNTK Function
-
-    return Block(function, type)
+    return BlockFunction(type, name)(function)
 
 
 def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peepholes=default_override_or(False),
@@ -371,9 +346,9 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
     init_bias                 = get_default_override(LSTM, init_bias=init_bias)
     enable_self_stabilization = get_default_override(LSTM, enable_self_stabilization=enable_self_stabilization)
 
-    return _RecurrentBlock ('LSTM', shape, cell_shape, activation=activation, use_peepholes=use_peepholes,
-                            init=init, init_bias=init_bias,
-                            enable_self_stabilization=enable_self_stabilization, name=name)
+    return _RecurrentBlock('LSTM', shape, cell_shape, activation=activation, use_peepholes=use_peepholes,
+                           init=init, init_bias=init_bias,
+                           enable_self_stabilization=enable_self_stabilization, name=name)
 
 
 # TODO: needs better name
@@ -392,9 +367,9 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
     init_bias                 = get_default_override(RNNUnit, init_bias=init_bias)
     enable_self_stabilization = get_default_override(RNNUnit, enable_self_stabilization=enable_self_stabilization)
 
-    return _RecurrentBlock ('RNNUnit', shape, cell_shape, activation=activation, use_peepholes=False,
-                            init=init, init_bias=init_bias,
-                            enable_self_stabilization=enable_self_stabilization, name=name)
+    return _RecurrentBlock('RNNUnit', shape, cell_shape, activation=activation, use_peepholes=False,
+                           init=init, init_bias=init_bias,
+                           enable_self_stabilization=enable_self_stabilization, name=name)
 
 
 def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
@@ -411,6 +386,6 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
     init_bias                 = get_default_override(GRU, init_bias=init_bias)
     enable_self_stabilization = get_default_override(GRU, enable_self_stabilization=enable_self_stabilization)
 
-    return _RecurrentBlock ('GRU', shape, cell_shape, activation=activation, use_peepholes=False,
-                            init=init, init_bias=init_bias,
-                            enable_self_stabilization=enable_self_stabilization, name=name)
+    return _RecurrentBlock('GRU', shape, cell_shape, activation=activation, use_peepholes=False,
+                           init=init, init_bias=init_bias,
+                           enable_self_stabilization=enable_self_stabilization, name=name)

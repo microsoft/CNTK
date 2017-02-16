@@ -28,9 +28,7 @@ def Sequential(layers, name=''):
     layers = [Sequential(layer) for layer in layers] # expand all layers recursively
     composed_function = reduce(lambda f, g: f >> g, layers, identity)
 
-    composed_function = _inject_name(composed_function, name)
-
-    return Block(composed_function, 'Sequential', Record(layers=layers))
+    return _inject_name(composed_function, name)
 
 
 def For(range, constructor, name=''):
@@ -52,9 +50,7 @@ def For(range, constructor, name=''):
     layers = [call(i) for i in range]
     sequential = Sequential(layers)
 
-    sequential = _inject_name(sequential, name)
-
-    return Block(sequential, 'For', Record(layers=layers))
+    return _inject_name(sequential, name)
 
 
 # legacy name for For() --TODO: remove

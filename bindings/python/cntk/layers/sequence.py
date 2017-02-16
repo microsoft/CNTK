@@ -33,8 +33,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         #    return r;
         ## regular case
         return sequence.delay(x, initial_state=initial_state, time_step=T)
-
-    return Block(delay, 'Delay')
+    return delay
 
 
 def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name=''):
@@ -69,7 +68,6 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
     
         # value[t] = value of t steps back; valid[t] = true if there was a value t steps back
         return (value, valid)
-
     return past_value_window
 
 
@@ -142,9 +140,7 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
     # this creates the CNTK Function
     recurrence_from = Function(recurrence_from_functions[num_state_args-1])
 
-    recurrence_from = _inject_name(recurrence_from, name)
-
-    return Block(recurrence_from, 'RecurrenceFrom', Record(over_function=over_function))
+    return _inject_name(recurrence_from, name)
 
 
 def Recurrence(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
@@ -182,10 +178,7 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
     @Function
     def recurrence(x):
         return recurrence_from(*(initial_state + (x,)))
-
-    recurrence = _inject_name(recurrence, name)
-
-    return Block(recurrence, 'Recurrence', Record(over_function=over_function))
+    return _inject_name(recurrence, name)
 
 
 def Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
@@ -206,9 +199,8 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
     get_final = sequence.first if go_backwards else sequence.last
     fold = recurrence >> tuple(get_final for output in recurrence.outputs)
 
-    fold = _inject_name(fold, name)
-
-    return Block(fold, 'Fold', Record(folder_function=folder_function))
+    # BUGBUG: Does this work for tuples?? Needs a test
+    return _inject_name(fold, name)
 
 
 # TODO: This is still a bit messy. The returned unfold_from() function should take the encoding instead of 'input'.
@@ -276,6 +268,4 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
 
         return output
 
-    unfold_from = _inject_name(unfold_from, name)
-
-    return Block(unfold_from, 'UnfoldFrom', Record(generator_function=generator_function))
+    return _inject_name(unfold_from, name)

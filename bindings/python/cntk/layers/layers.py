@@ -76,8 +76,8 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
         if activation is not None:
             r = activation(r)
         return r
+    return dense
 
-    return Block(dense, 'Dense', Record(W=W, b=b))
 
 def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name=''):
     '''
@@ -120,8 +120,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     @BlockFunction('Embedding', name)
     def embed(x):
         return times(x,E)
-
-    return Block(embed, 'Embedding', Record(E=E))
+    return embed
 
 
 def _window(x, axis, begin, end, step, stride, initial_state=None):
@@ -271,7 +270,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
             r = activation(r)
         return r
 
-    return Block(convolve, op_name, Record(W=W, b=b))
+    return convolve
 
 
 def Convolution1D(rf_shape,         # e.g. (3)
@@ -391,19 +390,22 @@ def Deconvolution(rf_shape,        # e.g. (3,3)
     b = Parameter(output_channels_shape + (1,) * len(rf_shape), init=init_bias, name='b') if bias else None
 
     # expression
-    x = Placeholder(name='deconvolution_arg')
-    apply_x = convolution (W, x,
-                           strides=_as_tuple(strides),
-                           sharing=_as_tuple(sharing),
-                           auto_padding=_as_tuple(pad),
-                           lower_pad=lower_pad,
-                           upper_pad=upper_pad,
-                           transpose=True,
-                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
-    if bias:
-        apply_x = apply_x + b
-    apply_x = apply_x >> activation
-    return Block(apply_x, 'Deconvolution', name, Record(W=W, b=b), make_block=True)
+    @BlockFunction('Deconvolution', name)
+    def deconvolve(x):
+        r = convolution (W, x,
+                         strides=_as_tuple(strides),
+                         sharing=_as_tuple(sharing),
+                         auto_padding=_as_tuple(pad),
+                         lower_pad=lower_pad,
+                         upper_pad=upper_pad,
+                         transpose=True,
+                         max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+        if bias:
+            r = r + b
+        if activation is not None:
+            r = activation(r)
+        return r
+    return deconvolve
 
 # TODO: add sequential mode like Convolution()
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
@@ -425,8 +427,7 @@ def _Pooling(op,       # PoolingType_Max or _Average
     @BlockFunction(op_name, name)
     def pool(x):
         return pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
-
-    return Block(pool, op_name)
+    return pool
 
 
 def MaxPooling(rf_shape,  # e.g. (3,3)
@@ -476,10 +477,10 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
                  name=''):
     UntestedBranchError("MaxUnpooling not tested after merge to new Layers lib")
     @BlockFunction('MaxUnpooling', name)
-    def maxunpooling(x, y):
+    def maxunpool(x, y):
         return unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
                          lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
-    return Block(maxunpooling, 'MaxUnpooling')
+    return maxunpool
 
 
 def Dropout(prob, name=''):
@@ -489,7 +490,7 @@ def Dropout(prob, name=''):
     @BlockFunction('Dropout', name)
     def dropout_f(x):
         return dropout(x, dropout_rate=prob)
-    return Block(dropout_f, 'Dropout')
+    return dropout_f
 
 
 def Activation(activation=default_override_or(identity), name=''): 
@@ -504,10 +505,10 @@ def Activation(activation=default_override_or(identity), name=''):
     @BlockFunction('Activation', name)
     def activation_f(x):
         return activation(x) 
-    return Block(activation_f, 'Activation')
+    return activation_f
 
 
-# TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C++ change.
+# TODO: map_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C++ change.
 def BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=default_override_or(5000), blend_time_constant=0,
@@ -538,14 +539,14 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
         return batch_normalization(x, scale, bias, run_mean, run_variance, run_count, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
                                   use_cudnn_engine=not use_cntk_engine)
 
-    return Block(batch_normalize, 'BatchNormalization', Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance))
+    return batch_normalize
 
-# TODO: add an epsilon [CR comment by Nikos]
-def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
+def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override_or(0.00001), name=''):
     '''
     Layer factory function to create a function that implements layer normalization.
     '''
     UntestedBranchError("LayerNormalization")
+    epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
     # parameters bound to this Function
     scale = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
@@ -554,14 +555,14 @@ def LayerNormalization(initial_scale=1, initial_bias=0, name=''):
     # expression
     @BlockFunction('LayerNormalization', name)
     def layer_normalize(x):
-        mean = reduce_mean (x) # normalize w.r.t. actual sample statistics
+        mean = reduce_mean(x) # normalize w.r.t. actual sample statistics
         x0 = x - mean;
         std = sqrt (reduce_mean (x0 * x0))
-        #x_hat = element_divide (x0, std)
+        if (epsilon != 0):
+            std += epsilon
         x_hat = x0 / std
         return x_hat * scale + bias    # denormalize with learned parameters
-
-    return Block(layer_normalize, 'LayerNormalization', Record(scale=scale, bias=bias))
+    return layer_normalize
 
 
 def Label(name):
@@ -573,6 +574,4 @@ def Label(name):
     @Function  # cannot be a BlockFunction since that would hide the label
     def label(x):
         return alias(x, name=name)
-    # BUGBUG: Currently fails for sparse, since PassNode cannot pass on sparse data presently.
-    #         This problem will go away once the Pass() call of alias() is eliminated in generation of the V1 graph.
     return label
