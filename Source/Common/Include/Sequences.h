@@ -1017,6 +1017,9 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
                                                                    const FrameRange &fr /*select frame or entire batch*/,
                                                                    const MBLayoutPtr &pMBLayout /*the MB layout of 'data'*/)
 {
+    if (!fr.m_pMBLayout && !fr.IsAllFrames())
+        LogicError("ColumnRangeWithMBLayoutFor: FrameRange refers to a time slice while being outside of a loop.");
+
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
     // MBLayouts that are identical in content but not object identity (pointer) are admissible.
@@ -1031,7 +1034,7 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
             ; // layouts are compatible--you may proceed
         else
-            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix. They are compatible though--are you missing a ReconcileDynamicAxis operation?");
+            LogicError("ColumnRangeWithMBLayoutFor: FrameRange's dynamic axis is inconsistent with matrix. They are compatible though--are you missing a ReconcileDynamicAxis operation?");
     }
     // if FrameRange refers to whole minibatch (map mode)
     // or if we don't even have a layout
@@ -1040,15 +1043,15 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
     if (!pMBLayout || fr.IsAllFrames())
     {
         if (fr.m_timeOffset != 0)
-            LogicError("DataFor: Time offset must not be specified for FrameRanges that reference the entire minibatch."); // (note: the tensor version allows this)
+            LogicError("ColumnRangeWithMBLayoutFor: Time offset must not be specified for FrameRanges that reference the entire minibatch."); // (note: the tensor version allows this)
         if (fr.seqIndex == SIZE_MAX)
             return std::pair<size_t, size_t>(0, numCols);
         else
         {
             if (!pMBLayout)
-                LogicError("DataFor: Attempting to retrieve a parallel sequence from data without layout.");
+                LogicError("ColumnRangeWithMBLayoutFor: Attempting to retrieve a parallel sequence from data without layout.");
             else
-                LogicError("DataFor: Individual parallel sequences cannot be retrieved in Matrix representation. Use TensorView instead.");
+                LogicError("ColumnRangeWithMBLayoutFor: Individual parallel sequences cannot be retrieved in Matrix representation. Use TensorView instead.");
         }
     }
     // FrameRange refers to a time slice -> return that
@@ -1057,11 +1060,11 @@ static inline std::pair<size_t, size_t> ColumnRangeWithMBLayoutFor(size_t numCol
         size_t numParallelSequences = pMBLayout->GetNumParallelSequences();
         size_t startColumn = (fr.timeIdxInSeq + fr.m_timeOffset) * numParallelSequences;
         if (startColumn >= numCols)
-            LogicError("DataFor: FrameRange specifies a time index that is out of range.");
+            LogicError("ColumnRangeWithMBLayoutFor: FrameRange specifies a time index that is out of range.");
         if (fr.seqIndex == SIZE_MAX)
             return std::pair<size_t, size_t>(startColumn, numParallelSequences * fr.m_timeRange);
         else if (fr.m_timeRange != 1)
-            LogicError("DataFor: FrameRange only support per-sequence time ranges with tensor slices, not matrix slices.");
+            LogicError("ColumnRangeWithMBLayoutFor: FrameRange only support per-sequence time ranges with tensor slices, not matrix slices.");
         else
             return std::pair<size_t, size_t>(startColumn + fr.seqIndex, 1);
     }
@@ -1093,6 +1096,9 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
                                                                                      const FrameRange &fr /*select frame or entire batch from 'data'*/,
                                                                                      const MBLayoutPtr &pMBLayout /*the MB layout of 'data'*/)
 {
+    if (!fr.m_pMBLayout && !fr.IsAllFrames())
+        LogicError("TensorSliceWithMBLayoutFor: FrameRange refers to a time slice while being outside of a loop.");
+
     std::pair<DimensionVector, DimensionVector> result;
     typedef decltype(result.first[0]) ElemType;
 
@@ -1116,8 +1122,11 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
             ; // the time dimension is broadcasting--leave it as is
         else if (fr.m_pMBLayout && pMBLayout && *fr.m_pMBLayout == *pMBLayout)
             ; // layouts are compatible--you may proceed
+        else if (!fr.m_pMBLayout)
+            LogicError("TensorSliceWithMBLayoutFor: FrameRange has no layout, incompatible with data's layout: %s",
+                       static_cast<string>(*(pMBLayout)).c_str());
         else
-            LogicError("DataFor: FrameRange's dynamic axis is inconsistent with matrix: %s vs. %s", 
+            LogicError("TensorSliceWithMBLayoutFor: FrameRange's dynamic axis is inconsistent with data: %s vs. %s", 
                        static_cast<string>(*(fr.m_pMBLayout)).c_str(), static_cast<string>(*(pMBLayout)).c_str());
     }
     // if FrameRange refers to whole minibatch (map mode)
@@ -1129,11 +1138,11 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
         if (fr.m_timeOffset != 0)
         {
             if (!pMBLayout)
-                LogicError("DataFor: Time offset cannot be applied to tensors that have no time dimension.");
+                LogicError("TensorSliceWithMBLayoutFor: Time offset cannot be applied to tensors that have no time dimension.");
             result.first[iterDim] += (ElemType) fr.m_timeOffset; // Note: If we have an offset, this is guaranteed to yield a slice that is out of bounds.
             result.second[iterDim] += (ElemType) fr.m_timeOffset;
             if (result.first[iterDim] > result.second[iterDim])
-                LogicError("DataFor: Numeric wraparound. You used a size_t vector where an int vector would be needed.");
+                LogicError("TensorSliceWithMBLayoutFor: Numeric wraparound. You used a size_t vector where an int vector would be needed.");
         }
     }
     // FrameRange refers to a time slice -> return that
@@ -1156,7 +1165,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
             {
                 size_t s = fr.seqIndex;
                 if (s >= result.second[sequenceDim])
-                    LogicError("DataFor: FrameRange specifies a parallel-sequence index that is out of range.");
+                    LogicError("TensorSliceWithMBLayoutFor: FrameRange specifies a parallel-sequence index that is out of range.");
                 result.first[sequenceDim] = (ElemType)s;
                 result.second[sequenceDim] = (ElemType)s + 1;
             }

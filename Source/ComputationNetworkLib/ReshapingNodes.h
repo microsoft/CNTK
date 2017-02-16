@@ -293,7 +293,7 @@ public:
             // copy the data from 'dataInput'
             size_t rank = GetSampleLayout().GetRank();
             auto result =             ValueTensorFor(rank, fr);
-            auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).GetMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
+            auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).HasMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
             // If data input has a layout (which is known to match), then replace the pointer here ^^ to avoid another runtime check.
             // If it has no layout, then set the broadcast-allowed flag, which will accept any layout to be passed in.
             result.AssignCopyOf(input0);
@@ -316,7 +316,7 @@ public:
             {
                 size_t rank = GetSampleLayout().GetRank();
                 auto gradient      =                      GradientTensorFor(rank, fr);
-                auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, InputRef(inputIndex).GetMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
+                auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, InputRef(inputIndex).HasMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
 
                 // if reduction then mask the respective input(s) (zero out the gaps)
                 if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))
