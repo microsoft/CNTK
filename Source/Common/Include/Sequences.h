@@ -747,15 +747,6 @@ public:
         return ret;
     }
 
-    // dimension we are iterating over; -1 means time dimension; 0 means no layout
-    int GetIterationDimension() const
-    {
-        if (!m_pMBLayout)
-            return 0;
-        else
-            return -1; // TODO: allow user to specify other dimensions  --BUGBUG: This is currently not thought through.
-    }
-
     std::pair<size_t,size_t> GetSequenceRange() const
     {
         if (!m_pMBLayout) return
@@ -1094,10 +1085,6 @@ static inline Matrix<ElemType> DataWithMBLayoutFor(const Matrix<ElemType> &data,
 // -----------------------------------------------------------------------
 // TensorSliceWithMBLayoutFor() -- Return tensor slice for a FrameRange with a given MBLayout.
 // This implements the logic of interpreting the FrameRange object.
-// Unlike the matrix version above, this supports iteration indices other than time.
-// If the iteration index is time, then it refers to the minibatch's time, not time of
-// individual sequences (the difference is where multiple sequences get concatenated).
-// TODO: This ^^. FrameRange still missing is a field to identify the index.
 // This function happily returns tensor bounds that are out of bounds, assuming caller will do the right thing.
 // -----------------------------------------------------------------------
 
@@ -1115,17 +1102,14 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
 
     // get position of time and sequence index
     // These are only valid if we have a layout.
-    // In the future, the 'timeDim' will be identified by the FrameRange.
-    int iterDimParam = fr.GetIterationDimension();
-    bool isTimeIteration = iterDimParam < 0;
-    size_t iterDim = isTimeIteration ? shape.size() + iterDimParam /*-1 for time dimension*/ : iterDimParam - 1 /*regular dimensions are specified as 1-based*/;
+    const size_t iterDim = shape.size() -1;
 
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
     // MBLayouts that are identical in content but not object identity (pointer) are admissible.
     // We rely on a runtime check. If this is inefficient, use a ReconcileDynamicAxis node.
     // (Note: Earlier versions of CNTK did not accept same-content MBLayouts.)
-    if (isTimeIteration && fr.m_pMBLayout != pMBLayout)
+    if (fr.m_pMBLayout != pMBLayout)
     {
         // if broadcast allowed then it is allowed to broadcast from an outer-loop value
         // Currently, the only 'outer' loop we have is to have no layout.
@@ -1141,7 +1125,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     // or if we don't even have a layout
     // then return the whole matrix
     // but as a reference (e.g. it cannot be resized)
-    else if ((isTimeIteration && !pMBLayout) || fr.IsAllFrames())
+    else if (!pMBLayout || fr.IsAllFrames())
     {
         if (fr.m_timeOffset != 0)
         {
