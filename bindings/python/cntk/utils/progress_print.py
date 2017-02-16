@@ -7,8 +7,7 @@ from __future__ import print_function
 import os
 import time
 
-from cntk.cntk_py import TensorBoardFileWriter
-
+from cntk.cntk_py import TensorBoardFileWriter, print_built_info
 
 # TODO: Let's switch to import logging in the future instead of print. [ebarsoum]
 class ProgressPrinter(object):
@@ -66,6 +65,9 @@ class ProgressPrinter(object):
         self.gen_heartbeat = gen_heartbeat
         self.num_epochs =  num_epochs
         self.trainer = None
+        
+        # print out data about CNTK build
+        print_built_info()
 
         # Create TensorBoardFileWriter if the path to a log directory was provided.
         self.tensorboard_writer = None
