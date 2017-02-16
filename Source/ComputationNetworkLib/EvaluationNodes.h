@@ -481,7 +481,7 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 0.0f, float delPen = 0.0f, float insPen = 0.0f, bool squashInputs = false, vector<int> tokensToIgnore = {})
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 0.0f, float delPen = 0.0f, float insPen = 0.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
         : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
     {
     }
@@ -575,7 +575,7 @@ public:
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
     static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
-        float subPen, float delPen, float insPen, bool squashInputs, const vector<int>& tokensToIgnore)
+        float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& tokensToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
 
@@ -685,11 +685,11 @@ public:
         return (ElemType)(wrongSampleNum * totalframeNum / totalSampleNum);
     }
 
-    float SubstitutionPenalty() const { return m_subPen; }
-    float DeletionPenalty() const { return m_delPen; }
-    float InsertionPenalty() const { return m_insPen; }
-    bool SquashInputs() const { return m_squashInputs; }
-    std::vector<size_t> SamplesToIgnore() const { return m_SamplesToIgnore; }
+    float SubstitutionPenalty() const { return m_SubPen; }
+    float DeletionPenalty() const { return m_DelPen; }
+    float InsertionPenalty() const { return m_InsPen; }
+    bool SquashInputs() const { return m_SquashInputs; }
+    std::vector<size_t> TokensToIgnore() const { return m_tokensToIgnore; }
 
 private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
@@ -698,10 +698,10 @@ private:
     float m_SubPen;
     float m_DelPen;
     float m_InsPen;
-    std::vector<int> m_tokensToIgnore;
+    std::vector<size_t> m_tokensToIgnore;
 
     // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
-    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<int>& tokensToIgnore, std::vector<int>& out_SampleSeqVec)
+    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<size_t>& tokensToIgnore, std::vector<int>& out_SampleSeqVec)
     {
         out_SampleSeqVec.clear();
 

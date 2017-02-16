@@ -14,11 +14,7 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceErrorTest)
 {
     Matrix<float> firstSeq(CPUDEVICE);
     Matrix<float> secondSeq(CPUDEVICE);
-<<<<<<< a1e25e1073b132300c9e9bc1c134da03a0d22838
-    vector<size_t> samplesToIgnore;
-=======
-    vector<int> tokensToIgnore;
->>>>>>> Exposing EditDistanceError node in BrainScript
+    vector<size_t> tokensToIgnore;
     size_t seqSize = 10;
     firstSeq.Resize(1, seqSize);
     secondSeq.Resize(1, seqSize);
