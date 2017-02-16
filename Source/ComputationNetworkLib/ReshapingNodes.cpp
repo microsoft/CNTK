@@ -81,7 +81,7 @@ template <class ElemType>
     // We are mixing two kinds of operations here; elementwise and whole-batch reduction (m_reduceAll).
     // In the latter case, we must mimic the behaviour of ComputationNodeNonLooping.
     if (m_reduceAll && !fr.IsAllFrames())
-        LogicError("%ls: %s node should never be in a loop when reducing over all axes including the dynamic ones.", Base::NodeDescription().c_str(), typeid(*this).name());
+        LogicError("%ls: %s node should never be in a loop when reducing over all static and dynamic axes.", Base::NodeDescription().c_str(), typeid(*this).name());
 
     const auto frInput = !m_reduceAll ? fr : FrameRange(InputRef(0).GetMBLayout()); // can't use 'fr' for m_reduceAll as it refers to the result (same as for training criteria)
 
