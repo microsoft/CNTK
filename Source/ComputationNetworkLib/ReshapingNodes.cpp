@@ -78,22 +78,28 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
+    // We are mixing two kinds of operations here; elementwise and whole-batch reduction (m_reduceAll).
+    // In the latter case, we must mimic the behaviour of ComputationNodeNonLooping.
+    if (m_reduceAll && !fr.IsAllFrames())
+        LogicError("%ls: %s node should never be in a loop when reducing over all axes including the dynamic ones.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+    const auto frInput = !m_reduceAll ? fr : FrameRange(InputRef(0).GetMBLayout()); // can't use 'fr' for m_reduceAll as it refers to the result (same as for training criteria)
+
+    // when reducing all, we must mask gaps
     if (m_reduceAll)
     {
-        // When operating on all axes we need to mask the invalid parts of the minibatch
-        auto mbLayout = InputRef(0).GetMBLayout();
-        InputRef(0).MaskMissingValueColumnsTo(fr.WithLayout(mbLayout), NeutralValue<ElemType>(m_reductionOp));
+        InputRef(0).MaskMissingValueColumnsTo(frInput, NeutralValue<ElemType>(m_reductionOp));
         if (m_mean)
         {
-            //for mean reduction and all axes we need to carefully compute the scaling factor
-            auto actual_samples = mbLayout != nullptr ? mbLayout->GetActualNumSamples() : 1;
+            // for mean reduction and all axes we need to carefully compute the scaling factor
+            auto actual_samples = InputRef(0).HasMBLayout() ? InputRef(0).GetMBLayout()->GetActualNumSamples() : 1;
             m_scale = ElemType((1.0 / GetInputSampleLayout(0).GetNumElements()) / actual_samples);
         }
     }
 
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
-    auto input  = InputRef(0).   ValueTensorFor(rank, fr);
+    auto input  = InputRef(0).   ValueTensorFor(rank, frInput);
     auto result = !m_reduceAll ? ValueTensorFor(rank, fr) : TensorView<ElemType>(ValuePtr(), TensorShape(1));
 
     switch (m_reductionOp)
@@ -114,10 +120,12 @@ template <class ElemType>
 {
     assert(inputIndex == 0), inputIndex;
 
+    const auto frInput = !m_reduceAll ? fr : FrameRange(InputRef(0).GetMBLayout()); // can't use 'fr' for m_reduceAll as it refers to the result (same as for training criteria)
+
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
     auto sliceOutputGrad = !m_reduceAll ? GradientTensorFor(rank, fr) : TensorView<ElemType>(GradientPtr(), TensorShape(1)); // propagate from this one...
-    auto sliceInputGrad  = InputRef(0).   GradientTensorFor(rank, fr); // ...to this one
+    auto sliceInputGrad  = InputRef(0).   GradientTensorFor(rank, frInput); // ...to this one
 
     // gradients are not as simple as passing an op-code, unfortunately
     switch (m_reductionOp)
@@ -130,7 +138,7 @@ template <class ElemType>
 
     case ElementWiseOperator::opLogSum:
         {
-            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
             auto output = ValueTensorFor(rank, fr.AllowBroadcast());
             // Let: f(x, y, z) = log(exp x + exp y + exp z)
             // For the derivative we get:
@@ -143,7 +151,7 @@ template <class ElemType>
     case ElementWiseOperator::opMin:
     case ElementWiseOperator::opMax:
         {
-            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
             auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
             // POTENTIAL PROBLEM:
@@ -164,7 +172,7 @@ template <class ElemType>
         break;
    case ElementWiseOperator::opElementwiseProduct:
     {        
-        auto input  = InputRef(inputIndex).ValueTensorFor(rank, fr);
+        auto input  = InputRef(inputIndex).ValueTensorFor(rank, frInput);
         auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
         sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
         break;
