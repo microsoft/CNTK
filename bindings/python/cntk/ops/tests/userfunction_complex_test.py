@@ -13,7 +13,7 @@ import numpy as np
 from cntk import *
 from cntk.learner import *
 from cntk.ops import *
-from .ops_test_utils import cntk_device
+from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.ops.functions import UserFunction
 
 from cntk.utils import get_train_eval_criterion, get_train_loss
@@ -46,8 +46,9 @@ def linear_layer(input_var, output_dim):
 
 def dense_layer(input, output_dim, nonlinearity):
     r = linear_layer(input, output_dim)
+    r = nonlinearity(r)
     if isinstance(nonlinearity, UserFunction):
-        r = user_function(nonlinearity(r))
+        r = user_function(r)
     return r
 
 def fully_connected_classifier_net(input, num_output_classes, hidden_layer_dim,
@@ -160,4 +161,7 @@ def measure_runtime(device_id):
         print("%i\t%.2f\t%.2f"%(num_hidden_layers, min(timings_my_sigmoid), min(timings_sigmoid)))
 
 if __name__=='__main__':
-    measure_runtime()
+    print("CPU")
+    measure_runtime(-1)
+    print("GPU")
+    measure_runtime(0)
