@@ -309,7 +309,8 @@ public:
             if (seq.seqId == GAP_SEQUENCE_ID)
                 continue;
 
-            assert(seq.seqId == seqId++);
+            assert(seq.seqId == seqId);
+            seqId++;
             uttToChanInd.push_back(seq.s);
             size_t numFrames = seq.GetNumTimeSteps();
             uttBeginFrame.push_back(seq.tBegin);
