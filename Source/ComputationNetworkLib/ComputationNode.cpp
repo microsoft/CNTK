@@ -159,11 +159,13 @@ template<class ElemType>
 /*static*/ void ComputationNode<ElemType>::BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
                                                              const MBLayoutPtr& inputLayout,
                                                              Matrix<ElemType>& broadcastTo,
-                                                             const MBLayoutPtr& targetLayout,
+                                                             const FrameRange& targetFrameRange,
                                                              const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage)
 {
+    auto targetLayout = targetFrameRange.m_pMBLayout;
+    
     // Generate the gather indices
-    std::vector<ElemType> gatherIndicesVector(targetLayout->GetNumCols(), -1);
+    std::vector<ElemType> gatherIndicesVector(broadcastTo.GetNumCols(), -1);
     auto& layoutSequences = targetLayout->GetAllSequences();
     int numLayoutSequences = (int)layoutSequences.size();
 
@@ -175,11 +177,18 @@ template<class ElemType>
     for (int layoutSequenceIdx = 0; layoutSequenceIdx < numLayoutSequences; ++layoutSequenceIdx)
     {
         auto sequenceInfo = layoutSequences[layoutSequenceIdx];
-        if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
+
+        if ((sequenceInfo.seqId != GAP_SEQUENCE_ID) && 
+            (targetFrameRange.IsAllFrames() || ((sequenceInfo.tBegin <= (ptrdiff_t)(targetFrameRange.timeIdxInSeq + targetFrameRange.m_timeOffset)) && (sequenceInfo.tEnd > (targetFrameRange.timeIdxInSeq + targetFrameRange.m_timeOffset)))))
         {
             auto srcSequenceInfo = inputLayout->FindSequence(sequenceInfo.seqId);
             auto gatherFromIndex = inputLayout->GetColumnIndex(srcSequenceInfo, 0);
-            auto currentSequenceColumnIndices = targetLayout->GetColumnIndices(sequenceInfo);
+            std::vector<size_t> currentSequenceColumnIndices;
+            if (targetFrameRange.IsAllFrames())
+                currentSequenceColumnIndices = targetLayout->GetColumnIndices(sequenceInfo);
+            else
+                currentSequenceColumnIndices.push_back(sequenceInfo.s);
+
             for (auto i : currentSequenceColumnIndices)
                 gatherIndicesVector[i] = (ElemType)gatherFromIndex;
         }
@@ -187,9 +196,9 @@ template<class ElemType>
 
     auto gatherIdxMatrix = tempIndicesStorage;
     if (!gatherIdxMatrix)
-        gatherIdxMatrix = std::make_shared<Matrix<ElemType>>(1, targetLayout->GetNumCols(), gatherIndicesVector.data(), broadcastTo.GetDeviceId());
+        gatherIdxMatrix = std::make_shared<Matrix<ElemType>>(1, broadcastTo.GetNumCols(), gatherIndicesVector.data(), broadcastTo.GetDeviceId());
     else
-        gatherIdxMatrix->SetValue(1, targetLayout->GetNumCols(), broadcastTo.GetDeviceId(), gatherIndicesVector.data());
+        gatherIdxMatrix->SetValue(1, broadcastTo.GetNumCols(), broadcastTo.GetDeviceId(), gatherIndicesVector.data());
 
     broadcastTo.DoGatherColumnsOf(0, *gatherIdxMatrix, dataToBroadcast, 1);
 }
