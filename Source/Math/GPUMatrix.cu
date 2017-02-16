@@ -4286,7 +4286,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::GetARowByIndex(const GPUMatrix<ElemTyp
 // uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
 // uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
 // uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
-// numChannels (input): channel number in this minibatch
+// numParallelSequences (input): channel number in this minibatch
 // maxFrameNum (input): the maximum channel frame number
 // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
 //      Alpha and Beta scores outside of the delay boundary are set to zero.
@@ -4299,12 +4299,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
     const GPUMatrix<ElemType> phoneSeq,
     const GPUMatrix<ElemType> phoneBoundary,
     ElemType &totalScore,
-    std::vector<size_t>& uttToChanInd,
-    std::vector<size_t> & uttBeginFrame,
-    std::vector<size_t> & uttFrameNum,
-    std::vector<size_t> & uttPhoneNum,
-    size_t numChannels,
-    const size_t maxFrameNum, int delayConstraint, const bool isColWise)
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t> & uttBeginFrame,
+    const std::vector<size_t> & uttFrameNum,
+    const std::vector<size_t> & uttPhoneNum,
+    const size_t numParallelSequences,
+    const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
 {
     if (isColWise)
     {
@@ -4345,21 +4345,21 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
         for (long t = 0; t < maxFrameNum; t++)
         {
             _assignAlphaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
-                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numChannels, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
+                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
         }
 
         for (long t = maxFrameNum - 1; t >= 0; t--)
         {
             _assignBetaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
-                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numChannels, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
+                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
         }
 
-        _assignTotalScore << <uttNum, 1, 0, t_stream >> > (beta.Data(), gpuScores, uttNum, gpuUttToChanInd, gpuBeginFrame, numChannels, maxPhoneNum);
+        _assignTotalScore << <uttNum, 1, 0, t_stream >> > (beta.Data(), gpuScores, uttNum, gpuUttToChanInd, gpuBeginFrame, numParallelSequences, maxPhoneNum);
 
         dim3 block_tail_2((uttNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM, (maxFrameNum + DEFAULT_THREAD_PER_DIM - 1) / DEFAULT_THREAD_PER_DIM);
 
         _assignCTCScore << < block_tail_2, thread_tail, 0, t_stream >> >(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, gpuUttToChanInd,
-            gpuBeginFrame, gpuPhoneNum, gpuFrameNum, numChannels, maxPhoneNum, totalPhoneNum);
+            gpuBeginFrame, gpuPhoneNum, gpuFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
 
         vector<ElemType>scores(uttNum);
         CUDA_CALL(cudaMemcpyAsync(scores.data(), gpuScores, sizeof(ElemType) * uttNum, cudaMemcpyDeviceToHost, t_stream));

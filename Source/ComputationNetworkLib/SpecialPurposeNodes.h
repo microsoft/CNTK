@@ -784,8 +784,8 @@ class ForwardBackwardNode : public  ComputationNodeNonLooping<ElemType>, public 
     }
 public:
     DeclareConstructorFromConfigWithNumInputs(ForwardBackwardNode);
-    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, int delayConstraint=3) :
-        Base(deviceId, name), m_delayConstraint(delayConstraint)
+    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, int blankTokenId=INT_MIN, int delayConstraint=3) :
+        Base(deviceId, name), m_blankTokenId(blankTokenId), m_delayConstraint(delayConstraint)
     {
     }
 
@@ -857,7 +857,7 @@ public:
         FrameRange fr(InputRef(0).GetMBLayout());
         InputRef(0).ValueFor(fr).VectorMax(*m_maxIndexes, *m_maxValues, true);
         // compute CTC score
-        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, InputRef(0).GetMBLayout(), m_delayConstraint);
+        m_GammaCal.doCTC(Value(), *m_logSoftmaxOfRight, *m_maxIndexes, *m_maxValues, *m_CTCposterior, InputRef(0).GetMBLayout(), m_blankTokenId, m_delayConstraint);
 
 #if NANCHECK
         functionValues.HasNan("ForwardBackwardNode");
@@ -944,6 +944,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_maxValues;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
+    int m_blankTokenId;
     int m_delayConstraint;
 };
 

@@ -5291,7 +5291,7 @@ __global__ void _assignAlphaScore(
 
             x = logaddk(x, alphaScore[alphaId_0]);
 
-            if (phoneId != 65535)
+            if (phoneId != SIZE_MAX)
                 ascore = prob[probId]; // Probability of observing given label at given time
             else
                 ascore = 0;
@@ -5382,7 +5382,7 @@ __global__ void _assignBetaScore(
 
             x = logaddk(x, betaScore[betaid_0]);
 
-            if (phoneId != 65535)
+            if (phoneId != SIZE_MAX)
                 ascore = prob[probId];
             else
                 ascore = 0;
@@ -5439,7 +5439,7 @@ __global__ void _assignCTCScore(
             LONG64 alphaId = maxPhoneNum* timeId + s;
             LONG64 probId = timeId*totalPhoneNum + phoneId;
 
-            if (phoneId != 65535)
+            if (phoneId != SIZE_MAX)
             {
                 ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
                 CTCscore[probId] = logaddk(CTCscore[probId], logoccu);

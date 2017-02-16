@@ -461,7 +461,7 @@ template class NDCG1EvalNode<double>;
 // Edit distance error evaluation node with the option of specifying penalty of substitution, deletion and insertion, as well as squashing the input sequences and ignoring certain samples.
 // Using the classic DP algorithm as described in https://en.wikipedia.org/wiki/Edit_distance, adjusted to take into account the penalties.
 // 
-// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and samplesToIgnore contains label '-' then
+// The node allows to squash sequences of repeating labels and ignore certain labels. For example, if squashInputs is true and tokensToIgnore contains label '-' then
 // given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
 //
 // The returned error is computed as: EditDistance(s1,s2) * length(s1') / length(s1)
@@ -480,14 +480,14 @@ public:
     // delPen - deletion penalty
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
-    // samplesToIgnore - list of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 0.0f, float delPen = 0.0f, float insPen = 0.0f, bool squashInputs = false, vector<int> samplesToIgnore = {})
-        : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_SamplesToIgnore(samplesToIgnore)
+    // tokensToIgnore - list of samples to ignore during edit distance evaluation
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 0.0f, float delPen = 0.0f, float insPen = 0.0f, bool squashInputs = false, vector<int> tokensToIgnore = {})
+        : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
     {
     }
 
     EditDistanceErrorNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : EditDistanceErrorNode(configp->Get(L"deviceId"), configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), configp->Get(L"samplesToIgnore"), L"<placeholder>")
+        : EditDistanceErrorNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), configp->Get(L"tokensToIgnore"))
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
@@ -510,7 +510,7 @@ public:
 
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_SamplesToIgnore);
+        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_tokensToIgnore);
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -539,11 +539,11 @@ public:
             node->m_maxIndexes0 = m_maxIndexes0;
             node->m_maxIndexes1 = m_maxIndexes1;
             node->m_maxValues = m_maxValues;
-            node->m_squashInputs = m_squashInputs;
-            node->m_subPen = m_subPen;
-            node->m_delPen = m_delPen;
-            node->m_insPen = m_insPen;
-            node->m_SamplesToIgnore = m_SamplesToIgnore;
+            node->m_SquashInputs = m_SquashInputs;
+            node->m_SubPen = m_SubPen;
+            node->m_DelPen = m_DelPen;
+            node->m_InsPen = m_InsPen;
+            node->m_tokensToIgnore = m_tokensToIgnore;
         }
     }
 
@@ -573,9 +573,9 @@ public:
     // delPen - deletion penalty
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
-    // samplesToIgnore - list of samples to ignore during edit distance evaluation
+    // tokensToIgnore - list of samples to ignore during edit distance evaluation
     static ElemType ComputeEditDistanceError(Matrix<ElemType>& firstSeq, const Matrix<ElemType> & secondSeq, MBLayoutPtr pMBLayout, 
-        float subPen, float delPen, float insPen, bool squashInputs, const vector<size_t>& samplesToIgnore)
+        float subPen, float delPen, float insPen, bool squashInputs, const vector<int>& tokensToIgnore)
     {
         std::vector<int> firstSeqVec, secondSeqVec;
 
@@ -609,8 +609,8 @@ public:
 
                 auto columnIndices = pMBLayout->GetColumnIndices(sequence);
 
-                ExtractSampleSequence(firstSeq, columnIndices, squashInputs, samplesToIgnore, firstSeqVec);
-                ExtractSampleSequence(secondSeq, columnIndices, squashInputs, samplesToIgnore, secondSeqVec);
+                ExtractSampleSequence(firstSeq, columnIndices, squashInputs, tokensToIgnore, firstSeqVec);
+                ExtractSampleSequence(secondSeq, columnIndices, squashInputs, tokensToIgnore, secondSeqVec);
 
                 //calculate edit distance
                 size_t firstSize = firstSeqVec.size();
@@ -694,20 +694,20 @@ public:
 private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    bool m_squashInputs;
-    float m_subPen;
-    float m_delPen;
-    float m_insPen;
-    std::vector<size_t> m_SamplesToIgnore;
+    bool m_SquashInputs;
+    float m_SubPen;
+    float m_DelPen;
+    float m_InsPen;
+    std::vector<int> m_tokensToIgnore;
 
     // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
-    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<size_t>& samplesToIgnore, std::vector<int>& out_SampleSeqVec)
+    static void ExtractSampleSequence(const Matrix<ElemType>& firstSeq, vector<size_t>& columnIndices, bool squashInputs, const vector<int>& tokensToIgnore, std::vector<int>& out_SampleSeqVec)
     {
         out_SampleSeqVec.clear();
 
         // Get the first element in the sequence
         size_t lastId = (int)firstSeq(0, columnIndices[0]);
-        if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), lastId) == samplesToIgnore.end())
+        if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), lastId) == tokensToIgnore.end())
             out_SampleSeqVec.push_back(lastId);
 
         // Remaining elements
@@ -720,7 +720,7 @@ private:
                 if (lastId != refId)
                 {
                     lastId = refId;
-                    if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
+                    if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
                         out_SampleSeqVec.push_back(refId);
                 }
             }
@@ -730,7 +730,7 @@ private:
             for (size_t i = 1; i < columnIndices.size(); i++)
             {
                 auto refId = (int)firstSeq(0, columnIndices[i]);
-                if (std::find(samplesToIgnore.begin(), samplesToIgnore.end(), refId) == samplesToIgnore.end())
+                if (std::find(tokensToIgnore.begin(), tokensToIgnore.end(), refId) == tokensToIgnore.end())
                     out_SampleSeqVec.push_back(refId);
             }
         }

@@ -5873,8 +5873,8 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
 template<class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
-    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, std::vector<size_t>& uttMap, std::vector<size_t> & uttBeginFrame, std::vector<size_t> & uttFrameNum,
-    std::vector<size_t> & uttPhoneNum, size_t samplesInRecurrentStep, const size_t maxFrameNum, int delayConstraint, const bool isColWise)
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const std::vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
     if (isColWise)
@@ -5936,7 +5936,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
                             y = alpha(s - 2, t - 1);
                             x = LogAddD(x, y);
                         }
-                        if (senoneid != 65535)
+                        if (senoneid != SIZE_MAX)
                             ascore = prob(senoneid, t);
                         else
                             ascore = 0;
@@ -5977,7 +5977,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
                             x = LogAddD(x, y);
                         }
 
-                        if (senoneid != 65535)
+                        if (senoneid != SIZE_MAX)
                             ascore = prob(senoneid, t);
                         else
                             ascore = 0;
@@ -6008,7 +6008,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
                     for (s = 1; s < senonenum - 1; s++)
                     {
                         senoneid = curPhoneSeq[s];
-                        if (senoneid != 65535)
+                        if (senoneid != SIZE_MAX)
                         {
                             ElemType logoccu = alpha(s, t) + beta(s, t) - prob(senoneid, t) - (float)Zt;
                             if (logoccu < LOG_OF_EPS_IN_LOG)

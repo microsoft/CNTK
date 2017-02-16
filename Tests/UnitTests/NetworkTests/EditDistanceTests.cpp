@@ -14,7 +14,11 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceErrorTest)
 {
     Matrix<float> firstSeq(CPUDEVICE);
     Matrix<float> secondSeq(CPUDEVICE);
+<<<<<<< a1e25e1073b132300c9e9bc1c134da03a0d22838
     vector<size_t> samplesToIgnore;
+=======
+    vector<int> tokensToIgnore;
+>>>>>>> Exposing EditDistanceError node in BrainScript
     size_t seqSize = 10;
     firstSeq.Resize(1, seqSize);
     secondSeq.Resize(1, seqSize);
@@ -26,7 +30,7 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceErrorTest)
     MBLayoutPtr pMBLayout = make_shared<MBLayout>(1, seqSize, L"X");
     pMBLayout->AddSequence(0, 0, 0, seqSize);
 
-    float ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, pMBLayout, 1, 1, 1, true, samplesToIgnore);
+    float ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, pMBLayout, 1, 1, 1, true, tokensToIgnore);
     assert((int)ed == 2);
 
     for (size_t i = 0; i < seqSize; i++)
@@ -34,12 +38,12 @@ BOOST_AUTO_TEST_CASE(ComputeEditDistanceErrorTest)
         secondSeq(0, i) = (float)i;
     }
 
-    ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, pMBLayout, 1, 1, 1, true, samplesToIgnore);
+    ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, pMBLayout, 1, 1, 1, true, tokensToIgnore);
     assert((int)ed == 0);
 
     secondSeq(0, seqSize-1) = (float)123;
 
-    ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, pMBLayout, 1, 1, 1, true, samplesToIgnore);
+    ed = EditDistanceErrorNode<float>::ComputeEditDistanceError(firstSeq, secondSeq, pMBLayout, 1, 1, 1, true, tokensToIgnore);
     assert((int)ed == 1);
 }
 
