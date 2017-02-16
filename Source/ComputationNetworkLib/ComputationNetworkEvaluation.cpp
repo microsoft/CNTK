@@ -1072,6 +1072,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
+    m_matrixPool.ResetStepCounter(); 
     set<ComputationNodeBasePtr> completedEvaluate;
     for (auto& nodeIter : compositeForwardPropEvalOrder)
     {
@@ -1137,7 +1138,11 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
+    m_matrixPool.OptimizedMemoryAllocation(); 
     m_areMatricesAllocated = true;
+
+    // TO DO (chazhang): when some matrices are sparse, one may need to call OptimizedMemoryAllocation multiple times assuming the requests of allocation
+    // and release are re-processed correctly. Future work. 
 
     // print the memory sharing structure
     if (TraceLevel() > 0)

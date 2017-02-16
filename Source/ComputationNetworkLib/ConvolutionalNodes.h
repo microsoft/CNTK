@@ -533,6 +533,8 @@ public:
 
     bool IsConvolution2D() const { return m_convolution2D; }
 
+    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+
 private:
     using TransformerNode::m_transforms;
     using ConvolutionNodeBase<ElemType>::ComputeFilterTransform;

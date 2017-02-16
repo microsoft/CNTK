@@ -599,14 +599,14 @@ public:
     virtual void AllocateGradientMatricesForInputs(MatrixPool& matrixPool) override
     {
         // this is a special handling case. We need to allocate sparse matrix directly instead of from pool.
-        if (Input(0)->NeedsGradient() && Input(1)->Value().GetMatrixType() == SPARSE)
-        {
-            InputRef(0).GradientPtrRef() = std::make_shared<Matrix<ElemType>>(0, // size would be initialized later
-                                                                              0,
-                                                                              Gradient().GetPreferredDeviceId(),
-                                                                              SPARSE,
-                                                                              MatrixFormat::matrixFormatSparseBlockCol);
-        }
+        //if (Input(0)->NeedsGradient() && Input(1)->Value().GetMatrixType() == SPARSE)
+        //{
+        //    InputRef(0).GradientPtrRef() = std::make_shared<Matrix<ElemType>>(0, // size would be initialized later
+        //                                                                      0,
+        //                                                                      Gradient().GetPreferredDeviceId(),
+        //                                                                      SPARSE,
+        //                                                                      MatrixFormat::matrixFormatSparseBlockCol);
+        //}
 
         // we need to call base allocation at end since we will need to allocate special ones first
         // so that the default allocator will not allocate it again.

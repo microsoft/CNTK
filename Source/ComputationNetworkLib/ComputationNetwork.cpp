@@ -47,6 +47,18 @@ vector<shared_ptr<Matrix<double>>>& MatrixPool::GetReleasedMatrices<double>()
     return m_releasedDoubleMatrices;
 }
 
+template <>
+vector<MemRequestInfo<float>>& MatrixPool::GetMemRequestInfoVec<float>()
+{
+    return m_memRequestInfoFloatVec;
+}
+
+template <>
+vector<MemRequestInfo<double>>& MatrixPool::GetMemRequestInfoVec<double>()
+{
+    return m_memRequestInfoDoubleVec;
+}
+
 // -----------------------------------------------------------------------
 // construction
 // -----------------------------------------------------------------------
