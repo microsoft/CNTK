@@ -276,10 +276,11 @@ public:
         // enforce compatibility of 'dataInput' with 'layoutInput'
         // TODO: how to deal with boundary flags?
 
-        // this does a deep value-level comparison
-        m_layoutsMatch = InputRef(0).HasMBLayout() && *m_pMBLayout == *InputRef(0).GetMBLayout();
-        if (InputRef(0).GetMBLayout() && !m_layoutsMatch &&
-            ((InputRef(0).GetMBLayout()->GetNumTimeSteps() != 1) || (InputRef(0).GetMBLayout()->GetNumSequences() != m_pMBLayout->GetNumSequences()) || !fr.IsAllFrames()))
+        m_layoutsMatch = InputRef(0).HasMBLayout() && *m_pMBLayout == *InputRef(0).GetMBLayout(); // this does a deep value-level comparison
+
+        if (InputRef(0).HasMBLayout() && !m_layoutsMatch &&                                       // input is a mismatching data input --only allowed case is broadcast_as()
+            ((InputRef(0).GetMBLayout()->GetNumTimeSteps() != 1) ||                               // not broadcast_as()
+             (InputRef(0).GetMBLayout()->GetNumSequences() != m_pMBLayout->GetNumSequences())))   // different batch??
         {
             InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompatible with that of %ls %ls.",
                             NodeName().c_str(), OperationName().c_str(),
@@ -287,7 +288,7 @@ public:
                             InputRef(1).NodeName().c_str(), InputRef(1).OperationName().c_str());
         }
 
-        if (!InputRef(0).GetMBLayout() || m_layoutsMatch)
+        if (!InputRef(0).HasMBLayout() || m_layoutsMatch)   // no shuffle-case: everything matches or non-data that can use tensor broadcast
         {
             // copy the data from 'dataInput'
             size_t rank = GetSampleLayout().GetRank();
@@ -301,9 +302,10 @@ public:
             result.AssignCopyOf(input0);
             // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the tensor lib).
         }
-        else
+        else // Broadcasting along the sequence case: must reshuffle
         {
-            // Broadcast along the sequence
+            if (!fr.IsAllFrames())           // BroadcastToPacked() does not support being inside a loop  --BUGBUG: This is needed.
+                InvalidArgument("%ls %ls operation: Broadcasting along sequence not supported inside loops.", NodeName().c_str(), OperationName().c_str());
             auto result = ValueFor(fr);
             ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), result, m_pMBLayout, m_tempGatherIndices);
         }
