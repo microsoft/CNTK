@@ -143,6 +143,7 @@ public:
 public:
     ReferenceConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind)
         : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind), 
+        m_inDims(m_geometry->InputShape(), ImageLayoutKind::CHW), m_kernelDims(m_geometry->KernelShape(), ImageLayoutKind::CHW), m_outDims(m_geometry->OutputShape(), ImageLayoutKind::CHW),
         m_mpRowCol(geometry->MpRowCol().size(), 1, const_cast<int*>(geometry->MpRowCol().data()), deviceId, IsGpu(deviceId) ? matrixFlagNormal : matrixFlagDontOwnBuffer)
     {
     }
@@ -176,7 +177,54 @@ protected:
 
     void ForwardCore(const Mat& in, const Mat& kernel, Mat& out, Mat& /*workspace*/) override
     {
-        in.ConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
+        // if sparse
+        bool isGpuSparse = in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
+                           in.GetMatrixType() == MatrixType::SPARSE;
+
+        if (isGpuSparse)
+        {
+            //ImageDimensions inT(m_geometry->InputShape(), ImageLayoutKind::CHW);
+            //ImageDimensions outT(m_geometry->OutputShape(), ImageLayoutKind::CHW);
+            //ImageDimensions kernelT(m_geometry->KernelShape(), ImageLayoutKind::CHW);
+
+            // m_inT:   w=10,   h=1,    c=49292 -> w=49292, h=10,   c=1
+            // m_outT:  w=8,    h=1,    c=128   -> w=1,     h=8,    c=128
+            // m_k      w=3,    h=1,    c=49292 -> w=49292, h=3,    c=1
+            // m_stride w=1,    h=1,    c=49292
+
+            //std::unique_ptr<ElemType[]> inRef(in.CopyToArray());
+            //for (int i = 0; i < 1000000; i++)
+            //{
+            //    if (inRef[i] > 0)
+            //    {
+            //        printf("%d:%f\r\n", i, inRef[i]);
+            //    }
+            //}
+
+            //printf("\r\n");
+
+
+            size_t kRows1 = m_outDims.c();
+            size_t kCols1 = kernel.GetNumRows() * kernel.GetNumCols() / kRows1;
+            auto kernel1 = kernel.DeepClone();
+            kernel1.Reshape(kRows1, kCols1);
+            Mat::ConvolveAndWeightedAdd(1, kernel1, false, in, false, 0, out, static_cast<int>(49292), 1, false, true);
+
+            std::unique_ptr<ElemType[]> ref(kernel1.CopyToArray());
+            for (int i = 0; i < 20; i++)
+            {
+                if (ref[i] > 0)
+                {
+                    printf("%d:%f\r\n", i, ref[i]);
+                }
+            }
+
+            printf("\r\n");
+        }
+        else
+        {
+            in.ConvolutionForward(kernel, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, out);
+        }
     }
 
     void BackwardDataCore(const Mat& srcGrad, const Mat& kernel, Mat& grad, bool /*accumulateGradient*/, Mat& /*workspace*/) override
@@ -252,6 +300,10 @@ protected:
     // Pooling-specific maps.
     IntMatPtr m_mpRowIndices;
     IntMatPtr m_indices;
+
+    ImageDimensions m_inDims;
+    ImageDimensions m_outDims;
+    ImageDimensions m_kernelDims;
 };
 
 //------------------------------------------------------------------
@@ -330,6 +382,9 @@ protected:
             size_t smallBatchSize = endSampleId - startSampleId;
             Mat inputSubBatch(in.GetDeviceId());
 
+            if (i > 0)
+                printf("i = %d, startSampleId=%d\r\n", (int)i, (int)startSampleId);
+
             // We optimize for three different scenarios here by handling them slightly differently.
             // [Scenario 1] Dense: Unroll using AssignPackedConvolutionInput and multiply.
             // [Scenario 2] Sparse 1-D convolution on GPU: for text scenarios we have a specific kernel.
@@ -346,6 +401,18 @@ protected:
 
                 inputSubBatch.Reshape(m_inT.c() * m_inT.w(), m_inT.h() * smallBatchSize);
                 Mat outputSubBatch = out.ColumnSlice(startSampleId, m_outT.h() * smallBatchSize);
+
+                std::unique_ptr<ElemType[]> ref(outputSubBatch.CopyToArray());
+                for (int ii = 0; ii < 20; ii++)
+                {
+                    if (ref[ii] > 0)
+                    {
+                        printf("%d:%f\r\n", ii, ref[ii]);
+                    }
+                }
+
+                printf("\r\n");
+
                 Mat::ConvolveAndWeightedAdd(1, kernel, false, inputSubBatch, false, 0, outputSubBatch,
                                             static_cast<int>(m_inT.c()), m_strideT.w(), m_padding, true);
             }
@@ -367,6 +434,17 @@ protected:
         }
 
         out.Reshape(m_outT.c() * outputSizePerChannel, batchSize); // each sample becomes a column
+
+        std::unique_ptr<ElemType[]> outRef(out.CopyToArray());
+        for (int i = 0; i < 20; i++)
+        {
+            if (outRef[i] > 0)
+            {
+                printf("%d:%f\r\n", i, outRef[i]);
+            }
+        }
+
+        printf("\r\n");
 
         assert(m_outT.w() * m_outT.h() * m_outT.c() == out.GetNumRows());
         assert(batchSize == out.GetNumCols());
