@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 import os
+import argparse
 import math
 import cntk
 
@@ -13,10 +14,11 @@ import cntk
 # variables and stuff  #
 ########################
 
-data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
+# Paths relative to current python file.
+abs_path   = os.path.dirname(os.path.abspath(__file__))
+data_path  = os.path.join(abs_path, "..", "Data") # under Examples/LanguageUnderstanding/ATIS
+model_path = os.path.join(abs_path, "Models")
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
-
-model_dir = "./Models"
 
 # model dimensions
 input_dim  = vocab_size
@@ -107,6 +109,7 @@ def train(reader, model, max_epochs):
             trainer.train_minibatch(data)                                   # update model with it
             t += trainer.previous_minibatch_sample_count                    # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
+            z.save(os.path.join(model_path, "atis" + "_{}.dnn".format(epoch))) 
 
             #def trace_node(name):
             #    nl = [n for n in z.parameters if n.name() == name]
@@ -116,7 +119,7 @@ def train(reader, model, max_epochs):
             #trace_node('stabilizer_param')
 
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
-
+ 
     return loss, metric
 
 #############################
@@ -124,6 +127,12 @@ def train(reader, model, max_epochs):
 #############################
 
 if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='8')
+
+    args = vars(parser.parse_args())
+    max_epochs = int(args['epochs'])
+
     # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
 
@@ -131,13 +140,13 @@ if __name__=='__main__':
     set_fixed_random_seed(1)  # BUGBUG: has no effect at present  # TODO: remove debugging facilities once this all works
     force_deterministic_algorithms()
 
-    reader = create_reader(data_dir + "/atis.train.ctf")
+    reader = create_reader(data_path + "/atis.train.ctf")
     model = create_model()
 
     # train
-    train(reader, model, max_epochs=8)
+    train(reader, model, max_epochs)
 
     # test (TODO)
-    reader = create_reader(data_dir + "/atis.test.ctf")
+    reader = create_reader(data_path + "/atis.test.ctf")
 
-    #test(reader, model_dir + "/slu.cmf")  # TODO: what is the correct pattern here?
+    #test(reader, model_path + "/slu.cmf")  # TODO: what is the correct pattern here?
