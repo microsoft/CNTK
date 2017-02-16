@@ -1,5 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
+// Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 // CNTK.cpp : Defines the entry point for the console application.
@@ -690,7 +691,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
 #ifndef CPUONLY
     ConfigValue val = config("deviceId", "auto");
-    if (!EqualCI(val, "cpu") && !EqualCI(val, "auto"))
+    if (!EqualCI(val, "cpu") && !EqualCI(val, "auto") && !EqualCI(val, "localRank"))
     {
         if (static_cast<int>(val) >= 0) // gpu (id >= 0)
         {
@@ -725,11 +726,19 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     if (paralleltrain)
     {
        mpi = MPIWrapper::GetInstance(true /*create*/);
+
+       // check support for gpu in case using localRank mode
+       if(EqualCI(val, "localRank")) CheckSupportForGpu(mpi->CurrentLocalNodeRank());
     } 
+    // check gpu 0 in case using localRank mode in single process
+    else if(EqualCI(val, "localRank"))
+        CheckSupportForGpu(0);
 
     Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
     Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
     Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
+
+
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -765,7 +774,17 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     // full config info
     PrintBuiltInfo();
-    PrintGpuInfo();
+    if(EqualCI(val, "localRank")) {
+      auto data = GetGpuData(paralleltrain ? mpi->CurrentLocalNodeRank() : 0);
+
+      LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+      LOGPRINTF(stderr, "GPU info(only print info of gpu being used in localRank mode):\n\n");
+      LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
+		data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory);
+      LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+      LOGPRINTF(stderr, "\n");
+    }
+    else PrintGpuInfo();
 
 #ifdef _DEBUG
     if (traceLevel > 0)

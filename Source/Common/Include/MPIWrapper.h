@@ -1,6 +1,6 @@
 //
 // Copyright (c) Microsoft. All rights reserved.
-// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+// Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -376,6 +376,20 @@ public:
     {
         return m_myRank;
     }
+
+    size_t CurrentLocalNodeRank()
+    {
+        const char* p = std::getenv("OMPI_COMM_WORLD_LOCAL_RANK");
+        if (!p)
+        {
+            RuntimeError("Cannot get local rank, try other mode.\nPossible cause: localRank mode is currently not supported in windows.\n");
+        }
+        else
+        {
+            return std::stoi(string(p));
+        }
+    }
+
     std::wstring CurrentNodeName() const
     {
         return m_myName;
