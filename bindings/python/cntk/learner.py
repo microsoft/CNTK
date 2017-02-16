@@ -92,8 +92,8 @@ def _verify_momentum_type(momentum):
 
 class Learner(cntk_py.Learner):
     '''
-    Abstraction for learning a subset of parameters of a learnable function using first order gradient values
-    For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
+    Abstraction for learning a subset of parameters of a learnable function using first order gradient values.
+    For example momentum, AdaGrad, RMSProp, etc. are different types of learners with their own algorithms for
     learning parameter values using first order gradients.
     To instantiate a concrete learner, use the factory methods in this module.
     '''

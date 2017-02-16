@@ -22,7 +22,7 @@ class CloneMethod(Enum):
 
     clone = 'clone'
     '''
-    New learnable parameters are created and initialied with the current values of the
+    New learnable parameters are created and initialized with the current values of the
     corresponding parameters of the Function being cloned
     '''
 
@@ -188,7 +188,7 @@ class Function(cntk_py.Function):
                  mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
-             In both cases, every every sample in the data will be interpreted
+             In both cases, every sample in the data will be interpreted
              as a new sequence.
 
              Sequences can be marked as continuations of the same sequence in
@@ -256,7 +256,7 @@ class Function(cntk_py.Function):
                  mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
-             In both cases, every every sample in the data will be interpreted
+             In both cases, every sample in the data will be interpreted
              as a new sequence.
 
              Sequences can be marked as continuations of the same sequence in
@@ -505,7 +505,7 @@ class Function(cntk_py.Function):
     def block_root(self):
         '''
         Returns the root of the Function graph underlying this block Function.
-        Throws an exception of this is not a block Function.
+        Throws an exception if this is not a block Function.
         '''
         return super(Function, self).block_root()
 

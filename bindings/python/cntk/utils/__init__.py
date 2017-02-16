@@ -339,7 +339,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
              mapped to this input.
          For nodes with more than one input, only dict is allowed.
 
-         In both cases, every every sample in the data will be interpreted
+         In both cases, every sample in the data will be interpreted
          as a new sequence.
 
          Sequences can be marked as continuations of the same sequence in
