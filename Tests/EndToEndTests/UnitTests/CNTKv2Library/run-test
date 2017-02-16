@@ -1,0 +1,69 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+set -x
+
+# This test uses a large dataset which is not part of the CNTK repository itself
+# We use the dataset from an external location specified using an environment variable
+if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+    DataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`/Image
+else
+    DataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY/Image
+fi
+
+# Copy the test data to the test run directory
+TestDataDir=$TEST_RUN_DIR/TestData
+mkdir $TestDataDir
+cp -R $DataSourceDir/MNIST/v0/Train-28x28_cntk_text.txt $TestDataDir || exit $?
+cp -R $TEST_DIR/../../Text/SequenceClassification/Data/Train.ctf $TestDataDir || exit $?
+cp -R $TEST_DIR/../../Simple2d/Data/SimpleDataT*_cntk_text.txt $TestDataDir || exit $?
+cp -R $TEST_DIR/../../../../Examples/Speech/AN4/Data/* $TestDataDir || exit $?
+cp -R $TEST_DIR/../../../UnitTests/V2LibraryTests/data/* $TestDataDir || exit $?
+
+# Train model that is used by LoadLegacyModel tests.
+# Setup predefined variables $DataDir, $ConfigDir, and $OutputDir that are required by cntkrun
+ConfigDir=$TEST_ROOT_DIR/../../Examples/Speech/AN4/Config
+OutputDir=$ConfigDir/../Output
+DataDir=$ConfigDir/../Data
+
+[ -d $OutputDir ] || mkdir $OutputDir || exit $?
+[ -d $OutputDir/Models ] && rm -rf $OutputDir/Models
+DeleteModelsAfterTest=0
+[ -f $ConfigDir/FeedForward.cntk ] || exit 1
+cntkrun FeedForward.cntk "stderr=- command=speechTrain parallelTrain=false speechTrain=[SGD=[maxEpochs=1]]" || exit $?
+cp $OutputDir/Models/cntkSpeechFF.dnn $TestDataDir || exit $?
+
+# Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  export CUDA_VISIBLE_DEVICES=-1
+fi
+
+pushd $TestDataDir
+
+# Note: Run the device selection tests first since later tests may interfere with
+# device selection by freezing default device
+if [ "$OS" == "Windows_NT" ]; then
+  $TEST_BIN_DIR/V2LibraryTests.exe --report_level=detailed --run_test=DeviceSelectionSuite
+  $TEST_BIN_DIR/V2LibraryTests.exe --report_level=detailed --run_test=!DeviceSelectionSuite
+else
+  $TEST_BIN_DIR/v2librarytests --report_level=detailed --run_test=DeviceSelectionSuite
+  $TEST_BIN_DIR/v2librarytests --report_level=detailed --run_test=!DeviceSelectionSuite
+fi
+
+ExitCode=$?
+
+# Delete the test data
+popd
+rm -rf $TestDataDir
+
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  unset CUDA_VISIBLE_DEVICES
+fi
+
+exit $ExitCode

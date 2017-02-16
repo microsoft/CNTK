@@ -56,7 +56,7 @@ def _test_unary_op(precision, device_id, op_func,
         input_op = op_func(a, **op_param_dict)
 
     forward_input = {a: value}
-    expected_backward = {a: expected_backward_all['arg'], }
+    expected_backward = {a: expected_backward_all['arg'], } if expected_backward_all is not None else None
     unittest_helper(input_op,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)

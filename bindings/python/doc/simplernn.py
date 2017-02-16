@@ -65,7 +65,7 @@ def train_sequence_classifier(debug_output=False):
 
     lr_per_sample = learning_rate_schedule(0.0005, UnitType.sample)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(classifier_output, ce, pe,
+    trainer = Trainer(classifier_output, (ce, pe),
                       sgd(classifier_output.parameters, lr=lr_per_sample))
 
     # Get minibatches of sequences to train with and perform model training

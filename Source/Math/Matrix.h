@@ -215,6 +215,10 @@ public:
                          Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
                          const double learnRatePerSample, const double targetAdagradAvDenom,
                          const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
+
+    void AdamUpdate(Matrix<ElemType>& gradients, Matrix<ElemType>& functionValues, double& smoothedCount,
+        const double learnRatePerSample, const double meanMomentum, const double varMomentum, bool unitGainMomentum = true);
+
     ElemType RmsProp(Matrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier);
 
     void Resize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve = 10000, bool growOnly = true); // by default we only reallocate if need to grow
@@ -594,6 +598,11 @@ public:
                   const std::array<size_t, 4>& offsets,
                   const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                   const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 4>& reducingStrides);
+
+    void TensorArgOp(const Matrix<ElemType>& a, ElementWiseOperator reductionOp,
+                     const std::array<size_t, 2>& offsets,
+                     const SmallVector<size_t>& regularOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                     const SmallVector<size_t>& reducingOpDims, const std::array<SmallVector<ptrdiff_t>, 2>& reducingStrides);
 
 public:
     void Read(File& stream);

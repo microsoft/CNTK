@@ -14,6 +14,9 @@
 #include <thread>
 #include "GPUMatrix.h"
 #include "Globals.h"
+#include "PerformanceProfiler.h"
+#include "MPIWrapper.h"
+#include "Basics.h"
 
 extern bool g_shareNodeValueMatrices;
 
@@ -99,6 +102,37 @@ namespace CNTK
         void DisableGradientAccumulationOptimization()
         {
             Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ false);
+        }
+
+        void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
+        {
+            std::wstring logSuffix = L"";
+            auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
+            if (mpi)
+            {
+                logSuffix = std::to_wstring(mpi->CurrentNodeRank());
+            }
+
+            Microsoft::MSR::CNTK::ProfilerInit(
+                profilerDir,
+                profilerBufferSize,
+                logSuffix,
+                profilerSyncGpu);
+        }
+
+        void EnableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(true);
+        }
+
+        void DisableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(false);
+        }
+
+        void StopProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerClose();
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -573,4 +607,18 @@ namespace CNTK
     {
         s_defaultUnitGainValue.store(value);
     }
+
+    template <class E>
+    __declspec_noreturn void ThrowFormatted(const char* format, ...)
+    {
+        va_list args;
+        va_start(args, format);
+        Microsoft::MSR::CNTK::ThrowFormattedVA<E>(format, args);
+        va_end(args);
+    }
+
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::runtime_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::logic_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::invalid_argument>(const char* format, ...);
 }
+

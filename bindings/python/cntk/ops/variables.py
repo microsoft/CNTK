@@ -132,6 +132,26 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
         super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name,
                          dynamic_axes)
 
+    @typemap
+    def as_parameter(self):
+        '''
+        Converts this instance into a :class:`Parameter`
+        '''
+        if not self.is_parameter:
+            raise TypeError('cannot be converted into a Parameter')
+
+        return cntk_py.Parameter(self)
+
+    @typemap
+    def as_constant(self):
+        '''
+        Converts this instance into a :class:`Constant`
+        '''
+        if not self.is_constant:
+            raise TypeError('cannot be converted into a Constant')
+
+        return cntk_py.Constant(self)
+
 
 class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     '''

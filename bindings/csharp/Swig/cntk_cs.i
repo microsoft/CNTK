@@ -271,6 +271,11 @@
 %ignore_function CNTK::Internal::DisableForwardValuesSharing;
 %ignore_function CNTK::Internal::EnableHyperMemoryCompress;
 %ignore_function CNTK::Internal::DisableHyperMemoryCompress;
+%ignore CNTK::Internal::DefaultProfilerBufferSize;
+%ignore_function CNTK::Internal::StartProfiler;
+%ignore_function CNTK::Internal::StopProfiler;
+%ignore_function CNTK::Internal::EnableProfiler;
+%ignore_function CNTK::Internal::DisableProfiler;
 %ignore_function CNTK::Internal::AreEquivalent;
 %ignore_function CNTK::Internal::AreEqual;
 

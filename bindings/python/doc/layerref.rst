@@ -49,7 +49,7 @@ layers of identical dimensions can be written like this:
 ::
 
     my_model = Sequential ([
-        LayerStack(6, lambda: \
+        For(range(6), lambda: \
             Dense(2048, activation=sigmoid))
         Dense(9000, activation=softmax)
     ])
@@ -719,7 +719,7 @@ dimension compared to above), use this:
 
     h_fwd = Recurrence(LSTM(150))(e)
     h_bwd = Recurrence(LSTM(150), go_backwards=True)(e)
-    h = splice ([h_fwd, h_bwd])
+    h = splice (h_fwd, h_bwd)
 
 .. _lstm:
 
@@ -847,8 +847,8 @@ vector:
 
     x  = ...                   # input value, e.g. a N-dimensional one-hot vector
     xp = Delay()(x)            # previous value
-    xn = Delay(T=-1)(x)         # next value (negative delay)
-    tg = splice ([xp, x, xn])  # concatenate all into a 3N-dimensional three-hot vector
+    xn = Delay(T=-1)(x)        # next value (negative delay)
+    tg = splice (xp, x, xn)    # concatenate all into a 3N-dimensional three-hot vector
 
 BatchNormalization(), LayerNormalization(), Stabilizer()
 --------------------------------------------------------
@@ -1057,14 +1057,14 @@ deep-neural network work on speech recognition:
 
 .. _layerstack:
 
-LayerStack()
-------------
+For()
+-----
 
 Repeats a layer multiple times.
 
 ::
 
-    LayerStack(N, constructor)
+    For(range(N), constructor)
 
 Parameters
 ~~~~~~~~~~
@@ -1083,7 +1083,7 @@ model parameters.
 Description
 ~~~~~~~~~~~
 
-``LayerStack()`` creates a sequential model by repeatedly executing a
+``For()`` creates a sequential model by repeatedly executing a
 *constructor lambda* passed to it; that is, you pass a Python function
 that creates a layer, e.g. using the Python ``lambda`` syntax.
 
@@ -1099,7 +1099,7 @@ is as easy as:
 
 ::
 
-    model = LayerStack(3, lambda: Dense(128))
+    model = For(range(3), lambda: Dense(128))
 
 Note that because you pass in a lambda for creating the layer, each
 layer will be separately constructed. This is important, because this
@@ -1120,14 +1120,14 @@ the one-parameter lambda form allows you to say this (notice the
 
 ::
 
-    model = LayerStack(3, lambda i: Dense(128 * 2**i))
+    model = For(range(3), lambda i: Dense(128 * 2**i))
 
 or this:
 
 ::
 
     dims = [128,256,512]
-    model = LayerStack(3, lambda i: Dense(dims[i]))
+    model = For(range(3), lambda i: Dense(dims[i]))
 
 Example
 ~~~~~~~
@@ -1139,13 +1139,12 @@ architecture for image recognition:
 
     with default_options(activation=relu):
         model = Sequential([
-            LayerStack(3, lambda i: [  # lambda with one parameter
+            For(range(3), lambda i: [  # lambda with one parameter
                 Convolution((3,3), [64,96,128][i], pad=True),  # depth depends on i
                 Convolution((3,3), [64,96,128][i], pad=True),
                 MaxPooling((3,3), strides=(2,2))
             ]),
-            LayerStack(2, lambda : [   # lambda without parameter
-
+            For(range(2), lambda : [   # lambda without parameter
                 Dense(1024),
                 Dropout(0.5)
             ]),
