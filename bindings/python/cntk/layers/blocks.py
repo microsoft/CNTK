@@ -78,7 +78,10 @@ def _inject_name(f, name):
     Call this at the end of any layer or block that takes an optional name argument.
     '''
     if name:
-        f = alias(f, name=name)
+        if len(f.outputs) == 1:
+            f = alias(f, name=name)
+        else:
+            f = combine([*f.outputs], name=name) # BUGBUG: Does this actually name things?
     return f
 
 # TODO: Move this into the lower layer where these are defined.

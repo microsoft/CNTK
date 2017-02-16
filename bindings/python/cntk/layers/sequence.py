@@ -104,7 +104,9 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
 
     # function that this layer represents
     def _recurrence_from_n(*args):
-        *initial_state, x = args
+        #*initial_state, x = args # Python 3
+        initial_state = args[:-1]
+        x             = args[-1]
 
         out_vars_fwd = [ForwardDeclaration(name=state_var.name) for state_var in prev_state_args] # create list of placeholders for the state variables
 
@@ -199,7 +201,6 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
     get_final = sequence.first if go_backwards else sequence.last
     fold = recurrence >> tuple(get_final for output in recurrence.outputs)
 
-    # BUGBUG: Does this work for tuples?? Needs a test
     return _inject_name(fold, name)
 
 
