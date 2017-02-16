@@ -12,7 +12,7 @@ import numpy as np
 from ..ops.functions import Function
 from ..ops.variables import Variable
 from ..ops import parameter, input_variable, placeholder_variable, combine
-from ..ops import times, element_times, convolution, pooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum
+from ..ops import times, element_times, convolution, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from ..utils import Record, _as_tuple
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
@@ -475,7 +475,7 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
                  lower_pad=0,
                  upper_pad=0, 
                  name=''):
-    UntestedBranchError("MaxUnpooling not tested after merge to new Layers lib")
+    #UntestedBranchError("MaxUnpooling not tested after merge to new Layers lib")
     @BlockFunction('MaxUnpooling', name)
     def maxunpool(x, y):
         return unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
@@ -545,7 +545,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     '''
     Layer factory function to create a function that implements layer normalization.
     '''
-    UntestedBranchError("LayerNormalization")
+    #UntestedBranchError("LayerNormalization")
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
     # parameters bound to this Function
