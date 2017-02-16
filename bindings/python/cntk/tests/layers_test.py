@@ -6,7 +6,9 @@
 
 import numpy as np
 from cntk import *
-#from cntk.layers import Input
+
+# Note: We do not test gradients here, assuming that those are tested elsewhere.
+# Forward outputs are tested to verify that the structure of the layer is as expected.
 
 def test_layers_name(device_id):
     from cntk import placeholder_variable
@@ -29,13 +31,58 @@ def _getModelParameterDict(model, node_name):
     for attr in getattr(model, node_name).parameters:
         node_dict[attr.name] = np.matrix(attr.value) 
     return node_dict
-    
+
+####################################
+# Recurrence()
+# Note: Run this first, since it uses random init; result will change if moved down.
+# TODO: How to reset the RNG?
+####################################    
+
+def test_recurrence():
+    r = Recurrence(GRU(5), go_backwards=False)
+    a = input_variable(shape=(5,), dynamic_axes=[Axis.default_batch_axis(), Axis('Seq')])
+    x = np.reshape(np.arange(0,25, dtype=np.float32), (1,5,5))
+    rt = r(a).eval({a:x})
+    exp = [[ 0.403719,  0.138464, -0.41292 , -0.527761, -0.552515],
+           [ 0.432029, -0.967444, -0.498568, -0.973288, -0.98996 ],
+           [-0.193994, -0.999806, -0.527336, -0.999831, -0.999987],
+           [-0.875168, -0.999995, -0.532773, -1.      , -1.      ],
+           [-0.989135, -1.      , -0.533798, -1.      , -1.      ]]
+    np.testing.assert_array_almost_equal(rt[0], exp, decimal=6, err_msg='Error in Recurrence(GRU()) forward')
+
+####################################
+# Recurrence() over regular function
+####################################    
+
+def test_recurrence_fun(device_id):
+    from cntk.layers import Recurrence
+    from cntk.ops import plus
+
+    ####################################################
+    # Test 1: sum-reduction over sequence
+    ####################################################
+    r = Fold(plus)
+    r.update_signature(1)
+    data = [np.array([[2], [6], [4], [8], [6]])]   # simple sequence
+    out = r(data)
+    exp = [[sum(data[0])]]
+    np.testing.assert_array_equal(out, exp, err_msg='Error in recurrence over plus')
+
+    ####################################################
+    # Test 2: max-pool over sequence
+    ####################################################
+    r = Fold(element_max)
+    r.update_signature(2)
+    data = [np.array([[2,1], [6,3], [4,2], [8,1], [6,0]])]   # simple sequence
+    out = r(data)
+    exp = [[np.max(data[0], axis=0)]]
+    np.testing.assert_array_equal(out, exp, err_msg='Error in recurrence over element_max')
+
 ####################################
 # Test dense layer for correctness
 ####################################    
 
 def test_layers_dense(device_id):
-
     y = Input(2)
     dat = np.array([[-1., 1.]], dtype=np.float32)
     
@@ -362,12 +409,30 @@ def test_layers_convolution_2d(device_id):
     np.testing.assert_array_almost_equal(res[0][0][0][0][0], expected_res, decimal=5, \
         err_msg="Error in convolution2D computation with stride = 1 and zeropad = True")    
     
-##########################################################
-# Test convolutional 1D layer for correctness 
-##########################################################     
-# TESTTODO: Add the test for conv1D once current bug with rf_shape is fixed
-def test_layers_convolution_1d(device_id):
-    pass                
+####################################
+# sequential convolution without reduction dimension
+####################################
+
+def test_sequential_convolution_without_reduction_dim(device_id):
+    c = Convolution(3, init=np.array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
+    c.update_signature(1)
+    data = [np.array([[2], [6], [4], [8], [6]])]   # like a short audio sequence, in the dynamic dimension
+    out = c(data)
+    exp = [[[24], [40], [38]]]
+    np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
+
+####################################
+# 1D convolution without reduction dimension
+####################################
+
+def test_1D_convolution_without_reduction_dim(device_id):
+    c = Convolution1D(3, init=np.array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
+    ## BUGBUG: pad seems ignored??
+    c.update_signature(5)
+    data = [np.array([[2, 6, 4, 8, 6]])]   # like a audio sequence, in a static dimension
+    out = c(data)
+    exp = [[[24, 40, 38]]]
+    np.testing.assert_array_equal(out, exp, err_msg='Error in 1D convolution without reduction dimension')
 
 ##########################################################
 # Test Deconvolution layer for correctness 
@@ -479,10 +544,3 @@ def test_layers_batch_normalization(device_id):
 #    expected_res = scale * (x/(std + 0.00001)) + bias
 #    np.testing.assert_array_almost_equal(res[0], expected_res, decimal=5, \
 #         err_msg="Error in BN computation") 
-
-def test_recurrence():
-  r = Recurrence(GRU(5), go_backwards=False)
-  a = input_variable(shape=(5,), dynamic_axes=[Axis.default_batch_axis(), Axis('Seq')])
-  x = np.reshape(np.arange(0,25, dtype=np.float32), (1,5,5))
-  rt = r(a).eval({a:x})
-  print(rt)

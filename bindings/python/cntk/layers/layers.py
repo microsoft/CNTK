@@ -273,6 +273,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
     return convolve
 
 
+# TODO: make sure the xD versions have all the needed parameters
 def Convolution1D(rf_shape,         # e.g. (3)
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
@@ -282,6 +283,7 @@ def Convolution1D(rf_shape,         # e.g. (3)
                   sharing=True,     # (must be True currently)
                   bias=default_override_or(True),
                   init_bias=default_override_or(0),
+                  reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
                   name=''):
     '''
     Layer factory function to create a 1D convolution layer with optional non-linearity.
@@ -292,9 +294,9 @@ def Convolution1D(rf_shape,         # e.g. (3)
     pad        = get_default_override(Convolution1D, pad=pad)
     bias       = get_default_override(Convolution1D, bias=bias)
     init_bias  = get_default_override(Convolution1D, init_bias=init_bias)
-    if len(rf_shape) != 1: 
+    if len(_as_tuple(rf_shape)) != 1: 
          raise ValueError('Convolution1D: rf_shape must be a scalar')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, op_name='Convolution1D', name=name)
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution1D', name=name)
 
 
 def Convolution2D(rf_shape,         # a 2D tuple, e.g., (3,3) 
@@ -306,6 +308,7 @@ def Convolution2D(rf_shape,         # a 2D tuple, e.g., (3,3)
                   sharing=True,     # (must be True currently)
                   bias=default_override_or(True),
                   init_bias=default_override_or(0),
+                  reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
                   name=''):
     '''
     Layer factory function to create a 2D convolution layer with optional non-linearity.
@@ -318,7 +321,7 @@ def Convolution2D(rf_shape,         # a 2D tuple, e.g., (3,3)
     init_bias  = get_default_override(Convolution2D, init_bias=init_bias)
     if len(rf_shape) != 2: 
          raise ValueError('Convolution2D: rf_shape must be a 2D tuple, e.g. (3,3)')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, op_name='Convolution2D', name=name)
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution2D', name=name)
 
 
 def Convolution3D(rf_shape,         # a 3D tuple, e.g., (3,3,3)
@@ -330,6 +333,7 @@ def Convolution3D(rf_shape,         # a 3D tuple, e.g., (3,3,3)
                   sharing=True,     # (must be True currently)
                   bias=default_override_or(True),
                   init_bias=default_override_or(0),
+                  reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
                   name=''):
     '''
     Layer factory function to create a 3D convolution layer with optional non-linearity.
@@ -342,7 +346,7 @@ def Convolution3D(rf_shape,         # a 3D tuple, e.g., (3,3,3)
     init_bias  = get_default_override(Convolution3D, init_bias=init_bias)
     if len(rf_shape) != 3: 
          raise ValueError('Convolution3D: rf_shape must be a 3D tuple, e.g. (3,3,3)')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, op_name='Convolution3D', name=name)
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution3D', name=name)
 
 
 # Deconvolution -- create a deconvolution layer with optional non-linearity

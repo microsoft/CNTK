@@ -356,9 +356,9 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
 
 # TODO: needs better name
 def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
-         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         enable_self_stabilization=default_override_or(False),
-         name=''): # (prev_h, x) -> (h)
+            init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+            enable_self_stabilization=default_override_or(False),
+            name=''): # (prev_h, x) -> (h)
     '''
     Layer factory function to create a plain RNN block for use inside a recurrence.
     Returns a function (prev_h, input) -> h):
@@ -376,9 +376,9 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
 
 
 def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
-         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
-         enable_self_stabilization=default_override_or(False),
-         name=''): # (prev_h, x) -> (h)
+        init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+        enable_self_stabilization=default_override_or(False),
+        name=''): # (prev_h, x) -> (h)
     '''
     Layer factory function to create a GRU block for use inside a recurrence.
     Returns a function (prev_h, input) -> h).
