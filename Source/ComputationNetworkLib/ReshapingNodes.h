@@ -293,12 +293,9 @@ public:
             // copy the data from 'dataInput'
             size_t rank = GetSampleLayout().GetRank();
             auto result =             ValueTensorFor(rank, fr);
-#if 1
-            auto input0 = InputRef(0).ValueTensorFor(rank, fr.WithLayout(InputRef(0).GetMBLayout()));
-#else
             auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).GetMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
-            // ^^ I don't think the conditional is needed here; it seems the related test in TensorSliceWithMBLayoutFor() can never be True. Can it?
-#endif
+            // If data input has a layout (which is known to match), then replace the pointer here ^^ to avoid another runtime check.
+            // If it has no layout, then set the broadcast-allowed flag, which will accept any layout to be passed in.
             result.AssignCopyOf(input0);
             // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the tensor lib).
         }
@@ -319,11 +316,7 @@ public:
             {
                 size_t rank = GetSampleLayout().GetRank();
                 auto gradient      =                      GradientTensorFor(rank, fr);
-#if 1
-                auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, fr.WithLayout(InputRef(inputIndex).GetMBLayout()));
-#else
-                auto inputGradient = Input(inputIndex)->GradientTensorFor(rank, InputRef(inputIndex).GetMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
-#endif
+                auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, InputRef(inputIndex).GetMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
 
                 // if reduction then mask the respective input(s) (zero out the gaps)
                 if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))

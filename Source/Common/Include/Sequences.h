@@ -1101,8 +1101,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     result.second = shape;
 
     // get position of time and sequence index
-    // These are only valid if we have a layout.
-    const size_t iterDim = shape.size() -1;
+    const size_t iterDim = shape.size() -1; // valid if data has MBLayout
 
     // MBLayout of data and of FrameRange must be identical pointers,
     // or in case of broadcasting, respective parent pointers.
@@ -1129,7 +1128,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     {
         if (fr.m_timeOffset != 0)
         {
-            if (iterDim >= result.first.size())
+            if (!pMBLayout)
                 LogicError("DataFor: Time offset cannot be applied to tensors that have no time dimension.");
             result.first[iterDim] += (ElemType) fr.m_timeOffset; // Note: If we have an offset, this is guaranteed to yield a slice that is out of bounds.
             result.second[iterDim] += (ElemType) fr.m_timeOffset;
@@ -1140,6 +1139,7 @@ static inline std::pair<DimensionVector, DimensionVector> TensorSliceWithMBLayou
     // FrameRange refers to a time slice -> return that
     else if (result.second[iterDim] > 1) // (if iter dim is broadcasting then always return that one independent of requested index)
     {
+        assert(pMBLayout);
         size_t ts = fr.timeIdxInSeq + fr.m_timeOffset;
         size_t te = ts + fr.m_timeRange;
         result.first[iterDim] = (ElemType) ts;
