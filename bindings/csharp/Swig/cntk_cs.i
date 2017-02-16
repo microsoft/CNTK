@@ -269,8 +269,6 @@
 %ignore_function CNTK::Internal::SetFixedRandomSeed;
 %ignore_function CNTK::Internal::EnableForwardValuesSharing;
 %ignore_function CNTK::Internal::DisableForwardValuesSharing;
-%ignore_function CNTK::Internal::EnableHyperMemoryCompress;
-%ignore_function CNTK::Internal::DisableHyperMemoryCompress;
 %ignore CNTK::Internal::DefaultProfilerBufferSize;
 %ignore_function CNTK::Internal::StartProfiler;
 %ignore_function CNTK::Internal::StopProfiler;

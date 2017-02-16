@@ -1013,7 +1013,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
     MarkValueNonSharableNodes();
 
-    bool performingBackPropagation = (trainRootNode != nullptr) || (Globals::ShouldEnableHyperCompressMemory());
+    bool performingBackPropagation = (trainRootNode != nullptr);
 
     // Construct the composite forward prop eval order by enumerating the
     // nodes corresponding to each of our roots in global eval oder
