@@ -91,7 +91,7 @@
     <CudaCompile>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <GenerateLineInfo>true</GenerateLineInfo>
-      <AdditionalCompilerOptions>/WX</AdditionalCompilerOptions>
+      <AdditionalCompilerOptions>/DCNTK_COMPONENT_VERSION="$(CntkComponentVersion)" /WX</AdditionalCompilerOptions>
       <CodeGeneration>$(CudaCodeGen)</CodeGeneration>
       <FastMath>true</FastMath>
       <GPUDebugInfo>false</GPUDebugInfo>
