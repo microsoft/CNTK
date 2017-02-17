@@ -59,12 +59,19 @@ shared_ptr<C> CreateObject(const ScriptableObjects::IConfigRecord& config, const
 template <class C>
 shared_ptr<C> CreateObject(const ConfigParameters& config, const wchar_t* id)
 {
-    ConfigParameters readerConfig(config(id));
-    if (!readerConfig.ExistsCurrent("traceLevel")) // do not overwrite "traceLevel" if it's already present
+    ConfigParameters objConfig(config(id));
+    const auto& readerType = string(objConfig("readerType", ""));
+    if (objConfig.ExistsCurrent("traceLevel") || // do not overwrite "traceLevel" if it's already present
+        AreEqualIgnoreCase(readerType, "CNTKTextFormatReader") || // do not overwrite "traceLevel" when creating a CTF reader
+        AreEqualIgnoreCase(readerType, "CNTKBinaryReader"))  // do not overwrite "traceLevel" when creating a binary reader
     {
-        readerConfig.Insert("traceLevel", config(L"traceLevel", "0")); // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
+        return make_shared<C>(objConfig);
     }
-    return make_shared<C>(readerConfig);                           // old CNTK config specifies a dictionary which then must be explicitly instantiated
+
+    // If the config does not specify a 'traceLevel', the following line
+    // will insert it with the value of 0.
+    objConfig.Insert("traceLevel", config(L"traceLevel", "0")); // TODO: fix this by adding it to all config blocks. Easy to fix in BS as 'config with [ traceLevel = 0 ]'.
+    return make_shared<C>(objConfig);                           // old CNTK config specifies a dictionary which then must be explicitly instantiated
 }
 
 template <class ConfigRecordType, typename ElemType>
