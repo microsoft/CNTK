@@ -127,6 +127,7 @@
 
   <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <ClCompile>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <TreatWarningAsError>true</TreatWarningAsError>
       <SDLCheck>true</SDLCheck>
@@ -168,6 +169,7 @@
       <Optimization>Disabled</Optimization>
       <FunctionLevelLinking>false</FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>false</EnableCOMDATFolding>
