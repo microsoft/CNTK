@@ -216,6 +216,10 @@ class Function(cntk_py.Function):
              Specifying this as False returns a CNTK Value which avoids a 
              costly conversion but returns a somewhat opaque object.
 
+        Note:
+             See :meth:`~cntk.ops.functions.Function.forward` for examples on
+             passing input data.
+
         Returns:
            dict or NumPy Array: Dict with keys of ouput variable names and values of
            output variable. A single NumPy array if there is only one output value.
@@ -237,11 +241,60 @@ class Function(cntk_py.Function):
         the function (i.e. those that have ``is_input = True``).
 
         Example:
+            >>> # Example of passing dense data
             >>> v = C.input_variable(shape=(3,))
             >>> f = C.reciprocal(v)
             >>> _, fv = f.forward({v:[[1, 2, 4]]})
             >>> list(fv.values())[0]
             array([[[ 1.  ,  0.5 ,  0.25]]], dtype=float32)
+
+        Example:
+            >>> # Passing sparse values as one-hot with a vocabulary size of 5
+            >>> vocab_size = 5
+            >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
+            >>> f = C.times(v, np.eye(vocab_size))
+            >>> # Passing a batch of two sequences: 
+            >>> # 1st sequence: word 1
+            >>> # 2nd sequence: words 2 and 4
+            >>> batch = [[1],[2,4]]
+            >>> sparse_batch = C.one_hot(batch, vocab_size)
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32), 
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+
+        Example:
+            >>> # Doing the same, but with a CSR matrix from scipy.sparse
+            >>> vocab_size = 5
+            >>> from scipy.sparse import csr_matrix
+            >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
+            >>> f = C.times(v, np.eye(vocab_size))
+            >>> # Note that csr_matrix automatically creates sparse representations.
+            >>> sparse_batch = [csr_matrix([[0,1,0,0,0]]), csr_matrix([[0,0,1,0,0], [0,0,0,0,1]])]
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32), 
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+            <BLANKLINE>
+            >>> # Much more efficient, however, is to incrementally create CSR
+            >>> # arrays incrementally.
+            >>> # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
+            >>> # for more information.
+            >>> def seq_to_csr_matrix(seq, vocab_size):
+            ...     indptr = [0]
+            ...     indices = []
+            ...     data = []
+            ...     for term_idx in seq:
+            ...         indices.append(term_idx)
+            ...         data.append(1)
+            ...         indptr.append(len(indices))
+            ...     return csr_matrix((data, indices, indptr), shape=(len(seq), vocab_size))
+            >>> sparse_batch = [seq_to_csr_matrix(seq, vocab_size) for seq in batch]
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32), 
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+
 
         Args:
             arguments: maps variables to their input data. The interpretation depends on
@@ -250,7 +303,7 @@ class Function(cntk_py.Function):
                * dict: keys are input variable or names, and values are the
                  input data. To specify a minibatch, provide a list of arrays.
                  The shape of each array must be compatible with the shape of
-                 the dictionary key.If the array denotes a sequence then the
+                 the dictionary key. If the array denotes a sequence then the
                  elements of the sequence are grouped along axis 0.
                * any other type: if node has an unique input, arguments is
                  mapped to this input.
@@ -342,6 +395,10 @@ class Function(cntk_py.Function):
             root_gradients (dict): the gradients that will be backpropagated
             variables (set): a list of input variables with respect to which
              the gradients have to be computed.
+
+        Note:
+             See :meth:`~cntk.ops.functions.Function.forward` for more examples
+             on passing input data.
 
         Returns:
             dict: mapping of ``variables`` to NumPy arrays

@@ -50,11 +50,10 @@ class Trainer(cntk_py.Trainer):
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
 
         Args:
-            arguments: maps variables to their
-             input data. Empty map signifies end of local training data.
+            arguments: maps variables to their input data. Empty map signifies
+            end of local training data. 
              The interpretation depends on the input type:
                * `dict`: keys are input variable or names, and values are the input data.
-                 See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
              In both cases, every sample in the data will be interpreted
@@ -69,6 +68,10 @@ class Trainer(cntk_py.Trainer):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
+
+        Note:
+             See :meth:`~cntk.ops.functions.Function.forward` for examples on
+             passing input data.
 
         Returns:
             `bool` or `tuple`:
@@ -140,6 +143,11 @@ class Trainer(cntk_py.Trainer):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
+
+        Note:
+             See :meth:`~cntk.ops.functions.Function.forward` for examples on
+             passing input data.
+
         Returns:
             `float`: the average evaluation criterion value per sample for the
               tested minibatch.
