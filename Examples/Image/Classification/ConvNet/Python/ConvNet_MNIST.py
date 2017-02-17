@@ -74,10 +74,10 @@ def convnet_mnist(debug_output=False):
     }
 
     cntk.utils.log_number_of_parameters(z) ; print()
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training')
+    max_epochs = 40
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # Get minibatches of images to train with and perform model training
-    max_epochs = 40
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch

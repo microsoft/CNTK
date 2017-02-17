@@ -77,7 +77,10 @@ endif
 
 # The mpic++ wrapper only adds MPI specific flags to the g++ command line.
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
+ifneq ($(HAS_MPI),0)
 CXX = $(MPI_PATH)/bin/mpic++
+endif
+
 SSE_FLAGS = -msse4.1 -mssse3
 
 PROTOC = $(PROTOBUF_PATH)/bin/protoc
@@ -90,8 +93,8 @@ SOURCEDIR:= Source
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
-COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
-CPPFLAGS:=
+COMMON_FLAGS:= -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
+CPPFLAGS:= 
 CXXFLAGS:= $(SSE_FLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS_LIST:=
@@ -270,7 +273,7 @@ RPATH=-Wl,-rpath,
 # Build info
 ########################################
 
-BUILDINFO:= $(SOURCEDIR)/CNTK/buildinfo.h
+BUILDINFO:= $(SOURCEDIR)/CNTKv2LibraryDll/buildinfo.h
 GENBUILD:=Tools/generate_build_info
 
 BUILDINFO_OUTPUT := $(shell $(GENBUILD) $(BUILD_TOP)/Config.make && echo Success)

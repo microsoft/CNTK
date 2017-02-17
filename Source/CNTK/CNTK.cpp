@@ -36,6 +36,7 @@
 #include "BrainScriptEvaluator.h"
 #include "BrainScriptParser.h"
 #include "PerformanceProfiler.h"
+#include "CNTKLibrary.h"
 
 #include <string>
 #include <chrono>
@@ -372,55 +373,6 @@ std::string TimeDateStamp()
     return buf;
 }
 
-void PrintBuiltInfo()
-{
-    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-    LOGPRINTF(stderr, "Build info: \n\n");
-    LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
-    LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
-#ifdef _BUILDTYPE_
-    LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
-#endif
-#ifdef _BUILDTARGET_
-    LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
-#endif
-#ifdef _WITH_1BITSGD_
-    LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
-#endif
-#ifdef _WITH_ASGD_
-    LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
-#endif
-#ifdef _MATHLIB_
-    LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
-#endif
-#ifdef _CUDA_PATH_
-    LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
-#endif
-#ifdef _CUB_PATH_
-    LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
-#endif
-#ifdef _CUDNN_PATH_
-    LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
-#endif
-#ifdef _GIT_EXIST
-    LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
-    LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
-#endif
-#ifdef _BUILDER_
-    LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
-#endif
-#ifdef _BUILDPATH_
-    LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
-#endif
-#ifdef _MPI_NAME_
-    LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
-#endif
-#ifdef _MPI_VERSION_
-    LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
-#endif
-    LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
-}
-
 void PrintUsageInfo()
 {
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
@@ -598,7 +550,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
         RedirectStdErr(logpath);
         LOGPRINTF(stderr, "%ls\n", startupMessage.c_str());
-        PrintBuiltInfo();
+        ::CNTK::PrintBuiltInfo();
     }
 
     // echo gpu info to log
@@ -764,7 +716,7 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
     }
 
     // full config info
-    PrintBuiltInfo();
+    ::CNTK::PrintBuiltInfo();
     PrintGpuInfo();
 
 #ifdef _DEBUG
@@ -857,7 +809,7 @@ int wmain1(int argc, wchar_t* argv[]) // called from wmain which is a wrapper th
     {        
         if (argc <= 1)
         {
-            PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
+            ::CNTK::PrintBuiltInfo(); // print build info directly in case that user provides zero argument (convenient for checking build type)
             LOGPRINTF(stderr, "No command-line argument given.\n");
             PrintUsageInfo();
             fflush(stderr);
