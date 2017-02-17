@@ -75,11 +75,20 @@ namespace CNTK
 
             std::sort(parameters.begin(), parameters.end(), [](const Parameter& a, const Parameter& b) { return a.Uid() < b.Uid(); });
 
+            auto profGradientAgg = Microsoft::MSR::CNTK::ProfilerTimeBegin();
+
             bool updated = PerformDistributedUpdateIfNeeded(parameters, info);
 
+            Microsoft::MSR::CNTK::ProfilerTimeEnd(profGradientAgg, Microsoft::MSR::CNTK::profilerEvtMainGradient);
+
             // For block momentum the number of aggreagate/checkpoints should match, so for now we ignore the return value of local learners.
+
+            auto profWeights = Microsoft::MSR::CNTK::ProfilerTimeBegin();
+
             if (!info.IsEmpty())
                 m_learner->Update(gradientValues, info.numberOfSamples, info.atEndOfSweep);
+
+            Microsoft::MSR::CNTK::ProfilerTimeEnd(profWeights, Microsoft::MSR::CNTK::profilerEvtMainWeights);
 
             return updated;
         }
