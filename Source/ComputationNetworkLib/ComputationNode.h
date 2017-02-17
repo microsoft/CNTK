@@ -1445,7 +1445,7 @@ public:
     static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
                                   const MBLayoutPtr& inputLayout,
                                   Matrix<ElemType>& broadcastTo,
-                                  const MBLayoutPtr& targetLayout,
+                                  const FrameRange& targetFrameRange,
                                   const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage);
 
     // -----------------------------------------------------------------------

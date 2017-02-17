@@ -117,7 +117,7 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     }
 
     cntk.utils.log_number_of_parameters(z) ; print()
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training')
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # perform model training
     for epoch in range(max_epochs):       # loop over epochs

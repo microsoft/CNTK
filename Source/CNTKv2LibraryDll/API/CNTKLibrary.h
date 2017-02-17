@@ -4727,6 +4727,9 @@ namespace CNTK
         bool keepExistingCheckpoints = false,
         size_t maxNumberOfTrainingSamples = std::numeric_limits<size_t>::max(),
         size_t progressFrequency = std::numeric_limits<size_t>::max());
+
+
+    CNTK_API void PrintBuiltInfo();
 }
 
 

@@ -97,7 +97,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     }
 
     log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(tag='Training')
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # perform model training
     

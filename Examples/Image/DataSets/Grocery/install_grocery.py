@@ -7,6 +7,9 @@
 from __future__ import print_function
 import zipfile
 import os
+from sys import platform
+import shutil
+
 try:
     from urllib.request import urlretrieve 
 except ImportError: 
@@ -26,6 +29,15 @@ def download_grocery_data():
             print('Extracting ' + filename + '...')
             with zipfile.ZipFile(filename) as myzip:
                 myzip.extractall(dataset_folder)
+            if platform != "win32":
+                testfile  = os.path.join(dataset_folder, "grocery", "test.txt")
+                unixfile = os.path.join(dataset_folder, "grocery", "test_unix.txt")
+                out = open(unixfile, 'w')
+                with open(testfile) as f:
+                    for line in f:
+                        out.write(line.replace('\\', '/'))
+                out.close()
+                shutil.move(unixfile, testfile)
         finally:
             os.remove(filename)
         print('Done.')

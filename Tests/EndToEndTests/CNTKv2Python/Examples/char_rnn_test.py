@@ -17,5 +17,5 @@ def test_char_rnn(device_id):
     set_default_device(cntk_device(device_id))
 
     # Just run and verify it does not crash
-    output = train_and_eval_char_rnn(200)
+    output = train_and_eval_char_rnn(1, 200)
     print(output)

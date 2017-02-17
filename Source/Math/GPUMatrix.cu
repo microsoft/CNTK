@@ -2374,7 +2374,9 @@ ElemType GPUMatrix<ElemType>::AbsoluteMax() const
         int resInd = 0;
         cublasIdamax(cuHandle, (CUDA_LONG)GetNumElements(), reinterpret_cast<double*>(Data()), 1, &resInd);
         resInd--;
+
         CUDA_CALL(cudaMemcpy(reinterpret_cast<double*>(&res), Data() + resInd, sizeof(double), cudaMemcpyDeviceToHost));
+
         return res;
     }
 }

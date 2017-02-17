@@ -1086,7 +1086,7 @@ def log_add_exp(left, right, name=''):
 def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     '''
     The output of this operation is the matrix product of the two input matrices.
-    It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
+    It supports broadcasting. Sparse is supported in the left operand, if it is a matrix.
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
 
     Example:
