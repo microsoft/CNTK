@@ -25,6 +25,14 @@
     },
     {
         "category": ["Image"],
+        "name":  "Transfer Learning",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/TransferLearning",
+        "description":  "Transfer Learning: adapt a pretrained model to a new classification task.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Image"],
         "name":  "Image auto encoder",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/GettingStarted#07_deconvolution",
         "description":  "A simple image auto encoder using deconvolution and unpooling.",
@@ -68,7 +76,7 @@
         "name":  "Fast R-CNN",
         "url":  "https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN",
         "description":  "Train object detection from images by adapting pre-trained classification models on arbitrarily sized regions of interest using ROI pooling.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"]
     },
     {
@@ -85,14 +93,6 @@
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/InceptionV3#cntk-examples-imageclassificationgooglenetinceptionv3",
         "description":  "GoogLeNet (Inception V3) network for image classification.",
         "language":  ["BrainScript"],
-        "type":  ["Recipe"]
-    },
-    {
-        "category": ["Image"],
-        "name":  "MLP",
-        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/MLP#cntk-examples-imageclassificationmlp",
-        "description":  "Training a multilayer perceptron (MLP) network for image classification.",
-        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"]
     },
     {
@@ -130,7 +130,7 @@
     {
         "category": ["Image"],
         "name":  "Generative Adversarial Networks (GAN)",
-        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_205_Basic_GAN.ipynb",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206_Basic_GAN.ipynb",
         "description":  "This tutorial is a basic implementation of GAN networks. This allows us generate realistic looking MNIST images.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
@@ -196,7 +196,7 @@
         "name":  "VGG",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/VGG",
         "description":  "Deep CNN from University of Oxford. This was the winning model for the ILSVRC2014 localization task.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"]
     },
     {
@@ -236,6 +236,14 @@
         "name":  "Reinforcement Learning",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb",
         "description":  "Example how software agents could take actions in an environment so as to maximize some notion of cumulative reward.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Numeric"],
+        "name":  "Training with Sampled Softmax",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb",
+        "description":  "Training with Sampled Softmax",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -372,6 +380,14 @@
         "name":  "Sequence Classification",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/SequenceClassification/SimpleExample/Python",
         "description":  "Create and train an LSTM sequence classification model.",
+        "language":  ["Python"],
+        "type":  ["Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "Training with Sampled Softmax",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb",
+        "description":  "Improve training speed for models with large vocabularies.",
         "language":  ["Python"],
         "type":  ["Recipe"]
     }

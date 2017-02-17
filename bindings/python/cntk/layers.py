@@ -14,7 +14,8 @@ from .ops import parameter, input_variable, placeholder_variable, combine
 from .ops import times, convolution, pooling, batch_normalization, dropout, unpooling
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from .utils import Record, _as_tuple
-from .blocks import *  # TODO: reduce to what we actually use
+from .blocks import * # layers.py imports all of blocks and models
+from .models import *
 from .blocks import _trace_layers  # (debugging)
 
 from .ops.functions import Function
@@ -349,7 +350,10 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
     f_x_h_c = over(x, prev_state) # apply the recurrent over
     # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
     h_c = f_x_h_c.outputs
-    replacements = { value_forward: value for (value_forward, value) in zip(list(_as_tuple(state_forward)), h_c) }
+    if type(state_forward) is tuple and len(state_forward) > 1: 
+      replacements = { value_forward: value for (value_forward, value) in zip(list(_as_tuple(state_forward)), h_c) }
+    else:
+      replacements = {(state_forward,)[0] : h_c[0] }
     f_x_h_c.replace_placeholders(replacements)  # resolves state_forward := h_c
     h = f_x_h_c.outputs[0]  # 'h' is a Variable (the output of a Function that computed it)
     if _trace_layers:
@@ -406,12 +410,13 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     bias         = Parameter(norm_shape, init=0)
     run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
     run_variance = Constant(0, shape=norm_shape)
+    run_count    = Constant(0, shape=(1,))
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
-    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                  #use_cntk_engine=use_cntk_engine)
-                                  use_cudnn_engine=not use_cntk_engine)
+    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, running_count=run_count, spatial=(map_rank == 1),
+                                  normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, 
+                                  epsilon=epsilon, use_cudnn_engine=not use_cntk_engine)
     return Block(apply_x, 'BatchNormalization', name, Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance), make_block=True)
 
 # LayerNormalization -- create a layer-normalization layer

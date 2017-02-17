@@ -241,7 +241,7 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
     f = lambda_rank(s, n, g)
 
     actual_grad  = f.grad({s:score, n:gain, g:group}, [s])[0]
-    actual_value = np.copy(f.eval({s:score, n:gain, g:group}))
+    actual_value = f.eval({s:score, n:gain, g:group})
 
     assert np.allclose(actual_value, expected_value)
     assert np.allclose(actual_grad,  expected_grad)
@@ -269,7 +269,7 @@ def test_ndcg(value, output, gain, device_id, precision):
     n = I((1,))
     f = ndcg_at_1(s, n, g)
 
-    actual_value = np.copy(f.eval({s:score, n:gain, g:group}))
+    actual_value = f.eval({s:score, n:gain, g:group})
 
     assert np.allclose(actual_value, expected_value)
 

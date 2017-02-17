@@ -91,6 +91,9 @@
     <ClInclude Include="ReaderUtil.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="ReaderConstants.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">

@@ -537,6 +537,34 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingDouble, RandomSeedFixture)
     BOOST_CHECK(m1.IsEqualTo(m2));
 }
 
+BOOST_FIXTURE_TEST_CASE(GPUMatrixAdam, RandomSeedFixture)
+{
+    GPUMatrix<double> adamMatrix(c_deviceIdZero);
+    GPUMatrix<double> gradients(2, 1, c_deviceIdZero);
+    GPUMatrix<double> parameters(2, 1, c_deviceIdZero);
+    GPUMatrix<double> expectedParameters(2, 1, c_deviceIdZero);
+    GPUMatrix<double> expectedStates(2, 2, c_deviceIdZero);
+    double gradientValues[] = { 0.1, -0.1 };
+    double paramValues[] = { 0.1, 0.1 };
+    double expectedValues[] = { -0.05803489, 0.25803488 };
+    double expectedStateValues[] = { 1e-5, 0.01, 1e-5, -0.01 };
+    gradients.SetValue(2, 1, c_deviceIdZero, gradientValues, matrixFormatRowMajor);
+    parameters.SetValue(2, 1, c_deviceIdZero, paramValues, matrixFormatRowMajor);
+    expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, true);
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+
+    double expectedValues2[] = { -0.27046135, 0.47046134 };
+    double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
+    expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues2, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues2, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, true);
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+}
+
 #if 0 // Temporarily disabling
 BOOST_FIXTURE_TEST_CASE(GPUMatrixLargeInequality, RandomSeedFixture)
 {

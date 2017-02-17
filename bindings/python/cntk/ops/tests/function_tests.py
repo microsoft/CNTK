@@ -13,7 +13,7 @@ import pytest
 from ..functions import *
 from ...trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value, sequence, as_composite, combine
+from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value, sequence, as_composite, combine, convolution, splice
 from ... import InferredDimension
 from .ops_test_utils import compare_lists_of_np_arrays, AA
 
@@ -21,7 +21,17 @@ def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
     assert op.shape == (3,4)
 
+def test_eval_by_node_name():
+    i = input_variable(shape=(1,),
+                       needs_gradient=True,
+                       name='i')
+    res = i + 3
 
+    assert res.eval({i: [[3]]}) == [6]
+    assert res.eval({'i': [[3]]}) == [6]
+    assert res.eval({u'i': [[3]]}) == [6]
+
+    
 def test_replace_placeholders():
     p = placeholder_variable(shape=(1,))
     i = input_variable(shape=(1,),
@@ -214,6 +224,23 @@ def test_clone_with_function_in_substitution_map():
     just_b = t_plus_b.clone('clone', {t : p})
     t_plus_b_clone = just_b.clone('share', {p : t})
 
+def test_clone_with_slice(): 
+    i1 = input_variable((2,2), name='i1')
+    i2 = input_variable((2,2), name='i2')
+    x = splice(i1, i2, axis=0) 
+    W = constant(1, (4,1), name='W') 
+    y = convolution(W, x)
+    assert(y.shape == (4,2)) 
+    
+    from ..functions import CloneMethod
+    x1 = input_variable((2,1), name='x1')
+    x2 = input_variable((2,1), name='x2')
+    p1 = placeholder_variable()
+    p2 = placeholder_variable()
+    y_cloned = y.clone('clone', {i1:p1, i2:p2})
+    y2 = y_cloned(x1, x2)
+    assert(y2.shape == (4,1))
+
 def test_as_composite():
     input_dim = 1
     proj_dim = 2
@@ -229,3 +256,58 @@ def test_as_composite():
     assert(composite.root_function.name == func_name)
     composite = as_composite(t_plus_b)
     assert(composite.root_function.name == func_name)
+
+def test_input_order():
+    input_dim = 1
+    proj_dim = 2
+    x = input_variable((input_dim,), name='x')
+    b = parameter((proj_dim), name='b')
+    w = parameter((input_dim, proj_dim), name='w')
+    func_name = 't_plus_b'
+    t = times(x, w)
+    t_plus_b = plus(t, b, name=func_name)
+
+    def compare_var_names(vars, names): 
+        num_vars = len(vars)
+        for i in range(num_vars):
+            if (vars[i].name != names[i]):
+                return False
+
+        return True
+
+    assert compare_var_names(t.root_function.inputs, ['x', 'w'])
+    assert compare_var_names(t.inputs, ['x', 'w'])
+    assert compare_var_names(t_plus_b.inputs, ['x', 'w', 'b'])
+
+def test_combine_duplicated_inputs():
+    input_dim = 1
+    proj_dim = 2
+    x = input_variable((input_dim,), name='x')
+    b = parameter((proj_dim), name='b')
+    w = parameter((input_dim, proj_dim), name='w')
+    func_name = 't_plus_b'
+    t = times(x, w)
+    t_plus_b = plus(t, b, name=func_name)
+
+    duplicated_t_plus_b = combine([t_plus_b, t_plus_b])
+    
+    def compare_var_names(vars, names): 
+        num_vars = len(vars)
+        for i in range(num_vars):
+            if (vars[i].name != names[i]):
+                return False
+
+        return True
+
+    assert compare_var_names(duplicated_t_plus_b.outputs, [func_name, func_name])
+    
+
+def test_extra_arguments_in_eval():
+    x1 = input_variable((1,), name='x1')
+    x2 = input_variable((1,), name='x2')
+    x1_plus_1 = x1 + 1
+    x1_plus_1_plus_x2 = x1_plus_1 + x2
+
+    result = x1_plus_1.eval({x1 : np.asarray([[1]]), x2 : np.asarray([[1]])})
+    assert np.allclose(result, [[[2]]])
+    

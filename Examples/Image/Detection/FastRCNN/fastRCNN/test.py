@@ -7,15 +7,10 @@
 
 """Test a Fast R-CNN network on an imdb (image database)."""
 
-#from config import cfg #, get_output_dir
-#from blob import im_list_to_blob
 from __future__ import print_function
 import os, sys, cv2, numpy as np, pickle as cp, heapq
 from .nms import nms as nmsPython
-if sys.version_info[0] < 3: 
-    from utils2_win64.cython_nms import nms
-else: 
-    from .utils3_win64.cython_nms import nms
+from .utils.cython_nms import nms
 from .timer import Timer
 from cntk_helpers import im_detect, apply_nms
 from builtins import range

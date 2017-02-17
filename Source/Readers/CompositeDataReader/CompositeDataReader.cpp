@@ -21,6 +21,7 @@
 #include "CorpusDescriptor.h"
 #include "ConfigUtil.h"
 #include "StringUtil.h"
+#include "ReaderConstants.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -116,9 +117,28 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
         }
 
         randomizationWindow = config(L"randomizationWindow", randomizationWindow);
+        bool sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", true);
+
+        if (ContainsDeserializer(config, L"CNTKTextFormatDeserializer") && !config.ExistsCurrent(L"randomizationWindow"))
+        {
+            if (!config.ExistsCurrent(L"sampleBasedRandomizationWindow") || // sampleBasedRandomizationWindow is not specified
+                !sampleBasedRandomizationWindow) // randomization window is in chunks
+            {
+                sampleBasedRandomizationWindow = false;
+                size_t chunkSizeBytes = config(L"chunkSizeInBytes", g_32MB); // 32 MB by default
+                randomizationWindow = g_4GB / chunkSizeBytes; // ~ 4 GB disk space worth of chunks
+                // TODO: decrease randomization window if m_deserializers.size() > 1 ?
+            }
+            else
+            {
+                // config explicitly says to use a sample-based window, but does not specify its size.
+                LogicError("'sampleBasedRandomizationWindow' (== 'true') requires that the 'randomizationWindow' is explicitly specified.");
+            }
+        }
 
         bool shouldPrefetch = true;
-        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, multiThreadedDeserialization, maxErrors);
+        m_sequenceEnumerator = std::make_shared<BlockRandomizer>(verbosity, randomizationWindow, deserializer, shouldPrefetch, 
+            multiThreadedDeserialization, maxErrors, sampleBasedRandomizationWindow);
     }
     else
     {

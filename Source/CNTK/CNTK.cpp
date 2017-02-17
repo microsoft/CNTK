@@ -117,7 +117,7 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 // TODO: Clarify how a single thread restriction can be lifted.
 void ForceDeterministicAlgorithmsOnCPU()
 {
-    LOGPRINTF(stderr, "WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
+    LOGPRINTF(stderr, "WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
     CPUMatrix<float /*any type will do*/>::SetNumThreads(1);
     CPUMatrix<float /*any type will do*/>::SetCompatibleMode();
 }
@@ -666,7 +666,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0.beta9.0+ (");
+    fprintf(stderr, "CNTK 2.0.beta11.0+ (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif

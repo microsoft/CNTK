@@ -33,7 +33,7 @@ def test_trainer(tmpdir, no_eval_function):
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, ce, errs,
+    trainer = Trainer(z, (ce, errs),
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
@@ -61,7 +61,7 @@ def test_output_to_retain():
     errs = classification_error(z, labels)
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, ce, errs,
+    trainer = Trainer(z, (ce, errs),
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[[1]], [[2]]]
     label_value = [[0], [1]]
@@ -218,7 +218,7 @@ def test_model_not_criterion_subset():
     ce = 0.5 * sequence.reduce_sum(ce_model2) + 0.5 * ce_model1
 
     lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
-    trainer_multitask = Trainer(model1, ce, pe_model1, sgd(ce.parameters, lr=lr_schedule))
+    trainer_multitask = Trainer(model1, (ce, pe_model1), sgd(ce.parameters, lr=lr_schedule))
 
     x_data = np.asarray([[2., 1.], [1., 2.]], np.float32)
     model1_label_data = np.asarray([1., 0., 0.], np.float32)
@@ -243,7 +243,7 @@ def test_model_one_output_of_multi_output_function():
     lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
     ce = cross_entropy_with_softmax(combined_model.outputs[0], labels)
     pe = classification_error(combined_model.outputs[0], labels)
-    trainer_multitask = Trainer(combined_model.outputs[0], ce, pe, sgd(ce.parameters, lr=lr_schedule))
+    trainer_multitask = Trainer(combined_model.outputs[0], (ce, pe), sgd(ce.parameters, lr=lr_schedule))
 
 
 def test_trainer_with_some_params_not_learned():
@@ -263,7 +263,7 @@ def test_trainer_with_some_params_not_learned():
     pe = classification_error(z, labels)
 
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
-    trainer = Trainer(z, ce, pe, sgd([W], lr_per_sample))
+    trainer = Trainer(z, (ce, pe), sgd([W], lr_per_sample))
 
     x_value = [[1, 1],[2, 2]]
     label_value = [[0, 1], [1, 0]]
@@ -304,3 +304,17 @@ def test_not_replaced_placeholders():
     x0 = [[1, 1],[2, 2]]
     with pytest.raises(RuntimeError):
         model.forward({x : x0}, model.outputs)
+
+def test_disallow_seq_starts_with_Value_objects():
+    one_hot_batch = [[2,5], [0,1,6]]
+    dim = 10
+
+    in1 = input_variable(shape=(dim,), is_sparse=True)
+    z = times(in1, np.eye(dim))
+    batch = one_hot(one_hot_batch, num_classes=dim)
+
+    with pytest.raises(ValueError):
+        result = z.eval(({in1: batch}, len(batch)*[True]))
+
+    with pytest.raises(ValueError):
+        result = z.eval({in1: (batch, len(batch)*[True])})

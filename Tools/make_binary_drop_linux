@@ -7,16 +7,17 @@
 # Generating CNTK Binary drops in Jenkins environment
 
 # Stop on Error
-set -e
+set -e -o pipefail
 
 # Define variables to be set via command parameters
 buildConfig=
 targetConfig=
+outputFile=BinaryDrops.tar.gz
 verbose=false
 
 # Process Command line parameters
 
-usage="Usage: make_binary_drop_linux -b build_configuration -t target_configuration [-v] [-h]\nBuild and Target configurations should correspond to Jenkins environment\n-v Verbose output\n-h Displays this message\nExample: make_binary_drop_linux -b Release -t gpu -v"
+usage="Usage: make_binary_drop_linux -b build_configuration -t target_configuration [-o output_file] [-v] [-h]\nBuild and Target configurations should correspond to Jenkins environment\n-v Verbose output\n-h Displays this message\nExample: make_binary_drop_linux -b Release -t gpu -v"
 
 if [[ $# == 0 ]]; then
     echo "Command line parameters are missing" >&2
@@ -24,7 +25,7 @@ if [[ $# == 0 ]]; then
     exit 1
 fi
 
-while getopts ":b::t::v" opt; do
+while getopts ":b:t:o:v" opt; do
     case $opt in
     b)
         # Supposed to be taken from Jenkins BUILD_CONFIGURATION
@@ -34,12 +35,15 @@ while getopts ":b::t::v" opt; do
         # Supposed to be taken from Jenkins TARGET_CONFIGURATION
         targetConfig=$OPTARG
         ;;
+    o)
+        outputFile="$OPTARG"
+        ;;
     v)
         # Enables verbose output
         verbose=true
         ;;
     h)
-        # Display Usage message and exit
+        # Display usage message and exit
         echo -e $usage
         exit 0
         ;;
@@ -70,8 +74,8 @@ if [[ -z "$targetConfig" ]]; then
 fi
 
 # Make buildConfig and targetConfig lowercase
-buildConfig=$(echo ${buildConfig} | tr '[:upper:]' '[:lower:]')
-targetConfig=$(echo ${targetConfig} | tr '[:upper:]' '[:lower:]')
+buildConfig=${buildConfig,,}
+targetConfig=${targetConfig,,}
 
 # Enable "verbose" mode if needed
 # stderr is NOT changed
@@ -88,9 +92,9 @@ fi
 function CopyFilesFromList ()
 {
     declare -a fileNames=(${!2})
-    for fileName in  "${fileNames[@]}"
+    for fileName in "${fileNames[@]}"
     do
-        cp "$1/$fileName" "$3"
+        cp -p "$1/$fileName" "$3"
     done
 }
 
@@ -138,13 +142,13 @@ declare -a includeFiles=("Eval.h")
 declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h")
 
 # Set dependency sources paths
-mklVersion="2"
+mklVersion="3"
 mklPath="/usr/local/CNTKCustomMKL/$mklVersion/x64/parallel"
 opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cuda/lib64"
+cudnnPath="/usr/local/cudnn/cuda/lib64"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"
 kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
@@ -160,14 +164,13 @@ baseIncludePath="$baseDropPath/Include"
 includePath="Source/Common/Include"
 includePath20="Source/CNTKv2LibraryDll/API"
 extrasPath="Tools/cntk-binary-drop/linux/$targetConfig"
-gzipFile="BinaryDrops.tar.gz"
 
 # Make BinaryDrops directory
 mkdir -p $baseBinariesPath
 
 # Copy build binaries
 echo "Copying build binaries..." >&3
-cp -r $buildPath/* $baseBinariesPath
+cp -pr $buildPath/* $baseBinariesPath
 # Remove unnessesary file(s) if exist(s)
 #
 # General TODO: Implement White List of Binary Drop contents.
@@ -182,7 +185,7 @@ rm -f $baseBinariesPath/bin/mathtests
 rm -f $baseBinariesPath/bin/multiversotests
 rm -f $baseBinariesPath/bin/networktests
 rm -f $baseBinariesPath/bin/readertests
-rm -f $baseBinariesPath/bin/v2librarydistributiontests
+rm -f $baseBinariesPath/bin/V2LibraryEndToEndTests 
 rm -f $baseBinariesPath/bin/v2librarytests
 
 # Make Include directory
@@ -190,29 +193,30 @@ mkdir -p $baseIncludePath
 
 # Copy Include
 echo "Copying Include files..." >&3
-CopyFilesFromList $includePath includeFiles[@] $baseIncludePath 
+CopyFilesFromList $includePath includeFiles[@] $baseIncludePath
 echo "Copying Include files for Version 2..." >&3
-CopyFilesFromList $includePath20 includeFiles20[@] $baseIncludePath 
+CopyFilesFromList $includePath20 includeFiles20[@] $baseIncludePath
 
 # Copy Examples
 echo "Copying Examples..." >&3
-cp -r Examples $baseDropPath
+cp -pr Examples $baseDropPath
 # Include CPPEvalV2Client examples in 2.0 Beta drop
 # rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
 
 # Copy Tutorials
 echo "Copying Tutorials..." >&3
-cp -r Tutorials $baseDropPath
+cp -pr Tutorials $baseDropPath
 
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
-cp -r Scripts $baseDropPath
-# Remove test related file(s) if exist(s)
+cp -pr Scripts $baseDropPath
+# Remove some unneeded files
 rm -f $baseDropPath/Scripts/pytest.ini
+rm -rf $baseDropPath/Scripts/install/windows
 
 # Copy Extras
 echo "Copying Extras..." >&3
-cp -r $extrasPath/* $baseDropPath
+cp -pr $extrasPath/* $baseDropPath
 
 # Copy Dependencies
 echo "Copying Dependencies..." >&3
@@ -261,10 +265,13 @@ echo "Making Archive and cleaning up..." >&3
 # Make GZipped TAR
 cd $basePath
 if [[ "$verbose" == true ]]; then
-    tar -cvzf $gzipFile cntk
+    tar -cvzf "$outputFile" cntk
 else
-    tar -czf $gzipFile cntk
+    tar -czf "$outputFile" cntk
 fi
+
+# Log the file hash
+sha256sum "$outputFile"
 
 # Remove TAR sources
 rm -r cntk

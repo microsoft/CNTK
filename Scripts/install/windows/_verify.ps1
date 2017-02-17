@@ -2,7 +2,8 @@
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
-function VerifyOperations()
+function VerifyOperations(
+    [bool] $NoConfirm)
 {
     Write-Host "Determining Operations to perform. This will take a moment..."
 
@@ -28,7 +29,9 @@ function VerifyOperations()
             $info = $item.Info
             Write-Host " * $info"
         }
-        
+        if ($NoConfirm) {
+            return $true
+        }
         Write-Host 
         Write-Host "Do you want to continue? (y/n)"
         

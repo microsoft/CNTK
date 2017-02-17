@@ -160,7 +160,7 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
                            lr_per_minibatch, momentum_time_constant,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-    trainer = Trainer(z, ce, errs, learner)
+    trainer = Trainer(z, (ce, errs), learner)
 
     # setup data
     train_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "cmudict-0.7b.train-dev-20-21.ctf")
@@ -233,14 +233,14 @@ def sequence_to_sequence_translator(debug_output=False, run_test=False):
 
     error1 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
 
-    z.save_model("seq2seq.dnn")
-    z.restore_model("seq2seq.dnn")
+    z.save("seq2seq.dnn")
+    z.restore("seq2seq.dnn")
 
     label_seq_axis = Axis('labelAxis')
     label_sequence = sequence.slice(find_arg_by_name('raw_labels',z), 1, 0)
     ce = cross_entropy_with_softmax(z, label_sequence)
     errs = classification_error(z, label_sequence)
-    trainer = Trainer(z, ce, errs, [momentum_sgd(
+    trainer = Trainer(z, (ce, errs), [momentum_sgd(
                     z.parameters, lr_per_minibatch, momentum_time_constant, True,
                     clipping_threshold_per_sample, gradient_clipping_with_truncation)])
 

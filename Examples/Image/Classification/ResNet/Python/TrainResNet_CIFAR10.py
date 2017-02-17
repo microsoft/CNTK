@@ -53,7 +53,7 @@ def create_reader(map_file, mean_file, train):
 
 
 # Train and evaluate the network.
-def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs):
+def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs, profiler_dir=None):
 
     set_computation_network_trace_level(0)
 
@@ -88,7 +88,7 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     # trainer object
     learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                                l2_regularization_weight = l2_reg_weight)
-    trainer     = Trainer(z, ce, pe, learner)
+    trainer     = Trainer(z, (ce, pe), learner)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -100,6 +100,10 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     progress_printer = ProgressPrinter(tag='Training')
 
     # perform model training
+    
+    if profiler_dir:
+        start_profiler(profiler_dir, True)
+        
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
@@ -108,7 +112,11 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        z.save(os.path.join(model_path, network_name + "_{}.dnn".format(epoch)))
+        enable_profiler() # begin to collect profiler data after first epoch
+        
+    if profiler_dir:
+        stop_profiler()
     
     # Evaluation parameters
     test_epoch_size     = 10000
@@ -141,6 +149,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
     parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
+    parser.add_argument('-p', '--profiler_dir', help='directory for saving profiler output', required=False, default=None)
 
     args = vars(parser.parse_args())
     epochs = int(args['epochs'])
@@ -150,4 +159,4 @@ if __name__=='__main__':
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
     epoch_size = 50000
-    train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs)
+    train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs, args['profiler_dir'])

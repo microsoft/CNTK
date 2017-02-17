@@ -12,7 +12,7 @@
 
 ### Getting the data
 
-We use the `grocery` toy data set ([Examples/Image/DataSets/grocery](../DataSets/grocery)) and a pre-trained ResNet_18 model [Examples/Image/PretrainedModels/ResNet_18.model](../PretrainedModels). To download both run 
+We use the `grocery` toy data set ([Examples/Image/DataSets/Grocery](../DataSets/Grocery)) and a pre-trained ResNet_18 model [Examples/Image/PretrainedModels/ResNet_18.model](../PretrainedModels). To download both run 
 
 `python install_data_and_model.py`
 
