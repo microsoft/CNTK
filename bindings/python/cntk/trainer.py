@@ -51,7 +51,7 @@ class Trainer(cntk_py.Trainer):
 
         Args:
             arguments: maps variables to their input data. Empty map signifies
-            end of local training data. 
+            end of local training data.
              The interpretation depends on the input type:
                * `dict`: keys are input variable or names, and values are the input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
@@ -95,11 +95,11 @@ class Trainer(cntk_py.Trainer):
 
         if outputs:
             output_map = {v: None for v in outputs}
-            
+
             if contains_minibatch_data:
                 updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
                     arguments, output_map, device)
-            else:    
+            else:
                 updated = super(Trainer, self).train_minibatch(arguments,
                     output_map, device)
 
@@ -246,7 +246,7 @@ class Trainer(cntk_py.Trainer):
         The average training loss per sample since the last reset_accumulation()
         '''
         return super(Trainer, self).accumulated_loss_average()
-        
+
     @property
     def accumulated_evaluation_average(self):
         '''
@@ -260,7 +260,7 @@ class Trainer(cntk_py.Trainer):
         The number of samples since last reset_accumulation
         '''
         return super(Trainer, self).accumulated_sample_count()
-    
+
     def reset_accumulation(self):
         '''
         Reset accumulated loss and evaluation criterion

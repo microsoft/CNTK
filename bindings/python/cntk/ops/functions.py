@@ -213,7 +213,7 @@ class Function(cntk_py.Function):
              contains the type and id of the device on which the computation is
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
-             Specifying this as False returns a CNTK Value which avoids a 
+             Specifying this as False returns a CNTK Value which avoids a
              costly conversion but returns a somewhat opaque object.
 
         Note:
@@ -253,14 +253,14 @@ class Function(cntk_py.Function):
             >>> vocab_size = 5
             >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
-            >>> # Passing a batch of two sequences: 
+            >>> # Passing a batch of two sequences:
             >>> # 1st sequence: word 1
             >>> # 2nd sequence: words 2 and 4
             >>> batch = [[1],[2,4]]
             >>> sparse_batch = C.one_hot(batch, vocab_size)
             >>> _, fv = f.forward({v:sparse_batch})
             >>> list(fv.values())[0]
-            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32), 
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
              array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
 
         Example:
@@ -269,15 +269,14 @@ class Function(cntk_py.Function):
             >>> from scipy.sparse import csr_matrix
             >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
-            >>> # Note that csr_matrix automatically creates sparse representations.
+            >>> # Note that csr_matrix automatically uses a sparse representation underneath.
             >>> sparse_batch = [csr_matrix([[0,1,0,0,0]]), csr_matrix([[0,0,1,0,0], [0,0,0,0,1]])]
             >>> _, fv = f.forward({v:sparse_batch})
             >>> list(fv.values())[0]
-            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32), 
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
              array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
             <BLANKLINE>
-            >>> # Much more efficient, however, is to incrementally create CSR
-            >>> # arrays incrementally.
+            >>> # Much more efficient, however, is to incrementally create CSR arrays.
             >>> # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
             >>> # for more information.
             >>> def seq_to_csr_matrix(seq, vocab_size):
@@ -292,7 +291,7 @@ class Function(cntk_py.Function):
             >>> sparse_batch = [seq_to_csr_matrix(seq, vocab_size) for seq in batch]
             >>> _, fv = f.forward({v:sparse_batch})
             >>> list(fv.values())[0]
-            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32), 
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
              array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
 
 
@@ -341,7 +340,7 @@ class Function(cntk_py.Function):
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
-             Specifying this as False returns a CNTK Value which avoids a 
+             Specifying this as False returns a CNTK Value which avoids a
              costly conversion but returns a somewhat opaque object.
 
         Returns:
