@@ -63,7 +63,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     @property
     def end_of_sweep(self):
         '''
-        Indicates whether the data in this minibatch is comes from a sweep end
+        Indicates whether the data in this minibatch comes from a sweep end
         or crosses a sweep boundary (and as a result includes data from 
         different sweeps).
         '''

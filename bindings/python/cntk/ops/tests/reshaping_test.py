@@ -431,3 +431,51 @@ def test_op_scatter_sparse(device_id):
     res = a_last_scatter_dense.eval({a : input_data})
     assert np.array_equal(res[0], np.asarray([[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
     assert np.array_equal(res[1], np.asarray([[0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0]]))
+
+
+def test_op_broadcast_as(device_id, precision):
+    from .. import sequence
+
+    a_data = [AA([1], dtype=PRECISION_TO_TYPE[precision]), AA([2], dtype=PRECISION_TO_TYPE[precision]), AA([3], dtype=PRECISION_TO_TYPE[precision])]
+    b_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
+
+    a = I(shape=(1,),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          name='a',
+          dynamic_axes=[Axis.default_batch_axis()])
+
+    b = I(shape=(1,),
+          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          name='b')
+
+    broadcast_a_as_b = sequence.broadcast_as(a, b)
+    
+    res = broadcast_a_as_b.eval({a: a_data, b: b_data})
+    assert np.array_equal(res[0], np.asarray([[1.]]))
+    assert np.array_equal(res[1], np.asarray([[2.], [2.]]))
+    assert np.array_equal(res[2], np.asarray([[3.], [3.], [3.]]))
+
+
+def test_op_broadcast_as_in_loop(device_id):
+    from .. import sequence, placeholder_variable, past_value
+
+    a_data = [AA([1]), AA([2]), AA([3])]
+    b_data = [AA([[2]]), AA([[2], [3]]), AA([[2], [3], [4]])]
+
+    a = I(shape=(1,),
+          name='a',
+          dynamic_axes=[Axis.default_batch_axis()])
+
+    b = I(shape=(1,),
+          name='b')
+
+    out_placeholder = placeholder_variable()
+    out_delayed = past_value(out_placeholder, time_step=5)
+    out_delayed_plus_b = out_delayed + b
+    out = sequence.broadcast_as(a, out_delayed_plus_b)
+    out.replace_placeholder(out)
+    
+    res = out.eval({a: a_data, b: b_data})
+    assert np.array_equal(res[0], np.asarray([[1.]]))
+    assert np.array_equal(res[1], np.asarray([[2.], [2.]]))
+    assert np.array_equal(res[2], np.asarray([[3.], [3.], [3.]]))

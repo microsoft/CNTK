@@ -117,7 +117,7 @@ size_t GetMaxEpochs(const ConfigParameters& configParams)
 // TODO: Clarify how a single thread restriction can be lifted.
 void ForceDeterministicAlgorithmsOnCPU()
 {
-    LOGPRINTF(stderr, "WARNING: forceDeterministcAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
+    LOGPRINTF(stderr, "WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.\n");
     CPUMatrix<float /*any type will do*/>::SetNumThreads(1);
     CPUMatrix<float /*any type will do*/>::SetCompatibleMode();
 }

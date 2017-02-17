@@ -301,10 +301,8 @@ public:
         }
         else // Broadcasting along the sequence case: must reshuffle
         {
-            if (!fr.IsAllFrames())           // BroadcastToPacked() does not support being inside a loop  --BUGBUG: This is needed.
-                InvalidArgument("%ls %ls operation: Broadcasting along sequence not supported inside loops.", NodeName().c_str(), OperationName().c_str());
             auto result = ValueFor(fr);
-            ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), result, m_pMBLayout, m_tempGatherIndices);
+            ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), result, fr, m_tempGatherIndices);
         }
     }
 
@@ -312,39 +310,35 @@ public:
     {
         if (inputIndex == 0)
         {
+            size_t rank = GetSampleLayout().GetRank();
+
+            // if reduction then mask the respective input(s) (zero out the gaps)
+            if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))
+                MaskMissingGradientColumnsToZero(fr);
+
+            TensorView<ElemType> gradient;
+            TensorView<ElemType> inputGradient;
             if (!InputRef(0).GetMBLayout() || m_layoutsMatch)
             {
-                size_t rank = GetSampleLayout().GetRank();
-                auto gradient      =                      GradientTensorFor(rank, fr);
-                auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, InputRef(inputIndex).HasMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
-
-                // if reduction then mask the respective input(s) (zero out the gaps)
-                if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))
-                    MaskMissingGradientColumnsToZero(fr);
-
-                // TODO: can simplify to DoCopyOf((float)!ParentOverwritesGradient(), gradient)
-                if (InputRef(inputIndex).ParentOverwritesGradient())
-                    inputGradient.AssignCopyOf(gradient);
-                else
-                    inputGradient.AddCopyOf(gradient);
-
-                // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
+                gradient      =                      GradientTensorFor(rank, fr);
+                inputGradient = InputRef(inputIndex).GradientTensorFor(rank, InputRef(inputIndex).HasMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
             }
             else
             {
-                assert(fr.IsAllFrames());
-                // BUGBUG: This should also work inside loops.
+                // Broadcasting along the sequence
+                if (!fr.IsAllFrames())
+                    InvalidArgument("%ls %ls operation does not support broadcasting the left operand to the right operand's dynamic axis, inside a recurrent loop.", NodeName().c_str(), OperationName().c_str());
 
-                MaskMissingGradientColumnsToZero(fr);
-                auto unpackedGradientTensor = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, /*batchMajor=*/ true, /*maskGaps=*/ true);
-
-                size_t rank = GetSampleLayout().GetRank();
-                auto inputGradient = InputRef(inputIndex).GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
-                if (InputRef(inputIndex).ParentOverwritesGradient())
-                    inputGradient.AssignCopyOf(unpackedGradientTensor);
-                else
-                    inputGradient.AddCopyOf(unpackedGradientTensor);
+                gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, /*batchMajor=*/ true, /*maskGaps=*/ true);
+                inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
             }
+
+            if (InputRef(inputIndex).ParentOverwritesGradient())
+                inputGradient.AssignCopyOf(gradient);
+            else
+                inputGradient.AddCopyOf(gradient);
+
+            // TODO: Once we do in-place, the above must include a copy-to-self check (pay special attention to adding vs. copying).
         }
     }
 
