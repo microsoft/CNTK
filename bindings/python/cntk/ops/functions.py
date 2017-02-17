@@ -230,16 +230,16 @@ class Function(cntk_py.Function):
 
 
     @typemap
-    def forward(self, arguments, outputs, keep_for_backward=None, device=None, as_numpy=True):
+    def forward(self, arguments, outputs=None, keep_for_backward=None, device=None, as_numpy=True):
         '''
         Computes the values of speficied variables in ``outputs``, using values
         provided in ``arguments`` that correspond to each input `Variable` of
-        the function whose ``is_input`` is `True`.
+        the function (i.e. those that have ``is_input = True``).
 
         Example:
             >>> v = C.input_variable(shape=(3,))
             >>> f = C.reciprocal(v)
-            >>> _, fv = f.forward({v:[[1, 2, 4]]}, [f.output])
+            >>> _, fv = f.forward({v:[[1, 2, 4]]})
             >>> list(fv.values())[0]
             array([[[ 1.  ,  0.5 ,  0.25]]], dtype=float32)
 
@@ -277,7 +277,8 @@ class Function(cntk_py.Function):
 
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
-            outputs (iterable): outputs to fetch values for.
+            outputs (iterable, optional): outputs to fetch values for. If not
+             set, all outputs of the function will be fetched.
             keep_for_backward (set, default `None`): the subset of the
              Function's output variables for which gradients shall be calculated
              in a subsequent backward call. If `None`, the returned state will
@@ -299,6 +300,9 @@ class Function(cntk_py.Function):
 
         in_var_map = sanitize_var_map(self.arguments, arguments,
                                       None, device)
+        if outputs is None:
+            outputs = self.outputs
+
         output_map = {v: None for v in outputs}
         keep_for_backward = set(keep_for_backward or {})
 
