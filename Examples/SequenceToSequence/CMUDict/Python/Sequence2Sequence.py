@@ -211,7 +211,7 @@ def train(train_reader, valid_reader, vocab, i2w, model, max_epochs, epoch_size)
                            lr_per_sample, momentum_time_constant,
                            gradient_clipping_threshold_per_sample=clipping_threshold_per_sample,
                            gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-    trainer = Trainer(model, ce, errs, learner)
+    trainer = Trainer(model, (ce, errs), learner)
 
     # Get minibatches of sequences to train with and perform model training
     i = 0
@@ -537,16 +537,16 @@ def create_inputs():
 if __name__ == '__main__':
 
     # hook up data
-    #train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
-    #valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
+    train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
+    valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
     vocab, i2w = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
 
     # create inputs and create model
-    #inputs = create_inputs()
-    #model = create_model(inputs)
+    inputs = create_inputs()
+    model = create_model(inputs)
     
     # train
-    #train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=10, epoch_size=908241)
 
     # write
     #model = load_model("model_epoch0.cmf")
