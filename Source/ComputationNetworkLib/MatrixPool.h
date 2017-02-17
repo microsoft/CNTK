@@ -62,15 +62,10 @@ struct MemAllocInfo
 // Note: see #define SUPRESS_MEMSHARING below as for how to temporarily disable memory sharing altogether, for debugging
 class MatrixPool
 {
-    vector<shared_ptr<Matrix<float>>>  m_releasedFloatMatrices;
-    vector<shared_ptr<Matrix<double>>> m_releasedDoubleMatrices;
     vector<MemRequestInfo<float>> m_memRequestInfoFloatVec; 
     vector<MemRequestInfo<double>> m_memRequestInfoDoubleVec;
     set<DEVICEID_TYPE> m_deviceIDSet; 
     int m_stepCounter; 
-
-    template <class ElemType>
-    vector<shared_ptr<Matrix<ElemType>>>& GetReleasedMatrices();
 
     template <class ElemType>
     vector<MemRequestInfo<ElemType>>& GetMemRequestInfoVec(); 
@@ -102,6 +97,9 @@ public:
         memInfoVec.push_back(memInfo); 
         m_deviceIDSet.insert(deviceId); 
         m_stepCounter++; 
+
+        // assign some temporary pointer, they will be replaced later unless the matrix is sparse
+        *pMatrixPtr = make_shared<Matrix<ElemType>>(deviceId);
     }
 
     void OptimizedMemoryAllocation()
@@ -239,7 +237,7 @@ private:
                     LogicError("MatrixPool: failed to get a valid matrix.");
                 for (auto& memInfo : memInfoVec)
                 {
-                    if (memInfo.deviceId == devId && memInfo.memoryId == i)
+                    if (memInfo.deviceId == devId && memInfo.memoryId == i && (*memInfo.pMatrixPtr)->GetMatrixType() != SPARSE) 
                         *memInfo.pMatrixPtr = matrixPtr;
                 }
             }

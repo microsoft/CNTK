@@ -1805,7 +1805,7 @@ public:
     // don't release matrices that need to be used in the gradient computation
     virtual void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
     {
-        if (!IsOutputNeededDuringBackprop() && IsValueSharable())
+        if (!IsOutputNeededDuringBackprop() && (m_value->GetMatrixType() != SPARSE) && IsValueSharable())
             ReleaseMatrixToPool(m_value, matrixPool);
     }
 
@@ -1830,11 +1830,12 @@ public:
     {
         if (!IsLeaf() && !RequiresPreCompute())
         {
-            ReleaseMatrixToPool(m_gradient, matrixPool);
+            if (m_gradient != nullptr && m_gradient->GetMatrixType() != SPARSE) // since we don't have a sparse pool yet
+                ReleaseMatrixToPool(m_gradient, matrixPool);
 
             // Release the Value matrix only if the output value is needed during backprop
             // since in the case it isn't used, we release it during forward prop itself
-            if (IsOutputNeededDuringBackprop() && IsValueSharable())
+            if (IsOutputNeededDuringBackprop() && m_value->GetMatrixType() != SPARSE && IsValueSharable())
                 ReleaseMatrixToPool(m_value, matrixPool);
         }
     }

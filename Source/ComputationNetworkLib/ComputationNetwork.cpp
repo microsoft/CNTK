@@ -36,18 +36,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <>
-vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
-{
-    return m_releasedFloatMatrices;
-}
-
-template <>
-vector<shared_ptr<Matrix<double>>>& MatrixPool::GetReleasedMatrices<double>()
-{
-    return m_releasedDoubleMatrices;
-}
-
-template <>
 vector<MemRequestInfo<float>>& MatrixPool::GetMemRequestInfoVec<float>()
 {
     return m_memRequestInfoFloatVec;
