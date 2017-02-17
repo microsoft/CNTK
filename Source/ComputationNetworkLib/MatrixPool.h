@@ -137,6 +137,15 @@ private:
         if (memInfoVec.empty())
             return; 
 
+        // remove all requests that has been marked as sparse matrices, those will not participate in memory sharing 
+        for (auto iter = memInfoVec.begin(); iter != memInfoVec.end(); )
+        {
+            if ((*(iter->pMatrixPtr))->GetMatrixType() == SPARSE)
+                memInfoVec.erase(iter);
+            else
+                iter++; 
+        }
+
         // sort the memory request from largest size to smallest 
         std::sort(memInfoVec.begin(), memInfoVec.end(), greater_than_mem_req_size<ElemType>());
 
@@ -237,7 +246,7 @@ private:
                     LogicError("MatrixPool: failed to get a valid matrix.");
                 for (auto& memInfo : memInfoVec)
                 {
-                    if (memInfo.deviceId == devId && memInfo.memoryId == i && (*memInfo.pMatrixPtr)->GetMatrixType() != SPARSE) 
+                    if (memInfo.deviceId == devId && memInfo.memoryId == i) 
                         *memInfo.pMatrixPtr = matrixPtr;
                 }
             }
