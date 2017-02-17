@@ -28,6 +28,9 @@ class MyPlus(UserFunction):
         return [output_variable(self.inputs[0].shape,
             self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
+    def clone(self, cloned_inputs):
+        return MyPlus(cloned_inputs[0], cloned_inputs[1])
+
     def forward(self, arguments, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
 
@@ -147,7 +150,7 @@ def test_ext_train():
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, z+0, z+0, \
+    trainer = Trainer(z, (z+0, z+0), \
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
                 True)])
 
@@ -158,6 +161,20 @@ def test_ext_train():
         trainer.train_minibatch([input_data])
 
     assert m.forward_calls == m.backward_calls == 100
+
+def test_udf_clone():
+    dim = 4
+    i = input_variable(dim, needs_gradient=True, name='i_var')
+    m_udf = user_function(MyPlus(i, constant(3)))
+    p = parameter(shape=(dim,), init=10, name='p')
+    z = m_udf + p
+    
+    z_clone = z.clone('share');
+
+    input_data = np.random.rand(dim)
+    result = z_clone.eval([input_data])
+    assert np.allclose(result[0][0], input_data+3+10)
+
 
 @pytest.mark.parametrize("payload", [
     (np.asarray([[[1,2,3.0]]]),),
@@ -191,7 +208,7 @@ def test_ext_backpropstate(payload):
     z = m+p
 
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, z+0, z+0, \
+    trainer = Trainer(z, (z+0, z+0), \
             [sgd(z.parameters, lr_per_sample)])
 
     for i in range(100):
@@ -243,7 +260,7 @@ def test_ext_lambdafunc():
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, z+0, z+0, \
+    trainer = Trainer(z, (z+0, z+0), \
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
                 True)])
 

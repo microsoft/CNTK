@@ -65,7 +65,7 @@ def convnet_mnist(debug_output=False):
 
     # Instantiate the trainer object to drive the model training
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule)
-    trainer = cntk.Trainer(z, ce, pe, learner)
+    trainer = cntk.Trainer(z, (ce, pe), learner)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -87,7 +87,7 @@ def convnet_mnist(debug_output=False):
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
         progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, "ConvNet_MNIST_{}.dnn".format(epoch)))
+        z.save(os.path.join(model_path, "ConvNet_MNIST_{}.dnn".format(epoch)))
     
     # Load test data
     reader_test = create_reader(os.path.join(data_path, 'Test-28x28_cntk_text.txt'), False, input_dim, num_output_classes)

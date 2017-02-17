@@ -92,8 +92,8 @@ def _verify_momentum_type(momentum):
 
 class Learner(cntk_py.Learner):
     '''
-    Abstraction for learning a subset of parameters of a learnable function using first order gradient values
-    For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
+    Abstraction for learning a subset of parameters of a learnable function using first order gradient values.
+    For example momentum, AdaGrad, RMSProp, etc. are different types of learners with their own algorithms for
     learning parameter values using first order gradients.
     To instantiate a concrete learner, use the factory methods in this module.
     '''
@@ -106,7 +106,7 @@ class Learner(cntk_py.Learner):
             gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
-            training_sample_count (int): training sample count
+            training_sample_count (int): number of samples in the minibatch
 
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
@@ -114,7 +114,7 @@ class Learner(cntk_py.Learner):
         var_nd_map = { var: NDArrayView.from_data(val) for var, val in
                 gradient_values.items() }
 
-        return super(Learner, self).update(var_nd_map, training_sample_count)
+        return super(Learner, self)._update(var_nd_map, training_sample_count)
 
     @property
     @typemap
@@ -140,6 +140,56 @@ class Learner(cntk_py.Learner):
         Current learning rate.
         '''
         return super(Learner, self).learning_rate()
+
+class UserLearner(cntk_py.Learner):
+    '''
+    Base class of all user-defined learners. To implement your own learning
+    algorithm, derive from this class and override the :meth:`update`.
+
+    Certain optimizers (such as AdaGrad) require additional storage.
+    This can be allocated and initialized during construction.
+    '''
+
+    def __init__(self, parameters, learningRateSchedule):
+        super(UserLearner, self).__init__(parameters, learningRateSchedule)
+        self.__disown__()
+
+    def _update(self, gradient_values, training_sample_count, sweep_end):
+        '''
+        Update the parameters and related state associated with this learner.
+
+        Args:
+            gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
+             a NumPy array containing the gradient for the
+             Parameter w.r.t. the training objective.
+            training_sample_count (int): number of samples in the minibatch
+            sweep_end (bool): if the data is fed by a conforming reader, this indicates
+             whether a full pass over the dataset has just occured.
+
+        Returns:
+            `False` to indicate that learning has stopped for all of the parameters associated with this learner
+        '''
+        var_nd_map = { var: NDArrayView.from_data(val) for var, val in
+                gradient_values.items() }
+
+        return self.update(var_nd_map, training_sample_count, sweep_end)
+
+    def update(self, gradient_values, training_sample_count, sweep_end):
+        '''
+        Update the parameters associated with this learner.
+
+        Args:
+            gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
+             a NumPy array containing the first order gradient values for the
+             Parameter w.r.t. the training objective.
+            training_sample_count (int): number of samples in the minibatch
+            sweep_end (bool): if the data is fed by a conforming reader, this indicates
+             whether a full pass over the dataset has just occured.
+
+        Returns:
+            `False` to indicate that learning has stopped for all of the parameters associated with this learner
+        '''
+        raise NotImplementedError('UserLearner.update must be overriden')
 
 @typemap
 def training_parameter_schedule(schedule, unit, epoch_size=None):
@@ -215,7 +265,7 @@ def training_parameter_schedule(schedule, unit, epoch_size=None):
 @typemap
 def learning_rate_schedule(lr, unit, epoch_size=None):
     '''
-    Create a learning rate schedule (using the same semantics as 
+    Create a learning rate schedule (using the same semantics as
     :func:`training_parameter_schedule`).
 
     Args:

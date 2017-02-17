@@ -278,6 +278,7 @@
 %ignore_function CNTK::Internal::DisableProfiler;
 %ignore_function CNTK::Internal::AreEquivalent;
 %ignore_function CNTK::Internal::AreEqual;
+%ignore_function CNTK::PrintBuiltInfo;
 
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }

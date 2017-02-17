@@ -126,8 +126,8 @@ function ExecuteApplication(
     }
 
     if ($Execute) {
-        $application = ResolveApplicationName $appName $appDir $usePath
-        if ($application.Length -eq 0) {
+        $application = ResolveApplicationName -name $appName -directory $appDir -usePath $usePath
+        if (-not $application) {
             throw "ExecuteApplication: Couldn't resolve program [$appName] with location directory [$appDir] and usePath [$usePath]"
         }
 
@@ -396,16 +396,16 @@ function Invoke-DosCommand {
 }
 
 function ResolveApplicationName(
-    [string] $name,
-    [string] $directory,
-    [bool] $usePath)
+    [Parameter(Mandatory=$True)][string] $name,
+    [string] $directory = "",
+    [bool] $usePath = $false)
 {
     $application = ""
 
-    if ($directory.Length -gt 0) {
+    if ($directory) {
         $application = CallGetCommand (join-path $directory $name)
     }
-    if ($application.Length -eq 0) {
+    if (-not $application) {
         if ($usePath) {
             # we are at this point if we are supposed to check in the path environment for a match and
             # $directory was empty or we couldn't find it in the $directory
@@ -414,19 +414,18 @@ function ResolveApplicationName(
         }
     }
     # application will be an empty string if we couldn't resolve the name, otherwise we can execute $application
-
     return $application
 }
 
 function CallGetCommand(
-    [string] $application)
+    [Parameter(Mandatory=$True)][string] $application)
 {
-    try {
-        get-command $application -CommandType Application -ErrorAction Stop | Out-Null
-        return $application
-    }
-    catch {
-        # the application can't be found, so return empty string
+    $matches = @(get-command $application -CommandType Application -TotalCount 1 -ErrorAction SilentlyContinue)
+    if ($matches.Count -eq 0) {
         return ""
     }
+
+    return $matches[0].Source
 }
+
+# vim:set expandtab shiftwidth=4 tabstop=4:

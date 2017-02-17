@@ -94,7 +94,7 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
     else:
         learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
     
-    return Trainer(network['output'], network['ce'], network['pe'], learner)
+    return Trainer(network['output'], (network['ce'], network['pe']), learner)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling=False):

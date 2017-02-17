@@ -51,9 +51,35 @@ using namespace std;
 // -----------------------------------------------------------------------
 // ThrowFormatted() - template function to throw a std::exception with a formatted error string
 // -----------------------------------------------------------------------
+template <class E>
+__declspec_noreturn static inline void ThrowFormattedVA(const char* format, va_list args)
+{
+    // Note: The call stack will skip 2 levels to suppress this function and its call sites (XXXError()).
+    //       If more layers are added here, it would have to be adjusted.
+    auto callstack = DebugUtil::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true);
 
-#pragma warning(push)
-#pragma warning(disable : 4996)
+    va_list args_copy;
+    va_copy(args_copy, args);
+    auto size = vsnprintf(nullptr, 0, format, args) + 1;
+
+    string buffer("Unknown error.");
+    if (size > 0)
+    {
+        buffer = string(size, ' ');
+        if (vsnprintf(&buffer[0], size, format, args_copy) < 0)
+        {
+            buffer = string("Unknown error.");
+        }
+    }
+    
+    va_end(args_copy);
+
+#ifdef _DEBUG // print this to log, so we can see what the error is before throwing
+    fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer.c_str());
+#endif
+    throw ExceptionWithCallStack<E>(buffer, callstack);
+}
+
 #ifndef _MSC_VER // TODO: what is the correct trigger for gcc?
 template <class E>
 __declspec_noreturn void ThrowFormatted(const char* format, ...) __attribute__((format(printf, 1, 2)));
@@ -65,25 +91,9 @@ __declspec_noreturn static inline void ThrowFormatted(const char* format, ...)
 {
     va_list args;
     va_start(args, format);
-
-    char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
-    int written = vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
-    // TODO: In case of EILSEQ error, choose between just outputting the raw format itself vs. continuing the half-completed buffer
-    //if (written < 0) // an invalid wide-string conversion may lead to EILSEQ
-    //    strncpy(buffer, format, _countof(buffer)
-    UNUSED(written); // pre-VS2015 vsnprintf() returns -1 in case of overflow, instead of the #characters written
-    if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
-        sprintf(buffer + _countof(buffer) - 4, "...");
-#ifdef _DEBUG // print this to log, so we can see what the error is before throwing
-    fprintf(stderr, "\nAbout to throw exception '%s'\n", buffer);
-#endif
-    //Microsoft::MSR::CNTK::ExceptionWithCallStack<E>::PrintCallStack();
-    // Note: The call stack will skip 2 levels to suppress this function and its call sites (XXXError()).
-    //       If more layers are added here, it would have to be adjusted.
-    // TODO: Change ExceptionWithCallStack to take a parameter how many levels to skip.
-    throw ExceptionWithCallStack<E>(buffer, ExceptionWithCallStack<E>::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true));
+    ThrowFormattedVA<E>(format, args);
+    va_end(args);
 };
-#pragma warning(pop)
 
 // RuntimeError - throw a std::runtime_error with a formatted error string
 #ifndef _MSC_VER // gcc __attribute__((format(printf())) does not percolate through variadic templates; so must go the macro route

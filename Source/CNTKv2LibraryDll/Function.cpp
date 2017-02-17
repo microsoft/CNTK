@@ -510,10 +510,6 @@ namespace CNTK
                                 std::unordered_map<Variable, Variable>& leafVariablesCloneMap,
                                 std::unordered_map<Variable, Variable>& placeholderReplacements)
     {
-        const PrimitiveFunction* primitiveFunction = dynamic_cast<const PrimitiveFunction*>(clonee.get());
-        if (primitiveFunction == nullptr)
-            LogicError("Currently cloning of user defined Functions is unsupported");
-
         if (cloneMap.find(clonee.get()) != cloneMap.end())
             LogicError("Cloning an already visited Function");
 
@@ -608,13 +604,11 @@ namespace CNTK
             cloneeToClonedInputMap.insert({cloneeInput, clonedInput});
         }
 
-        Dictionary attributesCopy(primitiveFunction->Attributes());
         FunctionPtr clonedFunction;
-        if (primitiveFunction->OpType() != PrimitiveOpType::Block)
-            clonedFunction = MakeSharedObject<PrimitiveFunction>(primitiveFunction->OpType(), inputs, std::move(attributesCopy), primitiveFunction->Name());
-        else
+        const BlockFunction* blockFunction = dynamic_cast<const BlockFunction*>(clonee.get());
+        if (blockFunction)
         {
-            auto cloneeComposite = dynamic_cast<const BlockFunction*>(primitiveFunction)->Composite();
+            auto cloneeComposite = blockFunction->Composite();
             auto clonedComposite = cloneeComposite->Clone(parameterCloneMethod, replacements);
 
             auto cloneeBlockCompositeArguments = cloneeComposite->Arguments();
@@ -623,16 +617,17 @@ namespace CNTK
             for (size_t i = 0; i < cloneeBlockCompositeArguments.size(); ++i)
                 cloneeToClonedBlockCompositeArgumentsMap.insert({ cloneeBlockCompositeArguments[i], clonedBlockCompositeArguments[i] });
 
-            auto cloneeBlockCompositeArgumentsMap = primitiveFunction->BlockArgumentsMapping();
+            auto cloneeBlockCompositeArgumentsMap = blockFunction->BlockArgumentsMapping();
             std::vector<std::pair<Variable, Variable>> clonedBlockCompositeArgumentsMap;
             for (auto cloneeArgumentMapping : cloneeBlockCompositeArgumentsMap)
                 clonedBlockCompositeArgumentsMap.push_back({ cloneeToClonedBlockCompositeArgumentsMap.at(cloneeArgumentMapping.first), cloneeToClonedInputMap.at(cloneeArgumentMapping.second) });
 
-            clonedFunction = MakeSharedObject<BlockFunction>(std::move(clonedComposite), clonedBlockCompositeArgumentsMap, primitiveFunction->OpName(), std::move(attributesCopy), primitiveFunction->Name());
+            clonedFunction = MakeSharedObject<BlockFunction>(std::move(clonedComposite), clonedBlockCompositeArgumentsMap, blockFunction->OpName(), Dictionary(blockFunction->Attributes()), blockFunction->Name());
         }
+        else
+            clonedFunction = clonee->Clone(inputs);
 
-        cloneMap[primitiveFunction] = clonedFunction;
-
+        cloneMap[clonee.get()] = clonedFunction;
         return clonedFunction;
     }
 
@@ -1311,6 +1306,49 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::OptimizedRNNStack, operand, weights, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ELU(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero, 
+            Minus(Exp(operandPlaceholder), Constant::Scalar(operand.GetDataType(), 1.0)),
+            operandPlaceholder);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ELU", name);
+    }
+
+    FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero,
+            ElementTimes(Constant::Scalar(operand.GetDataType(), 0.01), operandPlaceholder),
+            operandPlaceholder);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"LeakyReLU", name);
+    }
+
+    FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ElementSelect(lessThanZero,
+            ElementTimes(alpha, operandPlaceholder),
+            operandPlaceholder);
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"PReLU", name);
+    }
+
+    FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgmaxReductionOpName, axis, name);
+    }
+
+    FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name)
+    {
+        return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgminReductionOpName, axis, name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)
@@ -1411,11 +1449,7 @@ namespace CNTK
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
-
-            auto dataPadded = Internal::Scatter(operandPlaceholder, Sequence::IsFirst(broadcastAsPlaceholder), std::make_pair<size_t, int>(0, 1));
-            auto placeHolderOutput = PlaceholderVariable(operand.Shape(), broadcastAs.DynamicAxes());
-            auto output = ElementSelect(Sequence::IsFirst(broadcastAsPlaceholder), dataPadded, PastValue(placeHolderOutput));
-            return AsBlock(output->ReplacePlaceholders({ { placeHolderOutput, output } }), { { operandPlaceholder, operand }, { broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+            return AsBlock(Internal::ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
         }
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)

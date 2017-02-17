@@ -199,7 +199,7 @@ std::pair<size_t, size_t> BlockRandomizer::LoadSequenceData(size_t globalSampleC
             LogicError("Invalid chunk requested.");
         }
 
-        it->second->GetSequence(description.m_id, sequenceData);
+        it->second->GetSequence(description.m_indexInOriginalChunk, sequenceData);
         for (int j = 0; j < m_streams.size(); ++j)
         {
             assert(offset + i < data[j].size());

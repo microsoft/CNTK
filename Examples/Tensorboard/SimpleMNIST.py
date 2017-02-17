@@ -70,7 +70,7 @@ def simple_mnist():
 
     lr_per_minibatch = learning_rate_schedule(0.2, UnitType.minibatch)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, ce, pe, sgd(netout.parameters, lr=lr_per_minibatch))
+    trainer = Trainer(netout, (ce, pe), sgd(netout.parameters, lr=lr_per_minibatch))
 
     # Instantiate a ProgressPrinter.
     logdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mnist_log") 

@@ -24,33 +24,34 @@ using namespace std;
 static string MakeFunctionNameStandOut(string name);
 static void CollectCallStack(size_t skipLevels, bool makeFunctionNamesStandOut, const function<void(string)>& write);
 
-/// <summary>This function retrieves the call stack as a string</summary>
-template <class E>
-string ExceptionWithCallStack<E>::GetCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
+namespace DebugUtil
 {
-    try
+    /// <summary>This function retrieves the call stack as a string</summary>
+    string GetCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
     {
-        string output;
-        CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output](string stack)
+        try
         {
-            output += stack;
-        });
-        return output;
+            string output;
+            CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [&output](string stack)
+            {
+                output += stack;
+            });
+            return output;
+        }
+        catch (...) // since we run as part of error reporting, don't get hung up on our own error
+        {
+            return string();
+        }
     }
-    catch (...) // since we run as part of error reporting, don't get hung up on our own error
-    {
-        return string();
-    }
-}
 
-/// <summary>This function outputs the call stack to the std err</summary>
-template <class E>
-void ExceptionWithCallStack<E>::PrintCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
-{
-    CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [](string stack)
+    /// <summary>This function outputs the call stack to the std err</summary>
+    void PrintCallStack(size_t skipLevels /*= 0*/, bool makeFunctionNamesStandOut /*= false*/)
     {
-        cerr << stack;
-    });
+        CollectCallStack(skipLevels + 1/*skip this function*/, makeFunctionNamesStandOut, [](string stack)
+        {
+            cerr << stack;
+        });
+    }
 }
 
 // make the unmangled name a bit more readable

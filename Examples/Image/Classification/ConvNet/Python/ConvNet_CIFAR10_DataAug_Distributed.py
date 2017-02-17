@@ -61,12 +61,12 @@ def create_conv_network():
     
     with cntk.layers.default_options(activation=cntk.ops.relu, pad=True):
         z = cntk.models.Sequential([
-            cntk.models.LayerStack(2, lambda : [
+            cntk.models.For(range(2), lambda : [
                 cntk.layers.Convolution2D((3,3), 64),
                 cntk.layers.Convolution2D((3,3), 64),
                 cntk.layers.MaxPooling((3,3), (2,2))
             ]), 
-            cntk.models.LayerStack(2, lambda i: [
+            cntk.models.For(range(2), lambda i: [
                 cntk.layers.Dense([256,128][i]), 
                 cntk.layers.Dropout(0.5)
             ]), 
@@ -111,7 +111,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
         parameter_learner = cntk.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
     # Create trainer
-    return cntk.Trainer(network['output'], network['ce'], network['pe'], parameter_learner)
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner)
 
 # Train and test
 def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore, profiling=False):

@@ -14,7 +14,8 @@ from .ops import parameter, input_variable, placeholder_variable, combine
 from .ops import times, convolution, pooling, batch_normalization, dropout, unpooling
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from .utils import Record, _as_tuple
-from .blocks import *  # TODO: reduce to what we actually use
+from .blocks import * # layers.py imports all of blocks and models
+from .models import *
 from .blocks import _trace_layers  # (debugging)
 
 from .ops.functions import Function
@@ -413,7 +414,7 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
-    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, running_sample_count=run_count,
+    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, running_count=run_count, spatial=(map_rank == 1),
                                   normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, 
                                   epsilon=epsilon, use_cudnn_engine=not use_cntk_engine)
     return Block(apply_x, 'BatchNormalization', name, Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance), make_block=True)

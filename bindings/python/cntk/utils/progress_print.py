@@ -7,8 +7,7 @@ from __future__ import print_function
 import os
 import time
 
-from cntk.cntk_py import TensorBoardFileWriter
-
+from cntk.cntk_py import TensorBoardFileWriter, print_built_info
 
 # TODO: Let's switch to import logging in the future instead of print. [ebarsoum]
 class ProgressPrinter(object):
@@ -59,12 +58,16 @@ class ProgressPrinter(object):
         self.freq = freq
         self.first = first
         self.tag = '' if not tag else "[{}] ".format(tag)
-        self.epoch_start_time = 0
+        self.epoch_start_time = time.time()
         self.progress_timer_time = 0
         self.log_to_file = log_to_file
         self.rank = rank
         self.gen_heartbeat = gen_heartbeat
         self.num_epochs =  num_epochs
+        self.trainer = None
+        
+        # print out data about CNTK build
+        print_built_info()
 
         # Create TensorBoardFileWriter if the path to a log directory was provided.
         self.tensorboard_writer = None
@@ -176,6 +179,7 @@ class ProgressPrinter(object):
         Args:
             with_metric (`bool`): if `False` it only prints the loss, otherwise it prints both the loss and the metric
         '''
+        self.update_with_trainer(self.trainer, with_metric, force_update=True)
         self.epochs += 1
         if self.freq > 0:
             epoch_end_time = time.time()
@@ -197,6 +201,9 @@ class ProgressPrinter(object):
             if with_metric:
                 self.update_value('epoch_avg_metric', avg_metric * 100.0, self.epochs)
 
+            self.loss_since_last    = 0
+            self.metric_since_last  = 0
+            self.samples_since_last = 0
             return avg_loss, avg_metric, samples  # BUGBUG: for freq=0, we don't return anything here
 
     def ___generate_progress_heartbeat(self):
@@ -211,7 +218,7 @@ class ProgressPrinter(object):
     def log(self, message):
         self.___logprint(message)
 
-    def update(self, loss, minibatch_size, metric=None):
+    def update(self, loss, minibatch_size, metric=None, updates_inc=True):
         '''
         Updates the accumulators using the loss, the minibatch_size and the optional metric.
 
@@ -225,15 +232,14 @@ class ProgressPrinter(object):
         self.samples_since_last  += minibatch_size
         self.loss_since_start    += loss * minibatch_size
         self.loss_since_last     += loss * minibatch_size
-        self.updates_since_start += 1
-        self.total_updates       += 1
+        
+        if updates_inc:
+            self.updates_since_start += 1
+            self.total_updates       += 1
 
         if metric is not None:
             self.metric_since_start += metric * minibatch_size
             self.metric_since_last  += metric * minibatch_size
-
-        if self.epoch_start_time == 0:
-            self.epoch_start_time = time.time()
 
         self.___generate_progress_heartbeat()
 
@@ -269,7 +275,7 @@ class ProgressPrinter(object):
                 if metric is not None:
                     self.update_value('mb_avg_metric', avg_metric * 100.0, self.total_updates)
 
-    def update_with_trainer(self, trainer, with_metric=False):
+    def update_with_trainer(self, trainer, with_metric=False, force_update=False):
         '''
         Updates the accumulators using the loss, the minibatch_size and optionally the metric
         using the information from the ``trainer``.
@@ -278,12 +284,22 @@ class ProgressPrinter(object):
             trainer (:class:`cntk.trainer.Trainer`): trainer from which information is gathered
             with_metric (`bool`): whether to update the metric accumulators
         '''
-        if trainer.previous_minibatch_sample_count == 0:
+        if trainer == None or trainer.previous_minibatch_sample_count == 0:
             return
-        self.update(
-            trainer.previous_minibatch_loss_average,
-            trainer.previous_minibatch_sample_count, 
-            trainer.previous_minibatch_evaluation_average if with_metric else None)
+
+        #remember the trainer for epoch_summary
+        self.trainer = trainer
+
+        self.updates_since_start += 1
+        self.total_updates       += 1
+        
+        if force_update or (self.freq == 0 and (self.updates_since_start+1) & self.updates_since_start == 0) or (self.freq > 0 and (self.updates_since_start % self.freq == 0 or self.updates_since_start <= self.first)):
+            self.update(
+                trainer.accumulated_loss_average,
+                trainer.accumulated_sample_count, 
+                trainer.accumulated_evaluation_average if with_metric else None,
+                updates_inc=False)
+            trainer.reset_accumulation()         
 
     def update_value(self, name, value, step):
         '''
