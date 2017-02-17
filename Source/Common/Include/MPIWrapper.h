@@ -149,6 +149,7 @@ public:
     virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank) = 0;
     virtual void Bcast(double* sendData, size_t numElements, size_t srcRank) = 0;
     virtual void Bcast(float* sendData, size_t numElements, size_t srcRank) = 0;
+    virtual void Bcast(void* buffer, int count, MPI_Datatype datatype, int root) = 0;
 
     virtual void AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const = 0;
     virtual void AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const = 0;
@@ -159,6 +160,7 @@ public:
     virtual void AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const = 0;
     virtual void AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const = 0;
     virtual void AllGather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements) const = 0;
+    virtual void Allgather(const void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype) const = 0;
 
     virtual void Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const = 0;
     virtual void Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const = 0;
