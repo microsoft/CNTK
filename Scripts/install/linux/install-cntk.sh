@@ -6,10 +6,15 @@
 # for full license information.
 # ==============================================================================
 
-SCRIPT_NAME="$(basename "$(test -L "$0" && readlink "$0" || echo "$0")")"
-PARSED_ARGS=`getopt -o '' --long py-version:,anaconda-prefix: -n "$SCRIPT_NAME" -- "$@"`
+SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
+SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
-if [ $? != 0 ] ; then echo "Terminating..." >&2 ; exit 1 ; fi
+PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath: -n "$SCRIPT_NAME" -- "$@")
+
+[ $? != 0 ] && {
+  echo Terminating...
+  exit 1
+}
 
 eval set -- "$PARSED_ARGS"
 PY_VERSION=35
@@ -17,7 +22,7 @@ ANACONDA_PREFIX="$HOME/anaconda3"
 
 while true; do
   case "$1" in
-    --py-version) 
+    --py-version)
       case "$2" in
         27 | 34 | 35)
           PY_VERSION="$2"
@@ -27,18 +32,27 @@ while true; do
           exit 1
           ;;
       esac
-      shift 2 ;;
-    --anaconda-prefix) ANACONDA_PREFIX="$2"; shift 2 ;;
-    -- ) shift; break ;;
-    * ) break ;;
+      shift 2
+      ;;
+    --anaconda-basepath)
+      ANACONDA_PREFIX="$2"
+      shift 2
+      ;;
+    --)
+      shift
+      break
+      ;;
   esac
 done
+
+[ $# = 0 ] || {
+  echo Extra parameters detected: $*
+  exit 1
+}
 
 # Log steps, stop on error
 # TODO cut down on logging
 set -x -e -o pipefail
-
-SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
 # Go to the drop root
 cd "$SCRIPT_DIR/../../.."
@@ -55,7 +69,7 @@ CNTK_BINARY="$CNTK_BIN_PATH/cntk"
 CNTK_PY_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py$PY_VERSION-environment.yml"
 CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta11.0-$PYWHEEL_QUALIFIER-linux_x86_64.whl"
 
-test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" && 
+test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" &&
 test -d "$CNTK_TUTORIALS_PATH" &&
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
 test -f "$CNTK_PY_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {
