@@ -11,6 +11,7 @@
 #include "Basics.h"
 #define FORMAT_SPECIALIZE // to get the specialized version of the format routines
 #include "File.h"
+#include <Config.h>
 #include <string>
 #include <stdint.h>
 #include <locale>
@@ -963,18 +964,15 @@ template vector<double> File::LoadMatrixFromTextFile<double>(const std::wstring&
 template vector<float>  File::LoadMatrixFromStringLiteral<float> (const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 
-
 #ifndef CNTK_COMPONENT_VERSION
 #error CNTK_COMPONENT_VERSION must be set
 #endif
 
 #ifdef _WIN32
-template <class STRING> // accepts char (UTF-8) and wide string
-FARPROC Plugin::Load(const STRING& plugin, const std::string& proc)
+FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc)
 {
-    std::string a();
-    m_dllName = msra::strfun::utf16(plugin);
-    m_dllName += L"-" + msra::strfun::utf16(std::string("CNTK_COMPONENT_VERSION"));
+    m_dllName = plugin;
+    m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
     m_dllName += L".dll";
     m_hModule = LoadLibrary(m_dllName.c_str());
     if (m_hModule == NULL)
@@ -986,10 +984,9 @@ FARPROC Plugin::Load(const STRING& plugin, const std::string& proc)
     return entryPoint;
 }
 #else
-template <class STRING> // accepts char (UTF-8) and wide string
-void* Plugin::Load(const STRING& plugin, const std::string& proc)
+FARPROC Plugin::LoadInternal(const std::string& plugin, const std::string& proc)
 {
-    string soName = msra::strfun::utf8(plugin);
+    string soName = plugin;
     soName += std::string("-") + std::string(CNTK_COMPONENT_VERSION);
     soName = soName + ".so";
     void* handle = dlopen(soName.c_str(), RTLD_LAZY);
@@ -1001,6 +998,5 @@ void* Plugin::Load(const STRING& plugin, const std::string& proc)
     return entryPoint;
 }
 #endif
-
 
 }}}

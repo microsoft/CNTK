@@ -676,12 +676,18 @@ public:
     {
     }
     template <class STRING> // accepts char (UTF-8) and wide string
-    FARPROC Load(const STRING& plugin, const std::string& proc);
+    FARPROC Load(const STRING& plugin, const std::string& proc)
+    {
+        return LoadInternal(msra::strfun::utf16(plugin), proc);
+    }
     ~Plugin()
     {
     }
     // we do not unload because this causes the exception messages to be lost (exception vftables are unloaded when DLL is unloaded)
     // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
+
+private:
+    FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc);
 };
 #else
 class Plugin
@@ -695,7 +701,10 @@ public:
     {
     }
     template <class STRING> // accepts char (UTF-8) and wide string
-    void* Load(const STRING& plugin, const std::string& proc);
+    void *Load(const STRING& plugin, const std::string& proc)
+    {
+        return LoadInternal(msra::strfun::utf8(plugin), proc);
+    }
     ~Plugin()
     {
         if (handle != NULL)
@@ -707,6 +716,9 @@ public:
             }
         }
     }
+
+private:
+    FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc);
 };
 #endif
 
