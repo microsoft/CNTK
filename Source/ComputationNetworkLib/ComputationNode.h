@@ -1871,11 +1871,15 @@ protected:
     // if the matrix's size will scale with minibatch size, set mbScale = true 
     void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false)
     {
-        matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale);
+        if (matrixPtr == nullptr)
+        {
+            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale);
+        }
     }
 
     void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
     {
+        assert(matrixPtr != nullptr);
         matrixPool.RequestRelease<ElemType>(&matrixPtr);
     }
 
