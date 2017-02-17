@@ -119,6 +119,12 @@
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
   </PropertyGroup>
 
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <PreprocessorDefinitions>HAS_MPI=1</PreprocessorDefinitions>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
   <ItemDefinitionGroup Condition="'$(ConfigurationType)' == 'StaticLibrary'">
     <ClCompile>
       <WarningLevel>Level4</WarningLevel>
