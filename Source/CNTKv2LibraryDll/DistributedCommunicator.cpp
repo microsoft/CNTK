@@ -14,6 +14,7 @@
 #include "MatrixQuantizerImpl.h"
 #include "GPUDataTransferer.h"
 #include <numeric>
+#include "Utils.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -330,16 +331,33 @@ namespace CNTK
 
         std::unique_ptr<Matrix<float>> aggregationBufferFloat;
         std::unique_ptr<Matrix<double>> aggregationBufferDouble;
+
         // Do the packing to reduce the number of MPI requests.
+        // TODO: Junjie, please assert that all packed gradients have the same device.
+        // TODO: Also move to a speparate function and get rid of code duplication please.
+        // TODO: make buffers to be member of MPICommunicatorImpl, so that they are not allocated on each call.
         if (packedFloatGradientsIndex.size() > 1)
         {
             aggregationBufferFloat.reset(new (std::nothrow) Matrix<float>(1, packedFloatGradientsSizeInBytes / sizeof(float),
-                inputValues[packedFloatGradientsIndex[0]]->Device().Id()));
+                AsCNTKImplDeviceId(inputValues[packedFloatGradientsIndex[0]]->Device())));
         }
+        else if (packedFloatGradientsIndex.size() == 1)
+        {
+            valuesToAggregate.push_back(inputValues[packedFloatGradientsIndex.front()]);
+            valuesAfterAggregate.push_back(outputValues[packedFloatGradientsIndex.front()]);
+            packedFloatGradientsIndex.clear();
+        }
+
         if (packedDoubleGradientsIndex.size() > 1)
         {
             aggregationBufferDouble.reset(new (std::nothrow) Matrix<double>(1, packedDoubleGradientsSizeInBytes / sizeof(double),
-                inputValues[packedDoubleGradientsIndex[0]]->Device().Id()));
+                AsCNTKImplDeviceId(inputValues[packedDoubleGradientsIndex[0]]->Device())));
+        }
+        else if (packedDoubleGradientsIndex.size() == 1)
+        {
+            valuesToAggregate.push_back(inputValues[packedDoubleGradientsIndex.front()]);
+            valuesAfterAggregate.push_back(outputValues[packedDoubleGradientsIndex.front()]);
+            packedDoubleGradientsIndex.clear();
         }
 
         if (aggregationBufferFloat == nullptr && aggregationBufferDouble == nullptr)
@@ -355,6 +373,7 @@ namespace CNTK
         }
         else
         {
+            // TODO: Junjie please also move this into a separate function that is templatized and get rid of code duplicaiton.
             if (aggregationBufferFloat != nullptr)
             {
                 size_t offset = 0;
@@ -458,12 +477,12 @@ namespace CNTK
 
             numAllReduceRequestsCompleted++;
 
-            assert(idx < inputValues.size());
-            auto value = inputValues[idx];
+            assert(idx < valuesToAggregate.size());
+            auto value = valuesToAggregate[idx];
 
             if (value->Device() != DeviceDescriptor::CPUDevice())
             {
-                auto view = outputValues[idx];
+                auto view = valuesAfterAggregate[idx];
                 auto size = GetBufferSize(view);
                 auto& transferer = m_gpuDataTransferers[idx];
                 auto& buffer = m_intermediateCPUBuffers[idx];
@@ -471,9 +490,18 @@ namespace CNTK
             }
         }
 
-        // Unpack the continuous buffer
-        if (aggregationBufferFloat == nullptr || aggregationBufferDouble == nullptr)
+        // TODO: Should not wait, simply publishing event on the compute stream should be sufficient.
+        for (auto i = 0; i < numValues; ++i)
         {
+            if (valuesToAggregate[i]->Device() != DeviceDescriptor::CPUDevice())
+                m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
+        }
+
+
+        // Unpack the continuous buffer
+        if (aggregationBufferFloat != nullptr)
+        {
+            // TODO: Junjie please also move this into a separate function that is templatized and get rid of code duplicaiton.
             size_t offset = 0;
             for (size_t i : packedFloatGradientsIndex)
             {
@@ -481,21 +509,17 @@ namespace CNTK
                 gradient->AssignValuesOf(aggregationBufferFloat->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
                 offset += gradient->GetNumElements();
             }
+        }
 
-            offset = 0;
+        if(aggregationBufferDouble != nullptr)
+        {
+            size_t offset = 0;
             for (size_t i : packedDoubleGradientsIndex)
             {
                 auto gradient = GetWritableMatrix<double>(outputValues[i]);
                 gradient->AssignValuesOf(aggregationBufferDouble->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
                 offset += gradient->GetNumElements();
             }
-        }
-
-        // TODO: Should not wait, simply publishing event on the compute stream should be sufficient.
-        for (auto i = 0; i < numValues; ++i)
-        {
-            if (inputValues[i]->Device() != DeviceDescriptor::CPUDevice())
-                m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
         }
     }
 
