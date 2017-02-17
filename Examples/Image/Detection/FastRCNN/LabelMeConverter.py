@@ -52,7 +52,7 @@ for filename in os.listdir(filepath):
                 ymin = min(ylist)
                 ymax = max(ylist)
 
-                # output object roi based on cntk format of xmin ymax width hight
+                # output object roi based on cntk format of xmin ymin xmax ymax
                 obj_ROI = str(xmin) + "\t" + str(ymin) + "\t" +str(xmax) + "\t" + str(ymax)
 
                 labelFile.write(label  + '\n')
