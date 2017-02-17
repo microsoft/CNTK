@@ -487,9 +487,10 @@ public:
     }
 
     EditDistanceErrorNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : EditDistanceErrorNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), configp->Get(L"tokensToIgnore"))
+        : EditDistanceErrorNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"subPen"), configp->Get(L"delPen"), configp->Get(L"insPen"), configp->Get(L"squashInputs"), {})
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+        m_tokensToIgnore = ScriptableObjects::ConfigArray::FlattenedVectorFrom<size_t>(configp->Get(L"tokensToIgnore"));
     }
 
     virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
