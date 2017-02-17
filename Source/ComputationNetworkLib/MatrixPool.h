@@ -116,7 +116,7 @@ private:
     bool CheckOverlap(pair<int, int>occ, vector<pair<int, int>>&occVec)
     {
         bool bRet = false;
-        for (auto&o : occVec)
+        for (auto& o : occVec)
         {
             if (occ.first <= o.second && occ.second >= o.first)
             {
@@ -124,6 +124,11 @@ private:
                 break;
             }
         }
+//#define SUPRESS_MEMSHARING // #define this to disable memory sharing by always return true 
+// TODO: Make this a runtime option.
+#ifdef SUPRESS_MEMSHARING
+        bRet = true; 
+#endif
         return bRet;
     }
 
@@ -137,13 +142,13 @@ private:
         // sort the memory request from largest size to smallest 
         std::sort(memInfoVec.begin(), memInfoVec.end(), greater_than_mem_req_size<ElemType>());
 
-        for (auto&devId : m_deviceIDSet)
+        for (auto& devId : m_deviceIDSet)
         {
             // memAllocInfoVec is a sorted list of memory allocations from smallest to largest in memory size 
             vector<MemAllocInfo> memAllocInfoVec;
             int memoryCounter = 0; 
             // we start with memory request that is scalable with minibatch size(usually those require larger memory size)
-            for (auto&memInfo : memInfoVec)
+            for (auto& memInfo : memInfoVec)
             {
                 // check if it's the proper device
                 if (memInfo.deviceId != devId || !memInfo.mbScale)
@@ -185,7 +190,7 @@ private:
             }
 
             // rescan the request list and this time allocate for those that doesn't depend on minibatch size 
-            for (auto&memInfo : memInfoVec)
+            for (auto& memInfo : memInfoVec)
             {
                 // check if it's the proper device
                 if (memInfo.deviceId != devId || memInfo.mbScale)
@@ -232,7 +237,7 @@ private:
                 auto matrixPtr = make_shared<Matrix<ElemType>>(devId);
                 if (!matrixPtr) // this can't really happen, because we haven't started allocating memory yet
                     LogicError("MatrixPool: failed to get a valid matrix.");
-                for (auto&memInfo : memInfoVec)
+                for (auto& memInfo : memInfoVec)
                 {
                     if (memInfo.deviceId == devId && memInfo.memoryId == i)
                         *memInfo.pMatrixPtr = matrixPtr;
