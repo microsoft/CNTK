@@ -963,4 +963,44 @@ template vector<double> File::LoadMatrixFromTextFile<double>(const std::wstring&
 template vector<float>  File::LoadMatrixFromStringLiteral<float> (const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::string& literal, size_t& /*out*/ numRows, size_t& /*out*/ numCols);
 
+
+#ifndef CNTK_COMPONENT_VERSION
+#error CNTK_COMPONENT_VERSION must be set
+#endif
+
+#ifdef _WIN32
+template <class STRING> // accepts char (UTF-8) and wide string
+FARPROC Plugin::Load(const STRING& plugin, const std::string& proc)
+{
+    std::string a();
+    m_dllName = msra::strfun::utf16(plugin);
+    m_dllName += L"-" + msra::strfun::utf16(std::string("CNTK_COMPONENT_VERSION"));
+    m_dllName += L".dll";
+    m_hModule = LoadLibrary(m_dllName.c_str());
+    if (m_hModule == NULL)
+        RuntimeError("Plugin not found: '%ls'", m_dllName.c_str());
+    // create a variable of each type just to call the proper templated version
+    FARPROC entryPoint = GetProcAddress(m_hModule, proc.c_str());
+    if (entryPoint == nullptr)
+        RuntimeError("Symbol '%s' not found in plugin '%ls'", proc.c_str(), m_dllName.c_str());
+    return entryPoint;
+}
+#else
+template <class STRING> // accepts char (UTF-8) and wide string
+void* Plugin::Load(const STRING& plugin, const std::string& proc)
+{
+    string soName = msra::strfun::utf8(plugin);
+    soName += std::string("-") + std::string(CNTK_COMPONENT_VERSION);
+    soName = soName + ".so";
+    void* handle = dlopen(soName.c_str(), RTLD_LAZY);
+    if (handle == NULL)
+        RuntimeError("Plugin not found: '%s' (error: %s)", soName.c_str(), dlerror());
+    void* entryPoint = dlsym(handle, proc.c_str());
+    if (entryPoint == nullptr)
+        RuntimeError("Symbol '%s' not found in plugin '%s'", proc.c_str(), soName.c_str());
+    return entryPoint;
+}
+#endif
+
+
 }}}
