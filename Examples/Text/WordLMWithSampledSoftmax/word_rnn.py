@@ -18,8 +18,6 @@ from cntk.models import For, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from data_reader import DataReader
 from math import log, exp
-from download_data import Paths
-
 from cntk.device import set_default_device, cpu, gpu
 
 # Setting global parameters
@@ -179,12 +177,6 @@ def print_progress(samples_per_second, average_full_ce, total_samples, total_tim
 
 # Creates and trains an rnn language model.
 def train_lm():
-    training_text_file = Paths.train
-    validation_text_file = Paths.validation
-    token_to_ix_file_path = Paths.token2id
-    sampling_weights_file_path = Paths.frequencies
-
-   
     data = DataReader(token_to_id_path, segment_sepparator)
 
     # Create model nodes for the source and target inputs
