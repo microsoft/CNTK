@@ -1,0 +1,89 @@
+RootDir = "."
+
+ConfigDir = "$RootDir$"
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$RootDir$/Models"
+
+ndlMacros = "$ConfigDir$/Macros.ndl"
+
+precision = "float"
+deviceId = 0
+parallelTrain=true
+
+imageLayout = "cudnn"
+# override the above as follows when running on CPU:
+# deviceId = -1
+
+command = Train
+
+modelPath = "$ModelDir$/05_ConvLocal"
+maxEpochs = 30
+
+
+stderr = "$OutputDir$/05_ConvLocal"
+traceLevel = 1
+numMBsToShowResult = 50
+
+Train = [
+    action = "train"
+
+     NDLNetworkBuilder = [
+        networkDescription = "$ConfigDir$/05_ConvLocal.ndl"
+    ]
+    
+    SGD = [
+        epochSize = 49984
+        minibatchSize = 64
+        learningRatesPerMB = 0.01*10:0.003*10:0.001
+        momentumPerMB = 0.9*20:0.99
+        L2RegWeight = 0.03
+        
+        ParallelTrain=[
+            parallelizationMethod="DataParallelSGD"
+#           distributedMBReading=true
+            parallelizationStartEpoch=2
+            
+            DataParallelSGD=[
+                gradientBits=1
+            ]
+        ]    
+    ]
+    
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        # See REAMDE.md for details on getting the data (Train_cntk_text.txt).
+        file = "$DataDir$/Train_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]
+
+Test = [
+    action = "test"
+    # Set minibatch size for testing.
+    minibatchSize = 16
+
+    reader = [
+        readerType = "CNTKTextFormatReader"
+        file = "$DataDir$/Test_cntk_text.txt"
+        input = [
+            features = [
+                dim = 3072
+                format = "dense"
+            ]
+            labels = [
+                dim = 10
+                format = "dense"
+            ]
+        ]
+    ]    
+]

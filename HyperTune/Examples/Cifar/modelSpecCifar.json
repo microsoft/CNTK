@@ -1,0 +1,57 @@
+# Do not change name of variables
+
+{
+
+    'HyperParams':
+    {
+        'learningrate':  ['Continuous', [1e-5, 1e3], 'LogUniform'],
+        'l2reg':  ['Continuous', [1e-5, 1.], 'LogUniform'],
+        'droprate':  ['Continuous', [0., 0.9], 'Uniform'],
+        'momentum':  ['Continuous', [0.5, 0.99], 'Uniform'],
+        'numhidden': ['Discrete', [32, 128], 'LogUniform'],
+        'initWScaleConv1': ['Continuous', [1e-5, 1e3], 'LogUniform'], 
+        'initWScaleConv2': ['Continuous', [1e-5, 1e3], 'LogUniform'], 
+        'initWScaleConv3': ['Continuous', [1e-5, 1e3], 'LogUniform'], 
+        'initWScaleFc1': ['Continuous', [1e-5, 1e3], 'LogUniform'], 
+        'initWScaleFc2': ['Continuous', [1e-5, 1e3], 'LogUniform']
+    }
+
+    # Overall
+    'GP': True,
+    'Additive': True,
+    'Early': True,
+    'Test': False,
+    'CustomizedGroup': False,
+
+    # path to filename, will be ignored in later version
+    'HTfile': 'src/Examples/Cifar/hyper_Cifar.py',
+    'cntkfile': 'src/Examples/Cifar/Cifar10_02BatchNormConv.cntk',
+    'rootpath': 'src/Examples/Cifar/Hypertune/',
+    'ErrName': 'EvalClassificationError',
+    'ErrWhenFailed': 2,
+
+
+    # HyperTune Spec
+    # 'HTMaxEvalTrials': 30,
+    # 'HTTrainingEpochsPerEval': 3,
+
+    # HyperTuneEarly Spec
+    'HTInitialEvalTrials': 128,
+    'HTMaxRound': 4,
+    'HTTrainingEpochsPerEval': [2, 4, 8, 16],
+    'HTSuggestRate': [0.4, 0.3, 0.2, 0.1],
+    'HTNextRate': 0.5,
+    'HTCalibrate': True,
+    'HTCalibrateRatio_M': 0.6,
+    'HTCalibrateRatio_V': 0.6,
+    
+    # Bayes Optimization Spec
+    'BOGridSize': 1000,
+    'BOInitSize': 40,
+    'BOLambdaConst': 0.4,
+    'BOKernelType': 'M52',
+    'BOBaseNoise': 0.02
+
+
+}
+

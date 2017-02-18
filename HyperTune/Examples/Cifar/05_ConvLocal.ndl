@@ -1,0 +1,84 @@
+load=ndlMnistMacros
+run=DNN
+
+ndlMnistMacros = [
+    ImageW = 32
+    ImageH = 32
+    ImageC = 3
+    LabelDim = 10
+
+    features = ImageInput(ImageW, ImageH, ImageC, tag = feature, imageLayout = $imageLayout$)
+    featOffs = Const(128)
+    featScaled = Minus(features, featOffs)
+    labels = Input(LabelDim, tag = label)
+    
+    conv1WScale = 0.0043
+    conv1BValue = 0
+    conv2WScale = 1.414
+    conv2BValue = 0
+    conv3WScale = 1.414
+    conv3BValue = 0
+    conv4WScale = 1.414
+    conv4BValue = 0
+    fc1WScale = 1.5
+    fc1BValue = 0
+]
+
+DNN=[
+    # conv1
+    kW1 = 5
+    kH1 = 5
+    cMap1 = 64
+    hStride1 = 1
+    vStride1 = 1
+    # weight[cMap1, kW1 * kH1 * ImageC]
+    conv1 = ConvReLULayer(featScaled, cMap1, 75, kW1, kH1, hStride1, vStride1, conv1WScale, conv1BValue)
+
+    # pool1
+    pool1W = 3
+    pool1H = 3
+    pool1hStride = 2
+    pool1vStride = 2
+    pool1 = MaxPooling(conv1, pool1W, pool1H, pool1hStride, pool1vStride, imageLayout = $imageLayout$)
+
+    # conv2
+    kW2 = 5
+    kH2 = 5
+    cMap2 = 64
+    hStride2 = 1
+    vStride2 = 1
+    # weight[cMap2, kW2 * kH2 * cMap1]
+    conv2 = ConvReLULayer(pool1, cMap2, 1600, kW2, kH2, hStride2, vStride2, conv2WScale, conv2BValue)
+
+    # pool2
+    pool2W = 3
+    pool2H = 3
+    pool2hStride = 2
+    pool2vStride = 2
+    pool2 = MaxPooling(conv2, pool2W, pool2H, pool2hStride, pool2vStride, imageLayout = $imageLayout$)
+
+    # conv_local3
+    kW3 = 3
+    kH3 = 3
+    cMap3 = 64
+    hStride3 = 1
+    vStride3 = 1
+    # weight[cMap3 * pool2OutW * poolOutH, kW3 * kH3 * cMap2]
+    conv3 = ConvLocalReLULayer(pool2, cMap3, 3136, cMap2, 576, kW3, kH3, hStride3, vStride3, conv3WScale, conv3BValue)
+
+    # conv_local4
+    kW4 = 3
+    kH4 = 3
+    cMap4 = 32
+    hStride4 = 1
+    vStride4 = 1
+    # weight[cMap4 * conv3OutW * conv3OutH, kW4 * kH4 * cMap3]
+    conv4 = ConvLocalReLULayer(conv3, cMap4, 1568, cMap3, 576, kW4, kH4, hStride4, vStride4, conv4WScale, conv4BValue)
+
+    ol = DnnImageLastLayer(7, 7, cMap4, labelDim, conv4, fc1WScale, fc1BValue)
+    
+    CE = CrossEntropyWithSoftmax(labels, ol, tag = Criteria)
+    Err = ErrorPrediction(labels, ol, tag = Eval)
+    OutputNodes = ol
+]
+

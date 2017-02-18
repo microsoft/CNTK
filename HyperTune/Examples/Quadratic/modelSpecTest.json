@@ -1,0 +1,72 @@
+# Do not change name of variables
+
+{
+    #rename to HyperParams to turn it on
+    'HyperParams1':
+    {
+        'x1':  ['Continuous', [-1., 1.], 'Uniform'],
+        'x2':  ['Continuous', [1e-2, 1e2], 'LogUniform'],
+        'x3':  ['Discrete', [-3, 3], 'Uniform'],
+        'x4':  ['Categorical', [1, 2, 3], 'Uniform']
+    },
+    
+    #rename to HyperParams to turn it on
+    'HyperParams2':    
+    {
+        'x1':  ['Continuous', [-1., 1.], 'Uniform'],
+        'x2':  ['Continuous', [1e-2, 1e2], 'LogUniform'],
+        'x3':  ['Discrete', [-3, 3], 'Uniform'],
+        'x4':  ['Categorical', [1, 2, 3], 'Uniform'],
+        'x5':  ['Continuous', [-1., 1.], 'Uniform'],
+        'x6':  ['Continuous', [-1., 1.], 'Uniform'],
+        'x7':  ['Continuous', [-1., 1.], 'Uniform'],
+        'x8':  ['Continuous', [-1., 1.], 'Uniform'],
+        'x9':  ['Continuous', [-1., 1.], 'Uniform']
+    },
+
+    #rename to HyperParams to turn it on
+    'HyperParams':    
+    [
+        {'x1':  ['Continuous', [-1., 1.], 'Uniform'] ,
+        'x2':  ['Continuous', [1e-2, 1e2], 'LogUniform'] },
+        {'x3':  ['Discrete', [-3, 3], 'Uniform'] },
+        {'x4':  ['Discrete', [1, 3], 'Uniform'] },
+        {'x5':  ['Continuous', [-1., 1.], 'Uniform'] },
+        {'x6':  ['Continuous', [-1., 1.], 'Uniform'] },
+        {'x7':  ['Continuous', [-1., 1.], 'Uniform'] },
+        {'x8':  ['Continuous', [-1., 1.], 'Uniform'] },
+        {'x9':  ['Continuous', [-1., 1.], 'Uniform'] }
+    ],
+
+    # Overall
+    'GP': True,
+    'Additive': False,
+    'Early': True,
+    'Test': True,
+    'CustomizedGroup': True,
+
+    # HyperTune Spec
+     'HTMaxEvalTrials': 30,
+     'HTTrainingEpochsPerEval': 3,
+
+    # HyperTuneEarly Spec
+    'HTInitialEvalTrials': 128,
+    'HTMaxRound': 4,
+    'HTTrainingEpochsPerEval': [2, 4, 8, 16],
+    'HTSuggestRate': [0.4, 0.3, 0.2, 0.1],
+    'HTNextRate': 0.5,
+    'HTCalibrate': True,
+    'HTCalibrateRatio_M': 0.6,
+    'HTCalibrateRatio_V': 0.6,
+    
+    # Bayes Optimization Spec
+    'BOGridSize': 2000,
+    'BOInitSize': 4,
+    'BOLambdaConst': 0.4,
+    'BOKernelType': 'M52',
+    'BOBaseNoise': 1e-5
+
+
+
+}
+

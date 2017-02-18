@@ -1,0 +1,31 @@
+Usage example:
+
+
+python main -e D:/users/dongyu/Repos/CNTK/x64/Release/cntk -n 2 -c D:/users/dongyu/Repos/CNTK/HyperTune/Examples/Simple2d/Simple.cntk -s D:/users/dongyu/Repos/CNTK/HyperTune/Examples/Simple2d/modelSpecSimple.json -m D:/temp/Simple2d/Hypertune/Model -l D:/temp/Simple2d/Hypertune/output
+
+
+argParser.add_argument('-e', '--cntkexe', dest='cntkExe', required=True,
+                       help='the full path to the CNTK executable')
+argParser.add_argument('-p', '--hostfile', dest='hostFile',
+                       help='the file that contains a list of hosts to run the MPI job')
+arg_parser.add_argument('-n', '--numproc', dest='numproc',
+                       help='the number of parallel jobs running on the same computer. cannot be used together with -p.')
+argParser.add_argument('-c', '--cntkcfgfile', dest='cntkCfgFile', required=True,
+                       help='the full path to the CNTK config file')
+argParser.add_argument('-s', '--specfile', dest='specFile',  required=True,
+                       help='the file that specifies hyper-parameter search configurations')
+argParser.add_argument('-m', '--modeldir', dest='modelDir', required=True,
+                       help='the absolute directory where the CNTK model files will be generated')
+argParser.add_argument('-l', '--logdir', dest='logDir', required=True,
+                       help='the absolute directory where the logs will be saved')
+        arg_parser.add_argument('-r', '--restart', dest='restart', type=bool, default=False,
+                               help='if False (default) it will continue from the checkpoint. Otherwise it will start from scratch.')
+
+
+The checkpoint file will be saved as:
+
+HTCheckpoint.json
+
+To run an new instance, make sure to delete this checkpoint file.
+
+ATTENTION: All the tunable parameters as well "maxEpochs", "stderr" and "modelPath" must be at the top level of the CNTK config file so that they can be overwritten by the tuner.
