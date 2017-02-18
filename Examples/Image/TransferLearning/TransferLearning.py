@@ -59,10 +59,10 @@ _num_classes = 102
 
 # Creates a minibatch source for training or testing
 def create_mb_source(map_file, image_width, image_height, num_channels, num_classes, randomize=True):
-    transforms = [xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
+    transforms = [xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')] 
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-            features_stream_name=StreamDef(field='image', transforms=transforms),
-            label_stream_name   =StreamDef(field='label', shape=num_classes))),
+            features =StreamDef(field='image', transforms=transforms),
+            labels   =StreamDef(field='label', shape=num_classes))),
             randomize=randomize)
 
 
@@ -100,6 +100,9 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
     label_input = input_variable(num_classes)
 
     # Define mapping from reader streams to network inputs
+    import pdb
+    pdb.set_trace()
+    
     input_map = {
         image_input: minibatch_source[features_stream_name],
         label_input: minibatch_source[label_stream_name]

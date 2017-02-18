@@ -35,8 +35,7 @@ def test_htk_deserializers():
     features = C.input_variable(((2*context+1)*feature_dim))
     labels = C.input_variable((num_classes))
 
-    model = Sequential([BatchNormalization(),
-                        For(range(3), lambda : Recurrence(LSTM(256))),
+    model = Sequential([For(range(3), lambda : Recurrence(LSTM(256))),
                         Dense(num_classes)])
     z = model(features)
     ce = C.cross_entropy_with_softmax(z, labels)
