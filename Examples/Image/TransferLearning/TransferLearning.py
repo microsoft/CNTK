@@ -12,7 +12,7 @@ from cntk.device import set_default_device, gpu
 from cntk import load_model, Trainer, UnitType
 from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, get_node_outputs
-from cntk.io import MinibatchSource, ImageDeserializer
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
 import cntk.io.transforms as xforms
 from cntk.layers import Dense
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule
