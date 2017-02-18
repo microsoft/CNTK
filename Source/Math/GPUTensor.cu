@@ -283,7 +283,7 @@ template<> __device__ float NeutralValue<float>(ElementWiseOperator op)
     case ElementWiseOperator::opMax:                return -FLT_MAX;
     case ElementWiseOperator::opElementwiseProduct: return 1.0f;
     case ElementWiseOperator::opArgmin:             return FLT_MAX;
-    case ElementWiseOperator::opArgmax:             return FLT_MIN;
+    case ElementWiseOperator::opArgmax:             return -FLT_MAX;
     default:                                        return 0; // error
     }
 };
@@ -298,7 +298,7 @@ template<> __device__ double NeutralValue<double>(ElementWiseOperator op)
     case ElementWiseOperator::opMax:                return -DBL_MAX;
     case ElementWiseOperator::opElementwiseProduct: return 1.0;
     case ElementWiseOperator::opArgmin:             return DBL_MAX;
-    case ElementWiseOperator::opArgmax:             return DBL_MIN;
+    case ElementWiseOperator::opArgmax:             return -DBL_MAX;
     default:                                        return 0; // error
     }
 };
