@@ -178,6 +178,14 @@
 %ignore_function CNTK::ElementSelect;
 %ignore_function CNTK::Splice;
 %ignore_function CNTK::AsBlock;
+%ignore_function CNTK::ReaderCrop;
+%ignore_function CNTK::ReaderMean;
+%ignore_function CNTK::ReaderScale;
+%ignore_function CNTK::ReaderColor;
+%ignore_function CNTK::ImageDeserializer;
+%ignore_function CNTK::CTFDeserializer;
+%ignore_function CNTK::HTKFeatureDeserializer;
+%ignore_function CNTK::HTKMLFDeserializer;
 
 %ignore_namespace CNTK::Sequence;
 
