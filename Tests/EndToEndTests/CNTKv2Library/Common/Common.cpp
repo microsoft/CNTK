@@ -93,32 +93,6 @@ bool Is1bitSGDAvailable()
     Deserializer featureDeserializer = HTKFeatureDeserializer({ HTKFeatureConfiguration(L"features", featuresFilePath, featureDim, 0, 0, false) });
     Deserializer labelDeserializer = HTKMLFDeserializer(L"labels", labelMappingFile, numOutputClasses, { labelsFilePath });
 
-    /*
-    Dictionary featuresStreamConfig;
-    featuresStreamConfig[L"dim"] = featureDim;
-    featuresStreamConfig[L"scpFile"] = featuresFilePath;
-
-    Dictionary featInputStreamsConfig;
-    featInputStreamsConfig[L"features"] = featuresStreamConfig;
-
-    Dictionary featDeserializerConfiguration;
-    featDeserializerConfiguration[L"type"] = L"HTKFeatureDeserializer";
-    featDeserializerConfiguration[L"input"] = featInputStreamsConfig;
-
-    Dictionary labelsStreamConfig;
-    labelsStreamConfig[L"dim"] = numOutputClasses;
-    labelsStreamConfig[L"mlfFile"] = labelsFilePath;
-    labelsStreamConfig[L"labelMappingFile"] = labelMappingFile;
-    labelsStreamConfig[L"scpFile"] = featuresFilePath;
-
-    Dictionary labelsInputStreamsConfig;
-    labelsInputStreamsConfig[L"labels"] = labelsStreamConfig;
-
-    Dictionary labelsDeserializerConfiguration;
-    labelsDeserializerConfiguration[L"type"] = L"HTKMLFDeserializer";
-    labelsDeserializerConfiguration[L"input"] = labelsInputStreamsConfig;
-    */
-
     Dictionary minibatchSourceConfiguration;
     if (randomize)
         minibatchSourceConfiguration[L"randomize"] = true;
