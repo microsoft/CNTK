@@ -100,9 +100,6 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
     label_input = input_variable(num_classes)
 
     # Define mapping from reader streams to network inputs
-    import pdb
-    pdb.set_trace()
-    
     input_map = {
         image_input: minibatch_source[features_stream_name],
         label_input: minibatch_source[label_stream_name]
