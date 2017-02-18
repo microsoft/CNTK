@@ -55,8 +55,4 @@ ExitCode=$?
 popd
 rm -rf $TestDataDir
 
-if [ "$TEST_DEVICE" == "cpu" ]; then
-  unset CUDA_VISIBLE_DEVICES
-fi
-
 exit $ExitCode
