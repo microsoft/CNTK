@@ -531,11 +531,11 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
     norm_shape  = _INFERRED
     if map_rank is not None and map_rank != 1:
         UntestedBranchError("BatchNormalization map_rank can only be 1 or None for now")
-    scale        = Parameter(norm_shape, init=init_scale)
-    bias         = Parameter(norm_shape, init=0)
-    run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
-    run_variance = Constant(0, shape=norm_shape)
-    run_count    = Constant(0, shape=(1,))  # TODO: This should be a scalar, not a 1-dim vector
+    scale        = Parameter(norm_shape, init=init_scale, name='scale')
+    bias         = Parameter(norm_shape, init=0,          name='bias')
+    run_mean     = Constant(0, shape=norm_shape, name='mean')  # note: these are not really constants; they are updated differently
+    run_variance = Constant(0, shape=norm_shape, name='variance')
+    run_count    = Constant(0, shape=(),         name='count')
 
     # expression
     @BlockFunction('BatchNormalization', name)
@@ -553,8 +553,8 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
     # parameters bound to this Function
-    scale = Parameter((1), init=initial_scale)  # TODO: offer Softplus version for protection, as for Stabilizer
-    bias  = Parameter((1), init=initial_bias)
+    scale = Parameter((1), init=initial_scale, name='scale')  # TODO: offer Softplus version for protection, as for Stabilizer
+    bias  = Parameter((1), init=initial_bias,  name='bias')
 
     # expression
     @BlockFunction('LayerNormalization', name)

@@ -277,7 +277,7 @@ template<> __device__ float AggregateNeutralValue<float>(ElementWiseOperator op)
     switch (op)
     {
     case ElementWiseOperator::opSum:                return 0;
-    case ElementWiseOperator::opLogSum:             return -INFINITY;
+    case ElementWiseOperator::opLogSum:             return -FLT_MAX;
     case ElementWiseOperator::opMin:                return FLT_MAX;
     case ElementWiseOperator::opMax:                return -FLT_MAX;
     case ElementWiseOperator::opElementwiseProduct: return 1.0f;
@@ -292,7 +292,7 @@ template<> __device__ double AggregateNeutralValue<double>(ElementWiseOperator o
     switch (op)
     {
     case ElementWiseOperator::opSum:                return 0;
-    case ElementWiseOperator::opLogSum:             return -INFINITY;
+    case ElementWiseOperator::opLogSum:             return -DBL_MAX;
     case ElementWiseOperator::opMin:                return DBL_MAX;
     case ElementWiseOperator::opMax:                return -DBL_MAX;
     case ElementWiseOperator::opElementwiseProduct: return 1.0;

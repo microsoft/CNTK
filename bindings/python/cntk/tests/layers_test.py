@@ -34,20 +34,21 @@ def _getModelParameterDict(model, node_name):
 
 ####################################
 # Recurrence()
-# Note: Run this first, since it uses random init; result will change if moved down.
-# TODO: How to reset the RNG?
 ####################################    
 
 def test_recurrence():
-    r = Recurrence(GRU(5), go_backwards=False)
+    # Note: We cannot use random init of the GRU parameters because random numbers will
+    # depend on what previous tests were run. Hence, use a constant (which is not realistic).
+    # TODO: Find out how to reset the random generator, then remove the constant init.
+    r = Recurrence(GRU(5, init=0.1), go_backwards=False)
     a = input_variable(shape=(5,), dynamic_axes=[Axis.default_batch_axis(), Axis('Seq')])
     x = np.reshape(np.arange(0,25, dtype=np.float32), (1,5,5))
     rt = r(a).eval({a:x})
-    exp = [[ 0.403719,  0.138464, -0.41292 , -0.527761, -0.552515],
-           [ 0.432029, -0.967444, -0.498568, -0.973288, -0.98996 ],
-           [-0.193994, -0.999806, -0.527336, -0.999831, -0.999987],
-           [-0.875168, -0.999995, -0.532773, -1.      , -1.      ],
-           [-0.989135, -1.      , -0.533798, -1.      , -1.      ]]
+    exp = [[ 0.204824,  0.204824,  0.204824,  0.204824,  0.204824],
+           [ 0.225884,  0.225884,  0.225884,  0.225884,  0.225884],
+           [ 0.227594,  0.227594,  0.227594,  0.227594,  0.227594],
+           [ 0.227735,  0.227735,  0.227735,  0.227735,  0.227735],
+           [ 0.227746,  0.227746,  0.227746,  0.227746,  0.227746]]
     np.testing.assert_array_almost_equal(rt[0], exp, decimal=6, err_msg='Error in Recurrence(GRU()) forward')
 
 ####################################

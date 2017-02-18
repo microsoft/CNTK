@@ -64,6 +64,4 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
         h_att = attn_final_stab(h_att)
         return h_att
 
-    attention = _inject_name(attention, name)
-
-    return attention
+    return _inject_name(attention, name)

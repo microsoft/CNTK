@@ -218,7 +218,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     Cf = Parameter(            cell_shape,           init=init,      name='Cf') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
     Co = Parameter(            cell_shape,           init=init,      name='Co') if use_peepholes else None  # cell-to-hiddden {note: applied elementwise}
 
-    Wmr = Parameter(cell_shape + shape, init=init) if has_projection else None  # final projection
+    Wmr = Parameter(cell_shape + shape, init=init, name='P') if has_projection else None  # final projection
 
     # each use of a stabilizer layer must get its own instance
     Sdh = Stabilizer(enable_self_stabilization=enable_self_stabilization)
