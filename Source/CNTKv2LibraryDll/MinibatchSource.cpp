@@ -350,7 +350,7 @@ namespace CNTK
         m_prevMinibatchSize = 0;
     }
 
-    /* static */ ImageTransform CNTK::ReaderCrop(const wchar_t* cropType,
+    /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
             int cropSize, float sideRatio, float areaRatio,
             float aspectRatio, const wchar_t* jitterType)
     {
@@ -365,7 +365,7 @@ namespace CNTK
         return crop;
     }
 
-    /* static */ ImageTransform CNTK::ReaderScale(int width,
+    /* static */ ImageTransform ReaderScale(int width,
             int height, int channels, const wchar_t* interpolations,
             const wchar_t* scaleMode, int padValue)
     {
@@ -380,14 +380,14 @@ namespace CNTK
         return scale;
     }
 
-    /* static */ ImageTransform CNTK::ReaderMean(const wchar_t* meanFile)
+    /* static */ ImageTransform ReaderMean(const wchar_t* meanFile)
     {
         ImageTransform mean;
         mean.Add(L"type", L"Mean", L"meanFile", meanFile);
         return mean;
     }
 
-    /* static */ ImageTransform CNTK::ReaderColor(float brightnessRadius,
+    /* static */ ImageTransform ReaderColor(float brightnessRadius,
             float contrastRadius, float saturationRadius)
     {
         ImageTransform color;
@@ -398,7 +398,7 @@ namespace CNTK
         return color;
     }
 
-    Deserializer CNTK::ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
     {
         Deserializer img;
         std::vector<DictionaryValue> actualTransforms;
@@ -413,7 +413,7 @@ namespace CNTK
         return img;
     }
 
-    Deserializer CNTK::CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
+    Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
     {
         Deserializer ctf;
         Dictionary input;
@@ -428,7 +428,7 @@ namespace CNTK
         return ctf;
     }
 
-    Deserializer CNTK::HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams)
+    Deserializer HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams)
     {
         Deserializer htk;
         Dictionary input;
@@ -444,7 +444,7 @@ namespace CNTK
         return htk;
     }
 
-    Deserializer CNTK::HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles)
+    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles)
     {
         Deserializer htk;
         Dictionary stream;
