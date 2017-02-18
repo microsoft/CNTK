@@ -36,15 +36,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <>
-vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
+vector<MemRequestInfo<float>>& MatrixPool::GetMemRequestInfoVec<float>()
 {
-    return m_releasedFloatMatrices;
+    return m_memRequestInfoFloatVec;
 }
 
 template <>
-vector<shared_ptr<Matrix<double>>>& MatrixPool::GetReleasedMatrices<double>()
+vector<MemRequestInfo<double>>& MatrixPool::GetMemRequestInfoVec<double>()
 {
-    return m_releasedDoubleMatrices;
+    return m_memRequestInfoDoubleVec;
 }
 
 // -----------------------------------------------------------------------
