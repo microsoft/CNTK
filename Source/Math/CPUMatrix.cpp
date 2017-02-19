@@ -5870,6 +5870,166 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
     }
 };
 
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
+    const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const std::vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
+{
+    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
+    if (isColWise)
+    {
+        vector<size_t> curPhoneSeq;
+        
+        auto &us = *this;
+        size_t s, s2;
+        size_t senoneid, t;
+        ElemType ascore;
+        double x, y;
+        size_t senonenum, frameNum;
+
+        for (size_t uttId = 0;uttId < uttFrameNum.size(); uttId++) {
+            senonenum = uttPhoneNum[uttId];
+            frameNum = uttFrameNum[uttId];
+
+            // Populate utterance
+            // Using loop instead of memcpy for clarity
+            curPhoneSeq.reserve(senonenum);
+            for (size_t i =0;i < senonenum;i++)
+                curPhoneSeq.push_back(phoneSeq(i, uttId));
+
+            if (frameNum > 1)
+            {
+                //initialize alpha
+                for (s = 1; s < 3; s++)
+                {
+                    senoneid = curPhoneSeq[s];
+                    alpha(s, 0) = prob(senoneid, 0);
+                }
+                alpha(senonenum - 1, 0) = LZERO;
+                //initialize beta
+                for (s = senonenum - 3; s < senonenum - 1; s++)
+                {
+                    senoneid = curPhoneSeq[s];
+                    beta(s, frameNum - 1) = prob(senoneid, frameNum - 1);
+                }
+                beta(senonenum - 1, frameNum - 1) = LZERO;
+
+                //cal alpha
+                for (t = 1; t < frameNum; t++)
+                {
+                    for (s = 1; s < senonenum - 1; s++)
+                    {
+                        senoneid = curPhoneSeq[s];
+                        x = LZERO;
+                        for (s2 = s - 1; s2 <= s; s2++)
+                        {
+                            if (s2 > 0)
+                            {
+                                y = alpha(s2, t - 1);
+                                x = LogAddD(x, y);
+                            }
+                        }
+
+                        if (senoneid != prob.GetNumRows() - 1 && s - 2 > 0 && senoneid != curPhoneSeq[s - 2])
+                        {
+                            y = alpha(s - 2, t - 1);
+                            x = LogAddD(x, y);
+                        }
+                        if (senoneid != SIZE_MAX)
+                            ascore = prob(senoneid, t);
+                        else
+                            ascore = 0;
+                        alpha(s, t) = (float)x + ascore;
+                    }
+
+                }
+                //exit senone
+                x = LZERO;
+                for (s2 = senonenum - 3; s2 < senonenum - 1; s2++)
+                {
+                    y = alpha(s2, frameNum - 1);
+                    x = LogAddD(x, y);
+                }
+                alpha(senonenum - 1, frameNum - 1) = (float)x;
+
+                totalScore = -alpha(senonenum - 1, frameNum - 1);
+
+                //cal beta
+                for (t = frameNum - 2; t >= 0; t--)
+                {
+
+                    for (s = 1; s < senonenum - 1; s++)
+                    {
+                        senoneid = curPhoneSeq[s];
+                        x = LZERO;
+                        for (s2 = s; s2 <= s + 1; s2++)
+                        {
+                            if (s2 < senonenum - 1)
+                            {
+                                y = beta(s2, t + 1);
+                                x = LogAddD(x, y);
+                            }
+                        }
+                        if (senoneid != prob.GetNumRows() - 1 && s + 2 < senonenum - 1 && senoneid != curPhoneSeq[s + 2])
+                        {
+                            y = beta(s + 2, t + 1);
+                            x = LogAddD(x, y);
+                        }
+
+                        if (senoneid != SIZE_MAX)
+                            ascore = prob(senoneid, t);
+                        else
+                            ascore = 0;
+                        beta(s, t) = (float)x + ascore;
+
+                    }
+                    if (t == 0)
+                        break;
+                }
+                //entry senone
+                x = LZERO;
+                for (s2 = 1; s2 < 3; s2++)
+                {
+                    y = beta(s2, 0);
+                    x = LogAddD(x, y);
+                }
+                beta(0, 0) = (float)x;
+                for (t = 0; t < frameNum; t++)
+                {
+                    //cal zt
+                    double Zt = LZERO;
+                    for (s = 1; s < senonenum - 1; s++)
+                    {
+                        senoneid = curPhoneSeq[s];
+                        Zt = LogAddD(Zt, (alpha(s, t) + beta(s, t) - prob(senoneid, t)));
+                    }
+
+                    for (s = 1; s < senonenum - 1; s++)
+                    {
+                        senoneid = curPhoneSeq[s];
+                        if (senoneid != SIZE_MAX)
+                        {
+                            ElemType logoccu = alpha(s, t) + beta(s, t) - prob(senoneid, t) - (float)Zt;
+                            if (logoccu < LOG_OF_EPS_IN_LOG)
+                                us(senoneid, t) += 0.0f;
+                            else
+                                us(senoneid, t) += exp(logoccu);
+                        }
+                    }
+                }
+            }
+        }
+        return *this;
+
+    }
+     else {
+         LogicError("Only ColWise minibatch layout is supported.");
+    }
+
+    return *this;
+}
+
 /// the kernel function for RCRF backward computation
 template <class ElemType>
 void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,

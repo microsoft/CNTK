@@ -577,6 +577,9 @@ Shift(input, fromOffset, boundaryValue, boundaryMode=-1/*context*/, dim=-1, tag=
 RowSlice(beginIndex, numRows, input, tag='') = Slice(beginIndex, beginIndex + numRows, input, axis = 1)
 RowRepeat(input, numRepeats, tag='') = new ComputationNode [ operation = 'RowRepeat' ; inputs = _AsNodes (input) /*plus the function args*/ ]
 RowStack(inputs, axis=1, tag='') = new ComputationNode [ operation = 'RowStack' /*plus the function args*/ ]
+EditDistanceError(leftInput, rightInput, subPen=0.0, delPen=0.0, insPen=0.0, squashInputs=false, tokensToIgnore=[||], tag='') = new ComputationNode [ operation = 'EditDistanceError' ; inputs = _AsNodes (leftInput : rightInput) /*plus the function args*/ ]
+ForwardBackward(graph, features, blankTokenId, delayConstraint=-1, tag='') = new ComputationNode [ operation = 'ForwardBackward' ; inputs = _AsNodes (graph : features) /*plus the function args*/ ]
+LabelsToGraph(labels, tag='') = new ComputationNode [ operation = 'LabelsToGraph' ; inputs = _AsNodes (labels) /*plus the function args*/ ]
 Slice(beginIndex, endIndex, input, axis=1, tag='') =
     if axis < 0 then [ # time axis: specify -1
         beginFlags = if beginIndex > 0 then BS.Boolean.Not (BS.Loop.IsFirstN (beginIndex, input)) else                 BS.Loop.IsLastN  (-beginIndex, input)

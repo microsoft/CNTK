@@ -5646,6 +5646,51 @@ Matrix<ElemType>& Matrix<ElemType>::AssignSequenceError(const ElemType hsmoothin
                             NOT_IMPLEMENTED);
     return *this;
 }
+
+// Calculate CTC score
+// prob (input): the posterior output from the network
+// alpha, beta (output): alpha and beta for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// totalScore (output): total CTC score
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numParallelSequences (input): num of parallel sequences
+// mbsize (input): the maximum channel frame number
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+//      delayConstraint=-1 means no constraint
+template<class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta,
+    const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, ElemType &totalScore, const std::vector<size_t> & uttToChanInd,
+    const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum, const std::vector<size_t> & uttPhoneNum,
+    const size_t numParallelSequences, const size_t mbsize, const int delayConstraint, const bool isColWise)
+{
+    DecideAndMoveToRightDevice(prob, *this);
+    alpha.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
+    beta.Resize(phoneSeq.GetNumRows(), prob.GetNumCols());
+    Resize(prob.GetNumRows(), prob.GetNumCols());
+
+    alpha.SetValue(LZERO);
+    beta.SetValue(LZERO);
+    SetValue(LZERO);
+    SwitchToMatrixType(prob.GetMatrixType(), prob.GetFormat(), false);
+
+    DISPATCH_MATRIX_ON_FLAG(&prob,
+        this,
+        this->m_CPUMatrix->AssignCTCScore(*prob.m_CPUMatrix, *alpha.m_CPUMatrix, *beta.m_CPUMatrix, *phoneSeq.m_CPUMatrix, *phoneBound.m_CPUMatrix, totalScore,
+            uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, delayConstraint, isColWise),
+        this->m_GPUMatrix->AssignCTCScore(*prob.m_GPUMatrix, *alpha.m_GPUMatrix, *beta.m_GPUMatrix, *phoneSeq.m_GPUMatrix, *phoneBound.m_GPUMatrix, totalScore,
+            uttToChanInd, uttBeginFrame, uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, delayConstraint, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED
+    );
+
+    return *this;
+}
+
 #pragma endregion Static BLAS Functions
 
 // TensorView currently does not interface with sparse matrices. For now, we just catch this and throw.

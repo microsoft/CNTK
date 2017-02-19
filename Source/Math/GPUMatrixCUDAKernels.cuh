@@ -5192,6 +5192,292 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
         val[idx] -= g;
     }
 }
+
+// calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
+// prob (input): the posterior output from the network
+// alpha (output): alpha for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numChannels (input): channel number in this minibatch
+// uttNum (input): number of utterances
+// t (input): time stamp to process
+// maxPhoneNum (input): the max number of phones between utterances
+// totalPhoneNum (input): the total number of phones of all utterances
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      delayConstraint=-1 means no constraint
+template<class ElemType>
+__global__ void _assignAlphaScore(
+    const ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const size_t *uttToChanInd,
+    const size_t *uttFrameNum,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
+    size_t numChannels,
+    const size_t uttNum,
+    const size_t  t,
+    const size_t maxPhoneNum, // Maximum length of utterance in this MB
+    const size_t totalPhoneNum, // Total number of phones
+    const int delayConstraint)
+{
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
+    // Index of the label in the sequence
+    LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
+
+    // Number of phones and frames in this utterance
+    LONG64 phoneNum = uttPhoneNum[uttId]; 
+    LONG64 frameNum = uttFrameNum[uttId];
+
+    if (uttId >= uttNum || phoneSeqId >= phoneNum - 1 || t >= frameNum || phoneSeqId == 0) return;
+
+    // Current and previous phone indices in phoneSeq matrix
+    LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
+    LONG64 labelid_2 = labelid - 2;
+
+    // Actual current phone label
+    LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
+
+    // Index of the current frame in minibatch
+    LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+
+    // Index of probability of observing phoneId at frame timeId
+    LONG64 probId = timeId*totalPhoneNum + phoneId;
+
+    LONG64 alphaId = maxPhoneNum* timeId + phoneSeqId; // alpha_t(s)
+    // Previous time frame
+    LONG64 timeId_1 = timeId - numChannels; // Index corresponding to (t-1)
+    LONG64 alphaId_0 = maxPhoneNum* timeId_1 + phoneSeqId; // alpha_{t-1}(s)
+    LONG64 alphaId_1 = alphaId_0 - 1; // alpha_{t-1}(s-1)
+    LONG64 alphaId_2 = alphaId_0 - 2; // alpha_{t-1}(s-2)
+
+    if (t == 0)
+    {
+        // Initialize recursion
+        if (phoneSeqId == 1 || phoneSeqId == 2)
+        {
+            alphaScore[alphaId] = prob[probId];
+        }
+    }
+    else
+    {
+        if (phoneSeqId >= 1)
+        {
+            ElemType x = LZERO;
+
+            ElemType ascore;
+            if (phoneSeqId > 2)
+            {
+                // if current label is not blank and not equal prev non-blank label
+                if ((LONG64)(phoneSeq[labelid]) != totalPhoneNum - 1 && phoneId != (LONG64)(phoneSeq[labelid_2]))
+                {
+                    x = logaddk(x, alphaScore[alphaId_2]);
+                }
+            }
+
+            if (phoneSeqId > 1)
+            {
+                x = logaddk(x, alphaScore[alphaId_1]);
+            }
+
+            x = logaddk(x, alphaScore[alphaId_0]);
+
+            if (phoneId != SIZE_MAX)
+                ascore = prob[probId]; // Probability of observing given label at given time
+            else
+                ascore = 0;
+            alphaScore[alphaId] = (ElemType)x + ascore;
+            if (delayConstraint != -1)
+            {
+                LONG64 labelid_r = labelid + 2;
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_r]);
+                if (phoneId == totalPhoneNum - 1)
+                {
+                    // only constraint right side
+                    if (t > phoneBoundId_r + delayConstraint - 1)
+                        alphaScore[alphaId] = LZERO;
+                }
+                else if (phoneId != totalPhoneNum - 1)
+                {
+                    if (t > phoneBoundId_r + delayConstraint)
+                        alphaScore[alphaId] = LZERO;
+                }
+            }
+        }
+    }
+}
+
+// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+__global__ void _assignBetaScore(
+    const ElemType *prob,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const size_t *uttToChanInd,
+    const size_t *uttFrameNum,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
+    const size_t numChannels,
+    const size_t uttNum,
+    const size_t  t,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum,
+    const int delayConstraint)
+{
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
+    // Index of the label in the sequence
+    LONG64 phoneSeqId = blockDim.y * blockIdx.y + threadIdx.y;
+    LONG64 phoneNum = uttPhoneNum[uttId];
+    LONG64 frameNum = uttFrameNum[uttId];
+
+    if (uttId >= uttNum || phoneSeqId >= phoneNum - 1 || t >= frameNum || phoneSeqId == 0) return;
+
+    LONG64 labelid = uttId*maxPhoneNum + phoneSeqId;
+    LONG64 labelid_2 = labelid + 2;
+    LONG64 phoneId = (LONG64)(phoneSeq[labelid]);
+    LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+    LONG64 probId = timeId*totalPhoneNum + phoneId;
+    LONG64 betaid = maxPhoneNum* timeId + phoneSeqId;
+    LONG64 timeId_1 = timeId + numChannels;
+    LONG64 betaid_0 = maxPhoneNum* timeId_1 + phoneSeqId;
+    LONG64 betaid_1 = betaid_0 + 1;
+    LONG64 betaid_2 = betaid_0 + 2;
+
+    if (t == frameNum - 1)
+    {
+        if (phoneSeqId == phoneNum - 3 || phoneSeqId == phoneNum - 2)
+        {
+            betaScore[betaid] = prob[probId];
+        }
+    }
+    else
+    {
+        if (phoneSeqId >= 1)
+        {
+            ElemType x = LZERO;
+            ElemType ascore;
+            if (phoneSeqId < phoneNum - 3)
+            {
+                if (phoneSeq[labelid] != totalPhoneNum - 1 && phoneId != phoneSeq[labelid_2])
+                {
+                    x = logaddk(x, betaScore[betaid_2]);
+                }
+            }
+
+            if (phoneSeqId < phoneNum - 2)
+            {
+                x = logaddk(x, betaScore[betaid_1]);
+            }
+
+            x = logaddk(x, betaScore[betaid_0]);
+
+            if (phoneId != SIZE_MAX)
+                ascore = prob[probId];
+            else
+                ascore = 0;
+            betaScore[betaid] = (ElemType)x + ascore;
+            if (delayConstraint != -1)
+            {
+                LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
+                if (phoneId == totalPhoneNum - 1)
+                {
+                    if (t > phoneBoundId_r + delayConstraint - 1)
+                        betaScore[betaid] = LZERO;
+                }
+                else if (phoneId != totalPhoneNum - 1)
+                {
+                    if (t > phoneBoundId_r + delayConstraint)
+                        betaScore[betaid] = LZERO;
+                }
+            }
+        }
+    }
+}
+
+// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+__global__ void _assignCTCScore(
+    ElemType *CTCscore,
+    ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    const size_t uttNum,
+    const size_t *uttToChanInd,
+    const size_t *uttBeginFrame,
+    const size_t *uttPhoneNum,
+    const size_t *uttFrameNum,
+    const long numChannels,
+    const long maxPhoneNum,
+    const long totalPhoneNum)
+{
+    LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
+    LONG64 t = blockDim.y * blockIdx.y + threadIdx.y;
+
+    if (uttId < uttNum && t < uttFrameNum[uttId])
+    {
+        LONG64 phoneNum = uttPhoneNum[uttId];
+        LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+        LONG64 timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+        ElemType P_lx = betaScore[alphaId_0];
+
+        for (int s = 1; s < phoneNum - 1; s++)
+        {
+            long phoneId = phoneSeq[uttId*maxPhoneNum + s];
+            LONG64 alphaId = maxPhoneNum* timeId + s;
+            LONG64 probId = timeId*totalPhoneNum + phoneId;
+
+            if (phoneId != SIZE_MAX)
+            {
+                ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
+                CTCscore[probId] = logaddk(CTCscore[probId], logoccu);
+            }
+        }
+
+        for (int s = 0; s < totalPhoneNum; s++)
+        {
+            LONG64 probId = timeId*totalPhoneNum + s;
+            ElemType logoccu = CTCscore[probId];
+            if (logoccu < LZERO)
+                CTCscore[probId] = 0.0f;
+            else
+                CTCscore[probId] = exp(logoccu);
+        }
+    }
+}
+
+// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+template<class ElemType>
+__global__ void _assignTotalScore(ElemType *betaScore,
+    ElemType *totalScore,
+    const size_t uttNum,
+    const size_t *uttToChanInd,
+    const size_t *uttBeginFrame,
+    const size_t numChannels,
+    const size_t maxPhoneNum)
+{
+    LONG64 uttId = blockIdx.x;
+    if (uttId < uttNum)
+    {
+        LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+
+        betaScore[alphaId_0] = logaddk(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
+        totalScore[uttId] = betaScore[alphaId_0];
+    }
+}
+
 }
 }
 }
