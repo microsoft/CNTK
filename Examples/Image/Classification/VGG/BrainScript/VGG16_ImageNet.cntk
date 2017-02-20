@@ -26,7 +26,6 @@ ImageC    = 3
 NumLabels = 1000
 
 parallelTrain = true
-hyperCompressMemory = true
 
 ################################
 Train = {
