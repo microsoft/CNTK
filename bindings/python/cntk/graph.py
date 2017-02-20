@@ -147,7 +147,7 @@ def plot(root, filename=None):
         dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
         dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
                                      style='filled',
-                                     fillcolor='lightgray',  # TEST THIS
+                                     fillcolor='lightgray',
                                      height=.85, width=.85, fontsize=12)
         dot_object.set_edge_defaults(fontsize=10)
 
