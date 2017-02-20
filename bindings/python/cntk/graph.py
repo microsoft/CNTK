@@ -127,7 +127,7 @@ def find_by_name(node, node_name, max_depth=None):
         raise ValueError('found multiple functions matching "%s". '
                          'If that was expected call find_all_with_name' % node_name)
 
-    if not result: # TODO: a better name would be try_find_by_name()
+    if not result:
         return None
 
     return result[0]
@@ -137,7 +137,7 @@ def plot(root, filename=None):
     '''
     Walks through every node of the graph starting at ``root``,
     creates a network graph, and returns a network description. It `filename` is
-    specified, it outputs a DOT, PNG, PDF, or SVD file depending on the file name's suffix.
+    specified, it outputs a DOT, PNG, PDF, or SVG file depending on the file name's suffix.
 
     Requirements:
 
@@ -171,8 +171,8 @@ def plot(root, filename=None):
         # initialize a dot object to store vertices and edges
         dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
         dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
-                                     style='filled',    # FROM WILLI
-                                     #color='lightgray',  # BUGBUG: This will kill the borders??
+                                     style='filled',
+                                     fillcolor='lightgray',  # TEST THIS
                                      height=.85, width=.85, fontsize=12)
         dot_object.set_edge_defaults(fontsize=10)
 
@@ -190,10 +190,6 @@ def plot(root, filename=None):
         'ElementTimes': '*',
         'Times': '@',
     }
-    def map_primitive_op(op_name):
-        if op_name in primitive_op_map:
-            op_name = primitive_op_map[op_name]
-        return op_name
     function_nodes = {}  # [uid] -> dot node
 
     def node_desc(node):
@@ -224,7 +220,6 @@ def plot(root, filename=None):
             # Function node
             node = node.root_function
 
-            #stack.extend(node.inputs)
             stack = list(node.root_function.inputs) + stack
 
             # add current Function node
@@ -232,7 +227,7 @@ def plot(root, filename=None):
                 if node.uid in function_nodes: # dot node already exists
                     return function_nodes[node.uid]
                 if node.is_primitive and not node.is_block and len(node.outputs) == 1 and node.output.name == node.name:     # skip the node name if redundant
-                    op_name = map_primitive_op(node.op_name)
+                    op_name = primitive_op_map.get(node.op_name, node.op_name)
                     render_as_primitive = len(op_name) <= 4
                     size = 0.4 if render_as_primitive else 0.6
                     cur_node = pydot.Node(node.uid, label='"' + op_name + '"',
@@ -240,6 +235,7 @@ def plot(root, filename=None):
                                           fixedsize='true' if render_as_primitive else 'false', height=size, width=size,
                                           fontsize=20  if render_as_primitive and len(op_name) == 1 else 12 ,
                                           penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
+                    # TODO: Would be cool, if the user could pass a dictionary with overrides. But maybe for a later version.
                 else:
                     f_name = '\n' + node.name + '()' if node.name else ''
                     cur_node = pydot.Node(node.uid, label='"' + node.op_name + f_name + '"',
@@ -255,15 +251,10 @@ def plot(root, filename=None):
 
             if filename:
                 cur_node = lazy_create_node(node)
-                # FROM WILLI:
-                #cur_node = pydot.Node(node.uid, label=node_desc(node),
-                #        shape='circle')
                 dot_object.add_node(cur_node)
 
             # add node's inputs
-            for i in range(len(node.inputs)):
-                input = node.inputs[i]
-
+            for i, input in enumerate(node.inputs):
                 # Suppress Constants inside BlockFunctions, since those are really private to the BlockFunction.
                 # Still show Parameters, so users know what parameters it learns, e.g. a layer.
                 from cntk import cntk_py
@@ -275,10 +266,12 @@ def plot(root, filename=None):
                     line.append(', ')
 
                 if filename:
-                    # TODO: further merge this
-                    if input.is_input:  # does this include placeholder?
+                    if input.is_input:
                         shape = 'invhouse'
                         color = 'yellow'
+                    elif input.is_placeholder:
+                        shape = 'invhouse'
+                        color = 'grey'
                     elif input.is_parameter:
                         shape = 'diamond'
                         color = 'green'
@@ -292,7 +285,7 @@ def plot(root, filename=None):
                         name = 'Parameter' if input.is_parameter else 'Constant' if input.is_constant else 'Input' if input.is_input else 'Placeholder'
                         if input.name:
                             if name == 'Parameter':  # don't say Parameter for parameters, it's clear from the box
-                                    name = input.name
+                                name = input.name
                             else:
                                 name = name + '\n' + input.name
                         name += '\n' + shape_desc(input)
@@ -302,18 +295,11 @@ def plot(root, filename=None):
                             input_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
                     else: # output variables never get drawn except the final output
                         assert(isinstance (input, cntk_py.Variable))
-                        # BUGBUG: The Output variables all have no names...?
                         input_node = lazy_create_node(input.owner)  # connect to where the output comes from directly, no need to draw it
                     dot_object.add_node(input_node)
-                    label = input.name if input.name else input.uid # TODO: not optimal; why is the .name field not fillled for Outputs?
+                    label = input.name if input.name else input.uid # the Output variables have no name if the function has none
                     label += '\n' + shape_desc(input)
                     dot_object.add_edge(pydot.Edge(input_node, cur_node, label=label))
-                    # FROM WILLI--also move above to here before merge
-                    #child_node = pydot.Node(input.uid, label=node_desc(input),
-                    #        shape=shape, color=color)
-                    #dot_object.add_node(child_node)
-                    #dot_object.add_edge(pydot.Edge(
-                    #    child_node, cur_node, label=shape_desc(input)))
 
             # add node's output
             line.append(') -> ')
@@ -329,12 +315,6 @@ def plot(root, filename=None):
                                                 fixedsize='true', height=1, width=1.3, penwidth=4)
                         dot_object.add_node(final_node)
                         dot_object.add_edge(pydot.Edge(cur_node, final_node, label=shape_desc(output)))
-                # FROM WILLI --these are Output nodes, keep them out
-                #if filename:
-                #    out_node = pydot.Node(n.uid, label=node_desc(n))
-                #    dot_object.add_node(out_node)
-                #    dot_object.add_edge(pydot.Edge(
-                #        cur_node, out_node, label=shape_desc(node)))
 
         except AttributeError:
             # OutputVariable node
