@@ -10,7 +10,6 @@ import sys
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
-from cntk.io import ReaderConfig, ImageDeserializer
 import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
