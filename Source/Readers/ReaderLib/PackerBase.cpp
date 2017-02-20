@@ -57,13 +57,15 @@ void PackerBase::SetConfiguration(const ReaderConfiguration& config, const std::
         LogicError("Minibatch size cannot be zero.");
 }
 
-PackerBase::PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
+PackerBase::PackerBase(CorpusDescriptorPtr corpus,
+    SequenceEnumeratorPtr sequenceEnumerator,
     const std::vector<StreamDescriptionPtr>& streams,
     size_t numberOfBuffers) :
     m_sequenceEnumerator(sequenceEnumerator),
     m_outputStreamDescriptions(streams),
     m_numberOfBuffers(numberOfBuffers),
-    m_currentBufferIndex(0)
+    m_currentBufferIndex(0),
+    m_corpus(corpus)
 {
     assert(m_numberOfBuffers >= 1);
     m_inputStreamDescriptions = sequenceEnumerator->GetStreamDescriptions();
@@ -116,6 +118,36 @@ size_t PackerBase::GetSampleSize(StreamDescriptionPtr stream)
     assert(stream != nullptr);
     size_t elementSize = GetSizeByType(stream->m_elementType);
     return stream->m_sampleLayout->GetNumElements() * elementSize;
+}
+
+void PackerBase::EstablishIdToKey(Minibatch& minibatch, const Sequences& sequences)
+{
+    if (m_corpus == nullptr)
+    {
+        minibatch.m_getKeyById = [](size_t)
+        {
+            RuntimeError("Sequence Id mapping is not available for old style configurations. Please use deserializers.");
+            return "";
+        };
+        return;
+    }
+
+    auto& layout = minibatch.m_data.front()->m_layout;
+    const auto& batch = sequences.m_data.front();
+
+    std::vector<size_t> localSequenceIdToGlobal;
+    localSequenceIdToGlobal.reserve(layout->GetAllSequences().size());
+
+    for (auto& s : layout->GetAllSequences())
+    {
+        if (s.seqId == GAP_SEQUENCE_ID)
+            continue;
+
+        localSequenceIdToGlobal.resize(s.seqId + 1);
+        localSequenceIdToGlobal[s.seqId] = batch[s.seqId]->m_key.m_sequence;
+    }
+
+    minibatch.m_getKeyById = [this, localSequenceIdToGlobal](const size_t i) { return m_corpus->IdToKey(localSequenceIdToGlobal[i]); };
 }
 
 }}}
