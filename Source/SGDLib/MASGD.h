@@ -224,7 +224,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (dest != m_myRank)
                     {
-                        MPI_Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, m_pMPI->Communicator() , &sendRequests[dest]);
+                        m_pMPI->Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, &sendRequests[dest]);
                     }
                 }
                 // 2. recv others 
@@ -234,7 +234,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         int recvSignal = 0;
                         MPI_Status status;
-                        MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_pMPI->Communicator(), &status);
+                        m_pMPI->Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, &status);
                         m_MAworkerStatus[src] = (MAWorkerStatus)recvSignal;
 #if 0
                         assert(status.MPI_SOURCE == src);
@@ -247,7 +247,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 {
                     if (dest != m_myRank)
                     {
-                        MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
+                        m_pMPI->Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
                     }
                 }
                 retval = true; 
@@ -266,7 +266,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (dest != m_myRank)
                         {
-                            MPI_Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, m_pMPI->Communicator(), &sendRequests[dest]);
+                            m_pMPI->Isend(&sentSignal, 1, MPI_INT, dest, m_numSyncPerformed, &sendRequests[dest]);
                         }
                     }
                     // 2. recv status from others (blocking call)
@@ -276,7 +276,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                         {
                             int recvSignal = 0;
                             MPI_Status status;
-                            MPI_Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, m_pMPI->Communicator(), &status);
+                            m_pMPI->Recv(&recvSignal, 1, MPI_INT, src, m_numSyncPerformed, &status);
 #if 0 
                             // for debugging purpose, to be removed when mature 
                             assert(status.MPI_SOURCE == src);
@@ -290,7 +290,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     {
                         if (dest != m_myRank)
                         {
-                            MPI_Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
+                            m_pMPI->Wait(&sendRequests[dest], MPI_STATUS_IGNORE);
                         }
                     }
                     // 4. check peer status again
@@ -318,7 +318,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t                      m_numWorkers; 
         size_t                      m_myRank;
         MASGDPerfStats              m_perfReporter;
-        MPIWrapperPtr m_pMPI;
+        MPIWrapperPtr               m_pMPI;
         DEVICEID_TYPE               m_deviceId;
  };
 

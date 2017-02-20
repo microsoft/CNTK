@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(ImageSimpleCompositeAndBase64)
             0,
             1,
             false,
-            false,
+            true,
             true,
             additionalParameters);
     };
@@ -82,7 +82,8 @@ BOOST_AUTO_TEST_CASE(ImageSimpleCompositeAndBase64)
     test(
     {
         L"MapFile=\"$RootDir$/Base64ImageReaderSimple_map.txt\"",
-        L"DeserializerType=\"Base64ImageDeserializer\""
+        L"DeserializerType=\"Base64ImageDeserializer\"",
+        L"useNumericSequenceKeys=true"
     });
 };
 
@@ -112,11 +113,86 @@ BOOST_AUTO_TEST_CASE(InvalidImageSimpleCompositeAndBase64)
     test(
     {
         L"MapFile=\"$RootDir$/InvalidBase64ImageReaderSimple_map.txt\"",
-        L"DeserializerType=\"Base64ImageDeserializer\""
-        L"maxErrors=4"
+        L"DeserializerType=\"Base64ImageDeserializer\"",
+        L"maxErrors=4",
+        L"useNumericSequenceKeys=true"
     });
 };
 
+BOOST_AUTO_TEST_CASE(Base64WithWriteIds)
+{
+    auto test = [this](std::vector<std::wstring> additionalParameters, multiset<string>& actualKeys)
+    {
+        shared_ptr<StreamMinibatchInputs> inputs = CreateStreamMinibatchInputs<float>(1, 1, false, true, true);
+        shared_ptr<DataReader> reader = GetDataReader(testDataPath() + "/Config/ImageReaderSimple_Config.cntk",
+            "Composite_Test", "reader", additionalParameters);
+
+        reader->StartMinibatchLoop(2 /*mbSize*/, 0, inputs->GetStreamDescriptions(), 8/*epochSize*/);
+        for (auto index = 0; reader->GetMinibatch(*inputs); index++)
+        {
+            for (const auto s : inputs->GetInput(L"features").pMBLayout->GetAllSequences())
+            {
+                auto key = inputs->m_getKeyById(s.seqId);
+                actualKeys.insert(key);
+            }
+        }
+    };
+
+    {
+        multiset<string> expectedKeys
+        {
+            "image0", "image0",
+            "image1", "image1",
+            "image2", "image2",
+            "image3", "image3"
+        };
+
+        std::vector<std::wstring> additionalParameters
+        {
+            L"MapFile=\"$RootDir$/Base64WithStringIds_map.txt\"",
+            L"DeserializerType=\"Base64ImageDeserializer\""
+        };
+
+        multiset<string> actualKeys;
+        test(additionalParameters, actualKeys);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(actualKeys.begin(), actualKeys.end(),
+            expectedKeys.begin(), expectedKeys.end());
+
+        additionalParameters.push_back(L"truncationLength=1");
+        actualKeys.clear();
+        test(additionalParameters, actualKeys);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(actualKeys.begin(), actualKeys.end(),
+            expectedKeys.begin(), expectedKeys.end());
+    }
+
+    {
+        multiset<string> expectedKeys
+        {
+            "0", "0",
+            "1", "1",
+            "2", "2",
+            "3", "3"
+        };
+
+        std::vector<std::wstring> additionalParameters
+        {
+            L"MapFile=\"$RootDir$/Base64ImageReaderSimple_map.txt\"",
+            L"DeserializerType=\"Base64ImageDeserializer\"",
+            L"useNumericSequenceKeys=true"
+        };
+
+        multiset<string> actualKeys;
+        test(additionalParameters, actualKeys);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(actualKeys.begin(), actualKeys.end(),
+            expectedKeys.begin(), expectedKeys.end());
+
+        additionalParameters.push_back(L"truncationLength=1");
+        actualKeys.clear();
+        test(additionalParameters, actualKeys);
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(actualKeys.begin(), actualKeys.end(),
+            expectedKeys.begin(), expectedKeys.end());
+    }
+};
 
 BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
 {

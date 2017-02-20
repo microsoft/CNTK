@@ -626,14 +626,16 @@ template <class ElemType>
 // 'transpose' means print one row per sample (non-transposed is one column per sample).
 // 'isSparse' will print all non-zero values as one row (non-transposed, which makes sense for one-hot) or column (transposed).
 template <class ElemType>
-void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const FrameRange& fr,
+void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f,
+                                                             const FrameRange& fr,
                                                              size_t onlyUpToRow, size_t onlyUpToT, bool transpose, bool isCategoryLabel, bool isSparse,
                                                              const vector<string>& labelMapping, const string& sequenceSeparator, 
                                                              const string& sequencePrologue, const string& sequenceEpilogue,
                                                              const string& elementSeparator, const string& sampleSeparator,
                                                              string valueFormatString,
                                                              bool outputGradient,
-                                                             bool onlyShowAbsSumForDense) const
+                                                             bool onlyShowAbsSumForDense,
+                                                             std::function<std::string(size_t)> getKeyById) const
 {
     // get minibatch matrix -> matData, matRows, matStride
     const Matrix<ElemType>& outputValues = outputGradient ? Gradient() : Value();
@@ -716,6 +718,8 @@ void ComputationNode<ElemType>::WriteMinibatchWithFormatting(FILE* f, const Fram
 
         if (s > 0)
             fprintfOrDie(f, "%s", sequenceSeparator.c_str());
+        if (getKeyById)
+            fprintfOrDie(f, "%s ", getKeyById(seqInfo.seqId).c_str());
         fprintfOrDie(f, "%s", seqProl.c_str());
 
         // output it according to our format specification

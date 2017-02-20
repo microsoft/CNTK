@@ -172,7 +172,19 @@ class Value(cntk_py.Value):
     @staticmethod
     def _as_best_data_type(var, sample):
         if isinstance(sample, list):
-            sample = np.asarray(sample, dtype=var.dtype)
+            try:
+                sample = np.asarray(sample, dtype=var.dtype)
+            except ValueError:
+                s = sample
+                while isinstance(s, list) and len(s)>0:
+                    s = s[0]
+                if sparse.issparse(s):
+                    raise ValueError('if you provide sparse data, every '
+                            'sequence has to be encoded as one '
+                            'csr_matrix instance. Your sequence was: \'%s\''%str(sample))
+                else:
+                    raise
+
             if sample.dtype != var.dtype:
                 raise ValueError('could not convert sample data to '
                         'NumPy array')
