@@ -1646,6 +1646,8 @@ private:
 
         Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
 
+        Variable NonCompositePreservingCopy() const;
+
     private:
 #ifdef SWIGCSHARP
     public:
