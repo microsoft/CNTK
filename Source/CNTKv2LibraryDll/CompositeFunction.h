@@ -266,7 +266,7 @@ namespace CNTK
         void GetNetworkGradients(std::unordered_map<Variable, ValuePtr>& gradients);
 
         // Remove cyclic references for composite nodes
-        static std::unordered_set<Variable> CompositeFunction::NonOwnerPreservingCopy(const std::unordered_set<Variable>& outputs);
+        static std::unordered_set<Variable> NonOwnerPreservingCopy(const std::unordered_set<Variable>& outputs);
 
         const std::vector<Variable>& GetArgumentDependencies(const Variable& output);
 
