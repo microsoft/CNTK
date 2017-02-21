@@ -8,6 +8,9 @@ from __future__ import print_function
 import os
 import math
 import numpy as np
+import cntk
+import _cntk_py
+import cntk.io.transforms as xforms
 
 from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, Placeholder, identity, Sequential, For
 from cntk.layers.typing import *
@@ -47,11 +50,11 @@ def create_reader(map_file, mean_file, is_training):
     transforms = []
     if is_training:
         transforms += [
-            ImageDeserializer.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
+            xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
         ]
     transforms += [
-        ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
-        ImageDeserializer.mean(mean_file)
+        xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
+        xforms.mean(mean_file)
     ]
     # deserializer
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
@@ -142,6 +145,10 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
     # TODO: we should be done here
     #return metric_numer/metric_denom
 
+        progress_printer.epoch_summary(with_metric=True)
+        z.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
+
+    ### Evaluation action
     
     # evaluate with current Trainer instance; just to make sure we save and load the model correctly and BN works now --TODO: delete once confirmed
     epoch_size     = 10000

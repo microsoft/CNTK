@@ -235,7 +235,7 @@ namespace CNTK
         static const std::wstring AttributeNameDeletionPenalty;
         static const std::wstring AttributeNameInsertionPenalty;
         static const std::wstring AttributeNameSquashInputs;
-        static const std::wstring AttributeNameSamplesToIgnore;
+        static const std::wstring AttributeNameTokensToIgnore;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

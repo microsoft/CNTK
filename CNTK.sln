@@ -1484,7 +1484,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "BrainScript", "BrainScript"
 		Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\InceptionLayers.bs = Examples\Image\Classification\GoogLeNet\BN-Inception\BrainScript\InceptionLayers.bs
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKLibraryCPPEvalExamplesTest", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryCPPEvalExamplesTest\CNTKLibraryCPPEvalExamplesTest.vcxproj.vcxproj", "{D771A06D-CC25-4582-B5CD-D2A4782BB005}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKLibraryCPPEvalExamplesTest", "Tests\EndToEndTests\EvalClientTests\CNTKLibraryCPPEvalExamplesTest\CNTKLibraryCPPEvalExamplesTest.vcxproj", "{D771A06D-CC25-4582-B5CD-D2A4782BB005}"
 	ProjectSection(ProjectDependencies) = postProject
 		{91973E60-A7BE-4C86-8FDB-59C88A0B3715} = {91973E60-A7BE-4C86-8FDB-59C88A0B3715}
 		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}

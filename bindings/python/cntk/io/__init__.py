@@ -64,7 +64,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     def end_of_sweep(self):
         '''
         Indicates whether the data in this minibatch comes from a sweep end
-        or crosses a sweep boundary (and as a result includes data from 
+        or crosses a sweep boundary (and as a result includes data from
         different sweeps).
         '''
         return self.sweep_end
@@ -80,7 +80,8 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         return self.num_sequences
 
 class MinibatchSource(cntk_py.MinibatchSource):
-    '''
+    '''MinibatchSource(deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None)
+    A `MinibatchSource` can be indexed by the stream name, which will return a
     Parent class of all minibatch sources.  A `MinibatchSource` can be indexed by the stream name, which will return a
     :class:`MinibatchData` object that can be passed e.g. to the
     :func:`~cntk.trainer.Trainer.train_minibatch` function.
@@ -94,22 +95,22 @@ class MinibatchSource(cntk_py.MinibatchSource):
           `randomization_window`. If `True`, the size of the randomization window is interpreted as a certain
           number of samples, otherwise -- as a number of chunks. Similarly to `randomization_window`,
           this parameter is ignored, when `randomize` is `False`
-        epoch_size (`int`, default to `INFINITELY_REPEAT`): number of samples as a scheduling unit. 
-          Parameters in the schedule change their values every `epoch_size` 
-          samples. If no `epoch_size` is provided, this parameter is substituted 
+        epoch_size (`int`, default to `INFINITELY_REPEAT`): number of samples as a scheduling unit.
+          Parameters in the schedule change their values every `epoch_size`
+          samples. If no `epoch_size` is provided, this parameter is substituted
           by the size of the full data sweep with infinte repeat, in which case the scheduling unit is
           the entire data sweep (as indicated by the MinibatchSource) and parameters
           change their values on the sweep-by-sweep basis specified by the schedule.
         distributed_after (int, default to `INFINITE_SAMPLES`): sample count after which minibatch source becomes distributed
         multithreaded_deserializer (`bool`, default to `None`): using multi threaded deserializer
     '''
-    def __init__(self, 
-        deserializers=None, 
-        randomize=True, 
-        randomization_window=DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS, 
+    def __init__(self,
+        deserializers=None,
+        randomize=True,
+        randomization_window=DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS,
         sample_based_randomization_window=False,
-        epoch_size=INFINITELY_REPEAT, 
-        distributed_after=INFINITE_SAMPLES, 
+        epoch_size=INFINITELY_REPEAT,
+        distributed_after=INFINITE_SAMPLES,
         multithreaded_deserializer=None):
 
         if not isinstance(deserializers, (list,tuple)):
@@ -250,14 +251,7 @@ def _py_dict_to_cntk_dict(py_dict):
             res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
         # TODO: add support to list of lists ?
         elif isinstance(v, list):
-            l = []
-            for e in v:
-                if isinstance(e, dict):
-                    l.append(cntk_py.DictionaryValueFromDict(
-                        _py_dict_to_cntk_dict(e)))
-                else:
-                    l.append(cntk_py.DictionaryValue(e))
-            res[k] = cntk_py.DictionaryValue(l)
+            res[k] = cntk_py.DictionaryValue([cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e) if isinstance(e, dict) else e) for e in v])
         else:
             res[k] = cntk_py.DictionaryValue(v)
     return res
@@ -288,28 +282,28 @@ class ReaderConfig(dict):
         deserializers ('list', default is `None`): list of deserializers
          (:class:`ImageDeserializer` for now).
         randomize (`bool`, default to `True`): randomize images before every epoch
-        randomization_window (int): size of window that reader will shuffle, ignored if `randomize` 
+        randomization_window (int): size of window that reader will shuffle, ignored if `randomize`
           is `False`
         sample_based_randomization_window (bool, default False): specifies how to interpret
           `randomization_range`. If `True`, the size of the randomization window is interpreted as a certain
           number of samples, otherwise -- as a number of chunks. Similarly to `randomization_window`,
           this parameter is ignored, when `randomize` is `False`
-        epoch_size (`int`, default to `INFINITELY_REPEAT`): number of samples as a scheduling unit. 
-          Parameters in the schedule change their values every `epoch_size` 
-          samples. If no `epoch_size` is provided, this parameter is substituted 
+        epoch_size (`int`, default to `INFINITELY_REPEAT`): number of samples as a scheduling unit.
+          Parameters in the schedule change their values every `epoch_size`
+          samples. If no `epoch_size` is provided, this parameter is substituted
           by the size of the full data sweep with infinte repeat, in which case the scheduling unit is
           the entire data sweep (as indicated by the MinibatchSource) and parameters
           change their values on the sweep-by-sweep basis specified by the schedule.
         distributed_after (int, default to `INFINITE_SAMPLES`): sample count after which reader becomes distributed
         multithreaded_deserializer (`bool`, default to `None`): using multi threaded deserializer
     '''
-    def __init__(self, 
-        deserializers=None, 
-        randomize=True, 
-        randomization_window=DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS, 
+    def __init__(self,
+        deserializers=None,
+        randomize=True,
+        randomization_window=DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS,
         sample_based_randomization_window=False,
-        epoch_size=INFINITELY_REPEAT, 
-        distributed_after=INFINITE_SAMPLES, 
+        epoch_size=INFINITELY_REPEAT,
+        distributed_after=INFINITE_SAMPLES,
         multithreaded_deserializer=None):
         self['epochSize'] = cntk_py.SizeTWrapper(epoch_size) # force to store in size_t
         if not isinstance(deserializers, (list, tuple)):
@@ -319,7 +313,7 @@ class ReaderConfig(dict):
         self['randomizationWindow'] = cntk_py.SizeTWrapper(randomization_window)
         self['sampleBasedRandomizationWindow'] = sample_based_randomization_window
         self['distributedAfterSampleCount'] = cntk_py.SizeTWrapper(distributed_after)
-        if multithreaded_deserializer != None:
+        if multithreaded_deserializer is not None:
             self['multiThreadedDeserialization'] = multithreaded_deserializer
 
     @typemap
@@ -335,36 +329,50 @@ class ReaderConfig(dict):
         '''
         return minibatch_source(self)
 
-
-class Deserializer(dict):
+def HTKFeatureDeserializer(streams):
     '''
-    Base deserializer class that can be used in the :class:`ReaderConfig`. A
-    deserializer is responsible for deserialization of input from external
-    storage into in-memory sequences.
-
-    Currently CNTK supports the below deserializers:
-
-    ========================== ============
-    Deserializer type          Description
-    ========================== ============
-    :class:`ImageDeserializer` Deserializer for images that uses OpenCV
-    :class:`CTFDeserializer`   Deserializer for text of the `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
-    ========================== ============
+    Configures the HTK feature reader that reads speech data from scp files.
 
     Args:
-        type (str): type of the deserializer
-
-    See also:
-        https://github.com/microsoft/cntk/wiki/Understanding-and-Extending-Readers
+        streams: any dictionary-like object that contains a mapping from stream names
+            to :class:`StreamDef` objects. Each StreamDef object configures a feature stream.
     '''
+    feat = []
+    for stream_name, stream in streams.items():
+        if stream.stream_alias is not None: raise ValueError("HTKFeatureDeserializer does not support steam names")
+        if 'scp' not in stream: raise ValueError("No scp files specified for HTKFeatureDeserializer")
+        dimension = stream.dim
+        scp_file = stream['scp']
+        broadcast = stream['broadcast'] if 'broadcast' in stream else False
+        left_context, right_context = stream.context if 'context' in stream else (0, 0)
+        feat.append(cntk_py.HTKFeatureConfiguration(stream_name, scp_file, dimension, left_context, right_context, broadcast))
+    if len(feat) == 0:
+        raise ValueError("no feature streams found")
+    return cntk_py.htk_feature_deserializer(feat)
 
-    def __init__(self, type):
-        self['type'] = type
-
-
-class ImageDeserializer(Deserializer):
+def HTKMLFDeserializer(label_mapping_file, streams):
     '''
-    This class configures the image reader that reads images and corresponding
+    Configures an HTK label reader that reads speech HTK format MLF (Master Label File)
+
+    Args:
+        label_mapping_file (str): path to the label mapping file
+        streams: any dictionary-like object that contains a mapping from stream names
+            to :class:`StreamDef` objects. Each StreamDef object configures a label stream.
+    '''
+    if len(streams) != 1: raise ValueError("HTKMLFDeserializer only accepts a single stream")
+    for stream_name, stream in streams.items():
+        if stream.stream_alias is not None: raise ValueError("HTKMLFDeserializer does not support steam names")
+        dimension = stream.dim
+        if 'mlf' not in stream: raise ValueError("No master label files specified for HTKMLFDeserializer")
+        master_label_files = stream['mlf']
+        if not isinstance(master_label_files,list):
+            master_label_files = [master_label_files]
+        return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files)
+
+
+def ImageDeserializer(filename, streams):
+    '''
+    Configures the image reader that reads images and corresponding
     labels from a file of the form::
 
          <full path to image> <tab> <numerical label (0-based class id)>
@@ -379,210 +387,30 @@ class ImageDeserializer(Deserializer):
     See also:
         `Image reader definition <https://github.com/microsoft/cntk/wiki/Image-reader>`_
     '''
+    image_stream_name = None
+    label_stream_name = '_ignore_labels_'
+    num_labels = 2
+    transforms = []
+    for key in streams:
+        s = streams[key]
+        alias = s.stream_alias
+        if alias == "image":
+            image_stream_name = key
+            transforms = s.transforms
+        elif alias == "label":
+            label_stream_name = key
+            num_labels = s.dim
+        else:
+            raise ValueError("ImageDeserializer: invalid field name '{}', allowed are 'image' and 'label'".format(alias))
+    if image_stream_name is None:
+        raise ValueError("ImageDeserializer: stream name ('image' or 'label') must be specified")
+    return cntk_py.image_deserializer(filename, label_stream_name, num_labels, image_stream_name, transforms)
 
-    def __init__(self, filename, streams=None):
-        super(ImageDeserializer, self).__init__('ImageDeserializer')
-        self['file'] = filename
-        self['input'] = self.input = {}
-        # In ImageDeserializer, stream field names are hard-coded as "image" and "label".
-        # These are configured in a somewhat inconsistent way.
-        if streams is not None:
-            for key in streams:
-                s = streams[key]
-                node = s.stream_alias
-                if node == "image":
-                    # BUGBUG: Can dim not be specified as well?
-                    # TODO: clean this up and use a unified internal representation
-                    self.map_features(key, s.transforms)
-                elif node == "label":
-                    self.map_labels(key, s.dim)
-                else:
-                    raise ValueError("ImageDeserializer: invalid field name '{}', allowed are 'image' and 'label'".format(node))
-
-    # TODO: should be a private method; use constructor only
-    def map_features(self, node, transforms):
-        '''
-        Maps feature node (either node instance or node name) to the transforms
-        that will be applied to the images. It is usually applied to the input
-        of the network with data augmentation.
-
-        Args:
-            node (str or input node): node or its name
-            transforms (`list` of transforms): the transforms can be created by
-             the static methods `crop`, `scale`, or `mean`.
-
-        '''
-        if not isinstance(node, str):
-            node = node.name()
-        if not isinstance(transforms, list):
-            transforms = [transforms] if transforms else []
-        self.input[node] = dict(transforms=transforms)
-
-    # TODO: should be a private method; use constructor only
-    def map_labels(self, node, num_classes):
-        '''
-        Maps label node (either node instance or node name)
-        that will be applied to the images. It is usually used to define the
-        ground truth of train or test.
-
-        Args:
-            node (str or input node): node or its name
-            num_classes (int): number of classes
-
-        '''
-        if not isinstance(node, str):
-            node = node.name()
-        self.input[node] = dict(labelDim=num_classes) # reader distinguishes labels from features by calling this 'labelDim'
-
-    # TODO: ignore labels on C++ level if labeldim is not specified
-    def ignore_labels(self):
-        '''
-        Ignore labels from the image deserializer
-        '''
-        self.input["_ignore_labels_"] = dict(labelDim=1000)
-
-    @staticmethod
-    def crop(crop_type='center', crop_size=0, side_ratio=0.0, area_ratio=0.0, aspect_ratio=1.0, jitter_type='none'):
-        '''
-        Crop transform that can be used to pass to `map_features`
-
-        Args:
-            crop_type (str, default 'center'): 'center', 'randomside', 'randomarea', 
-              or 'multiview10'.  'randomside' and 'randomarea' are usually used during
-              training, while 'center' and 'multiview10' are usually used during testing. 
-              Random cropping is a popular data augmentation technique used to improve
-              generalization of the DNN.
-            crop_size (`int`, default 0): crop size in pixels. Ignored if set to 0. 
-              When crop_size is non-zero, for example, crop_size=256, it means a cropping
-              window of size 256x256 pixels will be taken. If one want to crop with
-              non-square shapes, specify crop_size=256:224 will crop 256x224 (width x height) 
-              pixels. `When crop_size is specified, side_ratio, area_ratio and aspect_ratio
-              will be ignored.` 
-            side_ratio (`float`, default 0.0): It specifies the ratio of final image 
-              side (width or height) with respect to the original image. Ignored if set 
-              to 0.0. Otherwise, must be set within `(0,1]`. For example, with an input 
-              image size of 640x480, side_ratio of 0.5 means we crop a square region 
-              (if aspect_ratio is 1.0) of the input image, whose width and height are 
-              equal to 0.5*min(640, 480) = 240. To enable scale jitter (a popular data 
-              augmentation technique), use colon-delimited values like side_ratio=0.5:0.75, 
-              which means the crop will have size between 240 (0.5*min(640, 480)) and 360 
-              (0.75*min(640, 480)). 
-            area_ratio (`float`, default 0.0): It specifies the area ratio of final image 
-              with respect to the original image. Ignored if set to 0.0. Otherwise, must be 
-              set within `(0,1]`. For example, for an input image size of 200x150 pixels, 
-              the area is 30,000. If area_ratio is 0.3333, we crop a square region (if 
-              aspect_ratio is 1.0) with width and height equal to sqrt(30,000*0.3333)=100. 
-              To enable scale jitter, use colon-delimited values such as area_ratio=0.3333:0.8, 
-              which means the crop will have size between 100 (sqrt(30,000*0.3333)) and 
-              155 (sqrt(30,000*0.8)). 
-            aspect_ratio (`float`, default 1.0): It specifies the aspect ratio (width/height
-              or height/width) of the crop window. Must be set within `(0,1]`. For example, 
-              if due to size_ratio the crop size is 240x240, an aspect_ratio of 0.64 will 
-              change the window size to non-square: 192x300 or 300x192, each having 50% 
-              chance. Note the area of the crop window does not change. To enable aspect 
-              ratio jitter, use colon-delimited values such as aspect_ratio=0.64:1.0, which means 
-              the crop will have size between 192x300 (or euqally likely 300x192) and 240x240. 
-            jitter_type (str, default 'none'): crop scale jitter type, possible
-              values are 'none' and 'uniratio'. 'uniratio' means uniform distributed jitter
-              scale between the minimum and maximum ratio values.
-
-        Returns:
-            dict:
-            A `dict` describing the crop transform
-        '''
-        return dict(type='Crop', cropType=crop_type, cropSize=crop_size, sideRatio=side_ratio, 
-                    areaRatio=area_ratio, aspectRatio=aspect_ratio, jitterType=jitter_type)
-
-    @staticmethod
-    def scale(width, height, channels, interpolations='linear', scale_mode="fill", pad_value=-1):
-        '''
-        Scale transform that can be used to pass to `map_features` for data augmentation.
-
-        Args:
-            width (int): width of the image in pixels
-            height (int): height of the image in pixels
-            channels (int): channels of the image
-            interpolations (str, default 'linear'): possible values are
-              'nearest', 'linear', 'cubic', and 'lanczos'
-            scale_mode (str, default 'fill'): 'fill', 'crop' or 'pad'.
-              'fill' - warp the image to the given target size.
-              'crop' - resize the image's shorter side to the given target size and crop the overlap.
-              'pad'  - resize the image's larger side to the given target size, center it and pad the rest
-            pad_value (int, default -1): -1 or int value. The pad value used for the 'pad' mode.
-             If set to -1 then the border will be replicated.
-
-        Returns:
-            dict:
-            A `dict` describing the scale transform
-        '''
-        return dict(type='Scale', width=width, height=height, channels=channels,
-                interpolations=interpolations, scaleMode=scale_mode, padValue=pad_value)
-
-    @staticmethod
-    def mean(filename):
-        '''
-        Mean transform that can be used to pass to `map_features` for data augmentation.
-
-        Args:
-            filename (str): file that stores the mean values for each pixel
-             in OpenCV matrix XML format
-
-        Returns:
-            dict:
-            A `dict` describing the mean transform
-        '''
-        return dict(type='Mean', meanFile=filename)
-
-    @staticmethod
-    def color(brightness_radius=0.0, contrast_radius=0.0, saturation_radius=0.0): 
-        '''
-        Color transform that can be used to pass to `map_features` for data augmentation.
-
-        Args: 
-            brightness_radius (float, default 0.0): Radius for brightness change. Must be 
-              set within [0.0, 1.0]. For example, assume brightness_radius = 0.2, a random 
-              number `x` is uniformly drawn from [-0.2, 0.2], and every pixel's value is 
-              added by `x*meanVal`, where meanVal is the mean of the image pixel intensity 
-              combining all color channels. 
-            contrast_radius (float, default 0.0): Radius for contrast change. Must be 
-              set within [0.0, 1.0]. For example, assume contrast_radius = 0.2, a random 
-              number `x` is uniformly drawn from [-0.2, 0.2], and every pixel's value is 
-              multiplied by `1+x`. 
-            saturation_radius (float, default 0.0): Radius for saturation change. Only for
-              color images and must be set within [0.0, 1.0]. For example, assume 
-              saturation_radius = 0.2, a random number `x` is uniformly drawn from [-0.2, 0.2], 
-              and every pixel's saturation is multiplied by `1+x`.
-
-        Returns:
-            dict:
-            A `dict` describing the mean transform
-        '''
-        return dict(type='Color', brightnessRadius=brightness_radius, 
-                    contrastRadius=contrast_radius, saturationRadius=saturation_radius)
-
-    #@staticmethod
-    #def intensity(intensity_stddev, intensity_file): 
-    #    '''
-    #    Intensity transform that can be used to pass to `map_features` for data augmentation. 
-    #    Intensity jittering based on PCA transform as described in original `AlexNet paper
-    #    <http://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf>`_
-
-    #    Currently uses precomputed values from 
-    #    https://github.com/facebook/fb.resnet.torch/blob/master/datasets/imagenet.lua
-
-    #    Args: 
-    #        intensity_stddev (float): intensity standard deviation. 
-    #        intensity_file (str): intensity file. 
-    #    Returns:
-    #        dict describing the mean transform        '''
-    #    return dict(type='Intensity', intensityStdDev=intensity_stddev, intensityFile=intensity_file)
-
-class CTFDeserializer(Deserializer):
+def CTFDeserializer(filename, streams):
     '''
-    This class configures the text reader that reads text-encoded files from a
-    file with lines of the form::
+    Configures the CNTK text-format reader that reads text-based files with lines of the form::
 
-        [Sequence_Id](Sample)+
+        [Sequence_Id] (Sample)+
 
     where::
 
@@ -594,44 +422,11 @@ class CTFDeserializer(Deserializer):
     See also:
         `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
     '''
-
-    def __init__(self, filename, streams=None):
-        super(CTFDeserializer, self).__init__('CNTKTextFormatDeserializer')
-        self['file'] = filename
-        self['input'] = self.input = {}
-        # connect all streams (: StreamDef) if given
-        if streams is not None:
-            for key in streams:
-                s = streams[key]
-                # TODO: guard against any other fields, such as transformers, which is not valid here
-                self.map_input(key, s.dim, "sparse" if s.is_sparse else "dense", alias=s.stream_alias)
-
-    # TODO: should be a private method; use constructor only
-    def map_input(self, node, dim, format="dense", alias=None):
-        '''
-        Maps node (either node instance or node name) to a part of the text input,
-        either specified by the node name or the alias in the text file.
-
-        Example: for node name 'input0' an input line could look like this::
-
-          |input0 3 7 1 0 2
-
-        Args:
-            node (str or input node): node or its name
-            dim (int): specifies the dimension of the input value vector
-              (for dense input this directly corresponds to the number of values in each sample,
-              for sparse this represents the upper bound on the range of possible index values).
-            format (str, default 'dense'): 'dense' or 'sparse'. Specifies the input type.
-            alias (str, default to None): None or alias name. Optional abbreviated name that
-              is used in the text file to avoid repeating long input names. For details please
-              see `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
-        '''
-        if not isinstance(node, str):
-            node = node.name()
-        if alias is None:
-            alias=node
-        self.input[node] = dict(dim=dim, format=format, alias=alias)
-
+    for k,s in streams.items():
+        if s.stream_alias is None:
+            raise ValueError("CTFDeserializer: stream name for key %s must be specified"%(k))
+    sc = [cntk_py.StreamConfiguration(k, s.dim, s.is_sparse, s.stream_alias) for k,s in streams.items()]
+    return cntk_py.ctf_deserializer(filename, sc)
 
 # TODO: this should be a private class; use StreamDef instead
 class StreamConfiguration(cntk_py.StreamConfiguration):
@@ -647,37 +442,55 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
           (`False` by default)
         stream_alias (str, default ''): name of the stream in the file
     '''
-
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse, stream_alias)
 
-
-# wrapper around text_format_minibatch_source() that attaches a record of streams
-# TODO: This should not exist; use MinibatchSource(CTFDeserializer(...))
-def _unused_CNTKTextFormatMinibatchSource(path, streams, epoch_size=None): # TODO: delete this
-    from cntk.utils import _ClassFromDict
-    # convert streams into StreamConfiguration format
-    # TODO: stream_alias should default to 'key'
-    stream_configs = [ StreamConfiguration(key, dim=value.dim, is_sparse=value.is_sparse, stream_alias=value.stream_alias) for (key, value) in streams.items() ]
-    if epoch_size is not None:  # TODO: use MAX_UI64, now that we have access
-        source = text_format_minibatch_source(path, stream_configs, epoch_size)
-    else:
-        source = text_format_minibatch_source(path, stream_configs)
-    # attach a dictionary of the streams
-    source.streams = _ClassFromDict({ name : source.stream_info(name) for name in streams.keys() })
-    return source
-
-
 # stream definition for use in StreamDefs
-# returns a record { stream_alias, is_sparse, optional dim, optional transforms }
+# returns a record { stream_alias, is_sparse, optional shape, optional transforms, optional context, optional scp, optional mlf }
 from cntk.utils import Record
-def StreamDef(field, shape=None, is_sparse=False, transforms=None):
-    # note: the names used inside here are required by the C++ code which looks them up in a dictionary
+def StreamDef(field=None, shape=None, is_sparse=False, transforms=None, context=None, scp=None, mlf=None, broadcast=None):
+    '''
+       Configuration of a stream for use with the builtin Deserializers.
+       The meanings of some configuration keys have a mild dependency on the
+       exact deserializer, and certain keys are meaningless for certain deserializers.
+
+    Args:
+        field (str): this is the name of the stream:
+        
+         * for CTFDeserializer the name is inside the CTF file
+         * for ImageDeserializer the acceptable names are `image` or `label`
+         * for HTKFeatureDeserializer and HTKMLFDeserializer only the default 
+           value of None is acceptable
+        
+        shape (int, tuple): dimensions of this stream. HTKFeatureDeserializer, 
+         HTKMLFDeserializer, and CTFDeserializer read data
+         as flat arrays. If you need different shapes you can
+         :func:`~cntk.ops.reshape` it later.
+        is_sparse (bool): whether the provided data is sparse.
+         `False` by default, unless mlf is provided.
+        transforms (list): list of transforms to be applied by the Deserializer. 
+         Currently only ImageDeserializer supports transforms.
+        context (tuple): left and right context to consider when reading in HTK 
+         data. Only supported by HTKFeatureDeserializer.
+        scp (str, list): scp files for HTK data
+        mlf (str, list): mlf files for HTK data
+        broadcast (bool): whether the features in this stream should be 
+         broadcast to the whole sequence (useful in e.g. ivectors with HTK)
+    '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
     if shape is not None:
         config['dim'] = shape
     if transforms is not None:
         config['transforms'] = transforms
+    if context is not None:
+        config['context'] = context
+    if scp is not None:
+        config['scp'] = scp
+    if mlf is not None:
+        config['mlf'] = mlf
+        config['is_sparse'] = True
+    if broadcast is not None:
+        config['broadcast'] = broadcast
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
     # TODO: dim should be inferred from the file, at least for dense
@@ -703,7 +516,7 @@ def _is_tensor(data):
         data: data to check
 
     Returns:
-      bool: 
+      bool:
       `True`, if it is a tensor.
     '''
     if isinstance(data, np.ndarray):

@@ -10,8 +10,9 @@ import math
 import numpy as np
 import cntk
 import _cntk_py
+import cntk.io.transforms as xforms
 
-# Paths relative to current python file. 
+# Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
 data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
@@ -32,11 +33,11 @@ def create_reader(map_file, mean_file, is_training):
     transforms = []
     if is_training:
         transforms += [
-            cntk.io.ImageDeserializer.crop(crop_type='RandomSide', side_ratio=0.8, jitter_type='uniRatio') # train uses jitter
+            xforms.crop(crop_type='RandomSide', side_ratio=0.8, jitter_type='uniRatio') # train uses jitter
         ]
     transforms += [
-        cntk.io.ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
-        cntk.io.ImageDeserializer.mean(mean_file)
+        xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
+        xforms.mean(mean_file)
     ]
     # deserializer
     return cntk.io.MinibatchSource(cntk.io.ImageDeserializer(map_file, cntk.io.StreamDefs(
@@ -44,23 +45,23 @@ def create_reader(map_file, mean_file, is_training):
         labels   = cntk.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=is_training)
 
-# Local Response Normalization layer. See Section 3.3 of the paper: 
-# https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf 
-# The mathematical equation is: 
+# Local Response Normalization layer. See Section 3.3 of the paper:
+# https://papers.nips.cc/paper/4824-imagenet-classification-with-deep-convolutional-neural-networks.pdf
+# The mathematical equation is:
 #   b_{x,y}^i=a_{x,y}^i/(k+\alpha\sum_{j=max(0,i-n)}^{min(N-1, i+n)}(a_{x,y}^j)^2)^\beta
 # where a_{x,y}^i is the activity of a neuron comoputed by applying kernel i at position (x,y)
-# N is the total number of kernals, n is half normalization width.  
-def LocalResponseNormalization(k, n, alpha, beta, name=''): 
-    x = cntk.blocks.Placeholder(name='lrn_arg') 
-    x2 = cntk.ops.square(x) 
-    # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed. 
+# N is the total number of kernals, n is half normalization width.
+def LocalResponseNormalization(k, n, alpha, beta, name=''):
+    x = cntk.blocks.Placeholder(name='lrn_arg')
+    x2 = cntk.ops.square(x)
+    # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
     x2s = cntk.ops.reshape(x2, (1, cntk.InferredDimension), 0, 1)
     W = cntk.ops.constant(alpha/(2*n+1), (1,2*n+1,1,1), name='W')
     # 3D convolution with a filter that has a non 1-size only in the 3rd axis, and does not reduce since the reduction dimension is fake and 1
     y = cntk.ops.convolution (W, x2s)
     # reshape back to remove the fake singleton reduction dimension
     b = cntk.ops.reshape(y, cntk.InferredDimension, 0, 2)
-    den = cntk.ops.exp(beta * cntk.ops.log(k + b)) 
+    den = cntk.ops.exp(beta * cntk.ops.log(k + b))
     apply_x = cntk.ops.element_divide(x, den)
     return cntk.blocks.Block(apply_x, 'LocalResponseNormalization', name, make_block=True)
 
@@ -75,18 +76,18 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     # apply model to input
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
 
-    with cntk.layers.default_options (activation=cntk.ops.relu, pad=True): 
+    with cntk.layers.default_options (activation=cntk.ops.relu, pad=True):
         z = cntk.models.Sequential([
             cntk.models.For(range(2), lambda : [
-                cntk.layers.Convolution2D((3,3), 64), 
-                cntk.layers.Convolution2D((3,3), 64), 
+                cntk.layers.Convolution2D((3,3), 64),
+                cntk.layers.Convolution2D((3,3), 64),
                 LocalResponseNormalization (1.0, 4, 0.001, 0.75),
                 cntk.layers.MaxPooling((3,3), (2,2))
-            ]), 
+            ]),
             cntk.models.For(range(2), lambda i: [
-                cntk.layers.Dense([256,128][i]), 
+                cntk.layers.Dense([256,128][i]),
                 cntk.layers.Dropout(0.5)
-            ]), 
+            ]),
             cntk.layers.Dense(num_classes, activation=None)
         ])(scaled_input)
 
@@ -103,7 +104,7 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     mm_time_constant       = [0]*20 + [600]*20 + [1200]
     mm_schedule            = cntk.learner.momentum_as_time_constant_schedule(mm_time_constant, epoch_size=epoch_size)
     l2_reg_weight          = 0.002
-    
+
     # trainer object
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                                         unit_gain = True,
@@ -117,7 +118,7 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     }
 
     cntk.utils.log_number_of_parameters(z) ; print()
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training')
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # perform model training
     for epoch in range(max_epochs):       # loop over epochs
@@ -130,7 +131,7 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
 
         progress_printer.epoch_summary(with_metric=True)
         z.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
-    
+
     ### Evaluation action
     epoch_size     = 10000
     minibatch_size = 16

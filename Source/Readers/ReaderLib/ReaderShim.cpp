@@ -275,6 +275,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // Remember current data transfer, async memcpy for it already started on the prefetch thread.
     auto currentDataTransferIndex = m_currentDataTransferIndex;
 
+    matrices.m_getKeyById = m_getKeyById;
+
     // Let's update the current data transferer.
     m_currentDataTransferIndex = (m_currentDataTransferIndex + 1) % 2;
 
@@ -357,6 +359,8 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
     // We need to make sure that the compute for the current transfer is finished before we start prefetch.
     if (m_dataTransferers[currentDataTransferIndex])
         m_dataTransferers[currentDataTransferIndex]->WaitForSyncPointOnAssignStreamAsync();
+
+    m_getKeyById = minibatch.m_getKeyById;
 
     for (auto& mx : m_prefetchBuffers)
     {

@@ -19,8 +19,7 @@ from cntk.ops import cross_entropy_with_softmax, classification_error, splice, r
 # variables and stuff  #
 ########################
 
-cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # data resides in the CNTK folder
-data_dir = cntk_dir + "/Examples/LanguageUnderstanding/ATIS/Data"       # under Examples/LanguageUnderstanding/ATIS
+data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
 
 model_dir = "./Models"
