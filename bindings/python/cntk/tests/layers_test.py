@@ -6,6 +6,7 @@
 
 import numpy as np
 from cntk import *
+from cntk.layers.typing import *
 
 # Note: We do not test gradients here, assuming that those are tested elsewhere.
 # Forward outputs are tested to verify that the structure of the layer is as expected.
@@ -32,6 +33,10 @@ def _getModelParameterDict(model, node_name):
         node_dict[attr.name] = np.matrix(attr.value) 
     return node_dict
 
+def assert_list_of_arrays_equal(r, exp, err_msg):
+    for r_i, exp_i in zip(r, exp): # note: must compare seq by seq due to differing lengths
+        np.testing.assert_array_equal(r_i, exp_i, err_msg=err_msg)
+
 ####################################
 # default options
 ####################################    
@@ -53,26 +58,96 @@ def test_default_options():
         assert Test(some_param=124) == 124
 
 ####################################
-# Recurrence()
+# @Function, @BlockFunction, types
+####################################    
+
+####################################
+# . syntax for name lookup
+####################################    
+
+####################################
+# Unfold()
+####################################    
+
+def test_unfold(device_id):
+    from cntk.layers import UnfoldFrom
+
+    @Function
+    def double_up(s):
+        return s * 2
+    x = [[[0],[0],[0]],
+         [[0],[0],[0],[0],[0]]]
+
+    ####################################################
+    # Test 1: simple unfold
+    ####################################################
+    US = UnfoldFrom(double_up, initial_state=1)
+    @Function
+    def FU(x : Sequence[Tensor[1]]):
+        return US(x)
+    r = FU(x)
+    exp = [[[ 2 ], [ 4 ], [ 8 ]],
+           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
+    assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom() forward')
+
+    ####################################################
+    # Test 2: unfold with length increase and terminating condition
+    ####################################################
+    US = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63),  initial_state=1, length_increase=1.6)
+    @Function
+    def FU(x : Sequence[Tensor[1]]):
+        return US(x)
+    r = FU(x)
+    exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
+           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate
+    print(r)
+    print(exp)
+    assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom(..., until_predicate, length_increase, ...) forward')
+
+####################################
+# Recurrence(), RecurrenceFrom()
 ####################################    
 
 def test_recurrence():
+    inputAxis = Axis('inputAxis')
+    stateAxis = Axis('stateAxis')
+    InputSequence = SequenceOver[inputAxis]
+    StateSequence = SequenceOver[stateAxis]
+
+    # input and expected for both tests below
+    x = np.reshape(np.arange(0,25, dtype=np.float32), (1,5,5))
+    exp = [[ 0.239151, 0.239151, 0.239151, 0.239151, 0.239151],
+           [ 0.338713, 0.338713, 0.338713, 0.338713, 0.338713],
+           [ 0.367456, 0.367456, 0.367456, 0.367456, 0.367456],
+           [ 0.375577, 0.375577, 0.375577, 0.375577, 0.375577],
+           [ 0.377891, 0.377891, 0.377891, 0.377891, 0.377891]]
+
+    ####################################################
+    # Test 1: Recurrence(): initial state is constant
+    ####################################################
     # Note: We cannot use random init of the GRU parameters because random numbers will
     # depend on what previous tests were run. Hence, use a constant (which is not realistic).
     # TODO: Find out how to reset the random generator, then remove the constant init.
-    r = Recurrence(GRU(5, init=0.1), go_backwards=False)
-    a = input_variable(shape=(5,), dynamic_axes=[Axis.default_batch_axis(), Axis('Seq')])
-    x = np.reshape(np.arange(0,25, dtype=np.float32), (1,5,5))
-    rt = r(a).eval({a:x})
-    exp = [[ 0.204824,  0.204824,  0.204824,  0.204824,  0.204824],
-           [ 0.225884,  0.225884,  0.225884,  0.225884,  0.225884],
-           [ 0.227594,  0.227594,  0.227594,  0.227594,  0.227594],
-           [ 0.227735,  0.227735,  0.227735,  0.227735,  0.227735],
-           [ 0.227746,  0.227746,  0.227746,  0.227746,  0.227746]]
+    R = Recurrence(GRU(5, init=0.05), go_backwards=False, initial_state=0.1)
+    @Function
+    def F(x : InputSequence[Tensor[5]]):
+        return R(x)
+    rt = F(x)
     np.testing.assert_array_almost_equal(rt[0], exp, decimal=6, err_msg='Error in Recurrence(GRU()) forward')
 
+    ####################################################
+    # Test 2: RecurrenceFrom(): initial state is data input
+    ####################################################
+    RF = RecurrenceFrom(GRU(5, init=0.05), go_backwards=False)
+    @Function
+    def FF(s : StateSequence[Tensor[5]], x : InputSequence[Tensor[5]]):
+        return RF(s, x)
+    s = np.ones((1,5,5)) * 0.1 # we pass the same value as the constant in the previous test to make the result the same
+    rt = FF(s, x)
+    np.testing.assert_array_almost_equal(rt[0], exp, decimal=6, err_msg='Error in RecurrenceFrom(GRU()) forward')
+
 ####################################
-# Recurrence() over regular function
+# recurrence (Fold()) over regular function
 ####################################    
 
 def test_recurrence_fun(device_id):
