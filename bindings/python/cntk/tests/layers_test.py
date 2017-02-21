@@ -65,44 +65,13 @@ def test_default_options():
 # . syntax for name lookup
 ####################################    
 
-####################################
-# Unfold()
-####################################    
-
-def test_unfold(device_id):
-    from cntk.layers import UnfoldFrom
-
-    @Function
-    def double_up(s):
-        return s * 2
-    x = [[[0],[0],[0]],
-         [[0],[0],[0],[0],[0]]]
-
-    ####################################################
-    # Test 1: simple unfold
-    ####################################################
-    US = UnfoldFrom(double_up, initial_state=1)
-    @Function
-    def FU(x : Sequence[Tensor[1]]):
-        return US(x)
-    r = FU(x)
-    exp = [[[ 2 ], [ 4 ], [ 8 ]],
-           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
-    assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom() forward')
-
-    ####################################################
-    # Test 2: unfold with length increase and terminating condition
-    ####################################################
-    US = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63),  initial_state=1, length_increase=1.6)
-    @Function
-    def FU(x : Sequence[Tensor[1]]):
-        return US(x)
-    r = FU(x)
-    exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
-           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate
-    print(r)
-    print(exp)
-    assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom(..., until_predicate, length_increase, ...) forward')
+def test_lookup(device_id):
+    model = Sequential([ Dense(3, init=1, name='first'), Dense(2, init=2, name='second')])
+    model.update_signature((2,))
+    W1 = model.first.W.value
+    W2 = model.second.W.value
+    np.testing.assert_array_equal(W1, np.ones((2,3)),     err_msg='Error in lookup of Dense parameters')
+    np.testing.assert_array_equal(W2, np.ones((3,2)) * 2, err_msg='Error in lookup of Dense parameters')
 
 ####################################
 # Recurrence(), RecurrenceFrom()
@@ -173,6 +142,45 @@ def test_recurrence_fun(device_id):
     out = r(data)
     exp = [[np.max(data[0], axis=0)]]
     np.testing.assert_array_equal(out, exp, err_msg='Error in recurrence over element_max')
+
+####################################
+# Unfold()
+####################################    
+
+def test_unfold(device_id):
+    from cntk.layers import UnfoldFrom
+
+    @Function
+    def double_up(s):
+        return s * 2
+    x = [[[0],[0],[0]],
+         [[0],[0],[0],[0],[0]]]
+
+    ####################################################
+    # Test 1: simple unfold
+    ####################################################
+    US = UnfoldFrom(double_up, initial_state=1)
+    @Function
+    def FU(x : Sequence[Tensor[1]]):
+        return US(x)
+    r = FU(x)
+    exp = [[[ 2 ], [ 4 ], [ 8 ]],
+           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
+    assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom() forward')
+
+    ####################################################
+    # Test 2: unfold with length increase and terminating condition
+    ####################################################
+    US = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63),  initial_state=1, length_increase=1.6)
+    @Function
+    def FU(x : Sequence[Tensor[1]]):
+        return US(x)
+    r = FU(x)
+    exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
+           [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate
+    print(r)
+    print(exp)
+    assert_list_of_arrays_equal(r, exp, err_msg='Error in UnfoldFrom(..., until_predicate, length_increase, ...) forward')
 
 ####################################
 # Test dense layer for correctness
