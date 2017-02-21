@@ -3525,6 +3525,8 @@ namespace CNTK
 
     CNTK_API FunctionPtr SeqReduceSum(const Variable& operand, const Variable& weight, const std::wstring& name = L"");
 
+    CNTK_API FunctionPtr ConstantRef(const Variable& operand, const std::wstring& name = L"");
+
     ///
     /// Creates a composite Function that has the specified rootFunction as its root.
     /// The composite denotes a higher-level Function encapsulating the entire graph

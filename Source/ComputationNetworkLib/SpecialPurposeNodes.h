@@ -765,4 +765,37 @@ public:
 template class DummyCriterionNode<float>;
 template class DummyCriterionNode<double>;
 
+template <class ElemType>
+class ConstantRefNode : public UnaryElementWiseNode<ElemType>
+{
+    typedef UnaryElementWiseNode<ElemType> Base; 
+    UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"ConstantRef"; }
+public:
+    DeclareConstructorFromConfigWithNumInputs(ConstantRefNode);
+    ConstantRefNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto result = ValueFor(fr);
+        auto inputValue = InputRef(0).ValueFor(fr);
+        // TODO: Due to current limitation of the network builder, we can't by pass the memory copy operation at this step. 
+        // But idealy, we should just pass the value of input as this node's output
+        result.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // Do nothing to short cut the gradient backward propagation
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+};
+
+template class ConstantRefNode<float>;
+template class ConstantRefNode<double>;
 } } }

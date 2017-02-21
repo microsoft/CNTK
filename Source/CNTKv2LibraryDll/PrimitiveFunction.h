@@ -93,7 +93,8 @@ namespace CNTK
         { PrimitiveOpType::NDCG, L"NDCG" },
         { PrimitiveOpType::NoOp, L"NoOp" },
         { PrimitiveOpType::ContractiveReward, L"ContractiveReward" },
-        { PrimitiveOpType::SeqReduceSum, L"SeqReduceSum" }
+        { PrimitiveOpType::SeqReduceSum, L"SeqReduceSum" },
+        { PrimitiveOpType::ConstantRef, L"ConstantRef" }
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

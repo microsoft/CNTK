@@ -21,6 +21,7 @@
 #include "RNNNodes.h"
 #include "UserDefinedV2FunctionNode.h"
 #include "BlockFunction.h"
+#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -818,6 +819,9 @@ namespace CNTK
                 break;
             case PrimitiveOpType::SeqReduceSum:
                 computationNodePtr = New<SeqReduceSumNode<ElementType>>(network->GetDeviceId(), internalNodeName, variable.DynamicAxes()[0].Name());
+                break;
+            case PrimitiveOpType::ConstantRef:
+                computationNodePtr = New<ConstantRefNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
             default:
                 LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());

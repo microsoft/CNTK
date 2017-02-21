@@ -1329,6 +1329,12 @@ namespace CNTK
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::SeqReduceSum, operands, Dictionary(), name), name);
     }
 
+    FunctionPtr ConstantRef(const Variable& operand, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { operand };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ConstantRef, operands, Dictionary(), name), name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)

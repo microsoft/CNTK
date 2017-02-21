@@ -17,6 +17,7 @@
 #include "RNNNodes.h"
 #include "BlockFunction.h"
 #include "CompositeFunction.h"
+#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -581,6 +582,11 @@ namespace CNTK
                             break;
                         }
                         case PrimitiveOpType::SeqReduceSum:
+                        {
+                            outputShape = m_inputs[0].Shape();
+                            break;
+                        }
+                        case PrimitiveOpType::ConstantRef:
                         {
                             outputShape = m_inputs[0].Shape();
                             break;

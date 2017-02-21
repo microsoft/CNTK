@@ -2575,3 +2575,19 @@ def seq_reduce_sum(operand, weight, name=''):
     op = sanitize_input(operand, dtype)
     wei = sanitize_input(weight, dtype)
     return seq_reduce_sum(op, wei, name)
+
+@typemap
+def constant_ref(input, name=''):
+    '''
+    Reference the input variable as a constant and the derivative from this node to the input will always be zero 
+
+    Args:
+        input: class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import constant_ref
+    dtype = get_data_type(input)
+    op = sanitize_input(input, dtype)
+    return constant_ref(op, name)
