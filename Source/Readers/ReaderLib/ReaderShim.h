@@ -10,7 +10,9 @@
 
 #include <unordered_map>
 #include <string>
-#include <future>
+#define BOOST_THREAD_PROVIDES_FUTURE
+#include <boost/thread.hpp>
+#include <boost/thread/future.hpp>
 #include "DataReader.h"
 #include "Reader.h"
 
@@ -50,7 +52,7 @@ public:
         if (m_prefetchTask.valid())
         {
             // If there are some, give them time to finish.
-            m_prefetchTask.wait_for(std::chrono::seconds(5));
+            m_prefetchTask.timed_wait(boost::posix_time::milliseconds(1000));
             // TODO: if the prefetch is still valid, print a warning here!
         }
 
@@ -116,7 +118,7 @@ private:
 
     PrefetchResult PrefetchMinibatch(size_t currentDataTransferIndex);
 
-    std::future<PrefetchResult> m_prefetchTask;
+    boost::future<PrefetchResult> m_prefetchTask;
     ReaderPtr m_reader;
     ReaderFactory m_factory;
     bool m_endOfEpoch;
@@ -126,7 +128,7 @@ private:
 
     std::unordered_map<std::wstring, size_t> m_nameToStreamId;
     std::vector<StreamDescriptionPtr> m_streams;
-    launch m_launchType;
+    boost::launch m_launchType;
 
     // Data structure required for prefetch.
     struct StreamPrefetchBuffer

@@ -58,7 +58,7 @@ void ReaderShim<ElemType>::Init(const ConfigParameters& config)
     bool prefetch = config(L"prefetch", true);
     // if prefetch - launching asynchronously,
     // otherwise deferring - synchronous execution during .get() call
-    m_launchType = prefetch ? launch::async : launch::deferred;
+    m_launchType = prefetch ? boost::launch::async : boost::launch::deferred;
 
     m_numParallelSequences = numberOfuttsPerMinibatchForAllEpochs[0];
 
@@ -135,7 +135,7 @@ void ReaderShim<ElemType>::SetConfiguration(const ReaderConfiguration& config, c
     // Starting the prefetch task. There is always a single async read in flight.
     // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
     // and kick off the new prefetch.
-    m_prefetchTask = std::async(m_launchType,
+    m_prefetchTask = boost::async(m_launchType,
         [this, localCurrentDataTransferIndex]()
     {
         return PrefetchMinibatch(localCurrentDataTransferIndex);
@@ -201,7 +201,7 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
     // Starting the prefetch task. There is always a single async read in flight.
     // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
     // and kick off the new prefetch.
-    m_prefetchTask = std::async(m_launchType,
+    m_prefetchTask = boost::async(m_launchType,
     [this, localCurrentDataTransferIndex]()
     {
         return PrefetchMinibatch(localCurrentDataTransferIndex);
@@ -342,7 +342,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
         // and kick off the new prefetch.
         auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
-        m_prefetchTask = std::async(m_launchType, [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); });
+        m_prefetchTask = boost::async(m_launchType, [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); });
     }
 
     ProfilerTimeEnd(profLaunchAsync, m_currentDataTransferIndex ? "Launch Async 1" : "Launch Async 0");
