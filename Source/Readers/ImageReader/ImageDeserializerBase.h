@@ -29,7 +29,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         ImageDeserializerBase();
 
     protected:
-        void PopulateSequenceData(cv::Mat image, size_t classId, size_t sequenceId, std::vector<SequenceDataPtr>& result);
+        void PopulateSequenceData(cv::Mat image, size_t classId, size_t sequenceId, const KeyType& sequenceKey, std::vector<SequenceDataPtr>& result);
 
         // A helper class for generation of type specific labels (currently float/double only).
         LabelGeneratorPtr m_labelGenerator;

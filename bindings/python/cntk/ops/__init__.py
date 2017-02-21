@@ -61,7 +61,7 @@ def as_block(composite, block_arguments_map, block_op_name, block_instance_name=
      where details of implementing certain building block operations can be encapsulated away
      such that the actual structure of the block's implementation is not inlined into
      the parent graph where the block is used, and instead the block just appears as an opaque
-     primtive. Users still have the ability to peek at the underlying Function graph that implements
+     primitive. Users still have the ability to peek at the underlying Function graph that implements
      the actual block Function.
 
     Args:
@@ -1086,7 +1086,7 @@ def log_add_exp(left, right, name=''):
 def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     '''
     The output of this operation is the matrix product of the two input matrices.
-    It supports broadcasting. Sparse is supported in the right operand, if it is a matrix.
+    It supports broadcasting. Sparse is supported in the left operand, if it is a matrix.
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
 
     Example:
@@ -2613,7 +2613,7 @@ from cntk.axis import Axis
 @typemap
 def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
                    dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''
+    '''input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes(), name='')
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
@@ -2778,7 +2778,6 @@ def constant(value=None, shape=None, dtype=None, device=None, name=''):
     from .variables import Constant
     if not device:
         device = use_default_device()
-    #if np.isscalar(value) and not shape:
     if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
         shape = ()
     if dtype is not None:

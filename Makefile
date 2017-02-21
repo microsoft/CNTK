@@ -77,7 +77,10 @@ endif
 
 # The mpic++ wrapper only adds MPI specific flags to the g++ command line.
 # The actual compiler/linker flags added can be viewed by running 'mpic++ --showme:compile' and 'mpic++ --showme:link'
+ifneq ($(HAS_MPI),0)
 CXX = $(MPI_PATH)/bin/mpic++
+endif
+
 SSE_FLAGS = -msse4.1 -mssse3
 
 PROTOC = $(PROTOBUF_PATH)/bin/protoc
@@ -90,8 +93,8 @@ SOURCEDIR:= Source
 INCLUDEPATH:= $(addprefix $(SOURCEDIR)/, Common/Include CNTKv2LibraryDll CNTKv2LibraryDll/API CNTKv2LibraryDll/proto Math CNTK ActionsLib ComputationNetworkLib SGDLib SequenceTrainingLib CNTK/BrainScript Readers/ReaderLib PerformanceProfilerDll)
 INCLUDEPATH+=$(PROTOBUF_PATH)/include
 # COMMON_FLAGS include settings that are passed both to NVCC and C++ compilers.
-COMMON_FLAGS:= -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
-CPPFLAGS:=
+COMMON_FLAGS:= -DHAS_MPI=$(HAS_MPI) -D_POSIX_SOURCE -D_XOPEN_SOURCE=600 -D__USE_XOPEN2K -std=c++11
+CPPFLAGS:= 
 CXXFLAGS:= $(SSE_FLAGS) -std=c++0x -fopenmp -fpermissive -fPIC -Werror -fcheck-new
 LIBPATH:=
 LIBS_LIST:=
@@ -270,7 +273,7 @@ RPATH=-Wl,-rpath,
 # Build info
 ########################################
 
-BUILDINFO:= $(SOURCEDIR)/CNTK/buildinfo.h
+BUILDINFO:= $(SOURCEDIR)/CNTKv2LibraryDll/buildinfo.h
 GENBUILD:=Tools/generate_build_info
 
 BUILDINFO_OUTPUT := $(shell $(GENBUILD) $(BUILD_TOP)/Config.make && echo Success)
@@ -579,9 +582,16 @@ $(EVAL_EXTENDED_CLIENT): $(EVAL_EXTENDED_CLIENT_OBJ) | $(EVAL_LIB) $(READER_LIBS
 ########################################
 CNTKLIBRARY_CPP_EVAL_EXAMPLES:=$(BINDIR)/CNTKLibraryCPPEvalExamples
 
+#ifdef CUDA_PATH
 CNTKLIBRARY_CPP_EVAL_EXAMPLES_SRC=\
-	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalExamples/CNTKLibraryCPPEvalExamples.cpp  \
-	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalExamples/EvalMultithreads.cpp
+	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalGPUExamples/CNTKLibraryCPPEvalGPUExamples.cpp\
+	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalCPUOnlyExamples/EvalMultithreads.cpp
+
+#else
+CNTKLIBRARY_CPP_EVAL_EXAMPLES_SRC=\
+	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalCPUOnlyExamples/CNTKLibraryCPPEvalCPUOnlyExamples.cpp\
+	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalCPUOnlyExamples/EvalMultithreads.cpp
+#endif
 
 CNTKLIBRARY_CPP_EVAL_EXAMPLES_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_CPP_EVAL_EXAMPLES_SRC))
 
@@ -592,6 +602,26 @@ $(CNTKLIBRARY_CPP_EVAL_EXAMPLES): $(CNTKLIBRARY_CPP_EVAL_EXAMPLES_OBJ) | $(CNTKL
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $(CNTKLIBRARY_CPP_EVAL_EXAMPLES) for $(ARCH) with build type $(BUILDTYPE)
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) $(L_READER_LIBS)
+
+########################################
+# Eval V2 Sample test 
+########################################
+CNTKLIBRARY_CPP_EVAL_TEST:=$(BINDIR)/CNTKLibraryCPPEvalExamplesTest
+
+CNTKLIBRARY_CPP_EVAL_TEST_SRC=\
+	$(SOURCEDIR)/../Tests/EndToEndTests/EvalClientTests/CNTKLibraryCPPEvalExamplesTest/CNTKLibraryCPPEvalExamplesTest.cpp\
+	$(SOURCEDIR)/../Examples/Evaluation/CNTKLibraryCPPEvalCPUOnlyExamples/EvalMultithreads.cpp\
+	$(SOURCEDIR)/../Tests/EndToEndTests/CNTKv2Library/Common/Common.cpp
+
+CNTKLIBRARY_CPP_EVAL_TEST_OBJ:=$(patsubst %.cpp, $(OBJDIR)/%.o, $(CNTKLIBRARY_CPP_EVAL_TEST_SRC))
+
+ALL+=$(CNTKLIBRARY_CPP_EVAL_TEST)
+SRC+=$(CNTKLIBRARY_CPP_EVAL_TEST_SRC)
+
+$(CNTKLIBRARY_CPP_EVAL_TEST): $(CNTKLIBRARY_CPP_EVAL_TEST_OBJ) | $(CNTKLIBRARY_LIB) $(READER_LIBS)
+	@mkdir -p $(dir $@)
+	@echo building $(CNTKLIBRARY_CPP_EVAL_TEST) for $(ARCH) with build type $(BUILDTYPE)
 	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(LIBPATH) $(GDK_NVML_LIB_PATH)) $(patsubst %,$(RPATH)%, $(ORIGINLIBDIR) $(LIBPATH)) -o $@ $^ $(LIBS) -l$(CNTKLIBRARY) $(L_READER_LIBS)
 
 ########################################

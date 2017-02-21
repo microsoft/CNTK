@@ -235,9 +235,7 @@ namespace CNTK
         static const std::wstring AttributeNameDeletionPenalty;
         static const std::wstring AttributeNameInsertionPenalty;
         static const std::wstring AttributeNameSquashInputs;
-        static const std::wstring AttributeNameSamplesToIgnore;
-        static const std::wstring AttributeNameMinValue;
-        static const std::wstring AttributeNameMaxValue;
+        static const std::wstring AttributeNameTokensToIgnore;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -714,6 +712,11 @@ namespace CNTK
         static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig);
 
         void InferOutputs(std::vector<Variable>& outputs) override;
+
+        FunctionPtr Clone(const std::vector<Variable>& clonedInputs) override
+        {
+            return MakeSharedObject<PrimitiveFunction>(OpType(), clonedInputs, Dictionary(Attributes()), Name());
+        }
 
     private:
         PrimitiveOpType m_op;

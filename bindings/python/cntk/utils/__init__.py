@@ -104,7 +104,7 @@ def sanitize_shape(shape):
 
 
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
-    """
+    """sanitize_input(arg, fallback_dtype=np.float32, reshape=None)
     Convert to :class:`~cntk.ops.variables.Variable` so that it can be passed as Variable to the
     CNTK operators.
 
@@ -339,7 +339,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
              mapped to this input.
          For nodes with more than one input, only dict is allowed.
 
-         In both cases, every every sample in the data will be interpreted
+         In both cases, every sample in the data will be interpreted
          as a new sequence.
 
          Sequences can be marked as continuations of the same sequence in
@@ -707,19 +707,19 @@ def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_pr
         reserve_mem: size in byte for profiler memory reserved
     '''
     cntk_py.start_profiler(dir, sync_gpu, reserve_mem)
-    
+
 def stop_profiler():
     '''
     Stop profiler from gathering performance statistics and flush them to file
     '''
     cntk_py.stop_profiler()
-    
+
 def enable_profiler():
     '''
     Enable profiler to gather data. Note that in training_session, profiler would be enabled automatically after the first check point
     '''
     cntk_py.enable_profiler()
-    
+
 def disable_profiler():
     '''
     Disable profiler from gathering data.

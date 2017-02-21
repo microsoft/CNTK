@@ -13,5 +13,5 @@ def test_callstack1():
 
 def test_callstack2():
     with pytest.raises(ValueError) as excinfo:
-        cntk.io.MinibatchSource(cntk.io.CTFDeserializer(""))
-    assert '[CALL STACK]' in str(excinfo.value)   
+        cntk.io.MinibatchSource(cntk.io.CTFDeserializer("", streams={}))
+    assert '[CALL STACK]' in str(excinfo.value)

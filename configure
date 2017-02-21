@@ -88,6 +88,9 @@ declare -A py_paths
 
 mathlib=
 
+have_mpi=yes
+default_use_mpi=$have_mpi
+
 default_use_1bitsgd=no
 enable_1bitsgd=$default_use_1bitsgd
 
@@ -337,6 +340,7 @@ function show_help ()
     echo "  --asgd[=(yes|no)] use ASGD powered by Multiverso $(show_default $(default_use_asgd))"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --python[=(yes|no)] with Python bindings $(show_default $(default_use_python))"
+    echo "  --mpi[=(yes|no)] use MPI communication $(show_default ${default_use_mpi})"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
     echo "  --with-gdk-include[=directory] $(show_default $(find_gdk_include))"
@@ -485,7 +489,7 @@ do
                     echo "Cannot find Python $py_version directory."
                     echo "Please specify a value for $key"
                     exit 1
-                fi
+            fi
             else
                 if check_python $py_version "$optarg"
                 then
@@ -516,6 +520,17 @@ do
                     echo "Invalid SWIG directory $optarg"
                     exit 1
                 fi
+            fi
+            ;;
+
+        --mpi*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                have_mpi=$optarg
+            else
+                echo "Invalid value for --mpi $optarg"
+                show_help
+                exit
             fi
             ;;
 
@@ -1063,6 +1078,11 @@ case $mathlib in
         echo OPENBLAS_PATH=$openblas_path >> $config
         ;;
 esac
+if test $have_mpi = yes ; then
+    echo HAS_MPI=1 >> $config
+else
+    echo HAS_MPI=0 >> $config
+fi
 if test $enable_cuda = yes ; then
     echo CUDA_PATH=$cuda_path >> $config
     echo GDK_INCLUDE_PATH=$gdk_include_path >> $config

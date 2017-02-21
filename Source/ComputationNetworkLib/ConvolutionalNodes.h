@@ -220,7 +220,8 @@ protected:
     ImageLayoutKind m_imageLayout;
     
     size_t m_maxTempMemSizeInSamples;
-    shared_ptr<Matrix<ElemType>> m_tempMatrix;
+    shared_ptr<Matrix<ElemType>> m_tempMatrixForward;
+    shared_ptr<Matrix<ElemType>> m_tempMatrixBackward;
 
     std::unique_ptr<ConvolutionEngine<ElemType>> m_convEng;
 };
@@ -239,7 +240,8 @@ protected:                                  \
     using Base::m_transpose;                \
     using Base::m_imageLayout;              \
     using Base::m_maxTempMemSizeInSamples;  \
-    using Base::m_tempMatrix;               \
+    using Base::m_tempMatrixForward;        \
+    using Base::m_tempMatrixBackward;       \
     using Base::m_convEng;                  \
     using Base::InferReductionDims;         \
 public:
@@ -351,13 +353,13 @@ public:
         const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
         Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
         if (!m_transpose)
-            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);
+            m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrixForward);
         else
         {
             // BackwardData adds results to the output so need to zero them out first.
             // REVIEW alexeyk: should be rolled into BackwardData itself.
             sliceOutputValue.SetValue(0);
-            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, /*accumulateGradient =*/ true, *m_tempMatrix);
+            m_convEng->BackwardData(sliceInput1Value, input0, sliceOutputValue, /*accumulateGradient =*/ true, *m_tempMatrixForward);
         }
     }
 
@@ -369,20 +371,20 @@ public:
             auto& grad = InputRef(0).GradientAsMatrix();
             auto sliceInput1Value = InputRef(1).ValueFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrix);
+                m_convEng->BackwardKernel(sliceOutputGrad, sliceInput1Value, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrixBackward);
             else
-                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrix);
+                m_convEng->BackwardKernel(sliceInput1Value, sliceOutputGrad, grad, !Input(inputIndex)->ParentOverwritesGradient(), fr.IsAllFrames(), *m_tempMatrixBackward);
         }
         else if (inputIndex == 1) // derivative with respect to the input feature
         {
             auto& input0 = InputRef(0).ValueAsMatrix();
             auto sliceInput1Grad = InputRef(1).GradientFor(fr);
             if (!m_transpose)
-                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->ParentOverwritesGradient(), *m_tempMatrix);
+                m_convEng->BackwardData(sliceOutputGrad, input0, sliceInput1Grad, !Input(inputIndex)->ParentOverwritesGradient(), *m_tempMatrixBackward);
             else
             {
                 // REVIEW alexeyk: Forward overwrites values in sliceInput1Grad. Should handle correctly instead.
-                m_convEng->Forward(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrix);
+                m_convEng->Forward(sliceOutputGrad, input0, sliceInput1Grad, *m_tempMatrixBackward);
             }
         }
     }
@@ -500,25 +502,26 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempMatrix, matrixPool);
+        RequestMatrixFromPool(m_tempMatrixForward, matrixPool);
     }
 
-    //void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
-    //{
-    //    Base::ReleaseMatricesAfterForwardProp(matrixPool);
-    //    ReleaseMatrixToPool(m_tempMatrix, matrixPool);
-    //}
+    // m_tempMatrixForward is only used as workspace for convolution, we can release it immediately afterwards
+    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_tempMatrixForward, matrixPool);
+    }
 
-    //void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
-    //{
-    //    Base::RequestMatricesBeforeBackprop(matrixPool);
-    //    RequestMatrixFromPool(m_tempMatrix, matrixPool);
-    //}
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_tempMatrixBackward, matrixPool);
+    }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
         Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseMatrixToPool(m_tempMatrix, matrixPool);
+        ReleaseMatrixToPool(m_tempMatrixBackward, matrixPool);
     }
 
     void SetmMaxTempMemSizeInSamples(const size_t maxTempMemSizeInSamples)
@@ -529,6 +532,8 @@ public:
     }
 
     bool IsConvolution2D() const { return m_convolution2D; }
+
+    bool OutputUsedInComputingInputNodesGradients() const override { return false; }
 
 private:
     using TransformerNode::m_transforms;
@@ -600,8 +605,11 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempMatrix, matrixPool);
+        size_t matrixSize = m_sampleLayout.GetNumElements();
+        RequestMatrixFromPool(m_tempMatrix, matrixPool, matrixSize, true);
     }
+
+    // m_tempMatrix cannot be released after Forward Prop because its content (argmax) is used for back prop. 
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
     {
