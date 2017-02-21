@@ -486,7 +486,7 @@ namespace CNTK
         size_t offset = 0;
         for (size_t i : packedGradientsIndex)
         {
-            assert(inputValues[i]->Device() == inputValues[packedGradientsIndex[0]]->Device());
+            //assert(inputValues[i]->Device() == inputValues[packedGradientsIndex[0]]->Device());
             auto gradient = GetWritableMatrix<ElemType>(inputValues[i]);
             aggregationBuffer->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
             offset += gradient->GetNumElements();
