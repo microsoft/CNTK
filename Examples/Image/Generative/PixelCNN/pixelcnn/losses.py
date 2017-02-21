@@ -5,8 +5,20 @@ import numpy as np
 import cntk as ct
 from . import nn as nn
 
+def loss_function(input_norm, target, z, loss):
+    if loss == 'category':
+        return softmax_256_loss(target, z)        
+    elif loss == 'mixture':
+        return discretized_mix_logistic_loss(input_norm,z)
+
+    return None
+
 def discretized_mix_logistic_loss(x,l):
-    """ log-likelihood for mixture of discretized logistics, assumes the data has been rescaled to [-1,1] interval """
+    """
+    Porting discretized_mix_logistic_loss from  https://github.com/openai/pixel-cnn/blob/master/pixel_cnn_pp/nn.py.
+
+    log-likelihood for mixture of discretized logistics, assumes the data has been rescaled to [-1,1] interval
+    """
     x = ct.transpose(ct.transpose(x,0,1),1,2) # From CHW to HWC
     l = ct.transpose(ct.transpose(l,0,1),1,2) # From CHW to HWC
 
