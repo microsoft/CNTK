@@ -280,7 +280,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
                                                                                              ImageLayoutKind imageLayout)
 {
     return net.AddNodeToNetWithElemType(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout));
+                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, false, imageLayout));
 }
 
 template <class ElemType>
@@ -361,7 +361,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooli
                                                                                    const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),
+                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, false, imageLayout),
                                                                       { inputValues });
 }
 
