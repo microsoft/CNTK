@@ -81,7 +81,7 @@ def _inject_name(f, name):
         if len(f.outputs) == 1:
             f = alias(f, name=name)
         else:
-            f = combine([*f.outputs], name=name) # BUGBUG: Does this actually name things?
+            f = combine(list(f.outputs), name=name) # BUGBUG: Does this actually name things?
     return f
 
 # TODO: Move this into the lower layer where these are defined.
