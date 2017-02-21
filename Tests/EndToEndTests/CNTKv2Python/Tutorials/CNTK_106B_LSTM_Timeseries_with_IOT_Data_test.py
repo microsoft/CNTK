@@ -10,7 +10,7 @@ import numpy as np
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_106B_LSTM_Timeseries_with_IOT_Data.ipynb")
-notebook_timeoutSeconds = 450
+notebook_timeoutSeconds = 600
 
 def test_cntk_106B_lstm_timeseries_with_iot_data_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
