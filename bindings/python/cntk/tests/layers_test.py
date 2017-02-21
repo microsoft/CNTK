@@ -54,12 +54,35 @@ def test_default_options():
             assert Test() == 2017
             assert Test(some_param=123) == 123
     with default_options_for(test_default_options, some_param=2017): # some other function (misusing test_default_options() as a placeholder)
-        assert Test() == 13
+        assert Test() == 13  # tests that default value does not apply since it is set for a different function
         assert Test(some_param=124) == 124
 
 ####################################
 # @Function, @BlockFunction, types
-####################################    
+####################################
+
+def test_Function(device_id):
+
+    ####################################################
+    # Test 1: BlockFunction()
+    ####################################################
+    @BlockFunction('Square', 'block_name')
+    def f(x):
+        return x * x
+    assert f.shape == (-2,)
+    #assert f.op_name == 'Square'   # BUGBUG: op_name is 'CompositeFunctionOpName'
+    assert f.name == 'block_name'
+
+    ####################################################
+    # Test 2: Function() with shapes and type
+    ####################################################
+    @Function
+    def g(x : Tensor[3,2]):
+        return x * x
+    assert g.shape == (3,2)
+    r = g([[[2, 1], [5, 2], [1, 3]]])
+    e = [np.array([[[2, 1], [5, 2], [1, 3]]]) ** 2]
+    assert_list_of_arrays_equal(r, e, err_msg='@Function test failed')
 
 ####################################
 # . syntax for name lookup
@@ -144,7 +167,7 @@ def test_recurrence_fun(device_id):
     np.testing.assert_array_equal(out, exp, err_msg='Error in recurrence over element_max')
 
 ####################################
-# Unfold()
+# UnfoldFrom()
 ####################################    
 
 def test_unfold(device_id):
@@ -159,10 +182,10 @@ def test_unfold(device_id):
     ####################################################
     # Test 1: simple unfold
     ####################################################
-    US = UnfoldFrom(double_up, initial_state=1)
+    UF = UnfoldFrom(double_up, initial_state=1)
     @Function
     def FU(x : Sequence[Tensor[1]]):
-        return US(x)
+        return UF(x)
     r = FU(x)
     exp = [[[ 2 ], [ 4 ], [ 8 ]],
            [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
@@ -171,10 +194,10 @@ def test_unfold(device_id):
     ####################################################
     # Test 2: unfold with length increase and terminating condition
     ####################################################
-    US = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63),  initial_state=1, length_increase=1.6)
+    UF = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63),  initial_state=1, length_increase=1.6)
     @Function
     def FU(x : Sequence[Tensor[1]]):
-        return US(x)
+        return UF(x)
     r = FU(x)
     exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
            [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate

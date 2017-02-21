@@ -213,12 +213,12 @@ class Function(cntk_py.Function):
                     raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
 
             # for debugging
-            out.f_name = f_name  # keep in Python wrapper for debugging
+            #out.f_name = f_name  # keep in Python wrapper for debugging
 
             # add all members to the Python class
             # TODO: remove this, stuff should not be in the Python objects
-            for key in members:   # UNTESTED
-                out.__dict__[key] = members[key]
+            #for key in members:   # UNTESTED
+            #    out.__dict__[key] = members[key]
             return out
 
     @property
