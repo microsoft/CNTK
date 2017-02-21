@@ -752,6 +752,39 @@ namespace CNTK
         CompositeFunction::PreorderTraverseFunctions(RootFunction(), [](const FunctionPtr& function) {
         });
     }
+    
+    FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
+    {
+        std::vector<Variable> operands = { };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
+    }
+
+    FunctionPtr RandomUniform(const NDShape& shape, float minVal, float maxVal, size_t seed, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = shape;
+        additionalProperties[PrimitiveFunction::AttributeNameMinValue] = minVal;
+        additionalProperties[PrimitiveFunction::AttributeNameMaxValue] = maxVal;
+        additionalProperties[PrimitiveFunction::AttributeNameRngSeed]  = seed;
+
+        return NullaryOp(PrimitiveOpType::RandomUniform, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr Zeros(const NDShape& shape, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = shape;
+
+        return NullaryOp(PrimitiveOpType::Zeros, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr Ones(const NDShape& shape, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = shape;
+
+        return NullaryOp(PrimitiveOpType::Ones, std::move(additionalProperties), name);
+    }
 
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
