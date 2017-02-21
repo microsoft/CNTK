@@ -5870,6 +5870,166 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
     }
 };
 
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
+    const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const std::vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
+{
+    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
+    if (isColWise)
+    {
+        vector<size_t> curPhoneSeq;
+        
+        auto &us = *this;
+        size_t s, s2;
+        size_t senoneid, t;
+        ElemType ascore;
+        double x, y;
+        size_t senonenum, frameNum;
+
+        for (size_t uttId = 0;uttId < uttFrameNum.size(); uttId++) {
+            senonenum = uttPhoneNum[uttId];
+            frameNum = uttFrameNum[uttId];
+
+            // Populate utterance
+            // Using loop instead of memcpy for clarity
+            curPhoneSeq.reserve(senonenum);
+            for (size_t i =0;i < senonenum;i++)
+                curPhoneSeq.push_back(phoneSeq(i, uttId));
+
+            if (frameNum > 1)
+            {
+                //initialize alpha
+                for (s = 1; s < 3; s++)
+                {
+                    senoneid = curPhoneSeq[s];
+                    alpha(s, 0) = prob(senoneid, 0);
+                }
+                alpha(senonenum - 1, 0) = LZERO;
+                //initialize beta
+                for (s = senonenum - 3; s < senonenum - 1; s++)
+                {
+                    senoneid = curPhoneSeq[s];
+                    beta(s, frameNum - 1) = prob(senoneid, frameNum - 1);
+                }
+                beta(senonenum - 1, frameNum - 1) = LZERO;
+
+                //cal alpha
+                for (t = 1; t < frameNum; t++)
+                {
+                    for (s = 1; s < senonenum - 1; s++)
+                    {
+                        senoneid = curPhoneSeq[s];
+                        x = LZERO;
+                        for (s2 = s - 1; s2 <= s; s2++)
+                        {
+                            if (s2 > 0)
+                            {
+                                y = alpha(s2, t - 1);
+                                x = LogAddD(x, y);
+                            }
+                        }
+
+                        if (senoneid != prob.GetNumRows() - 1 && s - 2 > 0 && senoneid != curPhoneSeq[s - 2])
+                        {
+                            y = alpha(s - 2, t - 1);
+                            x = LogAddD(x, y);
+                        }
+                        if (senoneid != SIZE_MAX)
+                            ascore = prob(senoneid, t);
+                        else
+                            ascore = 0;
+                        alpha(s, t) = (float)x + ascore;
+                    }
+
+                }
+                //exit senone
+                x = LZERO;
+                for (s2 = senonenum - 3; s2 < senonenum - 1; s2++)
+                {
+                    y = alpha(s2, frameNum - 1);
+                    x = LogAddD(x, y);
+                }
+                alpha(senonenum - 1, frameNum - 1) = (float)x;
+
+                totalScore = -alpha(senonenum - 1, frameNum - 1);
+
+                //cal beta
+                for (t = frameNum - 2; t >= 0; t--)
+                {
+
+                    for (s = 1; s < senonenum - 1; s++)
+                    {
+                        senoneid = curPhoneSeq[s];
+                        x = LZERO;
+                        for (s2 = s; s2 <= s + 1; s2++)
+                        {
+                            if (s2 < senonenum - 1)
+                            {
+                                y = beta(s2, t + 1);
+                                x = LogAddD(x, y);
+                            }
+                        }
+                        if (senoneid != prob.GetNumRows() - 1 && s + 2 < senonenum - 1 && senoneid != curPhoneSeq[s + 2])
+                        {
+                            y = beta(s + 2, t + 1);
+                            x = LogAddD(x, y);
+                        }
+
+                        if (senoneid != SIZE_MAX)
+                            ascore = prob(senoneid, t);
+                        else
+                            ascore = 0;
+                        beta(s, t) = (float)x + ascore;
+
+                    }
+                    if (t == 0)
+                        break;
+                }
+                //entry senone
+                x = LZERO;
+                for (s2 = 1; s2 < 3; s2++)
+                {
+                    y = beta(s2, 0);
+                    x = LogAddD(x, y);
+                }
+                beta(0, 0) = (float)x;
+                for (t = 0; t < frameNum; t++)
+                {
+                    //cal zt
+                    double Zt = LZERO;
+                    for (s = 1; s < senonenum - 1; s++)
+                    {
+                        senoneid = curPhoneSeq[s];
+                        Zt = LogAddD(Zt, (alpha(s, t) + beta(s, t) - prob(senoneid, t)));
+                    }
+
+                    for (s = 1; s < senonenum - 1; s++)
+                    {
+                        senoneid = curPhoneSeq[s];
+                        if (senoneid != SIZE_MAX)
+                        {
+                            ElemType logoccu = alpha(s, t) + beta(s, t) - prob(senoneid, t) - (float)Zt;
+                            if (logoccu < LOG_OF_EPS_IN_LOG)
+                                us(senoneid, t) += 0.0f;
+                            else
+                                us(senoneid, t) += exp(logoccu);
+                        }
+                    }
+                }
+            }
+        }
+        return *this;
+
+    }
+     else {
+         LogicError("Only ColWise minibatch layout is supported.");
+    }
+
+    return *this;
+}
+
 /// the kernel function for RCRF backward computation
 template <class ElemType>
 void CPUMatrix<ElemType>::_rcrfBackwardCompute(size_t t, size_t k, const CPUMatrix<ElemType>& alpha,
@@ -6181,6 +6341,91 @@ struct TensorOpReduction<ElemType, OPFN, ReductionOp, N, -1>
     }
 };
 
+// perform loop over reduction index m, while keeping track of the number of elements and their corresponding indices.
+// This function is declared inside a wrapper struct to allow partial specialization (m = -1).
+template <class ElemType, size_t N, int m>
+struct TensorArgOpReduction
+{
+    static inline std::pair<ElemType, size_t> ReduceAll(array<ElemType*, N> pointers, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides,
+        ElementWiseOperator reductionOp)
+    {
+        size_t counter = 0;
+        size_t index = 0;
+        ElemType val = (ElemType)0;
+
+        switch (reducingOpDims.size())
+        {
+        case 3:
+            val = TensorArgOpReduction<ElemType, N, 2>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        case 2:
+            val = TensorArgOpReduction<ElemType, N, 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        case 1:
+            val = TensorArgOpReduction<ElemType, N, 0>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        case 0:
+            val = TensorArgOpReduction<ElemType, N, -1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        default:
+            LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)reducingOpDims.size());
+        }
+
+        return make_pair(val, index);
+    }
+
+    // reduction case (non-reduction case is specialized)
+    static inline ElemType Loop(array<ElemType*, N> pointers, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides,
+                                ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+    {
+        array<ptrdiff_t, N - 1> strides;   // N-1 because last one is the result pointer, which is unused in reduction
+        for (size_t i = 0; i < N - 1; i++) // N = a small constant, this will be unrolled
+            strides[i] = reducingStrides[i][(size_t)m];
+
+        ElemType aggregate = TensorArgOpReduction<ElemType, N, m - 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+        for (size_t dim = reducingOpDims[(size_t)m] - 1; dim-- > 0;)
+        {
+            // advance the pointers
+            for (size_t i = 0; i < N - 1; i++)
+                pointers[i] += strides[i]; // note: last pointer (result) is unused and untouched here
+
+            ElemType val = TensorArgOpReduction<ElemType, N, m - 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+
+            bool update = false;
+            switch (reductionOp)
+            {
+            case ElementWiseOperator::opArgmin:
+                update = (aggregate > val);
+                break;
+            case ElementWiseOperator::opArgmax:
+                update = (aggregate < val);
+                break;
+            }
+
+            if (update)
+            {
+                aggregate = val;
+                index = counter - 1;
+            }
+        }
+
+        return aggregate;
+    }
+};
+
+// perform loop over reduction index m
+// This is the specialized version for m = -1, which terminates the recursion.
+template <class ElemType, size_t N>
+struct TensorArgOpReduction<ElemType, N, -1>
+{
+    static inline ElemType Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&, ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+    {
+        counter++;
+        return *pointers[0]; // finally we are doing some work!!!
+    }
+};
+
 // -----------------------------------------------------------------------
 // perform loop over regular index k for N-nary operations (N counting the output)
 // -----------------------------------------------------------------------
@@ -6283,6 +6528,47 @@ struct TensorOpIteration<ElemType, OPFN, ReductionOp, N, vectorizable, m, -1>
             val += beta * *pout;
         // save
         *pout = val;
+        return;
+    }
+};
+
+// perform loop over regular index k and reducing index m for N operands (counting the output), the difference
+// between TensorOpIteration and TensorArgOpIteration, is that the latter store the index of the result, instead of 
+// the result. The reason that they aren't combined is because of performance.
+template <class ElemType, size_t N, int k>
+struct TensorArgOpIteration
+{
+    static inline void Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
+        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
+    {
+        // non-scalar case: still nested result loops left
+        array<ptrdiff_t, N> strides;
+        for (size_t i = 0; i < N; i++) // N = a small constant, this will be unrolled
+            strides[i] = regularStrides[i][(size_t)k];
+        for (size_t dim = regularOpDims[(size_t)k]; dim-- > 0;)
+        {
+            // need to descend into one loop deeper
+            TensorArgOpIteration<ElemType, N, k - 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+            // advance the pointers
+            for (size_t i = 0; i < N; i++)
+                pointers[i] += strides[i];
+        }
+    }
+};
+
+template <class ElemType, size_t N>
+struct TensorArgOpIteration<ElemType, N, -1>
+{
+    static inline void Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&,
+        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
+    {
+        // we are at element level for the result: perform the op (there may still be reduction)
+        auto val = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(pointers, reducingOpDims, reducingStrides, reductionOp);
+
+        auto* pout = pointers.back();
+        *pout = (ElemType)val.second;
         return;
     }
 };
@@ -6472,6 +6758,147 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
         ForAllTernaryOps(CaseTernaryTensorOp);
     default:
         LogicError("TensorOp: Unknown ternary op code %d.", (int) op);
+    }
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::Argmin() const
+{
+    int minArg = -1;
+    ElemType minValue = std::numeric_limits<ElemType>::max();
+
+#pragma omp parallel 
+    {
+        int localMinArg = -1;
+        ElemType localMinValue = std::numeric_limits<ElemType>::max();
+
+        #pragma omp for
+        for (int index = 0; index < (int)GetNumElements(); ++index)
+        {
+            if (localMinValue > Data()[index])
+            {
+                localMinArg = index;
+                localMinValue = Data()[index];
+            }
+            // If we have more then one min value, select the one with lower index.
+            else if ((localMinValue == Data()[index]) && (localMinArg > index))
+            {
+                localMinArg = index;
+            }
+        }
+
+        #pragma omp critical
+        {
+            if (minValue > localMinValue)
+            {
+                minArg = localMinArg;
+                minValue = localMinValue;
+            }
+            // If we have more then one min value, select the one with lower index.
+            else if ((minValue == localMinValue) && (minArg > localMinArg))
+            {
+                minArg = localMinArg;
+            }
+        }
+    }
+    return minArg;
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::Argmax() const
+{
+    int maxArg = -1;
+    ElemType maxValue = std::numeric_limits<ElemType>::min();
+
+#pragma omp parallel 
+    {
+        int localMaxArg = -1;
+        ElemType localMaxValue = std::numeric_limits<ElemType>::min();
+
+#pragma omp for
+        for (int index = 0; index < (int)GetNumElements(); ++index)
+        {
+            if (localMaxValue < Data()[index])
+            {
+                localMaxArg = index;
+                localMaxValue = Data()[index];
+            }
+            // If we have more then one max value, select the one with lower index.
+            else if ((localMaxValue == Data()[index]) && (localMaxArg > index))
+            {
+                localMaxArg = index;
+            }
+        }
+
+#pragma omp critical
+        {
+            if (maxValue < localMaxValue)
+            {
+                maxArg = localMaxArg;
+                maxValue = localMaxValue;
+            }
+            // If we have more then one max value, select the one with lower index.
+            else if ((maxValue == localMaxValue) && (maxArg > localMaxArg))
+            {
+                maxArg = localMaxArg;
+            }
+        }
+    }
+    return maxArg;
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::ArgOp(ElementWiseOperator reductionOp) const
+{
+    switch (reductionOp)
+    {
+        case ElementWiseOperator::opArgmin:
+            return Argmin();
+            break;
+        case ElementWiseOperator::opArgmax:
+            return Argmax();
+            break;
+    }
+
+    InvalidArgument("ArgOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
+    return -1;
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+                                      const array<size_t, 2>& offsets,
+                                      const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                      const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    if (reductionOp != ElementWiseOperator::opArgmin &&
+        reductionOp != ElementWiseOperator::opArgmax)
+        InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
+
+    if (GetNumElements() == 1)
+    {
+        Data()[0] = (ElemType) a.ArgOp(reductionOp);
+    }
+    else
+    {
+        const size_t N = 2;
+        array<ElemType*, N> pointers = { a.Data(), Data() };
+        for (size_t i = 0; i < N; i++)
+            pointers[i] += offsets[i];
+
+        switch (regularOpDims.size())
+        {
+            case 2:
+                TensorArgOpIteration<ElemType, N, 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            case 1:
+                TensorArgOpIteration<ElemType, N, 0>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            case 0:
+                TensorArgOpIteration<ElemType, N, -1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            default:
+                LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)regularOpDims.size());
+        }
     }
 }
 

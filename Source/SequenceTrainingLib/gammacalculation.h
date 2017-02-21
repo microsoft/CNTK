@@ -250,6 +250,142 @@ public:
         functionValues.SetValue(objectValue);
     }
 
+
+    // Calculate CTC score
+    // totalScore (output): total CTC score at element (0,0)
+    // prob (input): the posterior output from the network (log softmax of right)
+    // maxIndexes (input): indexes of max elements in label input vectors
+    // maxValues (input): values of max elements in label input vectors
+    // labels (input): 1-hot vector with frame-level phone labels
+    // CTCPosterior (output): CTC posterior
+    // blankTokenId (input): id of the blank token
+    // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+    //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+    //      delayConstraint=-1 means no constraint
+    void doCTC(Microsoft::MSR::CNTK::Matrix<ElemType>& totalScore, 
+        const Microsoft::MSR::CNTK::Matrix<ElemType>& prob, 
+        const Microsoft::MSR::CNTK::Matrix<ElemType>& maxIndexes,
+        const Microsoft::MSR::CNTK::Matrix<ElemType>& maxValues,
+        Microsoft::MSR::CNTK::Matrix<ElemType>& CTCPosterior, 
+        const std::shared_ptr<Microsoft::MSR::CNTK::MBLayout> pMBLayout, 
+        size_t blankTokenId,
+        int delayConstraint = -1)
+    {
+        const auto numParallelSequences = pMBLayout->GetNumParallelSequences();
+        const auto numSequences = pMBLayout->GetNumSequences();
+        const size_t numRows = prob.GetNumRows();
+        const size_t numCols = prob.GetNumCols();
+        m_deviceid = prob.GetDeviceId();
+        Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneSeqs(CPUDEVICE);
+        Microsoft::MSR::CNTK::Matrix<ElemType> matrixPhoneBounds(CPUDEVICE);
+        std::vector<std::vector<size_t>> allUttPhoneSeqs;
+        std::vector<std::vector<size_t>> allUttPhoneBounds;
+        int maxPhoneNum = 0;
+        std::vector<size_t> phoneSeq;
+        std::vector<size_t> phoneBound;
+
+        ElemType finalScore = 0;
+        if (blankTokenId == INT_MIN)
+            blankTokenId = numRows - 1;
+
+        size_t mbsize = numCols / numParallelSequences;
+
+        // Prepare data structures from the reader
+        // the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttBeginFrame;
+        // the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttFrameNum;
+        // the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+        std::vector<size_t> uttPhoneNum;
+        // map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+        std::vector<size_t> uttToChanInd;
+        uttBeginFrame.reserve(numSequences);
+        uttFrameNum.reserve(numSequences);
+        uttPhoneNum.reserve(numSequences);
+        uttToChanInd.reserve(numSequences);
+        size_t seqId = 0;
+        for (const auto& seq : pMBLayout->GetAllSequences())
+        {
+            if (seq.seqId == GAP_SEQUENCE_ID)
+                continue;
+
+            assert(seq.seqId == seqId);
+            seqId++;
+            uttToChanInd.push_back(seq.s);
+            size_t numFrames = seq.GetNumTimeSteps();
+            uttBeginFrame.push_back(seq.tBegin);
+            uttFrameNum.push_back(numFrames);
+
+            // Get the phone list and boundaries
+            phoneSeq.clear();
+            phoneSeq.push_back(SIZE_MAX);
+            phoneBound.clear();
+            phoneBound.push_back(0);
+            int prevPhoneId = -1;
+            size_t startFrameInd = seq.tBegin * numParallelSequences + seq.s;
+            size_t endFrameInd   = seq.tEnd   * numParallelSequences + seq.s;
+            size_t frameCounter = 0;
+            for (auto frameInd = startFrameInd; frameInd < endFrameInd; frameInd += numParallelSequences, frameCounter++) 
+            {
+                // Labels are represented as 1-hot vectors for each frame
+                // If the 1-hot vectors may have either value 1 or 2 at the position of the phone corresponding to the frame:
+                //      1 means the frame is within phone boundary
+                //      2 means the frame is the phone boundary
+                if (maxValues(0, frameInd) == 2) 
+                {
+                    prevPhoneId = (size_t)maxIndexes(0, frameInd);
+
+                    phoneSeq.push_back(blankTokenId);
+                    phoneBound.push_back(frameCounter);
+                    phoneSeq.push_back(prevPhoneId);
+                    phoneBound.push_back(frameCounter);
+                }
+            }
+            phoneSeq.push_back(blankTokenId);
+            phoneBound.push_back(numFrames);
+            phoneSeq.push_back(SIZE_MAX);
+            phoneBound.push_back(numFrames);
+
+            allUttPhoneSeqs.push_back(phoneSeq);
+            allUttPhoneBounds.push_back(phoneBound);
+
+            uttPhoneNum.push_back(phoneSeq.size());
+
+            if (phoneSeq.size() > maxPhoneNum)
+                maxPhoneNum = phoneSeq.size();
+        }
+
+        matrixPhoneSeqs.Resize(maxPhoneNum, numSequences);
+        matrixPhoneBounds.Resize(maxPhoneNum, numSequences);
+        for (size_t i = 0; i < numSequences; i++)
+        {
+            for (size_t j = 0; j < allUttPhoneSeqs[i].size(); j++)
+            {
+                matrixPhoneSeqs(j, i) = (ElemType)allUttPhoneSeqs[i][j];
+                matrixPhoneBounds(j, i) = (ElemType)allUttPhoneBounds[i][j];
+            }
+        }
+
+        // Once these matrices populated, move them to the active device
+        matrixPhoneSeqs.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
+        matrixPhoneBounds.TransferFromDeviceToDevice(CPUDEVICE, m_deviceid);
+
+        // compute alpha, beta and CTC scores
+        Microsoft::MSR::CNTK::Matrix<ElemType> alpha(m_deviceid);
+        Microsoft::MSR::CNTK::Matrix<ElemType> beta(m_deviceid);
+        CTCPosterior.AssignCTCScore(prob, alpha, beta, matrixPhoneSeqs, matrixPhoneBounds, finalScore, uttToChanInd, uttBeginFrame,
+            uttFrameNum, uttPhoneNum, numParallelSequences, mbsize, delayConstraint, /*isColWise=*/true );
+        
+        Microsoft::MSR::CNTK::Matrix<ElemType> rowSum(m_deviceid);
+        rowSum.Resize(1, numCols);
+
+        // Normalize the CTC scores
+        CTCPosterior.VectorSum(CTCPosterior, rowSum, /*isColWise=*/true);
+        CTCPosterior.RowElementDivideBy(rowSum);
+
+        totalScore(0, 0) = -finalScore;
+    }
+
 private:
     // Helper methods for copying between ssematrix objects and CNTK matrices
     void CopyFromCNTKMatrixToSSEMatrix(const Microsoft::MSR::CNTK::Matrix<ElemType>& src, size_t numCols, msra::math::ssematrixbase& dest)

@@ -28,15 +28,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static void SetShareNodeValueMatrices(bool enable) { m_enableShareNodeValueMatrices = enable; }
         static bool ShouldEnableShareNodeValueMatrices() { return m_enableShareNodeValueMatrices; }
 
-        static void SetHyperCompressMemory(bool enable) { m_enableHyperCompressMemory = enable; }
-        static bool ShouldEnableHyperCompressMemory() { return m_enableHyperCompressMemory; }
-
     private:
         static std::atomic<bool> m_forceDeterministicAlgorithms;
         // The global flag to enable matrices values in forward and backward prop
         static std::atomic<bool> m_enableShareNodeValueMatrices;
-        // The global flag to enable hyper memory compression 
-        static std::atomic<bool> m_enableHyperCompressMemory;
         static std::atomic<bool> m_forceConstantRandomSeed;
         static std::atomic<bool> m_optimizeGradientAccumulation;
     };

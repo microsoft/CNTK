@@ -57,7 +57,7 @@ private:
     // Array of all labels.
     msra::dbn::biggrowablevector<msra::dbn::CLASSIDTYPE> m_classIds;
 
-    // Index of utterances in the m_classIds.
+    // Index of utterances in the m_classIds (index of the first frame of the utterance)
     msra::dbn::biggrowablevector<size_t> m_utteranceIndex;
 
     // Type of the data this serializer provides.

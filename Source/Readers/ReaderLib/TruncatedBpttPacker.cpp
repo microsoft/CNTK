@@ -116,8 +116,9 @@ struct SequenceBuffer
 TruncatedBPTTPacker::TruncatedBPTTPacker(
     SequenceEnumeratorPtr sequenceEnumerator,
     const vector<StreamDescriptionPtr>& streams,
-    size_t numberOfBuffers)
-    : PackerBase(sequenceEnumerator, streams, numberOfBuffers)
+    size_t numberOfBuffers,
+    CorpusDescriptorPtr corpus)
+    : PackerBase(corpus, sequenceEnumerator, streams, numberOfBuffers)
 {
     auto sparseOutput = find_if(m_outputStreamDescriptions.begin(), m_outputStreamDescriptions.end(), [](const StreamDescriptionPtr& s){ return s->m_storageType == StorageType::sparse_csc; });
     if (sparseOutput != m_outputStreamDescriptions.end())
@@ -190,13 +191,18 @@ Minibatch TruncatedBPTTPacker::ReadMinibatch()
     Minibatch result;
 
     // Iterating over the streams/slots and packing them into the minibatch.
+    std::vector<size_t> mbSeqIdToCorpusSeqId;
     for (size_t streamIndex = 0; streamIndex < m_outputStreamDescriptions.size(); ++streamIndex)
     {
+        // We will take only the last stream, because currently in BPTT 
+        // all mblayouts should  match anyway.
+        mbSeqIdToCorpusSeqId.clear();
+
         m_currentLayouts[streamIndex]->Init(m_numParallelSequences, m_config.m_truncationSize);
         size_t sequenceId = 0;
         for (size_t slotIndex = 0; slotIndex < m_numParallelSequences; ++slotIndex)
         {
-            result.m_endOfSweep |= PackSlot(streamIndex, slotIndex, sequenceId);
+            result.m_endOfSweep |= PackSlot(streamIndex, slotIndex, sequenceId, mbSeqIdToCorpusSeqId);
         }
 
         StreamMinibatchPtr m = make_shared<StreamMinibatch>();
@@ -210,11 +216,21 @@ Minibatch TruncatedBPTTPacker::ReadMinibatch()
     // Eagerly set the end of epoch flag if all the data have been packed.
     result.m_endOfEpoch = m_sequenceBufferPerStream.front()->NothingToPack();
 
+    // Return mapping between sequence id inside the minibatch layout
+    // and the string representation of the sequence key.
+    if (m_corpus == nullptr)
+        result.m_getKeyById = [](size_t)
+        {
+            RuntimeError("Sequence Id mapping is not available for old style configurations. Please use deserializers.");
+            return "";
+        };
+    else
+        result.m_getKeyById = [mbSeqIdToCorpusSeqId, this](size_t id) { return m_corpus->IdToKey(mbSeqIdToCorpusSeqId[id]); };
     return result;
 }
 
 // Packs a slot of sequences into the minibatch.
-bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId)
+bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId, std::vector<size_t>& idToKey)
 {
     bool containsEndOfSweepSequence = false;
     auto& slot = m_sequenceBufferPerStream[streamIndex]->m_slots[slotIndex];
@@ -239,6 +255,8 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
     size_t strideSize = m_numParallelSequences * sampleSize;
 
     // Add current sequence to the minibatch layout.
+    idToKey.resize(sequenceId + 1);
+    idToKey[sequenceId] = slot.FrontSequence()->m_key.m_sequence;
     m_currentLayouts[streamIndex]->AddSequence(
         sequenceId++,
         slotIndex,
@@ -255,6 +273,8 @@ bool TruncatedBPTTPacker::PackSlot(size_t streamIndex, size_t slotIndex, size_t&
             containsEndOfSweepSequence |= slot.PopSequence();
 
             //Adding next sequence to the minibatch.
+            idToKey.resize(sequenceId + 1);
+            idToKey[sequenceId] = slot.FrontSequence()->m_key.m_sequence;
             m_currentLayouts[streamIndex]->AddSequence(
                 sequenceId++,
                 slotIndex,

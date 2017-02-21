@@ -8,10 +8,12 @@ from __future__ import print_function
 import numpy as np
 import os
 from PIL import Image
+from cntk.device import set_default_device, gpu
 from cntk import load_model, Trainer, UnitType
 from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, get_node_outputs
-from cntk.io import MinibatchSource, ImageDeserializer
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
+import cntk.io.transforms as xforms
 from cntk.layers import Dense
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, combine, softmax
@@ -57,11 +59,11 @@ _num_classes = 102
 
 # Creates a minibatch source for training or testing
 def create_mb_source(map_file, image_width, image_height, num_channels, num_classes, randomize=True):
-    transforms = [ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
-    image_source = ImageDeserializer(map_file)
-    image_source.map_features(features_stream_name, transforms)
-    image_source.map_labels(label_stream_name, num_classes)
-    return MinibatchSource(image_source, randomize=randomize)
+    transforms = [xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')] 
+    return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
+            features =StreamDef(field='image', transforms=transforms),
+            labels   =StreamDef(field='label', shape=num_classes))),
+            randomize=randomize)
 
 
 # Creates the network model for transfer learning
@@ -135,14 +137,21 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
 
 # Evaluates a single image using the provided model
 def eval_single_image(loaded_model, image_path, image_width, image_height):
-    # load and format image
+    # load and format image (resize, RGB -> BGR, CHW -> HWC)
     img = Image.open(image_path)
     if image_path.endswith("png"):
         temp = Image.new("RGB", img.size, (255, 255, 255))
         temp.paste(img, img)
         img = temp
     resized = img.resize((image_width, image_height), Image.ANTIALIAS)
-    hwc_format = np.ascontiguousarray(np.array(resized, dtype=np.float32).transpose(2, 0, 1))
+    bgr_image = np.asarray(resized, dtype=np.float32)[..., [2, 1, 0]]
+    hwc_format = np.ascontiguousarray(np.rollaxis(bgr_image, 2))
+
+    ## Alternatively: if you want to use opencv-python
+    # cv_img = cv2.imread(image_path)
+    # resized = cv2.resize(cv_img, (image_width, image_height), interpolation=cv2.INTER_NEAREST)
+    # bgr_image = np.asarray(resized, dtype=np.float32)
+    # hwc_format = np.ascontiguousarray(np.rollaxis(bgr_image, 2))
 
     # compute model output
     arguments = {loaded_model.arguments[0]: [hwc_format]}
@@ -177,7 +186,7 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
                     correct_count += 1
 
                 np.savetxt(results_file, probs[np.newaxis], fmt="%.3f")
-                if pred_count % 500 == 0:
+                if pred_count % 100 == 0:
                     print("Processed {0} samples ({1} correct)".format(pred_count, (correct_count / pred_count)))
                 if pred_count >= num_images:
                     break
@@ -186,6 +195,7 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
 
 
 if __name__ == '__main__':
+    set_default_device(gpu(0))
     # check for model and data existence
     if not (os.path.exists(_base_model_file) and os.path.exists(_train_map_file) and os.path.exists(_test_map_file)):
         print("Please run 'python install_data_and_model.py' first to get the required data and model.")

@@ -22,7 +22,7 @@ class CloneMethod(Enum):
 
     clone = 'clone'
     '''
-    New learnable parameters are created and initialied with the current values of the
+    New learnable parameters are created and initialized with the current values of the
     corresponding parameters of the Function being cloned
     '''
 
@@ -173,7 +173,7 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).constants()
 
-    def eval(self, arguments=None, device=None):
+    def eval(self, arguments=None, device=None, as_numpy=True):
         '''
         Evaluate the node using the specified ``arguments`` as input.
 
@@ -188,7 +188,7 @@ class Function(cntk_py.Function):
                  mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
-             In both cases, every every sample in the data will be interpreted
+             In both cases, every sample in the data will be interpreted
              as a new sequence.
 
              Sequences can be marked as continuations of the same sequence in
@@ -212,32 +212,88 @@ class Function(cntk_py.Function):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
+            as_numpy (bool): whether to return the result as a NumPy array. Default True.
+             Specifying this as False returns a CNTK Value which avoids a
+             costly conversion but returns a somewhat opaque object.
+
+        Note:
+             See :meth:`~cntk.ops.functions.Function.forward` for examples on
+             passing input data.
 
         Returns:
            dict or NumPy Array: Dict with keys of ouput variable names and values of
            output variable. A single NumPy array if there is only one output value.
         '''
 
-        _, output_map = self.forward(arguments, self.outputs, device=device)
+        _, output_map = self.forward(arguments, self.outputs, device=device, as_numpy=as_numpy)
 
         if len(output_map) > 1:
             return output_map
         else:
             return list(output_map.values())[0]
 
+
     @typemap
-    def forward(self, arguments, outputs, keep_for_backward=None, device=None):
+    def forward(self, arguments, outputs=None, keep_for_backward=None, device=None, as_numpy=True):
         '''
         Computes the values of speficied variables in ``outputs``, using values
         provided in ``arguments`` that correspond to each input `Variable` of
-        the function whose ``is_input`` is `True`.
+        the function (i.e. those that have ``is_input = True``).
 
         Example:
+            >>> # Example of passing dense data
             >>> v = C.input_variable(shape=(3,))
             >>> f = C.reciprocal(v)
-            >>> _, fv = f.forward({v:[[1, 2, 4]]}, [f.output])
+            >>> _, fv = f.forward({v:[[1, 2, 4]]})
             >>> list(fv.values())[0]
             array([[[ 1.  ,  0.5 ,  0.25]]], dtype=float32)
+
+        Example:
+            >>> # Passing sparse values as one-hot with a vocabulary size of 5
+            >>> vocab_size = 5
+            >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
+            >>> f = C.times(v, np.eye(vocab_size))
+            >>> # Passing a batch of two sequences:
+            >>> # 1st sequence: word 1
+            >>> # 2nd sequence: words 2 and 4
+            >>> batch = [[1],[2,4]]
+            >>> sparse_batch = C.one_hot(batch, vocab_size)
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+
+        Example:
+            >>> # Doing the same, but with a CSR matrix from scipy.sparse
+            >>> vocab_size = 5
+            >>> from scipy.sparse import csr_matrix
+            >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
+            >>> f = C.times(v, np.eye(vocab_size))
+            >>> # Note that csr_matrix automatically uses a sparse representation underneath.
+            >>> sparse_batch = [csr_matrix([[0,1,0,0,0]]), csr_matrix([[0,0,1,0,0], [0,0,0,0,1]])]
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+            <BLANKLINE>
+            >>> # Much more efficient, however, is to incrementally create CSR arrays.
+            >>> # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
+            >>> # for more information.
+            >>> def seq_to_csr_matrix(seq, vocab_size):
+            ...     indptr = [0]
+            ...     indices = []
+            ...     data = []
+            ...     for term_idx in seq:
+            ...         indices.append(term_idx)
+            ...         data.append(1)
+            ...         indptr.append(len(indices))
+            ...     return csr_matrix((data, indices, indptr), shape=(len(seq), vocab_size))
+            >>> sparse_batch = [seq_to_csr_matrix(seq, vocab_size) for seq in batch]
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+
 
         Args:
             arguments: maps variables to their input data. The interpretation depends on
@@ -246,13 +302,13 @@ class Function(cntk_py.Function):
                * dict: keys are input variable or names, and values are the
                  input data. To specify a minibatch, provide a list of arrays.
                  The shape of each array must be compatible with the shape of
-                 the dictionary key.If the array denotes a sequence then the
+                 the dictionary key. If the array denotes a sequence then the
                  elements of the sequence are grouped along axis 0.
                * any other type: if node has an unique input, arguments is
                  mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
-             In both cases, every every sample in the data will be interpreted
+             In both cases, every sample in the data will be interpreted
              as a new sequence.
 
              Sequences can be marked as continuations of the same sequence in
@@ -273,7 +329,8 @@ class Function(cntk_py.Function):
 
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
-            outputs (iterable): outputs to fetch values for.
+            outputs (iterable, optional): outputs to fetch values for. If not
+             set, all outputs of the function will be fetched.
             keep_for_backward (set, default `None`): the subset of the
              Function's output variables for which gradients shall be calculated
              in a subsequent backward call. If `None`, the returned state will
@@ -282,6 +339,9 @@ class Function(cntk_py.Function):
             device (:class:`~cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
+            as_numpy (bool): whether to return the result as a NumPy array. Default True.
+             Specifying this as False returns a CNTK Value which avoids a
+             costly conversion but returns a somewhat opaque object.
 
         Returns:
              A tuple (BackPropState, map of outputs to NumPy arrays). The
@@ -292,14 +352,17 @@ class Function(cntk_py.Function):
 
         in_var_map = sanitize_var_map(self.arguments, arguments,
                                       None, device)
+        if outputs is None:
+            outputs = self.outputs
+
         output_map = {v: None for v in outputs}
         keep_for_backward = set(keep_for_backward or {})
 
         state = super(Function, self)._forward(in_var_map, output_map, device,
                                              keep_for_backward)
-
-        for k in output_map:
-            output_map[k] = variable_value_to_seq(output_map[k], k)
+        if as_numpy:
+            for k in output_map:
+                output_map[k] = variable_value_to_seq(output_map[k], k)
 
         return state, output_map
 
@@ -331,6 +394,10 @@ class Function(cntk_py.Function):
             root_gradients (dict): the gradients that will be backpropagated
             variables (set): a list of input variables with respect to which
              the gradients have to be computed.
+
+        Note:
+             See :meth:`~cntk.ops.functions.Function.forward` for more examples
+             on passing input data.
 
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
@@ -498,7 +565,7 @@ class Function(cntk_py.Function):
     def block_root(self):
         '''
         Returns the root of the Function graph underlying this block Function.
-        Throws an exception of this is not a block Function.
+        Throws an exception if this is not a block Function.
         '''
         return super(Function, self).block_root()
 
@@ -809,6 +876,19 @@ class UserFunction(Function):
         :meth:`~cntk.ops.functions.output_variable`.
         '''
         raise NotImplementedError('infer_outputs has to be overwritten')
+
+    def clone(self, cloned_inputs):
+        '''
+        Creates a clone of this user-defined function.
+
+        Args:
+            cloned_inputs: list of cloned inputs to the new user-defined
+             Function clone to be created.
+
+        Returns:
+            A cloned instance of this user-defined function.
+        '''
+        raise NotImplementedError('clone has to be overwritten')
 
     def op_name(self):
         '''

@@ -9,6 +9,7 @@
 #include "MemoryProvider.h"
 #include "SequenceEnumerator.h"
 #include "Packer.h"
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -31,7 +32,8 @@ protected:
         void Resize(size_t newSize);
     };
 
-    PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
+    PackerBase(CorpusDescriptorPtr corpus,
+               SequenceEnumeratorPtr sequenceEnumerator,
                const std::vector<StreamDescriptionPtr>& streams,
                size_t numberOfBuffers);
 
@@ -54,6 +56,10 @@ protected:
     // specifies the offset of the first value from the given sample in the sequence data/ array 
     // (sampleOffset is equal to the sum of sample sizes of all preceding samples).
     void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
+
+    // Establishes a mapping between id inside the mb layout and the global key in the corpus.
+    // Assumes the sequences inside MBLayout have the same order as Sequences.
+    void EstablishIdToKey(Minibatch& minibatch, const Sequences& sequences);
 
     SequenceEnumeratorPtr m_sequenceEnumerator;
 
@@ -83,6 +89,8 @@ protected:
 
     // Current config.
     ReaderConfiguration m_config;
+
+    CorpusDescriptorPtr m_corpus;
 
 public:
     // Sets current epoch configuration.

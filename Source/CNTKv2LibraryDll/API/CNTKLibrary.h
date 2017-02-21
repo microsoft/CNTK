@@ -1395,6 +1395,18 @@ namespace CNTK
 
         CNTK_API void Add(const Dictionary& other);
 
+        void Add(const std::wstring& key, const DictionaryValue& value)
+        {
+            operator[](key.c_str()) = value;
+        }
+
+        template<typename... Args>
+        void Add(const std::wstring& key, const DictionaryValue& value, Args... args)
+        {
+            Add(key, value); //insert one
+            Add(args...);    //recurse
+        }
+
         CNTK_API bool operator==(const Dictionary& other) const;
         CNTK_API bool operator!=(const Dictionary& other) const;
 
@@ -1633,6 +1645,8 @@ private:
         void SetOwner(Function* ownerFunction);
 
         Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
+
+        Variable NonCompositePreservingCopy() const;
 
     private:
 #ifdef SWIGCSHARP
@@ -2554,6 +2568,11 @@ namespace CNTK
         /// (e.g. for use as a fixed feature extractor)
         ///
         Freeze,
+
+        ///
+        /// Internal use only
+        ///
+        Invalid,
     };
 
     ///
@@ -2641,6 +2660,8 @@ namespace CNTK
         /// crossing of dll boundary.
         ///
         CNTK_API virtual void InferOutputs(std::vector<Variable>& outputs) = 0;
+
+        CNTK_API virtual FunctionPtr Clone(const std::vector<Variable>& /*clonedInputs*/) { NOT_IMPLEMENTED; }
 
     public:
 
@@ -3522,6 +3543,32 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise parametric rectified linear Unit operation 
+    /// with the specified input operand and learning parameter alpha.
+    ///
+    CNTK_API FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
     namespace Sequence
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");
@@ -3757,8 +3804,8 @@ namespace CNTK
     CNTK_API void SetDefaultUnitGainValue(bool value);
 
     ///
-    /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values
-    /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
+    /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values.
+    /// For example momentum, AdaGrad, RMSProp, etc. are different types of learners with their own algorithms for
     /// learning parameter values using first order gradients.
     ///
     class Learner
@@ -4355,6 +4402,20 @@ namespace CNTK
         std::wstring m_streamAlias;
     };
 
+    struct HTKFeatureConfiguration
+    {
+        HTKFeatureConfiguration(const std::wstring& streamName, const std::wstring& scp, size_t dim, size_t left, size_t right, bool broadcast)
+            : m_streamName(streamName), m_dim(dim), m_scp(scp), m_left(left), m_right(right), m_broadcast(broadcast)
+        {}
+
+        std::wstring m_streamName;
+        std::wstring m_scp;
+        size_t m_dim;
+        size_t m_left;
+        size_t m_right;
+        bool m_broadcast;
+    };
+
     /// 
     /// Instantiate the CNTK built-in text format minibatch source
     ///
@@ -4399,6 +4460,56 @@ namespace CNTK
         minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
         return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
     }
+
+    typedef Dictionary ImageTransform;
+
+    /// 
+    /// Create a crop transform with the specified options to be used with a reader
+    /// 
+    CNTK_API ImageTransform ReaderCrop(const wchar_t* cropType = L"center",
+        int cropSize = 0, float sideRatio = 0.0f, float areaRatio = 0.0f,
+        float aspectRatio = 1.0f, const wchar_t* jitterType = L"none");
+
+    /// 
+    /// Create a scale transform with the specified options to be used with a reader
+    /// 
+    CNTK_API ImageTransform ReaderScale(int width,
+        int height, int channels, const wchar_t* interpolations = L"linear",
+        const wchar_t* scaleMode = L"fill", int padValue = -1);
+
+    /// 
+    /// Create a mean subtraction transform with the specified options to be used with a reader
+    /// 
+    CNTK_API ImageTransform ReaderMean(const wchar_t* meanFile);
+
+    /// 
+    /// Create a color transform with the specified options to be used with a reader
+    /// 
+    CNTK_API ImageTransform ReaderColor(float brightnessRadius = 0.0f,
+        float contrastRadius = 0.0f, float saturationRadius = 0.0f);
+
+
+    typedef Dictionary Deserializer;
+
+    /// 
+    /// Create an ImageDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms = {});
+
+    /// 
+    /// Create an CTFDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams);
+
+    /// 
+    /// Create an HTKFeatureDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams);
+
+    /// 
+    /// Create an HTKMLFDeserializer with the specified options
+    /// 
+    CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles);
 
     ///
     /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.
@@ -4694,6 +4805,9 @@ namespace CNTK
         bool keepExistingCheckpoints = false,
         size_t maxNumberOfTrainingSamples = std::numeric_limits<size_t>::max(),
         size_t progressFrequency = std::numeric_limits<size_t>::max());
+
+
+    CNTK_API void PrintBuiltInfo();
 }
 
 

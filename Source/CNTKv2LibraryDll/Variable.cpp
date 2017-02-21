@@ -87,6 +87,13 @@ namespace CNTK
         return result;
     }
 
+    Variable Variable::NonCompositePreservingCopy() const
+    {
+        Variable copy = *this;
+        copy.m_outputComposite = nullptr;
+        return copy;
+    }
+
     void Variable::SetOwner(Function* ownerFunction)
     {
         if (Kind() != VariableKind::Output)

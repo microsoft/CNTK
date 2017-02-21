@@ -18,6 +18,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // sequence or sample mode, exposing only sequences.
 struct KeyType
 {
+    KeyType() : m_sequence(0), m_sample(0) {}
+
+    KeyType(size_t sequence, size_t sample) : m_sequence(sequence), m_sample(sample) {}
+
     // Possible sequence common prefix.
     // size_t m_prefix;
 
@@ -75,6 +79,7 @@ struct SequenceDataBase
     ElementType    m_elementType;     // Sequence element type.
     TensorShapePtr m_sampleLayout;    // Sample layout, can be shared by several sequences.
     bool           m_isValid;         // Flag indicating if sequence is valid.
+    KeyType        m_key;             // Sequence key.
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
