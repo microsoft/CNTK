@@ -768,7 +768,7 @@ class UserFunction(Function):
         inputs (list): inputs to this function
         as_numpy (bool, optional): whether the data should be automatically
          converted from and to NumPy. Defaults to True. Specifying this as
-         False returns passes the data as CNTK Value objects.
+         `False` passes the data as CNTK Value objects.
         name (str): name of this function
     '''
     def __init__(self, inputs, as_numpy=True, name=''):
