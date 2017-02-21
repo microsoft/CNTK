@@ -24,10 +24,11 @@ class MatrixPool
 {
     vector<shared_ptr<Matrix<float>>>  m_releasedFloatMatrices;
     vector<shared_ptr<Matrix<double>>> m_releasedDoubleMatrices;
+    shared_ptr<MatrixPool> m_bigPool;
 
     template <class ElemType>
     vector<shared_ptr<Matrix<ElemType>>>& GetReleasedMatrices();
-
+    
 public:
     // release here means the matrix can be put back and shared by others
     template <class ElemType>
@@ -47,7 +48,8 @@ public:
         }
 
 #endif
-        releasedMatrices.push_back(freeMatrix);
+        if (std::find(releasedMatrices.begin(), releasedMatrices.end(), freeMatrix) == releasedMatrices.end())
+            releasedMatrices.push_back(freeMatrix);
 #endif
     }
 
@@ -70,6 +72,16 @@ public:
             LogicError("MatrixPool::Request: failed to get a valid matrix.");
 
         return matrixPtr;
+    }
+
+    shared_ptr<MatrixPool> BigPool()
+    {
+        if (m_bigPool == nullptr)
+        {
+            m_bigPool = make_shared<MatrixPool>();
+        }
+
+        return m_bigPool;
     }
 };
 

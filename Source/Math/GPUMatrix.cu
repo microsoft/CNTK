@@ -4653,6 +4653,130 @@ void GPUMatrix<ElemType>::ReduceSumVector(const GPUMatrix<ElemType>& src, GPUMat
         vectorSize, numTgt, numSrc, isColWise);
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::WeightedColumnwiseReduceSum(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& weight, GPUMatrix<ElemType>& tgt, const int& seqNum, const ElemType& alpha, const ElemType& beta, const bool isColWise)
+{
+    if (src.GetComputeDeviceId() != tgt.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("All matrices must be on the same GPU");
+
+    if (src.IsEmpty() || weight.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+    tgt.PrepareDevice();
+    tgt.RequireSize(src.GetNumRows(), seqNum);
+
+    const int m = (int)src.GetNumRows();
+    const int n = (int)src.GetNumCols();
+    const int k = (int)tgt.GetNumRows();
+    const int l = (int)tgt.GetNumCols();
+    const int h = (int)weight.GetNumRows();
+    const int f = (int)weight.GetNumCols();
+    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
+    
+    if (isColWise)
+    { // Ensure l >= n and l times n
+        assert(m == k && n%l == 0);                 // converting from size_t to int may cause overflow
+        if (m != k || n%l != 0 || h!=1 || f!=n || n<l)
+            InvalidArgument("Matrices a and o should have same dimension.");
+    }
+    else
+    {
+        // Ensure k >= m && k times m
+        assert(m%k == 0 && n == l);                 // converting from size_t to int may cause overflow
+        if (m%k != 0 || n != l || f!=1 || h!=m || m <k)
+            InvalidArgument("Matrices a and o should have same dimension.");
+    }
+
+    int vectorSize = m;
+    int numSrc = n;
+    int numTgt = l;
+    if (!isColWise) // col-wise
+    {
+        numSrc = m;
+        numTgt = k;
+        vectorSize = n;
+    }
+
+    // Due to the column major storage, make row direction to align with the threads direction to speed memory access
+    int numOfThreadsPerBlock = min(GridDim::maxThreadsPerBlock, numSrc / numTgt);
+    int blockDimY = numTgt;
+    int blockDimX = vectorSize;
+    int shareMem = numOfThreadsPerBlock * sizeof(ElemType);
+
+    dim3 blocksPerGrid(blockDimX, blockDimY);
+    SyncGuard syncGuard;
+    _weightedColWiseReduceSum<ElemType> << <blocksPerGrid, numOfThreadsPerBlock, shareMem, t_stream >> >(tgt.Data(), beta, src.Data(), weight.Data(), alpha,
+        vectorSize, numTgt, numSrc, isColWise);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::WeightedColumnwiseAdd(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& weight, GPUMatrix<ElemType>& tgt)
+{
+    if (src.GetComputeDeviceId() != tgt.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("All matrices must be on the same GPU");
+
+    if (src.IsEmpty() || tgt.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+
+    const int m = (int)src.GetNumRows();
+    const int n = (int)src.GetNumCols();
+    const int k = (int)tgt.GetNumRows();
+    const int l = (int)tgt.GetNumCols();
+    const int h = (int)weight.GetNumRows();
+    const int f = (int)weight.GetNumCols();
+    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
+
+    assert(m == k);                 // converting from size_t to int may cause overflow
+    if (m != k || h != 1)
+        InvalidArgument("Matrices a and o should have same dimension.");
+
+    tgt.PrepareDevice();
+
+    int vectorSize = m;
+    int numSrc = n;
+    int numTgt = l;
+
+    // Due to the column major storage, make row direction to align with the threads direction to speed memory access
+    int numOfThreadsPerBlock = min(GridDim::maxThreadsPerBlock, vectorSize);
+    int gridDimX = max(n, l);
+
+    SyncGuard syncGuard;
+    _weightedColWiseAdd<ElemType> << <gridDimX, numOfThreadsPerBlock, 0, t_stream >> >(tgt.Data(), src.Data(), weight.Data(),
+        vectorSize, numTgt, numSrc, f);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ElementMultiplyAndRowwiseReduce(const GPUMatrix<ElemType>& srcA, const GPUMatrix<ElemType>& srcB, GPUMatrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta)
+{
+    if (srcA.GetComputeDeviceId() != tgt.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("All matrices must be on the same GPU");
+
+    if (srcA.IsEmpty() || tgt.IsEmpty())
+        LogicError("Scale:  one of the input matrices is empty.");
+
+    const int m = (int)srcA.GetNumRows();
+    const int n = (int)srcA.GetNumCols();
+    const int k = (int)srcB.GetNumRows();
+    const int l = (int)srcB.GetNumCols();
+    const int h = (int)tgt.GetNumRows();
+    const int f = (int)tgt.GetNumCols();
+    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
+
+    assert(m == k);                 // converting from size_t to int may cause overflow
+    if (m != k)
+        InvalidArgument("Matrices a and o should have same dimension.");
+
+    tgt.PrepareDevice();
+
+    int vectorSize = m;
+    // Due to the column major storage, make row direction to align with the threads direction to speed memory access
+    int numOfThreadsPerBlock = min(GridDim::maxThreadsPerBlock, vectorSize);
+    int gridDimX = max(n, l);
+    int shareMem = numOfThreadsPerBlock * sizeof(ElemType);
+    SyncGuard syncGuard;
+    _elementMultiplyAndRowwiseReduce<ElemType> << <gridDimX, numOfThreadsPerBlock, shareMem, t_stream >> >(tgt.Data(), beta, srcA.Data(), srcB.Data(), alpha,
+        vectorSize, n, l, f);
+}
+
 // perform unary operation 'op' on a giving 'this', reinterpreting the matrices as tensors as specified by the dims and strides
 // This binds the N-ariness to a template parameter N, and gets the data pointers out from the matrix objects.
 template <class ElemType>

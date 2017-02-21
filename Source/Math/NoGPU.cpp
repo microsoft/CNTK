@@ -2194,6 +2194,20 @@ void GPUMatrix<ElemType>::ReduceSumVector(const GPUMatrix<ElemType>& src, GPUMat
 {
 }
 
+template <class ElemType>
+void GPUMatrix<ElemType>::WeightedColumnwiseAdd(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& weight, GPUMatrix<ElemType>& tgt)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::WeightedColumnwiseReduceSum(const GPUMatrix<ElemType>& src, const GPUMatrix<ElemType>& weight, GPUMatrix<ElemType>& tgt, const int& numSeq, const ElemType& alpha, const ElemType& beta, const bool isColWise)
+{
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::ElementMultiplyAndRowwiseReduce(const GPUMatrix<ElemType>& srcA, const GPUMatrix<ElemType>& srcB, GPUMatrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta)
+{
+}
 #pragma endregion Static BLAS Functions
 
 #pragma region MatrixQuantizerGPU functions

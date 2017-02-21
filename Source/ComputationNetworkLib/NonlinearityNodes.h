@@ -544,7 +544,7 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         // there is only a gradient for the input tensor that is to be clipped
-        if (inputIndex == 2)
+        if (inputIndex == 0)
         {
             size_t rank = DetermineElementwiseTensorRank();
             auto gradient =                           GradientTensorFor(rank, fr);
@@ -552,7 +552,8 @@ public:
             auto input =         InputRef(inputIndex).ValueTensorFor(rank, fr.AllowBroadcast());
             auto output =                             ValueTensorFor(rank, fr.AllowBroadcast());
 
-            inputGradient.AddCopyIfEqualOf(input, output, gradient);
+            //inputGradient.AddCopyIfEqualOf(input, output, gradient);
+            inputGradient.AddCopyOf(gradient);
         }        
     }
 

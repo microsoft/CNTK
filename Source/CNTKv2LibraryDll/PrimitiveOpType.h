@@ -72,7 +72,9 @@ namespace CNTK
         NDCG = 60,
         EditDistanceError = 61,
         NoOp = 62,
-        ContractiveReward = 63
+        ContractiveReward = 63,
+        SeqReduceSum = 64,
+        UnknownOP
         // New op types should only be appended to the end of this list.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)
         // and bump up PrimitiveFunction::s_serializationVersion and update PrimitiveFunction::Deserialize

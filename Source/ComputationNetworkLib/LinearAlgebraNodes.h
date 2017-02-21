@@ -825,6 +825,126 @@ public:
 template class SumElementsNode<float>;
 template class SumElementsNode<double>;
 
+template <class ElemType>
+class SeqReduceSumNode : public ComputationNodeNonLooping /*ComputationNode*/<ElemType>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"SeqReduceSum";
+    }
+    static const std::wstring DefaultBatchAxisName() { return L"defaultBatchAxis"; }
+
+public:
+    DeclareConstructorFromConfig(SeqReduceSumNode);
+    SeqReduceSumNode(DEVICEID_TYPE deviceId, const wstring& name, const wstring& dynamicAxisName = DefaultBatchAxisName())
+        : Base(deviceId, name), m_dynamicAxisName(dynamicAxisName)
+    {
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ ForwardPropNonLooping() override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+
+        auto input = InputRef(0).MaskedValueFor(fr);
+        auto weight = InputRef(1).MaskedValueFor(fr);
+        // TODO: Build MBLayout
+        BuildMBLayout();
+        Matrix<ElemType>::WeightedColumnwiseReduceSum(input, weight, Value(), GetMBLayout()->GetNumSequences(), 1, 0, true);
+    }
+
+    void BuildMBLayout()
+    {
+        MBLayoutPtr inputMB = InputRef(0).GetMBLayout();
+        m_reducedSequence.resize(inputMB->GetNumSequences());
+        auto const& inputSeq = inputMB->GetAllSequences();
+        const unsigned NUM_THREADS = 2;
+        UNUSED(NUM_THREADS); // in case OMP is turned off.
+        int j = 0;
+//#pragma omp parallel for num_threads(NUM_THREADS)
+        for (int i = 0; i < inputSeq.size(); i++)
+        {
+            if(inputSeq[i].seqId == GAP_SEQUENCE_ID)
+                continue;
+            m_reducedSequence[j].seqId = inputSeq[i].seqId;
+            m_reducedSequence[j].s = j;
+            m_reducedSequence[j].tBegin = 0;
+            m_reducedSequence[j].tEnd = 1;
+            j++;
+        }
+
+        if (j > inputMB->GetNumSequences() || j != inputMB->GetNumParallelSequences())
+        {
+            RuntimeError("The sequence length of the two inputs doesn't math. %d, %d, %d.", j, (int)inputMB->GetNumSequences(), (int)inputMB->GetNumParallelSequences());
+        }
+
+        let& outMBLayout = GetMBLayout();
+        outMBLayout->InitAsPackedSequences(m_reducedSequence, /*temp*/m_placementBuffer, /*temp*/m_rowAllocationsBuffer);
+    }
+
+    virtual void /*ComputationNodeNonLooping::*/ BackpropToNonLooping(size_t inputIndex) override
+    {
+        FrameRange fr(InputRef(0).GetMBLayout());
+        auto input = InputRef(0).MaskedValueFor(fr);
+        auto weight = InputRef(1).MaskedValueFor(fr);
+
+        if (inputIndex == 0)
+        {
+            auto inputGradient = InputRef(0).GradientFor(fr);
+            Matrix<ElemType>::WeightedColumnwiseAdd(Gradient(), weight, inputGradient);
+        }
+        else
+        {
+            auto weightGradient = InputRef(1).GradientFor(fr);
+            Matrix<ElemType>::ElementMultiplyAndRowwiseReduce(Gradient(), input, weightGradient, 1, 1);
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return true; }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+        if (isFinalValidationPass && !Input(0)->HasMBLayout())
+            InvalidArgument("%ls %ls operation can only operate on minibatch data (which have a layout).", NodeName().c_str(), OperationName().c_str());
+        if (!m_pMBLayout)
+        {
+            m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
+            m_pMBLayout->SetUniqueAxisName(m_dynamicAxisName);
+        }
+
+        SetDims(GetInputSampleLayout(0), Input(0)->HasMBLayout());
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        if (modelVersion >= CNTK_MODEL_VERSION_11)
+            fstream >> m_dynamicAxisName;
+        else
+            m_dynamicAxisName = DefaultBatchAxisName();
+    }
+
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_dynamicAxisName;
+    }
+
+    std::wstring DynamicAxisName() const { return m_dynamicAxisName; }
+private:
+    std::wstring m_dynamicAxisName;
+    std::vector<MBLayout::SequenceInfo>   m_reducedSequence;
+    std::vector<size_t>               m_rowAllocationsBuffer; // [row] for determining new MBLayout packing
+    std::vector<std::pair<size_t, size_t>> m_placementBuffer; // [sequenceIndex] assigned location for a sequence
+};
+
+template class SeqReduceSumNode<float>;
+template class SeqReduceSumNode<double>;
+
+
 // -----------------------------------------------------------------------
 // TransposeDimensions (input, axis1, axis2)
 //  - swaps index dimensions axis1 and axis2. The values are 1-based; 1 stands for the leading dimension.
@@ -963,7 +1083,7 @@ class CosDistanceNode: public ComputationNode<ElemType>, public NumInputs<2>
 public:
     DeclareConstructorFromConfigWithNumInputs(CosDistanceNode);
     CosDistanceNode(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_expandedGrad2(deviceId)
+        : Base(deviceId, name)
     {
     }
 
@@ -983,10 +1103,11 @@ public:
             Matrix<ElemType> sliceNodeGradient = GradientFor(fr);
             if (inputIndex == 0)
             {
-                m_expandedGrad2.Resize(sliceInputValueB);
-                m_expandedGrad2.SetValue(0);
+                m_expandedGrad = m_pPool->BigPool()->Request<ElemType>(this->m_deviceId);
+                m_expandedGrad->Resize(sliceInputValueB);
+                m_expandedGrad->SetValue(0);
                 Matrix<ElemType>::CosSimilarityDeriv(sliceInputValueA, *m_rnorm2[inputIndex], sliceInputValueB, *m_rnorm2[1 - inputIndex],
-                    sliceOutputValue, sliceNodeGradient, m_expandedGrad2, true);
+                    sliceOutputValue, sliceNodeGradient, *m_expandedGrad, true);
                 //for (int i = 0; i < mb1->GetNumTimeSteps(); i++)
                 //{
                 //    auto subFr = FrameRange(mb1, i);
@@ -994,7 +1115,8 @@ public:
                 //    sliceInputGradientA += subgrad;
                 //}
                 //MaskMissingColumnsToZero(m_expandedGrad2, mb1, fr);
-                Matrix<ElemType>::ReduceSumVector(m_expandedGrad2, sliceInputGradientA, 1, 1, true);
+                Matrix<ElemType>::ReduceSumVector(*m_expandedGrad, sliceInputGradientA, 1, 1, true);
+                m_pPool->BigPool()->Release<ElemType>(m_expandedGrad);
             }
             else
             {
@@ -1084,7 +1206,6 @@ public:
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
             node->m_rnorm2[0]->SetValue(*m_rnorm2[0]);
             node->m_rnorm2[1]->SetValue(*m_rnorm2[1]);
-            node->m_expandedGrad->SetValue(*m_expandedGrad);
         }
     }
     // request matrices needed to do node function value evaluation
@@ -1099,7 +1220,7 @@ public:
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_expandedGrad, matrixPool);
+        m_pPool = &matrixPool;
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1108,15 +1229,13 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_rnorm2[0], matrixPool);
         ReleaseMatrixToPool(m_rnorm2[1], matrixPool);
-        ReleaseMatrixToPool(m_expandedGrad, matrixPool);
     }
 
 private:
     // invNorm nodes tranfer data between ForwardProp and BackpropTo
     shared_ptr<Matrix<ElemType>> m_rnorm2[2];
     shared_ptr<Matrix<ElemType>> m_expandedGrad;
-
-    Matrix<ElemType> m_expandedGrad2;
+    MatrixPool* m_pPool;
 };
 
 template class CosDistanceNode<float>;

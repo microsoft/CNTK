@@ -2557,3 +2557,21 @@ def contractive_reward(labels, predictionAndStopMap, name=''):
     l = sanitize_input(labels, dtype)
     steps = [ (sanitize_input(p[0], dtype), sanitize_input(p[1], dtype)) for p in predictionAndStopMap ]
     return contractive_reward(l, steps, name)
+
+@typemap
+def seq_reduce_sum(operand, weight, name=''):
+    '''
+    Computes the contractive rewards 
+
+    Args:
+        labels: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        predictionAndStopMap: a list of tuples of each step generated preidtions and stop probability
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import seq_reduce_sum
+    dtype = get_data_type(operand)
+    op = sanitize_input(operand, dtype)
+    wei = sanitize_input(weight, dtype)
+    return seq_reduce_sum(op, wei, name)

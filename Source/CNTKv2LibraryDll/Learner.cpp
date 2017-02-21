@@ -97,7 +97,8 @@ namespace CNTK
     {
         if (m_additionalOptions.gradientClippingThresholdPerSample != numeric_limits<double>::infinity())
         {
-            double maxGradientPerMB = m_additionalOptions.gradientClippingThresholdPerSample * actualMBSize;
+            gradient /= (ElementType)actualMBSize;
+            double maxGradientPerMB = m_additionalOptions.gradientClippingThresholdPerSample;// *actualMBSize;
             if (m_additionalOptions.gradientClippingWithTruncation)
                 gradient.InplaceTruncate(ElementType(maxGradientPerMB));
             else
@@ -165,6 +166,11 @@ namespace CNTK
             // multiply by actualMBSize so that it's invariant to minibatch size since learning rate is per sample
             const auto weight = learningRate * m_additionalOptions.l1RegularizationWeight * actualMBSize;
             parameterValue->GetWritableMatrix<ElementType>()->InplaceSoftThreshold(ElementType(weight));
+        }
+
+        if (m_additionalOptions.weightClippingWithTruncation)
+        {
+            parameterValue->GetWritableMatrix<ElementType>()->InplaceTruncate(ElementType(m_additionalOptions.weightClippingThreshold));
         }
     }
 

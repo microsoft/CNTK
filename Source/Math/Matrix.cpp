@@ -5233,6 +5233,44 @@ void Matrix<ElemType>::CosSimilarity(const Matrix<ElemType>& a, const Matrix<Ele
 }
 
 template <class ElemType>
+void Matrix<ElemType>::WeightedColumnwiseAdd(const Matrix<ElemType>& src, const Matrix<ElemType>& weight, Matrix<ElemType>& tgt)
+{
+    tgt.SwitchToMatrixType(src.GetMatrixType(), src.GetFormat(), true);
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        NOT_IMPLEMENTED,
+        GPUMatrix<ElemType>::WeightedColumnwiseAdd(*src.m_GPUMatrix, *weight.m_GPUMatrix, *tgt.m_GPUMatrix),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::WeightedColumnwiseReduceSum(const Matrix<ElemType>& src, const Matrix<ElemType>& weight, Matrix<ElemType>& tgt, const int& numSeq, const ElemType& alpha,
+    const ElemType& beta, const bool isColWise)
+{
+    tgt.SwitchToMatrixType(src.GetMatrixType(), src.GetFormat(), true);
+    DISPATCH_MATRIX_ON_FLAG(&src,
+        &src,
+        NOT_IMPLEMENTED,
+        GPUMatrix<ElemType>::WeightedColumnwiseReduceSum(*src.m_GPUMatrix, *weight.m_GPUMatrix, *tgt.m_GPUMatrix, numSeq, alpha, beta, isColWise),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
+void Matrix<ElemType>::ElementMultiplyAndRowwiseReduce(const Matrix<ElemType>& srcA, const Matrix<ElemType>& srcB, Matrix<ElemType>& tgt, const ElemType& alpha,
+    const ElemType& beta)
+{
+    tgt.SwitchToMatrixType(srcA.GetMatrixType(), srcA.GetFormat(), true);
+    DISPATCH_MATRIX_ON_FLAG(&srcA,
+        &srcA,
+        NOT_IMPLEMENTED,
+        GPUMatrix<ElemType>::ElementMultiplyAndRowwiseReduce(*srcA.m_GPUMatrix, *srcB.m_GPUMatrix, *tgt.m_GPUMatrix, alpha, beta),
+        NOT_IMPLEMENTED,
+        NOT_IMPLEMENTED);
+}
+
+template <class ElemType>
 void Matrix<ElemType>::InnerProduct(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, const bool isColWise)
 {
     if (a.IsEmpty() || b.IsEmpty())

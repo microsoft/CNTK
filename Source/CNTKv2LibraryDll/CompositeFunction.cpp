@@ -816,6 +816,9 @@ namespace CNTK
             case PrimitiveOpType::ContractiveReward:
                 computationNodePtr = New<ContractiveRewardNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::SeqReduceSum:
+                computationNodePtr = New<SeqReduceSumNode<ElementType>>(network->GetDeviceId(), internalNodeName, variable.DynamicAxes()[0].Name());
+                break;
             default:
                 LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
                 break;

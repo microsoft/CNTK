@@ -252,7 +252,7 @@ public:
     template<typename SequenceInfoVector>
     void InitAsPackedSequences(const SequenceInfoVector& inputSequences,
         /*temp buffer*/std::vector<std::pair<size_t, size_t>>& placement,
-        /*temp buffer*/std::vector<size_t> rowAllocations)
+        /*temp buffer*/std::vector<size_t>& rowAllocations)
     {
         placement.resize(inputSequences.size()); // [sequence index] result goes here (entries are invalid for gaps)
                                                  // determine width of MBLayout

@@ -527,7 +527,8 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         low_memory=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
-        gradient_clipping_with_truncation=True):
+        gradient_clipping_with_truncation=True, weight_clipping_threshold=np.inf,
+        weight_clipping_with_truncation = False):
     '''
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
@@ -576,6 +577,8 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
     additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+    additional_options.weight_clipping_threshold = weight_clipping_threshold
+    additional_options.weight_clipping_with_truncation = weight_clipping_with_truncation
 
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
             variance_momentum, low_memory, additional_options)

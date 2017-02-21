@@ -585,6 +585,10 @@ public:
         const Matrix<ElemType>& derivO, Matrix<ElemType>& derivA, const bool isColWise);
     static void CosSimilarity(const Matrix<ElemType>& a, const Matrix<ElemType>& b, Matrix<ElemType>& c, Matrix<ElemType>& pa, Matrix<ElemType>& pb, const bool isColWise);
     static void ReduceSumVector(const Matrix<ElemType>& src, Matrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta, const bool isColWise);
+    static void WeightedColumnwiseAdd(const Matrix<ElemType>& src, const Matrix<ElemType>& weight, Matrix<ElemType>& tgt);
+    static void WeightedColumnwiseReduceSum(const Matrix<ElemType>& src, const Matrix<ElemType>& weight, Matrix<ElemType>& tgt, const int& numSeq, const ElemType& alpha, const ElemType& beta, const bool isColWise);
+    static void ElementMultiplyAndRowwiseReduce(const Matrix<ElemType>& srcA, const Matrix<ElemType>& srcB, Matrix<ElemType>& tgt, const ElemType& alpha, const ElemType& beta);
+
     static bool AreEqual(const Matrix<ElemType>& a, const Matrix<ElemType>& b, const ElemType threshold = 1e-8);
     static bool HasElement(const Matrix<ElemType>& a, const ElemType value = 0.0);
 

@@ -5244,70 +5244,6 @@ __global__ void _cosSimDeriv(
 }
 
 template <class ElemType>
-__global__ void _cosSim2(
-    ElemType* c,
-    ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
-    ElemType* rnorm2B,           // 1/sqrt(Sum(B^2))
-    const ElemType* a,
-    const ElemType* b,
-    const CUDA_LONG vectorSize, // size of vector
-    const CUDA_LONG numA, // Number of vectors in A
-    const CUDA_LONG numB, // Number of vectors in B
-    const bool isColWise) {
-    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
-    CUDA_LONG N = numA > numB ? numA : numB;
-    if (id >= N)
-        return;
-    ElemType sum = 0;
-    CUDA_LONG indexA = 0;
-    CUDA_LONG indexB = 0;
-    CUDA_LONG idA = id%numA;
-    CUDA_LONG idB = id%numB;
-    ElemType squareSumA = 0;
-    ElemType squareSumB = 0;
-    if (isColWise)
-    {
-        indexA = idA*vectorSize;
-        indexB = idB*vectorSize;
-        for (CUDA_LONG i = 0; i < vectorSize; ++i)
-        {
-            sum += a[indexA] * b[indexB];
-            squareSumA += a[indexA] * a[indexA];
-            squareSumB += b[indexB] * b[indexB];
-            indexA++;
-            indexB++;
-        }
-    }
-    else
-    {
-        // TODO: Due to the memory storage of matrix is column major, this mode is much faster in GPU
-        indexA = idA;
-        indexB = idB;
-        for (CUDA_LONG j = 0; j < vectorSize; ++j)
-        {
-            sum += a[indexA] * b[indexB];
-            squareSumA += a[indexA] * a[indexA];
-            squareSumB += b[indexB] * b[indexB];
-            indexA += numA;
-            indexB += numB;
-        }
-    }
-
-    if (sizeof(ElemType) == sizeof(double))
-    {
-        rnorm2A[idA] = rsqrt(squareSumA + 1e-8);
-        rnorm2B[idB] = rsqrt(squareSumB + 1e-8);
-    }
-    else
-    {
-        rnorm2A[idA] = rsqrtf(squareSumA + 1e-8);
-        rnorm2B[idB] = rsqrtf(squareSumB + 1e-8);
-    }
-
-    c[id] = (ElemType)(sum*rnorm2A[idA] * rnorm2B[idB]);
-}
-
-template <class ElemType>
 __global__ void _cosSim(
     ElemType* c,
     ElemType* rnorm2A,           // 1/sqrt(Sum(A^2))
@@ -5432,7 +5368,6 @@ __global__ void _reduceSumVector(ElemType* dst,
         return;
     extern __shared__ char sharePtr[];
     ElemType* sum = (ElemType*)sharePtr;
-    int colId = vid;
     int colStep = blockDim.x*numDst;
     int colStart = vid + tid*numDst;
     int step = 0;
@@ -5487,6 +5422,193 @@ __global__ void _reduceSumVector(ElemType* dst,
         }
 
         dst[dstOffset] = dst[dstOffset] * beta + sum[threadIdx.x] * alpha;
+    }
+}
+
+template <class ElemType>
+__global__ void _weightedColWiseReduceSum(ElemType* dst,
+    const ElemType beta,
+    const ElemType* input,
+    const ElemType* weight, // Weight, TODO: support scalar, colums of scalor, columns of vector
+    const ElemType alpha,
+    const CUDA_LONG vectorSize,
+    const CUDA_LONG numDst,
+    const CUDA_LONG numSrc,
+    const bool isColWise)
+{
+    CUDA_LONG eid = blockIdx.x;
+    CUDA_LONG vid = blockIdx.y;
+    CUDA_LONG tid = threadIdx.x;
+    //TODO: this path should never be actived, else there will be dead lock
+    if (eid >= vectorSize || tid*numDst + vid >= numSrc)
+        return;
+    extern __shared__ char sharePtr[];
+    ElemType* sum = (ElemType*)sharePtr;
+    int colStep = blockDim.x*numDst;
+    int colStart = vid + tid*numDst;
+    int step = 0;
+    int offset = 0;
+    int dstOffset = 0;
+    int colOffset = colStart;
+    if (isColWise)
+    {
+        offset = colStart*vectorSize + eid;
+        step = colStep*vectorSize;
+        dstOffset = vid*vectorSize + eid;
+    }
+    else
+    {
+        offset = colStart + vectorSize*eid;
+        step = colStep;
+        dstOffset = vid + vectorSize*eid;
+    }
+
+    sum[threadIdx.x] = 0;
+    for (int i = colStart; i < numSrc; )
+    {
+        sum[threadIdx.x] += input[offset]*weight[i];
+        i += colStep;
+        offset += step;
+    }
+
+    __syncthreads();
+    // DO aggregation
+    // 64-ways aggregation log_2(n)/log_2(ways)
+    int pof2 = 6;
+    int ways = 1 << pof2;
+    step = blockDim.x;
+    while (step > ways)
+    {
+        step = min((step + ways - 1) >> pof2, step);
+        if (threadIdx.x < step)
+        {
+            for (int i = threadIdx.x + step; i < blockDim.x; )
+            {
+                sum[threadIdx.x] += sum[i];
+                i += step;
+            }
+        }
+        __syncthreads();
+    }
+
+    if (threadIdx.x == 0)
+    {
+        for (int i = 1; i < step; i++)
+        {
+            sum[threadIdx.x] += sum[i];
+        }
+        if (beta == 1 && alpha == 1)
+        {
+            dst[dstOffset] = dst[dstOffset] + sum[threadIdx.x];
+        }
+        else if (beta == 0 && alpha == 1)
+        {
+            dst[dstOffset] = sum[threadIdx.x];
+        }
+        else
+        {
+            dst[dstOffset] = dst[dstOffset] * beta + sum[threadIdx.x] * alpha;
+        }
+    }
+}
+
+template <class ElemType>
+__global__ void _weightedColWiseAdd(ElemType* dst,
+    const ElemType* input,
+    const ElemType* weight, // Weight, TODO: support scalar, colums of scalor, columns of vector
+    const CUDA_LONG vectorSize,
+    const CUDA_LONG numDst,
+    const CUDA_LONG numSrc,
+    const CUDA_LONG numWeight)
+{
+    CUDA_LONG columnId = blockIdx.x;
+    CUDA_LONG rowId = threadIdx.x;
+    //TODO: this path should never be actived, else there will be dead lock
+    if (rowId >= vectorSize || columnId >= max(numSrc, numDst))
+        return;
+    CUDA_LONG srcColumnId = columnId%numSrc;
+    CUDA_LONG dstColumnId = columnId%numDst;
+    CUDA_LONG weightId = columnId%numWeight;
+    CUDA_LONG srcOffset = srcColumnId*vectorSize;
+    CUDA_LONG dstOffset = dstColumnId*vectorSize;
+    for (int i = rowId; i < vectorSize; )
+    {
+        dst[dstOffset + i] += input[srcOffset + i] * weight[weightId];
+        i += blockDim.x;
+    }
+}
+
+template <class ElemType>
+__global__ void _elementMultiplyAndRowwiseReduce(ElemType* dst,
+    const ElemType beta,
+    const ElemType* inputA,
+    const ElemType* inputB,
+    const ElemType alpha,
+    const CUDA_LONG vectorSize,
+    const CUDA_LONG numA,
+    const CUDA_LONG numB,
+    const CUDA_LONG numDst)
+{
+    CUDA_LONG columnId = blockIdx.x;
+    CUDA_LONG rowId = threadIdx.x;
+    //TODO: this path should never be actived, else there will be dead lock
+    if (rowId >= vectorSize || columnId >= max(numA, numB))
+        return;
+    extern __shared__ char sharePtr[];
+    ElemType* sum = (ElemType*)sharePtr;
+
+    CUDA_LONG aColumnId = columnId%numA;
+    CUDA_LONG bColumnId = columnId%numB;
+    CUDA_LONG dstColumnId = columnId%numDst;
+    CUDA_LONG aOffset = aColumnId*vectorSize;
+    CUDA_LONG bOffset = bColumnId*vectorSize;
+    CUDA_LONG dstOffset = dstColumnId;
+    sum[threadIdx.x] = 0;
+    for (int i = rowId; i < vectorSize; )
+    {
+        sum[threadIdx.x] += inputA[aOffset + i] * inputB[bOffset + i];
+        i += blockDim.x;
+    }
+
+    __syncthreads();
+    // DO aggregation
+    // 64-ways aggregation log_2(n)/log_2(ways)
+    int pof2 = 6;
+    int ways = 1 << pof2;
+    int step = blockDim.x;
+    while (step > ways)
+    {
+        step = min((step + ways - 1) >> pof2, step);
+        if (threadIdx.x < step)
+        {
+            for (int i = threadIdx.x + step; i < blockDim.x; )
+            {
+                sum[threadIdx.x] += sum[i];
+                i += step;
+            }
+        }
+        __syncthreads();
+    }
+
+    if (threadIdx.x == 0)
+    {
+        for (int i = 1; i < step; i++)
+        {
+            sum[threadIdx.x] += sum[i];
+        }
+
+        if (beta == 1 && alpha == 1)
+        {
+            dst[dstOffset] = dst[dstOffset] + sum[threadIdx.x];
+        }
+        else if (beta == 0 && alpha == 1)
+        {
+            dst[dstOffset] = sum[threadIdx.x];
+        }
+        else
+        {
+            dst[dstOffset] = dst[dstOffset] * beta + sum[threadIdx.x];
+        }
     }
 }
 }

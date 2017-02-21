@@ -191,6 +191,13 @@ namespace CNTK
             outputDynamicAxes = inputs[1].DynamicAxes();
         else if (op == PrimitiveOpType::CosDistance)
             outputDynamicAxes = inputs[1].DynamicAxes();
+        else if (op == PrimitiveOpType::SeqReduceSum)
+        {
+            for (int i = 1; i < inputs[0].DynamicAxes().size(); i++)
+            {
+                outputDynamicAxes.push_back(inputs[0].DynamicAxes()[i]);
+            }
+        }
         else
         {
             auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
@@ -558,22 +565,26 @@ namespace CNTK
                             outputShape = ReductionOpOutputShape(m_op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
                             break;
                         }
-                    case PrimitiveOpType::ContractiveReward:
-                    {
-                        // TODO: Predict output shape
-                        auto predictionShape = m_inputs[1].Shape();
-                        auto labelsShape = m_inputs[0].Shape();
-                        auto numLeadingAxesToCompare = std::min(predictionShape.Rank(), labelsShape.Rank());
-                        if (predictionShape.SubShape(0, numLeadingAxesToCompare) != labelsShape.SubShape(0, numLeadingAxesToCompare))
-                            RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(m_op).c_str());
+                        case PrimitiveOpType::ContractiveReward:
+                        {
+                            auto predictionShape = m_inputs[1].Shape();
+                            auto labelsShape = m_inputs[0].Shape();
+                            auto numLeadingAxesToCompare = std::min(predictionShape.Rank(), labelsShape.Rank());
+                            if (predictionShape.SubShape(0, numLeadingAxesToCompare) != labelsShape.SubShape(0, numLeadingAxesToCompare))
+                                RuntimeError("Prediction output operand's shape %S is incompatible with label operand's shape %S for the %S operation", AsStringForErrorReporting(predictionShape).c_str(), AsStringForErrorReporting(labelsShape).c_str(), PrimitiveOpTypeName(m_op).c_str());
 
-                        std::vector<int> reductionAxes;
-                        for (int i3 = 0; i3 < (int)m_inputs[0].Shape().Rank(); ++i3)
-                            reductionAxes.push_back(i3);
+                            std::vector<int> reductionAxes;
+                            for (int i3 = 0; i3 < (int)m_inputs[0].Shape().Rank(); ++i3)
+                                reductionAxes.push_back(i3);
 
-                        outputShape = ReductionOpOutputShape(m_op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
-                        break;
-                    }
+                            outputShape = ReductionOpOutputShape(m_op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
+                            break;
+                        }
+                        case PrimitiveOpType::SeqReduceSum:
+                        {
+                            outputShape = m_inputs[0].Shape();
+                            break;
+                        }
                         case PrimitiveOpType::ReduceElements:
                         {
                             assert(m_inputs.size() == 1);
@@ -765,7 +776,7 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::NoOp)
+        if (op >= PrimitiveOpType::UnknownOP)
         {
             LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 

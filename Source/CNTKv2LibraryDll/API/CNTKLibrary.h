@@ -3523,6 +3523,8 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr ContractiveReward(const Variable& label, const std::vector<std::pair<Variable, Variable>>& predictionAndStop, const std::wstring& name = L"");
 
+    CNTK_API FunctionPtr SeqReduceSum(const Variable& operand, const Variable& weight, const std::wstring& name = L"");
+
     ///
     /// Creates a composite Function that has the specified rootFunction as its root.
     /// The composite denotes a higher-level Function encapsulating the entire graph
@@ -3752,6 +3754,8 @@ namespace CNTK
 #endif
         double gradientClippingThresholdPerSample = std::numeric_limits<double>::infinity();
         bool gradientClippingWithTruncation = true;
+        double weightClippingThreshold = std::numeric_limits<double>::infinity();
+        bool weightClippingWithTruncation = false;
     };
 
     ///  
