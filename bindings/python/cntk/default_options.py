@@ -10,25 +10,21 @@ default_options: ``with default_options():`` and ``with default_options_for():``
 
 from cntk.utils import Record
 
-# this global variable holds a linked list of default overrides, which is managed by _OptionsContextManager
-# TODO: move into _OptionsContextManager [Willi]
-_current_default_overrides = None
-
 # context manager for overriding defaults, use through default_options() or default_options_for() below
 class _OptionsContextManager: # implement Python's 'with' protocol
+    # this static member variable holds a linked list of default overrides, managed by _OptionsContextManager
+    _current_default_overrides = None
     # constructor remembers the options-override record
     def __init__(self, scope, **kwargs):
         self.scope = scope
         self.kwargs = kwargs
     # entering with block: link in a new default-options record at head
     def __enter__(self):
-        global _current_default_overrides
-        _current_default_overrides = Record(_scope = self.scope, _outer = _current_default_overrides, **self.kwargs) # insert new scope at head of link
+        _OptionsContextManager._current_default_overrides = Record(_scope = self.scope, _outer = _OptionsContextManager._current_default_overrides, **self.kwargs) # insert new scope at head of link
         return self
     # exiting with block: restore previous remembered defaults
     def __exit__(self, type, value, traceback):
-        global _current_default_overrides
-        _current_default_overrides = _current_default_overrides._outer # restore outer scope
+        _OptionsContextManager._current_default_overrides = _OptionsContextManager._current_default_overrides._outer # restore outer scope
 
 # options scope without limit to specific functions, e.g.:
 #   with default_options(activation=relu, init=he_normal(), pad=True):
@@ -59,29 +55,35 @@ class default_override_or:
 def is_default_override(value):
     return isinstance(value, default_override_or)
 
-# look up an option default override
-# meant to be used inside functions that use this facility
-# 'function' is the function that calls this, e.g.:
-# def Convolution(args, init=default_override_or(glorot_uniform()), activation=default_override_or(identity), pad=default_override_or(False)):
-#     init = _get_default_override(Convolution, init=init) # pass default under the same name
 def get_default_override(function, **kwargs):
+    '''
+    Looks up an option default override.
+    Meant to be used inside functions that use this facility.
+
+    Args:
+        function: the function that calls this, e.g.:
+         ``def Convolution(args, init=default_override_or(glorot_uniform()), activation=default_override_or(identity), pad=default_override_or(False)):
+             init = _get_default_override(Convolution, init=init) # pass default under the same name``
+    '''
     # parameter checking and casting
     if len(kwargs) != 1:
-        raise ValueError("_get_default_override() expects 1 keyword argument")
+        raise ValueError("get_default_override() expects 1 keyword argument")
     key, value = [kvp for kvp in kwargs.items()][0] # this is the keyword argument that the user passed in  --TODO: can this be simplified?
     if function:
-        from inspect import signature, isfunction  # check if key is a valid parameter  --TODO: should check for kw arguments
+        # first arg, unless None, must be an actual Python function...
+        from inspect import isfunction
         if not isfunction(function):
             raise ValueError('First argument must be a function')
-        try:
-            signature(function).parameters[key]
-        except:
+        # ...that has an arg with the same name as the given parameter
+        from inspect import getargspec, isfunction
+        args, _, _, _ = getargspec(function)
+        if key not in args:
             raise TypeError("{0}() has no argument named '{1}'".format(function.__name__, key))
     # if the value passed in is not a default, then use that value
     if not is_default_override(value):
         return value
     # traverse linked list of scopes inside-out until an override was found, else fall back to default
-    opts = _current_default_overrides
+    opts = _OptionsContextManager._current_default_overrides
     while opts is not None:
         if opts._scope is None or function is None or function in opts._scope: # we are in the right scope
             if hasattr(opts, key):
