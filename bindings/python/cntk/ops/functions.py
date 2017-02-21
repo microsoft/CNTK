@@ -693,6 +693,9 @@ class Function(cntk_py.Function):
         Save this function graph into a model file using protobuf-based
         serialization.
 
+        Use distributed.Communicator.is_main() to gate your call to save()
+        in distributed environment.
+
         Args:
             filename (str): model path
         '''
