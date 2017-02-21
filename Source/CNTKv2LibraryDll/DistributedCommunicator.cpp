@@ -349,7 +349,6 @@ namespace CNTK
         }
         else
         {
-            // TODO: Junjie please also move this into a separate function that is templatized and get rid of code duplicaiton.
             packToContinousBuffer(m_aggregationBufferFloat.get(), packedFloatGradientsIndex, inputValues, valuesToAggregate, valuesAfterAggregate);
             packToContinousBuffer(m_aggregationBufferDouble.get(), packedDoubleGradientsIndex, inputValues, valuesToAggregate, valuesAfterAggregate);
         }
