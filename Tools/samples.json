@@ -360,10 +360,18 @@
         "type":  ["Tutorial", "Recipe"]
     },
     {
+        "category": [ "Text" ],
+        "name": "Neural Character Language Model",
+        "url": "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/CharacterLM",
+        "description": "A neural language model uses a recurrent neural network to predict words (or characters) with a richer context than traditional n-gram models allow.",
+        "language": [ "Python" ],
+        "type": [ "Recipe" ]
+    },
+    {
         "category": ["Text"],
-        "name":  "Neural Character Language Model",
-        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/CharacterLM",
-        "description":  "A neural language model uses a recurrent neural network to predict words (or characters) with a richer context than traditional n-gram models allow.",
+        "name":  "Word Based Language Model using Sampled Softmax",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/WordLMWithSampledSoftmax",
+        "description":  "An example on how to use sampled softmax to train a neural language model.",
         "language":  ["Python"],
         "type":  ["Recipe"]
     },

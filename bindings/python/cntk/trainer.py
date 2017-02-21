@@ -163,6 +163,9 @@ class Trainer(cntk_py.Trainer):
         Saves a checkpoint of the model and other Trainer state at the
         specified file location.
 
+        In distributed environment the checkpointing is done by 
+        the main worker.
+
         Args:
             filename (str): filename to store the checkpoint.
         '''

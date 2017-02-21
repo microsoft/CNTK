@@ -9,7 +9,7 @@ from cntk import Trainer, UnitType, load_model
 from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, plot
 from cntk.initializer import glorot_uniform
-from cntk.io import ReaderConfig, ImageDeserializer, CTFDeserializer
+from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
 from cntk.ops import input_variable, parameter, cross_entropy_with_softmax, classification_error, times, combine
 from cntk.ops import roipooling
@@ -93,8 +93,7 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
     label_source.map_input(label_stream_name, dim=label_dim, format="dense")
 
     # define a composite reader
-    rc = ReaderConfig([image_source, roi_source, label_source], epoch_size=sys.maxsize, randomize=data_set == "train")
-    return rc.minibatch_source()
+    return MinibatchSource([image_source, roi_source, label_source], epoch_size=sys.maxsize, randomize=data_set == "train")
 
 
 # Defines the Fast R-CNN network model for detecting objects in images

@@ -10,6 +10,7 @@ import numpy as np
 import pytest
 
 from cntk.io import *
+from cntk.io import _ReaderConfig
 import cntk.io.transforms as xforms
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -99,7 +100,7 @@ def test_image():
         xforms.mean(mean_file)]
     image = ImageDeserializer(map_file, StreamDefs(f = StreamDef(field='image', transforms=transforms), l = StreamDef(field='label', shape=num_classes)))
 
-    rc = ReaderConfig(image, randomize=False, epoch_size=epoch_size)
+    rc = _ReaderConfig(image, randomize=False, epoch_size=epoch_size)
 
     assert rc['epochSize'].value == epoch_size
     assert rc['randomize'] == False
@@ -129,7 +130,7 @@ def test_image():
     assert t1['interpolations'] == 'linear'
     assert t2['meanFile'] == mean_file
 
-    rc = ReaderConfig(image, randomize=False, randomization_window = 100,
+    rc = _ReaderConfig(image, randomize=False, randomization_window = 100,
         sample_based_randomization_window = True, epoch_size=epoch_size)
 
     assert rc['epochSize'].value == epoch_size
@@ -144,7 +145,7 @@ def test_image():
     l = d['input'][label_name]
     assert l['labelDim'] == num_classes
 
-    rc = ReaderConfig(image, randomize=True, randomization_window = 100,
+    rc = _ReaderConfig(image, randomize=True, randomization_window = 100,
         sample_based_randomization_window = True, epoch_size=epoch_size)
 
     assert rc['epochSize'].value == epoch_size

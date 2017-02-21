@@ -693,6 +693,9 @@ class Function(cntk_py.Function):
         Save this function graph into a model file using protobuf-based
         serialization.
 
+        Use distributed.Communicator.is_main() to gate your call to save()
+        in distributed environment.
+
         Args:
             filename (str): model path
         '''
@@ -764,9 +767,21 @@ class UserFunction(Function):
     If it has only one output, one can invoke Variable methods on it, which it
     will relay to its only output.
 
+    Args:
+        inputs (list): inputs to this function
+        as_numpy (bool, optional): whether the data should be automatically
+         converted from and to NumPy. Defaults to True. Specifying this as
+         `False` passes the data as CNTK Value objects.
+        name (str): name of this function
     '''
-    def __init__(self, inputs, name=''):
+    def __init__(self, inputs, as_numpy=True, name=''):
         super(UserFunction, self).__init__(inputs, name)
+        self.as_numpy = as_numpy
+
+        # Since the state will frequently not be used, we cache the None-state
+        # to speed up.
+        self._none_state =  cntk_py.UserBackPropState(self,
+                DeviceDescriptor.cpu_device(), None)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -793,7 +808,8 @@ class UserFunction(Function):
         Returns:
              A BackPropState instance, which is used by :func:`backward`.
         '''
-        arguments = tuple(variable_value_to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
+        if self.as_numpy:
+            arguments = tuple(variable_value_to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
 
         map_if_possible(outputs)
         map_if_possible(outputs_to_retain)
@@ -807,15 +823,18 @@ class UserFunction(Function):
         else:
             state = self.forward(args, outputs, device, outputs_to_retain)
 
-        if not isinstance(state, cntk_py.BackPropState):
+        if state is None:
+            state = self._none_state
+        elif not isinstance(state, cntk_py.BackPropState):
             state = cntk_py.UserBackPropState(self, device, state)
 
-        for k,v in outputs.items():
-            if v is None:
-                raise ValueError('not all outputs have been provided')
+        if self.as_numpy:
+            for k,v in outputs.items():
+                if v is None:
+                    raise ValueError('not all outputs have been provided')
 
-            # FIXME: seq_starts
-            outputs[k] = sanitize_batch(k, v, None, device)
+                # FIXME: seq_starts
+                outputs[k] = sanitize_batch(k, v, None, device)
 
         return state, outputs
 
@@ -830,9 +849,6 @@ class UserFunction(Function):
         This function calls :func:`backward`, which is to be implemented by the
         user.
 
-        Example:
-            TBD
-
         Args:
             state (BackPropState): state obtained from a previous call to the
              func:`cntk.ops.Function.forward` method on this Function for the
@@ -844,25 +860,39 @@ class UserFunction(Function):
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
         '''
-        for v in root_gradients:
-            root_gradients[v] = variable_value_to_seq(root_gradients[v], v)
+        device = state.device()
+
+        if self.as_numpy:
+            for v in root_gradients:
+                root_gradients[v] = variable_value_to_seq(root_gradients[v], v)
+
+            state = cntk_py.UserBackPropState.data(state)
+
+        else:
+            if not isinstance(state, cntk_py.BackPropState):
+                if state is None:
+                    state = self._none_state
+                else:
+                    raise ValueError('if as_numpy=False, state must be of '
+                            'type BackPropState')
+
         map_if_possible(variables)
 
-
         if len(variables)>1:
-            self.backward(cntk_py.UserBackPropState.data(state), root_gradients, variables)
+            self.backward(state, root_gradients, variables)
         else:
             for rg in root_gradients.values():
                 break
-            result = self.backward(cntk_py.UserBackPropState.data(state), rg)
+            result = self.backward(state, rg)
             for k in variables:
                 variables[k] = result
 
-        for k,v in variables.items():
-            if v is None:
-                raise ValueError('gradients were not provided for all variables')
+        if self.as_numpy:
+            for k,v in variables.items():
+                if v is None:
+                    raise ValueError('gradients were not provided for all variables')
 
-            variables[k] = sanitize_batch(k, v, None, state.device())
+                variables[k] = sanitize_batch(k, v, None, device)
 
     def _infer_outputs(self, outputs):
         outputs.extend(self.infer_outputs())
