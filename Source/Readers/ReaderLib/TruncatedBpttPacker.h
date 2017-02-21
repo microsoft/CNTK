@@ -23,7 +23,8 @@ public:
     TruncatedBPTTPacker(
         SequenceEnumeratorPtr sequenceEnumerator,
         const std::vector<StreamDescriptionPtr>& streams,
-        size_t numberOfBuffers = 2);
+        size_t numberOfBuffers = 2,
+        CorpusDescriptorPtr corpus = nullptr);
 
     virtual Minibatch ReadMinibatch() override;
 
@@ -46,7 +47,7 @@ private:
     // inputs to have consistent sequence ids.
     // Returns a boolean indicating if a packed data contains a sequence 
     // (i.e., sequence tail) that was read last in a data sweep.
-    bool PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId);
+    bool PackSlot(size_t streamIndex, size_t slotIndex, size_t& sequenceId, std::vector<size_t>& idToKey);
 
     virtual MBLayoutPtr CreateMBLayout(const StreamBatch& batch)
     {

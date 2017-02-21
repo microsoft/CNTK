@@ -158,9 +158,6 @@ private:
 
     const char m_streamPrefix;
 
-    // Same function as above but with check that the sequence is included in the corpus descriptor.
-    void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd);
-
     // fills up the buffer with data from file, all previously buffered data
     // will be overwritten.
     void RefillBuffer();
@@ -168,17 +165,22 @@ private:
     // Moves the buffer position to the beginning of the next line.
     void SkipLine();
 
-    // Reads the line until the next pipe character, parsing numerical characters into a sequence id.
+    // Tries to get numeric sequence id.
     // Throws an exception if a non-numerical is read until the pipe character or 
     // EOF is reached without hitting the pipe character.
     // Returns false if no numerical characters are found preceding the pipe.
     // Otherwise, writes sequence id value to the provided reference, returns true.
-    bool TryGetSequenceId(size_t& id);
+    bool TryGetNumericSequenceId(size_t& id);
+
+    // Same as above but for symbolic ids.
+    // It reads a symbolic key and converts it to numeric id using provided keyToId function.
+    bool TryGetSymbolicSequenceId(size_t& id, std::function<size_t(const std::string&)> keyToId);
+
 
     // Build a chunk/sequence index, treating each line as an individual sequence.
     // Does not do any sequence parsing, instead uses line number as 
     // the corresponding sequence id.
-    void BuildFromLines(CorpusDescriptorPtr corpus);
+    void BuildFromLines();
 
     // Returns current offset in the input file (in bytes). 
     int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }

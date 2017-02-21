@@ -213,8 +213,12 @@ class Function(cntk_py.Function):
              contains the type and id of the device on which the computation is
              to be performed.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
-             Specifying this as False returns a CNTK Value which avoids a 
+             Specifying this as False returns a CNTK Value which avoids a
              costly conversion but returns a somewhat opaque object.
+
+        Note:
+             See :meth:`~cntk.ops.functions.Function.forward` for examples on
+             passing input data.
 
         Returns:
            dict or NumPy Array: Dict with keys of ouput variable names and values of
@@ -230,18 +234,66 @@ class Function(cntk_py.Function):
 
 
     @typemap
-    def forward(self, arguments, outputs, keep_for_backward=None, device=None, as_numpy=True):
+    def forward(self, arguments, outputs=None, keep_for_backward=None, device=None, as_numpy=True):
         '''
         Computes the values of speficied variables in ``outputs``, using values
         provided in ``arguments`` that correspond to each input `Variable` of
-        the function whose ``is_input`` is `True`.
+        the function (i.e. those that have ``is_input = True``).
 
         Example:
+            >>> # Example of passing dense data
             >>> v = C.input_variable(shape=(3,))
             >>> f = C.reciprocal(v)
-            >>> _, fv = f.forward({v:[[1, 2, 4]]}, [f.output])
+            >>> _, fv = f.forward({v:[[1, 2, 4]]})
             >>> list(fv.values())[0]
             array([[[ 1.  ,  0.5 ,  0.25]]], dtype=float32)
+
+        Example:
+            >>> # Passing sparse values as one-hot with a vocabulary size of 5
+            >>> vocab_size = 5
+            >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
+            >>> f = C.times(v, np.eye(vocab_size))
+            >>> # Passing a batch of two sequences:
+            >>> # 1st sequence: word 1
+            >>> # 2nd sequence: words 2 and 4
+            >>> batch = [[1],[2,4]]
+            >>> sparse_batch = C.one_hot(batch, vocab_size)
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+
+        Example:
+            >>> # Doing the same, but with a CSR matrix from scipy.sparse
+            >>> vocab_size = 5
+            >>> from scipy.sparse import csr_matrix
+            >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
+            >>> f = C.times(v, np.eye(vocab_size))
+            >>> # Note that csr_matrix automatically uses a sparse representation underneath.
+            >>> sparse_batch = [csr_matrix([[0,1,0,0,0]]), csr_matrix([[0,0,1,0,0], [0,0,0,0,1]])]
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+            <BLANKLINE>
+            >>> # Much more efficient, however, is to incrementally create CSR arrays.
+            >>> # See https://docs.scipy.org/doc/scipy/reference/generated/scipy.sparse.csr_matrix.html
+            >>> # for more information.
+            >>> def seq_to_csr_matrix(seq, vocab_size):
+            ...     indptr = [0]
+            ...     indices = []
+            ...     data = []
+            ...     for term_idx in seq:
+            ...         indices.append(term_idx)
+            ...         data.append(1)
+            ...         indptr.append(len(indices))
+            ...     return csr_matrix((data, indices, indptr), shape=(len(seq), vocab_size))
+            >>> sparse_batch = [seq_to_csr_matrix(seq, vocab_size) for seq in batch]
+            >>> _, fv = f.forward({v:sparse_batch})
+            >>> list(fv.values())[0]
+            [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
+             array([[ 0.,  0.,  1.,  0.,  0.], [ 0.,  0.,  0.,  0.,  1.]], dtype=float32)]
+
 
         Args:
             arguments: maps variables to their input data. The interpretation depends on
@@ -250,7 +302,7 @@ class Function(cntk_py.Function):
                * dict: keys are input variable or names, and values are the
                  input data. To specify a minibatch, provide a list of arrays.
                  The shape of each array must be compatible with the shape of
-                 the dictionary key.If the array denotes a sequence then the
+                 the dictionary key. If the array denotes a sequence then the
                  elements of the sequence are grouped along axis 0.
                * any other type: if node has an unique input, arguments is
                  mapped to this input.
@@ -277,7 +329,8 @@ class Function(cntk_py.Function):
 
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
-            outputs (iterable): outputs to fetch values for.
+            outputs (iterable, optional): outputs to fetch values for. If not
+             set, all outputs of the function will be fetched.
             keep_for_backward (set, default `None`): the subset of the
              Function's output variables for which gradients shall be calculated
              in a subsequent backward call. If `None`, the returned state will
@@ -287,7 +340,7 @@ class Function(cntk_py.Function):
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
             as_numpy (bool): whether to return the result as a NumPy array. Default True.
-             Specifying this as False returns a CNTK Value which avoids a 
+             Specifying this as False returns a CNTK Value which avoids a
              costly conversion but returns a somewhat opaque object.
 
         Returns:
@@ -299,6 +352,9 @@ class Function(cntk_py.Function):
 
         in_var_map = sanitize_var_map(self.arguments, arguments,
                                       None, device)
+        if outputs is None:
+            outputs = self.outputs
+
         output_map = {v: None for v in outputs}
         keep_for_backward = set(keep_for_backward or {})
 
@@ -338,6 +394,10 @@ class Function(cntk_py.Function):
             root_gradients (dict): the gradients that will be backpropagated
             variables (set): a list of input variables with respect to which
              the gradients have to be computed.
+
+        Note:
+             See :meth:`~cntk.ops.functions.Function.forward` for more examples
+             on passing input data.
 
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
@@ -633,6 +693,9 @@ class Function(cntk_py.Function):
         Save this function graph into a model file using protobuf-based
         serialization.
 
+        Use distributed.Communicator.is_main() to gate your call to save()
+        in distributed environment.
+
         Args:
             filename (str): model path
         '''
@@ -704,9 +767,21 @@ class UserFunction(Function):
     If it has only one output, one can invoke Variable methods on it, which it
     will relay to its only output.
 
+    Args:
+        inputs (list): inputs to this function
+        as_numpy (bool, optional): whether the data should be automatically
+         converted from and to NumPy. Defaults to True. Specifying this as
+         `False` passes the data as CNTK Value objects.
+        name (str): name of this function
     '''
-    def __init__(self, inputs, name=''):
+    def __init__(self, inputs, as_numpy=True, name=''):
         super(UserFunction, self).__init__(inputs, name)
+        self.as_numpy = as_numpy
+
+        # Since the state will frequently not be used, we cache the None-state
+        # to speed up.
+        self._none_state =  cntk_py.UserBackPropState(self,
+                DeviceDescriptor.cpu_device(), None)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -733,7 +808,8 @@ class UserFunction(Function):
         Returns:
              A BackPropState instance, which is used by :func:`backward`.
         '''
-        arguments = tuple(variable_value_to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
+        if self.as_numpy:
+            arguments = tuple(variable_value_to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
 
         map_if_possible(outputs)
         map_if_possible(outputs_to_retain)
@@ -747,15 +823,18 @@ class UserFunction(Function):
         else:
             state = self.forward(args, outputs, device, outputs_to_retain)
 
-        if not isinstance(state, cntk_py.BackPropState):
+        if state is None:
+            state = self._none_state
+        elif not isinstance(state, cntk_py.BackPropState):
             state = cntk_py.UserBackPropState(self, device, state)
 
-        for k,v in outputs.items():
-            if v is None:
-                raise ValueError('not all outputs have been provided')
+        if self.as_numpy:
+            for k,v in outputs.items():
+                if v is None:
+                    raise ValueError('not all outputs have been provided')
 
-            # FIXME: seq_starts
-            outputs[k] = sanitize_batch(k, v, None, device)
+                # FIXME: seq_starts
+                outputs[k] = sanitize_batch(k, v, None, device)
 
         return state, outputs
 
@@ -770,9 +849,6 @@ class UserFunction(Function):
         This function calls :func:`backward`, which is to be implemented by the
         user.
 
-        Example:
-            TBD
-
         Args:
             state (BackPropState): state obtained from a previous call to the
              func:`cntk.ops.Function.forward` method on this Function for the
@@ -784,25 +860,39 @@ class UserFunction(Function):
         Returns:
             dict: mapping of ``variables`` to NumPy arrays
         '''
-        for v in root_gradients:
-            root_gradients[v] = variable_value_to_seq(root_gradients[v], v)
+        device = state.device()
+
+        if self.as_numpy:
+            for v in root_gradients:
+                root_gradients[v] = variable_value_to_seq(root_gradients[v], v)
+
+            state = cntk_py.UserBackPropState.data(state)
+
+        else:
+            if not isinstance(state, cntk_py.BackPropState):
+                if state is None:
+                    state = self._none_state
+                else:
+                    raise ValueError('if as_numpy=False, state must be of '
+                            'type BackPropState')
+
         map_if_possible(variables)
 
-
         if len(variables)>1:
-            self.backward(cntk_py.UserBackPropState.data(state), root_gradients, variables)
+            self.backward(state, root_gradients, variables)
         else:
             for rg in root_gradients.values():
                 break
-            result = self.backward(cntk_py.UserBackPropState.data(state), rg)
+            result = self.backward(state, rg)
             for k in variables:
                 variables[k] = result
 
-        for k,v in variables.items():
-            if v is None:
-                raise ValueError('gradients were not provided for all variables')
+        if self.as_numpy:
+            for k,v in variables.items():
+                if v is None:
+                    raise ValueError('gradients were not provided for all variables')
 
-            variables[k] = sanitize_batch(k, v, None, state.device())
+                variables[k] = sanitize_batch(k, v, None, device)
 
     def _infer_outputs(self, outputs):
         outputs.extend(self.infer_outputs())

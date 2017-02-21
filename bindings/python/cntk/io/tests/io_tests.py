@@ -10,6 +10,8 @@ import numpy as np
 import pytest
 
 from cntk.io import *
+from cntk.io import _ReaderConfig
+import cntk.io.transforms as xforms
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 
@@ -92,17 +94,13 @@ def test_image():
 
     label_name = "l"
     num_classes = 7
-    
-    image = ImageDeserializer(map_file)
-    image.map_features(feature_name,
-            [ImageDeserializer.crop(crop_type='randomside', side_ratio=0.8,
-                jitter_type='uniratio'),
-             ImageDeserializer.scale(width=image_width, height=image_height,
-                 channels=num_channels, interpolations='linear'),
-             ImageDeserializer.mean(mean_file)])
-    image.map_labels(label_name, num_classes)
 
-    rc = ReaderConfig(image, randomize=False, epoch_size=epoch_size)
+    transforms = [xforms.crop(crop_type='randomside', side_ratio=0.5, jitter_type='uniratio'),
+        xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
+        xforms.mean(mean_file)]
+    image = ImageDeserializer(map_file, StreamDefs(f = StreamDef(field='image', transforms=transforms), l = StreamDef(field='label', shape=num_classes)))
+
+    rc = _ReaderConfig(image, randomize=False, epoch_size=epoch_size)
 
     assert rc['epochSize'].value == epoch_size
     assert rc['randomize'] == False
@@ -122,20 +120,19 @@ def test_image():
     assert t0['type'] == 'Crop'
     assert t1['type'] == 'Scale'
     assert t2['type'] == 'Mean'
-    t0['cropType'] == 'randomside'
-    t0['sideRatio'] == 0.8
-    t0['aspectRatio'] == 0.9
-    t0['jitterType'] == 'uniratio'
-    t1['width'] == image_width
-    t1['height'] == image_height
-    t1['channels'] == num_channels
-    t1['interpolations'] == 'linear'
-    t2['type'] == 'mean'
-    t2['meanFile'] == mean_file
-    
-    rc = ReaderConfig(image, randomize=False, randomization_window = 100, 
+    assert t0['cropType'] == 'randomside'
+    assert t0['sideRatio'] == 0.5
+    assert t0['aspectRatio'] == 1.0
+    assert t0['jitterType'] == 'uniratio'
+    assert t1['width'] == image_width
+    assert t1['height'] == image_height
+    assert t1['channels'] == num_channels
+    assert t1['interpolations'] == 'linear'
+    assert t2['meanFile'] == mean_file
+
+    rc = _ReaderConfig(image, randomize=False, randomization_window = 100,
         sample_based_randomization_window = True, epoch_size=epoch_size)
-    
+
     assert rc['epochSize'].value == epoch_size
     assert rc['randomize'] == False
     assert rc['sampleBasedRandomizationWindow'] == True
@@ -144,13 +141,13 @@ def test_image():
     assert d['type'] == 'ImageDeserializer'
     assert d['file'] == map_file
     assert set(d['input'].keys()) == {label_name, feature_name}
-    
+
     l = d['input'][label_name]
     assert l['labelDim'] == num_classes
-    
-    rc = ReaderConfig(image, randomize=True, randomization_window = 100,
+
+    rc = _ReaderConfig(image, randomize=True, randomization_window = 100,
         sample_based_randomization_window = True, epoch_size=epoch_size)
-    
+
     assert rc['epochSize'].value == epoch_size
     assert rc['randomize'] == True
     assert rc['sampleBasedRandomizationWindow'] == True
@@ -159,12 +156,12 @@ def test_image():
     assert d['type'] == 'ImageDeserializer'
     assert d['file'] == map_file
     assert set(d['input'].keys()) == {label_name, feature_name}
-    
+
     l = d['input'][label_name]
     assert l['labelDim'] == num_classes
-    
+
     # TODO depends on ImageReader.dll
-    ''' 
+    '''
     mbs = rc.minibatch_source()
     sis = mbs.stream_infos()
     assert set(sis.keys()) == { feature_name, label_name }
@@ -173,12 +170,12 @@ def test_image():
 def test_full_sweep_minibatch(tmpdir):
 
     mbdata = r'''0	|S0 0   |S1 0
-0	|S0 1 	|S1 1 
-0	|S0 2 	
-0	|S0 3 	|S1 3 
-1	|S0 4 	
+0	|S0 1 	|S1 1
+0	|S0 2
+0	|S0 3 	|S1 3
+1	|S0 4
 1	|S0 5 	|S1 1
-1	|S0 6	|S1 2 
+1	|S0 6	|S1 2
 '''
 
     tmpfile = str(tmpdir/'mbtest.txt')
@@ -189,10 +186,10 @@ def test_full_sweep_minibatch(tmpdir):
         features  = StreamDef(field='S0', shape=1),
         labels    = StreamDef(field='S1', shape=1))),
         randomize=False, epoch_size=FULL_DATA_SWEEP)
-     
+
     features_si = mb_source.stream_info('features')
     labels_si = mb_source.stream_info('labels')
-    
+
     mb = mb_source.next_minibatch(1000)
     assert mb[features_si].num_sequences == 2
     assert mb[labels_si].num_sequences == 2
@@ -209,7 +206,7 @@ def test_full_sweep_minibatch(tmpdir):
     for res, exp in zip (features.value, expected_features):
         assert np.allclose(res, exp)
 
-    assert np.allclose(features.mask, 
+    assert np.allclose(features.mask,
             [[2, 1, 1, 1],
              [2, 1, 1, 0]])
 
@@ -218,25 +215,25 @@ def test_full_sweep_minibatch(tmpdir):
     assert len(labels.value) == 2
     expected_labels = \
             [
-                [[0],[1],[3]], 
+                [[0],[1],[3]],
                 [[1],[2]]
             ]
     for res, exp in zip (labels.value, expected_labels):
         assert np.allclose(res, exp)
 
-    assert np.allclose(labels.mask, 
+    assert np.allclose(labels.mask,
             [[2, 1, 1],
              [2, 1, 0]])
 
 def test_large_minibatch(tmpdir):
 
     mbdata = r'''0  |S0 0   |S1 0
-0   |S0 1   |S1 1 
-0   |S0 2   
-0   |S0 3   |S1 3 
-0   |S0 4   
+0   |S0 1   |S1 1
+0   |S0 2
+0   |S0 3   |S1 3
+0   |S0 4
 0   |S0 5   |S1 1
-0   |S0 6   |S1 2 
+0   |S0 6   |S1 2
 '''
 
     tmpfile = str(tmpdir/'mbtest.txt')
@@ -247,7 +244,7 @@ def test_large_minibatch(tmpdir):
         features  = StreamDef(field='S0', shape=1),
         labels    = StreamDef(field='S1', shape=1))),
         randomize=False)
-     
+
     features_si = mb_source.stream_info('features')
     labels_si = mb_source.stream_info('labels')
 
@@ -256,7 +253,7 @@ def test_large_minibatch(tmpdir):
     labels = mb[labels_si]
 
     # Actually, the minibatch spans over multiple sweeps,
-    # not sure if this is an artificial situation, but 
+    # not sure if this is an artificial situation, but
     # maybe instead of a boolean flag we should indicate
     # the largest sweep index the data was taken from.
     assert features.end_of_sweep

@@ -13,8 +13,7 @@ import cntk
 # variables and stuff  #
 ########################
 
-cntk_dir = os.path.dirname(os.path.abspath(__file__)) + "/../../../.."  # data resides in the CNTK folder
-data_dir = cntk_dir + "/Examples/LanguageUnderstanding/ATIS/Data"       # under Examples/LanguageUnderstanding/ATIS
+data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
 
 model_dir = "./Models"
@@ -92,8 +91,8 @@ def train(reader, model, max_epochs):
 
     # process minibatches and perform model training
     cntk.utils.log_number_of_parameters(z) ; print()
-    progress_printer = cntk.ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging
-    #progress_printer = ProgressPrinter(tag='Training')
+    progress_printer = cntk.ProgressPrinter(freq=100, first=10, tag='Training', num_epochs=max_epochs) # more detailed logging
+    #progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     t = 0
  
