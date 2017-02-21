@@ -17,6 +17,7 @@
 #include "RNNNodes.h"
 #include "BlockFunction.h"
 #include "CompositeFunction.h"
+#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -296,6 +297,7 @@ namespace CNTK
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Pass:
+                        case PrimitiveOpType::StopGradient:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
@@ -752,7 +754,7 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::NoOp)
+        if (op >= PrimitiveOpType::UnknownOP)
         {
             LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 

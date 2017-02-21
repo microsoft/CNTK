@@ -21,6 +21,7 @@
 #include "RNNNodes.h"
 #include "UserDefinedV2FunctionNode.h"
 #include "BlockFunction.h"
+#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -815,6 +816,9 @@ namespace CNTK
                 break;
             case PrimitiveOpType::LabelsToGraph:
                 computationNodePtr = New<LabelsToGraphNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
+            case PrimitiveOpType::StopGradient:
+                computationNodePtr = New<StopGradientNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
             default:
                 LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());

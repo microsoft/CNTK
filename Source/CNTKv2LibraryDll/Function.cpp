@@ -1352,6 +1352,11 @@ namespace CNTK
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgminReductionOpName, axis, name);
     }
 
+    FunctionPtr StopGradient(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::StopGradient, operand, Dictionary(), name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)

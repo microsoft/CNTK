@@ -3537,6 +3537,11 @@ namespace CNTK
     CNTK_API FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName = L"");
 
     ///
+    /// Creates a new Function instance which output its input as it is and previent any gradient contribution from its output. 
+    ///
+    CNTK_API FunctionPtr StopGradient(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Creates a composite Function that has the specified rootFunction as its root.
     /// The composite denotes a higher-level Function encapsulating the entire graph
     /// of Functions underlying the specified rootFunction.
