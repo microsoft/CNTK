@@ -15,4 +15,4 @@ There are several assumptions about the input data:
 
 * The label file (consumed by TextDeserializer) is expected to have the following format: 
   *seqId |l phoneId:[1|2]*,
-where seqId is the id of the sequence/utterance to which given frame belongs, phoneId is index of the phone of given frame, phoneId is followed by ":1" if this is not the first frame of the phone, and phoneId is followed by ":2" if this is the first frame of the phone.
+where *seqId* is the id of the sequence/utterance to which given frame belongs, *phoneId* is index of the phone of given frame. *PhoneId* is followed by ":1" if this is not the first frame of the phone, or followed by ":2" if this is the first frame of the phone.
