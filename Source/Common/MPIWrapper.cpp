@@ -116,6 +116,7 @@ public:
     virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank);
     virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
     virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
+    virtual void Bcast(void* buffer, int count, MPI_Datatype datatype, int root);
 
     virtual void AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const;
     virtual void AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const;
@@ -126,6 +127,7 @@ public:
     virtual void AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const;
     virtual void AllGather(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements) const;
     virtual void AllGather(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements) const;
+    virtual void Allgather(const void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype) const;
 
     virtual void Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const;
     virtual void Gather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, size_t rootRank) const;
@@ -209,11 +211,13 @@ public:
     virtual void Bcast(size_t* sendData, size_t numElements, size_t srcRank);
     virtual void Bcast(double* sendData, size_t numElements, size_t srcRank);
     virtual void Bcast(float* sendData, size_t numElements, size_t srcRank);
+    virtual void Bcast(void* buffer, int count, MPI_Datatype datatype, int root);
 
     virtual void AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const;
     virtual void AllGatherAsync(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements, MPI_Request* request) const;
     virtual void AllGatherAsync(const float *sendData, size_t numSendElements, float *receiveData, size_t numRecvElements, MPI_Request* request) const;
     virtual void AllGatherAsync(const double *sendData, size_t numSendElements, double *receiveData, size_t numRecvElements, MPI_Request* request) const;
+    virtual void Allgather(const void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype) const;
 
     virtual void AllGather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements) const;
     virtual void AllGather(const int *sendData, size_t numSendElements, int *receiveData, size_t numRecvElements) const;
@@ -844,6 +848,11 @@ void MPIWrapperMpi::Bcast(float* sendData, size_t numElements, size_t srcRank)
     MPI_Bcast(sendData, (int)numElements, GetDataType(sendData), (int)srcRank, Communicator()) || MpiFail("Bcast: MPI_Bcast");
 }
 
+void MPIWrapperMpi::Bcast(void* buffer, int count, MPI_Datatype datatype, int root)
+{
+    MPI_Bcast(buffer, count, datatype, root, Communicator()) || MpiFail("Bcast: MPI_Bcast");
+}
+
 void MPIWrapperMpi::AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const
 {
     MPI_Iallgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator(), request) || MpiFail("AllReduceAsync: MPI_Iallgather");
@@ -882,6 +891,11 @@ void MPIWrapperMpi::AllGather(const float *sendData, size_t numSendElements, flo
 void MPIWrapperMpi::AllGather(const double *sendData, size_t numSendElements, double*receiveData, size_t numRecvElements) const
 {
     MPI_Allgather(sendData, (int)numSendElements, GetDataType(receiveData), receiveData, (int)numRecvElements, GetDataType(receiveData), Communicator()) || MpiFail("AllReduceAsync: MPI_Allgather");
+}
+
+void MPIWrapperMpi::Allgather(const void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype) const
+{
+    MPI_Allgather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, Communicator()) || MpiFail("AllReduceAsync: MPI_Allgather");
 }
 
 void MPIWrapperMpi::Gather(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, size_t rootRank) const
@@ -1167,6 +1181,10 @@ void MPIWrapperEmpty::Bcast(float* sendData, size_t numElements, size_t srcRank)
 {
 }
 
+void MPIWrapperEmpty::Bcast(void* buffer, int count, MPI_Datatype datatype, int root)
+{
+}
+
 void MPIWrapperEmpty::AllGatherAsync(const size_t *sendData, size_t numSendElements, size_t *receiveData, size_t numRecvElements, MPI_Request* request) const
 {
 }
@@ -1196,6 +1214,10 @@ void MPIWrapperEmpty::AllGather(const float *sendData, size_t numSendElements, f
 }
 
 void MPIWrapperEmpty::AllGather(const double *sendData, size_t numSendElements, double*receiveData, size_t numRecvElements) const
+{
+}
+
+void MPIWrapperEmpty::Allgather(const void* sendbuf, int sendcount, MPI_Datatype sendtype, void* recvbuf, int recvcount, MPI_Datatype recvtype) const
 {
 }
 

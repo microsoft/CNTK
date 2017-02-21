@@ -249,9 +249,6 @@ namespace CNTK
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void DisableForwardValuesSharing();
 
-        CNTK_API void EnableHyperMemoryCompress();
-        CNTK_API void DisableHyperMemoryCompress();
-
         CNTK_API void EnableGradientAccumulationOptimization();
         CNTK_API void DisableGradientAccumulationOptimization();
 

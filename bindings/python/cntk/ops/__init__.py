@@ -2613,7 +2613,7 @@ from cntk.axis import Axis
 @typemap
 def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
                    dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''
+    '''input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes(), name='')
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
@@ -2778,7 +2778,6 @@ def constant(value=None, shape=None, dtype=None, device=None, name=''):
     from .variables import Constant
     if not device:
         device = use_default_device()
-    #if np.isscalar(value) and not shape:
     if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
         shape = ()
     if dtype is not None:

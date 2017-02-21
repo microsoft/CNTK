@@ -721,8 +721,8 @@ namespace CNTK
                 auto delPen = functionConfig[PrimitiveFunction::AttributeNameDeletionPenalty].Value<float>();
                 auto insPen = functionConfig[PrimitiveFunction::AttributeNameInsertionPenalty].Value<float>();
                 auto squashInputs = functionConfig[PrimitiveFunction::AttributeNameSquashInputs].Value<bool>();
-                auto samplesToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameSamplesToIgnore].Value<std::vector<DictionaryValue>>());
-                computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), subPen, delPen, insPen, squashInputs, samplesToIgnore, internalNodeName);
+                auto tokensToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameTokensToIgnore].Value<std::vector<DictionaryValue>>());
+                computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
                 break;
             }
             case PrimitiveOpType::LambdaRank:
@@ -812,6 +812,9 @@ namespace CNTK
             }
             case PrimitiveOpType::Pass:
                 computationNodePtr = New<PassNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
+            case PrimitiveOpType::LabelsToGraph:
+                computationNodePtr = New<LabelsToGraphNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
             default:
                 LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());
@@ -932,6 +935,18 @@ namespace CNTK
         return computationNodePtr;
     }
 
+    std::unordered_set<Variable> CompositeFunction::NonOwnerPreservingCopy(const std::unordered_set<Variable>& outputs)
+    {
+        std::unordered_set<Variable> result;
+        for (auto& o : outputs)
+        {
+            Variable sanitized = o.NonCompositePreservingCopy();
+            result.insert(sanitized);
+        }
+
+        return result;
+    }
+
     template <typename ElementType>
     ComputationNetworkPtr CompositeFunction::GetComputationNetwork(const DeviceDescriptor& device,
                                                                    const std::unordered_set<Variable>& backpropRoots,
@@ -941,7 +956,7 @@ namespace CNTK
     {
         if (m_computationNetwork != nullptr)
         {
-            // TODO: We should either invalidate and readapt the network if he backpropRoots change compared to what was specified when the network
+            // TODO: We should either invalidate and readapt the network if the backpropRoots change compared to what was specified when the network
             // was last constructed, to just recreate a new network.
             // For now just disallow changing the backpropRoots after the network is created
             if (!backpropRoots.empty() && (m_currentBackpropRoots != backpropRoots))
@@ -966,7 +981,7 @@ namespace CNTK
                     InvalidArgument("Function::Forward: Only inputs of a Function can be excluded from gradient computation");
             }
 
-            m_inputsExcludedFromGradientComputation = inputsToExcludeGradientsFor;
+            m_inputsExcludedFromGradientComputation = NonOwnerPreservingCopy(inputsToExcludeGradientsFor);
 
             ComputationNetworkBuilder<ElementType> builder(*m_computationNetwork);
 
@@ -1023,7 +1038,7 @@ namespace CNTK
                 }
             }
 
-            m_currentBackpropRoots = backpropRoots;
+            m_currentBackpropRoots = NonOwnerPreservingCopy(backpropRoots);
 
             // In case of recurrence, the inputs of some of the ComputationNodes are not attached due to cycles.
             // Now attach those after we have created all ComputationNodes in the network
@@ -1317,10 +1332,12 @@ namespace CNTK
     {
         if (m_perOutputVarArgumentDependencies.find(output) == m_perOutputVarArgumentDependencies.end())
         {
-            if (output.IsOutput())
-                m_perOutputVarArgumentDependencies[output] = AsComposite(output.Owner())->Arguments();
+            auto sanitizedOutput = output.NonCompositePreservingCopy();
+
+            if (sanitizedOutput.IsOutput())
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = AsComposite(sanitizedOutput.Owner())->Arguments();
             else
-                m_perOutputVarArgumentDependencies[output] = { output };
+                m_perOutputVarArgumentDependencies[sanitizedOutput] = { sanitizedOutput };
         }
 
         return m_perOutputVarArgumentDependencies[output];
@@ -1381,12 +1398,13 @@ namespace CNTK
         std::unordered_set<Variable> functionOutputs(m_outputs.begin(), m_outputs.end());
         std::vector<ComputationNodeBasePtr> outputsToEvaluate;
         std::unordered_set<Variable> requiredArguments;
-        for (auto outputVarValuePair : outputs)
+
+        for (auto outputVariable : requestedOutputVariables)
         {
-            auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVarValuePair.first);
+            auto& requiredArgumentsForCurrentOutput = GetArgumentDependencies(outputVariable);
             requiredArguments.insert(requiredArgumentsForCurrentOutput.begin(), requiredArgumentsForCurrentOutput.end());
 
-            auto outputComputationNode = m_variableToNodeMap.at(outputVarValuePair.first);
+            auto outputComputationNode = m_variableToNodeMap.at(outputVariable);
             outputsToEvaluate.push_back(outputComputationNode);
         }
 
