@@ -259,13 +259,15 @@ def plot(root, filename=None):
                     if isinstance (input, cntk_py.Variable) and not input.is_output:
                         name = 'Parameter' if input.is_parameter else 'Constant' if input.is_constant else 'Input' if input.is_input else 'Placeholder'
                         if input.name:
-                            if name == 'Parameter':  # don't say Parameter for parameters, it's clear from the box
+                            if name == 'Parameter':  # don't say 'Parameter' for named parameters, it's already indicated by being a box
                                 name = input.name
                             else:
                                 name = name + '\n' + input.name
                         name += '\n' + shape_desc(input)
                         if input.is_input or input.is_placeholder: # graph inputs are eggs (since dot has no oval)
                             input_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
+                        elif not input.name and input.is_constant and (input.shape == () or input.shape == (1,)): # unnamed scalar constants are just shown as values
+                            input_node = pydot.Node(input.uid, shape='box', label=str(input.as_constant().value), color='white', fillcolor='white', height=0.3, width=0.4)
                         else:                                      # parameters and constants are boxes
                             input_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
                     else: # output variables never get drawn except the final output
