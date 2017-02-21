@@ -136,14 +136,14 @@ def find_by_name(node, node_name, max_depth=None):
 def plot(root, filename=None):
     '''
     Walks through every node of the graph starting at ``root``,
-    creates a network graph, and returns a network description. It `filename` is
+    creates a network graph, and returns a network description. If ``filename`` is
     specified, it outputs a DOT, PNG, PDF, or SVG file depending on the file name's suffix.
 
     Requirements:
 
      * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
      * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
-       and `graphviz <http://graphviz.org>`_
+       and `graphviz <[http://graphviz.org](http://graphviz.org)>_ (GraphViz executable has to be in the system's PATH).
 
     Args:
         node (graph node): the node to start the journey from
@@ -166,13 +166,13 @@ def plot(root, filename=None):
         try:
             import pydot_ng as pydot
         except ImportError:
-            raise ImportError("SVG, PDF, PNG, and DOT format requires pydot_ng package. Unable to import pydot_ng.")
+            raise ImportError("Unable to import pydot_ng, which is required to output SVG, PDF, PNG, and DOT format.")
 
         # initialize a dot object to store vertices and edges
         dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
         dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
                                      style='filled',
-                                     fillcolor='lightgray',  # TEST THIS
+                                     fillcolor='lightgray',
                                      height=.85, width=.85, fontsize=12)
         dot_object.set_edge_defaults(fontsize=10)
 
@@ -284,13 +284,15 @@ def plot(root, filename=None):
                     if isinstance (input, cntk_py.Variable) and not input.is_output:
                         name = 'Parameter' if input.is_parameter else 'Constant' if input.is_constant else 'Input' if input.is_input else 'Placeholder'
                         if input.name:
-                            if name == 'Parameter':  # don't say Parameter for parameters, it's clear from the box
+                            if name == 'Parameter':  # don't say 'Parameter' for named parameters, it's already indicated by being a box
                                 name = input.name
                             else:
                                 name = name + '\n' + input.name
                         name += '\n' + shape_desc(input)
                         if input.is_input or input.is_placeholder: # graph inputs are eggs (since dot has no oval)
                             input_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
+                        elif not input.name and input.is_constant and (input.shape == () or input.shape == (1,)): # unnamed scalar constants are just shown as values
+                            input_node = pydot.Node(input.uid, shape='box', label=str(input.as_constant().value), color='white', fillcolor='white', height=0.3, width=0.4)
                         else:                                      # parameters and constants are boxes
                             input_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
                     else: # output variables never get drawn except the final output
