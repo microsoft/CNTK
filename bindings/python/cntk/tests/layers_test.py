@@ -33,6 +33,26 @@ def _getModelParameterDict(model, node_name):
     return node_dict
 
 ####################################
+# default options
+####################################    
+
+def test_default_options():
+    def Test(some_param=default_override_or(13)):
+        some_param = get_default_override(Test, some_param=some_param)
+        return some_param
+    assert Test() == 13
+    assert Test(42) == 42
+    with default_options(some_param=1968):
+        assert Test() == 1968
+        assert Test(some_param=1976) == 1976
+        with default_options_for(Test, some_param=2017):
+            assert Test() == 2017
+            assert Test(some_param=123) == 123
+    with default_options_for(test_default_options, some_param=2017): # some other function (misusing test_default_options() as a placeholder)
+        assert Test() == 13
+        assert Test(some_param=124) == 124
+
+####################################
 # Recurrence()
 ####################################    
 
