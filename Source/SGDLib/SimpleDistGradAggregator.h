@@ -327,7 +327,7 @@ private:
                     reductionBuffer = m_intermediateCPUBuffers[allReduceIndex].get();
                 }
 
-                m_mpi->Iallreduce(MPI_IN_PLACE, reductionBuffer, (i == -1) ? m_AggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(),
+                m_mpi->Iallreduce(MPI_IN_PLACE, reductionBuffer, (i == -1) ? m_aggregationBuffer->GetNumElements() : gradients[i]->GetNumElements(),
                     MPIWrapper::GetDataType(reductionBuffer), MPI_SUM, &allReduceRequests.back()) || MpiFail("MPI_Iallreduce");
                 allReduceIndex++;
             }
@@ -364,7 +364,7 @@ private:
         }
 
         // Broadcast the aggregated header to all nodes
-        MPI_Bcast(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank(), m_mpi->Communicator()) || MpiFail("MPI_Bcast");
+        m_mpi->Bcast(headerCPU, headerCPU->Size(), MPI_CHAR, m_mpi->MainNodeRank());
 
         if (m_nccl.IsSupported())
         {
@@ -376,7 +376,7 @@ private:
             size_t gpuDataTransfersIdx = 0; // Index of allReduceRequest for each un-packed gradient
             for (size_t i : m_gradientIndexToAggregate)
             {
-                MPI_Wait(&allReduceRequests[gpuDataTransfersIdx], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
+                m_mpi->Wait(&allReduceRequests[gpuDataTransfersIdx], MPI_STATUSES_IGNORE) || MpiFail("MPI_Wait");
                 if (deviceId != CPUDEVICE)
                 {
                     m_gpuDataTransferers[gpuDataTransfersIdx]->CopyCPUToGPUAsync(m_intermediateCPUBuffers[gpuDataTransfersIdx].get(),
