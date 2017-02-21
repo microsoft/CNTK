@@ -111,14 +111,14 @@ def find_by_name(node, node_name):
 def plot(root, filename=None):
     '''
     Walks through every node of the graph starting at ``root``,
-    creates a network graph, and returns a network description. It `filename` is
+    creates a network graph, and returns a network description. If ``filename`` is
     specified, it outputs a DOT, PNG, PDF, or SVG file depending on the file name's suffix.
 
     Requirements:
 
      * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
      * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
-       and `graphviz <http://graphviz.org>`_
+       and `graphviz <[http://graphviz.org](http://graphviz.org)>_ (GraphViz executable has to be in the system's PATH).
 
     Args:
         node (graph node): the node to start the journey from
@@ -141,7 +141,7 @@ def plot(root, filename=None):
         try:
             import pydot_ng as pydot
         except ImportError:
-            raise ImportError("SVG, PDF, PNG, and DOT format requires pydot_ng package. Unable to import pydot_ng.")
+            raise ImportError("Unable to import pydot_ng, which is required to output SVG, PDF, PNG, and DOT format.")
 
         # initialize a dot object to store vertices and edges
         dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
