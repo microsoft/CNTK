@@ -1077,7 +1077,7 @@ ifdef BOOST_PATH
 INCLUDEPATH += $(BOOST_PATH)/include
 
 BOOSTLIB_PATH = $(BOOST_PATH)/lib
-BOOSTLIBS := -lboost_unit_test_framework -lboost_filesystem -lboost_system
+BOOSTLIBS := -lboost_unit_test_framework -lboost_filesystem -lboost_system -lboost_thread
 
 UNITTEST_EVAL_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/EvalTests/EvalExtendedTests.cpp \
