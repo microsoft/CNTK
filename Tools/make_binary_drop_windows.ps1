@@ -129,7 +129,7 @@ If (Test-Path $baseDropPath\Scripts\install\linux)
 # Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
 # Copying with Robocopy. Maximum 2 retries, 30 sec waiting time in between
 Write-Verbose "Copying dependencies and other files from Remote Share ..."
-robocopy $sharePath $baseDropPath /s /e /r:2 /w:30
+robocopy $sharePath $baseDropPath /s /e /r:2 /w:30 /np
 # Check that Robocopy finished OK.
 # Any exit code greater than 7 indicates error
 # See http://ss64.com/nt/robocopy-exit.html
