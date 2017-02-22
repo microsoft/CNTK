@@ -59,10 +59,10 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     minibatch_size = 8 if (model == 'pixelcnnpp') else 64
 
     # Set learning parameters
-    lr_per_sample    = 0.00001 
-    lr_schedule      = ct.learning_rate_schedule(lr_per_sample, unit=ct.learner.UnitType.sample) #, epoch_size=epoch_size)
+    lr_per_sample    = 0.00001 if (model == 'pixelcnnpp') else 0.00001
+    lr_schedule      = ct.learning_rate_schedule(lr_per_sample, unit=ct.learner.UnitType.sample)
     mm_time_constant = 4096
-    mm_schedule      = ct.learner.momentum_as_time_constant_schedule(mm_time_constant) #, epoch_size=epoch_size)
+    mm_schedule      = ct.learner.momentum_as_time_constant_schedule(mm_time_constant)
     
     # trainer object
     learner = ct.learner.adam_sgd(z.parameters, lr=lr_schedule, momentum=mm_schedule, low_memory=False)
@@ -92,7 +92,6 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                 target = np.zeros((256,) + image.shape)
                 target[image, np.arange(image.size)] = 1
                 target = np.ascontiguousarray(np.reshape(target, (-1, 1, 256, 3*32*32)))
-                #print("Target shape: {}".format(target.shape))
                 trainer.train_minibatch({input_var:data[input_var].value, target_var:target})
             else:
                 trainer.train_minibatch({input_var:data[input_var].value})

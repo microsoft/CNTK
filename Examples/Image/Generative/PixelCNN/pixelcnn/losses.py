@@ -68,6 +68,7 @@ def discretized_mix_logistic_loss(x,l):
     log_probs = log_probs + nn.log_prob_from_logits(logit_probs)
 
     losses = nn.log_sum_exp(log_probs)
+    #loss = -ct.reduce_mean(losses)
     loss = ct.reshape(-ct.reduce_sum(ct.reduce_sum(losses,axis=0),axis=1), shape=(1,))
     return loss
 
