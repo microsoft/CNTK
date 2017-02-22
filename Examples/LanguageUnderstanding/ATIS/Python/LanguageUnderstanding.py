@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 import os
+import argparse
 import math
 import cntk
 
@@ -13,10 +14,10 @@ import cntk
 # variables and stuff  #
 ########################
 
-data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
+# Paths relative to current python file.
+abs_path   = os.path.dirname(os.path.abspath(__file__))
+data_dir  = os.path.join(abs_path, "..", "Data") # under Examples/LanguageUnderstanding/ATIS
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
-
-model_dir = "./Models"
 
 # model dimensions
 input_dim  = vocab_size
@@ -51,7 +52,7 @@ def create_model():
 # train action         #
 ########################
 
-def train(reader, model, max_epochs):
+def train(reader, model, max_epochs, model_dir=None):
     # Input variables denoting the features and label data
     query = cntk.blocks.Input(input_dim,  is_sparse=False)
     slot_labels = cntk.blocks.Input(num_labels, is_sparse=True)  # TODO: make sparse once it works
@@ -95,7 +96,7 @@ def train(reader, model, max_epochs):
     #progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     t = 0
- 
+
     # loop over epochs
     for epoch in range(max_epochs):
         epoch_end = (epoch+1) * epoch_size
@@ -114,16 +115,24 @@ def train(reader, model, max_epochs):
             #        print (name, np.asarray(nl[0].value))
             #trace_node('W')
             #trace_node('stabilizer_param')
-
+        if model_dir:
+            z.save(os.path.join(model_dir, "atis" + "_{}.dnn".format(epoch)))
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
+
 
 #############################
 # main function boilerplate #
 #############################
 
 if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='8')
+
+    args = vars(parser.parse_args())
+    max_epochs = int(args['epochs'])
+
     # TODO: leave these in for now as debugging aids; remove for beta
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
 
@@ -134,10 +143,11 @@ if __name__=='__main__':
     reader = create_reader(data_dir + "/atis.train.ctf")
     model = create_model()
 
+    model_path = os.path.join(abs_path, "Models")
     # train
-    train(reader, model, max_epochs=8)
+    train(reader, model, max_epochs, model_path)
 
     # test (TODO)
     reader = create_reader(data_dir + "/atis.test.ctf")
 
-    #test(reader, model_dir + "/slu.cmf")  # TODO: what is the correct pattern here?
+    #test(reader, model_path + "/slu.cmf")  # TODO: what is the correct pattern here?
