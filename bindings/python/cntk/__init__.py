@@ -3,7 +3,7 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.0.beta12.0+'
+__version__ = '2.0.beta12.0'
 
 import os
 import numpy as np
