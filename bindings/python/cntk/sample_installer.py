@@ -26,7 +26,6 @@ def default_sample_dir():
     if module_is_unreleased():
         version = version[:-1]
     version = version.replace('.', '-')
-    version = string.capwords(version, '-')
     return 'CNTK-Samples-%s' % (version)
 
 def default_sample_url():
