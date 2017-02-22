@@ -34,14 +34,15 @@ def default_sample_url():
 
 def install_samples(url=None, directory=None, quiet=False):
     '''
-    Fetch the CNTK samples from a URL and extract to local directory
+    Fetch the CNTK samples from a URL, extract to local directory, and install
+    Python package requirements.
 
     Args:
         url: the URL of the sample zip file (if passed ``None``, which is default,
-         the sample URL matching the CNTK module release is chosen) url: the
-        directory to extract the samples into (if passed ``None``, which is
-         default, a name matching the CNTK module release is chosen,
-         ``CNTK-Samples-<version>``)
+         the sample URL matching the CNTK module release is chosen)
+        directory: the directory to extract the samples into (if passed
+         ``None``, which is default, a name matching the CNTK module release is
+         chosen, ``CNTK-Samples-<version>``)
         quiet: whether to suppress all output (defaults to ``False``)
     '''
 
