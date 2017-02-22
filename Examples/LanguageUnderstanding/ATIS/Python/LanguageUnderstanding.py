@@ -48,7 +48,7 @@ def create_model_function():
   from cntk.ops.sequence import last
   with default_options(initial_state=0.1, enable_self_stabilization=False):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
-        #Label('input'), # BUGBUG: PassNode must work for sparse (no reason it cannot)
+        Label('input'),
         Embedding(emb_dim, name='embed'),
         Label('embedded_input'),
         Stabilizer(),
@@ -120,6 +120,7 @@ def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
     model.update_signature(Sequence[SparseTensor[vocab_size]])
+    #model.declare_args(vocab_size)
 
     # criterion: (model args, labels) -> (loss, metric)
     #   here  (query, slot_labels) -> (ce, errs)
@@ -158,6 +159,7 @@ def train(reader, model, max_epochs):
         epoch_end = (epoch+1) * epoch_size
         while t < epoch_end:                # loop over minibatches on the epoch
             # BUGBUG: The change of minibatch_size parameter vv has no effect.
+            # TODO: change all examples to this pattern; then remove this comment
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
             trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
             t += data[labels].num_samples                                      # count samples processed so far

@@ -102,7 +102,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
     # Decoder: (history*, input*) --> unnormalized_word_logp*
     # where history is one of these, delayed by 1 step and <s> prepended:
     #  - training: labels
-    #  - testing:  its own output hardmax(z)
+    #  - testing:  its own output hardmax(z) (greedy decoder)
     with default_options(enable_self_stabilization=True):
         # sub-layers
         stab_in = Stabilizer()
@@ -111,7 +111,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         proj_out = Dense(label_vocab_dim, name='out_proj')
         # attention model
         if use_attention:
-            attention_model = AttentionModel(attention_dim, attention_span, attention_axis, name='attention_model') # :: (h_enc*, h_dec) -> (h_aug_dec)
+            attention_model = AttentionModel(attention_dim, attention_span, attention_axis, name='attention_model') # :: (h_enc*, h_dec) -> (h_dec augmented)
         # layer function
         @Function
         def decode(history, input):
@@ -120,17 +120,14 @@ def create_model(): # :: (history*, input*) -> logP(w)*
             r = embed(r)
             r = stab_in(r)
             for i in range(num_layers):
-                rec_block = rec_blocks[i]   # LSTM(hidden_dim)  # :: (x, dh, dc) -> (h, c)
+                rec_block = rec_blocks[i]   # LSTM(hidden_dim)  # :: (dh, dc, x) -> (h, c)
                 if use_attention:
                     if i == 0:
                         @Function
-                        # TODO: undo x_last hack
                         def lstm_with_attention(dh, dc, x):
                             h_att = attention_model(encoded_input.outputs[0], dh)
-                            x = splice(x, h_att)
-                            r = rec_block(dh, dc, x)
-                            (h, c) = r.outputs                   # BUGBUG: we need 'r', otherwise this will crash with an A/V
-                            return (combine([h]), combine([c]))  # BUGBUG: we need combine(), otherwise this will crash with an A/V
+                            x = splice(x, h_att) # TODO: should this be added instead? (cf. BS example)
+                            return rec_block(dh, dc, x)
                         r = Recurrence(lstm_with_attention)(r)
                     else:
                         r = Recurrence(rec_block)(r)
@@ -172,18 +169,8 @@ def create_model_greedy(s2smodel):
         unfold = UnfoldFrom(lambda history: s2smodel(history, input) >> hardmax,
                             until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
                             length_increase=length_increase, initial_state=sentence_start)
+        # TODO: The signature should be changed, so that the initial_state is passed as data.
         return unfold(dynamic_axes_like=input)
-
-    try:
-      pass
-      #model_greedy.update_signature(InputSequence[Tensor[input_vocab_dim]])
-    except:
-      debughelpers.dump_function(model_greedy, 'model_greedy')
-      raise
-    #debughelpers.dump_function(model_greedy, 'model_greedy')
-    #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
-    #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.svg')
-    #plot(model_greedy, filename=os.path.join(MODEL_DIR, "model") + '.png')
     return model_greedy
 
 def create_criterion_function(model):
@@ -250,7 +237,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # Get minibatches of sequences to train with and perform model training
     i = 0
     mbs = 0
-    sample_freq = 100
+    eval_freq = 100
 
     # print out some useful training information
     log_number_of_parameters(model_train) ; print()
@@ -271,7 +258,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
             # every N MBs evaluate on a test sequence to visually show how we're doing
-            if mbs % sample_freq == 0:
+            if mbs % eval_freq == 0:
                 mb_valid = valid_reader.next_minibatch(1)
 
                 # run an eval on the decoder output model (i.e. don't use the groundtruth)

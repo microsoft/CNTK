@@ -263,6 +263,7 @@ class Function(cntk_py.Function):
 
         return arg_map
 
+
     def update_signature(self, *arg_types, **kwarg_types):
         '''
         define input shapes, in-place
@@ -289,7 +290,27 @@ class Function(cntk_py.Function):
         arg_map = { param: to_input(arg_type, name=param.name) for param, arg_type in arg_map.items() if arg_type is not None }
         self.replace_placeholders(arg_map)
 
-    # TODO: add a back-compat version of update_signature with the beta name and accepting Input() variables instead.
+
+    # TODO: find an old test that uses this, and turn it into a test case
+    def declare_args(self, *arg_types):
+        '''
+        Back-compat wrapper for update_signature() (beta12 and before).
+        '''
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'update_signature(...) instead', DeprecationWarning)
+        placeholders = self.placeholders  # the unbound parameters to fill in
+        if len(arg_types) != len(placeholders):
+            raise TypeError("CNTK Function.declare_args() expected {} arguments, got {}".format(len(placeholders), len(arg_types)))
+        def to_input(arg):
+            if isinstance(arg, cntk_py.Variable):
+                return arg
+            else:
+                from cntk import input_variable
+                return input_variable(arg)
+        args = [to_input(arg) for arg in arg_types]
+        self.replace_placeholders(dict(zip(placeholders, args)))
+
 
     # TODO: change to tuple, or remove entirely
     class OrderedRecord(list):

@@ -16,6 +16,8 @@ class _OptionsContextManager: # implement Python's 'with' protocol
     _current_default_overrides = None
     # constructor remembers the options-override record
     def __init__(self, scope, **kwargs):
+        if '_scope' in kwargs or '_outer' in kwargs:
+            raise ValueError("default_options: _scope or _outer are invalid (reserved) names.")
         self.scope = scope
         self.kwargs = kwargs
     # entering with block: link in a new default-options record at head
@@ -67,13 +69,13 @@ def get_default_override(function, **kwargs):
     '''
     # parameter checking and casting
     if len(kwargs) != 1:
-        raise ValueError("get_default_override() expects 1 keyword argument")
-    key, value = [kvp for kvp in kwargs.items()][0] # this is the keyword argument that the user passed in  --TODO: can this be simplified?
-    if function:
+        raise TypeError("get_default_override() takes 1 keyword argument but %s were given" % len(kwargs))
+    key, value = next(iter(kwargs.items())) # this is the keyword argument that the user passed in
+    if function is not None:
         # first arg, unless None, must be an actual Python function...
         from inspect import isfunction
         if not isfunction(function):
-            raise ValueError('First argument must be a function')
+            raise ValueError('get_default_override() expects the first argument to be a Python function')
         # ...that has an arg with the same name as the given parameter
         from inspect import getargspec, isfunction
         args, _, _, _ = getargspec(function)

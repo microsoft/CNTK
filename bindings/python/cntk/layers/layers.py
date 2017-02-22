@@ -571,9 +571,10 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
 
 def Label(name):
     '''
-    Layer factory function to create a function that assigns a label string to an intermediate value
-    flowing through computation. E.g.
-      ``Dense(...) >> Label('hidden') >> Dense(...)``
+    Layer factory function to create a dummy layer with a given name.
+    This can be used to access an intermediate value flowing through computation. E.g.
+      ``model = Dense(...) >> Label('hidden') >> Dense(...)
+        intermediate_val = model.hidden``
     '''
     @Function  # cannot be a BlockFunction since that would hide the label
     def label(x):
