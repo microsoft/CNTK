@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+import pytest
 from cntk import *
 
 def test_outputs():
@@ -20,3 +21,9 @@ def test_outputs():
     for arg in output.owner.arguments:
         print("Argument name: {}, argument owner name {}".format(arg.name, arg.owner.name))
 
+def test_0d_data_1d_sample_shape():
+    x = input_variable(shape=(1,))
+    op = x + x
+
+    with pytest.raises(ValueError):
+        op.eval({x : [np.asarray(2)]})
