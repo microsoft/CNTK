@@ -115,7 +115,7 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
     return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore, profiling=False):
+def train_and_test(network, trainer, train_source, test_source, progress_writers, minibatch_size, epoch_size, restore, profiling=False):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -128,7 +128,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         trainer = trainer,
         model_inputs_to_mb_source_mapping = input_map,
         mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
-        progress_printer = progress_printer,
+        progress_printer = progress_writers,
         checkpoint_frequency = epoch_size,
         checkpoint_filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
 #        save_all_checkpoints = False,
@@ -149,9 +149,11 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
 # Train and evaluate the network.
 def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64, epoch_size=50000, num_quantization_bits=32,
-                            block_size=3200, warm_up=0, max_epochs=2, restore=False, log_to_file=None,
-                            num_mbs_per_log=None, gen_heartbeat=False, profiling=False):
+                            block_size=3200, warm_up=0, max_epochs=2, restore=False, log_to_file=None, 
+                            num_mbs_per_log=None, gen_heartbeat=False, profiling=False, tensorboard_logdir=None):
     _cntk_py.set_computation_network_trace_level(0)
+
+    network = create_conv_network()
 
     progress_printer = cntk.utils.ProgressPrinter(
         freq=num_mbs_per_log,
@@ -161,11 +163,17 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64,
         gen_heartbeat=gen_heartbeat,
         num_epochs=max_epochs)
 
-    network = create_conv_network()
+    tensorboard_writer = cntk.utils.TensorBoardProgressWriter(
+        freq=num_mbs_per_log,
+        log_dir=tensorboard_logdir if tensorboard_logdir is not None else 'log',
+        rank=cntk.distributed.Communicator.rank(),
+        model=network['output'])
+
     trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore, profiling)
+    train_and_test(network, trainer, train_source, test_source, [progress_printer, tensorboard_writer], minibatch_size,
+                   epoch_size, restore, profiling)
 
 
 if __name__=='__main__':
@@ -176,6 +184,7 @@ if __name__=='__main__':
     parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
+    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where to tensorboard logs should be written', required=False, default='log')
     parser.add_argument('-n', '--num_epochs', help='Total number of epochs to train', type=int, required=False, default='160')
     parser.add_argument('-m', '--minibatch_size', help='Minibatch size', type=int, required=False, default='64')
     parser.add_argument('-e', '--epoch_size', help='Epoch size', type=int, required=False, default='50000')
@@ -192,8 +201,6 @@ if __name__=='__main__':
         model_path = args['outputdir'] + "/models"
     if args['datadir'] is not None:
         data_path = args['datadir']
-    if args['logdir'] is not None:
-        log_dir = args['logdir']
     if args['device'] is not None:
         cntk.device.set_default_device(cntk.device.gpu(args['device']))
 
@@ -213,7 +220,8 @@ if __name__=='__main__':
                                 log_to_file=args['logdir'],
                                 num_mbs_per_log=100,
                                 gen_heartbeat=False,
-                                profiling=args['profile'])
+                                profiling=args['profile'],
+                                tensorboard_logdir=args['tensorboard_logdir'])
     finally:
         cntk.distributed.Communicator.finalize()
 

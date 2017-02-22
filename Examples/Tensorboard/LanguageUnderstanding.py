@@ -85,7 +85,12 @@ def train(reader, model, max_epochs):
                        low_memory=True,
                        gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
-    trainer = Trainer(z, (ce, pe), [learner])
+    # more detailed logging
+    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training')
+    #progress_printer = ProgressPrinter(tag='Training')
+    tensorboard_writer = TensorBoardProgressWriter(freq=100, log_dir='atis_log', model=z)
+
+    trainer = Trainer(z, (ce, pe), [learner], [progress_printer, tensorboard_writer])
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -95,9 +100,6 @@ def train(reader, model, max_epochs):
 
     # process minibatches and perform model training
     log_number_of_parameters(z) ; print()
-    # more detailed logging
-    progress_printer = ProgressPrinter(freq=100, first=10, tag='Training', tensorboard_log_dir='atis_log', model=z)
-    #progress_printer = ProgressPrinter(tag='Training')
 
     t = 0
     for epoch in range(max_epochs):         # loop over epochs
@@ -107,16 +109,15 @@ def train(reader, model, max_epochs):
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map) # fetch minibatch
             trainer.train_minibatch(data)                                   # update model with it
             t += trainer.previous_minibatch_sample_count                    # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
             #def trace_node(name):
             #    nl = [n for n in z.parameters if n.name() == name]
             #    if len(nl) > 0:
             #        print (name, np.asarray(nl[0].value))
             #trace_node('W')
             #trace_node('stabilizer_param')
-        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+        trainer.summarize_training_progress()
 
-    return loss, metric
+    tensorboard_writer.close()
 
 #############################
 # main function boilerplate #

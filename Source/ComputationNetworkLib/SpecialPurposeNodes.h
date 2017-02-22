@@ -768,7 +768,8 @@ template class DummyCriterionNode<double>;
 // CTC training criterion, primarily based on the paper "Connectionist Temporal Classification: Labelling Unsegmented
 // Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
 //
-// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. 
+//      This using the original time information to enforce that CTC tokens only get aligned within a time margin.
 //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
 //      delayConstraint=-1 means no constraint
 // -----------------------------------------------------------------------
@@ -951,4 +952,41 @@ protected:
 template class ForwardBackwardNode<float>;
 template class ForwardBackwardNode<double>;
 
+// -----------------------------------------------------------------------
+// StopGradientNode (Input)
+// Outputs its input as it and prevents any gradient contribution from its output to its input.
+// -----------------------------------------------------------------------
+template <class ElemType>
+class StopGradientNode : public UnaryElementWiseNode<ElemType>
+{
+    typedef UnaryElementWiseNode<ElemType> Base; 
+    UsingUnaryElementwiseNodeBaseMembers;
+    static const std::wstring TypeName() { return L"StopGradient"; }
+public:
+    DeclareConstructorFromConfigWithNumInputs(StopGradientNode);
+    StopGradientNode(DEVICEID_TYPE deviceId, const wstring& name)
+        : Base(deviceId, name)
+    {
+    }
+
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        auto result = ValueFor(fr);
+        auto inputValue = InputRef(0).ValueFor(fr);
+        // TODO:@Amit Due to current limitation of the network builder, we can't bypass the memory copy operation at this step. 
+        // But idealy, we should just pass the value of input as this node's output
+        result.AssignValuesOf(inputValue);
+    }
+
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        // Do nothing to short circuit the gradient backward propagation
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override { return false; }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override { return false; }
+};
+
+template class StopGradientNode<float>;
+template class StopGradientNode<double>;
 } } }

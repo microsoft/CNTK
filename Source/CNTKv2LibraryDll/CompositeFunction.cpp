@@ -21,6 +21,7 @@
 #include "RNNNodes.h"
 #include "UserDefinedV2FunctionNode.h"
 #include "BlockFunction.h"
+#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -335,13 +336,6 @@ namespace CNTK
             }
         }
     }
-
-    // Names of the dynamic axes in the CNTK engine for some special sets of dynamic axes values
-    // Note: The no sequence axis corresponds to a special case where there is no sequence axis (i.e. has been reduced over)
-    // and the special name is used to identify this when loading back a model saved in CNTK v1 format. This will not really be needed
-    // when the new CNTK v2 model serialization format is ready.
-    /*static*/ const std::wstring CompositeFunction::InternalDefaultDynamicAxisName = L"*";
-    /*static*/ const std::wstring CompositeFunction::InternalNoSequenceAxisName = L"__noSequenceAxis";
 
     // Recursively create a sub-network of ComputationNode instances corresponding to the graph of Functions 
     // underlying the specified 'variable' and return the ComputationNode instance that corresponds to the 
@@ -815,6 +809,9 @@ namespace CNTK
                 break;
             case PrimitiveOpType::LabelsToGraph:
                 computationNodePtr = New<LabelsToGraphNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
+            case PrimitiveOpType::StopGradient:
+                computationNodePtr = New<StopGradientNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
             default:
                 LogicError("Specified op %S not yet supported", PrimitiveOpTypeName(op).c_str());

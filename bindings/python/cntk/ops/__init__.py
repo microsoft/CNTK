@@ -2815,3 +2815,19 @@ def per_dim_mean_variance_normalize(operand, mean, inv_stddev, name=''):
     mean = sanitize_input(mean, get_data_type(mean))
     inv_stddev = sanitize_input(inv_stddev, get_data_type(inv_stddev))
     return per_dim_mean_variance_normalize(operand, mean, inv_stddev, name)
+
+@typemap
+def stop_gradient(input, name=''):
+    '''
+    Outputs its input as it and prevents any gradient contribution from its output to its input. 
+
+    Args:
+        input: class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import stop_gradient
+    dtype = get_data_type(input)
+    op = sanitize_input(input, dtype)
+    return stop_gradient(op, name)

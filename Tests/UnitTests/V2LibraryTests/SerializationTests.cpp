@@ -325,10 +325,10 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::NDCG) == 60 &&
                   static_cast<size_t>(PrimitiveOpType::EditDistanceError) == 61 &&
                   static_cast<size_t>(PrimitiveOpType::NoOp) == 62 &&
-                  static_cast<size_t>(PrimitiveOpType::LabelsToGraph) == 63,
+                  static_cast<size_t>(PrimitiveOpType::LabelsToGraph) == 63 &&
+                  static_cast<size_t>(PrimitiveOpType::StopGradient) == 64,
                   "PrimitiveOpType enum value was modified.");
 }
-
 
 std::shared_ptr<std::fstream> GetFstream(const std::wstring& filePath, bool readOnly)
 {
