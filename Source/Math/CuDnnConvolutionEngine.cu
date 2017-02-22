@@ -260,8 +260,6 @@ protected:
         }
 
         // Only supported in MatrixPool enable
-        // NOTE: it's unnecessary to keep the workspace.
-        workspace.Resize(0, 0);
         CUDNN_CALL(err);
     }
 
@@ -304,7 +302,6 @@ protected:
             if (CUDNN_STATUS_SUCCESS == err2)
                 err = CUDNN_STATUS_SUCCESS;
         }
-        workspace.Resize(0, 0);
         CUDNN_CALL(err);
     }
 
@@ -347,7 +344,6 @@ protected:
             if (CUDNN_STATUS_SUCCESS == err2)
                 err = CUDNN_STATUS_SUCCESS;
         }
-        workspace.Resize(0, 0);
         CUDNN_CALL(err);
     }
 

@@ -39,7 +39,7 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CNTKLibraryManaged-2.0, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64">
+    <Reference Include="CNTKLibraryManaged-2.0, Version=1.0.0.0, Culture=neutral, PublicKeyToken=21fff2ec8197defe, processorArchitecture=AMD64">
       <HintPath>..\packages\CNTK.CPUOnly.2.0-beta11\lib\net45\x64\CNTKLibraryManaged-2.0.dll</HintPath>
       <Private>True</Private>
     </Reference>

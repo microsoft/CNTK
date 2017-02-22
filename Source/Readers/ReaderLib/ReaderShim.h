@@ -145,6 +145,9 @@ private:
     // in the meantime.
     std::vector<DataTransfererPtr> m_dataTransferers;
 
+    // Id to key mapping.
+    std::function<std::string(size_t)> m_getKeyById;
+
     // Current data transfer. Flips 0 and 1.
     // Can be changed only from the main thread with no ongoing prefetch.
     size_t m_currentDataTransferIndex; 

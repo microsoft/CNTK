@@ -374,7 +374,7 @@ def sgd(parameters, lr,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''sgd(parameters, lr, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an SGD learner instance to learn the parameters. See [1] for more
     information on how to set the parameters.
 
@@ -420,7 +420,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0.0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates a Momentum SGD learner instance to learn the parameters.
 
     Args:
@@ -468,7 +468,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates a Nesterov SGD learner instance to learn the parameters. This was
     originally proposed by Nesterov [1] in 1983 and then shown to work well in
     a deep learning context by Sutskever, et al. [2].
@@ -527,7 +527,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''adagrad(parameters, lr, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an AdaGrad learner instance to learn the parameters. See [1] for
     more information.
 
@@ -578,7 +578,7 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), low_memory=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
 
@@ -586,14 +586,12 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
-        momentum (output of :func:`momentum_schedule` or 
-         :func:`momentum_as_time_constant_schedule`): momentum schedule.
+        momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
          to the value returned by :func:`default_unit_gain_value`.
-        variance_momentum (output of :func:`momentum_schedule` or
-         :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
+        variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
          to ``momentum_as_time_constant_schedule(720000)``.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -637,7 +635,7 @@ def rmsprop(parameters, lr,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''rmsprop(parameters, lr, gamma, inc, dec, max, min, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an RMSProp learner instance to learn the parameters.
 
     Args:

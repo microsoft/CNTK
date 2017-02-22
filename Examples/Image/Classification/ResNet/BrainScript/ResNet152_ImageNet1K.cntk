@@ -13,7 +13,6 @@ modelPath = "$outputDir$/Models/ResNet_152"
 stderr = "$outputDir$/ResNet_152_BS_out"
 
 parallelTrain = true
-hyperCompressMemory = true
 
 TrainNetwork = {
     action = "train"

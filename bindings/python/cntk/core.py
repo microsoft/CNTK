@@ -171,18 +171,42 @@ class Value(cntk_py.Value):
 
     @staticmethod
     def _as_best_data_type(var, sample):
+        convert_to_var_dtype = False
+
         if isinstance(sample, list):
-            sample = np.asarray(sample, dtype=var.dtype)
+            try:
+                sample = np.asarray(sample, dtype=var.dtype)
+            except ValueError:
+                s = sample
+                while isinstance(s, list) and len(s)>0:
+                    s = s[0]
+                if sparse.issparse(s):
+                    raise ValueError('if you provide sparse data, every '
+                            'sequence has to be encoded as one '
+                            'csr_matrix instance. Your sequence was: \'%s\''%str(sample))
+                else:
+                    raise
+
             if sample.dtype != var.dtype:
                 raise ValueError('could not convert sample data to '
-                        'NumPy array')
+                                 'NumPy array')
 
-        if np.issubdtype(sample.dtype, int):
-            sample = sample.astype(var.dtype)
-        elif sample.dtype not in (np.float32, np.float64):
-            raise ValueError('only integer, float32 and float64 are supported, '
-                    'you gave %s'%sample.dtype)
+        elif sample.dtype in (np.float32, np.float64):
+            if sample.dtype != var.dtype:
+                convert_to_var_dtype = True
+
+        elif np.issubdtype(sample.dtype, int):
+            convert_to_var_dtype = True
+
         else:
+            raise ValueError('only integer, float32 and float64 are '
+                             'supported, you gave %s' % sample.dtype)
+
+        if convert_to_var_dtype:
+            warnings.warn('your data is of type "%s", but your input'
+                          'expects "%s". Please convert your data '
+                          'beforehand to speed up training.' %
+                          (sample.dtype, str(var.dtype)))
             sample = sample.astype(var.dtype)
 
         return sample

@@ -253,9 +253,6 @@ void DoCommands(const ConfigParameters& config, const shared_ptr<MPIWrapper>& mp
             ProgressTracing::SetStepOffset(fullEpochsOffset); // this is the epoch number that SGD will log relative to
         }
 
-        if (Globals::ShouldEnableHyperCompressMemory())
-            Matrix<ElemType>::UseCachedResizeOrNot(true);
-
         // determine the action to perform, and do it
         for (int j = 0; j < action.size(); j++)
         {
@@ -537,7 +534,6 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
     Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
     Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
-    Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 
@@ -618,7 +614,7 @@ int wmainWithBS(int argc, wchar_t* argv[]) // called from wmain which is a wrapp
 
 static void PrintBanner(int argc, wchar_t* argv[], const string& timestamp)
 {
-    fprintf(stderr, "CNTK 2.0.beta11.0+ (");
+    fprintf(stderr, "CNTK 2.0.beta11.0 (");
 #ifdef _GIT_EXIST
     fprintf(stderr, "%s %.6s, ", _BUILDBRANCH_, _BUILDSHA1_);
 #endif
@@ -681,7 +677,6 @@ int wmainOldCNTKConfig(int argc, wchar_t* argv[])
 
     Globals::SetShareNodeValueMatrices(config(L"shareNodeValueMatrices", true));
     Globals::SetGradientAccumulationOptimization(config(L"optimizeGradientAccumulation", true));
-    Globals::SetHyperCompressMemory(config(L"hyperCompressMemory", false));
 
     TracingGPUMemoryAllocator::SetTraceLevel(config(L"traceGPUMemoryAllocations", 0));
 

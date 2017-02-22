@@ -70,7 +70,7 @@ public:
         {
             auto node = dynamic_pointer_cast<ReshapeNode<ElemType>>(nodeP);
             node->m_beginDimParameter = m_beginDimParameter;
-            node->m_endDimParameter = m_endDimParameter;
+            node->m_endDimParameter   = m_endDimParameter;
             node->m_replacementSampleLayout = m_replacementSampleLayout;
         }
     }
@@ -152,14 +152,14 @@ public:
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
-        auto result = ValueFor(fr);
+        auto result     =             ValueFor(fr);
         auto inputValue = InputRef(0).ValueFor(fr);
         result.AssignValuesOf(inputValue.Reshaped(result.GetNumRows(), result.GetNumCols()));
     }
 
     virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
-        auto gradient = GradientFor(fr);
+        auto gradient      =                      GradientFor(fr);
         auto inputGradient = InputRef(inputIndex).GradientFor(fr);
         inputGradient += gradient.Reshaped(inputGradient.GetNumRows(), inputGradient.GetNumCols());
     }
@@ -252,10 +252,10 @@ private:
 // -----------------------------------------------------------------------
 // ReconcileDynamicAxis (dataInput, layoutInput)
 // This node copies data from 'dataInput' while it propagates the minibatch-layout information from 'layoutInput'.
-// If 'dataInput' does not have a MBLayout, it broadcasts the dataInput along the MBLayout of the 'layoutInput'.
 // It does perform a runtime check to enforce that the layout of 'dataInput' is compatible to that of 'layoutInput'.
+// 'dataInput' can also be without MBLayout, so that we can implement OnesLike().
+// If 'dataInput' does not have a MBLayout, it broadcasts the dataInput along the MBLayout of the 'layoutInput'.
 // This node is meant to be used from BrainScript macros that bracket expand/reduce pairs of nodes. It is not meant to really be used directly.
-// TODO: What to do with sequence-boundary flags?
 // -----------------------------------------------------------------------
 
 template <class ElemType>
@@ -276,10 +276,11 @@ public:
         // enforce compatibility of 'dataInput' with 'layoutInput'
         // TODO: how to deal with boundary flags?
 
-        // this does a deep value-level comparison
-        m_layoutsMatch = InputRef(0).GetMBLayout() && (*m_pMBLayout == *InputRef(0).GetMBLayout());
-        if (InputRef(0).GetMBLayout() && !m_layoutsMatch &&
-            ((InputRef(0).GetMBLayout()->GetNumTimeSteps() != 1) || (InputRef(0).GetMBLayout()->GetNumSequences() != m_pMBLayout->GetNumSequences())))
+        m_layoutsMatch = InputRef(0).HasMBLayout() && *m_pMBLayout == *InputRef(0).GetMBLayout(); // this does a deep value-level comparison
+
+        if (InputRef(0).HasMBLayout() && !m_layoutsMatch &&                                       // input is a mismatching data input --only allowed case is broadcast_as()
+            ((InputRef(0).GetMBLayout()->GetNumTimeSteps() != 1) ||                               // not broadcast_as()
+             (InputRef(0).GetMBLayout()->GetNumSequences() != m_pMBLayout->GetNumSequences())))   // different batch??
         {
             InvalidArgument("%ls %ls operation discovered that %ls %ls operation produced an MB layout that is incompatible with that of %ls %ls.",
                             NodeName().c_str(), OperationName().c_str(),
@@ -287,18 +288,19 @@ public:
                             InputRef(1).NodeName().c_str(), InputRef(1).OperationName().c_str());
         }
 
-        if (!InputRef(0).GetMBLayout() || m_layoutsMatch)
+        if (!InputRef(0).HasMBLayout() || m_layoutsMatch)   // no shuffle-case: everything matches or non-data that can use tensor broadcast
         {
             // copy the data from 'dataInput'
             size_t rank = GetSampleLayout().GetRank();
-            auto result = ValueTensorFor(rank, fr);
-            auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).GetMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
+            auto result =             ValueTensorFor(rank, fr);
+            auto input0 = InputRef(0).ValueTensorFor(rank, InputRef(0).HasMBLayout() ? fr.WithLayout(InputRef(0).GetMBLayout()) : fr.AllowBroadcast());
+            // If data input has a layout (which is known to match), then replace the pointer here ^^ to avoid another runtime check.
+            // If it has no layout, then set the broadcast-allowed flag, which will accept any layout to be passed in.
             result.AssignCopyOf(input0);
             // TODO: Once we do in-place, the above must include a copy-to-self check (either here or inside the tensor lib).
         }
-        else
+        else // Broadcasting along the sequence case: must reshuffle
         {
-            // Broadcast along the sequence
             auto result = ValueFor(fr);
             ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), result, fr, m_tempGatherIndices);
         }
@@ -311,27 +313,27 @@ public:
             size_t rank = GetSampleLayout().GetRank();
 
             // if reduction then mask the respective input(s) (zero out the gaps)
-            if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            if (InputRef(inputIndex).ReducesInTimeWrt(shared_from_this()))
                 MaskMissingGradientColumnsToZero(fr);
 
             TensorView<ElemType> gradient;
             TensorView<ElemType> inputGradient;
             if (!InputRef(0).GetMBLayout() || m_layoutsMatch)
             {
-                gradient = GradientTensorFor(rank, fr);
-                inputGradient = Input(inputIndex)->GradientTensorFor(rank, InputRef(inputIndex).GetMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
+                gradient      =                      GradientTensorFor(rank, fr);
+                inputGradient = InputRef(inputIndex).GradientTensorFor(rank, InputRef(inputIndex).HasMBLayout() ? fr.WithLayout(InputRef(inputIndex).GetMBLayout()) : fr.AllowBroadcast());
             }
             else
             {
                 // Broadcasting along the sequence
                 if (!fr.IsAllFrames())
-                    InvalidArgument("%ls %ls operation does not support broadcasting the left operand to the right operand's MB layout, inside a recurrent loop.", NodeName().c_str(), OperationName().c_str());
+                    InvalidArgument("%ls %ls operation does not support broadcasting the left operand to the right operand's dynamic axis, inside a recurrent loop.", NodeName().c_str(), OperationName().c_str());
 
                 gradient = ComputationNode<ElemType>::Unpack(GetSampleLayout(), GradientFor(fr), m_pMBLayout, m_tempUnpackedData, m_tempScatterIndices, /*batchMajor=*/ true, /*maskGaps=*/ true);
                 inputGradient = Input(inputIndex)->GradientTensorFor(rank, FrameRange(InputRef(inputIndex).GetMBLayout(), 0));
             }
 
-            if (Input(inputIndex)->ParentOverwritesGradient())
+            if (InputRef(inputIndex).ParentOverwritesGradient())
                 inputGradient.AssignCopyOf(gradient);
             else
                 inputGradient.AddCopyOf(gradient);
@@ -347,12 +349,10 @@ public:
     {
         Base::Validate(isFinalValidationPass);
         if (isFinalValidationPass && !InputRef(1).HasMBLayout())
-            RuntimeError("%ls %ls operation requires the 2nd input to have an associated MB layout.", NodeName().c_str(), OperationName().c_str());
-
+            RuntimeError("%ls %ls operation requires that the second argument has a dynamic axis.", NodeName().c_str(), OperationName().c_str());
         m_pMBLayout = InputRef(1).GetMBLayout(); // output layout is that of 'layoutInput'
-        // Note: We could also enforce that both inputs in fact have different layouts. But maybe there are edge cases where it isn't. Then this just becomes a nop. Also OK.
 
-        SetDims(InputRef(0).GetSampleLayout(), HasMBLayout());
+        SetDims(Input(0)->GetSampleLayout(), HasMBLayout());
     }
 
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
@@ -847,7 +847,19 @@ template class RowRepeatNode<float>;
 template class RowRepeatNode<double>;
 
 // -----------------------------------------------------------------------
-// WhereNode(cond) -- extract indices of non-0 values in a sequence
+// WhereNode(cond) -- extract indices of a sequence repeated according to
+// an indicator vector. Kinds of indicator values:
+//  - 0 and 1: frames with 0 are deleted
+//  - int > 0: each frame be repeated this many times
+//  - float > 0: each frame will on average be repeated this many times
+//               by rounding and carrying over the error
+// Example for float:
+//  - weights all 1.5
+//  - sequence A B C D E F G H I J
+//  - ->       A A B C C D E E F G G H I I J
+//  - algorithm:
+//     - keep an accumulated count of actual and desired #frames at any point
+//     - append as many frames as missing (rounded up)
 // As this implies a runtime-value dependent reduction in dimension, it can
 // only be applied to time sequences, and not other tensor dimensions.
 // The result will have a different MBLayout reflecting the shortened result sequences.

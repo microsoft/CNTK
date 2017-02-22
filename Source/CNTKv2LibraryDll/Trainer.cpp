@@ -34,7 +34,9 @@ namespace CNTK
         if (!Internal::MaxNumCPUThreadsSet())
             SetMaxNumCPUThreads(std::thread::hardware_concurrency());
 
-        std::vector<Variable> combinedFunctionArgs = m_model->Outputs();
+        std::vector<Variable> combinedFunctionArgs;
+        if (m_model) // model is optional, since it may not be adding any information on top of lossFunction
+            combinedFunctionArgs = m_model->Outputs();
         combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
