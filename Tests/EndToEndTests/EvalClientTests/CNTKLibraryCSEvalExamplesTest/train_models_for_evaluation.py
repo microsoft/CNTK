@@ -4,7 +4,6 @@
 # for full license information.
 # ==============================================================================
 
-from cntk.io import ReaderConfig, ImageDeserializer
 import os
 import sys
 import argparse
