@@ -19,7 +19,7 @@ Tutorials
 #.  *Forecasting using data from an IOT device*
      CNTK 106: LSTM based forecasting - Part A: `with simulated data <https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb>`_
 
-#.  *Recognize objects in images from CIFAR-10 data*
+#.  *Recognize objects in images from CIFAR-10 data (Convolutional Network)*
      CNTK 201 Part A: `Data preparation <https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb>`_,  Part B: `VGG and ResNet classifiers`_
 
 #.  *Infer meaning from text snippets using LSTMs and word embeddings*
@@ -31,7 +31,7 @@ Tutorials
 #.  *Translate text from one domain (grapheme) to other (phoneme)*
      CNTK 204: `Sequence to sequence basics`_ with CMU pronouncing dictionary
 
-#.  *Teach a computer to paint like Piccasso or van Gogh*
+#.  *Teach a computer to paint like Picasso or van Gogh*
      CNTK 205: `Artistic Style Transfer`_
 
 #.  *Produce realistic data (MNIST images) with no human input (unsupervised learning)*
