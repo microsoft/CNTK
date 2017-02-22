@@ -430,11 +430,11 @@ class Function(cntk_py.Function):
             >>> y = C.sqrt(x)
             >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1,1)
             >>> y.grad({x:a})
-            [array([[[ 0.5  ]],
+            array([[[ 0.5  ]],
             <BLANKLINE>
                    [[ 0.25 ]],
             <BLANKLINE>
-                   [[ 0.125]]], dtype=float32)]
+                   [[ 0.125]]], dtype=float32)
 
         Args:
             at (dict) : mapping of the Function's arguments to values
@@ -468,7 +468,11 @@ class Function(cntk_py.Function):
         state, results = self.forward(at, output, set(output), device, as_numpy=False)
         ones = {self.output: np.ones(v.shape, self.output.dtype) for v in results.values()}
         grad_dict = self.backward(state, ones, unique_wrt, as_numpy)
-        return [grad_dict[v] for v in wrt]
+
+        if len(grad_dict) > 1:
+            return grad_dict
+        else:
+            return list(grad_dict.values())[0]
 
     @property
     @typemap
