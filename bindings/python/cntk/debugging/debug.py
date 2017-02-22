@@ -26,7 +26,7 @@ following command-line interface::
 
     Forward after Parameter node with uid='Parameter28' shape=[](2,)
     [CNTK forward] >>> help
-    Your input was not understood. Please use
+    Commands:
         n - execute the next node
         n <number> - execute the next <number> nodes
         n <lambda> - execute until the lambda expression is True. Examples:
@@ -36,52 +36,55 @@ following command-line interface::
                          lambda arg, node: len(node.shape) == 3
                      Until the variance of the input exceeds 1 (np = numpy):
                          lambda arg, node: np.var(arg) > 1
+        f - run until forward pass (like 'n' when already in forward pass)
+        b - run until backward pass (like 'n' when already in backward pass)
         c - run until end
-        p - print input
+        p - print input (forward) or root gradients (backward)
         d - drop into a pdb shell
         q - quit
-    
-    [CNTK forward] >>> n
-    
-    Forward after Times node with uid='Times29' shape=[*,*](2,)
-    [CNTK forward] >>> p
-    Input:
-    [[[ 0.  0.]]
-    
-     [[ 0.  0.]]
-    
-     [[ 0.  0.]]
-    
-     [[ 0.  0.]]
-    
-     [[ 0.  0.]]
-    
-     [[ 0.  0.]]
-    
-     [[ 0.  0.]]
-    
-     [[ 0.  0.]]
-    
-     [[ 0.  0.]]
-    
-     [[ 0.  0.]]]
-    [CNTK forward] >>> n
-    
-    Backward before Times node with uid='Times29' shape=[*,*](2,)
+
     [CNTK backward] >>> n
 
-    Backward before Parameter node with uid='Parameter28' shape=[](2,)
+    ======================================== forward  ========================================
+    Forward after Parameter node with uid='Parameter28' shape=[](2,)
+    [CNTK forward] >>> n
+    Forward after Times node with uid='Times29' shape=[*,*](2,)
+    [CNTK forward] >>> n
+    ======================================== backward ========================================
+    Backward before Times node with uid='Times29' shape=[*,*](2,)
+    [CNTK backward] >>> p
+    State: None
+    Root gradients:
+    [[[-0.79412955  0.79412955]]
+    
+     [[-0.79412955  0.79412955]]
+    
+     [[ 0.20587046 -0.20587045]]
+    
+     [[ 0.20587046 -0.20587045]]
+    
+     [[ 0.20587046 -0.20587045]]
+    
+     [[ 0.20587046 -0.20587045]]
+    
+     [[-0.79412955  0.79412955]]
+    
+     [[ 0.20587046 -0.20587045]]
+    
+     [[ 0.20587039 -0.20587039]]
+    
+     [[-0.79412961  0.79412961]]]
 
 At every stop the following information is given:
  * Forward or backward pass
  * Node type (e.g. 'Times')
  * Name if given, otherwise it is omitted
  * uid, which is a unique reference within the graph
- * shape having the format [dynamic axis](static axes). E.g. ``[*,*](2,)`` 
-   means that the node's output has two dynamic axes (batch and sequence) and 
+ * shape having the format [dynamic axis](static axes). E.g. ``[*,*](2,)``
+   means that the node's output has two dynamic axes (batch and sequence) and
    one static axis (2 dimensions)
-
 '''
+
 
 def save_as_legacy_model(root_op, filename):
     '''
@@ -126,6 +129,7 @@ class DebugNode(UserFunction):
     step through the graph and investigate data, shapes, etc.
     '''
     _commands = []
+    _last_pass = 'f'
 
     def __init__(self, arg, name='DebugNode'):
         super(DebugNode, self).__init__([arg], as_numpy=True, name=name)
@@ -138,7 +142,7 @@ class DebugNode(UserFunction):
             if not new_input:
                 continue
 
-            if len(new_input) == 1 and new_input in ('p', 'd', 'c'):
+            if len(new_input) == 1 and new_input in 'bcdfp':
                 understood = [new_input]
             elif new_input[0] == 'n':
                 try:
@@ -158,7 +162,7 @@ class DebugNode(UserFunction):
 
             if not understood:
                 print('''\
-Your input was not understood. Please use
+Commands:
     n - execute the next node
     n <number> - execute the next <number> nodes
     n <lambda> - execute until the lambda expression is True. Examples:
@@ -168,14 +172,17 @@ Your input was not understood. Please use
                      lambda arg, node: len(node.shape) == 3
                  Until the variance of the input exceeds 1 (np = numpy):
                      lambda arg, node: np.var(arg) > 1
+    f - run until forward pass (like 'n' when already in forward pass)
+    b - run until backward pass (like 'n' when already in backward pass)
     c - run until end
-    p - print input
+    p - print input (forward) or root gradients (backward)
     d - drop into a pdb shell
     q - quit
 ''')
+
         return understood
 
-    def __format_after(self):
+    def _format_status(self):
         if isinstance(self.after, Constant):
             node_type = 'Constant'
         elif isinstance(self.after, Parameter):
@@ -200,8 +207,21 @@ Your input was not understood. Please use
         return "%s node with %suid='%s' shape=%s%s" % \
                (node_type, name, self.after.uid, dyn_axes, self.after.shape)
 
+    def _print_status(self, current_pass):
+        if current_pass != DebugNode._last_pass:
+            if current_pass == 'f':
+                print()
+                print('='*40 + ' forward  ' + '='*40)
+            else:
+                print('='*40 + ' backward ' + '='*40)
+
+        if current_pass == 'f':
+            print("Forward after %s" % self._format_status())
+        else:
+            print("Backward before %s" % self._format_status())
+
     def forward(self, argument, device=None, outputs_to_retain=None):
-        print("\nForward after %s" % self.__format_after())
+        self._print_status('f')
 
         commands = DebugNode._commands
 
@@ -215,6 +235,13 @@ Your input was not understood. Please use
                 done = True
 
             elif commands[-1] == 'n':
+                commands.pop()
+                done = True
+
+            elif commands[-1] == 'b':
+                done = True
+
+            elif commands[-1] == 'f':
                 commands.pop()
                 done = True
 
@@ -235,10 +262,12 @@ Your input was not understood. Please use
                 else:
                     done = True
 
+        DebugNode._last_pass = 'f'
+
         return None, argument
 
     def backward(self, state, root_gradients):
-        print("\nBackward before %s" % self.__format_after())
+        self._print_status('b')
 
         done = False
         commands = DebugNode._commands
@@ -251,7 +280,14 @@ Your input was not understood. Please use
                 done = True
 
             elif commands[-1] == 'n':
-                commands
+                commands.pop()
+                done = True
+
+            elif commands[-1] == 'b':
+                commands.pop()
+                done = True
+
+            elif commands[-1] == 'f':
                 done = True
 
             elif commands[-1] == 'p':
@@ -270,6 +306,8 @@ Your input was not understood. Please use
                     commands.pop()
                 else:
                     done = True
+
+        DebugNode._last_pass = 'b'
 
         return root_gradients
 
