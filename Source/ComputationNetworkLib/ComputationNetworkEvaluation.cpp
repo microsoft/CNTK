@@ -147,11 +147,11 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
             node->EndForwardProp();
 
             node->BumpEvalTimeStamp();
-        }
 
-        // Extreme Tracing, part 1/4
-        if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
-            DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
+            // Extreme Tracing, part 1/4
+            if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
+                DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
+        }
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/

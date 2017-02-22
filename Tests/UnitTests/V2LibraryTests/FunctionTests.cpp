@@ -516,6 +516,42 @@ void TestTimesNodeShapeInference()
     timesNodeShapeInferenceTest(3, 2, 2);
 }
 
+void TestTimesIndirectSparseInputGradientSparse(const DeviceDescriptor& device)
+{
+    size_t dim = 5;
+    size_t numSequences = 1;
+
+    auto timesParam = Parameter(NDShape({ 1, dim }), DataType::Float, 0.0, device);
+
+    auto input = InputVariable(NDShape({ dim }), /* isSparse*/ true, DataType::Float);
+    auto timesFunction = Times(timesParam, Sequence::First(input));
+
+    auto inputValue = Value::CreateSequence<float>(dim, { 2 }, device, true);
+    std::unordered_map<Variable, ValuePtr> inputMap;
+    inputMap.insert(std::make_pair(input, inputValue));
+
+    std::vector<float> outputData(numSequences);
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, 1, numSequences }), outputData, false));
+    std::unordered_map<Variable, ValuePtr> outputMap;
+    outputMap.insert(std::make_pair(timesFunction->Output(), outputValue));
+
+    auto backState = timesFunction->Forward(inputMap, outputMap, device, { timesFunction->Output() });
+
+    std::unordered_map<Variable, ValuePtr> rootGradients;
+    std::vector<float> rootGradient(numSequences, 1.0f);
+    rootGradients.insert(std::make_pair(timesFunction->Output(), MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ numSequences }), rootGradient, false))));
+
+    std::unordered_map<Variable, ValuePtr> inputGradients;
+    inputGradients.insert(std::make_pair(timesParam, nullptr));
+
+    timesFunction->Backward(backState, rootGradients, inputGradients);
+
+    ValuePtr paramGradient = inputGradients[timesParam];
+
+    if (!paramGradient->IsSparse())
+        ReportFailure("Gradient is expected to be sparse.");
+}
+
 template <typename ElementType>
 void TestChangingParameterValues(size_t rank, const DeviceDescriptor& device)
 {
@@ -1030,7 +1066,10 @@ BOOST_AUTO_TEST_CASE(FunctionOutputs)
     TestFunctionOutputs(DeviceDescriptor::CPUDevice());
 }
 
-
+BOOST_AUTO_TEST_CASE(TimesIndirectSparseGradType)
+{
+    TestTimesIndirectSparseInputGradientSparse(DeviceDescriptor::CPUDevice());
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

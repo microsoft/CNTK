@@ -447,6 +447,8 @@ Test module "V2LibraryTests" has passed with:
     Test case "FunctionSuite/OutputVariableNameInCPU" has passed
 
     Test case "FunctionSuite/FunctionOutputs" has passed
+    
+    Test case "FunctionSuite/TimesIndirectSparseGradType" has passed
 
   Test suite "NDArrayViewSuite" has passed with:
     4 test cases out of 4 passed
