@@ -78,7 +78,7 @@ class Function(cntk_py.Function):
         arg_names = param_specs.args
         defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
         if defaults:
-            arg_names = arg_names[0:-len(defaults)]
+            arg_names = arg_names[:-len(defaults)]
         return (arg_names, annotations)
 
     # helper to create a CNTK placeholder or input for a given name
@@ -89,7 +89,7 @@ class Function(cntk_py.Function):
     def _make_arg_variable(name, annotations):
         from .. import placeholder_variable, input_variable
         from .variables import Variable
-        if name in annotations and isinstance(annotations[name], Variable.Type):
+        if isinstance(annotations.get(name, None), Variable.Type):
             var_type = annotations[name]
             return input_variable(name=name, **var_type)
         else:

@@ -4,6 +4,8 @@
 # for full license information.
 # ==============================================================================
 
+from __future__ import division
+
 '''
 Helper functions for debugging graphs.
 '''
@@ -30,7 +32,7 @@ def dump_function(root, tag=None):
     names = dict()
     def make_name(n): # come up with a letter sequence
         if n < 26:
-            return chr(n + 97)
+            return chr(n + ord('a'))
         else:
             return make_name(n // 26) + make_name(n % 26)
     def name_it(item):

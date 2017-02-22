@@ -10,22 +10,21 @@ from . import Variable
 
 def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
     '''
-    Generic function that walks through the graph starting at ``node`` and
+    Generic function that walks through the graph starting at ``root`` and
     uses function ``visitor`` on each node to check whether it should be
     returned.
 
     Args:
-        root (Function or Variable): the root to start the journey from
+        root (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the root to start the journey from
         visitor (Python function or lambda): function that takes a node as
          argument and returns ``True`` if that node should be returned.
-        max_depth: maximum number of BlockFunction levels to traverse into.
+        max_depth (int): maximum number of BlockFunction levels to traverse into.
         sort_by_distance: result list is sorted by how far away they are from the root
+        TODO: is this still used? If not, remove.
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
-    #stack = [(root,0,0)] # node, distance, Block depth
-    # was changed to:
-    stack = [(root.root_function,0,0)] # node, distance, Block depth
+    stack = [(root.root_function, 0, 0)] # node, distance, Block depth
     accum = []         # final result (all unique nodes in a list) (node, distance)
     visited = set()    # [node]
 
@@ -36,26 +35,21 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
         if max_depth is None or depth < max_depth:
             from cntk import cntk_py
             if isinstance(node, cntk_py.Function) and node.is_block:
-                # TODO: This is still broken, needs to be cleaned up after debugging/desperate trying-around.
                 composite = node.block_root
                 # BlockFunction node
                 mapping = node.block_arguments_mapping
                 # redirect the composite's inputs to the true inputs
                 stack.extend([(actual_input, distance+1, depth) for _, actual_input in mapping]) # traverse into actual composite inputs
                 visited |= {comp_input for comp_input, _ in mapping} # don't traverse into the mapped-away inputs
-                #stack.extend((input, distance+1, depth+1) for input in composite.root_function.inputs) # and short-circuit the root composite instead
                 stack.append((composite, distance+1, depth+1))
                 visited.add(node)
                 if visitor(node):
                     accum.append((node, distance))
                 continue
                 # BlockFunctions are short-circuited until max_depth is hit, and not added to accum[]
-            #except:
-            #    pass
         try:
             # Function node
             stack = [(input, distance+1, depth) for input in node.root_function.inputs] + stack
-            #stack = list(node.root_function.inputs) + stack
         except AttributeError:
             # OutputVariable node
             try:
