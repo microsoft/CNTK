@@ -240,6 +240,8 @@
 %ignore_function CNTK::CreateDataParallelDistributedTrainer;
 %ignore_function CNTK::CreateQuantizedDataParallelDistributedTrainer;
 
+%ignore_class CNTK::ProgressWriter;
+
 %ignore_struct std::hash<::CNTK::DistributedWorkerDescriptor>;
 
 // Todo: add correct typemap as they might be useful for C# in future.

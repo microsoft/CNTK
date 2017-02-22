@@ -582,4 +582,18 @@ namespace CNTK
 
         return namedListString;
     }
+
+    class Accumulator : public Value
+    {
+    public:
+        Accumulator() : Value(nullptr), m_numUpdates(0) {}
+
+        void Update(const ValuePtr& delta, const DeviceDescriptor& device);
+        void Reset();
+
+    private:
+        void ResetToZero();
+
+        size_t   m_numUpdates;
+    };
 }

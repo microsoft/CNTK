@@ -131,12 +131,12 @@ namespace CNTK
             if (src.IsOutput())
             {
                 result = CreateFunctionNode(src.Owner(), dst, functionNodes, variableNodes, placeholders,
-                    placeholderInputs, scope);
+                                            placeholderInputs, scope);
             }
             else
             {
                 result = dst.add_node();
-                Internal::PopulateNodeDef(scope, src, *result);
+                PopulateNodeDef(scope, src, *result);
             }
 
             variableNodes.emplace(src, result);
@@ -162,14 +162,14 @@ namespace CNTK
             tensorflow::NodeDef* functionNode = nullptr;
             if (src->IsBlock())
             {
-                std::wstring newScope = Internal::GetScopedName(scope, src);
+                std::wstring newScope = GetScopedName(scope, src);
                 functionNode = CreateFunctionNode(src->BlockRoot(), dst, functionNodes,
-                    variableNodes, placeholders, placeholderInputs, newScope);
+                                                  variableNodes, placeholders, placeholderInputs, newScope);
             }
             else
             {
                 functionNode = dst.add_node();
-                Internal::PopulateNodeDef(scope, src, *functionNode);
+                PopulateNodeDef(scope, src, *functionNode);
             }
 
             // Note that we map the block function to its root node here (on purpose).
@@ -185,7 +185,7 @@ namespace CNTK
                     // We don't create placeholders immediately, just register them so we can later trace the actual
                     // input.
                     inputNode = CreateVariableNode(input, dst, functionNodes, variableNodes, placeholders,
-                        placeholderInputs, scope);
+                                                   placeholderInputs, scope);
                 }
 
                 if (!src->IsBlock())
@@ -214,47 +214,43 @@ namespace CNTK
             return functionNode;
         }
 
-        namespace TensorBoardUtils
+        void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
         {
-            void CreateGraph(const FunctionPtr& src, tensorflow::GraphDef& dst)
+            // For each function/variable visited, contains a matching tensorflow node.
+            std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;
+            std::unordered_map<Variable, tensorflow::NodeDef*> variableNodes;
+
+            // For each (function, placeholder input) found, contains (tensorflow_node, (placeholder, scope)).
+            std::unordered_multimap<tensorflow::NodeDef*, VariableWithScope> placeholders;
+            // For each placeholder found, contains a (placeholder, (replacement variable, scope)).
+            std::unordered_map<Variable, VariableWithScope> placeholderInputs;
+
+            // Create all nodes in the graph, except placeholders.
+            CreateFunctionNode(src, dst, functionNodes, variableNodes, placeholders, placeholderInputs, L"");
+
+            // For each function that had a placeholder as its input, add a link to the actual input if it was
+            // found.
+            for (auto placeholder : placeholders)
             {
-                // For each function/variable visited, contains a matching tensorflow node.
-                std::unordered_map<FunctionPtr, tensorflow::NodeDef*> functionNodes;
-                std::unordered_map<Variable, tensorflow::NodeDef*> variableNodes;
+                // Follow the placeholder chain until the end.
+                VariableWithScope* finalValue = &placeholder.second;
 
-                // For each (function, placeholder input) found, contains (tensorflow_node, (placeholder, scope)).
-                std::unordered_multimap<tensorflow::NodeDef*, Internal::VariableWithScope> placeholders;
-                // For each placeholder found, contains a (placeholder, (replacement variable, scope)).
-                std::unordered_map<Variable, Internal::VariableWithScope> placeholderInputs;
-
-                // Create all nodes in the graph, except placeholders.
-                Internal::CreateFunctionNode(src, dst, functionNodes, variableNodes,
-                                             placeholders, placeholderInputs, L"");
-
-                // For each function that had a placeholder as its input, add a link to the actual input if it was
-                // found.
-                for (auto placeholder : placeholders)
+                do
                 {
-                    // Follow the placeholder chain until the end.
-                    Internal::VariableWithScope* finalValue = &placeholder.second;
-
-                    do
+                    auto nextInput = placeholderInputs.find(finalValue->first);
+                    if (nextInput == placeholderInputs.end())
                     {
-                        auto nextInput = placeholderInputs.find(finalValue->first);
-                        if (nextInput == placeholderInputs.end())
-                        {
-                            break;
-                        }
+                        break;
+                    }
 
-                        finalValue = &nextInput->second;
-                    } while (true);
+                    finalValue = &nextInput->second;
+                } while (true);
 
-                    // Create a node for the finalValue and add it as an input of the function.
-                    tensorflow::NodeDef* inputNode = Internal::CreateVariableNode(
-                        finalValue->first, dst, functionNodes, variableNodes, placeholders, placeholderInputs,
-                        finalValue->second);
-                    placeholder.first->add_input(inputNode->name());
-                }
+                // Create a node for the finalValue and add it as an input of the function.
+                tensorflow::NodeDef* inputNode = CreateVariableNode(
+                    finalValue->first, dst, functionNodes, variableNodes, placeholders, placeholderInputs,
+                    finalValue->second);
+                placeholder.first->add_input(inputNode->name());
             }
         }
     }
