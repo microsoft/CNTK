@@ -857,13 +857,16 @@ namespace CNTK
 
     FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
     {
-        if (axis.IsStaticAxis())
+        if (((endIndex > 0 && beginIndex >= 0) || (beginIndex < 0 && endIndex <= 0))
+            && (endIndex - beginIndex) <= 0)
         {
-            if ((endIndex - beginIndex) <= 0)
-                InvalidArgument("CNTK::Slice: endIndex (%d) - beginIndex (%d) must be a positive number", endIndex, beginIndex);
-
-            return Internal::Slice(operand, axis, beginIndex, endIndex, name);
+            // range check only applies if both begin and end are from start or both are from end,
+            // otherwise we can't determine anything without knowing the actual dimensions
+            InvalidArgument("CNTK::Slice: endIndex (%d) - beginIndex (%d) must be a positive number", endIndex, beginIndex);
         }
+
+        if (axis.IsStaticAxis())
+            return Internal::Slice(operand, axis, beginIndex, endIndex, name);
 
         if (axis == Axis::DefaultBatchAxis())
             LogicError("Slice is currently unsupported along the batch axis");
@@ -1449,7 +1452,17 @@ namespace CNTK
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
+#if 1       // from master, requires latest update to ReconcileDynamicAxes(), not sure if works correctly inside a recurrent loop
             return AsBlock(Internal::ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+#else
+            // We broadcast using a PastValue() operation that is normally outside of a loop,
+            // although it works inside the loop as well.
+            // The PastValue() uses an "infinite" delay such that every single time step reaches outside
+            // and gets the initial value, which is the value we want to broadcast.
+            // PastValue() also requires a data input, which is a dummy since it will never ever be used.
+            auto output = PastValue(Internal::ZeroesWithDynamicAxesLike(broadcastAsPlaceholder), /*initialState=*/ operandPlaceholder, /*offset=*/ INT_MAX);
+            return AsBlock(std::move(output), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
+#endif
         }
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
@@ -1512,7 +1525,7 @@ namespace CNTK
 
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)
         {
-            return Internal::ReconcileDynamicAxes(Constant::Scalar(0.0f), operand);
+            return Internal::ReconcileDynamicAxes(Constant::Scalar(0.0f), operand/*acts as layout input*/);
         }
 
         FunctionPtr Where(const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name)
@@ -1572,6 +1585,8 @@ namespace CNTK
 
         FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name)
         {
+            // TODO: In V1 graph generation, ReconcileDynamicAxis() should be treated like a no-op if the axis is known to be the same.
+            //       E.g. used for seq2seq.
             return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
         }
    }

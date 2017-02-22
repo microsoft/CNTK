@@ -191,6 +191,8 @@ namespace CNTK
             outputDynamicAxes = inputs[1].DynamicAxes();
         else if (op == PrimitiveOpType::ReconcileDynamicAxis)
             outputDynamicAxes = inputs[1].DynamicAxes();
+        else if (op == PrimitiveOpType::PastValue || op == PrimitiveOpType::FutureValue)
+            outputDynamicAxes = inputs[0].DynamicAxes(); // second arg (initial state) may have different dynamic axis
         else
         {
             auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
@@ -257,10 +259,7 @@ namespace CNTK
 
                         // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
                         if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
-                            LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
-
-                        if (!initialStateVar.DynamicAxes().empty())
-                            LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
+                            LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axes (1 sequence axis and 1 batch axis)");
                     }
 
                     outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], true, true);
@@ -293,13 +292,16 @@ namespace CNTK
                         case PrimitiveOpType::Softmax:
                         case PrimitiveOpType::Hardmax:
                         case PrimitiveOpType::Dropout:
-                        case PrimitiveOpType::Where:
                         case PrimitiveOpType::LogSoftmax:
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Pass:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
+                            break;
+                        case PrimitiveOpType::Where:
+                            assert(m_inputs.size() == 1);
+                            outputShape = NDShape{}; // scalar
                             break;
                         case PrimitiveOpType::PackedIndex:
                             assert(m_inputs.size() == 2);
@@ -671,6 +673,7 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
                             auto operand = m_inputs[0];
                             auto layout = m_inputs[1];
+                            // data operand can be a constant or a param matrix
                             if (layout.DynamicAxes().empty())
                                 InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
                             outputShape = operand.Shape();

@@ -78,22 +78,28 @@ template <class ElemType>
 template <class ElemType>
 /*virtual*/ void ReduceElementsNode<ElemType>::ForwardProp(const FrameRange& fr) /*override*/
 {
+    // We are mixing two kinds of operations here; elementwise and whole-batch reduction (m_reduceAll).
+    // In the latter case, we must mimic the behaviour of ComputationNodeNonLooping.
+    if (m_reduceAll && !fr.IsAllFrames())
+        LogicError("%ls: %s node should never be in a loop when reducing over all static and dynamic axes.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+    const auto frInput = !m_reduceAll ? fr : FrameRange(InputRef(0).GetMBLayout()); // can't use 'fr' for m_reduceAll as it refers to the result (same as for training criteria)
+
+    // when reducing all, we must mask gaps
     if (m_reduceAll)
     {
-        // When operating on all axes we need to mask the invalid parts of the minibatch
-        auto mbLayout = InputRef(0).GetMBLayout();
-        InputRef(0).MaskMissingValueColumnsTo(fr.WithLayout(mbLayout), NeutralValue<ElemType>(m_reductionOp));
+        InputRef(0).MaskMissingValueColumnsTo(frInput, NeutralValue<ElemType>(m_reductionOp));
         if (m_mean)
         {
-            //for mean reduction and all axes we need to carefully compute the scaling factor
-            auto actual_samples = mbLayout != nullptr ? mbLayout->GetActualNumSamples() : 1;
+            // for mean reduction and all axes we need to carefully compute the scaling factor
+            auto actual_samples = InputRef(0).HasMBLayout() ? InputRef(0).GetMBLayout()->GetActualNumSamples() : 1;
             m_scale = ElemType((1.0 / GetInputSampleLayout(0).GetNumElements()) / actual_samples);
         }
     }
 
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
-    auto input  = InputRef(0).   ValueTensorFor(rank, fr);
+    auto input  = InputRef(0).   ValueTensorFor(rank, frInput);
     auto result = !m_reduceAll ? ValueTensorFor(rank, fr) : TensorView<ElemType>(ValuePtr(), TensorShape(1));
 
     switch (m_reductionOp)
@@ -114,10 +120,12 @@ template <class ElemType>
 {
     assert(inputIndex == 0), inputIndex;
 
+    const auto frInput = !m_reduceAll ? fr : FrameRange(InputRef(0).GetMBLayout()); // can't use 'fr' for m_reduceAll as it refers to the result (same as for training criteria)
+
     // get the args
     size_t rank = DetermineElementwiseTensorRank();
     auto sliceOutputGrad = !m_reduceAll ? GradientTensorFor(rank, fr) : TensorView<ElemType>(GradientPtr(), TensorShape(1)); // propagate from this one...
-    auto sliceInputGrad  = InputRef(0).   GradientTensorFor(rank, fr); // ...to this one
+    auto sliceInputGrad  = InputRef(0).   GradientTensorFor(rank, frInput); // ...to this one
 
     // gradients are not as simple as passing an op-code, unfortunately
     switch (m_reductionOp)
@@ -130,7 +138,7 @@ template <class ElemType>
 
     case ElementWiseOperator::opLogSum:
         {
-            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
             auto output = ValueTensorFor(rank, fr.AllowBroadcast());
             // Let: f(x, y, z) = log(exp x + exp y + exp z)
             // For the derivative we get:
@@ -143,7 +151,7 @@ template <class ElemType>
     case ElementWiseOperator::opMin:
     case ElementWiseOperator::opMax:
         {
-            auto input = InputRef(inputIndex).ValueTensorFor(rank, fr);
+            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
             auto output = ValueTensorFor(rank, fr.AllowBroadcast());
 
             // POTENTIAL PROBLEM:
@@ -164,7 +172,7 @@ template <class ElemType>
         break;
    case ElementWiseOperator::opElementwiseProduct:
     {        
-        auto input  = InputRef(inputIndex).ValueTensorFor(rank, fr);
+        auto input  = InputRef(inputIndex).ValueTensorFor(rank, frInput);
         auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
         sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
         break;
@@ -319,10 +327,22 @@ template <class ElemType>
         if (seq.seqId == GAP_SEQUENCE_ID)
             continue;
         auto& indexSequence = indexSequences[i];
+        // create index map for one sequence
+        // this is the condition check that this node performs; the meat
         indexSequence.clear();
+        double desiredCount = 0.0;
         for (size_t t = 0; t < seq.GetNumTimeSteps(); t++)
-            if (input(0, inMBLayout->GetColumnIndex(seq, t))) // this is the condition check that this node performs; the meat
+        {
+            double delta = input(0, inMBLayout->GetColumnIndex(seq, t)); // how many frames the current time step should expand into
+            desiredCount += delta; // this is now how many frames we should have
+            // use a margin against round-off errors, so that we get non-binary ratios like 1/3 and 1/5 right
+            // This really means generate a frame if too few, unless we are within machine accuracy of the target.
+            // The assumption is that the delta has this error, while accumulation (in double) has no error.
+            ElemType relativeMargin = 1 - std::numeric_limits<ElemType>::epsilon();
+            while ((indexSequence.empty() && desiredCount > 0)  // no margin for the first frame (always include unless flag is 0)
+                   || indexSequence.size() < desiredCount * relativeMargin)
                 indexSequence.push_back(t);
+        }
         // Note: The above accesses m_value directly on the CPU, putting it into BOTH state, possibly for other consumers as well.
     }
     input.CollapseDataLocation(); // BUGBUG: Move back, since BOTH state is broken at present.
@@ -389,7 +409,7 @@ template <class ElemType>
     let& sourceMBLayout = InputRef(SOURCEDATA).GetMBLayout(); // only used for index conversion
     let& indexMBLayout  = InputRef(INDEXDATA).GetMBLayout();
     let&  index  = InputRef(INDEXDATA).Value(); // per-seq index values that are to be mapped
-    auto& result =                   Value(); // packed index values as mapped to sourceData's layout
+    auto& result =                     Value(); // packed index values as mapped to sourceData's layout
     // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
     // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
@@ -399,8 +419,8 @@ template <class ElemType>
         let& sourceSeq = sourceSequences[i];
         if (sourceSeq.seqId == GAP_SEQUENCE_ID)
             continue;
-        let& indexSeq = indexMBLayout->FindSequence(sourceSeq.seqId);          // find corresponding entry in indexMBLayout
-        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++) // map all index values in index sequence
+        let& indexSeq = indexMBLayout->FindMatchingSequence(sourceSequences, i); // find corresponding entry in indexMBLayout
+        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++)   // map all index values in index sequence
         {
             let jIndex  = indexMBLayout->GetColumnIndex(indexSeq, tIndex);    // map time index to actual location in the matrix storage object
             let tSource = (size_t)index(0, jIndex);                           // the new time location (relative to source sequence)
