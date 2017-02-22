@@ -367,7 +367,7 @@ class Function(cntk_py.Function):
         return state, output_map
 
     @typemap
-    def backward(self, state, root_gradients, variables):
+    def backward(self, state, root_gradients, variables, as_numpy=True):
         '''
         Backpropagates supplied ``root_gradients`` for one or more of the output
         variables of the Function, to calculate gradients with respect to
@@ -394,6 +394,9 @@ class Function(cntk_py.Function):
             root_gradients (dict): the gradients that will be backpropagated
             variables (set): a list of input variables with respect to which
              the gradients have to be computed.
+            as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
+             Specifying this as False returns a CNTK Value which avoids a
+             costly conversion but returns a somewhat opaque object.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for more examples
@@ -410,13 +413,14 @@ class Function(cntk_py.Function):
 
         self._backward(state, root_gradients, var_gradients)
 
-        for var, value in var_gradients.items():
-            var_gradients[var] = variable_value_to_seq(value, var)
+        if as_numpy:
+            for var, value in var_gradients.items():
+                var_gradients[var] = variable_value_to_seq(value, var)
 
         return var_gradients
 
     @typemap
-    def grad(self, at, wrt=None, device=None):
+    def grad(self, at, wrt=None, device=None, as_numpy=True):
         '''
         Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
         The Function must have a single output.
@@ -439,6 +443,9 @@ class Function(cntk_py.Function):
              respect to all arguments that need gradient will be computed. If a variable
              is repeated in this list, the gradient will be repeated
              in the output as a shallow copy.
+            as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
+             Specifying this as False returns a CNTK Value which avoids a
+             costly conversion but returns a somewhat opaque object.
 
         Returns:
             list: list containing the gradients in the same order as
@@ -454,9 +461,13 @@ class Function(cntk_py.Function):
 
         unique_wrt = set(wrt)
         output = [self.output]
-        state, results = self.forward(at, output, set(output), device)
-        ones = {self.output: np.ones_like(v) for v in results.values()}
-        grad_dict = self.backward(state, ones, unique_wrt)
+        
+        # Since we do not return the computed results and use hem only to determine the shape
+        # of the root gradients, we run the forward pass with as_numpy=False regardless of the
+        # actual as_numpy setting passed to this function
+        state, results = self.forward(at, output, set(output), device, as_numpy=False)
+        ones = {self.output: np.ones(v.shape, self.output.dtype) for v in results.values()}
+        grad_dict = self.backward(state, ones, unique_wrt, as_numpy)
         return [grad_dict[v] for v in wrt]
 
     @property
