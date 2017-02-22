@@ -1,0 +1,604 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2620 v3 @ 2.40GHz
+    Hardware threads: 12
+    Total Memory: 33474872 kB
+-------------------------------------------------------------------
++ [[ C:\CNTKTestData == '' ]]
++ [[ ! -d C:\CNTKTestData ]]
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -au 'C:\CNTKTestData'
++ DataSourceDir=/cygdrive/c/CNTKTestData/Image
++ TestDataDir=/tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ mkdir /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ cp -R /cygdrive/c/CNTKTestData/Image/MNIST/v0/Train-28x28_cntk_text.txt /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ cp -R /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../Text/SequenceClassification/Data/Train.ctf /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ cp -R /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../Simple2d/Data/SimpleDataTest_cntk_text.txt /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../Simple2d/Data/SimpleDataTrain_cntk_text.txt /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ cp -R /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../../Examples/Speech/AN4/Data/000000000.chunk /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../../Examples/Speech/AN4/Data/glob_0000.mlf /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../../Examples/Speech/AN4/Data/glob_0000.scp /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../../Examples/Speech/AN4/Data/state.list /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ cp -R /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../UnitTests/V2LibraryTests/data/batch.norm.no.sample.count.v1.bin /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../UnitTests/V2LibraryTests/data/batch.norm.no.sample.count.v2.bin /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../UnitTests/V2LibraryTests/data/future.dictionary.proto.bin /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../UnitTests/V2LibraryTests/data/past.dictionary.proto.bin /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library/../../../UnitTests/V2LibraryTests/data/v2.0.beta1.0.dictionary.proto.bin /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ ConfigDir=/cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config
++ OutputDir=/cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config/../Output
++ DataDir=/cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config/../Data
++ '[' -d /cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config/../Output ']'
++ '[' -d /cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config/../Output/Models ']'
++ rm -rf /cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config/../Output/Models
++ DeleteModelsAfterTest=0
++ '[' -f /cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config/FeedForward.cntk ']'
++ cntkrun FeedForward.cntk 'stderr=- command=speechTrain parallelTrain=false speechTrain=[SGD=[maxEpochs=1]]'
++ configFileName=FeedForward.cntk
++ additionalCNTKArgs='stderr=- command=speechTrain parallelTrain=false speechTrain=[SGD=[maxEpochs=1]]'
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -aw /cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config
++ ConfigDir='C:\repos\CNTK\Examples\Speech\AN4\Config'
+++ cygpath -aw /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu
++ RunDir='C:\cygwin64\tmp\cntk-test-20170209112300.996353\UnitTests_CNTKv2Library@release_gpu'
+++ cygpath -aw /cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config/../Data
++ DataDir='C:\repos\CNTK\Examples\Speech\AN4\Data'
+++ cygpath -aw /cygdrive/c/repos/CNTK/Tests/EndToEndTests/../../Examples/Speech/AN4/Config/../Output
++ OutputDir='C:\repos\CNTK\Examples\Speech\AN4\Output'
++ CNTKArgs='configFile=C:\repos\CNTK\Examples\Speech\AN4\Config/FeedForward.cntk currentDirectory=C:\repos\CNTK\Examples\Speech\AN4\Data RunDir=C:\cygwin64\tmp\cntk-test-20170209112300.996353\UnitTests_CNTKv2Library@release_gpu DataDir=C:\repos\CNTK\Examples\Speech\AN4\Data ConfigDir=C:\repos\CNTK\Examples\Speech\AN4\Config OutputDir=C:\repos\CNTK\Examples\Speech\AN4\Output DeviceId=0 timestamping=true stderr=- command=speechTrain parallelTrain=false speechTrain=[SGD=[maxEpochs=1]]'
++ '[' '' '!=' '' ']'
++ modelsDir=/tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/Models
++ [[ 1 == 1 ]]
++ '[' -d /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/Models ']'
++ mkdir -p /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/Models
++ [[ 0 == 0 ]]
++ run /cygdrive/c/repos/CNTK/x64/release/cntk.exe 'configFile=C:\repos\CNTK\Examples\Speech\AN4\Config/FeedForward.cntk' 'currentDirectory=C:\repos\CNTK\Examples\Speech\AN4\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20170209112300.996353\UnitTests_CNTKv2Library@release_gpu' 'DataDir=C:\repos\CNTK\Examples\Speech\AN4\Data' 'ConfigDir=C:\repos\CNTK\Examples\Speech\AN4\Config' 'OutputDir=C:\repos\CNTK\Examples\Speech\AN4\Output' DeviceId=0 timestamping=true stderr=- command=speechTrain parallelTrain=false 'speechTrain=[SGD=[maxEpochs=1]]'
++ cmd=/cygdrive/c/repos/CNTK/x64/release/cntk.exe
++ shift
++ '[' '' == 1 ']'
++ echo === Running /cygdrive/c/repos/CNTK/x64/release/cntk.exe 'configFile=C:\repos\CNTK\Examples\Speech\AN4\Config/FeedForward.cntk' 'currentDirectory=C:\repos\CNTK\Examples\Speech\AN4\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20170209112300.996353\UnitTests_CNTKv2Library@release_gpu' 'DataDir=C:\repos\CNTK\Examples\Speech\AN4\Data' 'ConfigDir=C:\repos\CNTK\Examples\Speech\AN4\Config' 'OutputDir=C:\repos\CNTK\Examples\Speech\AN4\Output' DeviceId=0 timestamping=true stderr=- command=speechTrain parallelTrain=false 'speechTrain=[SGD=[maxEpochs=1]]'
+=== Running /cygdrive/c/repos/CNTK/x64/release/cntk.exe configFile=C:\repos\CNTK\Examples\Speech\AN4\Config/FeedForward.cntk currentDirectory=C:\repos\CNTK\Examples\Speech\AN4\Data RunDir=C:\cygwin64\tmp\cntk-test-20170209112300.996353\UnitTests_CNTKv2Library@release_gpu DataDir=C:\repos\CNTK\Examples\Speech\AN4\Data ConfigDir=C:\repos\CNTK\Examples\Speech\AN4\Config OutputDir=C:\repos\CNTK\Examples\Speech\AN4\Output DeviceId=0 timestamping=true stderr=- command=speechTrain parallelTrain=false speechTrain=[SGD=[maxEpochs=1]]
++ /cygdrive/c/repos/CNTK/x64/release/cntk.exe 'configFile=C:\repos\CNTK\Examples\Speech\AN4\Config/FeedForward.cntk' 'currentDirectory=C:\repos\CNTK\Examples\Speech\AN4\Data' 'RunDir=C:\cygwin64\tmp\cntk-test-20170209112300.996353\UnitTests_CNTKv2Library@release_gpu' 'DataDir=C:\repos\CNTK\Examples\Speech\AN4\Data' 'ConfigDir=C:\repos\CNTK\Examples\Speech\AN4\Config' 'OutputDir=C:\repos\CNTK\Examples\Speech\AN4\Output' DeviceId=0 timestamping=true stderr=- command=speechTrain parallelTrain=false 'speechTrain=[SGD=[maxEpochs=1]]'
+CNTK 2.0.beta9.0+ (t-ivrodr/v2tests_to_boost f3a57a, Feb  1 2017 14:05:30) on DESKTOP-9TF8PB8 at 2017/02/09 10:23:05
+
+C:\repos\CNTK\x64\release\cntk.exe  configFile=C:\repos\CNTK\Examples\Speech\AN4\Config/FeedForward.cntk  currentDirectory=C:\repos\CNTK\Examples\Speech\AN4\Data  RunDir=C:\cygwin64\tmp\cntk-test-20170209112300.996353\UnitTests_CNTKv2Library@release_gpu  DataDir=C:\repos\CNTK\Examples\Speech\AN4\Data  ConfigDir=C:\repos\CNTK\Examples\Speech\AN4\Config  OutputDir=C:\repos\CNTK\Examples\Speech\AN4\Output  DeviceId=0  timestamping=true  stderr=-  command=speechTrain  parallelTrain=false  speechTrain=[SGD=[maxEpochs=1]]
+Changed current directory to C:\repos\CNTK\Examples\Speech\AN4\Data
+02/09/2017 10:23:06: Redirecting stderr to file -_speechTrain.log
+02/09/2017 10:23:06: -------------------------------------------------------------------
+02/09/2017 10:23:06: Build info: 
+
+02/09/2017 10:23:06: 		Built time: Feb  1 2017 14:05:30
+02/09/2017 10:23:06: 		Last modified date: Thu Jan 26 16:13:49 2017
+02/09/2017 10:23:06: 		Build type: Release
+02/09/2017 10:23:06: 		Build target: GPU
+02/09/2017 10:23:06: 		With 1bit-SGD: yes
+02/09/2017 10:23:06: 		With ASGD: yes
+02/09/2017 10:23:06: 		Math lib: mkl
+02/09/2017 10:23:06: 		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+02/09/2017 10:23:06: 		CUB_PATH: c:\local\cub-1.4.1
+02/09/2017 10:23:06: 		CUDNN_PATH: c:\local\cudnn-8.0-v5.1\cuda
+02/09/2017 10:23:06: 		Build Branch: t-ivrodr/v2tests_to_boost
+02/09/2017 10:23:06: 		Build SHA1: f3a57a289943271148a01e8dcef157cbee85ee1a
+02/09/2017 10:23:06: 		Built by t-ivrodr on DESKTOP-9TF8PB8
+02/09/2017 10:23:06: 		Build Path: C:\repos\CNTK\Source\CNTK\
+02/09/2017 10:23:06: 		MPI distribution: Microsoft MPI
+02/09/2017 10:23:06: 		MPI version: 7.0.12437.6
+02/09/2017 10:23:06: -------------------------------------------------------------------
+02/09/2017 10:23:06: -------------------------------------------------------------------
+02/09/2017 10:23:06: GPU info:
+
+02/09/2017 10:23:06: 		Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB
+02/09/2017 10:23:06: 		Device[1]: cores = 96; computeCapability = 2.1; type = "Quadro 600"; memory = 1024 MB
+02/09/2017 10:23:06: -------------------------------------------------------------------
+
+Configuration After Processing and Variable Resolution:
+
+configparameters: FeedForward.cntk:command=speechTrain
+configparameters: FeedForward.cntk:ConfigDir=C:\repos\CNTK\Examples\Speech\AN4\Config
+configparameters: FeedForward.cntk:currentDirectory=C:\repos\CNTK\Examples\Speech\AN4\Data
+configparameters: FeedForward.cntk:DataDir=C:\repos\CNTK\Examples\Speech\AN4\Data
+configparameters: FeedForward.cntk:deviceId=0
+configparameters: FeedForward.cntk:ModelDir=C:\repos\CNTK\Examples\Speech\AN4\Output/Models
+configparameters: FeedForward.cntk:modelPath=C:\repos\CNTK\Examples\Speech\AN4\Output/Models/cntkSpeechFF.dnn
+configparameters: FeedForward.cntk:OutputDir=C:\repos\CNTK\Examples\Speech\AN4\Output
+configparameters: FeedForward.cntk:parallelTrain=false
+configparameters: FeedForward.cntk:precision=float
+configparameters: FeedForward.cntk:RootDir=..
+configparameters: FeedForward.cntk:RunDir=C:\cygwin64\tmp\cntk-test-20170209112300.996353\UnitTests_CNTKv2Library@release_gpu
+configparameters: FeedForward.cntk:speechTrain=[
+    action = "train"
+    SimpleNetworkBuilder = [
+        layerSizes = 363:512:512:132
+        trainingCriterion = "CrossEntropyWithSoftmax"
+        evalCriterion = "ClassificationError"
+        layerTypes = "Sigmoid"
+        applyMeanVarNorm = true
+        needPrior = true
+    ]
+    SGD = [
+        epochSize = 20480
+        minibatchSize = 256:1024:2048
+        learningRatesPerMB = 1.0:0.5:0.1
+        numMBsToShowResult = 10
+        momentumPerMB = 0.9:0.656119
+        maxEpochs = 3
+        keepCheckPointFiles = true
+        parallelTrain = [
+            parallelizationMethod = "DataParallelSGD"
+            distributedMBReading = true
+            dataParallelSGD = [
+                gradientBits = 1
+            ]
+        ]
+        autoAdjust=[
+            autoAdjustMinibatch = true
+            minibatchSizeTuningFrequency = 1
+            minibatchSearchCriterionErrorMargin = 2
+        ]
+    ]
+    reader = [
+        readerType = "HTKMLFReader"
+        readMethod = "blockRandomize"
+        miniBatchMode = "partial"
+        randomize = "auto"
+        verbosity = 0
+        features = [ 
+            dim = 363
+            type = "real"
+            scpFile = "C:\repos\CNTK\Examples\Speech\AN4\Data/glob_0000.scp"
+        ]
+        labels = [
+            mlfFile = "C:\repos\CNTK\Examples\Speech\AN4\Data/glob_0000.mlf"
+            labelMappingFile = "C:\repos\CNTK\Examples\Speech\AN4\Data/state.list"
+            labelDim = 132
+            labelType = "category"
+        ]
+    ]
+] [SGD=[maxEpochs=1]]
+
+configparameters: FeedForward.cntk:stderr=-
+configparameters: FeedForward.cntk:timestamping=true
+configparameters: FeedForward.cntk:traceLevel=1
+02/09/2017 10:23:06: Commands: speechTrain
+02/09/2017 10:23:06: precision = "float"
+
+02/09/2017 10:23:06: ##############################################################################
+02/09/2017 10:23:06: #                                                                            #
+02/09/2017 10:23:06: # speechTrain command (train action)                                         #
+02/09/2017 10:23:06: #                                                                            #
+02/09/2017 10:23:06: ##############################################################################
+
+parallelTrain option is not enabled. ParallelTrain config will be ignored.
+02/09/2017 10:23:06: 
+Creating virgin network.
+SimpleNetworkBuilder Using GPU 0
+Microsoft::MSR::CNTK::GPUMatrix<ElemType>::SetUniformRandomValue (GPU): creating curand object with seed 1, sizeof(ElemType)==4
+reading script file C:\repos\CNTK\Examples\Speech\AN4\Data/glob_0000.scp ... 948 entries
+total 132 state names in state list C:\repos\CNTK\Examples\Speech\AN4\Data/state.list
+htkmlfreader: reading MLF file C:\repos\CNTK\Examples\Speech\AN4\Data/glob_0000.mlf ... total 948 entries
+...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
+label set 0: 129 classes
+minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
+02/09/2017 10:23:07: 
+Model has 25 nodes. Using GPU 0.
+
+02/09/2017 10:23:07: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+02/09/2017 10:23:07: Evaluation criterion: EvalClassificationError = ClassificationError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 40 matrices, 21 are shared as 7, and 19 are not shared.
+
+	{ B1 : [512 x 1] (gradient)
+	  H2 : [512 x 1 x *] (gradient)
+	  HLast : [132 x 1 x *] (gradient) }
+	{ B0 : [512 x 1] (gradient)
+	  H1 : [512 x 1 x *] (gradient) }
+	{ H1 : [512 x 1 x *]
+	  W0*features : [512 x *]
+	  W0*features : [512 x *] (gradient) }
+	{ W1 : [512 x 512] (gradient)
+	  W1*H1+B1 : [512 x 1 x *] (gradient)
+	  W2*H1 : [132 x 1 x *] (gradient) }
+	{ W1*H1+B1 : [512 x 1 x *]
+	  W2*H1 : [132 x 1 x *] }
+	{ HLast : [132 x 1 x *]
+	  W2 : [132 x 512] (gradient) }
+	{ H2 : [512 x 1 x *]
+	  W0 : [512 x 363] (gradient)
+	  W0*features+B0 : [512 x 1 x *]
+	  W0*features+B0 : [512 x 1 x *] (gradient)
+	  W1*H1 : [512 x 1 x *]
+	  W1*H1 : [512 x 1 x *] (gradient) }
+
+
+02/09/2017 10:23:07: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+
+02/09/2017 10:23:07: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
+02/09/2017 10:23:07: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
+02/09/2017 10:23:07: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
+02/09/2017 10:23:07: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
+02/09/2017 10:23:07: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
+02/09/2017 10:23:07: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
+
+
+02/09/2017 10:23:07: Precomputing --> 3 PreCompute nodes found.
+
+02/09/2017 10:23:07: 	MeanOfFeatures = Mean()
+02/09/2017 10:23:07: 	InvStdOfFeatures = InvStdDev()
+02/09/2017 10:23:07: 	Prior = Mean()
+minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+
+02/09/2017 10:23:08: Precomputing --> Completed.
+
+
+02/09/2017 10:23:08: Starting Epoch 1: learning rate per sample = 0.003906  effective momentum = 0.900000  momentum as time constant = 2429.8 samples
+minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
+
+02/09/2017 10:23:08: Starting minibatch loop.
+02/09/2017 10:23:08:  Epoch[ 1 of 1]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 4.31999168 * 2560; EvalClassificationError = 0.90117187 * 2560; time = 0.0346s; samplesPerSecond = 73970.5
+02/09/2017 10:23:08:  Epoch[ 1 of 1]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 4.03155098 * 2560; EvalClassificationError = 0.88593750 * 2560; time = 0.0206s; samplesPerSecond = 124070.2
+02/09/2017 10:23:08:  Epoch[ 1 of 1]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 3.94608994 * 2560; EvalClassificationError = 0.88632813 * 2560; time = 0.0236s; samplesPerSecond = 108554.7
+02/09/2017 10:23:08:  Epoch[ 1 of 1]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 3.86249771 * 2560; EvalClassificationError = 0.86757812 * 2560; time = 0.0245s; samplesPerSecond = 104444.6
+02/09/2017 10:23:08:  Epoch[ 1 of 1]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 3.67761383 * 2560; EvalClassificationError = 0.82109375 * 2560; time = 0.0230s; samplesPerSecond = 111341.0
+02/09/2017 10:23:08:  Epoch[ 1 of 1]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 3.53011475 * 2560; EvalClassificationError = 0.80156250 * 2560; time = 0.0211s; samplesPerSecond = 121346.4
+02/09/2017 10:23:09:  Epoch[ 1 of 1]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 3.34954834 * 2560; EvalClassificationError = 0.79570312 * 2560; time = 0.0268s; samplesPerSecond = 95648.2
+02/09/2017 10:23:09:  Epoch[ 1 of 1]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 3.29253235 * 2560; EvalClassificationError = 0.78554687 * 2560; time = 0.0193s; samplesPerSecond = 132606.9
+02/09/2017 10:23:09: Finished Epoch[ 1 of 1]: [Training] CrossEntropyWithSoftmax = 3.75124245 * 20480; EvalClassificationError = 0.84311523 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.00390625; epochTime=0.200499s
+02/09/2017 10:23:09: SGD: Saving checkpoint model 'C:\repos\CNTK\Examples\Speech\AN4\Output/Models/cntkSpeechFF.dnn'
+
+02/09/2017 10:23:09: Action "train" complete.
+
+02/09/2017 10:23:09: __COMPLETED__
++ return 0
++ local ExitCode=0
++ [[ 0 == 1 ]]
++ return 0
++ cp 'C:\repos\CNTK\Examples\Speech\AN4\Output/Models/cntkSpeechFF.dnn' /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ '[' gpu == cpu ']'
++ pushd /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
+/tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData /cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library
++ '[' Windows_NT == Windows_NT ']'
++ /cygdrive/c/repos/CNTK/x64/release/V2LibraryTests.exe --report_level=detailed --run_test=DeviceSelectionSuite
+Running 4 test cases...
+
+Test module "V2LibraryTests" has passed with:
+  4 test cases out of 4 passed
+  8 assertions out of 8 passed
+
+  Test suite "DeviceSelectionSuite" has passed with:
+    4 test cases out of 4 passed
+    8 assertions out of 8 passed
+
+    Test case "DeviceSelectionSuite/SetCpuDeviceAsDefault" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "DeviceSelectionSuite/SetBestDeviceAsDefault" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "DeviceSelectionSuite/UseCpuDeviceAsDefault" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "DeviceSelectionSuite/CpuAndBestDevicesInAllDevices" has passed with:
+      4 assertions out of 4 passed
+
++ /cygdrive/c/repos/CNTK/x64/release/V2LibraryTests.exe --report_level=detailed '--run_test=!DeviceSelectionSuite'
+Running 105 test cases...
+Minibatch 0: CrossEntropy loss = 3.3893967, Evaluation criterion = 0.82421875
+Minibatch 1: CrossEntropy loss = 3.1829572, Evaluation criterion = 0.7421875
+Minibatch 2: CrossEntropy loss = 3.254487, Evaluation criterion = 0.8046875
+Minibatch 3: CrossEntropy loss = 3.1999359, Evaluation criterion = 0.7734375
+Minibatch 4: CrossEntropy loss = 3.2666368, Evaluation criterion = 0.7890625
+Minibatch 5: CrossEntropy loss = 3.2892547, Evaluation criterion = 0.7890625
+Minibatch 6: CrossEntropy loss = 3.086633, Evaluation criterion = 0.74609375
+Minibatch 7: CrossEntropy loss = 2.944721, Evaluation criterion = 0.67578125
+Minibatch 8: CrossEntropy loss = 2.9493382, Evaluation criterion = 0.7265625
+Minibatch 9: CrossEntropy loss = 3.0834334, Evaluation criterion = 0.734375
+Minibatch 0: CrossEntropy loss = 3.3893967, Evaluation criterion = 0.82421875
+Minibatch 1: CrossEntropy loss = 3.1829567, Evaluation criterion = 0.7421875
+Minibatch 2: CrossEntropy loss = 3.2544873, Evaluation criterion = 0.8046875
+Minibatch 3: CrossEntropy loss = 3.1999359, Evaluation criterion = 0.7734375
+Minibatch 4: CrossEntropy loss = 3.2666366, Evaluation criterion = 0.7890625
+Minibatch 5: CrossEntropy loss = 3.2892547, Evaluation criterion = 0.7890625
+Minibatch 6: CrossEntropy loss = 3.0866327, Evaluation criterion = 0.74609375
+Minibatch 7: CrossEntropy loss = 2.944721, Evaluation criterion = 0.67578125
+Minibatch 8: CrossEntropy loss = 2.9493382, Evaluation criterion = 0.7265625
+Minibatch 9: CrossEntropy loss = 3.0834334, Evaluation criterion = 0.734375
+
+Test module "V2LibraryTests" has passed with:
+  105 test cases out of 105 passed
+  2424 assertions out of 2424 passed
+
+  Test suite "BlockSuite" has passed with:
+    2 test cases out of 2 passed
+
+    Test case "BlockSuite/BlocksWithRecurrence" has passed
+
+    Test case "BlockSuite/ChangingParameterValuesInGPU" has passed
+
+  Test suite "LearnerSuite" has passed with:
+    10 test cases out of 10 passed
+
+    Test case "LearnerSuite/DefaultUnitGainGetterAndSetter" has passed
+
+    Test case "LearnerSuite/SweepBasedSchedule" has passed
+
+    Test case "LearnerSuite/TrainingParametersSchedule" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateSGDLearner" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateAdaGradLearner" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateRMSPropLearner" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateMomentumLearner" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateNesterovLearner" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateFSAdaGradLearner" has passed
+
+    Test case "LearnerSuite/CreateAndUpdateAdamLearner" has passed
+
+  Test suite "LoadLegacyModelSuite" has passed with:
+    2 test cases out of 2 passed
+
+    Test case "LoadLegacyModelSuite/LoadLegacyModelWithPrecomputeInCPU" has passed
+
+    Test case "LoadLegacyModelSuite/LoadLegacyModelWithPrecomputeInGPU" has passed
+
+  Test suite "MinibatchSourceSuite" has passed with:
+    5 test cases out of 5 passed
+
+    Test case "MinibatchSourceSuite/EndOfSweepFlagIsSetCorrectly" has passed
+
+    Test case "MinibatchSourceSuite/NoRandomizedMinibatchSourceWarmStart" has passed
+
+    Test case "MinibatchSourceSuite/NoRandomizedMinibatchSourceWithSingleChunk" has passed
+
+    Test case "MinibatchSourceSuite/RandomizedMinibatchSourceWithSmallChunks" has passed
+
+    Test case "MinibatchSourceSuite/RandomizedMinibatchSourceWithNoData" has passed
+
+  Test suite "SerializationSuite" has passed with:
+    18 test cases out of 18 passed
+    4 assertions out of 4 passed
+
+    Test case "SerializationSuite/LoadingAModelWithALoadBatchNormFunction" has passed
+
+    Test case "SerializationSuite/ExceptionsAreRaisedForNonExistentPaths" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "SerializationSuite/DictionarySerialization" has passed
+
+    Test case "SerializationSuite/LoadingDictionariesGeneratedFromPresentPastAndFutureProtos" has passed
+
+    Test case "SerializationSuite/LargeValueSerialization" has passed
+
+    Test case "SerializationSuite/LargeLernerSerializationInCpu" has passed
+
+    Test case "SerializationSuite/FunctionsForEquality" has passed
+
+    Test case "SerializationSuite/FunctionSerializationInCPU" has passed
+
+    Test case "SerializationSuite/ModelSerializationDuringTrainingInCPU" has passed
+
+    Test case "SerializationSuite/CheckpointingInCPU" has passed
+
+    Test case "SerializationSuite/LegacyModelSavingInCPU" has passed
+
+    Test case "SerializationSuite/CheckpointingWithStatefulNodesInCPU" has passed
+
+    Test case "SerializationSuite/LearnerSerializationInGPU" has passed
+
+    Test case "SerializationSuite/FunctionSerializationInGPU" has passed
+
+    Test case "SerializationSuite/ModelSerializationDuringTrainingInGPU" has passed
+
+    Test case "SerializationSuite/CheckpointingInGPU" has passed
+
+    Test case "SerializationSuite/LegacyModelSavingInGPU" has passed
+
+    Test case "SerializationSuite/CheckpointingWithStatefulNodesInGPU" has passed
+
+  Test suite "FeedForwardSuite" has passed with:
+    5 test cases out of 5 passed
+    16 assertions out of 16 passed
+
+    Test case "FeedForwardSuite/FFTimesAndPlusInCPU" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "FeedForwardSuite/ReduceableTransposeTimesInCPU" has passed
+
+    Test case "FeedForwardSuite/FFTimesAndPlusInGPU" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "FeedForwardSuite/FFNetworkCreationInGPU" has passed with:
+      7 assertions out of 7 passed
+
+    Test case "FeedForwardSuite/FFNetworkCreationInCPU" has passed with:
+      7 assertions out of 7 passed
+
+  Test suite "FunctionSuite" has passed with:
+    16 test cases out of 16 passed
+    12 assertions out of 12 passed
+
+    Test case "FunctionSuite/FindNameInCPU" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "FunctionSuite/FindNameInGPU" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "FunctionSuite/Splice" has passed
+
+    Test case "FunctionSuite/ChangingParameterValuesInCPU" has passed
+
+    Test case "FunctionSuite/ChangingParameterValuesInGPU" has passed
+
+    Test case "FunctionSuite/TimesNodeShapeInference" has passed
+
+    Test case "FunctionSuite/RecurrenceShapeInference" has passed
+
+    Test case "FunctionSuite/SliceInCPU" has passed
+
+    Test case "FunctionSuite/SliceInGPU" has passed
+
+    Test case "FunctionSuite/ReduceSumInCPU" has passed
+
+    Test case "FunctionSuite/ReduceSumInGPU" has passed
+
+    Test case "FunctionSuite/RecurrentFunctionCloning" has passed
+
+    Test case "FunctionSuite/TransposeInCPU" has passed
+
+    Test case "FunctionSuite/TransposeInGPU" has passed
+
+    Test case "FunctionSuite/OutputVariableNameInCPU" has passed
+
+    Test case "FunctionSuite/FunctionOutputs" has passed
+
+  Test suite "NDArrayViewSuite" has passed with:
+    4 test cases out of 4 passed
+    2048 assertions out of 2048 passed
+
+    Test case "NDArrayViewSuite/CheckFloatNDArrayViewInCpu" has passed with:
+      45 assertions out of 45 passed
+
+    Test case "NDArrayViewSuite/CheckNDArrayViewInGpu" has passed with:
+      1997 assertions out of 1997 passed
+
+    Test case "NDArrayViewSuite/CheckCscArrayViewInGpu" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "NDArrayViewSuite/CheckCscArrayViewInCpu" has passed with:
+      2 assertions out of 2 passed
+
+  Test suite "RecurrentFunctionSuite" has passed with:
+    6 test cases out of 6 passed
+    12 assertions out of 12 passed
+
+    Test case "RecurrentFunctionSuite/SimpleRecurrenceInCPU" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "RecurrentFunctionSuite/SimpleRecurrenceInGPU" has passed with:
+      1 assertion out of 1 passed
+
+    Test case "RecurrentFunctionSuite/SimpleLargeRecurrenceInCPU" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "RecurrentFunctionSuite/SimpleLargeRecurrenceInGPU" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "RecurrentFunctionSuite/RecurrentNetworkCreationInCPU" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "RecurrentFunctionSuite/RecurrentNetworkCreationInGPU" has passed with:
+      3 assertions out of 3 passed
+
+  Test suite "TensorSuite" has passed with:
+    3 test cases out of 3 passed
+
+    Test case "TensorSuite/TensorPlusInCPU" has passed
+
+    Test case "TensorSuite/TensorPlusRightOperandWithAxes" has passed
+
+    Test case "TensorSuite/TensorPlusRightOperandWithoutAxes" has passed
+
+  Test suite "UserDefinedFunctionSuite" has passed with:
+    4 test cases out of 4 passed
+
+    Test case "UserDefinedFunctionSuite/DuplicateVariablesInCPU" has passed
+
+    Test case "UserDefinedFunctionSuite/DuplicateVariablesInGPU" has passed
+
+    Test case "UserDefinedFunctionSuite/TimesAndPlusInCPU" has passed
+
+    Test case "UserDefinedFunctionSuite/TimesAndPlusInGPU" has passed
+
+  Test suite "ValueSuite" has passed with:
+    30 test cases out of 30 passed
+    332 assertions out of 332 passed
+
+    Test case "ValueSuite/SettingParameterValuesManuallyInCPU" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "ValueSuite/ValueCreationWithoutNDMaskInCPU" has passed with:
+      20 assertions out of 20 passed
+
+    Test case "ValueSuite/ValueCreationWithNDMaskInCPU" has passed with:
+      16 assertions out of 16 passed
+
+    Test case "ValueSuite/ValueCreationOneHotWithoutNDMaskInCPU" has passed with:
+      10 assertions out of 10 passed
+
+    Test case "ValueSuite/ValueCreationOneHotWithNDMaskInCPU" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "ValueSuite/SparseSequenceBatchValueCreationInCPU" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "ValueSuite/ValueCopyToDenseInCPU" has passed
+
+    Test case "ValueSuite/ValueCopyToOneHotTestInCPU" has passed
+
+    Test case "ValueSuite/ValueCopyToExceptionsInCPU" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "ValueSuite/CreateBatchDenseInCPU" has passed with:
+      8 assertions out of 8 passed
+
+    Test case "ValueSuite/CreateSequenceDenseInCPU" has passed with:
+      16 assertions out of 16 passed
+
+    Test case "ValueSuite/CreateBatchOfSequencesDenseInCPU" has passed with:
+      44 assertions out of 44 passed
+
+    Test case "ValueSuite/CreateBatchOneHotInCPU" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "ValueSuite/CreateSequenceOneHotInCPU" has passed with:
+      8 assertions out of 8 passed
+
+    Test case "ValueSuite/CreateBatchOfSequencesOneHotInCPU" has passed with:
+      22 assertions out of 22 passed
+
+    Test case "ValueSuite/SettingParameterValuesManuallyInGPU" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "ValueSuite/ValueCreationWithNDMaskInGPU" has passed with:
+      16 assertions out of 16 passed
+
+    Test case "ValueSuite/ValueCreationWithoutNDMaskInGPU" has passed with:
+      20 assertions out of 20 passed
+
+    Test case "ValueSuite/ValueCreationOneHotWithoutNDMaskInGPU" has passed with:
+      10 assertions out of 10 passed
+
+    Test case "ValueSuite/ValueCreationOneHotWithNDMaskInGPU" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "ValueSuite/SparseSequenceBatchValueCreationInGPU" has passed with:
+      2 assertions out of 2 passed
+
+    Test case "ValueSuite/ValueCopyToDenseInGPU" has passed
+
+    Test case "ValueSuite/ValueCopyToOneHotInGPU" has passed
+
+    Test case "ValueSuite/ValueCopyToExceptionsInGPU" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "ValueSuite/CreateBatchDenseInGPU" has passed with:
+      8 assertions out of 8 passed
+
+    Test case "ValueSuite/CreateSequenceDenseInGPU" has passed with:
+      16 assertions out of 16 passed
+
+    Test case "ValueSuite/CreateBatchOfSequencesDenseInGPU" has passed with:
+      44 assertions out of 44 passed
+
+    Test case "ValueSuite/CreateBatchOneHotInGPU" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "ValueSuite/CreateSequenceOneHotInGPU" has passed with:
+      8 assertions out of 8 passed
+
+    Test case "ValueSuite/CreateBatchOfSequencesOneHotInGPU" has passed with:
+      22 assertions out of 22 passed
+
++ ExitCode=0
++ popd
+/cygdrive/c/repos/CNTK/Tests/EndToEndTests/UnitTests/CNTKv2Library
++ rm -rf /tmp/cntk-test-20170209112300.996353/UnitTests_CNTKv2Library@release_gpu/TestData
++ '[' gpu == cpu ']'
++ exit 0

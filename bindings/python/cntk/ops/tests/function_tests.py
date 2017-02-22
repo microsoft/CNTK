@@ -21,6 +21,17 @@ def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
     assert op.shape == (3,4)
 
+def test_eval_by_node_name():
+    i = input_variable(shape=(1,),
+                       needs_gradient=True,
+                       name='i')
+    res = i + 3
+
+    assert res.eval({i: [[3]]}) == [6]
+    assert res.eval({'i': [[3]]}) == [6]
+    assert res.eval({u'i': [[3]]}) == [6]
+
+    
 def test_replace_placeholders():
     p = placeholder_variable(shape=(1,))
     i = input_variable(shape=(1,),
@@ -216,7 +227,7 @@ def test_clone_with_function_in_substitution_map():
 def test_clone_with_slice(): 
     i1 = input_variable((2,2), name='i1')
     i2 = input_variable((2,2), name='i2')
-    x = splice((i1,i2), 0) 
+    x = splice(i1, i2, axis=0) 
     W = constant(1, (4,1), name='W') 
     y = convolution(W, x)
     assert(y.shape == (4,2)) 
@@ -289,4 +300,14 @@ def test_combine_duplicated_inputs():
         return True
 
     assert compare_var_names(duplicated_t_plus_b.outputs, [func_name, func_name])
+    
+
+def test_extra_arguments_in_eval():
+    x1 = input_variable((1,), name='x1')
+    x2 = input_variable((1,), name='x2')
+    x1_plus_1 = x1 + 1
+    x1_plus_1_plus_x2 = x1_plus_1 + x2
+
+    result = x1_plus_1.eval({x1 : np.asarray([[1]]), x2 : np.asarray([[1]])})
+    assert np.allclose(result, [[[2]]])
     

@@ -69,11 +69,11 @@ def test_op_plus_sequences(device_id, precision):
     state, actual_forward = z.forward({x : operand}, [z.output], {z.output}, cntk_device(device_id))
     actual_backward = z.backward(state, {z.output : root_gradient}, [x])
 
-    np.allclose(list(actual_forward.values())[0][0], expected_forward[0])
-    np.allclose(list(actual_forward.values())[0][1], expected_forward[1])
+    assert np.allclose(list(actual_forward.values())[0][0], expected_forward[0])
+    assert np.allclose(list(actual_forward.values())[0][1], expected_forward[1])
 
-    np.allclose(list(actual_backward.values())[0][0], expected_backward[0])
-    np.allclose(list(actual_backward.values())[0][1], expected_backward[1])
+    assert np.allclose(list(actual_backward.values())[0][0], expected_backward[0])
+    assert np.allclose(list(actual_backward.values())[0][1], expected_backward[1])
 
 def test_op_plus_gradient_accumulation(device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]

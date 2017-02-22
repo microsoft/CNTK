@@ -6,8 +6,6 @@ DataDir = "$RootDir$"
 OutputDir = "$RootDir$/Output"
 ModelDir = "$OutputDir$/Models"
 
-ndlMacros="$ConfigDir$/Macros.ndl"
-
 precision = "float"
 deviceId = "Auto"
 
@@ -88,7 +86,7 @@ Train = {
     SGD = {
         epochSize = 0
         minibatchSize = 256
-        # CNTK weights new gradient by (1-momentum) for unit gain, thus we multiply Caffe's learning rate by (1-momentum)
+        # CNTK weights new gradient by (1-momentum) for unit gain, thus we divide Caffe's learning rate by (1-momentum)
         learningRatesPerMB = 0.1*25:0.01*25:0.001*25:0.0001*25:0.00001
         momentumPerMB = 0.9
         maxEpochs = 112

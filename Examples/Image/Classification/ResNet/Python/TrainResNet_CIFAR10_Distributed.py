@@ -94,10 +94,10 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
     else:
         learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
     
-    return Trainer(network['output'], network['ce'], network['pe'], learner)
+    return Trainer(network['output'], (network['ce'], network['pe']), learner)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size):
+def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling=False):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -105,40 +105,29 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         network['label']: train_source.streams.labels
     }
 
-    training_session = cntk.training_session(train_source, trainer,
-        cntk.minibatch_size_schedule(minibatch_size), progress_printer, input_map, "ConvNet_CIFAR10_DataAug_", epoch_size)
+    training_session = cntk.training_session(
+        training_minibatch_source = train_source, 
+        trainer = trainer,
+        mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
+        progress_printer = progress_printer,
+        model_inputs_to_mb_source_mapping = input_map, 
+        checkpoint_frequency = epoch_size,
+        checkpoint_filename="ResNet_CIFAR10_DataAug", 
+        progress_frequency=epoch_size,
+        cv_source=test_source,
+        cv_mb_size_schedule=cntk.minibatch_size_schedule(16),
+        restore=False)
+	
+    if profiling:
+        start_profiler(sync_gpu=True)
+        
     training_session.train()
-
-    # TODO: Stay tuned for an upcoming simpler EvalSession API for test/validation.
-    epoch_size     = 10000
-    minibatch_size = 16
-
-    # process minibatches and evaluate the model
-    metric_numer    = 0
-    metric_denom    = 0
-    sample_count    = 0
-    minibatch_index = 0
-
-    while True:
-        data = test_source.next_minibatch(minibatch_size, input_map=input_map)
-        if not data: break;
-
-        local_mb_samples=data[network['label']].num_samples
-        metric_numer += trainer.test_minibatch(data) * local_mb_samples
-        metric_denom += local_mb_samples
-        minibatch_index += 1
-
-    fin_msg = "Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom)
-    progress_printer.end_progress_print(fin_msg)
-
-    print("")
-    print(fin_msg)
-    print("")
-
-    return metric_numer/metric_denom
+    
+    if profiling:
+        stop_profiler()
 
 # Train and evaluate the network.
-def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=3200, warm_up=0, max_epochs=5, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False):
+def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=3200, warm_up=0, max_epochs=5, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiling=False):
 
     set_computation_network_trace_level(0)
     
@@ -160,7 +149,7 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
     trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    return train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size)
+    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling)
 
 
 if __name__=='__main__':
@@ -170,22 +159,22 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-n', '--network', help='network type, resnet20 or resnet110', required=False, default='resnet20')
     parser.add_argument('-s', '--scale_up', help='scale up minibatch size with #workers for better parallelism', type=bool, required=False, default='False')
-    parser.add_argument('-d', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
-    parser.add_argument('-o', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
-    parser.add_argument('-l', '--log', help='Log file', required=False, default=None)
+    parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
+    parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
+    parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
     parser.add_argument('-e', '--epochs', help='Total number of epochs to train', type=int, required=False, default='160')
     parser.add_argument('-es', '--epoch_size', help='Size of epoch in samples', type=int, required=False, default=None)
     parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int, required=False, default='32')
     parser.add_argument('-b', '--block_samples', type=int, help="Number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", required=False, default=None)
     parser.add_argument('-a', '--distributed_after', help='Number of samples to train with before running distributed', type=int, required=False, default='0')
     parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
-
+    parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
 
     args = vars(parser.parse_args())
 
     epoch_size = 50000
     if args['outputdir'] != None:
-        model_path = args['o'] + "/models"
+        model_path = args['outputdir'] + "/models"
     if args['device'] != None:
         set_default_device(gpu(args['device']))
     if args['datadir'] is not None:
@@ -215,7 +204,8 @@ if __name__=='__main__':
                        warm_up=args['distributed_after'],
                        max_epochs=epochs,
                        scale_up=scale_up,
-                       log_to_file=args['log'])
+                       log_to_file=args['logdir'],
+                       profiling=args['profile'])
     finally:
         # Must call MPI finalize when process exit
         Communicator.finalize()

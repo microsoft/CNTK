@@ -51,6 +51,7 @@ public:
         {
             // If there are some, give them time to finish.
             m_prefetchTask.wait_for(std::chrono::seconds(5));
+            // TODO: if the prefetch is still valid, print a warning here!
         }
 
         delete this;

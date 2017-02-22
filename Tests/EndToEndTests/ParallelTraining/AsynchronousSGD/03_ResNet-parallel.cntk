@@ -19,12 +19,10 @@ ModelDir = "$OutputDir$/Models"
 ndlMacros = "$ConfigDir$/Macros.ndl"
 
 precision = "float"
-DeviceId = "auto"
+DeviceId = 0
+# To run against multiple GPUs use this:
+# Device = "auto"
 imageLayout = "cudnn"
-
-
-# override the above as follows when running on CPU:
-# deviceId = -1
 
 # If set to true, always initialize the network on CPU, making initialization consistent across CPU and GPU targets (for testing).
 initOnCPUOnly=true

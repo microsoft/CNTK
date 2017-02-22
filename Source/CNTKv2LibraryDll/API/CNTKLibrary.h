@@ -408,6 +408,7 @@ namespace CNTK
         friend class MPICommunicatorImpl;
         friend class BlockMomentumDistributedLearner;
         friend class Internal::VariableResolver;
+        friend class Trainer;
 
         template <typename T, typename ...CtorArgTypes>
         friend inline std::shared_ptr<T> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
@@ -1631,7 +1632,7 @@ private:
 
         void SetOwner(Function* ownerFunction);
 
-        Variable CompositePreservingCopy() const;
+        Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
 
     private:
 #ifdef SWIGCSHARP
@@ -2553,6 +2554,11 @@ namespace CNTK
         /// (e.g. for use as a fixed feature extractor)
         ///
         Freeze,
+
+        ///
+        /// Internal use only
+        ///
+        Invalid,
     };
 
     ///
@@ -2641,6 +2647,8 @@ namespace CNTK
         ///
         CNTK_API virtual void InferOutputs(std::vector<Variable>& outputs) = 0;
 
+        CNTK_API virtual FunctionPtr Clone(const std::vector<Variable>& /*clonedInputs*/) { NOT_IMPLEMENTED; }
+
     public:
 
         // Optional overrides
@@ -2727,7 +2735,7 @@ namespace CNTK
 
         ///
         /// Returns the root of the Function graph underlying this block Function.
-        /// Throws an exception of this is not a block Function
+        /// Throws an exception ff this is not a block Function
         ///
         CNTK_API FunctionPtr BlockRoot() const;
 
@@ -2880,7 +2888,7 @@ namespace CNTK
         CNTK_API void PrintGraph() const;
 
         ///
-        /// Maimum number of outputs that is currently supported.
+        /// Maximum number of outputs that is currently supported.
         ///
         static const int MaxNumOutputs = 64;
 
@@ -3521,6 +3529,32 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr AsComposite(const FunctionPtr& rootFunction, const std::wstring& name = L"");
 
+    ///
+    /// Create an instance of the CNTK built-in elementwise exponential linear unit operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr ELU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise leaky linear rectifier operation with the specified input operand.
+    ///
+    CNTK_API FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise parametric rectified linear Unit operation 
+    /// with the specified input operand and learning parameter alpha.
+    ///
+    CNTK_API FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in argmin on specified tensor input operand along the specified axis
+    ///
+    CNTK_API FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name = L"");
+
     namespace Sequence
     {
         CNTK_API FunctionPtr IsFirst(const Variable& operand, const std::wstring& name = L"");
@@ -3756,8 +3790,8 @@ namespace CNTK
     CNTK_API void SetDefaultUnitGainValue(bool value);
 
     ///
-    /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values
-    /// For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
+    /// Abstraction for learning a subset of parameters of a learnable Function using first order gradient values.
+    /// For example momentum, AdaGrad, RMSProp, etc. are different types of learners with their own algorithms for
     /// learning parameter values using first order gradients.
     ///
     class Learner
@@ -3880,7 +3914,9 @@ namespace CNTK
     static MomentumSchedule DefaultVarianceMomentum = MomentumAsTimeConstantSchedule(2 * 3600 * 100);
 
     ///
-    /// Create an instance of the CNTK built-in Adam learner (only the low-memory variant is supported at the moment).
+    /// Create an instance of Adam learner as the original paper.
+    /// Due to history reason, the legacy implementation of AdamLearner is FSAdaGrad. To keep compitability on the interface, we
+    /// will switch to the original Adam only when lowMemory = false, while keep the legacy logic when it leaves default, aka. true.
     ///
     CNTK_API LearnerPtr AdamLearner(const std::vector<Parameter>& parameters,
                                     const LearningRateSchedule& learningRateSchedule,
@@ -4109,9 +4145,29 @@ namespace CNTK
         CNTK_API double PreviousMinibatchEvaluationAverage() const;
 
         ///
-        /// Returns the number of samples in the last minibatch trained with
+        /// Returns the number of samples in the last minibatch trained with.
         ///
         size_t PreviousMinibatchSampleCount() const { return m_prevMinibatchNumSamples; }
+
+        ///
+        /// Returns the average training loss per sample for accumulated training loss.
+        ///
+        CNTK_API double AccumulatedLossAverage() const;
+
+        ///
+        /// Returns the average evaluation criterion value per sample for accumulated eval criterion.
+        ///
+        CNTK_API double AccumulatedEvaluationAverage() const;
+
+        ///
+        /// Returns the number of samples accumulated
+        ///
+        size_t AccumulatedSampleCount() const { return m_accumulatedNumSamples; }
+
+        ///
+        /// Reset the accumulation
+        ///
+        CNTK_API void ResetAccumulation();
 
         ///
         /// Learners associated with this Trainer for updating the model's parameters using computed gradients.
@@ -4127,6 +4183,12 @@ namespace CNTK
         template <typename T1, typename ...CtorArgTypes>
         friend std::shared_ptr<T1> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
+        friend class TrainingSession;
+
+        // Returns aggregated evaluation criterion value and sample count.
+        // TODO: change the public interface to return pair(error, sampleCount) instead of average error.
+        double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, size_t& sampleCount);
+
         Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners);
         Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction, const std::vector<LearnerPtr>& parameterLearners);
 
@@ -4140,6 +4202,8 @@ namespace CNTK
         bool TrainDistributedMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, bool sweepEnd, const DeviceDescriptor& computeDevice);
 
         void Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState);
+
+        void AccumulatePrevMinibatch(const DeviceDescriptor& computeDevice);
 
         FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
@@ -4158,6 +4222,10 @@ namespace CNTK
         size_t   m_prevMinibatchNumSamples;
         ValuePtr m_prevMinibatchAggregateTrainingLossValue;
         ValuePtr m_prevMinibatchAggregateEvalCriterionValue;
+
+        size_t   m_accumulatedNumSamples;
+        ValuePtr m_accumulatedTrainingLossValue;
+        ValuePtr m_accumulatedEvalCriterionValue;
     };
 
     ///
@@ -4226,6 +4294,8 @@ namespace CNTK
         static const size_t FullDataSweep    = SIZE_MAX - 2; // An arbitrary sentinel value
         static const size_t InfiniteSamples  = SIZE_MAX;
         static const size_t DefaultRandomizationWindow = SIZE_MAX - 2;
+
+        CNTK_API static const size_t DefaultRandomizationWindowInChunks;
 
     public:
         ///
@@ -4321,13 +4391,21 @@ namespace CNTK
     /// 
     /// Instantiate the CNTK built-in text format minibatch source
     ///
-    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs, size_t epochSize = MinibatchSource::InfinitelyRepeat, bool randomize = true)
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs,
+                                                        size_t epochSize = MinibatchSource::InfinitelyRepeat, 
+                                                        bool randomize = true,
+                                                        size_t randomizationWindow = MinibatchSource::DefaultRandomizationWindowInChunks,
+                                                        bool sampleBasedRandomizationWindow = false)
     {
         ::CNTK::Dictionary minibatchSourceConfiguration;
         minibatchSourceConfiguration[L"epochSize"] = epochSize;
 
         if (randomize)
+        {
             minibatchSourceConfiguration[L"randomize"] = true;
+            minibatchSourceConfiguration[L"randomizationWindow"] = randomizationWindow;
+            minibatchSourceConfiguration[L"sampleBasedRandomizationWindow"] = sampleBasedRandomizationWindow;
+        }
 
         ::CNTK::Dictionary deserializerConfiguration;
         deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
@@ -4488,14 +4566,46 @@ namespace CNTK
     ///
     class TrainingSession
     {
+        struct PeriodicAction
+        {
+            size_t frequency;
+            size_t currentIndex;
+            size_t sampleCountWhenLastCalled;
+            std::function<void(size_t currentIndex, const DeviceDescriptor&)> action;
+        };
+
     public:
+        /// 
+        /// Constructor of the training session:
+        /// trainingSource : a minibatch source that will be used for training
+        /// trainer : an instance of a trainer
+        /// modelInputsToMinibatchSourceMapping : mapping between the input node of the model and the corresponding stream
+        /// minibatchSizeSchedule : a minibatch size schedule used for training
+        /// checkpointFrequencyInSamples : an approximate number of global samples processed accross the workers
+        ///    after which the checkpoint is taken. Should be positive number if the checkpoint file is specified.
+        /// checkpointFilename : a file name of the checkpoint file, if empty, the checkpointing is disabled.
+        /// crossValidationSource: a minibatch source that will be used for cross validation.
+        /// crossValidationSchedule : a minibatch size schedule for cross validation.
+        /// restoreFromCheckpointIfExists: flag, indicating whether perform restore of the training session from the checkpoint before the start of the training.
+        /// keepExistingCheckpoints: flag, indicating whether to store all checkpoints, by default only the last checkpoint is preserved
+        /// maxNumberOfTrainingSamples : max number of samples after which the training should be stopped
+        /// progressFrequency : an approximate number of global samples processed accross the workers
+        ///    after which the summary of metrics is reported using the progress_printer
+        ///
         CNTK_API TrainingSession(
             const MinibatchSourcePtr& trainingSource,
             const TrainerPtr& trainer,
             const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
-            const TrainingParameterPerUnitSchedule<size_t, TrainingParameterSchedule<size_t>::UnitType::Sample>& minibatchSizeSchedule,
+            const MinibatchSizeSchedule& minibatchSizeSchedule,
             size_t checkpointFrequencyInSamples,
-            const std::wstring& checkPointFileName);
+            const std::wstring& checkPointFileName,
+            const MinibatchSourcePtr& crossValidationSource = nullptr,
+            const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(1),
+            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
+            bool restoreFromCheckpointIfExists = true,
+            bool keepExistingCheckpoints = false,
+            size_t maxNumberOfTrainingSamples = std::numeric_limits<size_t>::max(),
+            size_t progressFrequency = std::numeric_limits<size_t>::max());
 
         ///
         /// Runs the session.
@@ -4532,12 +4642,27 @@ namespace CNTK
         ///
         /// Optionally overridable callback that is invoked before each checkpoint.
         ///
-        CNTK_API virtual void OnCheckpointStart() {};
+        CNTK_API virtual void OnCheckpointStart(size_t /*checkpointIndex*/) {};
 
         ///
         /// Optionally overridable callback that is invoked after each checkpoint.
         ///
-        CNTK_API virtual void OnCheckpointEnd() {};
+        CNTK_API virtual void OnCheckpointEnd(size_t /*checkpointIndex*/) {};
+
+        ///
+        /// Optionally overridable callback that is invoked before each cross validation.
+        ///
+        CNTK_API virtual void OnCrossValidationStart(size_t /*validationIndex*/) {};
+
+        ///
+        /// Optionally overridable callback that is invoked after each cross validation.
+        ///
+        CNTK_API virtual void OnCrossValidationEnd(size_t /*validationIndex*/, double /*averageError*/, size_t /*numberOfSamples*/, size_t /*numberOfMinibatches*/) {};
+
+        ///
+        /// Optionally overridable callback that is invoked with progress frequency.
+        ///
+        CNTK_API virtual void OnProgress(size_t /*index*/) {};
 
     protected:
         ///
@@ -4551,15 +4676,24 @@ namespace CNTK
         /// Disallow copy and move construction and assignment
         TrainingSession(const TrainingSession&) = delete; TrainingSession& operator=(const TrainingSession&) = delete; TrainingSession& operator=(TrainingSession&&) = delete; TrainingSession(TrainingSession&&) = delete;
 
-        void SaveCheckpoint();
+        // Auxilary functions.
+        void GetNextMinibatch(const MinibatchSourcePtr& source, std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, size_t workerRank, size_t numberOfWorkers, const DeviceDescriptor& computeDevice);
+        void GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
+        void GetCrossValidationMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice);
 
-        static const std::wstring s_checkpointIndex;
-        static const std::wstring s_trainingMinibatchSource;
+        void RestoreFromCheckpoint();
+        void SaveCheckpoint(size_t currentIndex);
+        void SaveFinalCheckpoint();
 
-        const size_t m_checkpointFrequencyinSamples;
+        void CrossValidate(size_t currentIndex, const DeviceDescriptor& computeDevice);
+        void ReportProgress(size_t currentIndex);
+
+        // Checkpointing
         const std::wstring m_checkPointFileName;
-        size_t m_currentCheckpointIndex;
+        const bool m_restoreFromCheckpointIfExists;
+        const bool m_saveAllCheckpoints;
 
+        // Training
         MinibatchSourcePtr m_trainingSource;
         TrainerPtr m_trainer;
         std::unordered_map<Variable, StreamInformation> m_modelInputToMinibatchSourceStream;
@@ -4567,15 +4701,35 @@ namespace CNTK
         size_t m_workerRank;
         size_t m_numberOfWorkers;
         const MinibatchSizeSchedule m_minibatchSizeSchedule;
+        const size_t m_maxNumberOfSamples;
+
+        // Cross validation.
+        MinibatchSourcePtr m_crossValidationSource;
+        const MinibatchSizeSchedule m_crossValidationSchedule;
+
+        std::vector<PeriodicAction> m_actions;
     };
 
+    ///
+    /// Creates an instance of the training session class. Parameters match the paramters of the TrainingSession constructor.
+    ///
     CNTK_API TrainingSessionPtr CreateBasicTrainingSession(
         const MinibatchSourcePtr& trainingSource,
         const TrainerPtr& trainer,
         const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
-        const TrainingParameterPerUnitSchedule<size_t, TrainingParameterSchedule<size_t>::UnitType::Sample>& minibatchSizeSchedule,
-        size_t checkpointFrequencyinSamples,
-        const std::wstring& checkPointFileName);
+        const MinibatchSizeSchedule& minibatchSizeSchedule,
+        size_t checkpointFrequencyInSamples,
+        const std::wstring& checkPointFileName,
+        const MinibatchSourcePtr& crossValidationSource = nullptr,
+        const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(1),
+        size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
+        bool restoreFromCheckpointIfExists = true,
+        bool keepExistingCheckpoints = false,
+        size_t maxNumberOfTrainingSamples = std::numeric_limits<size_t>::max(),
+        size_t progressFrequency = std::numeric_limits<size_t>::max());
+
+
+    CNTK_API void PrintBuiltInfo();
 }
 
 
