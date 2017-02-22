@@ -401,8 +401,8 @@ $(CNTKMATH_LIB): $(MATH_OBJ) | $(PERF_PROFILER_LIB)
 
 
 # Any executable using Common or ReaderLib needs to link these libraries. 
-READER_LIBS := $(CNTKMATH_LIB) $(PERF_PROFILER_LIB) $(BOOSTLIBS)
-L_READER_LIBS := -l$(CNTKMATH) -l$(PERF_PROFILER)
+READER_LIBS := $(CNTKMATH_LIB) $(PERF_PROFILER_LIB)
+L_READER_LIBS := -l$(CNTKMATH) -l$(PERF_PROFILER) $(BOOSTLIBS)
 
 
 ########################################
