@@ -145,6 +145,15 @@ namespace CNTK
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
+        else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
+        {
+            auto reductionAxis = NormalizeAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0]);
+            for (auto inputDynamicAxis : inputs[0].DynamicAxes())
+            {
+                if (inputDynamicAxis != reductionAxis)
+                    outputDynamicAxes.push_back(inputDynamicAxis);
+            }
+        }
         else if (op == PrimitiveOpType::Where)
         {
             if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewDynamicAxes))
@@ -565,9 +574,11 @@ namespace CNTK
                         case PrimitiveOpType::ReduceElements:
                         {
                             assert(m_inputs.size() == 1);
-                            auto reductionAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape());
+                            auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
                             if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                                 outputShape = {};
+                            else if (reductionAxis.IsDynamicAxis())
+                                outputShape = m_inputs[0].Shape();
                             else
                             {
                                 std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };

@@ -904,6 +904,14 @@ namespace CNTK
         CNTK_API static const Axis& DefaultDynamicAxis();
 
         ///
+        /// Axis object representing the sequence axis (ordered dynamic axis) of an
+        /// operand whose dynamic axes have not yet been inferred/resolved (i.e. are unknown).
+        /// This automatically resolves to the actual sequence dynamic axis of the operand that
+        /// it is specified for, when the dynamic axes of the operand are resolved.
+        ///
+        CNTK_API static const Axis& OperandSequenceAxis();
+
+        ///
         /// Axis object representing the batch axis.
         ///
         CNTK_API static const Axis& DefaultBatchAxis();

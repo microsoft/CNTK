@@ -819,6 +819,9 @@ public:
         return EnumerateNodes(std::vector<ComputationNodeBasePtr>{shared_from_this()});
     }
 
+    static const std::wstring DefaultDynamicAxisName;
+    static const std::wstring DefaultNoSequenceAxisName;
+
 private:
     // Recursive part of EnumerateNodes().
     void EnumerateNodesRec(std::unordered_set<ComputationNodeBasePtr>& visited, std::list<ComputationNodeBasePtr>& result) /*const*/ // const not working due to shared_from_this()
@@ -1443,6 +1446,7 @@ public:
 
     static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
                                   const MBLayoutPtr& inputLayout,
+                                  ElemType beta,
                                   Matrix<ElemType>& broadcastTo,
                                   const FrameRange& targetFrameRange,
                                   const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage);

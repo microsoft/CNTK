@@ -457,9 +457,9 @@ namespace CNTK
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
     {
         std::vector<Axis> inputVarDynamicAxes;
-        if (internalDynamicAxisName.substr(0, CompositeFunction::InternalDefaultDynamicAxisName.length()) == CompositeFunction::InternalDefaultDynamicAxisName)
+        if (internalDynamicAxisName.substr(0, ComputationNodeBase::DefaultDynamicAxisName.length()) == ComputationNodeBase::DefaultDynamicAxisName)
             inputVarDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
-        else if (internalDynamicAxisName.substr(0, CompositeFunction::InternalNoSequenceAxisName.length()) == CompositeFunction::InternalNoSequenceAxisName)
+        else if (internalDynamicAxisName.substr(0, ComputationNodeBase::DefaultNoSequenceAxisName.length()) == ComputationNodeBase::DefaultNoSequenceAxisName)
             inputVarDynamicAxes = { Axis::DefaultBatchAxis() };
         else
             inputVarDynamicAxes = { Axis(internalDynamicAxisName), Axis::DefaultBatchAxis() };
@@ -474,9 +474,9 @@ namespace CNTK
             LogicError("Empty dynamic axes set");
 
         if (dynamicAxes == std::vector<Axis>({ Axis::DefaultBatchAxis() }))
-            return CompositeFunction::InternalNoSequenceAxisName;
+            return ComputationNodeBase::DefaultNoSequenceAxisName;
         else if (dynamicAxes == std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }))
-            return CompositeFunction::InternalDefaultDynamicAxisName;
+            return ComputationNodeBase::DefaultDynamicAxisName;
         else
             return dynamicAxes[0].Name();
     }

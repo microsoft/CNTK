@@ -201,17 +201,9 @@ class ReduceElementsNode : public ComputationNode<ElemType>, public NumInputs<1>
 
     void ValidateOp();
 public:
-    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = 0) :
-        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/), m_reduceAll(false), m_mean(false)
+    ReduceElementsNode(DEVICEID_TYPE deviceId, const wstring& name, const std::wstring& operation = std::wstring(), int axis = CNTKInternalIdxValueForAllStaticAxes) :
+        Base(deviceId, name), m_operation(operation), m_axis(axis), m_reductionOp((ElementWiseOperator)-1/*invalid*/), m_scale(0/*invalid*/)
     {
-        // axis==-1 denotes reduction across all axes. 
-        // we achieve this by setting m_axis=0 and m_reduceAll = true
-        // later in forward/backward prop we use this to set the shape of the output  
-        if (axis == -1)
-        {
-            m_axis = 0;
-            m_reduceAll = true;
-        }
         if (!m_operation.empty()) // verify validity already here out of courtesy (would otherwise be caught in Validate())
             ValidateOp();
     }
@@ -231,11 +223,44 @@ public:
     virtual bool /*ComputationNodeBase::*/ InputUsedInComputingInputNodesGradients(size_t childIndex) const override;
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override;
 
+    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeForwardProp(matrixPool);
+        RequestMatrixFromPool(m_tempScatterIndices, matrixPool);
+        RequestMatrixFromPool(m_tempUnpackedData, matrixPool);
+    }
+
+    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterForwardProp(matrixPool);
+        ReleaseMatrixToPool(m_tempScatterIndices, matrixPool);
+        ReleaseMatrixToPool(m_tempUnpackedData, matrixPool);
+    }
+
+    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
+    {
+        Base::RequestMatricesBeforeBackprop(matrixPool);
+        RequestMatrixFromPool(m_tempGatherIndices, matrixPool);
+    }
+
+    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
+    {
+        Base::ReleaseMatricesAfterBackprop(matrixPool);
+        ReleaseMatrixToPool(m_tempGatherIndices, matrixPool);
+    }
+
     std::wstring ReductionOpName() const { return m_operation; }
     int ReductionAxis() const { return m_axis; }
 
     static const int  CNTKInternalIdxValueForAllStaticAxes = 0;
     static const int  CNTKInternalIdxValueForAllAxes = -1;
+    static const int  CNTKInternalIdxValueForSequenceAxis = -2;
+
+private:
+    bool IsMean() const { return (m_operation == L"Mean"); }
+    bool ReduceAllStaticAxes() const { return m_axis == CNTKInternalIdxValueForAllStaticAxes; }
+    bool ReduceAllAxes() const { return m_axis == CNTKInternalIdxValueForAllAxes; }
+    bool ReduceSequenceAxis() const { return m_axis == CNTKInternalIdxValueForSequenceAxis; }
 
 private:
     // operation attributes
@@ -245,8 +270,10 @@ private:
     // things cached during validation
     ElementWiseOperator m_reductionOp; // the reduction operation mapped to our internal opCode
     ElemType m_scale;                  // 1 or, for Mean, 1/number of elements we are reducing over
-    bool m_reduceAll;                  // true iff reducing over all axes (including dynamic ones)
-    bool m_mean;                       // true iff computing the mean
+
+    shared_ptr<Matrix<ElemType>> m_tempGatherIndices;
+    shared_ptr<Matrix<ElemType>> m_tempScatterIndices;
+    shared_ptr<Matrix<ElemType>> m_tempUnpackedData;
 };
 
 // -----------------------------------------------------------------------
@@ -302,7 +329,7 @@ public:
         else // Broadcasting along the sequence case: must reshuffle
         {
             auto result = ValueFor(fr);
-            ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), result, fr, m_tempGatherIndices);
+            ComputationNode<ElemType>::BroadcastToPacked(InputRef(0).Value(), InputRef(0).GetMBLayout(), /*beta =*/ 0, result, fr, m_tempGatherIndices);
         }
     }
 
