@@ -1,10 +1,10 @@
-Tutorials
+ Tutorials
 ===============
 
 #.  *Classify cancer using simulated data (Logistic Regression)*
      CNTK 101: `Logistic Regression`_ with NumPy
 
-#.  *Classify cancer using simulated data (Feed Forward)*
+#.  *Classify cancer using simulated data (Feed Forward, FFN)*
      CNTK 102: `Feed Forward network`_ with NumPy
 
 #.  *Recognize hand written digits (OCR) with MNIST data*
@@ -13,13 +13,13 @@ Tutorials
 #.  *Learn how to predict the stock market*
      CNTK 104: `Time Series basics`_ with finance data
 
-#.  *Compress (using autoencoder) hand written digits from MNIST data with no human input (unsupervised learning)*
+#.  *Compress (using autoencoder) hand written digits from MNIST data with no human input (unsupervised learning, FFN)*
      CNTK 105 Part A: `Data preparation <https://github.com/Microsoft/CNTK/blob/v2.0.beta11.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb>`_ ,  Part B: `Feed Forward autoencoder`_
 
 #.  *Forecasting using data from an IOT device*
      CNTK 106: LSTM based forecasting - Part A: `with simulated data <https://github.com/Microsoft/CNTK/blob/v2.0.beta11.0/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb>`_
 
-#.  *Recognize objects in images from CIFAR-10 data*
+#.  *Recognize objects in images from CIFAR-10 data (Convolutional Network, CNN)*
      CNTK 201 Part A: `Data preparation <https://github.com/Microsoft/CNTK/blob/v2.0.beta11.0/Tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb>`_,  Part B: `VGG and ResNet classifiers`_
 
 #.  *Infer meaning from text snippets using LSTMs and word embeddings*
