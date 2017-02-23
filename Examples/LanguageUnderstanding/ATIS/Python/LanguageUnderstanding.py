@@ -46,7 +46,7 @@ def create_reader(path, is_training):
 # TODO: separate slot and intent tagging; maybe do multi-task learning
 def create_model_function():
   from cntk.ops.sequence import last
-  with default_options(initial_state=0.1, enable_self_stabilization=False):  # inject an option to mimic the BS version identically; remove some day
+  with default_options(enable_self_stabilization=True):  # inject an option to mimic the BS version identically; remove some day
     return Sequential([
         Label('input'),
         Embedding(emb_dim, name='embed'),
