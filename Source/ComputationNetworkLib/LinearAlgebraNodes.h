@@ -418,7 +418,7 @@ public:
                         Input(inputIndex)->ParentOverwritesGradient() ? (ElemType)0.0 : (ElemType)1.0,
                         inputGradient);
                     // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
-                    // BUGBUG: is this masking correctly?
+                    // Note: We do not need to mask gaps here, since this code branch operates sample by sample (no reduction over samples).
                 }
                 else
                 {

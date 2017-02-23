@@ -17,18 +17,20 @@ using gradients of parameters w.r.t. a training objective.
 
 class Trainer(cntk_py.Trainer):
     '''
-    Trainer to train the specified ``model`` according to a specified loss function
-    as the training criterion, a specified metric function as the
-    criterion for evaluating the trained model's quality, and using the
+    Class for training the model parameters of a models' specified loss function, using the
     specified set of ``parameter_learners`` for updating the model's parameters
     using computed gradients.
+    An optional specified metric function, which can be non-differentiable,
+    can be used for tracking the trained model's quality.
 
     Args:
-       model (:class:`~cntk.ops.functions.Function`): root node of the function to train
+       model (:class:`~cntk.ops.functions.Function`): root node of the function to train or None
        criterion (:class:`~cntk.ops.functions.Function`): Function with one or two outputs,
-        representing loss and evaluation metric (in this order).
+        representing loss and, if given, evaluation metric (in this order).
         Alternatively, a tuple(loss Function, evaluation Function) is also accepted.
-       parameter_learners (list): list of learners from :mod:`cntk.learner`
+       parameter_learners (list): list of learners from :mod:`cntk.learner`.
+        The learners must cover all model parameters of the loss function.
+        TODO: Would be great to allow to skip some parameters that should not be updated.
     '''
 
     @staticmethod
@@ -37,8 +39,6 @@ class Trainer(cntk_py.Trainer):
             criterion = criterion.outputs           # break up tuple-valued Function into tuple of Functions
         # map Variable to Function
         from cntk import combine
-        #criterion = tuple([sanitize_function(output) for output in criterion])
-        # BUGBUG: for tuple-valued BlockFunctions, sanitize_function() returns the tuple; must use combine() instead
         criterion = tuple([combine([output], output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
         if not isinstance(criterion, tuple): # input can be a single value or a tuple (loss, metric)
             criterion = (criterion, None)    # if single then pad with None for the metric

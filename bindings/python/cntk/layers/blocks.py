@@ -19,9 +19,6 @@ from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
 from cntk.default_options import *
 
-# TODO: As you are on the level of cntk here, you could use relative imports:
-# from .ops.functions import Function
-# No -> SystemError: Parent module '' not loaded, cannot perform relative import
 from cntk.ops.functions import Function
 
 _INFERRED = (InferredDimension,)  # as a tuple, makes life easier
@@ -118,9 +115,14 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
     '''
     Constructs a Placeholder variable.
     '''
+    if shape is not None or dynamic_axes is not None or is_sparse is not None:
+        import warnings
+        warnings.warn('Placeholder() no longer requires shapes, axes, or spares to be specified. Please just remove the arguments.', DeprecationWarning)
+    return placeholder_variable(name=name)
+    # TODO: delete these vv once confirmed that this is indeed not used anymore
     #p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
     # BUGBUG: placeholder does not know is_sparse
-    return placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
+    #return placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
 
 def ForwardDeclaration(name='forward_declaration'):
     '''
@@ -131,20 +133,21 @@ def ForwardDeclaration(name='forward_declaration'):
     var_fwd = Placeholder(name=name)
     def resolve_to(var):
         from cntk import cntk_py
-        if isinstance(var, cntk_py.Function):
-            var.replace_placeholders({var_fwd: var.output})  # resolves var_fwd := var
-        else:
-            var.owner.replace_placeholders({var_fwd: var})   # resolves var_fwd := var
+        #if isinstance(var, cntk_py.Function):
+        #    var.replace_placeholders({var_fwd: var.output})  # resolves var_fwd := var
+        #else:
+        # TODO: ^^ should no longer be needed; delete once confirmed
+        var.owner.replace_placeholders({var_fwd: var})   # resolves var_fwd := var
     var_fwd.resolve_to = resolve_to
     return var_fwd
 
-# TODO: This should become a C++-side Function, e.g. like sigmoid
 @Function
 def identity(keep):
     '''
     Identity function.
     There is no factory for it because there is only one identity function.
     '''
+    # Note: We cannot use alias() here since parameter-shape inference cannot be done through alias().
     return combine([keep])
 
 

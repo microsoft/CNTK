@@ -20,7 +20,7 @@ def depth_first_search(root, visitor, max_depth=None, sort_by_distance=False):
          argument and returns ``True`` if that node should be returned.
         max_depth (int): maximum number of BlockFunction levels to traverse into.
         sort_by_distance: result list is sorted by how far away they are from the root
-        TODO: is this still used? If not, remove.
+        TODO: max_depth is no longer used. Remove?
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
@@ -82,11 +82,12 @@ def find_all_with_name(node, node_name, max_depth=None):
     search.
 
     Args:
-        node (graph node): the node to start the journey from
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
+        max_depth (int): maximum number of BlockFunction levels to traverse into.
 
     Returns:
-        List of primitive functions having the specified name
+        List of primitive (or block) functions having the specified name
 
     See also:
         :func:`~cntk.ops.functions.Function.find_all_with_name` in class
@@ -100,11 +101,12 @@ def find_by_name(node, node_name, max_depth=None):
     search. It assumes that the name occurs only once.
 
     Args:
-        node (graph node): the node to start the journey from
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
+        max_depth (int): maximum number of BlockFunction levels to traverse into.
 
     Returns:
-        Primitive function having the specified name
+        Primitive (or block) function having the specified name
 
     See also:
         :func:`~cntk.ops.functions.Function.find_by_name` in class

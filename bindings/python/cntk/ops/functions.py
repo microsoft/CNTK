@@ -146,9 +146,6 @@ class Function(cntk_py.Function):
                     out = f(*fun_args)
                     if out is None:
                         raise TypeError("CNTK Function '{}' must return a value".format(f_name))
-                    #if isinstance(out, Function): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                    #    print('trying to print args for', f_name)
-                    #    print('out args:', [arg.name for arg in out.arguments])
                 finally:
                     # unhide Placeholders of this function again
                     for arg in args:
@@ -164,11 +161,9 @@ class Function(cntk_py.Function):
                     out = [resolve_named(output) for output in out]
                     # BUGBUG: combine() does not allow duplicates, so we wrap them in alias()
                     out_seen = set()
-                    for i in range(len(out)):
-                        out_i = out[i]
+                    for i, out_i in enumerate(out):
                         if out_i in out_seen:
                             out[i] = alias(out_i)
-                            #print('alias-wrapping duplicate arg in', f_name)
                         else:
                             out_seen.add(out_i)
                     out = combine(out)  # --> turn into a combine()
@@ -181,19 +176,17 @@ class Function(cntk_py.Function):
                 block_args = [Function._make_arg_variable(arg.name, annotations) for arg in args]  # placeholders inside the BlockFunction
                 out = invoke(block_args)
                 out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=op_name, block_instance_name=name)
-                #print('made block out of', f_name, op_name, name)
             # not a block
             else:
                 fun_args = args
                 #if len(fun_args) > 1:
                 #    fun_args = force_order_args(fun_args)
-                # BUGBUG: Python interpreter used to crash sometimes with this enabled, so for now fix it after the fact only if needed
+                # BUGBUG: Python interpreter crashes sometimes with this enabled, so for now fix it after the fact only if needed
                 # now invoke the Python function
                 out = invoke(fun_args)
                 # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
                 out_arg_names = [arg.name for arg in out.signature]
                 if set(out_arg_names) == set(arg_names) and out_arg_names != arg_names:  # order came out wrong
-                    #print('reexecuting function', f_name, 'because args came out as', out_arg_names, 'instead of', arg_names)
                     fun_args = force_order_args(fun_args)
                     out = invoke(fun_args)
 
@@ -212,13 +205,6 @@ class Function(cntk_py.Function):
                     unused_arg_names = [arg.name for arg in unused_args]
                     raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
 
-            # for debugging
-            #out.f_name = f_name  # keep in Python wrapper for debugging
-
-            # add all members to the Python class
-            # TODO: remove this, stuff should not be in the Python objects
-            #for key in members:   # UNTESTED
-            #    out.__dict__[key] = members[key]
             return out
 
     @property
@@ -312,7 +298,7 @@ class Function(cntk_py.Function):
         self.replace_placeholders(dict(zip(placeholders, args)))
 
 
-    # TODO: change to tuple, or remove entirely
+    # TODO: we can use namedduple() for this
     class OrderedRecord(list):
         '''
         A container that behaves like a list and a class, in that the elements it stores
@@ -524,8 +510,6 @@ class Function(cntk_py.Function):
         # C++ clone() can only clone composites. If we are not a composite, make it one using combine()
         if not self.is_composite:
             from cntk import combine
-            #return combine([self]).clone(method, substitutions).root_function.arguments[0].owner
-            # BUGBUG: This ^^ does not give me the correct .arguments, so we leave the extra combine() in for now.
             return combine([self]).clone(method, substitutions)
 
         method = getattr(cntk_py,

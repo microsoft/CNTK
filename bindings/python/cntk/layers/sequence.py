@@ -56,7 +56,7 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
     @BlockFunction('PastValueWindow', name)
     def past_value_window(x):
     
-        ones_like_input = sequence.constant_with_dynamic_axes_like(1, x)
+        ones_like_input = sequence.broadcast_as(1, x)
 
         # get the respective n-th element from the end
         last_values = [nth(x, t)               for t in range(window_size)]
@@ -240,7 +240,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         # create a new dynamic axis if a length increase is specified
         out_axis = dynamic_axes_like
         if length_increase != 1:
-            factors = sequence.constant_with_dynamic_axes_like(length_increase, out_axis) # repeat each frame 'length_increase' times, on average
+            factors = sequence.broadcast_as(length_increase, out_axis) # repeat each frame 'length_increase' times, on average
             out_axis = sequence.where(factors)  # note: values are irrelevant; only the newly created axis matters
 
         state_fwd = ForwardDeclaration(name='unfold_state_fwd')

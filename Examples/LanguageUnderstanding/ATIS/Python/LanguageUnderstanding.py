@@ -119,9 +119,6 @@ def peek(model, epoch):
 def train(reader, model, max_epochs):
 
     # declare the model's input dimension, so that the saved model is usable
-    log_number_of_parameters(model)
-    from cntk.utils.debughelpers import dump_function
-    dump_function(model, 'm')
     model.update_signature(Sequence[SparseTensor[vocab_size]])
     #model.declare_args(vocab_size)
 
@@ -201,6 +198,7 @@ def evaluate(reader, model):
 #############################
 
 if __name__=='__main__':
+
     from _cntk_py import set_fixed_random_seed
     set_fixed_random_seed(1) # useful for testing
 
