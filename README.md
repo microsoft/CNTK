@@ -5,6 +5,17 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-02-23.* V 2.0 Beta 12 Release**  
+Highlights of this Release:
+* New and updated features: new activation functions, support of `Argmax` and `Argmin`, improved performance of `numpy` interop, new functionality of existing operators, and more.
+* [CNTK for CPU on Windows can now be installed via `pip install` on Anaconda 3](https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Python). Other configurations will be enabled soon.
+* New features in C++ API.
+* [New Eval examples for RNN models](https://github.com/Microsoft/CNTK/blob/master/Examples/Evaluation/CNTKLibraryCSEvalCPUOnlyExamples/CNTKLibraryCSEvalExamples.cs).
+* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package) with CNTK V2 C++ Library.
+
+See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_12_Release_Notes).  
+Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
+
 ***2017-02-13.* V 2.0 Beta 11 Release available at Docker Hub**  
 CNTK V 2.0 Beta 11 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
@@ -36,10 +47,6 @@ See more on CNTK as Docker Images in this [Wiki article](https://github.com/Micr
 
 See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_10_Release_Notes).
 Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
-
-***2017-01-25.* V 2.0 Beta 9 Release available at Docker Hub**  
-CNTK V 2.0 Beta 9 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
-See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 
