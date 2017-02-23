@@ -5873,161 +5873,344 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
     }
 };
 
+// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
+// prob (input): the posterior output from the network
+// alpha (output): alpha for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numChannels (input): channel number in this minibatch
+// uttNum (input): number of utterances
+// t (input): time stamp to process
+// maxPhoneNum (input): the max number of phones between utterances
+// totalPhoneNum (input): the total number of phones of all utterances
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      delayConstraint=-1 means no constraint
 template<class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
-    const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
-    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttMap, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
-    const std::vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
+void _assignAlphaScore(
+    const ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    size_t numChannels,
+    const size_t uttNum,
+    const size_t  t,
+    const size_t maxPhoneNum, // Maximum length of utterance in this MB
+    const size_t totalPhoneNum, // Total number of phones
+    const int delayConstraint)
 {
-    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
-    if (isColWise)
-    {
-        vector<size_t> curPhoneSeq;
-        
-        auto &us = *this;
-        size_t s, s2;
-        size_t senoneid, t;
-        ElemType ascore;
-        double x, y;
-        size_t senonenum, frameNum;
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
 
-        for (size_t uttId = 0;uttId < uttFrameNum.size(); uttId++) {
-            senonenum = uttPhoneNum[uttId];
-            frameNum = uttFrameNum[uttId];
+        // Number of phones and frames in this utterance
+        size_t frameNum = uttFrameNum[uttId];
+        if (t >= frameNum) continue;
 
-            // Populate utterance
-            // Using loop instead of memcpy for clarity
-            curPhoneSeq.reserve(senonenum);
-            for (size_t i =0;i < senonenum;i++)
-                curPhoneSeq.push_back(phoneSeq(i, uttId));
+        size_t phoneNum = uttPhoneNum[uttId];
 
-            if (frameNum > 1)
+#pragma omp parallel for
+        for (int phoneSeqId = 1;phoneSeqId < phoneNum - 1;phoneSeqId++) {
+            // Index of the label in the sequence
+
+            // Current and previous phone indices in phoneSeq matrix
+            size_t labelid = uttId*maxPhoneNum + phoneSeqId;
+
+            // Actual current phone label
+            size_t phoneId = (size_t)(phoneSeq[labelid]);
+
+            // Index of the current frame in minibatch
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+
+            // Index of probability of observing phoneId at frame timeId
+            size_t probId = timeId*totalPhoneNum + phoneId;
+
+            size_t alphaId = maxPhoneNum* timeId + phoneSeqId; // alpha_t(s)
+
+            if (t == 0)
             {
-                //initialize alpha
-                for (s = 1; s < 3; s++)
+                // Initialize recursion
+                if (phoneSeqId == 1 || phoneSeqId == 2)
                 {
-                    senoneid = curPhoneSeq[s];
-                    alpha(s, 0) = prob(senoneid, 0);
+                    alphaScore[alphaId] = prob[probId];
                 }
-                alpha(senonenum - 1, 0) = LZERO;
-                //initialize beta
-                for (s = senonenum - 3; s < senonenum - 1; s++)
+            }
+            else
+            {
+                if (phoneSeqId >= 1)
                 {
-                    senoneid = curPhoneSeq[s];
-                    beta(s, frameNum - 1) = prob(senoneid, frameNum - 1);
-                }
-                beta(senonenum - 1, frameNum - 1) = LZERO;
+                    size_t timeId_1 = timeId - numChannels; // Index corresponding to (t-1)
+                    size_t alphaId_0 = maxPhoneNum* timeId_1 + phoneSeqId; // alpha_{t-1}(s)
+                    size_t alphaId_1 = alphaId_0 - 1; // alpha_{t-1}(s-1)
+                    size_t alphaId_2 = alphaId_0 - 2; // alpha_{t-1}(s-2)
+                    ElemType x = LZERO;
 
-                //cal alpha
-                for (t = 1; t < frameNum; t++)
-                {
-                    for (s = 1; s < senonenum - 1; s++)
+                    ElemType ascore;
+                    if (phoneSeqId > 2)
                     {
-                        senoneid = curPhoneSeq[s];
-                        x = LZERO;
-                        for (s2 = s - 1; s2 <= s; s2++)
+                        size_t labelid_2 = labelid - 2;
+                        // if current label is not blank and not equal prev non-blank label
+                        if ((size_t)(phoneSeq[labelid]) != totalPhoneNum - 1 && phoneId != (size_t)(phoneSeq[labelid_2]))
                         {
-                            if (s2 > 0)
-                            {
-                                y = alpha(s2, t - 1);
-                                x = LogAddD(x, y);
-                            }
+                            x = LogAdd(x, alphaScore[alphaId_2]);
                         }
-
-                        if (senoneid != prob.GetNumRows() - 1 && s - 2 > 0 && senoneid != curPhoneSeq[s - 2])
-                        {
-                            y = alpha(s - 2, t - 1);
-                            x = LogAddD(x, y);
-                        }
-                        if (senoneid != SIZE_MAX)
-                            ascore = prob(senoneid, t);
-                        else
-                            ascore = 0;
-                        alpha(s, t) = (float)x + ascore;
                     }
 
-                }
-                //exit senone
-                x = LZERO;
-                for (s2 = senonenum - 3; s2 < senonenum - 1; s2++)
-                {
-                    y = alpha(s2, frameNum - 1);
-                    x = LogAddD(x, y);
-                }
-                alpha(senonenum - 1, frameNum - 1) = (float)x;
-
-                totalScore = -alpha(senonenum - 1, frameNum - 1);
-
-                //cal beta
-                for (t = frameNum - 2; t >= 0; t--)
-                {
-
-                    for (s = 1; s < senonenum - 1; s++)
+                    if (phoneSeqId > 1)
                     {
-                        senoneid = curPhoneSeq[s];
-                        x = LZERO;
-                        for (s2 = s; s2 <= s + 1; s2++)
-                        {
-                            if (s2 < senonenum - 1)
-                            {
-                                y = beta(s2, t + 1);
-                                x = LogAddD(x, y);
-                            }
-                        }
-                        if (senoneid != prob.GetNumRows() - 1 && s + 2 < senonenum - 1 && senoneid != curPhoneSeq[s + 2])
-                        {
-                            y = beta(s + 2, t + 1);
-                            x = LogAddD(x, y);
-                        }
-
-                        if (senoneid != SIZE_MAX)
-                            ascore = prob(senoneid, t);
-                        else
-                            ascore = 0;
-                        beta(s, t) = (float)x + ascore;
-
-                    }
-                    if (t == 0)
-                        break;
-                }
-                //entry senone
-                x = LZERO;
-                for (s2 = 1; s2 < 3; s2++)
-                {
-                    y = beta(s2, 0);
-                    x = LogAddD(x, y);
-                }
-                beta(0, 0) = (float)x;
-                for (t = 0; t < frameNum; t++)
-                {
-                    //cal zt
-                    double Zt = LZERO;
-                    for (s = 1; s < senonenum - 1; s++)
-                    {
-                        senoneid = curPhoneSeq[s];
-                        Zt = LogAddD(Zt, (alpha(s, t) + beta(s, t) - prob(senoneid, t)));
+                        x = LogAdd(x, alphaScore[alphaId_1]);
                     }
 
-                    for (s = 1; s < senonenum - 1; s++)
+                    x = LogAdd(x, alphaScore[alphaId_0]);
+
+                    if (phoneId != SIZE_MAX)
+                        ascore = prob[probId]; // Probability of observing given label at given time
+                    else
+                        ascore = 0;
+                    alphaScore[alphaId] = (ElemType)x + ascore;
+                    if (delayConstraint != -1)
                     {
-                        senoneid = curPhoneSeq[s];
-                        if (senoneid != SIZE_MAX)
+                        size_t labelid_r = labelid + 2;
+                        size_t phoneBoundId_r = (size_t)(phoneBound[labelid_r]);
+                        if (phoneId == totalPhoneNum - 1)
                         {
-                            ElemType logoccu = alpha(s, t) + beta(s, t) - prob(senoneid, t) - (float)Zt;
-                            if (logoccu < LOG_OF_EPS_IN_LOG)
-                                us(senoneid, t) += 0.0f;
-                            else
-                                us(senoneid, t) += exp(logoccu);
+                            // only constraint right side
+                            if (t > phoneBoundId_r + delayConstraint - 1)
+                                alphaScore[alphaId] = LZERO;
+                        }
+                        else if (phoneId != totalPhoneNum - 1)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint)
+                                alphaScore[alphaId] = LZERO;
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+void _assignBetaScore(
+    const ElemType *prob,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    const size_t numChannels,
+    const size_t uttNum,
+    const long  t,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum,
+    const int delayConstraint)
+{
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+
+        // Number of phones and frames in this utterance
+        size_t frameNum = uttFrameNum[uttId];
+        if (t >= frameNum) continue;
+
+        size_t phoneNum = uttPhoneNum[uttId];
+
+#pragma omp parallel for
+        for (int phoneSeqId = 1;phoneSeqId < phoneNum - 1;phoneSeqId++) {
+
+            size_t labelid = uttId*maxPhoneNum + phoneSeqId;
+            size_t labelid_2 = labelid + 2;
+            size_t phoneId = (LONG64)(phoneSeq[labelid]);
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+            size_t probId = timeId*totalPhoneNum + phoneId;
+            size_t betaid = maxPhoneNum* timeId + phoneSeqId;
+            size_t timeId_1 = timeId + numChannels;
+            size_t betaid_0 = maxPhoneNum* timeId_1 + phoneSeqId;
+            size_t betaid_1 = betaid_0 + 1;
+            size_t betaid_2 = betaid_0 + 2;
+
+            if (t == frameNum - 1)
+            {
+                if (phoneSeqId == phoneNum - 3 || phoneSeqId == phoneNum - 2)
+                {
+                    betaScore[betaid] = prob[probId];
+                }
+            }
+            else
+            {
+                if (phoneSeqId >= 1)
+                {
+                    ElemType x = LZERO;
+                    ElemType ascore;
+                    if (phoneSeqId < phoneNum - 3)
+                    {
+                        if (phoneSeq[labelid] != totalPhoneNum - 1 && phoneId != phoneSeq[labelid_2])
+                        {
+                            x = LogAdd(x, betaScore[betaid_2]);
+                        }
+                    }
+
+                    if (phoneSeqId < phoneNum - 2)
+                    {
+                        x = LogAdd(x, betaScore[betaid_1]);
+                    }
+
+                    x = LogAdd(x, betaScore[betaid_0]);
+
+                    if (phoneId != SIZE_MAX)
+                        ascore = prob[probId];
+                    else
+                        ascore = 0;
+                    betaScore[betaid] = (ElemType)x + ascore;
+                    if (delayConstraint != -1)
+                    {
+                        size_t phoneBoundId_r = (size_t)(phoneBound[labelid_2]);
+                        if (phoneId == totalPhoneNum - 1)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint - 1)
+                                betaScore[betaid] = LZERO;
+                        }
+                        else if (phoneId != totalPhoneNum - 1)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint)
+                                betaScore[betaid] = LZERO;
                         }
                     }
                 }
             }
         }
+    }
+}
+
+// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+template<class ElemType>
+void _assignTotalScore(ElemType *betaScore,
+    std::vector<ElemType>& totalScore,
+    const size_t uttNum,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttBeginFrame,
+    const size_t numChannels,
+    const size_t maxPhoneNum)
+{
+#pragma omp parallel for
+    for (int uttId = 0; uttId < uttNum; uttId++) {
+        if (uttId < uttNum)
+        {
+            LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+
+            betaScore[alphaId_0] = LogAdd(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
+            totalScore[uttId] = betaScore[alphaId_0];
+        }
+    }
+}
+
+// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+void _assignCTCScore(
+    ElemType *CTCscore,
+    ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    const size_t uttNum,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    const std::vector<size_t>& uttFrameNum,
+    const size_t numChannels,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum)
+{
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+#pragma omp parallel for
+        for (int t = 0; t < uttFrameNum[uttId]; t++) {
+            size_t phoneNum = uttPhoneNum[uttId];
+            size_t alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+            ElemType P_lx = betaScore[alphaId_0];
+
+            for (int s = 1; s < phoneNum - 1; s++)
+            {
+                long phoneId = phoneSeq[uttId*maxPhoneNum + s];
+                size_t alphaId = maxPhoneNum* timeId + s;
+                size_t probId = timeId*totalPhoneNum + phoneId;
+
+                if (phoneId != SIZE_MAX)
+                {
+                    ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
+                    CTCscore[probId] = LogAdd(CTCscore[probId], logoccu);
+                }
+            }
+
+            for (int s = 0; s < totalPhoneNum; s++)
+            {
+                size_t probId = timeId*totalPhoneNum + s;
+                ElemType logoccu = CTCscore[probId];
+                if (logoccu < LZERO)
+                    CTCscore[probId] = 0.0f;
+                else
+                    CTCscore[probId] = exp(logoccu);
+            }
+        }
+    }
+}
+
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
+    const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
+{
+    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
+    if (isColWise)
+    {
+        // Total number of phones
+        size_t totalPhoneNum = prob.GetNumRows();
+        size_t uttNum = uttFrameNum.size();
+
+        // Max number of phones in utterances in this minibatch
+        size_t maxPhoneNum = phoneSeq.GetNumRows();
+
+        for (size_t t = 0; t < maxFrameNum; t++)
+        {
+            _assignAlphaScore(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
+                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
+        }
+
+        for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
+        {
+            _assignBetaScore(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
+                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
+        }
+
+        std::vector<ElemType> scores(uttNum);
+        _assignTotalScore(beta.Data(), scores, uttNum, uttToChanInd, uttBeginFrame, numParallelSequences, maxPhoneNum);
+
+        _assignCTCScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
+            uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
+
+        for (size_t utt = 0; utt < uttNum; utt++)
+        {
+            totalScore += scores[utt];
+        }
+
         return *this;
 
     }
-     else {
-         LogicError("Only ColWise minibatch layout is supported.");
+    else {
+        LogicError("Only ColWise minibatch layout is supported.");
     }
 
     return *this;
