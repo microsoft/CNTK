@@ -312,12 +312,14 @@ namespace CNTK
         for (auto i = 0; i < numValues; i++)
         {
             // Push index to packing queue if the gradient's size is less than threshold size
-            if (GetBufferSize(inputValues[i]) < m_packThresholdSizeInBytes && (inputValues[i]->GetDataType() == DataType::Float))
+            if (GetBufferSize(inputValues[i]) < m_packThresholdSizeInBytes && (inputValues[i]->GetDataType() == DataType::Float)
+                && (packedFloatGradientsIndex.size() == 0 || inputValues[i]->Device() == inputValues[packedFloatGradientsIndex[0]]->Device()))
             {
                 packedFloatGradientsSizeInBytes += GetBufferSize(inputValues[i]);
                 packedFloatGradientsIndex.push_back(i);
             }
-            else if (GetBufferSize(inputValues[i]) < m_packThresholdSizeInBytes && (inputValues[i]->GetDataType() == DataType::Double))
+            else if (GetBufferSize(inputValues[i]) < m_packThresholdSizeInBytes && (inputValues[i]->GetDataType() == DataType::Double)
+                && (packedDoubleGradientsIndex.size() == 0 || inputValues[i]->Device() == inputValues[packedDoubleGradientsIndex[0]]->Device()))
             {
                 packedDoubleGradientsSizeInBytes += GetBufferSize(inputValues[i]);
                 packedDoubleGradientsIndex.push_back(i);
@@ -477,7 +479,7 @@ namespace CNTK
     void MPICommunicatorImpl::packToContinousBuffer(Matrix<ElemType>* aggregationBuffer, std::vector<size_t>& packedGradientsIndex,
         const std::vector<NDArrayViewPtr>& inputValues, std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate)
     {
-        if (aggregationBuffer == nullptr)
+        if (packedGradientsIndex.size() < 1)
         {
             return;
         }
@@ -485,7 +487,6 @@ namespace CNTK
         size_t offset = 0;
         for (size_t i : packedGradientsIndex)
         {
-            //assert(inputValues[i]->Device() == inputValues[packedGradientsIndex[0]]->Device());
             auto gradient = GetWritableMatrix<ElemType>(inputValues[i]);
             aggregationBuffer->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
             offset += gradient->GetNumElements();
@@ -501,7 +502,7 @@ namespace CNTK
     void MPICommunicatorImpl::unpackFromContinousBuffer(Matrix<ElemType>* aggregationBuffer, const std::vector<NDArrayViewPtr>& outputValues,
         std::vector<size_t> packedGradientsIndex)
     {
-        if (aggregationBuffer != nullptr)
+        if (packedGradientsIndex.size() != 0)
         {
             size_t offset = 0;
             for (size_t i : packedGradientsIndex)
