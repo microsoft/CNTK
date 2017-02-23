@@ -153,8 +153,15 @@ def identity(keep):
 
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True), name=''):
     '''
-    Layer factory function to create a Droppo stabilizer.
-    This takes enable_self_stabilization as a flag that allows to disable itself. Useful if this is a global default.
+    Layer factory function to create a Droppo self-stabilizer <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/SelfLR.pdf>.
+    It multiplies its input with a scalar that is learned.
+
+    This takes `enable_self_stabilization` as a flag that allows to disable itself. Useful if this is a global default.
+
+    Note: Unlike the original paper, which proposed a linear or exponential scalar,
+    CNTK uses a sharpened Softplus: 1/steepness ln(1+e^{steepness*beta}).
+    The softplus behaves linear for weights around and above 1 (like the linear scalar) while guaranteeing
+    positiveness (like the exponentional variant) but is also more robust by avoiding exploding gradients.
     '''
 
     enable_self_stabilization = get_default_override(Stabilizer, enable_self_stabilization=enable_self_stabilization)
@@ -163,12 +170,10 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
         return identity
 
     # parameters bound to this Function
-    param = Parameter((), init=0.99537863, name='stabilizer_param')  # 1/steepness*ln (e^steepness-1) for steepness==4
-    # TODO: compute this strange value directly in Python
-    # TODO: implement softplus non-linearity in C++ for stability
-    # sharpened Softplus: 1/steepness ln(1+e^{steepness*beta})
-    # this behaves linear for weights around 1, yet guarantees positiveness
-    beta = log (1 + exp (steepness * param)) * (1 / steepness)   # perf BUGBUG: "log() / steepness" should optimize to the samething   --TODO: change in Python
+    init_param = np.log(np.exp(steepness) -1) / steepness  # initialize so that factor is initially 1 (has no effect)
+    param = Parameter((), init=init_param, name='stabilizer_param')
+    beta = log (1 + exp (steepness * param)) / steepness
+    # TODO: implement softplus non-linearity in C++ for numeric stability
 
     # expression
     @BlockFunction('Stabilizer', name)

@@ -17,7 +17,7 @@ def test_layers_name(device_id):
     p = Dense(10, name='dense10')(I)
     assert(I.name == 'input')
     assert(p.root_function.name == 'dense10')
-    
+
     q = Convolution((3, 3), 3, name='conv33')(I)
     assert(q.root_function.name == 'conv33')
 
@@ -26,11 +26,11 @@ def test_layers_name(device_id):
 
     e = Embedding(0, name='')(I)
     assert(e.root_function.name == '')
-    
+
 def _getModelParameterDict(model, node_name):
     node_dict = {}
     for attr in getattr(model, node_name).parameters:
-        node_dict[attr.name] = np.matrix(attr.value) 
+        node_dict[attr.name] = np.matrix(attr.value)
     return node_dict
 
 def assert_list_of_arrays_equal(r, exp, err_msg):
@@ -39,7 +39,7 @@ def assert_list_of_arrays_equal(r, exp, err_msg):
 
 ####################################
 # default options
-####################################    
+####################################
 
 def test_default_options():
     def Test(some_param=default_override_or(13)):
@@ -86,7 +86,7 @@ def test_Function(device_id):
 
 ####################################
 # . syntax for name lookup
-####################################    
+####################################
 
 def test_lookup(device_id):
     model = Sequential([ Dense(3, init=1, name='first'), Dense(2, init=2, name='second')])
@@ -98,7 +98,7 @@ def test_lookup(device_id):
 
 ####################################
 # Recurrence(), RecurrenceFrom()
-####################################    
+####################################
 
 def test_recurrence():
     inputAxis = Axis('inputAxis')
@@ -140,7 +140,7 @@ def test_recurrence():
 
 ####################################
 # recurrence (Fold()) over regular function
-####################################    
+####################################
 
 def test_recurrence_fun(device_id):
     from cntk.layers import Recurrence
@@ -168,7 +168,7 @@ def test_recurrence_fun(device_id):
 
 ####################################
 # UnfoldFrom()
-####################################    
+####################################
 
 def test_unfold(device_id):
     from cntk.layers import UnfoldFrom
@@ -207,83 +207,83 @@ def test_unfold(device_id):
 
 ####################################
 # Test dense layer for correctness
-####################################    
+####################################
 
 def test_layers_dense(device_id):
     y = Input(2)
     dat = np.array([[-1., 1.]], dtype=np.float32)
-    
+
     ####################################################
     # Test 1: no activation
     ####################################################
     p = Dense(2, activation=None, name='foo')(y)
     res = p(y).eval({y: dat})
-    
+
     # Get the network paramters
     fooDict = _getModelParameterDict(p, 'foo')
-    
+
     npout = np.matrix(dat[0]) * fooDict['W'] + fooDict['b']
     print(res[0])
     print(npout)
     np.testing.assert_array_equal(res[0], npout, err_msg='Error in dense layer')
-    
+
     ####################################################
     # Test 2: with activation
     ####################################################
     p = Dense(2, activation=sigmoid, name='foo')(y)
     res = p(y).eval({y: dat})
-    
+
     # Get the network paramters
     fooDict = _getModelParameterDict(p, 'foo')
-    
-    def _sigmoid(x): 
+
+    def _sigmoid(x):
         return 1./(1 + np.exp(-x))
-    
+
     npout = _sigmoid(np.matrix(dat[0]) * fooDict['W'] + fooDict['b'])
     print(res[0])
     print(npout)
-    
+
     np.testing.assert_array_almost_equal(res[0], npout, decimal=7, err_msg='Error in dense layer with sigmoid')
-    
+
     ####################################################
     # Test 3: 2-dense layer
     ####################################################
     p = Dense(3, activation=None, name='foo')(y)
     q = Dense(3, activation=None, name='bar')(p)
     res = q(y).eval({y: dat})
-    
-    # Get the network paramters for the two layers        
+
+    # Get the network paramters for the two layers
     fooDict = _getModelParameterDict(q, 'foo')
-    barDict = _getModelParameterDict(q, 'bar')  
-    
+    barDict = _getModelParameterDict(q, 'bar')
+
     npout1 = np.matrix(dat[0]) * fooDict['W'] + fooDict['b']
     npout = npout1 * barDict['W'] + barDict['b']
-            
+
     np.testing.assert_array_almost_equal(res[0], npout, decimal=7, err_msg='Error in 2-dense layer')
 
 ########################################
 # Test Embedding layer for correctness
-########################################    
+########################################
 def test_layers_embedding(device_id):
     embDim = 3
-    
+
     y = Input(2)
     e = Embedding(shape=embDim, name='foo')
-    
+
     dat = np.array([[-1., 1.]], dtype=np.float32)
     res = e(y).eval({y: dat})
-    
+
     npout = np.matrix(dat[0]) * e.foo.parameters[0].value
     np.testing.assert_array_equal(res[0], npout, err_msg='Error in embedding layer')
 
 ########################################
 # Test Convolutional layer for shape correctness
-########################################   
+########################################
 
 def _getConvOutShape(inDim, kernelDim, zeroPad, strides):
     # First we tackle unit stride
     i, k, s = inDim, kernelDim, strides
-    
+
     if zeroPad == False:
         if s == 1:
             return inDim - kernelDim + 1
@@ -293,13 +293,13 @@ def _getConvOutShape(inDim, kernelDim, zeroPad, strides):
             raise ValueError("Stride must be a non-zero positive number")
     else: #Zero padding == True
         if s == 1:
-            return i 
+            return i
         elif s > 1:
             p = k//2
             return int(np.floor((i + 2 * p -k)/s) + 1)
         else:
             raise ValueError("Stride must be a non-zero positive number")
-    
+
 def test_layers_convolution_shape(device_id):
     # Get the output shape
     # i: input dimension
@@ -316,80 +316,80 @@ def test_layers_convolution_shape(device_id):
     ##########################################################
     zeropad = False
     in_strides = 1
-    
-    model = Convolution(rf_shape=in_rf_shape, 
+
+    model = Convolution(rf_shape=in_rf_shape,
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
-                                 strides=in_strides, name='foo')    
-    # shape should be 
+                                 strides=in_strides, name='foo')
+    # shape should be
     model_shape = model(y).foo.shape
-                
-    expected_shape = (out_num_filters, 
+
+    expected_shape = (out_num_filters,
                       _getConvOutShape(inH, in_rf_shape[0], zeropad, in_strides),
                       _getConvOutShape(inW, in_rf_shape[1], zeropad, in_strides))
 
     np.testing.assert_array_equal(model_shape, expected_shape, \
         "Error in convolution with stride = 1 with no padding")
-    
+
     ############################################################
     # Test convolutional layer for correctness (p=True s = (3,2))
     ############################################################
     zeropad = False
     in_strides_t = (2, 3)
-    
-    model = Convolution(rf_shape=in_rf_shape, 
+
+    model = Convolution(rf_shape=in_rf_shape,
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
                                  strides=in_strides_t, name='foo')
-    # shape should be 
+    # shape should be
     model_shape = model(y).foo.shape
-                
-    expected_shape = (out_num_filters, 
+
+    expected_shape = (out_num_filters,
                       _getConvOutShape(inH, in_rf_shape[0], zeropad, in_strides_t[0]),
                       _getConvOutShape(inW, in_rf_shape[1], zeropad, in_strides_t[1]))
 
     np.testing.assert_array_equal(model_shape, expected_shape, \
         "Error in convolution with stride>1 with no padding")
-    
+
     ##########################################################
     # Test convolutional layer for correctness (pad=True s = 1)
     ##########################################################
     zeropad = True
     in_strides = 1
-    
-    model = Convolution(rf_shape=in_rf_shape, 
+
+    model = Convolution(rf_shape=in_rf_shape,
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
                                  strides=in_strides, name='foo')
-    # shape should be 
-    model_shape = model(y).foo.shape  
-                       
-    expected_shape = (out_num_filters, 
+    # shape should be
+    model_shape = model(y).foo.shape
+
+    expected_shape = (out_num_filters,
                       _getConvOutShape(inH, in_rf_shape[0], zeropad, in_strides),
                       _getConvOutShape(inW, in_rf_shape[1], zeropad, in_strides))
-    print(expected_shape) 
+    print(expected_shape)
     np.testing.assert_array_equal(model_shape, expected_shape, \
         "Error in convolution with stride = 1 and padding")
-    
+
     ##########################################################
     # Test convolutional layer for correctness (pad=True s = 2)
     ##########################################################
     zeropad = True
     in_strides = 2
-    
-    model = Convolution(rf_shape=in_rf_shape, 
+
+    model = Convolution(rf_shape=in_rf_shape,
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
                                  strides=in_strides, name='foo')
-    
-    # shape should be 
+
+    # shape should be
     model_shape = model(y).foo.shape
-                  
-    expected_shape = (out_num_filters, 
+
+    expected_shape = (out_num_filters,
                       _getConvOutShape(inH, in_rf_shape[0], zeropad, in_strides),
                       _getConvOutShape(inW, in_rf_shape[1], zeropad, in_strides))
 
@@ -397,145 +397,145 @@ def test_layers_convolution_shape(device_id):
         "Error in convolution with stride > 1 and padding")
 
 def  test_layers_convolution_value(device_id):
-    
+
     # Common parameters
-    inC, inH, inW = 1, 3, 3   
+    inC, inH, inW = 1, 3, 3
     in_rf_shape = (3, 3)
     out_num_filters = 1
     dat = np.ones([1, inC, inH, inW], dtype = np.float32)
-    
+
     ##########################################################
     # Test convolutional layer for correctness (p=False s = 1)
-    ##########################################################    
+    ##########################################################
     y = Input((inC, inH, inW))
     zeropad = False
     in_strides = 1
 
-    model = Convolution(rf_shape=in_rf_shape, 
+    model = Convolution(rf_shape=in_rf_shape,
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
-                                 strides=in_strides, name='foo')        
+                                 strides=in_strides, name='foo')
     res = model(y).eval({y: dat})
-    
+
     # Extract the W weight matrix
     expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
-    
+
     np.testing.assert_array_almost_equal(res[0][0][0][0][0], expected_res, decimal=7, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = False")
-    
+
     ##########################################################
     # Test convolutional layer for correctness (p=False s = 2)
     ##########################################################
     zeropad = False
     in_strides = 2
-    
-    model = Convolution(rf_shape=in_rf_shape, 
+
+    model = Convolution(rf_shape=in_rf_shape,
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
-                                 strides=in_strides, name='foo')          
+                                 strides=in_strides, name='foo')
     res = model(y).eval({y: dat})
-    
+
     # Extract the W weight matrix
     expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
-    
+
     np.testing.assert_array_almost_equal(res[0][0][0][0][0], expected_res, decimal=7, \
         err_msg="Error in convolution computation with stride = 2 and zeropad = False")
-    
+
     ##########################################################
     # Test convolutional layer for correctness (p=True s = 1)
     ##########################################################
     zeropad = True
-    in_strides = 1    
-    
-    model = Convolution(rf_shape=in_rf_shape, 
+    in_strides = 1
+
+    model = Convolution(rf_shape=in_rf_shape,
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
-                                 strides=in_strides, name='foo')            
+                                 strides=in_strides, name='foo')
     res = model(y).eval({y: dat})
-    
+
     # Extract the W weight matrix
     expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
-    
+
     # Compare the center of the res with the sum of the weights
     np.testing.assert_array_almost_equal(res[0][0][0][1][1], expected_res, decimal=7, \
         err_msg="Error in convolution computation with stride = 1 and zeropad = True")
-    
+
     ##########################################################
     # Test convolutional layer for correctness (p=True s = 1)
     ##########################################################
     zeropad = True
     in_strides = 2
-    
-    model = Convolution(rf_shape=in_rf_shape, 
+
+    model = Convolution(rf_shape=in_rf_shape,
                                  num_filters=out_num_filters,
                                  activation=None,
                                  pad=zeropad,
-                                 strides=in_strides, name='foo')              
+                                 strides=in_strides, name='foo')
     res = model(y).eval({y: dat})
-    
+
     # Extract the W weight matrix
     W = getattr(model, 'foo').parameters[0].value
     expected_res = np.sum(W[0][0][1:,1:])
-    
+
     # Compare the center of the res with the sum of the weights
     np.testing.assert_array_almost_equal(res[0][0][0][0][0], expected_res, decimal=5,
-        err_msg="Error in convolution computation with stride = 1 and zeropad = True")    
+        err_msg="Error in convolution computation with stride = 1 and zeropad = True")
 
 ##########################################################
 # Test convolutional 3D layer for correctness (p=False s = 1)
 ##########################################################
 def  test_layers_convolution_3d(device_id):
     inC, inH, inW, inD = 1, 3, 3, 3
-    y = Input((inC,inH, inW, inD))    
+    y = Input((inC,inH, inW, inD))
     dat = np.ones([1, inC, inH, inW, inD], dtype = np.float32)
-    
-    model = Convolution3D(rf_shape=(3, 3, 3), 
+
+    model = Convolution3D(rf_shape=(3, 3, 3),
                                  num_filters=1,
                                  activation=None,
                                  pad=False,
                                  strides=1, name='foo')
-    # shape should be 
+    # shape should be
     model_shape = model(y).foo.shape
- 
+
     np.testing.assert_array_equal(model_shape, (1, 1, 1, 1), \
         "Error in convolution3D with stride = 1 and padding")
-                 
+
     res = model(y).eval({y: dat})
-    
+
     expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
-    
+
     np.testing.assert_array_almost_equal(res[0][0][0][0][0][0], expected_res, decimal=5, \
-        err_msg="Error in convolution3D computation with stride = 1 and zeropad = True")  
-    
+        err_msg="Error in convolution3D computation with stride = 1 and zeropad = True")
+
 ##########################################################
 # Test convolutional 2D layer for correctness (p=False s = 1)
 ##########################################################
 def test_layers_convolution_2d(device_id):
     inC, inH, inW = 1, 3, 3
     y = Input((inC,inH, inW))
-    
+
     dat = np.ones([1, inC, inH, inW], dtype = np.float32)
-    
-    model = Convolution2D(rf_shape=(3, 3), 
+
+    model = Convolution2D(rf_shape=(3, 3),
                                  num_filters=1,
                                  activation=None,
                                  pad=False,
                                  strides=1, name='foo')
-    # shape should be 
+    # shape should be
     model_shape = model(y).foo.shape
     np.testing.assert_array_equal(model_shape, (1, 1, 1), \
         "Error in convolution2D with stride = 1 and padding")
-                 
+
     res = model(y).eval({y: dat})
-    
+
     expected_res = np.sum(getattr(model, 'foo').parameters[0].value)
-    
+
     np.testing.assert_array_almost_equal(res[0][0][0][0][0], expected_res, decimal=5, \
-        err_msg="Error in convolution2D computation with stride = 1 and zeropad = True")    
-    
+        err_msg="Error in convolution2D computation with stride = 1 and zeropad = True")
+
 ####################################
 # sequential convolution without reduction dimension
 ####################################
@@ -562,112 +562,126 @@ def test_1D_convolution_without_reduction_dim(device_id):
     np.testing.assert_array_equal(out, exp, err_msg='Error in 1D convolution without reduction dimension')
 
 ##########################################################
-# Test Deconvolution layer for correctness 
+# Test Deconvolution layer for correctness
 ##########################################################
 # TESTTODO: Add the test for deconvolution once current bug with lower/upper pad is fixed
 def test_layers_deconvolution(device_id):
     pass
 
 ##########################################################
-# Test Conv/Pooling/Unpooling/Deconvolution and layer for correctness 
+# Test Conv/Pooling/Unpooling/Deconvolution and layer for correctness
 ##########################################################
 # TESTTODO: Add the test for deconvolution once current bug with lower/upper pad is fixed
 def test_layers_conv_pool_unpool_deconv(device_id):
     pass
 #    inC, inH, inW = 1,4,4
-#    
+#
 #    y = Input((inC,inH, inW))
-#    
+#
 #    cMap =1
-#    
-#    
+#
+#
 #    conv = Convolution((2,2), cMap, pad=True, activation=None, name='foo' )(y)
-#    
+#
 #    pool = MaxPooling((2,2), (2,2), name='bar')(conv)
-#    
+#
 #    unpool = MaxUnpooling ((4,4), (4,4), name ='baz')(pool, conv)
-#    
-#    z = Deconvolution((2,2), inC, cMap, 
-#                                  lower_pad=(0,2,2), 
-#                                  upper_pad=(0,2,2), 
-#                                  bias=False, 
+#
+#    z = Deconvolution((2,2), inC, cMap,
+#                                  lower_pad=(0,2,2),
+#                                  upper_pad=(0,2,2),
+#                                  bias=False,
 #                                  init=glorot_uniform(0.001))(unpool,
 #                                  name='faz')
-#    
-#    
+#
+#
 #    print(z.faz.shape)
-#    
+#
 #    dat = np.arange(0,16, dtype=np.float32).reshape(1,1,4,4)
 #    maxpool   = MaxPooling   (rf_shape=(2,2), strides=(2,2), name='bar')
 #    print(maxpool(y).shape)
-#    
-#    
+#
+#
 #    res = maxpool(y).eval({y: dat})
 #    print(res)
-#    
-#    maxunpool = MaxUnpooling(filter_shape=(2,2), 
-#                                      strides=(2,2), 
+#
+#    maxunpool = MaxUnpooling(filter_shape=(2,2),
+#                                      strides=(2,2),
 #                                      name='foo')((maxpool),(y))
-#    
+#
 #    # Add a few asserts (1 for value and other for shape once this is running)
 
 ##########################################################
 # Test for dropout
 ##########################################################
 def test_layers_dropout(device_id):
-    dat = np.array([[1., 1., 1., 1.]], dtype=np.float32)  
-    y = Input(4)  
-    p = Dense(1, activation=None, name='foo')(y)                 
+    dat = np.array([[1., 1., 1., 1.]], dtype=np.float32)
+    y = Input(4)
+    p = Dense(1, activation=None, name='foo')(y)
     z = Dropout(prob=0.75, name='bar')(p)
-    
+
     # Get the network paramters
     fooDict = {}
     for attr in getattr(p, 'foo').parameters:
         fooDict[attr.name] = np.matrix(attr.value)
-    
-    res =  z(y).eval({y: dat}) 
+
+    res =  z(y).eval({y: dat})
     expected_res = np.sum(fooDict['W'])
-    
+
     np.testing.assert_array_almost_equal(res, expected_res, decimal=7, \
         err_msg="Error in dropout computation")
-    
+
+##########################################################
+# Test for Stabilizer
+##########################################################
+def test_layers_stabilizer(device_id):
+    y = Input(4)
+    p = Stabilizer()(y)
+
+    dat = np.array([[1.0,2.0,3.0,4.0]], dtype=np.float32)
+    res = p(y).eval({y: dat})
+
+    # a stabilizer starts with having no effect, hence input=output
+    np.testing.assert_array_almost_equal(res[0], dat, decimal=7, \
+        err_msg="Error in layer normalization computation")
+
 ##########################################################
 # Test for LayerNormalization
-##########################################################    
+##########################################################
 def test_layers_layer_normalization(device_id):
-    y = Input(4) 
-    p = LayerNormalization(name='foo')(y)                 
-    
+    y = Input(4)
+    p = LayerNormalization(name='foo')(y)
+
     dat = np.array([[1.0,2.0,3.0,4.0]], dtype=np.float32)
-    res =  p(y).eval({y: dat}) 
-    
-    mean_dat = np.mean(dat) 
+    res =  p(y).eval({y: dat})
+
+    mean_dat = np.mean(dat)
     x = dat-mean_dat
     std = np.sqrt(np.mean(x*x))
     epsilon = 0.00001
 
     np.testing.assert_array_almost_equal(res[0], x/(std + epsilon), decimal=6, \
-        err_msg="Error in layer normalization computation") 
-    
+        err_msg="Error in layer normalization computation")
+
 ##########################################################
 # Test for BatchNormalization
-##########################################################   
-# TESTTODO: Currently the result doesn't match the expected result 
+##########################################################
+# TESTTODO: Currently the result doesn't match the expected result
 def test_layers_batch_normalization(device_id):
     pass
-#    dat = np.array([[1.0,0.5,1.0,0.5]], dtype=np.float32)    
-#    y = Input(4) 
+#    dat = np.array([[1.0,0.5,1.0,0.5]], dtype=np.float32)
+#    y = Input(4)
 #    p = BatchNormalization(init_scale=2
 #                                     normalization_time_constant=0,
-#                                     name ='foo')(y)                 
+#                                     name ='foo')(y)
 #
-#    res =  p(y).eval({y: dat}) 
-#    
-#    mean_dat = np.mean(dat) 
+#    res =  p(y).eval({y: dat})
+#
+#    mean_dat = np.mean(dat)
 #    x = dat-mean_dat
-#    std = np.sqrt(np.mean(x*x))       
+#    std = np.sqrt(np.mean(x*x))
 #    bias = 0
 #    scale = 2
 #    expected_res = scale * (x/(std + 0.00001)) + bias
 #    np.testing.assert_array_almost_equal(res[0], expected_res, decimal=5, \
-#         err_msg="Error in BN computation") 
+#         err_msg="Error in BN computation")
