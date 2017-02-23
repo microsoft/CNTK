@@ -645,7 +645,6 @@ namespace CNTK
                 break;
             case DataType::Double:
                 std::tie(computationNetwork, dummyVariableToNodeMap) = CompositeFunction::CreateComputationNetwork<double>(rootFunction, device, {}, {}, {}, /*useMangledNamesForComputationNodes =*/ true);
-
                 break;
             default:
                 LogicError("SaveAsLegacyModel: Function '%S' has unknown DataType %s.", rootFunction->AsString().c_str(), DataTypeName(dataType));

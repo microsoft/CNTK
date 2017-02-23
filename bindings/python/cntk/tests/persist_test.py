@@ -175,3 +175,4 @@ def test_large_model_serialization_double(tmpdir):
     for param_pair in zip(z.parameters, y.parameters):
         assert param_pair[0].shape == param_pair[1].shape
         assert np.allclose(param_pair[0].value, param_pair[1].value)
+

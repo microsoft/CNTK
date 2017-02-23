@@ -33,7 +33,7 @@ mkl_check=$cntk_custom_mkl_version/include/mkl.h
 # Experimental OpenBLAS support.
 have_openblas=no
 openblas_path=
-openblas_check=include/openblas_config.h
+openblas_check=include/openblas/openblas_config.h
 
 # Boost library
 boost_path=
@@ -1131,7 +1131,6 @@ then
         echo Cannot locate MPI library. See
         echo   https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Linux#open-mpi
         echo for installation instructions.
-        exit 1
     else
         echo Found MPI at $mpi_path
     fi

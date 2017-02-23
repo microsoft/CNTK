@@ -141,11 +141,11 @@ void TrainSequenceToSequenceTranslator(const DeviceDescriptor& device, bool useS
 
         auto combinedFunc = Combine({ z, ce, errs });
         auto clonedFunctionWithParametersCloned = combinedFunc->Clone();
-        CompareFunctions(combinedFunc, clonedFunctionWithParametersCloned, ParameterCloningMethod::Clone, {}, visitedFunctions);
+        CompareFunctions(combinedFunc, clonedFunctionWithParametersCloned, ParameterCloningMethod::Clone, {{}}, visitedFunctions);
 
         visitedFunctions.clear();
         auto clonedFunctionWithParametersShared = clonedFunctionWithParametersCloned->Clone(ParameterCloningMethod::Share);
-        CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {}, visitedFunctions);
+        CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {{}}, visitedFunctions);
     }
 
     if (testSaveAndReLoad)
