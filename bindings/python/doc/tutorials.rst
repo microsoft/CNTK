@@ -31,7 +31,7 @@
 #.  *Translate text from one domain (grapheme) to other (phoneme)*
      CNTK 204: `Sequence to sequence basics`_ with CMU pronouncing dictionary
 
-#.  *Teach a computer to paint like Piccasso or van Gogh*
+#.  *Teach a computer to paint like Picasso or van Gogh*
      CNTK 205: `Artistic Style Transfer`_
 
 #.  *Produce realistic data (MNIST images) with no human input (unsupervised learning)*
