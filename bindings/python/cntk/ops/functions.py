@@ -448,9 +448,9 @@ class Function(cntk_py.Function):
              costly conversion but returns a somewhat opaque object.
 
         Returns:
-            list: list containing the gradients in the same order as
-            the variables in ``wrt``. Each element has the same shape as
-            ``wrt`` including dynamic axes (such as the minibatch axis).
+            dict or NumPy Array: Dict with keys of ``wrt`` variables and gradient values of
+            ``wrt`` variables. A single NumPy array if there is only one gradient value.
+             Each element has the same shape as ``wrt`` including dynamic axes (such as the batch axis).
         '''
 
         if len(self.outputs) != 1 :
@@ -462,7 +462,7 @@ class Function(cntk_py.Function):
         unique_wrt = set(wrt)
         output = [self.output]
         
-        # Since we do not return the computed results and use hem only to determine the shape
+        # Since we do not return the computed results and use them only to determine the shape
         # of the root gradients, we run the forward pass with as_numpy=False regardless of the
         # actual as_numpy setting passed to this function
         state, results = self.forward(at, output, set(output), device, as_numpy=False)
