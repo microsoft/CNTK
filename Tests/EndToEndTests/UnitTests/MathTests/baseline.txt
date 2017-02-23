@@ -302,6 +302,9 @@ Test module "MathTests" has passed with:
 
     Test case "CPUMatrixSuite/CPUSparseMatrixMultiplyAndAdd" has passed with:
       20000 assertions out of 20000 passed
+      
+    Test case "CPUMatrixSuite/CPUSparseMatrixDoGatherColumnsOf" has passed with:
+      50 assertions out of 50 passed
 
     Test case "CPUMatrixSuite/MatrixMultiplyTest" has passed with:
       1484 assertions out of 1484 passed
