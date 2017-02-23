@@ -19,7 +19,7 @@ def _is_c_contiguous(data):
 
 class NDArrayView(cntk_py.NDArrayView):
     '''
-    Creates an empty dense internal data representation of a :class:`Value` object.
+    Creates an empty dense internal data representation of a :class:`~cntk.core.Value` object.
     To create an NDArrayView from a NumPy array, use :meth:`from_dense`.
     To create an NDArrayView from a sparse array, use :meth:`from_csr`.
 
@@ -59,7 +59,8 @@ class NDArrayView(cntk_py.NDArrayView):
                     ' and not %s'%type(np_array))
 
         if not _is_c_contiguous(np_array):
-            warnings.warn('data is not C contiguous; rearrange your data/computation to avoid this', RuntimeWarning)
+            warnings.warn('data is not C contiguous; rearrange your data/computation to avoid costly data conversions', RuntimeWarning)
+            np_array = np.ascontiguousarray(np_array)
 
         if device is None:
             device = use_default_device()
@@ -112,6 +113,9 @@ class NDArrayView(cntk_py.NDArrayView):
         if isinstance(data, cntk_py.NDArrayView):
             return data
 
+        if isinstance(data, np.number):
+            data = np.asarray(data)
+
         if isinstance(data, np.ndarray):
             ndav = NDArrayView.from_dense(data, device)
         elif sparse.issparse(data):
@@ -137,7 +141,7 @@ class Value(cntk_py.Value):
          It can be:
           * a pure Python structure (list of lists, ...),
           * a list of NumPy arrays or SciPy sparse CSR matrices
-          * a :class:`Value` object (e.g. returned by :func:`one_hot`)
+          * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
         seq_starts (list of `bool`s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
@@ -167,18 +171,42 @@ class Value(cntk_py.Value):
 
     @staticmethod
     def _as_best_data_type(var, sample):
+        convert_to_var_dtype = False
+
         if isinstance(sample, list):
-            sample = np.asarray(sample, dtype=var.dtype)
+            try:
+                sample = np.asarray(sample, dtype=var.dtype)
+            except ValueError:
+                s = sample
+                while isinstance(s, list) and len(s)>0:
+                    s = s[0]
+                if sparse.issparse(s):
+                    raise ValueError('if you provide sparse data, every '
+                            'sequence has to be encoded as one '
+                            'csr_matrix instance. Your sequence was: \'%s\''%str(sample))
+                else:
+                    raise
+
             if sample.dtype != var.dtype:
                 raise ValueError('could not convert sample data to '
-                        'NumPy array')
+                                 'NumPy array')
 
-        if np.issubdtype(sample.dtype, int):
-            sample = sample.astype(var.dtype)
-        elif sample.dtype not in (np.float32, np.float64):
-            raise ValueError('only integer, float32 and float64 are supported, '
-                    'you gave %s'%sample.dtype)
+        elif sample.dtype in (np.float32, np.float64):
+            if sample.dtype != var.dtype:
+                convert_to_var_dtype = True
+
+        elif np.issubdtype(sample.dtype, int):
+            convert_to_var_dtype = True
+
         else:
+            raise ValueError('only integer, float32 and float64 are '
+                             'supported, you gave %s' % sample.dtype)
+
+        if convert_to_var_dtype:
+            warnings.warn('your data is of type "%s", but your input'
+                          'expects "%s". Please convert your data '
+                          'beforehand to speed up training.' %
+                          (sample.dtype, str(var.dtype)))
             sample = sample.astype(var.dtype)
 
         return sample
@@ -187,7 +215,7 @@ class Value(cntk_py.Value):
     @typemap
     def create(var, data, seq_starts=None, device=None, read_only=False):
         '''
-        Creates a :class:`Value` object.
+        Creates a :class:`~cntk.core.Value` object.
 
         Args:
             var (:class:`~cntk.ops.variables.Variable`): variable into which
@@ -207,7 +235,7 @@ class Value(cntk_py.Value):
             read_only (bool, default False): whether the data is read only
 
         Returns:
-            :class:`Value` object.
+            :class:`~cntk.core.Value` object.
         '''
         if not isinstance(var, cntk_py.Variable):
             raise TypeError('Variable expected, but got "%s"'%type(var))
@@ -230,7 +258,7 @@ class Value(cntk_py.Value):
                         'of NumPy arrays')
 
             # FIXME if not seq_starts: directly pass it to Value constructor
-            data = list(data)
+            data = list(np.atleast_1d(data))
 
         if not isinstance(data, list):
             raise ValueError('batch has to be a list of NumPy arrays or '
@@ -289,3 +317,10 @@ class Value(cntk_py.Value):
         '''
         return self.shape[0]
 
+def user_function(user_func):
+    '''
+    Wraps the passed Function to create a composite representing the
+    composite Function graph rooted at the passed root Function.
+    '''
+    from . import as_composite
+    return as_composite(user_func)

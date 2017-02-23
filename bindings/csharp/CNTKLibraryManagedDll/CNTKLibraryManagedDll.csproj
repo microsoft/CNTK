@@ -1,13 +1,14 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="14.0" DefaultTargets="Build" InitialTargets="CheckDependencies" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <Import Project="$(SolutionDir)\CNTK.Common.props" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Platform Condition=" '$(Platform)' == '' ">x64</Platform>
     <ProjectGuid>{50EF9EE6-5018-453E-A063-F77044EF1A97}</ProjectGuid>
-    <IntermediateOutputPath>$(SolutionDir)\$(Platform)\.build\$(Configuration)\$(MSBuildProjectDirectory.Substring($(SolutionDir.Length)))\obj\</IntermediateOutputPath>
-    <BaseIntermediateOutputPath>$(SolutionDir)\$(Platform)\.build\$(Configuration)\$(MSBuildProjectDirectory.Substring($(SolutionDir.Length)))\obj\</BaseIntermediateOutputPath>
-    <OutputPath>$(SolutionDir)\$(Platform)\$(Configuration)\</OutputPath>
+    <IntermediateOutputPath>$(IntDir)obj\</IntermediateOutputPath>
+    <BaseIntermediateOutputPath>$(IntDir)obj\</BaseIntermediateOutputPath>
+    <OutputPath>$(OutDir)</OutputPath>
     <OutputType>Library</OutputType>
     <PlatformTarget>x64</PlatformTarget>
     <WarningLevel>4</WarningLevel>
@@ -19,7 +20,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+  <PropertyGroup Condition="$(DebugBuild)">
     <DebugSymbols>true</DebugSymbols>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
@@ -27,43 +28,32 @@
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug_CpuOnly|x64'">
-    <DebugSymbols>true</DebugSymbols>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DebugType>full</DebugType>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+  <PropertyGroup Condition="$(ReleaseBuild)">
     <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <!-- The following definitions are needed in order to make the configuration Debug/Debug_CpuOnly live -->
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug_CpuOnly|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <Optimize>true</Optimize>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_CpuOnly|x64'">
-    <DefineConstants>TRACE</DefineConstants>
     <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release_NoOpt|x64'">
-    <DefineConstants>TRACE</DefineConstants>
-    <Optimize>true</Optimize>
-    <DebugType>pdbonly</DebugType>
-    <ErrorReport>prompt</ErrorReport>
-    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+    <Optimize>false</Optimize>
+  </PropertyGroup>
+  <PropertyGroup>
+    <SignAssembly>false</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
-    <Reference Include="System.Drawing" />
   </ItemGroup>
-  <ItemGroup Condition="Exists('$(SWIG_PATH)\swig.exe')">
+  <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -97,11 +87,23 @@
     <Compile Include="SwigProxyClasses\Variable.cs" />
     <Compile Include="SwigProxyClasses\VariableKind.cs" />
     <Compile Include="SwigProxyClasses\VariableVector.cs" />
+    <Compile Include="SwigProxyClasses\FunctionPtrVector.cs" />
   </ItemGroup>
-  <Target Name="Build" Condition="!Exists('$(SWIG_PATH)\swig.exe')">
-    <Warning Condition="!Exists('$(SWIG_PATH)\swig.exe')" Text="The project requires SWIG to be installed." />
+  <ItemGroup Condition="$(CpuOnlyBuild)">
+    <Compile Include="CNTKLibraryManagedDll-CPUOnly-AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="$(GpuBuild)">
+    <Compile Include="CNTKLibraryManagedDll-GPU-AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="CNTKLibraryManagedDll-CPUOnly-KeyPair.snk" />
+    <None Include="CNTKLibraryManagedDll-GPU-KeyPair.snk" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="Build" Condition="$(HasSwig)" DependsOnTargets="$(BuildDependsOn)" />
+  <Target Name="CheckDependencies">
+    <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-cntk-cnet-library-for-evaluation for installation instructions." />
   </Target>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" Condition="Exists('$(SWIG_PATH)\swig.exe')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

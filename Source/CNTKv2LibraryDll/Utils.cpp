@@ -16,6 +16,8 @@
 #include <fcntl.h>
 #include "PrimitiveFunction.h"
 #include "RecurrentNodes.h"
+#include "Value.h"
+#include "CompositeFunction.h"
 
 using namespace std;
 using namespace Microsoft::MSR::CNTK;
@@ -452,6 +454,33 @@ namespace CNTK
 #endif
     }
 
+    std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
+    {
+        std::vector<Axis> inputVarDynamicAxes;
+        if (internalDynamicAxisName.substr(0, ComputationNodeBase::DefaultDynamicAxisName.length()) == ComputationNodeBase::DefaultDynamicAxisName)
+            inputVarDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
+        else if (internalDynamicAxisName.substr(0, ComputationNodeBase::DefaultNoSequenceAxisName.length()) == ComputationNodeBase::DefaultNoSequenceAxisName)
+            inputVarDynamicAxes = { Axis::DefaultBatchAxis() };
+        else
+            inputVarDynamicAxes = { Axis(internalDynamicAxisName), Axis::DefaultBatchAxis() };
+
+        return inputVarDynamicAxes;
+    }
+
+    // Construct the dynamic axis name to be used internally for the CNTK InputNodes
+    std::wstring InternalDynamicAxisNameFromDynamicAxes(const std::vector<Axis>& dynamicAxes)
+    {
+        if (dynamicAxes.empty())
+            LogicError("Empty dynamic axes set");
+
+        if (dynamicAxes == std::vector<Axis>({ Axis::DefaultBatchAxis() }))
+            return ComputationNodeBase::DefaultNoSequenceAxisName;
+        else if (dynamicAxes == std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }))
+            return ComputationNodeBase::DefaultDynamicAxisName;
+        else
+            return dynamicAxes[0].Name();
+    }
+
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes) 
     {
         size_t maxNumTimeSteps = 1;
@@ -479,36 +508,48 @@ namespace CNTK
 
         return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
     }
-
-    template <typename ElementType>
-    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
+    /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value)
     {
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        if (AsDataType<ElementType>() != value->GetDataType())
-            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
+        bool isPackedValue = (dynamic_cast<PackedValue*>(value.get()) != nullptr);
 
-        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error?
-        if (IsSparseInput(var) && !value->IsSparse())
-            InvalidArgument("Dense input data supplied for a sparse input Variable");
+        // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
+        if (!isPackedValue)
+        {
+            if (IsSparseInput(var) && !value->IsSparse())
+                InvalidArgument("Dense input data supplied for a sparse input Variable");
 
-        if (IsSparseInput(var) && (value->GetStorageFormat() != StorageFormat::SparseCSC))
-            InvalidArgument("Sparse Input data must be in SparseCSC format");
+            if (IsSparseInput(var) && (value->GetStorageFormat() != StorageFormat::SparseCSC))
+                InvalidArgument("Sparse Input data must be in SparseCSC format");
+        }
 
         auto varShape = var.Shape();
         auto valueShape = value->Shape();
 
-        if (valueShape.Rank() < varShape.Rank())
-            InvalidArgument("Value's rank should be >= the Variable's rank");
-
         auto numDynamicAxes = var.DynamicAxes().size();
+        if (numDynamicAxes > 2)
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
-        size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
         // max(2, numDynamicAxes) is needed for some backcompat scenarios, where even when there are no sequence axes
         // the user can pass a value object with a dim of 1 for the sequence axis.
         // TODO: try and remove support for this in the future, change the condition below to
         // valueShape.Rank() - varShape.Rank() <=  var.DynamicAxes().size()
+        size_t maxAddionalValueAxes = std::max<size_t>(2, numDynamicAxes);
+
+        // For packed values, we sometimes have the reader return the matrix with a flatenned sample layout
+        if (isPackedValue && ((valueShape.Rank() < varShape.Rank()) || (valueShape.SubShape(0, varShape.Rank()) != varShape)))
+        {
+            // If the leading dim of the value shape is same as the total size of the varShape,
+            // lets expand the leading dim to varShape for the purposes of the rest of the validation
+            if ((valueShape[0] == varShape.TotalSize()) && (valueShape.SubShape(1).Rank() <= (varShape.Rank() + maxAddionalValueAxes)))
+                valueShape = varShape.AppendShape(valueShape.SubShape(1));
+        }
+
+        if (valueShape.Rank() < varShape.Rank())
+            InvalidArgument("Value's rank should be >= the Variable's rank");
+
         if (valueShape.Rank() > (varShape.Rank() + maxAddionalValueAxes))
             InvalidArgument("Value rank should be larger than the Variable%S rank at most by number of dynamic axes", ParanthesizedName(var.Name()).c_str());
 
@@ -519,57 +560,32 @@ namespace CNTK
                 AsStringForErrorReporting(valueShape).c_str(),
                 AsStringForErrorReporting(varShape).c_str());
         }
+    }
 
-        if (numDynamicAxes == 0)
-            return{ value->Data()->GetMatrix<ElementType>(), nullptr };
+    template <typename ElementType>
+    std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject(const Variable& var, const ValuePtr& value)
+    {
+        VerifyVariableValueCompatibility(var, value);
 
-        if (numDynamicAxes > 2)
-            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
+        if (AsDataType<ElementType>() != value->GetDataType())
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
 
+        auto packedValue = dynamic_cast<PackedValue*>(value.get());
+        if (packedValue)
+            return packedValue->PackedData<ElementType>();
+
+        auto varShape = var.Shape();
+        auto valueShape = value->Shape();
+        auto numDynamicAxes = var.DynamicAxes().size();
         auto mask = value->Mask();
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
             InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
+        
+        if (numDynamicAxes == 0)
+            return{ value->Data()->GetMatrix<ElementType>(), nullptr };
 
         size_t maxNumTimeSteps, numSequences;
         std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(valueShape.SubShape(varShape.Rank()), numDynamicAxes);
-
-        auto getSequenceStartsAndLengthsFunc = [](const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes) {
-            auto cpuMask = mask;
-            if (mask->Device() != DeviceDescriptor::CPUDevice())
-                cpuMask = mask->DeepClone(DeviceDescriptor::CPUDevice());
-
-            const MaskKind* maskBuffer = cpuMask->DataBuffer();
-            size_t maxNumTimeSteps, numSequences;
-            std::tie(maxNumTimeSteps, numSequences) = GetNumTimeStepsAndSequences(mask->Shape(), numDynamicAxes);
-
-            for (size_t i = 0; i < numSequences; ++i)
-            {
-                MaskKind firstMaskEntry = maskBuffer[i * maxNumTimeSteps];
-                if (firstMaskEntry == MaskKind::SequenceBegin)
-                    sequenceBeginIndices[i] = 0;
-                else if (firstMaskEntry == MaskKind::Valid)
-                    sequenceBeginIndices[i] = Microsoft::MSR::CNTK::SentinelValueIndicatingUnspecifedSequenceBeginIdx;
-                else
-                    LogicError("The first entry of a mask should be Valid or SequenceBegin");
-
-                size_t currentSequenceLength = 1;
-                bool currentSequenceEndAlreadyFound = false;
-                for (size_t j = 1; j < maxNumTimeSteps; ++j)
-                {
-                    if (maskBuffer[(i * maxNumTimeSteps) + j] == MaskKind::Invalid)
-                        currentSequenceEndAlreadyFound = true;
-                    else
-                    {
-                        if (currentSequenceEndAlreadyFound)
-                            InvalidArgument("Invalid Value object; only trailing steps of a sequence can be masked");
-
-                        currentSequenceLength++;
-                    }
-                }
-
-                sequenceLengths[i] = currentSequenceLength;
-            }
-        };
 
         if ((numSequences == 1) || (maxNumTimeSteps == 1))
         {
@@ -592,7 +608,7 @@ namespace CNTK
 
                 std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
                 std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
-                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
+                Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
                 for (size_t i = 0; i < numSequences; ++i)
                     layout->AddSequence(i, i, sequenceBeginIndices[i], sequenceLengths[i]);
@@ -605,7 +621,7 @@ namespace CNTK
             std::vector<ptrdiff_t> sequenceBeginIndices(numSequences, 0);
             std::vector<size_t> sequenceLengths(numSequences, maxNumTimeSteps);
             if (mask != nullptr)
-                getSequenceStartsAndLengthsFunc(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
+                Value::GetSequenceStartsAndLengths(mask, sequenceBeginIndices, sequenceLengths, numDynamicAxes);
 
             bool hasTruncatedSequences = std::find_if(sequenceBeginIndices.begin(), sequenceBeginIndices.end(), [](const int& val) { return (val < 0); }) != sequenceBeginIndices.end();
 
@@ -678,21 +694,10 @@ namespace CNTK
     template <typename ElementType>
     ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
     {
-        NDShape valueDataShape = sampleShape;
-
-        size_t maxNumTimeSteps = 1;
-        size_t numSequences = 1;
-        if (layout != nullptr)
-        {
-            maxNumTimeSteps = layout->GetNumTimeSteps();
-            numSequences = layout->GetNumSequences();
-            valueDataShape = valueDataShape.AppendShape({ maxNumTimeSteps, numSequences });
-        }
-
-        auto createMaskFunc = [](const MBLayoutPtr& layout, const DeviceDescriptor& device, std::vector<size_t>& sequencesShorterThanLongestSequence) {
+        auto CreateMask = [](const MBLayoutPtr& layout, const DeviceDescriptor& device) {
             std::vector<bool> sequenceBeginFlags;
             std::vector<size_t> sequenceLengths;
-            sequencesShorterThanLongestSequence.clear();
+            std::vector<size_t> sequencesShorterThanLongestSequence;
 
             size_t maxNumTimeSteps = layout->GetNumTimeSteps();
             size_t numSequences = layout->GetNumSequences();
@@ -744,56 +749,16 @@ namespace CNTK
         };
 
         // No data shuffling needed if no layout or the layout has just one time-step or just one sequence
-        std::vector<size_t> sequencesShorterThanLongestSequence;
-        if ((maxNumTimeSteps == 1) || (numSequences == 1))
-        {
-            // Just create a view over the existing matrix itself
-            auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(valueDataShape));
-            auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, readOnly, tensorView);
-            if (layout == nullptr)
-                return MakeSharedObject<Value>(data);
-            else
-            {
-                auto mask = createMaskFunc(layout, AsDeviceDescriptor(matrix.GetDeviceId()), sequencesShorterThanLongestSequence);
-                return MakeSharedObject<Value>(data, mask);
-            }
-        }
-
-        if (layout->GetNumCols() != matrix.GetNumCols())
-            LogicError("Bad MBLayout: The number of columns in the MBLayout does not match the number of columns in the data matrix!");
+        NDMaskPtr mask;
+        if (layout != nullptr)
+            mask = CreateMask(layout, AsDeviceDescriptor(matrix.GetDeviceId()));
 
         // Reshuffle to data to unpack and uninterleave the CNTK form packed data
-        // Now generate the scatter indices
-        auto shuffledMatrixData = std::make_shared<Matrix<ElementType>>(matrix.GetNumRows(), maxNumTimeSteps * numSequences, matrix.GetDeviceId(), matrix.GetMatrixType(), matrix.GetFormat());
-        auto mask = createMaskFunc(layout, AsDeviceDescriptor(matrix.GetDeviceId()), sequencesShorterThanLongestSequence);
-
-        // Set the target location of all gaps to be the last step of the first sequence that is shorter than the longest sequence in the batch
-        size_t targetColIdxForInvalidColumns = sequencesShorterThanLongestSequence.empty() ? 0 : (((sequencesShorterThanLongestSequence[0] + 1) * maxNumTimeSteps) - 1);
-        std::vector<ElementType> scatterIndicesVector(layout->GetNumCols(), (ElementType)targetColIdxForInvalidColumns);
-
-        size_t i = 0;
-        auto& layoutSequences = layout->GetAllSequences();
-        for (auto sequenceInfo : layoutSequences)
-        {
-            if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
-            {
-                size_t targetParallelStreamIdx = sequenceInfo.s;
-                auto currentSequenceBeginIdx = std::max<ptrdiff_t>(0, sequenceInfo.tBegin);
-                auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
-                size_t currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
-
-                for (size_t j = 0; j < currentSequenceLength; ++j)
-                    scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElementType)((i * maxNumTimeSteps) + j);
-
-                i++;
-            }
-        }
-
-        auto scatterIdxMatrix = std::make_shared<Matrix<ElementType>>(1, layout->GetNumCols(), scatterIndicesVector.data(), matrix.GetDeviceId());
-        shuffledMatrixData->DoScatterColumnsOf(0, *scatterIdxMatrix, matrix, 1);
-
-        auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorViewShape(valueDataShape));
-        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(shuffledMatrixData->GetFormat()), valueDataShape, readOnly, tensorView);
+        auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*maskGaps=*/ false);
+        auto dataShape = sampleShape;
+        if (layout != nullptr)
+            dataShape = dataShape.AppendShape({ layout->GetNumTimeSteps(), layout->GetNumSequences() });
+        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), dataShape, readOnly, new TensorView<ElementType>(unpackedTensorView, AsTensorViewShape(dataShape)));
         return MakeSharedObject<Value>(data, mask);
     }
 
@@ -928,4 +893,64 @@ namespace CNTK
 
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const Variable& var, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const Variable& var, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+
+    void Accumulator::Update(const ValuePtr& delta, const DeviceDescriptor& device)
+    {
+        if (!delta)
+        {
+            InvalidArgument("Attempting to add a null value");
+        }
+
+        bool copied = false;
+        if (!Data() ||
+            GetDataType() != delta->GetDataType() ||
+            Shape() != delta->Shape() ||
+            Device() != device ||
+            Mask() != delta->Mask())
+        {
+            copied = true;
+            m_data = MakeSharedObject<NDArrayView>(delta->GetDataType(), delta->Shape(), device);
+            m_mask = delta->Mask();
+            ResetToZero();
+        }
+
+        if (delta->GetDataType() == DataType::Float)
+        {
+            Data()->GetWritableTensorView<float>()->AddCopyOf(*delta->Data()->GetTensorView<float>());
+        }
+        else
+        {
+            Data()->GetWritableTensorView<double>()->AddCopyOf(*delta->Data()->GetTensorView<double>());
+        }
+
+        if (copied && m_numUpdates != 0)
+        {
+            RuntimeError("Accumulation values are created when accumulated num updates not zero");
+        }
+
+        m_numUpdates++;
+    }
+
+    void Accumulator::Reset()
+    {
+        ResetToZero();
+        m_numUpdates = 0;
+    }
+
+    void Accumulator::ResetToZero()
+    {
+        if (Data() == nullptr)
+        {
+            return;
+        }
+
+        if (GetDataType() == DataType::Float)
+        {
+            Data()->SetValue(0.0f);
+        }
+        else
+        {
+            Data()->SetValue(0.0);
+        }
+    }
 }

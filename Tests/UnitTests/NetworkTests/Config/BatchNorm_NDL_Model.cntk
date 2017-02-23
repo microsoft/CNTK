@@ -1,0 +1,7 @@
+rootDir = ".."
+modelDir  = "$rootDir$/Models"
+precision = "float"
+# the model was created as a part of BatchNormalization/NonSpatial/CuDNN test
+# and contains a 'legacy' BatchNormalizationNode (that does not define an extra
+# input for 'running mean sample count')
+modelPath = "$modelDir$/01_OneHidden.dnn"

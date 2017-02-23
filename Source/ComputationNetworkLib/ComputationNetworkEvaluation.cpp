@@ -147,11 +147,11 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
             node->EndForwardProp();
 
             node->BumpEvalTimeStamp();
-        }
 
-        // Extreme Tracing, part 1/4
-        if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
-            DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
+            // Extreme Tracing, part 1/4
+            if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
+                DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
+        }
     }
 }
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
@@ -943,31 +943,41 @@ void ComputationNetwork::PrintMemorySharingStructure(const vector<ComputationNod
     size_t numUnshared = 0;
     for (const auto& item : memSharingStructure)
     {
-        if (item.second.size() < 2) // only print actually shared matrices
+        if (item.second.size() < 2) // unshared matrices
             numUnshared++;
-        else
+        else                        // shared matrices
             numShared++;
     }
 
-    fprintf(stderr, "\nMemory Sharing: Out of %d matrices, %d are shared as %d, and %d are not shared.\n\n", (int)numMatrices, (int)(numMatrices - numUnshared), (int)numShared, (int)numUnshared);
+    fprintf(stderr, "\nMemory Sharing: Out of %d matrices, %d are shared as %d, and %d are not shared.\n", (int)numMatrices, (int)(numMatrices - numUnshared), (int)numShared, (int)numUnshared);
+
+    fprintf(stderr, "\nHere are the ones that share memory:\n"); 
     for (const auto& item : memSharingStructure)
     {
-        if (item.second.size() < 2) // only print actually shared matrices
-            continue;
-        // Format:
-        // { node1
-        //   node2 }
-        // { node3
-        //   node4
-        //   node5 }
-        // where unshared nodes are not printed.
-        const char* delim = "\t{ ";
-        for (const auto& memShareInfo : item.second)
+        if (item.second.size() >= 2)
         {
-            fprintf(stderr, "%s%ls", delim, memShareInfo.c_str());
-            delim = "\n\t  ";
+            // Format:
+            // { node1
+            //   node2 }
+            // { node3
+            //   node4
+            //   node5 }
+            const char* delim = "\t{ ";
+            for (const auto& memShareInfo : item.second)
+            {
+                fprintf(stderr, "%s%ls", delim, memShareInfo.c_str());
+                delim = "\n\t  ";
+            }
+            fprintf(stderr, " }\n");
         }
-        fprintf(stderr, " }\n");
+    }
+    fprintf(stderr, "\nHere are the ones that don't share memory:\n");
+    for (const auto& item : memSharingStructure)
+    {
+        if (item.second.size() < 2)
+        {
+            fprintf(stderr, "\t{%ls}\n", item.second.begin()->c_str()); 
+        }
     }
     fprintf(stderr, "\n");
 }
@@ -1003,7 +1013,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
     MarkValueNonSharableNodes();
 
-    bool performingBackPropagation = (trainRootNode != nullptr) || (Globals::ShouldEnableHyperCompressMemory());
+    bool performingBackPropagation = (trainRootNode != nullptr);
 
     // Construct the composite forward prop eval order by enumerating the
     // nodes corresponding to each of our roots in global eval oder
@@ -1062,6 +1072,7 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
+    m_matrixPool.ResetStepCounter(); 
     set<ComputationNodeBasePtr> completedEvaluate;
     for (auto& nodeIter : compositeForwardPropEvalOrder)
     {
@@ -1127,7 +1138,15 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
+    m_matrixPool.OptimizedMemoryAllocation(); 
     m_areMatricesAllocated = true;
+
+    // TO DO: At the time of AllocateAllMatrices we don't know the minibatch size. In theory one may allocate memory again once we start to receive
+    // data from the reader (and the minibatch size is known). For some problems, minibatch size can change constantly, and there needs to be a 
+    // tradeoff in deciding how frequent to run optimized memory allocation. For now, we do it only once at the very beginning for speed concerns. 
+
+    // TO DO: when some matrices are sparse, the memory size request may be wrong. One may need to call OptimizedMemoryAllocation later again 
+    // if the requests of sparse allocation and release are re-processed correctly. Future work. 
 
     // print the memory sharing structure
     if (TraceLevel() > 0)

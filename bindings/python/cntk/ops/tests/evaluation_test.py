@@ -15,6 +15,8 @@ import pytest
 from .ops_test_utils import _test_binary_op, AA, I, precision, PRECISION_TO_TYPE,\
         unittest_helper
 
+from cntk import edit_distance_error, input_variable
+
 TARGET_OUT_PAIRS = [
     # (target_vector, output_vector)
     ([[0., 0., 0., 1]], [[1., 2., 3., 4.]]),
@@ -239,7 +241,7 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
     f = lambda_rank(s, n, g)
 
     actual_grad  = f.grad({s:score, n:gain, g:group}, [s])[0]
-    actual_value = np.copy(f.eval({s:score, n:gain, g:group}))
+    actual_value = f.eval({s:score, n:gain, g:group})
 
     assert np.allclose(actual_value, expected_value)
     assert np.allclose(actual_grad,  expected_grad)
@@ -267,6 +269,23 @@ def test_ndcg(value, output, gain, device_id, precision):
     n = I((1,))
     f = ndcg_at_1(s, n, g)
 
-    actual_value = np.copy(f.eval({s:score, n:gain, g:group}))
+    actual_value = f.eval({s:score, n:gain, g:group})
 
     assert np.allclose(actual_value, expected_value)
+
+EDIT_DISTANCE_ERROR_TEST_CASES = [
+        # drawing 1 sample
+    ([[1, 2]], [[1, 2]], 0, 0, 0, False, [], 0.0),
+    ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 0, 0, False, [], 1.0),
+    ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 1, 0, 0, False, [], 2.0),
+    ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, False, [], 1.0),
+    ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, True, [1], 2.0),
+]
+
+@pytest.mark.parametrize("left_input, right_input, subPen, delPen, insPen, squashInputs, samplesToIgnore, result", EDIT_DISTANCE_ERROR_TEST_CASES)
+def test_edit_distance_error(left_input, right_input, subPen, delPen, insPen, squashInputs, samplesToIgnore, result, device_id, precision):
+    i1 = input_variable(shape=(2,))
+    i2 = input_variable(shape=(2,))
+    arguments = {i1 : left_input, i2 : right_input}
+    a = edit_distance_error(i1, i2, subPen, delPen, insPen, squashInputs, samplesToIgnore)
+    assert np.allclose(result, a.eval(arguments))

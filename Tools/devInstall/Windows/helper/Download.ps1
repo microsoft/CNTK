@@ -51,8 +51,9 @@ function Download(
     $func = $table["Function"]
     $source = $table["Source"]
     $method = GetTableDefaultString -table $table -entryName "Method" -defaultValue "WebRequest"
+    $userAgent = GetTableDefaultString -table $table -entryName "UserAgent" -defaultValue = "InternetExplorer"
     $destination = $table["Destination"]
-    $ExpectedSize = GetTableDefaultInt -table $table -entryName "ExpectedSize" -defaultValue 0
+    $expectedHash = GetTableDefaultInt -table $table -entryName "expectedHash" -defaultValue ""
 
     if (test-path $destination -PathType Leaf) {
         Write-Host File [$destination] already exists
@@ -60,10 +61,10 @@ function Download(
     }
 
     if ($method -eq "WebRequest") {
-        DownloadFileWebRequest -SourceFile $source -OutFile $destination -ExpectedSize $ExpectedSize
+        DownloadFileWebRequest -SourceFile $source -OutFile $destination -UserAgent $userAgent -expectedHash $expectedHash
     }
     else {
-        DownloadFileWebClient -SourceFile $source -OutFile $destination
+        DownloadFileWebClient -SourceFile $source -OutFile $destination -expectedHash $expectedHash
     }
 }
 
@@ -122,7 +123,8 @@ function DownloadAndExtract(
 function DownloadFileWebRequest (
     [string] $SourceFile,
     [string] $OutFile,
-    [int] $ExpectedSize)
+    [string] $userAgent,
+    [string] $expectedHash)
 {
     Write-Host "Downloading [$SourceFile], please be patient...."
     if (-not $Execute) {
@@ -137,7 +139,7 @@ function DownloadFileWebRequest (
 
     $TempFile = [System.IO.Path]::GetTempFileName()
     try {
-        $response = Invoke-WebRequest -Uri $SourceFile -OutFile $TempFile -TimeoutSec 120 
+        $response = Invoke-WebRequest -Uri $SourceFile -OutFile $TempFile -UserAgent $userAgent -TimeoutSec 120 
     } 
     catch {
       $errorCode = $_.Exception.Response.StatusCode.Value__
@@ -146,14 +148,7 @@ function DownloadFileWebRequest (
       throw "Download $SourceFile Failed! WebRequest reported errorCode: [$errorCode]"
     }
 
-    # we now have the temporary file
-    if (($ExpectedSize -gt 0) -and (Test-Path $TempFile)) {
-        $fileSize = (Get-Item $TempFile).length
-        if (-not ($fileSize -eq $ExpectedSize)) {
-              Remove-Item -path $TempFile -ErrorAction SilentlyContinue
-              throw "Size of downloaded file [$fileSize] not matching expected filesize [$ExpectedSize] for $sourceFile"
-        }
-    }
+    CheckHash $TempFile $expectedHash
 
     new-item $outFile -type File -Force -ErrorAction SilentlyContinue
     move-Item $TempFile $OutFile -Force -ErrorAction SilentlyContinue
@@ -170,6 +165,7 @@ function DownloadFileWebRequest (
 function DownloadFileWebClient(
     [string] $SourceFile,
     [string] $OutFile,
+    [string] $expectedHash,
     [int] $timeout = 600,
     [int] $maxtry = 5)
 {
@@ -223,6 +219,8 @@ function DownloadFileWebClient(
 
                     Remove-Job $job -force -ErrorAction SilentlyContinue
 
+                    CheckHash $TempFile $expectedHash
+
                     # we now have the temporary file, we need to rename it
                     new-item $outFile -type File -Force -ErrorAction SilentlyContinue
                     move-Item $TempFile $OutFile -Force -ErrorAction SilentlyContinue
@@ -272,4 +270,18 @@ function PlatformMatching(
     return $isMatching
 }
 
-# vim:set expandtab shiftwidth=2 tabstop=2:
+function CheckHash(
+    [string] $tempFile,
+    [string] $expectedHash)
+{
+    if ($expectedHash) {
+        $fileHash = (Get-FileHash -Path $tempFile -Algorithm SHA256 -ErrorAction SilentlyContinue).Hash
+        if ($fileHash -ne $expectedHash) {
+              Write-Warning "Hash for downloaded file is not matching expected hash value."
+              Write-Warning "This could be a download error or an unexpected version change at the download source."
+              Write-Warning "The installation will continue ...."
+        }
+    }
+}
+
+# vim:set expandtab shiftwidth=4 tabstop=4:

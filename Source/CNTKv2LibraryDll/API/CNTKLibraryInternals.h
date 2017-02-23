@@ -88,24 +88,8 @@ namespace CNTK
 #endif
 
     template <class E>
-    __declspec_noreturn inline void ThrowFormatted(const char* format, ...)
-    {
-        va_list args;
-        va_start(args, format);
+    CNTK_API __declspec_noreturn void ThrowFormatted(const char* format, ...);
 
-        char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
-        int written = vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
-        // TODO: In case of EILSEQ error, choose between just outputting the raw format itself vs. continuing the half-completed buffer
-        //if (written < 0) // an invalid wide-string conversion may lead to EILSEQ
-        //    strncpy(buffer, format, _countof(buffer)
-        UNUSED(written); // pre-VS2015 vsnprintf() returns -1 in case of overflow, instead of the #characters written
-        if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
-            sprintf(buffer + _countof(buffer) - 4, "...");
-
-        // TODO: Should use ExceptionWithCallStack; temporarily using std::exception to avoid duplicating headers
-        //throw ExceptionWithCallStack<E>(buffer, ExceptionWithCallStack<E>::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true));
-        throw E(buffer);
-    }
 #pragma warning(pop)
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
@@ -217,6 +201,12 @@ namespace CNTK
     class Trainer;
     typedef std::shared_ptr<Trainer> TrainerPtr;
 
+    class ProgressWriter;
+    typedef std::shared_ptr<ProgressWriter> ProgressWriterPtr;
+
+    class Accumulator;
+    typedef std::shared_ptr<Accumulator> AccumulatorPtr;
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
@@ -231,6 +221,7 @@ namespace CNTK
         CNTK_API FunctionPtr Scatter(const Variable& operand, const Variable& condition, const std::pair<size_t, int>& newDerivedSequenceAxisScalingAndAdditiveFactor, const std::wstring& name = L"");
         CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
+        CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = L"");
 
         // This is meant for debugging purposes only and is very likely to be deprecated in the future.
         CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
@@ -264,11 +255,14 @@ namespace CNTK
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void DisableForwardValuesSharing();
 
-        CNTK_API void EnableHyperMemoryCompress();
-        CNTK_API void DisableHyperMemoryCompress();
-
         CNTK_API void EnableGradientAccumulationOptimization();
         CNTK_API void DisableGradientAccumulationOptimization();
+
+        static const uint64_t DefaultProfilerBufferSize = 32 * 1024 * 1024;
+        CNTK_API void StartProfiler(const std::wstring& profilerDir = L"profiler", bool profilerSyncGpu = false, size_t profilerBufferSize = DefaultProfilerBufferSize);
+        CNTK_API void EnableProfiler();
+        CNTK_API void DisableProfiler();
+        CNTK_API void StopProfiler();
 
         CNTK_API bool AreEquivalent(const ::CNTK::FunctionPtr& f1, const ::CNTK::FunctionPtr& f2);
         CNTK_API bool AreEquivalent(const ::CNTK::Variable& v1, const ::CNTK::Variable& v2, bool allowParameterAndConstantsEquivalence = false);
@@ -282,5 +276,60 @@ namespace CNTK
         /// Returns true if num CPU Threads was set.
         ///
         bool MaxNumCPUThreadsSet();
+
+        ///
+        /// TensorBoardFileWriter allows collecting various metrics (e.g. loss/error etc.) as the training progresses,
+        /// so that they can be analyzed in TensorBoard.
+        /// It also provides an option to serialize the model being trained, so that it can also be visualized.
+        /// The class is NOT thread-safe: it is assumed that only one thread is using each instance.
+        ///
+        class TensorBoardFileWriter final
+        {
+        public:
+            ///
+            /// Construct a TensorBoardFileWriter to log metrics as files in the given directory.
+            /// An optional model argument allows serializing the model as well, so that it can be visualized
+            /// in an external tool.
+            ///
+            CNTK_API explicit TensorBoardFileWriter(const std::wstring& dir, const FunctionPtr& modelToVisualize = nullptr);
+
+            ///
+            /// Destruct the TensorBoardFileWriter and close any open files.
+            ///
+            CNTK_API ~TensorBoardFileWriter() { Close(); }
+
+            ///
+            /// Record a value of some metric at a particular step.
+            /// For example, to record average value of a loss function for the n-th minibatch, one could call this:
+            ///     WriteValue("mb_avg_loss", lossValue, minibatchIdx);
+            ///
+            CNTK_API void WriteValue(const std::wstring& name, float value, uint64_t step);
+
+            ///
+            /// Flushes any outstanding records to disk. Returns true on success, false otherwise.
+            ///
+            CNTK_API bool Flush();
+
+            ///
+            /// Flushes any outstanding records to disk and closes a currently open underlying file.
+            /// Subsequent calls to WriteValue will open a new file. Returns true on success, false otherwise.
+            ///
+            CNTK_API bool Close();
+
+        private:
+            void Init();
+            void WriteModel();
+            void WriteRecord(const std::string& data);
+            void WriteVersion(time_t time);
+
+            // Disable copy-construction and assignment.
+            TensorBoardFileWriter(const TensorBoardFileWriter& other) = delete;
+            TensorBoardFileWriter& operator=(const TensorBoardFileWriter& other) = delete;
+
+            const FunctionPtr m_model;
+            const std::wstring m_dir;
+            FILE* m_file;
+            std::wstring m_fileName;
+        };
     }
 }

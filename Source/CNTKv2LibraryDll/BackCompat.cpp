@@ -20,6 +20,8 @@
 #include "ReshapingNodes.h"
 #include "DeprecatedNodes.h"
 #include "RNNNodes.h"
+#include "PreComputeNodes.h"
+#include "DeprecatedNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -49,9 +51,7 @@ namespace CNTK
 
                 Variable var;
                 if (node->IsLeaf())
-                {
                     var = ResolveLeaf<ElementType>(node);
-                }
                 else
                 {
                     // This is a non-leaf node and maps to a primitive Function
@@ -78,6 +78,22 @@ namespace CNTK
             }
 
         private:
+
+            template<class ElementType>
+            Variable CreateParameterOrConstantFromNodeValue(const ComputationNodeBasePtr& node, bool isConstant)
+            {
+                auto& matrix = node->As<ComputationNode<ElementType>>()->Value();
+                auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(node->GetSampleLayout()));
+                NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), AsNDShape(node->GetSampleLayout()), false, tensorView);
+
+                auto kind = isConstant ? VariableKind::Constant : VariableKind::Parameter;
+
+                std::wstring varUid, varName;
+                std::tie(varUid, varName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), kind);
+
+                return isConstant ? (Variable)Constant(value, varName, varUid) : Parameter(value, varName, varUid);
+            }
+
             template<class ElementType>
             Variable ResolveLeaf(const ComputationNodeBasePtr& node)
             {
@@ -104,13 +120,7 @@ namespace CNTK
                 if (node->Is<LearnableParameter<ElementType>>())
                 {
                     bool isConstant = (node->GetLearningRateMultiplier() == 0);
-                    auto& matrix = node->As<ComputationNode<ElementType>>()->Value();
-                    auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(node->GetSampleLayout()));
-                    NDArrayViewPtr value = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), variableShape, false, tensorView);
-
-                    auto kind = isConstant ? VariableKind::Constant : VariableKind::Parameter;
-                    std::tie(varUid, varName) = UidAndNameFromCNTKInternalNodeName(node->NodeName(), kind);
-                    return isConstant ? (Variable)Constant(value, varName, varUid) : Parameter(value, varName, varUid);
+                    return CreateParameterOrConstantFromNodeValue<ElementType>(node, isConstant);
                 }
 
                 LogicError("CNTK::LoadLegacyModel: Unsupported legacy CNTK node named '%S'", node->NodeName().c_str());
@@ -134,6 +144,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Sin;
                 else if (node->OperationName() == OperationNameOf(PassNode))
                     opType = PrimitiveOpType::Pass;
+                else if (node->OperationName() == OperationNameOf(LabelsToGraphNode))
+                    opType = PrimitiveOpType::LabelsToGraph;
                 else if (node->OperationName() == OperationNameOf(RectifiedLinearNode))
                     opType = PrimitiveOpType::ReLU;
                 else if (node->OperationName() == OperationNameOf(ExpNode))
@@ -311,7 +323,7 @@ namespace CNTK
                     // tensor dimensions flattended into the column dimension of the 2D paramater matrix
                     // We need to recover the actual tensor shape of the parameter in this case
                     auto& convolutionMapVar = inputVars[0];
-                    if (convolutionNode->IsConvolution2D())
+                    if (convolutionNode->IsConvolution2D() || (convolutionMapVar.Shape().Rank() == 2))
                     {
                         assert(convolutionMapVar.Shape().Rank() == 2);
                         assert(convolutionMapVar.IsConstant() || convolutionMapVar.IsParameter());
@@ -433,6 +445,35 @@ namespace CNTK
                 {
                     opType = PrimitiveOpType::LogSoftmax;
                 }
+                else if (node->OperationName() == OperationNameOf(EditDistanceErrorNode)) 
+                {
+                    auto edNode = node->As<EditDistanceErrorNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameInsertionPenalty] = edNode->InsertionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDeletionPenalty] = edNode->DeletionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSubstitutionPenalty] = edNode->SubstitutionPenalty();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSquashInputs] = edNode->SquashInputs();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(edNode->TokensToIgnore());
+
+                    opType = PrimitiveOpType::EditDistanceError;
+                }
+                else if ((node->OperationName() == OperationNameOf(MeanNode)) || (node->OperationName() == OperationNameOf(InvStdDevNode)))
+                {
+                    auto precomputeNode = node->As<MeanInvStdDevNodeBase<ElementType>>();
+                    if (!precomputeNode->HasComputed())
+                        InvalidArgument("Loading a CNTK legacy V1 model containing a Mean/InvStdDev precompute node, whose computation is unfinished, is not supported!");
+
+                    return CreateParameterOrConstantFromNodeValue<ElementType>(node, /* isConstant =*/ true);
+                }
+                else if (node->OperationName() == OperationNameOf(PerDimMeanVarNormalizationNode))
+                {
+                    auto meanValue = Constant(inputVars[1]).Value();
+                    auto invStdDevValue = Constant(inputVars[2]).Value();
+
+                    std::wstring uid, name;
+                    std::tie(uid, name) = UidAndNameFromCNTKInternalNodeName(node->NodeName());
+
+                    return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
+                }
                 else
                     LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
 
@@ -489,16 +530,16 @@ namespace CNTK
 
                 if (ComputationNetwork::IsNodePtr<ComputationNode<float>>(rootNode))
                 {
-                    rootVariables.push_back(resolver.GetVariable<float>(rootNode).Owner());
+                    auto var = resolver.GetVariable<float>(rootNode);
+                    rootVariables.push_back(var.IsOutput() ? (Variable)var.Owner() : var);
                 }
                 else if (ComputationNetwork::IsNodePtr<ComputationNode<double>>(rootNode))
                 {
-                    rootVariables.push_back(resolver.GetVariable<double>(rootNode).Owner());
+                    auto var = resolver.GetVariable<double>(rootNode);
+                    rootVariables.push_back(var.IsOutput() ? (Variable)var.Owner() : var);
                 }
                 else
-                {
                     LogicError("LoadLegacyModel(): invalid computation node element type.");
-                }
             }
 
             auto rootComposite = Combine(rootVariables);
@@ -527,10 +568,10 @@ namespace CNTK
             switch (dataType)
             {
             case DataType::Float:
-                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, {}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {}, {}, {}, false);
                 break;
             case DataType::Double:
-                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, {}, false);
                 break;
             default:
                 LogicError("Unknown DataType %s", DataTypeName(dataType));

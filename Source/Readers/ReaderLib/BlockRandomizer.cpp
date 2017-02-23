@@ -18,11 +18,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
 BlockRandomizer::BlockRandomizer(
     int verbosity,
-    size_t randomizationRangeInSamples,
+    size_t randomizationRange,
     IDataDeserializerPtr deserializer,
     bool shouldPrefetch,
     bool multithreadedGetNextSequence,
-    size_t maxNumberOfInvalidSequences)
+    size_t maxNumberOfInvalidSequences,
+    bool sampleBasedRandomizationWindow)
     : m_verbosity(verbosity),
       m_deserializer(deserializer),
       m_sweep(SIZE_MAX),
@@ -30,7 +31,7 @@ BlockRandomizer::BlockRandomizer(
       m_globalSamplePosition(SIZE_MAX),
       m_epochStartPosition(0),
       m_sweepSizeInSamples(0),
-      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRangeInSamples)),
+      m_chunkRandomizer(std::make_shared<ChunkRandomizer>(deserializer, randomizationRange, sampleBasedRandomizationWindow)),
       m_multithreadedGetNextSequences(multithreadedGetNextSequence),
       m_prefetchedChunk(CHUNKID_MAX),
       m_cleaner(maxNumberOfInvalidSequences)
@@ -198,7 +199,7 @@ std::pair<size_t, size_t> BlockRandomizer::LoadSequenceData(size_t globalSampleC
             LogicError("Invalid chunk requested.");
         }
 
-        it->second->GetSequence(description.m_id, sequenceData);
+        it->second->GetSequence(description.m_indexInOriginalChunk, sequenceData);
         for (int j = 0; j < m_streams.size(); ++j)
         {
             assert(offset + i < data[j].size());
@@ -436,6 +437,9 @@ void BlockRandomizer::SetCurrentSamplePosition(size_t currentSamplePosition)
 
 void BlockRandomizer::SetConfiguration(const ReaderConfiguration& config)
 {
+    // If configuration changes this can lead to reinitialization of worker chunks.
+    m_currentWindowRange = ClosedOpenChunkInterval{};
+
     *((ReaderConfiguration*)&m_config) = config;
 }
 

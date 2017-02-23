@@ -48,7 +48,8 @@
 #define CNTK_MODEL_VERSION_16 16 // save/load rng state for Dropout and RandomSample nodes.
 #define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
 #define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_18
+#define CNTK_MODEL_VERSION_19 19 // batch norm: add an input parameter to store running mean sample count.
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_19
 
 
 // helper mode for debugging
@@ -790,8 +791,7 @@ public:
     void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
     bool IsOutputNeededDuringBackprop() const 
     { 
-        return (!Globals::ShouldEnableShareNodeValueMatrices() && !Globals::ShouldEnableHyperCompressMemory())
-            || m_outputNeededDuringBackprop; 
+        return !Globals::ShouldEnableShareNodeValueMatrices() || m_outputNeededDuringBackprop; 
     }
 
     // -----------------------------------------------------------------------
@@ -818,6 +818,9 @@ public:
     {
         return EnumerateNodes(std::vector<ComputationNodeBasePtr>{shared_from_this()});
     }
+
+    static const std::wstring DefaultDynamicAxisName;
+    static const std::wstring DefaultNoSequenceAxisName;
 
 private:
     // Recursive part of EnumerateNodes().
@@ -1423,6 +1426,31 @@ public:
         MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
 
+    static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
+                                       const Matrix<ElemType>& packedData,                                       
+                                       const MBLayoutPtr& layout,
+                                       const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
+                                       const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                       bool batchMajor,
+                                       bool maskGaps);
+
+    static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
+                                       const Matrix<ElemType>& packedData,
+                                       const MBLayoutPtr& layout,
+                                       bool batchMajor,
+                                       bool maskGaps)
+    {
+        auto nullSharedPtr = std::shared_ptr<Matrix<ElemType>>(nullptr);
+        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, batchMajor, maskGaps);
+    }
+
+    static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
+                                  const MBLayoutPtr& inputLayout,
+                                  ElemType beta,
+                                  Matrix<ElemType>& broadcastTo,
+                                  const FrameRange& targetFrameRange,
+                                  const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage);
+
     // -----------------------------------------------------------------------
     // accessors for value and gradient
     // -----------------------------------------------------------------------
@@ -1441,6 +1469,9 @@ public:
     MatrixBasePtr GradientPtr() const { return m_gradient; }
     std::shared_ptr<Matrix<ElemType>>& GradientPtrRef() { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
+
+    MatrixType GetPreferredGradientMatrixType() { return m_preferredGradientMatrixType; }
+    void SetPreferredGradientMatrixType(MatrixType requestType) { m_preferredGradientMatrixType = requestType; }
 
 private:
 
@@ -1655,20 +1686,6 @@ public:
 #endif
         // tracing
         Trace();
-
-        // Any memory not needed could resize to zero immediately when HyperCompressMemory active. Since the memory won't really release,
-        // all these memory blocks are gathered into a memory pool. When the next request coming, the best fitting block will be chosen.
-        if (Globals::ShouldEnableHyperCompressMemory()) 
-        {
-            for (auto& input : GetInputs())
-            {
-                if (!input->IsOutputNeededDuringBackprop() && input->IsValueSharable())
-                {
-                    auto inputNodePtr = DownCast(input);
-                    inputNodePtr->Value().Resize(0, 0);
-                }
-            }
-        }
     }
 
     virtual void /*IComputationNode::*/BeginBackprop() override
@@ -1703,9 +1720,9 @@ public:
         }
     }
 
+#ifdef _DEBUG
     virtual void /*IComputationNode::*/ EndBackprop() override
     {
-#ifdef _DEBUG
         Base::EndBackprop();
 #ifdef TRACK_GAP_NANS
         for (size_t i = 0; i < m_inputs.size(); i++)
@@ -1719,18 +1736,8 @@ public:
             }
         }
 #endif
-#endif
-        // We could release the gradient of value sharable nodes and all no-longer used memory generated in forward.
-        if (IsValueSharable() && Globals::ShouldEnableHyperCompressMemory())
-        {
-            if (GradientPtr()) 
-                Gradient().Resize(0, 0);
-
-            // canceling the graph dependency
-            if (IsOutputNeededDuringBackprop()) 
-                Value().Resize(0, 0);
-        }
     }
+#endif
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
@@ -1791,10 +1798,12 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
+    // for memory pool utilization optimizaiton, the requested pointer is not immediately useable until the entire network has gone through all requests 
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
+        size_t matrixSize = m_sampleLayout.GetNumElements();
         if (IsValueSharable())
-            RequestMatrixFromPool(m_value, matrixPool);
+            RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
         else
             CreateMatrixIfNull(m_value);
     }
@@ -1819,7 +1828,8 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        RequestMatrixFromPool(m_gradient, matrixPool);
+        size_t matrixSize = m_sampleLayout.GetNumElements();
+        RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout());
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1864,18 +1874,20 @@ protected:
             matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
     }
 
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
+    // matrixSize is per sample size, if unknown or hard to estimate, set matrixSize = 0
+    // if the matrix's size will scale with minibatch size, set mbScale = true 
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false)
     {
         if (matrixPtr == nullptr)
         {
-            matrixPtr = matrixPool.Request<ElemType>(m_deviceId);
+            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale);
         }
     }
 
     void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
     {
         assert(matrixPtr != nullptr);
-        matrixPool.Release<ElemType>(matrixPtr);
+        matrixPool.RequestRelease<ElemType>(&matrixPtr);
     }
 
 public:
@@ -1890,7 +1902,8 @@ public:
                                       const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
                                       const std::string& sampleSeparator, std::string valueFormatString,
-                                      bool outputGradient = false, bool onlyShowAbsSumForDense = false) const;
+                                      bool outputGradient = false, bool onlyShowAbsSumForDense = false,
+                                      std::function<std::string(size_t)> getKeyById = std::function<std::string(size_t)>()) const;
 
     // simple helper to log the content of a minibatch
     void DebugLogMinibatch(bool outputGradient = false) const
@@ -2061,6 +2074,8 @@ protected:
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
 
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
+
+    MatrixType m_preferredGradientMatrixType = UNDETERMINED;
 };
 
 // convenience wrapper for ComputationNode::New()

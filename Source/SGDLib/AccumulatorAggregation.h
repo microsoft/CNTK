@@ -50,6 +50,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
         distGradAgg = make_shared<V2SimpleDistGradAggregator<ElemType>>(
             mpi,
             false /*useAsyncAggregation*/,
+            net->GetDeviceId(),
             0 /*syncStatsTrace*/,
             ::CNTK::MPICommunicator());
     else

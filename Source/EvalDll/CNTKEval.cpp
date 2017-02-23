@@ -21,7 +21,6 @@
 #include <vld.h> // leak detection
 #endif
 #include "BestGpu.h"
-#include "MPIWrapper.h"
 #include "DataDeserializer.h"
 #include "SequencePacker.h"
 #include "NoRandomizer.h"
@@ -42,7 +41,6 @@ void CNTKEvalBase<ElemType>::Init(const std::string& config)
     CPUMatrix<ElemType>::SetNumThreads(nThreads);
 
     Globals::SetShareNodeValueMatrices(m_config(L"shareNodeValueMatrices", true));
-    Globals::SetHyperCompressMemory(m_config(L"hyperCompressMemory", false));
 }
 
 

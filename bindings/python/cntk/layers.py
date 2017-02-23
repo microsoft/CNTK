@@ -14,7 +14,8 @@ from .ops import parameter, input_variable, placeholder_variable, combine
 from .ops import times, convolution, pooling, batch_normalization, dropout, unpooling
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from .utils import Record, _as_tuple
-from .blocks import *  # TODO: reduce to what we actually use
+from .blocks import * # layers.py imports all of blocks and models
+from .models import *
 from .blocks import _trace_layers  # (debugging)
 
 from .ops.functions import Function
@@ -169,7 +170,54 @@ def Convolution(filter_shape,        # e.g. (3,3)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Convolution', name, Record(W=W, b=b), make_block=True)
+
+    op_name = 'Convolution{}D'.format(len(filter_shape))
+    return Block(apply_x, op_name, name, Record(W=W, b=b), make_block=True)
+
+# Convolution1D -- create a 1D convolution layer with optional non-linearity
+def Convolution1D(filter_shape,        # a scalar, e.g., 3 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  name=''):
+    if len(filter_shape) != 1: 
+         raise ValueError('Convolution1D: filter_shape must be a scalar')
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
+
+# Convolution2D -- create a 2D convolution layer with optional non-linearity
+def Convolution2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  name=''):
+    if len(filter_shape) != 2: 
+         raise ValueError('Convolution2D: filter_shape must be a 2D tuple, e.g. (3,3)')
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
+
+# Convolution3D -- create a 3D convolution layer with optional non-linearity
+def Convolution3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
+                  num_filters=None,
+                  activation=activation_default_or_None,
+                  init=init_default_or_glorot_uniform,
+                  pad=pad_default_or_False,
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  bias=bias_default_or_True,
+                  init_bias=init_bias_default_or_0,
+                  name=''):
+    if len(filter_shape) != 3: 
+         raise ValueError('Convolution3D: filter_shape must be a 3D tuple, e.g. (3,3,3)')
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
 
 # Deconvolution -- create a deconvolution layer with optional non-linearity
 def Deconvolution(filter_shape,        # e.g. (3,3)
@@ -302,7 +350,10 @@ def Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_
     f_x_h_c = over(x, prev_state) # apply the recurrent over
     # this returns a Function (x, (h_prev, c_prev)) -> (h, c)
     h_c = f_x_h_c.outputs
-    replacements = { value_forward: value for (value_forward, value) in zip(list(_as_tuple(state_forward)), h_c) }
+    if type(state_forward) is tuple and len(state_forward) > 1: 
+      replacements = { value_forward: value for (value_forward, value) in zip(list(_as_tuple(state_forward)), h_c) }
+    else:
+      replacements = {(state_forward,)[0] : h_c[0] }
     f_x_h_c.replace_placeholders(replacements)  # resolves state_forward := h_c
     h = f_x_h_c.outputs[0]  # 'h' is a Variable (the output of a Function that computed it)
     if _trace_layers:
@@ -334,6 +385,14 @@ def Dropout(prob,name=''):
     apply_x = dropout(x, dropout_rate=prob)
     return Block(apply_x, 'Dropout', name, make_block=True)
 
+# Activation -- create an activation layer 
+def Activation(activation=activation_default_or_None, name=''): 
+    # expression 
+    activation = _resolve_activation(activation)
+    x = Placeholder(name='activation_arg') 
+    apply_x = activation(x) 
+    return Block(apply_x, 'Activation', name, make_block=True) 
+
 # BatchNormalization -- create a batch-normalization layer
 # TODO: spatial_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C+ change.
 def BatchNormalization(map_rank=None,  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
@@ -351,12 +410,13 @@ def BatchNormalization(map_rank=None,  # if given then normalize only over this 
     bias         = Parameter(norm_shape, init=0)
     run_mean     = Constant(0, shape=norm_shape)  # note: these are not really constants; they are updated differently
     run_variance = Constant(0, shape=norm_shape)
+    run_count    = Constant(0, shape=(1,))
 
     # expression
     x = Placeholder(name='batch_normalization_arg')
-    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, map_rank == 1, normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, epsilon=epsilon,
-                                  #use_cntk_engine=use_cntk_engine)
-                                  use_cudnn_engine=not use_cntk_engine)
+    apply_x = batch_normalization(x, scale, bias, run_mean, run_variance, running_count=run_count, spatial=(map_rank == 1),
+                                  normalization_time_constant=normalization_time_constant, blend_time_constant=blend_time_constant, 
+                                  epsilon=epsilon, use_cudnn_engine=not use_cntk_engine)
     return Block(apply_x, 'BatchNormalization', name, Record(scale=scale, bias=bias, mean=run_mean, variance=run_variance), make_block=True)
 
 # LayerNormalization -- create a layer-normalization layer

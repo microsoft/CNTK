@@ -15,11 +15,15 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-    ImageDeserializerBase::ImageDeserializerBase() : m_precision(ElementType::tfloat),
-        m_grayscale(false), m_verbosity(0), m_multiViewCrop(false)
+    ImageDeserializerBase::ImageDeserializerBase() 
+        : DataDeserializerBase(true),
+          m_precision(ElementType::tfloat),
+          m_grayscale(false), m_verbosity(0), m_multiViewCrop(false)
     {}
 
-    ImageDeserializerBase::ImageDeserializerBase(CorpusDescriptorPtr corpus, const ConfigParameters& config) : m_corpus(corpus)
+    ImageDeserializerBase::ImageDeserializerBase(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary)
+        : DataDeserializerBase(primary),
+          m_corpus(corpus)
     {
         assert(m_corpus);
 
@@ -69,7 +73,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_multiViewCrop = config(L"multiViewCrop", false);
     }
 
-    void ImageDeserializerBase::PopulateSequenceData(cv::Mat image, size_t classId, size_t sequenceId, std::vector<SequenceDataPtr>& result)
+    void ImageDeserializerBase::PopulateSequenceData(
+        cv::Mat image,
+        size_t classId,
+        size_t copyId,
+        const KeyType& sequenceKey,
+        std::vector<SequenceDataPtr>& result)
     {
         auto imageData = make_shared<ImageSequenceData>();
         if (!image.data)
@@ -86,11 +95,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             ImageDimensions dimensions(image.cols, image.rows, image.channels());
 
             imageData->m_sampleLayout = std::make_shared<TensorShape>(dimensions.AsTensorShape(HWC));
-            imageData->m_id = sequenceId;
+            imageData->m_copyIndex = static_cast<uint8_t>(copyId);
             imageData->m_image = image;
             imageData->m_numberOfSamples = 1;
             imageData->m_elementType = dataType;
             imageData->m_isValid = true;
+            imageData->m_key = sequenceKey;
         }
         result.push_back(imageData);
 

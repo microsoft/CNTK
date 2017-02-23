@@ -8,7 +8,7 @@ import os
 import math
 import numpy as np
 from .. import Function
-from ..ops import times, sequence, as_block
+from ..ops import times, sequence, as_block, element_select
 from ..ops.tests.ops_test_utils import cntk_device
 from ..utils import one_hot
 from ..trainer import *
@@ -19,17 +19,21 @@ from .. import cross_entropy_with_softmax, classification_error, parameter, \
 import pytest
 from scipy.sparse import csr_matrix as csr
 
-def test_trainer(tmpdir):
+@pytest.mark.parametrize("no_eval_function", [True, False])
+def test_trainer(tmpdir, no_eval_function):
     in1 = input_variable(shape=(1,))
     labels = input_variable(shape=(1,))
     p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
-    errs = classification_error(z, labels)
+    if no_eval_function:
+        errs = None
+    else:
+        errs = classification_error(z, labels)
 
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, ce, errs,
+    trainer = Trainer(z, (ce, errs),
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[1],[2]]
     label_value = [[0], [1]]
@@ -57,7 +61,7 @@ def test_output_to_retain():
     errs = classification_error(z, labels)
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, ce, errs,
+    trainer = Trainer(z, (ce, errs),
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
     in1_value = [[[1]], [[2]]]
     label_value = [[0], [1]]
@@ -214,7 +218,7 @@ def test_model_not_criterion_subset():
     ce = 0.5 * sequence.reduce_sum(ce_model2) + 0.5 * ce_model1
 
     lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
-    trainer_multitask = Trainer(model1, ce, pe_model1, sgd(ce.parameters, lr=lr_schedule))
+    trainer_multitask = Trainer(model1, (ce, pe_model1), sgd(ce.parameters, lr=lr_schedule))
 
     x_data = np.asarray([[2., 1.], [1., 2.]], np.float32)
     model1_label_data = np.asarray([1., 0., 0.], np.float32)
@@ -239,4 +243,78 @@ def test_model_one_output_of_multi_output_function():
     lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
     ce = cross_entropy_with_softmax(combined_model.outputs[0], labels)
     pe = classification_error(combined_model.outputs[0], labels)
-    trainer_multitask = Trainer(combined_model.outputs[0], ce, pe, sgd(ce.parameters, lr=lr_schedule))
+    trainer_multitask = Trainer(combined_model.outputs[0], (ce, pe), sgd(ce.parameters, lr=lr_schedule))
+
+
+def test_trainer_with_some_params_not_learned():
+    input_dim = 2
+    proj_dim = 2
+    x = input_variable(shape=(input_dim,))
+    W = parameter(shape=(input_dim, proj_dim), init=glorot_uniform())
+    B = parameter(shape=(proj_dim,), init=glorot_uniform())
+    t = times(x, W)
+    z = t + B
+
+    W_orig_value = W.value
+    B_orig_value = B.value
+
+    labels = input_variable(shape=(proj_dim,))
+    ce = cross_entropy_with_softmax(z, labels)
+    pe = classification_error(z, labels)
+
+    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
+    trainer = Trainer(z, (ce, pe), sgd([W], lr_per_sample))
+
+    x_value = [[1, 1],[2, 2]]
+    label_value = [[0, 1], [1, 0]]
+    arguments = {x: x_value, labels: label_value}
+
+    num_iters = 3
+    for i in range(num_iters):
+        trainer.train_minibatch(arguments)
+
+        assert np.array_equal(B.value, B_orig_value)
+        assert not np.array_equal(W.value, W_orig_value)
+        W_orig_value = W.value
+
+    trainer.test_minibatch(arguments)
+
+def test_not_replaced_placeholders():
+    
+    def wrap_in_block(fun_args, name):
+        block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+        combined_block_args = combine(block_args)                               # the content of the BlockFunction
+        arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
+        combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=name)
+        return combined_args
+
+
+    input_dim = 2
+    x = input_variable(shape=(input_dim,))
+    p1 = placeholder_variable()
+    p2 = placeholder_variable()
+
+    a = abs(x)
+    b = wrap_in_block(list(a.outputs) + [p1], "my_first_block")
+    b = wrap_in_block(list(b.outputs) + [p2], "my_second_block")
+    b = past_value(b.outputs[0])
+
+    model = b.replace_placeholders({p1:b.outputs[0], p2:b.outputs[0]})
+
+    x0 = [[1, 1],[2, 2]]
+    with pytest.raises(RuntimeError):
+        model.forward({x : x0}, model.outputs)
+
+def test_disallow_seq_starts_with_Value_objects():
+    one_hot_batch = [[2,5], [0,1,6]]
+    dim = 10
+
+    in1 = input_variable(shape=(dim,), is_sparse=True)
+    z = times(in1, np.eye(dim))
+    batch = one_hot(one_hot_batch, num_classes=dim)
+
+    with pytest.raises(ValueError):
+        result = z.eval(({in1: batch}, len(batch)*[True]))
+
+    with pytest.raises(ValueError):
+        result = z.eval({in1: (batch, len(batch)*[True])})

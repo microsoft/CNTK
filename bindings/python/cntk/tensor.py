@@ -187,6 +187,9 @@ class ArrayMixin(object):
         # must be replaced with data member of array
         if len(np_array.shape):
             interface_copy["data"] = np_array.data
+        else:
+            # save a reference to np_array so that it does not disappear
+            self.np_array = np_array
 
         return interface_copy
 

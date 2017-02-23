@@ -14,8 +14,14 @@
 #include <thread>
 #include "GPUMatrix.h"
 #include "Globals.h"
+#include "PerformanceProfiler.h"
+#include "MPIWrapper.h"
+#include "Basics.h"
+#include "ProgressTracing.h"
+#include "buildinfo.h"
 
 extern bool g_shareNodeValueMatrices;
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
@@ -81,16 +87,6 @@ namespace CNTK
             Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ false);
         }
 
-        void EnableHyperMemoryCompress()
-        {
-            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ true);
-        }
-
-        void DisableHyperMemoryCompress()
-        {
-            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ false);
-        }
-
         void EnableGradientAccumulationOptimization()
         {
             Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ true);
@@ -99,6 +95,37 @@ namespace CNTK
         void DisableGradientAccumulationOptimization()
         {
             Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ false);
+        }
+
+        void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
+        {
+            std::wstring logSuffix = L"";
+            auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
+            if (mpi)
+            {
+                logSuffix = std::to_wstring(mpi->CurrentNodeRank());
+            }
+
+            Microsoft::MSR::CNTK::ProfilerInit(
+                profilerDir,
+                profilerBufferSize,
+                logSuffix,
+                profilerSyncGpu);
+        }
+
+        void EnableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(true);
+        }
+
+        void DisableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(false);
+        }
+
+        void StopProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerClose();
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -471,8 +498,35 @@ namespace CNTK
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
     
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
+
+    bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_allKnownDynamicAxisNames.insert(axisName).second;
+    }
+
+    const std::wstring& Axis::UniqueDynamicAxesNames::NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_allKnownDynamicAxisNames.find(axisNamePrefix) == m_allKnownDynamicAxisNames.end())
+        {
+            m_allKnownDynamicAxisNames.insert(axisNamePrefix);
+            return axisNamePrefix;
+        }
+
+        for (size_t i = 1;; i++)
+        {
+            auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
+            if (m_allKnownDynamicAxisNames.find(newDynamicAxisName) == m_allKnownDynamicAxisNames.end())
+            {
+                m_allKnownDynamicAxisNames.insert(newDynamicAxisName);
+                return *m_allKnownDynamicAxisNames.find(newDynamicAxisName);
+            }
+        }
+    }
 
     static std::shared_ptr<std::vector<Axis>> s_defaultInputVariableDynamicAxes, s_unknownDynamicAxes;
     static std::once_flag s_initDefaultInputVariableDynamicAxesFlag, s_initUnknownDynamicAxesFlag;
@@ -501,6 +555,12 @@ namespace CNTK
         return s_defaultDynamicAxis;
     }
 
+    /*static*/ const Axis& Axis::OperandSequenceAxis()
+    {
+        static const Axis s_operandSequenceAxis(L"__operandSequenceAxis");
+        return s_operandSequenceAxis;
+    }
+
     /*static*/ const Axis& Axis::DefaultBatchAxis()
     {
         static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
@@ -511,6 +571,12 @@ namespace CNTK
     {
         static const Axis s_allStaticAxes(SentinelStaticAxisIndexValueForAllStaticAxes);
         return s_allStaticAxes;
+    }
+
+    /*static*/ const Axis& Axis::AllAxes()
+    {
+        static const Axis s_allAxes(SentinelStaticAxisIndexValueForAllAxes);
+        return s_allAxes;
     }
 
     void Axis::RegisterAxisName(const std::wstring& axisName)
@@ -540,4 +606,68 @@ namespace CNTK
     {
         s_defaultUnitGainValue.store(value);
     }
+
+    template <class E>
+    __declspec_noreturn void ThrowFormatted(const char* format, ...)
+    {
+        va_list args;
+        va_start(args, format);
+        Microsoft::MSR::CNTK::ThrowFormattedVA<E>(format, args);
+        va_end(args);
+    }
+
+
+    void PrintBuiltInfo()
+    {
+        LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+        LOGPRINTF(stderr, "Build info: \n\n");
+        LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
+        LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
+#ifdef _BUILDTYPE_
+        LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+#endif
+#ifdef _BUILDTARGET_
+        LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+#endif
+#ifdef _WITH_1BITSGD_
+        LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+#endif
+#ifdef _WITH_ASGD_
+        LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
+#endif
+#ifdef _MATHLIB_
+        LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
+#endif
+#ifdef _CUDA_PATH_
+        LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
+#endif
+#ifdef _CUB_PATH_
+        LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
+#endif
+#ifdef _CUDNN_PATH_
+        LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
+#endif
+#ifdef _GIT_EXIST
+        LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
+        LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
+#endif
+#ifdef _BUILDER_
+        LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+#endif
+#ifdef _BUILDPATH_
+        LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+#endif
+#ifdef _MPI_NAME_
+        LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
+#endif
+#ifdef _MPI_VERSION_
+        LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
+#endif
+        LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+    }
+
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::runtime_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::logic_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::invalid_argument>(const char* format, ...);
 }
+

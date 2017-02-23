@@ -61,8 +61,8 @@ struct TextParser<ElemType>::StreamInfo
 };
 
 template <class ElemType>
-TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool isPrimary) :
-TextParser(corpus, helper.GetFilePath(), helper.GetStreams(), isPrimary)
+TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool primary) :
+TextParser(corpus, helper.GetFilePath(), helper.GetStreams(), primary)
 {
     SetTraceLevel(helper.GetTraceLevel());
     SetMaxAllowedErrors(helper.GetMaxAllowedErrors());
@@ -74,7 +74,8 @@ TextParser(corpus, helper.GetFilePath(), helper.GetStreams(), isPrimary)
 
 // Internal, used for testing.
 template <class ElemType>
-TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool isPrimary) :
+TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool primary) :
+    DataDeserializerBase(primary),
     m_filename(filename),
     m_file(nullptr),
     m_streamInfos(streams.size()),
@@ -91,8 +92,7 @@ TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring&
     m_numAllowedErrors(0),
     m_skipSequenceIds(false),
     m_numRetries(5),
-    m_corpus(corpus),
-    m_isPrimary(isPrimary)
+    m_corpus(corpus)
 {
     assert(streams.size() > 0);
 
@@ -168,8 +168,7 @@ void TextParser<ElemType>::Initialize()
                 "UTF-16 encoding is currently not supported.", m_filename.c_str());
         }
 
-        m_indexer = make_unique<Indexer>(m_file, m_isPrimary, m_skipSequenceIds, NAME_PREFIX, m_chunkSizeBytes);
-
+        m_indexer = make_unique<Indexer>(m_file, m_primary, m_skipSequenceIds, NAME_PREFIX, m_chunkSizeBytes);
         m_indexer->Build(m_corpus);
     });
 
@@ -218,7 +217,7 @@ void TextParser<ElemType>::GetSequencesForChunk(ChunkIdType chunkId, std::vector
     {
         result.push_back(
         {
-            s.m_id,
+            s.m_indexInChunk,
             s.m_numberOfSamples,
             s.m_chunkId,
             s.m_key
@@ -268,7 +267,7 @@ void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor&
     chunk->m_sequenceMap.resize(descriptor.m_sequences.size());
     for (const auto& sequenceDescriptor : descriptor.m_sequences)
     {
-        chunk->m_sequenceMap[sequenceDescriptor.m_id] = LoadSequence(sequenceDescriptor);
+        chunk->m_sequenceMap[sequenceDescriptor.m_indexInChunk] = LoadSequence(sequenceDescriptor);
     }
 }
 
@@ -452,12 +451,12 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             sequenceDsc.m_key.m_sequence, GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
-    FillSequenceMetadata(sequence, sequenceDsc.m_id);
+    FillSequenceMetadata(sequence, sequenceDsc.m_key);
     return sequence;
 }
 
 template<class ElemType>
-void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, size_t sequenceId)
+void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, const KeyType& sequenceKey)
 {
     for (size_t j = 0; j < m_streamInfos.size(); ++j)
     {
@@ -475,7 +474,7 @@ void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, si
             assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
         }
 
-        data->m_id = sequenceId;
+        data->m_key = sequenceKey;
     }
 }
 
@@ -542,7 +541,9 @@ bool TextParser<ElemType>::TryReadRow(SequenceBuffer& sequence, size_t& bytesToR
             " while reading an input row %ls."
             " Possibly, a trailing newline is missing.\n", GetFileInfo().c_str());
     }
-    return false;
+
+    // Return true when we've consumed all expected input.
+    return bytesToRead == 0;
 }
 
 // Reads one sample (an pipe-prefixed input identifier followed by a list of values)
@@ -665,10 +666,10 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
                     return true;
                 }
 
-                if (ShouldWarn())
+                if (m_traceLevel >= Info)
                 {
                     fprintf(stderr,
-                        "WARNING: Unknown input ('%s') %ls. "
+                        "INFO: Skipping unknown input ('%s') %ls. "
                         "Input name '%s' was not specified in the reader config section.\n",
                         name.c_str(), GetFileInfo().c_str(), name.c_str());
                 }
@@ -709,12 +710,22 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
         --bytesToRead;
     }
 
-    if (bytesToRead == 0 && ShouldWarn())
-    {
-        fprintf(stderr,
-            "WARNING: Exhausted all input expected for the current sequence"
-            " while reading an input name %ls.\n", GetFileInfo().c_str());
+    if (ShouldWarn()) {
+        if (bytesToRead == 0)
+        {
+            fprintf(stderr,
+                "WARNING: Exhausted all input expected for the current sequence"
+                " while reading an input name %ls.\n", GetFileInfo().c_str());
+        }
+        else if (!CanRead()) 
+        {
+            fprintf(stderr,
+                "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
+                " while reading an input name %ls.\n", bytesToRead, GetFileInfo().c_str());
+        }
     }
+    
+    // Sequence ends with a dangling input id.
     IncrementNumberOfErrorsOrDie();
     return false;
 }
@@ -784,12 +795,23 @@ bool TextParser<ElemType>::TryReadDenseSample(vector<ElemType>& values, size_t s
 
     if (ShouldWarn())
     {
-        fprintf(stderr,
-            "WARNING: Exhausted all input expected for the current sequence"
-            " while reading a dense sample %ls.\n", GetFileInfo().c_str());
+        if (bytesToRead == 0)
+        {
+            fprintf(stderr,
+                "WARNING: Exhausted all input expected for the current sequence"
+                " while reading a dense sample %ls.\n", GetFileInfo().c_str());
+        }
+        else if (!CanRead())
+        {
+            fprintf(stderr,
+                "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
+                " while reading a dense sample %ls.\n", bytesToRead, GetFileInfo().c_str());
+        }
     }
-    IncrementNumberOfErrorsOrDie();
-    return false;
+
+    // If we've consumed all expected input, return true when we've successfully read
+    // at least a single value
+    return bytesToRead > 0 || counter > 0;
 }
 
 template <class ElemType>
@@ -869,13 +891,24 @@ bool TextParser<ElemType>::TryReadSparseSample(std::vector<ElemType>& values, st
     }
 
     if (ShouldWarn())
-    {
-        fprintf(stderr,
-            "WARNING: Exhausted all input expected for the current sequence"
-            " while reading a sparse sample %ls.\n", GetFileInfo().c_str());
+    { 
+        if (bytesToRead == 0)
+        {
+            fprintf(stderr,
+                "WARNING: Exhausted all input expected for the current sequence"
+                " while reading a sparse sample %ls.\n", GetFileInfo().c_str());
+        }
+        else if (!CanRead())
+        {
+            fprintf(stderr,
+                "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
+                " while reading a sparse sample %ls.\n", bytesToRead, GetFileInfo().c_str());
+        }
     }
 
-    return false;
+    // If we've consumed all expected input, return true when we've successfully read
+    // at least a single value
+    return bytesToRead > 0 || values.size() > 0;
 }
 
 template <class ElemType>
@@ -921,6 +954,13 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
 
         if (!IsDigit(c))
         {
+            if (!found && ShouldWarn()) 
+            {
+                fprintf(stderr,
+                    "WARNING: Expected a uint64 value, but none found %ls.\n", 
+                    GetFileInfo().c_str());
+            }
+
             return found;
         }
 
@@ -946,10 +986,21 @@ bool TextParser<ElemType>::TryReadUint64(size_t& value, size_t& bytesToRead)
 
     if (ShouldWarn())
     {
-        fprintf(stderr,
-            "WARNING: Exhausted all input expected for the current sequence"
-            " while reading a uint64 value %ls.\n", GetFileInfo().c_str());
+        if (bytesToRead == 0) {
+            fprintf(stderr,
+                "WARNING: Exhausted all input expected for the current sequence"
+                " while reading a uint64 value %ls.\n", GetFileInfo().c_str());
+        }
+        else if (!CanRead())
+        {
+            fprintf(stderr,
+                "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
+                " while reading a uint64 value %ls.\n", bytesToRead, GetFileInfo().c_str());
+        }
+        
     }
+    
+    // A well-formed input cannot end with a uint64 value.
     return false;
 }
 
@@ -1149,11 +1200,48 @@ bool TextParser<ElemType>::TryReadRealNumber(ElemType& value, size_t& bytesToRea
         --bytesToRead;
     }
 
+    // We've run out of input, see if we're in a valid state
+    if (bytesToRead == 0)
+    {
+        if (ShouldWarn())
+        {
+            fprintf(stderr,
+                "WARNING: Exhausted all input expected for the current sequence"
+                " while reading an input row %ls."
+                " Possibly, a trailing newline is missing.\n", GetFileInfo().c_str());
+        }
+
+        switch (state)
+        {
+        case IntegralPart:
+        case Period:
+            value = static_cast<ElemType>((negative) ? -number : number);
+            return true;
+        case FractionalPart:
+            coefficient += (number / divider);
+            value = static_cast<ElemType>((negative) ? -coefficient : coefficient);
+            return true;
+        case Exponent:
+            double exponent = (negative) ? -number : number;
+            value = static_cast<ElemType>(coefficient * pow(10.0, exponent));
+            return true;
+        }
+
+        // The floating point number we're reading is malformed.
+        if (ShouldWarn())
+        {
+            fprintf(stderr,
+                "WARNING: Reached an invalid state while reading a floating point value %ls.\n",
+                GetFileInfo().c_str());
+        }
+        return false;
+    }
+
     if (ShouldWarn())
     {
         fprintf(stderr,
-            "WARNING: Exhausted all input expected for the current sequence"
-            " while reading a floating point value %ls.\n", GetFileInfo().c_str());
+            "WARNING: Expected %" PRIu64 " more bytes, but no more input is available for the current sequence"
+            " while reading an input row %ls.\n", bytesToRead, GetFileInfo().c_str());
     }
 
     return false;
@@ -1200,7 +1288,7 @@ std::wstring TextParser<ElemType>::GetFileInfo()
 template <class ElemType>
 bool TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
-    if (m_isPrimary)
+    if (m_primary)
         LogicError("Matching by sequence key is not supported for primary deserilalizer.");
 
     const auto& keys = m_indexer->GetIndex().m_keyToSequenceInChunk;

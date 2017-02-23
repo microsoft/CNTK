@@ -51,7 +51,7 @@ protected:
         size_t bytesProcessed = 0;
         // Now call all of the deserializers on the chunk, in order
         for (size_t c = 0; c < m_deserializers.size(); c++)
-            bytesProcessed += m_deserializers[c]->GetSequenceDataForChunk(m_numSequences, 0, (byte*)m_buffer.get() + bytesProcessed, m_data[c]);
+            bytesProcessed += m_deserializers[c]->GetSequenceDataForChunk(m_numSequences, (byte*)m_buffer.get() + bytesProcessed, m_data[c]);
     }
 
     // chunk id (copied from the descriptor)

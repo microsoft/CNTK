@@ -18,11 +18,16 @@
      https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-with-script-on-Windows
  
  .PARAMETER Execute
- You need to supply this optional parameter to have the install script perform any changes to your machine. 
- Without this parameter NO CHANGES will be done to your machine.
+ You can set this switch to false to prevent devInstall from performing any physical changes to the machine.
+
+ .PARAMETER NoConfirm
+ If you supply this optional parameter, the install script will execute operations without asking for user confirmation.
  
  .PARAMETER localCache
  This optional parameter can be used to specify the directory downloaded components will be stored in
+
+ .PARAMETER InstallLocation
+ The directory the install tools/dependencies will be installed in, by default [c:\local]
 
  .PARAMETER AnacondaBasePath
  This optional parameter allows you to specify the location of an Anaconda installation to be used or created on your 
@@ -34,16 +39,24 @@
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
  Supported values for this parameter are 27, 34, or 35. The default values is 35 (for a CNTK Python 35 environment).
 
+  .PARAMETER PyEnvironmentName
+ This optional parameter allows to specify the name of the environment that will be created during the installation process.
+ By default the environment will be named cntkdev-py<PyVersion>, where PyVersion is being replaced by the content of the <PyVersion>
+ parameter to this script. If this parameter is specified by you, no version substitution in the environment will be performed. 
+
+  .PARAMETER NoPythonEnvironment
+ If this switch parameter is set, the install script will not create a CNTK Python environment during the installation process.
+ This allows creation of the desired environment after the installation.
+
  .EXAMPLE
  .\devInstall.ps1
  
- Run the installer and see what operations would be performed
- .EXAMPLE
- .\devInstall.ps1 -Execute
- 
  Run the installer and install the development tools
+.EXAMPLE
+ .\devInstall.ps1 -Execute:$false
  
- .EXAMPLE
+ Run the installer and see what operations would be performed, without actually performing these actions
+.EXAMPLE
  .\devInstall.ps1 -Execute -AnacondaBasePath d:\mytools\Anaconda34
 
  If the directory [d:\mytools\Anaconda34] exists, the installer will assume it contains a complete Anaconda installation. 
@@ -53,13 +66,26 @@
 
 [CmdletBinding()]
 Param(
-    [parameter(Mandatory=$false)] [switch] $Execute,
+    [parameter(Mandatory=$false)] [switch] $Execute = $true,
     [parameter(Mandatory=$false)] [string] $localCache = "c:\installCacheCntk",
     [parameter(Mandatory=$false)] [string] $InstallLocation = "c:\local",
-    [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
-    [parameter(Mandatory=$false)] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35")
+    [parameter(Mandatory=$false)] [string] $AnacondaBasePath,
+    [parameter(Mandatory=$false)] [switch] $NoConfirm,
+    [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
+    [parameter(Mandatory=$false, ParameterSetName = "PythonVersion")] [string] $PyEnvironmentName = "",
+    [parameter(Mandatory=$true, ParameterSetName = "PythonNoEnvironment")] [switch] $NoPythonEnvironment)
     
 $roboCopyCmd = "robocopy.exe"
+
+if (-not $AnacondaBasePath) {
+    $AnacondaBasePath = Join-Path $InstallLocation Anaconda3-4.1.1-Windows-x86_64
+}
+
+#just make sure the supplied parameter don't end on a backslash
+$localCache = (Join-Path $localCache .) | Split-Path
+$InstallLocation = (Join-Path $InstallLocation .) | Split-Path
+$AnacondaBasePath = (Join-Path $AnacondaBasePath .) | Split-Path
+
 $localDir = $InstallLocation
 
 
@@ -93,7 +119,7 @@ if (-not (Test-Path -Path $solutionFile -PathType Leaf)) {
 
 Function main
 {
-    try { if (-not (DisplayStart)) {
+    try { if (-not (DisplayStart -NoConfirm $NoConfirm)) {
             Write-Host 
             Write-Host " ... Quitting ... "
             Write-Host
@@ -126,16 +152,18 @@ Function main
         $operation += OpZlibVS15Prebuild -cache $localCache -targetFolder $localDir
         $operation += OpOpenCV31 -cache $localCache -targetFolder $localDir
         $operation += OpAnaconda3411 -cache $localCache -AnacondaBasePath $AnacondaBasePath
-        $operation += OpAnacondaEnv -AnacondaBasePath $AnacondaBasePath -repoDir $repositoryRootDir -repoName $reponame -pyVersion $PyVersion
+        if (-not $NoPythonEnvironment) {
+            $operation += OpAnacondaEnv -AnacondaBasePath $AnacondaBasePath -repoDir $repositoryRootDir -repoName $reponame -environmentName $PyEnvironmentName -pyVersion $PyVersion
+        }
 
         $operationList = @()
         $operationList += (VerifyOperations $operation)
 
         PreReqOperations $operationList
 
-        if (DisplayAfterVerify $operationList) {
+        if (DisplayAfterVerify -NoConfirm $NoConfirm -list $operationList) {
 
-            DownloadOperations $operationList 
+            DownloadOperations $operationList
 
             ActionOperations $operationList 
 
@@ -150,7 +178,6 @@ Function main
 }
 
 main
-
 exit 0
 
-# vim:set expandtab shiftwidth=2 tabstop=2:
+# vim:set expandtab shiftwidth=4 tabstop=4:

@@ -164,7 +164,7 @@ def test_sweep_based_schedule(tmpdir, device_id):
 
     lr_per_sample = learning_rate_schedule([0.3, 0.2, 0.1, 0.0], UnitType.sample)
     learner = sgd(z.parameters, lr_per_sample)
-    trainer = Trainer(z, ce, errs, [learner])
+    trainer = Trainer(z, (ce, errs), [learner])
 
     input_map = {
         in1       : mbs.streams.features,

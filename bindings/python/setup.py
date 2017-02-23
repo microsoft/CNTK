@@ -9,6 +9,8 @@ import numpy
 
 IS_WINDOWS = platform.system() == 'Windows'
 
+IS_PY2 = sys.version_info.major == 2
+
 # TODO should handle swig path specified via build_ext --swig-path
 if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     print("Please install swig (>= 3.0.10) and include it in your path.\n")
@@ -73,8 +75,11 @@ else:
     libname_rt_ext = '.so'
 
 
-rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
-                                                      '*' + libname_rt_ext))]
+if 'CNTK_LIBRARIES' in os.environ:
+  rt_libs = [strip_path(fn) for fn in os.environ['CNTK_LIBRARIES'].split()]
+else:
+  rt_libs = [strip_path(fn) for fn in glob(os.path.join(CNTK_LIB_PATH,
+                                                        '*' + libname_rt_ext))]
 
 # copy over the libraries to the cntk base directory so that the rpath is
 # correctly set
@@ -106,6 +111,7 @@ if IS_WINDOWS:
         "/EHsc",
         "/DEBUG",
         "/Zi",
+        "/WX"
     ]
     extra_link_args = ['/DEBUG']
     runtime_library_dirs = []
@@ -127,8 +133,7 @@ cntk_module = Extension(
     name="_cntk_py",
 
     sources = [os.path.join("cntk", "cntk_py.i")],
-    swig_opts = ["-builtin", "-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
-    #swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon],
+    swig_opts = ["-c++", "-D_MSC_VER", "-I" + cntkV2LibraryInclude, "-I" + cntkBindingCommon, "-Werror" ],
     libraries = link_libs,
     library_dirs = [CNTK_LIB_PATH],
 
@@ -160,13 +165,18 @@ else:
     package_data['cntk'] += rt_libs
     kwargs = dict(package_data = package_data)
 
+cntk_install_requires = [
+    'numpy>=1.11',
+    'scipy>=0.17'
+]
+
+if IS_PY2:
+    cntk_install_requires.append('enum34>=1.1.6')
+
 setup(name="cntk",
-      version="2.0.beta9.0",
+      version="2.0.beta11.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,
-      # install_requires=[
-      #  'numpy>=1.11',
-      #  'scipy>=0.17'
-      #],
+      install_requires=cntk_install_requires,
       **kwargs)
