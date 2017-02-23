@@ -7,11 +7,9 @@
 from __future__ import print_function
 import os
 import argparse
-import math
-import numpy as np
 
 from cntk.utils import *
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, reduce_mean
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
@@ -53,7 +51,8 @@ def create_reader(map_file, mean_file, train):
 
 
 # Train and evaluate the network.
-def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs, profiler_dir=None, model_dir=None):
+def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_epochs, profiler_dir=None,
+                       model_dir=None, tensorboard_logdir=None):
 
     set_computation_network_trace_level(0)
 
@@ -85,10 +84,17 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     lr_schedule = learning_rate_schedule(lr_per_sample, epoch_size=epoch_size, unit=UnitType.sample)
     mm_schedule = momentum_as_time_constant_schedule(momentum_time_constant)
 
+    # progress writers
+    progress_writers = [ProgressPrinter(tag='Training', num_epochs=max_epochs)]
+    tensorboard_writer = None
+    if tensorboard_logdir is not None:
+        tensorboard_writer = TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z)
+        progress_writers.append(tensorboard_writer)
+
     # trainer object
-    learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
-                               l2_regularization_weight = l2_reg_weight)
-    trainer     = Trainer(z, (ce, pe), learner)
+    learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule,
+                           l2_regularization_weight = l2_reg_weight)
+    trainer = Trainer(z, (ce, pe), learner, progress_writers)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -97,7 +103,6 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     }
 
     log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # perform model training
     if profiler_dir:
@@ -109,8 +114,14 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
-        progress_printer.epoch_summary(with_metric=True)
+
+        trainer.summarize_training_progress()
+
+        # Log mean of each parameter tensor, so that we can confirm that the parameters change indeed.
+        if tensorboard_writer:
+            for parameter in z.parameters:
+                tensorboard_writer.write_value(parameter.uid + "/mean", reduce_mean(parameter).eval(), epoch)
+
         if model_dir:
             z.save(os.path.join(model_dir, network_name + "_{}.dnn".format(epoch)))
         enable_profiler() # begin to collect profiler data after first epoch
@@ -126,7 +137,6 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
     metric_numer    = 0
     metric_denom    = 0
     sample_count    = 0
-    minibatch_index = 0
 
     while sample_count < test_epoch_size:
         current_minibatch = min(minibatch_size, test_epoch_size - sample_count)
@@ -137,10 +147,9 @@ def train_and_evaluate(reader_train, reader_test, network_name, epoch_size, max_
         metric_denom += current_minibatch
         # Keep track of the number of samples processed so far.
         sample_count += data[label_var].num_samples
-        minibatch_index += 1
 
     print("")
-    print("Final Results: Minibatch[1-{}]: errs = {:0.2f}% * {}".format(minibatch_index+1, (metric_numer*100.0)/metric_denom, metric_denom))
+    trainer.summarize_test_progress()
     print("")
 
     return metric_numer/metric_denom
@@ -151,6 +160,7 @@ if __name__=='__main__':
     parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='160')
     parser.add_argument('-p', '--profiler_dir', help='directory for saving profiler output', required=False, default=None)
     parser.add_argument('-m', '--model_dir', help='directory for saving model', required=False, default=None)
+    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', required=False, default=None)
 
     args = vars(parser.parse_args())
     epochs = int(args['epochs'])
@@ -164,4 +174,5 @@ if __name__=='__main__':
     reader_test  = create_reader(os.path.join(data_path, 'test_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
 
     epoch_size = 50000
-    train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs, args['profiler_dir'], model_dir)
+    train_and_evaluate(reader_train, reader_test, network_name, epoch_size, epochs, args['profiler_dir'], model_dir,
+                       args['tensorboard_logdir'])
