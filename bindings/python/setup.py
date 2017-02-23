@@ -124,7 +124,8 @@ else:
     # Expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside
     # site-packages/cntk/libs.
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
-    os.environ["CXX"] = "mpic++"
+    #os.environ["CXX"] = "mpic++"
+    os.environ["CXX"] = "g++"
 
 cntkV2LibraryInclude = os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API")
 cntkBindingCommon = os.path.join(CNTK_PATH, "bindings", "common")

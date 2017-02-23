@@ -2530,7 +2530,7 @@ namespace CNTK
         /// The forwardPropValuesToSave is an optional map of forward compute values saved for later use during back propagation of gradients
         /// in the backward call that 'this' BackPropState object is used.
         ///
-        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, const std::unordered_map<Variable, ValuePtr>& forwardPropValuesToSave = {})
+        BackPropState(const FunctionPtr& function, const DeviceDescriptor& computeDevice, const std::unordered_map<Variable, ValuePtr>& forwardPropValuesToSave = {{}})
             : m_function(function), m_forwardComputeDevice(computeDevice), m_savedForwardPropValues(forwardPropValuesToSave)
         {}
 
@@ -2626,8 +2626,8 @@ namespace CNTK
         CNTK_API BackPropStatePtr Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                           std::unordered_map<Variable, ValuePtr>& outputs,
                                           const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
-                                          const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {},
-                                          const std::unordered_set<Variable>& inputsToExcludeGradientsFor = {});
+                                          const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {{}},
+                                          const std::unordered_set<Variable>& inputsToExcludeGradientsFor = {{}});
 
         ///
         /// Backpropagates supplied 'rootGradientValues' for one or more of the output variables of the Function, to produce gradient Values
@@ -2665,7 +2665,7 @@ namespace CNTK
         virtual BackPropStatePtr Forward(const std::vector<ValuePtr>& inputValues,
                                          std::unordered_map<Variable, ValuePtr>& outputs,
                                          const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice(),
-                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {}) = 0;
+                                         const std::unordered_set<Variable>& outputsToRetainBackwardStateFor = {{}}) = 0;
 
         ///
         /// Infers the shape, data type and dynamic axes of the outputs of 'this' function based on the 
@@ -2699,7 +2699,7 @@ namespace CNTK
         /// Clones 'this' Function. The parameters of the Function are either cloned, shared or frozen as specified by the parameterCloneMethod argument and
         /// any variable replacements requested are applied in the cloned Function instance.
         ///
-        CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
+        CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {{}}) const;
 
         ///
         /// Generates a dictionary that captures the state of the Function graph underlying this Function.

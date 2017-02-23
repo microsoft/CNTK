@@ -106,3 +106,10 @@ def test_load_save_unique_input(tmpdir):
     loaded_node = Function.load(filename)
     loaded_result = loaded_node.eval(input1)
     assert np.allclose(loaded_result, expected)
+
+
+if __name__=='__main__':
+    tmpdir = '/tmp'
+    test_load_save_unique_input(tmpdir)
+    test_load_save_inputs(tmpdir)
+    test_load_save_constant(tmpdir)

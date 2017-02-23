@@ -184,7 +184,7 @@ endif
 ifeq ("$(MATHLIB)","openblas")
   INCLUDEPATH += $(OPENBLAS_PATH)/include
   LIBPATH += $(OPENBLAS_PATH)/lib
-  LIBS_LIST += openblas m pthread
+  LIBS_LIST += blas lapacke dl m pthread
   CPPFLAGS += -DUSE_OPENBLAS
 endif
 
@@ -230,7 +230,7 @@ ifeq ("$(BUILDTYPE)","debug")
     GENCODE_FLAGS := $(GENCODE_SM30)
   endif
 
-  CXXFLAGS += -g
+#  CXXFLAGS += -g
   LDFLAGS += -rdynamic
   COMMON_FLAGS += -D_DEBUG -DNO_SYNC
   CUFLAGS += -O0 -g -use_fast_math -lineinfo  $(GENCODE_FLAGS)
@@ -243,7 +243,7 @@ ifeq ("$(BUILDTYPE)","release")
     GENCODE_FLAGS := $(GENCODE_SM30) $(GENCODE_SM35) $(GENCODE_SM50)
   endif
 
-  CXXFLAGS += -g -O4
+#  CXXFLAGS += -g -O4
   LDFLAGS += -rdynamic
   COMMON_FLAGS += -DNDEBUG -DNO_SYNC
   CUFLAGS += -O3 -g -use_fast_math $(GENCODE_FLAGS)
@@ -1120,7 +1120,7 @@ $(UNITTEST_READER): $(UNITTEST_READER_OBJ) | $(HTKMLFREADER) $(HTKDESERIALIZERS)
 	@echo $(SEPARATOR)
 	@mkdir -p $(dir $@)
 	@echo building $@ for $(ARCH) with build type $(BUILDTYPE)
-	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(L_READER_LIBS) -ldl -fopenmp
+	$(CXX) $(LDFLAGS) $(patsubst %,-L%, $(LIBDIR) $(BOOSTLIB_PATH)) $(patsubst %, $(RPATH)%, $(ORIGINLIBDIR) $(BOOSTLIB_PATH)) -o $@ $^ $(BOOSTLIBS) $(L_READER_LIBS) -ldl -fopenmp -llapacke
 
 UNITTEST_NETWORK_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/NetworkTests/AccumulatorNodeTests.cpp \
@@ -1262,7 +1262,8 @@ unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MA
 endif
 
 # For now only build Release.
-ifeq ("$(PYTHON_SUPPORT) $(BUILDTYPE)","true release")
+#ifeq ("$(PYTHON_SUPPORT) $(BUILDTYPE)","true release")
+ifeq ("$(PYTHON_SUPPORT)","true")
 
 # Libraries needed for the run-time (i.e., excluding test binaries)
 # TODO MPI doesn't appear explicitly here, hidden by mpic++ usage (but currently, it should be user installed)
@@ -1324,7 +1325,8 @@ DEP := $(patsubst %.o, %.d, $(OBJ))
 # will result in the rebuild.
 -include ${DEP}
 
-BUILD_CONFIGURATION := Makefile $(BUILD_TOP)/Config.make
+# BUILD_CONFIGURATION := $(BUILD_TOP)/Config.make
+BUILD_CONFIGURATION := 
 
 %.pb.cc : %.proto $(BUILD_CONFIGURATION)
 	@echo $(SEPARATOR)

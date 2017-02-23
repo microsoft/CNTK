@@ -4,14 +4,15 @@
 # for full license information.
 # ==============================================================================
 
-from ..tensor import *
-from ..ops import constant, parameter
+from cntk import *
+#from ..tensor import *
+#from ..ops import constant, parameter
 import numpy as np
 
-import pytest
+#import pytest
 
 def test_overload_exception():
-    c = constant(value=list(range(0, 10)))
+    c = ops.constant(value=list(range(0, 10)))
 
     with pytest.raises(TypeError):
         c[:]
@@ -21,15 +22,12 @@ def test_overload_exception():
 
 
 def test_eval_scalar():
-    c = constant(value=2)
+    c = ops.constant(value=2)
     assert (c+3).eval() == 5.0
     assert np.all((c+[3,4]).eval() == [5,6])
 
 def test_numpy_conversion():
-    from ..utils import sanitize_value
-    from ..cntk_py import Value
 
-    # check NDArrayView
     ndav = sanitize_value((2,3), 1, np.float32, None)
     assert np.all(np.asarray(ndav) == np.ones((2,3)))
 
@@ -37,10 +35,16 @@ def test_numpy_conversion():
     assert np.all(np.asarray(Value(ndav)) == np.ones((2,3)))
 
     # check Constant
-    c = constant(1, shape=(2,3))
+    c = ops.constant(1, shape=(2,3))
     assert np.all(np.asarray(c) == np.ones((2,3)))
     
     #check Parameter
-    p = parameter(shape=(2,3), init=1)
+    p = ops.parameter(shape=(2,3), init=1)
     assert np.all(np.asarray(p) == np.ones((2,3)))
     
+
+if __name__=='__main__':
+    #test_eval_scalar()
+    test_numpy_conversion()
+    test_overload_exception()
+    print("tensor test passed")

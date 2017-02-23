@@ -6267,7 +6267,7 @@ int CPUMatrix<ElemType>::SetNumThreads(int numThreads)
     #ifdef USE_MKL
         mkl_set_num_threads(numThreads);
     #elif defined(USE_OPENBLAS)
-        openblas_set_num_threads(numThreads);
+        //openblas_set_num_threads(numThreads);
     #endif
 #endif
     return numThreads;

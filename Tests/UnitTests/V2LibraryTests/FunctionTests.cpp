@@ -295,11 +295,11 @@ void TestRecurrentFunctionCloning()
     std::unordered_set<FunctionPtr> visitedFunctions;
 
     auto clonedFunctionWithParametersCloned = rootFuncOriginal->Clone();
-    CompareFunctions(rootFuncOriginal, clonedFunctionWithParametersCloned, ParameterCloningMethod::Clone, {}, visitedFunctions);
+    CompareFunctions(rootFuncOriginal, clonedFunctionWithParametersCloned, ParameterCloningMethod::Clone, {{}}, visitedFunctions);
 
     visitedFunctions.clear();
     auto clonedFunctionWithParametersShared = clonedFunctionWithParametersCloned->Clone(ParameterCloningMethod::Share);
-    CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {}, visitedFunctions);
+    CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {{}}, visitedFunctions);
 
     visitedFunctions.clear();
     auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, false, L"input2");

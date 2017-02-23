@@ -170,7 +170,7 @@ namespace CNTK
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
+        std::unordered_map<Variable, ValuePtr> outputsToFetch = {{}};
         return TrainMinibatch(arguments, outputsToFetch, computeDevice);
     }
 
@@ -190,7 +190,7 @@ namespace CNTK
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        std::unordered_map<Variable, ValuePtr> outputsToFetch = {};
+        std::unordered_map<Variable, ValuePtr> outputsToFetch = {{}};
         return TrainMinibatch(arguments, outputsToFetch, computeDevice);
     }
 
