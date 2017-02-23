@@ -81,9 +81,22 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
 def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name=''):
     '''
-    Layer factory function to create a linear embedding layer.
-    To create an embedding from a file, use this (or equivalent):
-     Embedding(weights=np.load('PATH'))
+    Layer factory function to create a embedding layer.
+
+    An embedding is conceptually a lookup table. For every input token (e.g. word), the corresponding
+    entry in in the lookup table is returned.
+
+    In CNTK, discrete items such as words are represented as one-hot vectors.
+    The table lookup is realized as a matrix product, with a matrix
+    whose rows are the embedding vectors.
+    Note that multiplying a matrix from the left with a one-hot vector is the same as copying
+    out the row for which the input vector is 1.
+    CNTK has special optimizations to make this operation as efficient as an actual table lookup if the input is sparse.
+
+    The lookup table in this layer is learnable,
+    unless a user-specified one is supplied through the ``weights`` parameter.
+    For example, to use an existing embedding table from a file in numpy format, use this:
+     ``Embedding(weights=np.load('PATH.npy'))``
     '''
 
     if not is_default_override(init) and weights is not None:
