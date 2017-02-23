@@ -1485,6 +1485,40 @@ def sigmoid(x, name=''):
 
 
 @typemap
+def softplus(x, steepness=1, name=''):
+    '''
+    Softplus operation. Computes the element-wise softplus
+    of ``x``:
+     ``softplus(x) = log(1+ exp(x))``
+
+    The optional ``steepness`` allows to make the knee sharper (``steepness>1``) or softer, by computing
+    ``softplus(x * steepness) / steepness``.
+    (For very large steepness, this approaches a linear rectifier).
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.softplus([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[ 0.,  0.,  0.,  1.,  2.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        steepness (float, optional): optional steepness factor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    def softplus1(x):
+        return log_add_exp(0, x)
+    xp = placeholder_variable()
+    if steepness == 1:
+        f = softplus1(xp)
+    else:
+        f = softplus1(steepness * xp) / steepness
+    return as_block(f, [(xp, x)], 'softplus', name)
+
+
+@typemap
 def tanh(x, name=''):
     '''
     Computes the element-wise tanh of ``x``:

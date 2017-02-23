@@ -13,7 +13,7 @@ from __future__ import division
 import numpy as np
 from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, sequence
 from cntk.axis import Axis
-from cntk.ops import times, slice, sigmoid, tanh, log, exp, past_value, future_value
+from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
 from cntk.utils import Record, RecordWith, _as_tuple
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
@@ -171,9 +171,8 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     # parameters bound to this Function
     init_param = np.log(np.exp(steepness) -1) / steepness  # initialize so that factor is initially 1 (has no effect)
-    param = Parameter((), init=init_param, name='stabilizer_param')
-    beta = log (1 + exp (steepness * param)) / steepness
-    # TODO: implement softplus non-linearity in C++ for numeric stability
+    param = Parameter((), init=init_param, name='alpha')
+    beta = softplus(param, steepness=steepness)
 
     # expression
     @BlockFunction('Stabilizer', name)
