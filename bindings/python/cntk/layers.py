@@ -11,7 +11,7 @@
 from __future__ import division
 import numpy as np
 from .ops import parameter, input_variable, placeholder_variable, combine
-from .ops import times, convolution, pooling, batch_normalization, dropout, unpooling
+from .ops import times, convolution, convolution_transpose, pooling, batch_normalization, dropout, unpooling
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from .utils import Record, _as_tuple
 from .blocks import * # layers.py imports all of blocks and models
@@ -165,7 +165,6 @@ def Convolution(filter_shape,        # e.g. (3,3)
                            sharing=_as_tuple(sharing),
                            auto_padding=_as_tuple(pad),
                            # TODO: can we rename auto_padding to pad?
-                           transpose=False,
                            max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
     if bias:
         apply_x = apply_x + b
@@ -181,13 +180,12 @@ def Convolution1D(filter_shape,        # a scalar, e.g., 3
                   init=init_default_or_glorot_uniform,
                   pad=pad_default_or_False,
                   strides=1,
-                  sharing=True,     # (must be True currently)
                   bias=bias_default_or_True,
                   init_bias=init_bias_default_or_0,
                   name=''):
     if len(filter_shape) != 1: 
          raise ValueError('Convolution1D: filter_shape must be a scalar')
-    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, name=name)
 
 # Convolution2D -- create a 2D convolution layer with optional non-linearity
 def Convolution2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
@@ -196,13 +194,12 @@ def Convolution2D(filter_shape,        # a 2D tuple, e.g., (3,3)
                   init=init_default_or_glorot_uniform,
                   pad=pad_default_or_False,
                   strides=1,
-                  sharing=True,     # (must be True currently)
                   bias=bias_default_or_True,
                   init_bias=init_bias_default_or_0,
                   name=''):
     if len(filter_shape) != 2: 
          raise ValueError('Convolution2D: filter_shape must be a 2D tuple, e.g. (3,3)')
-    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, name=name)
 
 # Convolution3D -- create a 3D convolution layer with optional non-linearity
 def Convolution3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
@@ -211,38 +208,36 @@ def Convolution3D(filter_shape,        # a 3D tuple, e.g., (3,3,3)
                   init=init_default_or_glorot_uniform,
                   pad=pad_default_or_False,
                   strides=1,
-                  sharing=True,     # (must be True currently)
                   bias=bias_default_or_True,
                   init_bias=init_bias_default_or_0,
                   name=''):
     if len(filter_shape) != 3: 
          raise ValueError('Convolution3D: filter_shape must be a 3D tuple, e.g. (3,3,3)')
-    return Convolution(filter_shape, num_filters, activation, init, pad, strides, sharing, bias, init_bias, name=name)
+    return Convolution(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, name=name)
 
-# Deconvolution -- create a deconvolution layer with optional non-linearity
-def Deconvolution(filter_shape,        # e.g. (3,3)
-                num_filters,
-                num_input_filters,
-                activation=activation_default_or_None,
-                init=init_default_or_glorot_uniform,
-                pad=pad_default_or_False,
-                strides=1,
-                sharing=True,     # (must be True currently)
-                lower_pad=(0,),
-                upper_pad=(0,),
-                bias=bias_default_or_True,
-                init_bias=init_bias_default_or_0,
-                reduction_rank=1, # (must be 1 currently)
-                max_temp_mem_size_in_samples=0, 
-                name=''):
+# ConvolutionTranspose -- create a convolution transpose layer with optional non-linearity
+def ConvolutionTranspose(filter_shape,        # e.g. (3,3)
+                         num_filters,
+                         num_input_filters,
+                         activation=activation_default_or_None,
+                         init=init_default_or_glorot_uniform,
+                         pad=pad_default_or_False,
+                         strides=1,
+                         sharing=True,     # (must be True currently)
+                         bias=bias_default_or_True,
+                         init_bias=init_bias_default_or_0,
+                         output_shape=(0,), 
+                         reduction_rank=1, # (must be 1 currently)
+                         max_temp_mem_size_in_samples=0, 
+                         name=''):
     activation = _resolve_activation(activation)
     pad  = pad  if _is_given(pad ) else _get_current_default_options().pad
     bias = bias if _is_given(bias) else _get_current_default_options().bias
     # TODO: there must be a Python trick to do this as a function call on locals or so
     if reduction_rank != 1:
-        NotImplementedError("Convolution: reduction_rank other than 1 currently not supported")
+        NotImplementedError("ConvolutionTranspose: reduction_rank other than 1 currently not supported")
     if not sharing:
-        NotImplementedError("Convolution: sharing option currently must be True")
+        NotImplementedError("ConvolutionTranspose: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
     input_channels_shape = _as_tuple(num_input_filters)
     kernel_shape = output_channels_shape + filter_shape
@@ -254,19 +249,62 @@ def Deconvolution(filter_shape,        # e.g. (3,3)
     b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias, name='b') if bias else None
 
     # expression
-    x = Placeholder(name='deconvolution_arg')
-    apply_x = convolution (W, x,
-                           strides=_as_tuple(strides),
-                           sharing=_as_tuple(sharing),
-                           auto_padding=_as_tuple(pad),
-                           lower_pad=lower_pad,
-                           upper_pad=upper_pad,
-                           transpose=True,
-                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    x = Placeholder(name='convolution_transpose_arg')
+    apply_x = convolution_transpose (W, x,
+                                    strides=_as_tuple(strides),
+                                    sharing=_as_tuple(sharing),
+                                    auto_padding=_as_tuple(pad),
+                                    output_shape=output_shape, 
+                                    max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
-    return Block(apply_x, 'Deconvolution', name, Record(W=W, b=b), make_block=True)
+    return Block(apply_x, 'ConvolutionTranspose', name, Record(W=W, b=b), make_block=True)
+
+# ConvolutionTranspose1D -- create a 1D convolution transpose layer with optional non-linearity
+def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3 
+                           num_filters=None,
+                           activation=activation_default_or_None,
+                           init=init_default_or_glorot_uniform,
+                           pad=pad_default_or_False,
+                           strides=1,
+                           bias=bias_default_or_True,
+                           init_bias=init_bias_default_or_0,
+                           output_shape=None, 
+                           name=''):
+    if len(filter_shape) != 1: 
+         raise ValueError('ConvolutionTranspose1D: filter_shape must be a scalar')
+    return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
+
+# ConvolutionTranspose2D -- create a 2D convolution transpose layer with optional non-linearity
+def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
+                           num_filters=None,
+                           activation=activation_default_or_None,
+                           init=init_default_or_glorot_uniform,
+                           pad=pad_default_or_False,
+                           strides=1,
+                           output_shape=None, 
+                           bias=bias_default_or_True,
+                           init_bias=init_bias_default_or_0,
+                           name=''):
+    if len(filter_shape) != 2: 
+         raise ValueError('ConvolutionTranspose2D: filter_shape must be a 2D tuple, e.g. (3,3)')
+    return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
+
+# ConvolutionTranspose3D -- create a 3D convolution transpose layer with optional non-linearity
+def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
+                           num_filters=None,
+                           activation=activation_default_or_None,
+                           init=init_default_or_glorot_uniform,
+                           pad=pad_default_or_False,
+                           strides=1,
+                           output_shape=None, 
+                           bias=bias_default_or_True,
+                           init_bias=init_bias_default_or_0,
+                           name=''):
+    if len(filter_shape) != 3: 
+         raise ValueError('ConvolutionTranspose3D: filter_shape must be a 3D tuple, e.g. (3,3,3)')
+    return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
 
 # Create a Pooling layer with one of following types:
 #

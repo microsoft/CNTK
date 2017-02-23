@@ -1000,6 +1000,7 @@ namespace std {
     };
 }
 
+
 namespace CNTK
 {
     ///
@@ -3487,9 +3488,22 @@ namespace CNTK
                                      const std::vector<bool>& autoPadding = {true},
                                      const NDShape& lowerPad = {0},
                                      const NDShape& upperPad = {0},
-                                     bool transpose = false,
                                      size_t maxTempMemSizeInSamples = 0,
                                      const std::wstring& name = L"");
+
+    ///
+    /// TODO:
+    ///
+    CNTK_API FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
+                                              const Variable& operand,
+                                              const NDShape& strides = { 1 },
+                                              const std::vector<bool>& sharing = { true },
+                                              const std::vector<bool>& autoPadding = { true },
+                                              const NDShape& lowerPad = { 0 },
+                                              const NDShape& upperPad = { 0 },
+                                              const NDShape& outputShape = { 0 },
+                                              size_t maxTempMemSizeInSamples = 0,
+                                              const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape

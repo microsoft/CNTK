@@ -213,6 +213,7 @@ namespace CNTK
         static const std::wstring AttributeNameLowerPad;
         static const std::wstring AttributeNameUpperPad;
         static const std::wstring AttributeNameTranspose;
+        static const std::wstring AttributeNameOutputShape; 
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;
         static const std::wstring AttributeNameROIOutputShape;
         static const std::wstring AttributeNamePoolingType;

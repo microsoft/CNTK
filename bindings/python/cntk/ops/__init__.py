@@ -498,7 +498,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
+                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), 
                 max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
@@ -544,7 +544,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          the input dimension. The last value that lines up with the number of input channels must be false.
         lower_pad: precise lower padding for each input dimension.
         upper_pad : precise upper padding for each input dimension.
-        transpose (bool): set to true for deconvolution.
+        output_shape: user expected output shape after convolution transpose. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -559,8 +559,74 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     lower_pad = sanitize_shape(lower_pad)
     upper_pad = sanitize_shape(upper_pad)
     return convolution(convolution_map, operand, strides, sharing, auto_padding,
-                       lower_pad, upper_pad, transpose,
-                       max_temp_mem_size_in_samples, name)
+                       lower_pad, upper_pad, max_temp_mem_size_in_samples, name)
+
+@typemap
+def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
+                          auto_padding=[True], lower_pad=(0,), upper_pad=(0,), output_shape=(0,), 
+                          max_temp_mem_size_in_samples=0, name=''):
+    '''
+    Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
+    ``operand`` (commonly an image or output of a previous convolution/pooling operation).
+    This is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``. 
+    This operation is used in image and language processing applications. It supports arbitrary
+    dimensions, strides, sharing, and padding.
+
+    This function operates on input tensors with dimensions :math:`[C \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`. This can be understood as a rank-n
+    object, where each entry consists of a :math:`C`-dimensional vector. For example, an RGB image would have dimensions
+    :math:`[3 \\times W \\times H]`, i.e. a :math:`[W \\times H]`-sized structure, where each entry (pixel) consists of a 3-tuple.
+
+    `convolution_transpose` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
+    ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
+    The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
+    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
+    The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
+    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
+
+
+    Example:
+        >>> img = np.reshape(np.arange(9.0, dtype = np.float32), (1, 3, 3))
+        >>> x = C.input_variable(img.shape)
+        >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+        >>> kernel = C.constant(value = filter)
+        >>> np.round(C.convolution_transpose(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
+        array([[[[[  0.,   2.,   3.,  -2.],
+                  [  6.,   4.,   6.,  -1.],
+                  [  9.,  10.,  12.,   2.],
+                  [ -6.,   5.,   6.,  16.]]]]], dtype=float32)
+
+    Args:
+        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
+         where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
+        operand: convolution input. A tensor with dimensions :math:`[I \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`.
+        strides (tuple, optional): stride dimensions. If strides[i] > 1 then only pixel positions that are multiples of strides[i] are computed.
+         For example, a stride of 2 will lead to a halving of that dimension. The first stride dimension that lines up with the number
+         of input channels can be set to any non-zero value.
+        sharing (bool): sharing flags for each input dimension
+        auto_padding (bool): flags for each input dimension whether it should be padded automatically (that is,
+         symmetrically) or not padded at all. Padding means that the convolution kernel is applied to all pixel positions, where all
+         pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
+         positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
+         the input dimension. The last value that lines up with the number of input channels must be false.
+        lower_pad: precise lower padding for each input dimension.
+        upper_pad : precise upper padding for each input dimension.
+        max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
+         operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
+         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
+         samples.
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import convolution_transpose
+    operand = sanitize_input(operand)
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+    output_shape = sanitize_shape(output_shape)
+    return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
+                                 lower_pad, upper_pad, output_shape, 
+                                 max_temp_mem_size_in_samples, name)
 
 
 @typemap
