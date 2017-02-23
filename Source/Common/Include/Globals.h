@@ -23,7 +23,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         static bool ShouldOptimizeGradientAccumulation() { return m_optimizeGradientAccumulation; }
 
         // TODO: Currently the flag is set to false. Should be switched to true after more rigorous testing.
-        static bool UseV2Aggregator() { return false; }
+        static bool UseV2Aggregator() { return true; }
 
         static void SetShareNodeValueMatrices(bool enable) { m_enableShareNodeValueMatrices = enable; }
         static bool ShouldEnableShareNodeValueMatrices() { return m_enableShareNodeValueMatrices; }
