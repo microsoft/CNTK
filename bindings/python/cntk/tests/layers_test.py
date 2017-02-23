@@ -266,8 +266,9 @@ def test_layers_dense(device_id):
 ########################################
 def test_layers_embedding(device_id):
     embDim = 3
-
     y = Input(2)
+
+    # embedding base case
     e = Embedding(shape=embDim, name='foo')
 
     dat = np.array([[-1., 1.]], dtype=np.float32)
@@ -276,7 +277,17 @@ def test_layers_embedding(device_id):
     npout = np.matrix(dat[0]) * e.E.value
     np.testing.assert_array_equal(res[0], npout, err_msg='Error in embedding layer')
 
-    e = Embedding(weights=[[1, 3, 2], [3, 4, 1]], name='bar')
+    # embedding, initialized from a user-supplied starting point for the parameter
+    e = Embedding(embDim, init=[[1, 3, 2], [3, 4, 1]], name='bar')
+
+    dat = np.array([[-1., 1.]], dtype=np.float32)
+    res = e(y).eval({y: dat})
+
+    npout = np.matrix(dat[0]) * e.E.value
+    np.testing.assert_array_equal(res[0], npout, err_msg='Error in constant embedding layer')
+
+    # embedding, initialized from a user-supplied constant weight table
+    e = Embedding(weights=[[1, 3, 2], [3, 4, 1]], name='baz')
 
     dat = np.array([[-1., 1.]], dtype=np.float32)
     res = e(y).eval({y: dat})

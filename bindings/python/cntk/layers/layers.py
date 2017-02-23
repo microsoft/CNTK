@@ -97,6 +97,9 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     unless a user-specified one is supplied through the ``weights`` parameter.
     For example, to use an existing embedding table from a file in numpy format, use this:
      ``Embedding(weights=np.load('PATH.npy'))``
+
+    To initialize a learnable lookup table with a given numpy array that is to be used as
+    the initial value, pass that array to the ``init`` parameter (not ``weights``).
     '''
 
     if not is_default_override(init) and weights is not None:
@@ -143,19 +146,29 @@ def _window(x, axis, begin, end, step, stride, initial_state=None):
     return r
 
 
+# helper to expand options that can be specified as a single value
+def _pad_to_shape(rf_shape, param, what):
+    param = _as_tuple(param)
+    if len(param) == 1: # broadcast
+        while len(param) < len(rf_shape):
+            param = (param[0],) + param
+    if len(param) != len(rf_shape):
+        raise ValueError("{} parameter ({}) must be a scalar or have same number of elements as the rf_shape parameter ({})".format(what, param, rf_shape))
+    return param
+
 # BUGBUG: Can one pass a numpy array as initial values? TODO: add a test case
 # Convolution -- create a convolution layer with optional non-linearity
 #             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape)  )
 #    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape)  )
 #    kernel : (                +  (output shape) +  (reduction shape) + (rec field shape) )
 #    out    : ( (sample shape) +  (output shape) +                    + (shifting shape)  )
-# TODO: Can we specify atrous (dilated) convolution? How?
+# TODO: Add atrous (dilated) convolution once available.
 # TODO: sharing = false?
 # TODO: conflict of parameter order: filter_shape or num_filters first?
 #  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
 # TODO: stride not supported for sequential
-def Convolution(rf_shape,         # e.g. (3,3)
+def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
                 num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                 sequential=False, # time convolution if True (rf_shape[0] corresponds to dynamic axis)
                 activation=default_override_or(identity),
@@ -183,15 +196,9 @@ def Convolution(rf_shape,         # e.g. (3,3)
     rf_shape    = _as_tuple(rf_shape)
     num_filters = _as_tuple(num_filters or ())
     rf_rank = len(rf_shape)
-    # expand options that can be specified as a single value
-    def _pad_to_shape(param):
-        param = _as_tuple(param)
-        while len(param) < len(rf_shape):
-            param = (param[0],) + param
-        return param
-    strides     = _pad_to_shape(strides)
-    sharing     = _pad_to_shape(sharing)
-    pad         = _pad_to_shape(pad)
+    strides     = _pad_to_shape(rf_shape, strides, 'strides')
+    sharing     = _pad_to_shape(rf_shape, sharing, 'sharing')
+    pad         = _pad_to_shape(rf_shape, pad, 'pad')
 
     if reduction_rank > 1:
         raise NotImplementedError("Convolution: reduction_rank other than 0 or 1 currently not supported")
@@ -200,23 +207,21 @@ def Convolution(rf_shape,         # e.g. (3,3)
     if not sharing:
         raise NotImplementedError("Convolution: sharing option currently must be True")
     # The convolution() function currently requires exactly one input and one output depth axis.
-    # So we fake those dimensions on this level.
-    fake_output_depth = num_filters == ()
-    fake_input_depth  = reduction_rank == 0
+    # So we emulate those dimensions on this level. TODO: Once this is suppored by the C++ code, remove the emulation here.
+    emulated_output_depth = num_filters == ()
+    emulated_input_depth  = reduction_rank == 0
     # 1D convolution is not supported by cudnn, so we also add a fake dimension.
-    fake_1D = len(rf_shape) < 2
-    #if fake_output_depth or fake_input_depth or fake_1D:
-    #    UntestedBranchError("Convolution with depth faking")
+    emulating_1D = len(rf_shape) < 2
 
-    actual_output_channels_shape = num_filters                if not fake_output_depth else (1,)
-    actual_reduction_shape       = _INFERRED * reduction_rank if not fake_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
-    actual_rf_shape              = (1,) * fake_1D + rf_shape
+    actual_output_channels_shape = num_filters                if not emulated_output_depth else (1,)
+    actual_reduction_shape       = _INFERRED * reduction_rank if not emulated_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
+    actual_rf_shape              = (1,) * emulating_1D + rf_shape
 
     # add the dimension to the options as well
-    num_faked_axes = fake_input_depth + fake_1D
-    strides = (1,)     * num_faked_axes + strides
-    sharing = (True,)  * num_faked_axes + sharing
-    pad     = (False,) * num_faked_axes + pad
+    num_emulated_axes = emulated_input_depth + emulating_1D
+    strides = (1,)     * num_emulated_axes + strides
+    sharing = (True,)  * num_emulated_axes + sharing
+    pad     = (False,) * num_emulated_axes + pad
 
     kernel_shape = actual_reduction_shape + actual_rf_shape # kernel := filter plus reductionDims
 
@@ -243,7 +248,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
     def convolve(x):
         # insert additional axes for various purposes
         sequential_rank = 1 if sequential else 0
-        num_inserted_axes = sequential_rank + num_faked_axes
+        num_inserted_axes = sequential_rank + num_emulated_axes
         if num_inserted_axes != 0:
             x = reshape(x, (1,) * num_inserted_axes, begin_axis=-rf_rank + sequential_rank, end_axis=-rf_rank + sequential_rank) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
         # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
@@ -265,7 +270,7 @@ def Convolution(rf_shape,         # e.g. (3,3)
         # if no output dimension is desired, then strip it
         # also need to strip the fake singleton axes, since they are not reduced away
         # BUGBUG: We still have those axes in the kernel. That can only be solved inside the C++ implementation.
-        num_axes_to_remove = sequential + fake_1D + fake_output_depth
+        num_axes_to_remove = sequential + emulating_1D + emulated_output_depth
         if num_axes_to_remove > 0:
             r = reshape(r, (), begin_axis=-rf_rank-num_axes_to_remove, end_axis=-rf_rank) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
         if bias:
@@ -432,9 +437,12 @@ def _Pooling(op,       # PoolingType_Max or _Average
     if sequential:
         raise NotImplementedError("Pooling: sequential option not implemented yet")
 
+    strides     = _pad_to_shape(rf_shape, strides, 'strides')
+    pad         = _pad_to_shape(rf_shape, pad, 'pad')
+
     @BlockFunction(op_name, name)
     def pool(x):
-        return pooling (x, op, rf_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad))
+        return pooling (x, op, rf_shape, strides=strides, auto_padding=pad)
     return pool
 
 
@@ -483,10 +491,13 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
                  lower_pad=0,
                  upper_pad=0, 
                  name=''):
-    #UntestedBranchError("MaxUnpooling not tested after merge to new Layers lib")
+
+    strides     = _pad_to_shape(rf_shape, strides, 'strides')
+    pad         = _pad_to_shape(rf_shape, pad, 'pad')
+
     @BlockFunction('MaxUnpooling', name)
     def maxunpool(x, y):
-        return unpooling (x, y, PoolingType_Max, filter_shape, strides=_as_tuple(strides), auto_padding=_as_tuple(pad),
+        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad,
                          lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
     return maxunpool
 

@@ -72,7 +72,7 @@ def create_convnet_cifar10_model(num_classes):
             For(range(2), lambda : [
                 Convolution2D((3,3), 64), 
                 Convolution2D((3,3), 64), 
-                MaxPooling((3,3), strides=(2,2))
+                MaxPooling((3,3), strides=2)
             ]), 
             For(range(2), lambda i: [
                 Dense([256,128][i]), 
@@ -141,12 +141,11 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
         model.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
+        progress_printer.epoch_summary(with_metric=True)
 
     # TODO: we should be done here
     #return metric_numer/metric_denom
 
-        progress_printer.epoch_summary(with_metric=True)
-        z.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
 
     ### Evaluation action
     
