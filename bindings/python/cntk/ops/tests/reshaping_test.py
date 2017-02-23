@@ -492,9 +492,9 @@ def test_op_sequence_reduce_sum(device_id, precision):
     a_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
 
     actual_grad = sequence_sum_a_plus_sequence_sum_a.grad({a: a_data}, [a])
-    assert np.array_equal(actual_grad[0][0], np.asarray([[2.]]))
-    assert np.array_equal(actual_grad[0][1], np.asarray([[2.], [2.]]))
-    assert np.array_equal(actual_grad[0][2], np.asarray([[2.], [2.], [2.]]))
+    assert np.array_equal(actual_grad[0], np.asarray([[2.]]))
+    assert np.array_equal(actual_grad[1], np.asarray([[2.], [2.]]))
+    assert np.array_equal(actual_grad[2], np.asarray([[2.], [2.], [2.]]))
     
     res = sequence_sum_a_plus_sequence_sum_a.eval({a: a_data})
     assert np.array_equal(res[0], np.asarray([[4.]]))

@@ -204,7 +204,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
         expected_forward = fwd(value)
         expected_backward = bwd(value,expected_forward)
         binding = {a: value}
-        actual_backward = input_op.grad(binding)[0]
+        actual_backward = input_op.grad(binding)
         actual_forward  = np.copy(input_op.eval(binding))
         assert np.allclose(actual_forward, expected_forward)
         for ab,eb in zip (actual_backward, expected_backward):
