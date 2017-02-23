@@ -29,8 +29,7 @@ Copy-Item -ErrorAction Stop -Verbose:$isVerbose -Recurse Examples, Tutorials -De
 Push-Location SamplesZip
 
 try {
-    Add-Type -assembly "System.IO.Compression.FileSystem"
-    [IO.Compression.ZipFile]::CreateFromDirectory((Get-Location).Path, $Output)
+    7za.exe a -bd $Output .
 } finally {
     Pop-Location
 }
