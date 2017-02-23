@@ -23,10 +23,10 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
           bias=default_override_or(True), init_bias=default_override_or(0),
           name=''):
     '''
-    Layer factory function to create a fully-connected linear projection layer with optional non-linear activation.
+    Layer factory function to create a fully-connected linear layer with optional non-linear activation.
     Note: shape may describe a tensor as well.
     input_rank given: number of inferred axes to add to W (map_rank must not be given)
-    map_rank   given: expand W to leave exactly mapRank axes (input_rank must not be given)
+    map_rank   given: expand W to leave exactly map_rank axes (input_rank must not be given)
     none       given: expand W to all (same as map_rank=0)
     '''
 
@@ -82,38 +82,29 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name=''):
     '''
     Layer factory function to create a linear embedding layer.
-    To create an embedding from a file, use this:
+    To create an embedding from a file, use this (or equivalent):
      Embedding(weights=np.load('PATH'))
-    TODO: test this
     '''
 
     if not is_default_override(init) and weights is not None:
         raise ValueError('Embedding: init and weights options are mutually exclusive')
-
-    init = get_default_override(Embedding, init=init)
 
     # parameters bound to this Function:
     # no weights given: learn the embedding
     if weights is None:
         if shape is None:
             raise ValueError('Embedding: output shape must be specified')
-        #if init is None:
-        #    init = init_default_or_glorot_uniform
+        init = get_default_override(Embedding, init=init)
         shape = _as_tuple(shape)
         weight_shape = _INFERRED + shape
         E = Parameter(weight_shape, init=init, name='E')
     # weights given: use them as constant
     else:
-        UntestedBranchError("Embedding, from constant")
         import numpy as np
-        if not isinstance(weights, array): # TODO: is this the correct test for a numpy array
-            UntestedBranchError("Embedding, from constant that is not an array")
-            # TODO: can 'weights' be a CNTK object? Then how to do this?
-            raise ValueError('Embedding: weights must be a numpy array')
+        weights = np.array(weights)
         weight_shape = np.shape(weights)
         if shape is not None: # user may give shape, then it must match
-            if len(shape) >= len(weight_shape) or weight_shape[-len(shape):] != shape:
-                raise ValueError('Embedding: shape parameter must match weights')
+            raise ValueError('Embedding: output shape must not be specified when weights are given')
         E = Constant(weights, name='E')
 
     # expression

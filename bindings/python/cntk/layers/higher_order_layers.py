@@ -5,7 +5,8 @@
 # ==============================================================================
 
 '''
-higher_order_functions -- higher-order functions, like Sequential() and Recurrence()
+higher_order_layers -- higher-order functions, like Sequential() and ResNetBlock().
+Note that sequential higher-order functions like Recurrence() are in sequence.py.
 '''
 
 from ..utils import Record
@@ -31,7 +32,7 @@ def Sequential(layers, name=''):
     return _inject_name(composed_function, name)
 
 
-def For(range, constructor, name=''):
+def For(rng, constructor, name=''):
     '''
     Layer factory function to create a composite that applies a sequence of layers constructed with a constructor lambda(layer).
     E.g.
@@ -47,14 +48,17 @@ def For(range, constructor, name=''):
             return constructor(i)  # takes an arg: pass it
         else:
             return constructor()   # takes no arg: call without, that's fine too
-    layers = [call(i) for i in range]
+    layers = [call(i) for i in rng]
     sequential = Sequential(layers)
 
     return _inject_name(sequential, name)
 
 
-# legacy name for For() --TODO: remove
+# legacy name for For()
 def LayerStack(N, constructor):
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'For(...) instead', DeprecationWarning)
     return For(range(N), constructor)
 
 

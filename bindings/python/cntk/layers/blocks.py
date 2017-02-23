@@ -228,10 +228,10 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
     Wmr = Parameter(cell_shape + shape, init=init, name='P') if has_projection else None  # final projection
 
     # each use of a stabilizer layer must get its own instance
-    Sdh = Stabilizer(enable_self_stabilization=enable_self_stabilization)
-    Sdc = Stabilizer(enable_self_stabilization=enable_self_stabilization)
-    Sct = Stabilizer(enable_self_stabilization=enable_self_stabilization)
-    Sht = Stabilizer(enable_self_stabilization=enable_self_stabilization)
+    Sdh = Stabilizer(enable_self_stabilization=enable_self_stabilization, name='dh_stabilizer')
+    Sdc = Stabilizer(enable_self_stabilization=enable_self_stabilization, name='dc_stabilizer')
+    Sct = Stabilizer(enable_self_stabilization=enable_self_stabilization, name='c_stabilizer')
+    Sht = Stabilizer(enable_self_stabilization=enable_self_stabilization, name='P_stabilizer')
 
     # define the model function itself
     # general interface for Recurrence():
@@ -243,7 +243,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     # LSTM model function
     # in this case:
-    #   (dh, dc, x_last) --> (h, c)
+    #   (dh, dc, x) --> (h, c)
     def lstm(dh, dc, x):
 
         dhs = Sdh(dh)  # previous values, stabilized
@@ -280,17 +280,12 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
         # returns the new state as a tuple with names but order matters
         return (Function.NamedOutput(h=h), Function.NamedOutput(c=c))
-        #return OrderedDict([('h', h), ('c', c)])
 
     # GRU model function
     # in this case:
-    #   (dh, x_last) --> (h)
+    #   (dh, x) --> (h)
     # e.g. https://en.wikipedia.org/wiki/Gated_recurrent_unit
-    # TODO: Is this the same definition as NVidia's? Should we enable multiple definitions of this?
-    # BUGBUG: gru(x_last,dh,dc) passes, too. Since 'dc' is not referenced, it is just ignored. Also when routing it through combine().
-    #          This may have changed with as_block(), which cannot handle unused inputs. TODO: test this.
-    def gru(dh, x_last):
-        x = x_last
+    def gru(dh, x):
 
         dhs = Sdh(dh)  # previous value, stabilized
         # note: input does not get a stabilizer here, user is meant to do that outside
@@ -316,7 +311,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
         # i(t) = sigmoid(W_i x(t) +          R_i h(t-1)  + b_Wi + b_Ru)
         # r(t) = sigmoid(W_r x(t) +          R_r h(t-1)  + b_Wr + b_Rr)   --same up to here
         # h'(t) =   tanh(W_h x(t) + r(t) .* (R_h h(t-1)) + b_Wh + b_Rh)   --r applied after projection? Would make life easier!
-        # h(t) = (1 - i(t) .* h'(t)) + i(t) .* h(t-1)                     --wrong bracketing??
+        # h(t) = (1 - i(t) .* h'(t)) + i(t) .* h(t-1)                     --TODO: need to confirm bracketing with NVIDIA
 
         h = times(Sht(ht), Wmr) if has_projection else \
             ht

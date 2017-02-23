@@ -986,6 +986,7 @@ def element_times(left, right, name=''):
     return cntk_py_element_times(left, right, name)
 
 
+# TODO: move element_max/min to C++
 @associative_multi_arg
 @typemap
 def element_max(left, right, name=''):
@@ -1115,7 +1116,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     Args:
         left: left side matrix or tensor
         right: right side matrix or tensor
-        output_rank (int): in case we have tensors as arguemnts, output_rank represents
+        output_rank (int): in case we have tensors as arguments, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
         infer_input_rank_to_map ('int'): meant for internal use only. Always use default value

@@ -273,8 +273,16 @@ def test_layers_embedding(device_id):
     dat = np.array([[-1., 1.]], dtype=np.float32)
     res = e(y).eval({y: dat})
 
-    npout = np.matrix(dat[0]) * e.foo.parameters[0].value
+    npout = np.matrix(dat[0]) * e.E.value
     np.testing.assert_array_equal(res[0], npout, err_msg='Error in embedding layer')
+
+    e = Embedding(weights=[[1, 3, 2], [3, 4, 1]], name='bar')
+
+    dat = np.array([[-1., 1.]], dtype=np.float32)
+    res = e(y).eval({y: dat})
+
+    npout = np.matrix(dat[0]) * e.E.value
+    np.testing.assert_array_equal(res[0], npout, err_msg='Error in constant embedding layer')
 
 ########################################
 # Test Convolutional layer for shape correctness

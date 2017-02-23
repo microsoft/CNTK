@@ -106,10 +106,10 @@ class Function(cntk_py.Function):
     # The latter form will create a CNTK Function over Inputs; the former over Placeholders.
     @staticmethod
     def to_Function(f, members = {}, make_block=False, op_name=None, name=None):
+        f_name = f.__name__ # (only used for debugging and error messages)
         from ..default_options import default_options
         # Parameter() creation inside code of a Function def is forbidden. Setting 'pure' blocks it in Parameter().
         with default_options(pure=True):
-            f_name = f.__name__ # (for debugging)
 
             # get the parameter list through inspection
             arg_names, annotations = Function._get_param_names(f)
@@ -128,16 +128,16 @@ class Function(cntk_py.Function):
             args = [Function._make_arg_variable(name, annotations) for name in arg_names]
 
             # helpers
-            ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
+            #ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
             def force_order_args(fun_args):
-                from .. import plus, reduce_sum
                 block_args = [Function._make_arg_variable(arg.name, annotations) for arg in fun_args]  # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
-                combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple')
-                global ref_keeper   # TODO: should this really be 'nonlocal'?
-                ref_keeper = combined_args    # BUGBUG workaround the ref-counting problem
-                return combined_args.outputs
+                return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
+                #combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple')
+                #global ref_keeper   # TODO: should this really be 'nonlocal'?
+                #ref_keeper = combined_args    # BUGBUG workaround the ref-counting problem
+                #return combined_args.outputs
             def invoke(fun_args):
                 try:
                     # hide Placeholders of this function from .signature() of any function defined inside
@@ -194,7 +194,6 @@ class Function(cntk_py.Function):
             out_arg_names = [arg.name for arg in out.signature]
             assert out_arg_names == arg_names
 
-            # BUGBUG: as_block() cannot *not* use an argument (e.g. temporarily changing a function to not use an input)
             if len(out.signature) != len(args):
                 unfulfilled_args = set(out.signature) - set(args)
                 if unfulfilled_args:
