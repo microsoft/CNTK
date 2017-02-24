@@ -60,59 +60,78 @@ class Function(cntk_py.Function):
 
     _placeholders_under_construction = set()
 
-    # helper to get the parameter names and annotations of a Python function
     @staticmethod
-    def _get_param_names(f):
-        # Note we only use non-optional params (assume any optional param is not specified).
-        # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
-        import sys
-        if sys.version_info.major >= 3:
-            from inspect import getfullargspec
-        else:
-            def getfullargspec(f):
-                from inspect import getargspec
-                a = getargspec(f)
-                return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations={})
-        param_specs = getfullargspec(f)
-        annotations = param_specs.annotations
-        arg_names = param_specs.args
-        defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
-        if defaults:
-            arg_names = arg_names[:-len(defaults)]
-        return (arg_names, annotations)
+    def to_Function(f, make_block=False, op_name=None, name=None, with_27_signature=False):
+        '''
+        construct a Function from a Python lambda
+        where the Function's input signature is defined by the lambda
+        Use this as a decorator, e.g.:
+          @Function
+          def f(x): return x * x
+        or with given shapes:
+          @Function
+          def f(x:Tensor(13)): return x * x
+        The latter form will create a CNTK Function over Inputs; the former over Placeholders.
 
-    # helper to create a CNTK placeholder or input for a given name
-    # An input_variable is created if the parameter is annotated with a Tensor(...) type.
-    # In this case, CNTK will immediately trigger type inference.
-    # Unannotated parameters will yield placeholder_variables instead.
-    @staticmethod
-    def _make_arg_variable(name, annotations):
-        from .. import placeholder_variable, input_variable
-        from .variables import Variable
-        if isinstance(annotations.get(name, None), Variable.Type):
-            var_type = annotations[name]
-            return input_variable(name=name, **var_type)
-        else:
-            return placeholder_variable(name=name)
+        The additional arguments are used to implement variants of the @Function decorator, specifically:
 
-    # construct a Function from a Python lambda
-    # where the Function's input signature is defined by the lambda
-    # Use this as a decorator, e.g.:
-    #   @Function
-    #   def f(x): return x * x
-    # or with given shapes:
-    #   @Function
-    #   def f(x:Tensor(13)): return x * x
-    # The latter form will create a CNTK Function over Inputs; the former over Placeholders.
-    @staticmethod
-    def to_Function(f, members = {}, make_block=False, op_name=None, name=None):
+        ``make_block=True`` is used to implement @BlockFunction(). If given the result will be wrapped
+         in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
+
+        ``with_27_signature=True`` is used to implement the Python-2.7 approximation @FunctionWithSignature.
+         With this, type annotations are passed as default values (using `=`) instead of a Python 3 anotation (which uses `:`).
+        '''
         f_name = f.__name__ # (only used for debugging and error messages)
+
+        # helper to get the parameter names and annotations of a Python function
+        def get_param_names(f):
+            # Note we only use non-optional params (assume any optional param is not specified).
+            # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
+            import sys
+            if sys.version_info.major >= 3:
+                from inspect import getfullargspec
+            else:
+                def getfullargspec(f):
+                    from inspect import getargspec
+                    a = getargspec(f)
+                    return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations={})
+            param_specs = getfullargspec(f)
+            # emulation for Python 2.7
+            if with_27_signature: # we are in @FunctionWithSignature: emulate annotations by taking them from optional arguments instead
+                if (param_specs.varargs or param_specs.varkw or param_specs.kwonlyargs or param_specs.kwonlydefaults or param_specs.annotations or
+                    not param_specs.args or not param_specs.defaults or len(param_specs.args) != len(param_specs.defaults)):
+                    raise SyntaxError("CNTK Function '{}': @FunctionWithSignature requires annotations for all arguments in the form 'arg=type', not 'arg:type'".format(f_name))
+                param_specs = Record( # turn the defaults array into an annotation dict
+                    args        = param_specs.args,
+                    annotations = {arg: default for arg, default in zip(param_specs.args, param_specs.defaults)},
+                    defaults    = None
+                )
+            annotations = param_specs.annotations
+            arg_names = param_specs.args
+            defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
+            if defaults:
+                arg_names = arg_names[:-len(defaults)] # we allow Function(functions with default arguments), but those args will always have default values since CNTK Functions do not support this
+            return (arg_names, annotations)
+
+        # helper to create a CNTK placeholder or input for a given name
+        # An input_variable is created if the parameter is annotated with a Tensor(...) type.
+        # In this case, CNTK will immediately trigger type inference.
+        # Unannotated parameters will yield placeholder_variables instead.
+        def make_arg_variable(name, annotations):
+            from .. import placeholder_variable, input_variable
+            from .variables import Variable
+            if isinstance(annotations.get(name, None), Variable.Type):
+                var_type = annotations[name]
+                return input_variable(name=name, **var_type)
+            else:
+                return placeholder_variable(name=name)
+
         from ..default_options import default_options
         # Parameter() creation inside code of a Function def is forbidden. Setting 'pure' blocks it in Parameter().
         with default_options(pure=True):
 
             # get the parameter list through inspection
-            arg_names, annotations = Function._get_param_names(f)
+            arg_names, annotations = get_param_names(f)
 
             # The Python function is converted to a CNTK Function by executing it once
             # passing placeholders as inputs. This createss a piece of graph.
@@ -125,12 +144,12 @@ class Function(cntk_py.Function):
             # and always filtering .arguments against that list. This is done by the property .signature;
             # i.e. in all of this, do not use .arguments; use .signature instead.
             from .. import combine, alias, as_block
-            args = [Function._make_arg_variable(name, annotations) for name in arg_names]
+            args = [make_arg_variable(name, annotations) for name in arg_names]
 
             # helpers
             #ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
             def force_order_args(fun_args):
-                block_args = [Function._make_arg_variable(arg.name, annotations) for arg in fun_args]  # placeholders inside the BlockFunction
+                block_args = [make_arg_variable(arg.name, annotations) for arg in fun_args]  # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
@@ -173,7 +192,7 @@ class Function(cntk_py.Function):
             # ensure parameter ordering
             # if called from BlockFunction() then wrap into a block
             if make_block: # if we make a block then run off a separate set
-                block_args = [Function._make_arg_variable(arg.name, annotations) for arg in args]  # placeholders inside the BlockFunction
+                block_args = [make_arg_variable(arg.name, annotations) for arg in args]  # placeholders inside the BlockFunction
                 out = invoke(block_args)
                 out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=op_name, block_instance_name=name)
             # not a block
@@ -1128,6 +1147,31 @@ def save_model(model, filename): # legacy name
     warnings.warn('This will be removed in future versions. Please use '
             'model.save(...) instead', DeprecationWarning)
     return model.save(filename)
+
+
+def FunctionWithSignature(f):
+    '''
+    Python 2.7-compatible approximation of @Function decorator
+    for functions that use type annotations to declare Input() variables.
+    Since function annotations are not available prior to Python 3,
+    this decorator allows a very similar syntax using optional parameters.
+
+    Example, Python 3:
+        ``@Function
+        def g(x : Tensor[3,2]):
+            return x * x
+        r = g([[[2, 1], [5, 2], [1, 3]]])
+        print(r)``
+
+    Example, Python 2.7 approximation with ``FunctionWithSignature``:
+        ``@FunctionWithSignature   # different decorator
+        def g(x = Tensor[3,2]):  # : changed to =
+            return x * x``
+
+    You do not need to use this decorator for Functions that do not have type annotations;
+    those work equally in Python 2.7 and Python 3.
+    '''
+    return Function(f, with_27_signature=True)
 
 
 class UserFunction(Function):
