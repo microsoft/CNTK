@@ -22,7 +22,9 @@ from cntk.ops import cross_entropy_with_softmax, classification_error, splice, r
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
-data_dir  = os.path.join(abs_path, "..", "Data") # under Examples/LanguageUnderstanding/ATIS
+model_path = os.path.join(abs_path, "Models")
+data_dir   = os.path.join(abs_path, "..", "Data") # under Examples/LanguageUnderstanding/ATIS
+
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
 
 # model dimensions
@@ -79,6 +81,9 @@ def create_model_function():
 def create_criterion_function(model):
     @Function
     def criterion(query: Sequence[SparseTensor[vocab_size]], labels: Sequence[SparseTensor[num_labels]]):
+    #from cntk.ops.functions import FunctionWithSignature
+    #@FunctionWithSignature
+    #def criterion(query= Sequence[SparseTensor[vocab_size]], labels= Sequence[SparseTensor[num_labels]]):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)
         errs = classification_error      (z, labels)
@@ -217,12 +222,11 @@ if __name__=='__main__':
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
     model = create_model_function()
 
-    model_path = os.path.join(abs_path, "Models")
     # train
-    train(reader, model, max_epochs, model_path)
+    train(reader, model, max_epochs)
 
     # save and load (as an illustration)
-    path = data_dir + "/model.cmf"
+    path = model_path + "/model.cmf"
     model.save_model(path)
     model = Function.load(path)
 
