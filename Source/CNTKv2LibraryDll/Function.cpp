@@ -1353,6 +1353,11 @@ namespace CNTK
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgminReductionOpName, axis, name);
     }
 
+    FunctionPtr StopGradient(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::StopGradient, operand, Dictionary(), name);
+    }
+
     namespace Sequence
     {
         void VerifyIsSequence(const Variable& operand)
@@ -1468,6 +1473,9 @@ namespace CNTK
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
         {
+            if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
+                return Internal::ReduceElements(operand, reductionOpName, Axis::OperandSequenceAxis(), name);
+            
             using namespace std::placeholders;
 
             std::function<FunctionPtr(const Variable& leftOperand, const Variable& rightOperand)> reductionFunctor;
@@ -1576,7 +1584,13 @@ namespace CNTK
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
-            if (axis.IsStaticAxis() || (axis == Axis::AllStaticAxes()) || (axis == Axis::AllAxes()))
+            if (axis == Axis::DefaultBatchAxis())
+                LogicError("Reduction is currently unsupported along the batch axis only");
+
+            if (axis.IsStaticAxis() ||
+                (axis == Axis::AllStaticAxes()) ||
+                (axis == Axis::AllAxes()) ||
+                ((reductionOpName == PrimitiveFunction::InternalSumReductionOpName) && (axis == Axis::OperandSequenceAxis())))
             {
                 auto additionalProperties = Dictionary();
                 additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
@@ -1584,12 +1598,8 @@ namespace CNTK
                 return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
             }
 
-            if (axis == Axis::DefaultBatchAxis())
-                LogicError("Reduction is currently unsupported along the batch axis only");
-
             LogicError("CNTK::ReduceElements: Invalid axis argument provided. To reduce a sequence along its ordered dynamic axis use Sequence::ReduceElements.");
         }
-
 
         FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name)
         {

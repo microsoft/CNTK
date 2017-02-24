@@ -52,7 +52,7 @@ public:
         m_randomSeedOffset(0),
         m_isCompiled(false),
         m_areMatricesAllocated(false),
-        m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, L"*")),
+        m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultDynamicAxisName)),
         m_environment(make_shared<ComputationEnvironment>())
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");

@@ -34,6 +34,7 @@
     <ClCompile Include="tensorboard\tensorboard.pb.cc.VS_wrapper.cpp">
       <Filter>tensorboard</Filter>
     </ClCompile>
+    <ClCompile Include="ProgressWriter.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

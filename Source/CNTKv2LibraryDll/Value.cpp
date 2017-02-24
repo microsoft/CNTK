@@ -181,7 +181,7 @@ namespace CNTK
 
             // Since scalar samples can be rank=1 with dim=1, we automatically pad the sequence data shape with a leading axis 
             // of dim=1 if the sequence data shape's leading axis's dimensionality is not 1
-            if ((sampleShape.Rank() == 1) && (sampleShape.TotalSize() == 1) && (currentSequenceDataShape[0] != 1))
+            if ((sampleShape.Rank() == 1) && (sampleShape.TotalSize() == 1) && (currentSequenceDataShape.Rank() > 0) && (currentSequenceDataShape[0] != 1))
                 currentSequenceDataShape = NDShape(1, 1).AppendShape(currentSequenceDataShape);
 
             if ((currentSequenceDataShape.Rank() < sampleShape.Rank()) || (currentSequenceDataShape.Rank() > (sampleShape.Rank() + 1)) || (currentSequenceDataShape.SubShape(0, sampleShape.Rank()) != sampleShape))
@@ -560,6 +560,35 @@ namespace CNTK
         return std::pair<size_t, size_t>(maxSequenceLength, numSequences);
     }
 
+    template <typename ElementType>
+    ElementType Value::AsScalar() const
+    {
+        if (Mask())
+            LogicError("Scalar Value object cannot have an associated mask");
+
+        auto scalarData = Data();
+        if (scalarData->Shape().TotalSize() != 1)
+            LogicError("Scalar Value object's has a size > 1");
+
+        ElementType scalar = std::numeric_limits<ElementType>::quiet_NaN();
+        NDArrayViewPtr cpuData;
+        if (scalarData->Device() == DeviceDescriptor::CPUDevice())
+            cpuData = scalarData;
+        else
+        {
+            cpuData = std::make_shared<NDArrayView>(scalarData->GetDataType(), scalarData->Shape(), CNTK::DeviceDescriptor::CPUDevice());
+            cpuData->CopyFrom(*scalarData);
+        }
+
+        if (scalarData->GetDataType() == DataType::Float)
+            scalar = *(cpuData->DataBuffer<float>());
+        else if (scalarData->GetDataType() == DataType::Double)
+            scalar = static_cast<ElementType>(*(cpuData->DataBuffer<double>()));
+        else
+            LogicError("Unsupported DataType");
+
+        return scalar;
+    }
 
     void PackedValue::Unpack() const
     {
@@ -659,4 +688,6 @@ namespace CNTK
     template CNTK_API void Value::CopyVariableValueToVector<double>(const Variable& outputVariable, std::vector<std::vector<double>>& sequences);
     template CNTK_API void Value::CopyVariableValueToVector<float>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
     template CNTK_API void Value::CopyVariableValueToVector<double>(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences);
+    template float Value::AsScalar<float>() const;
+    template double Value::AsScalar<double>() const;
 }

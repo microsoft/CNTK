@@ -24,12 +24,15 @@ class Trainer(cntk_py.Trainer):
     can be used for tracking the trained model's quality.
 
     Args:
-       model (:class:`~cntk.ops.functions.Function`): root node of the function to train or None
-       criterion (:class:`~cntk.ops.functions.Function`): Function with one or two outputs,
+       model (:class:`~cntk.ops.functions.Function`): root node of the function to train
+       criterion (Python tuple of :class:`~cntk.ops.functions.Function`, or :class:`~cntk.ops.functions.Function` or ):
+        Function with one or two outputs,
         representing loss and, if given, evaluation metric (in this order).
         Alternatively, a tuple(loss Function, evaluation Function) is also accepted.
-       parameter_learners (list): list of learners from :mod:`cntk.learner`.
-        The learners must cover all model parameters of the loss function.
+       parameter_learners (list): list of learners from :mod:`cntk.learner`
+       progress_writers (list): optionally, list of progress writers from :mod:`cntk.utils` to automatically track
+         training progress.
+
         TODO: Would be great to allow to skip some parameters that should not be updated.
     '''
 
@@ -48,7 +51,7 @@ class Trainer(cntk_py.Trainer):
             raise ValueError("criterion parameter must be a singleton or a tuple of 2 elements")
         return criterion
 
-    def __init__(self, model, criterion, parameter_learners):
+    def __init__(self, model, criterion, parameter_learners, progress_writers=None):
         loss_function, eval_function = Trainer._get_loss_metric(criterion)
         # TODO sanitizing should be removed once Swig's typemaps are in place
         if model is not None:  # None means dummy model that is, e.g., the same as a criterion
@@ -58,8 +61,12 @@ class Trainer(cntk_py.Trainer):
             eval_function = sanitize_function(eval_function)
         if not isinstance(parameter_learners, list):
             parameter_learners = [parameter_learners]
+        if progress_writers is None:
+            progress_writers = []
+        elif not isinstance(progress_writers, list):
+            progress_writers = [progress_writers]
 
-        trainer = cntk_py.trainer_impl(model, loss_function, eval_function, parameter_learners)
+        trainer = cntk_py.trainer_impl(model, loss_function, eval_function, parameter_learners, progress_writers)
         # transplant into this class instance
         self.__dict__ = trainer.__dict__
 
@@ -296,30 +303,17 @@ class Trainer(cntk_py.Trainer):
         '''
         return super(Trainer, self).total_number_of_samples_seen()
 
-    @property
-    def accumulated_loss_average(self):
+    def summarize_training_progress(self):
         '''
-        The average training loss per sample since the last reset_accumulation()
+        Updates the progress writers with the summary of training progress since start and resets the internal
+        accumulators.
         '''
-        return super(Trainer, self).accumulated_loss_average()
+        return super(Trainer, self).summarize_training_progress()
 
-    @property
-    def accumulated_evaluation_average(self):
+    def summarize_test_progress(self):
         '''
-        The average evaluation criterion value per sample since the last reset_accumulation()
-        '''
-        return super(Trainer, self).accumulated_evaluation_average()
-
-    @property
-    def accumulated_sample_count(self):
-        '''
-        The number of samples since last reset_accumulation
-        '''
-        return super(Trainer, self).accumulated_sample_count()
-
-    def reset_accumulation(self):
-        '''
-        Reset accumulated loss and evaluation criterion
+        Updates the progress writers with the summary of test progress since start and resets the internal
+        accumulators.
         '''
         return super(Trainer, self).reset_accumulation()
 

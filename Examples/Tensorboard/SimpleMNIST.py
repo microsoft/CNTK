@@ -11,7 +11,7 @@ from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INF
 from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant, \
                      reduce_max, reduce_mean, reduce_min
-from cntk.utils import ProgressPrinter
+from cntk.utils import *
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", ".."))
@@ -68,13 +68,15 @@ def simple_mnist():
         label: reader_train.streams.labels
     }
 
-    lr_per_minibatch = learning_rate_schedule(0.2, UnitType.minibatch)
-    # Instantiate the trainer object to drive the model training
-    trainer = Trainer(netout, (ce, pe), sgd(netout.parameters, lr=lr_per_minibatch))
+    # Instantiate progress writers.
+    logdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mnist_log")
+    tensorboard_writer = TensorBoardProgressWriter(freq=1, log_dir=logdir, model=netout)
+    progress_printer = ProgressPrinter(freq=10, tag='Training')
 
-    # Instantiate a ProgressPrinter.
-    logdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mnist_log") 
-    progress_printer = ProgressPrinter(tag='Training', freq=1, tensorboard_log_dir=logdir, model=netout)
+    # Instantiate the trainer object to drive the model training
+    lr_per_minibatch = learning_rate_schedule(0.2, UnitType.minibatch)
+    learner = sgd(netout.parameters, lr=lr_per_minibatch)
+    trainer = Trainer(netout, (ce, pe), learner, [tensorboard_writer, progress_printer])
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 64
@@ -85,16 +87,15 @@ def simple_mnist():
     for minibatch_idx in range(0, int(num_minibatches_to_train)):
         trainer.train_minibatch(reader_train.next_minibatch(minibatch_size, input_map=input_map))
 
-        # Take snapshot of loss and eval criterion for the previous minibatch.
-        progress_printer.update_with_trainer(trainer, with_metric=True)
-
         # Log max/min/mean of each parameter tensor, so that we can confirm that the parameters change indeed.
         # Don't want to do that very often though, otherwise will spend too much time computing min/max/mean.
         if minibatch_idx % 10 == 9:
             for p in netout.parameters:
-                progress_printer.update_value("mb_" + p.uid + "_max", reduce_max(p).eval(), minibatch_idx)
-                progress_printer.update_value("mb_" + p.uid + "_min", reduce_min(p).eval(), minibatch_idx)
-                progress_printer.update_value("mb_" + p.uid + "_mean", reduce_mean(p).eval(), minibatch_idx)
+                tensorboard_writer.write_value(p.uid + "/max", reduce_max(p).eval(), minibatch_idx)
+                tensorboard_writer.write_value(p.uid + "/min", reduce_min(p).eval(), minibatch_idx)
+                tensorboard_writer.write_value(p.uid + "/mean", reduce_mean(p).eval(), minibatch_idx)
+
+    trainer.summarize_training_progress()
 
     # Load test data
     try:
@@ -122,6 +123,7 @@ def simple_mnist():
         test_result += trainer.test_minibatch(mb)
 
     # Average of evaluation errors of all test minibatches
+    trainer.summarize_test_progress()
     return test_result / num_minibatches_to_test
 
 if __name__ == '__main__':

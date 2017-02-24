@@ -6,6 +6,7 @@
 
 from __future__ import print_function
 import os
+import argparse
 import math
 from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
@@ -19,10 +20,10 @@ from cntk.ops import cross_entropy_with_softmax, classification_error, splice, r
 # variables and stuff  #
 ########################
 
-data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
+# Paths relative to current python file.
+abs_path   = os.path.dirname(os.path.abspath(__file__))
+data_dir  = os.path.join(abs_path, "..", "Data") # under Examples/LanguageUnderstanding/ATIS
 vocab_size = 943 ; num_labels = 129 ; num_intents = 26    # number of words in vocab, slot labels, and intent labels
-
-model_dir = "./Models"
 
 # model dimensions
 emb_dim    = 150
@@ -189,15 +190,26 @@ def evaluate(reader, model):
         metric = evaluator.test_minibatch(query=data[reader.streams.query], labels=data[reader.streams.slot_labels])
         # note: keyword syntax ^^ is optional; this is to demonstrate it
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
+    if model_dir:
+        model.save(os.path.join(model_dir, "atis" + "_{}.dnn".format(epoch)))
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
+
 
 #############################
 # main function boilerplate #
 #############################
 
 if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='8')
+
+    args = vars(parser.parse_args())
+    max_epochs = int(args['epochs'])
+
+    # TODO: leave these in for now as debugging aids; remove for beta
+    from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed, force_deterministic_algorithms
 
     from _cntk_py import set_fixed_random_seed
     set_fixed_random_seed(1) # useful for testing
@@ -205,8 +217,9 @@ if __name__=='__main__':
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True) 
     model = create_model_function()
 
+    model_path = os.path.join(abs_path, "Models")
     # train
-    train(reader, model, max_epochs=8)
+    train(reader, model, max_epochs, model_path)
 
     # save and load (as an illustration)
     path = data_dir + "/model.cmf"

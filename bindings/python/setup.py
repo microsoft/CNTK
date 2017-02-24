@@ -9,6 +9,8 @@ import numpy
 
 IS_WINDOWS = platform.system() == 'Windows'
 
+IS_PY2 = sys.version_info.major == 2
+
 # TODO should handle swig path specified via build_ext --swig-path
 if os.system('swig -version 1>%s 2>%s' % (os.devnull, os.devnull)) != 0:
     print("Please install swig (>= 3.0.10) and include it in your path.\n")
@@ -163,13 +165,18 @@ else:
     package_data['cntk'] += rt_libs
     kwargs = dict(package_data = package_data)
 
+cntk_install_requires = [
+    'numpy>=1.11',
+    'scipy>=0.17'
+]
+
+if IS_PY2:
+    cntk_install_requires.append('enum34>=1.1.6')
+
 setup(name="cntk",
-      version="2.0.beta11.0",
+      version="2.0.beta12.0",
       url="http://cntk.ai",
       ext_modules=[cntk_module],
       packages=packages,
-      # install_requires=[
-      #  'numpy>=1.11',
-      #  'scipy>=0.17'
-      #],
+      install_requires=cntk_install_requires,
       **kwargs)
