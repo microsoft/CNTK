@@ -661,7 +661,7 @@ def test_layers_stabilizer(device_id):
     res = p(y).eval({y: dat})
 
     # a stabilizer starts with having no effect, hence input=output
-    np.testing.assert_array_almost_equal(res[0], dat, decimal=7, \
+    np.testing.assert_array_almost_equal(res[0], dat, decimal=6, \
         err_msg="Error in layer normalization computation")
 
 ##########################################################

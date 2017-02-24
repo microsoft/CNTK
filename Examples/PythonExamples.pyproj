@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{292ff4ee-d9dd-4ba7-85f7-6a22148d1e01}</ProjectGuid>
     <ProjectHome />
-    <StartupFile>Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug.py</StartupFile>
+    <StartupFile>SequenceToSequence\CMUDict\Python\Sequence2Sequence.py</StartupFile>
     <SearchPath>..\Tests\EndToEndTests\CNTKv2Python;..\bindings\python;..\bindings\python\doc\;..\bindings\python\doc\test\</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -50,6 +50,12 @@
     <Compile Include="..\bindings\python\doc\test\simplernn_test.py">
       <Link>Tests\doc\test\simplernn_test.py</Link>
     </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\AlexNet_ImageNet_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\AlexNet_ImageNet_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\char_rnn_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\char_rnn_test.py</Link>
+    </Compile>
     <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\CNTK_103B_MNIST_FeedForwardNetwork_test.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_103B_MNIST_FeedForwardNetwork_test.py</Link>
     </Compile>
@@ -74,8 +80,29 @@
     <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\feature_extraction_test.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\feature_extraction_test.py</Link>
     </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\htk_deserializer_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\htk_deserializer_test.py</Link>
+    </Compile>
     <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\layers_test.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\layers_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\prepare_test_data.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\prepare_test_data.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\TrainResNet_CIFAR10_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\TrainResNet_CIFAR10_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\TrainResNet_CIFAR10_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\TrainResNet_CIFAR10_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\transfer_learning_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\transfer_learning_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\VGG16_ImageNet_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\VGG16_ImageNet_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\word_rnn_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\word_rnn_test.py</Link>
     </Compile>
     <Compile Include="common\nn.py" />
     <Compile Include="common\__init__.py" />
@@ -244,8 +271,10 @@
     <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\__init__.py">
       <Link>Tests\EndToEndTests\cntkv2Python\Examples\__init__.py</Link>
     </Compile>
-    <Compile Include="Tests\EndToEndTests\MetricsDriver.py" />
-    <Compile Include="Tests\EndToEndTests\TestDriver.py" />
+    <Compile Include="Text\CharacterLM\char_rnn.py" />
+    <Compile Include="Text\WordLMWithSampledSoftmax\data_reader.py" />
+    <Compile Include="Text\WordLMWithSampledSoftmax\download_data.py" />
+    <Compile Include="Text\WordLMWithSampledSoftmax\word_rnn.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="common\" />
@@ -301,13 +330,25 @@
     <Folder Include="Tests\EndToEndTests\cntkv2Python\Examples\" />
     <Folder Include="Tests\cntk\" />
     <Folder Include="Tests\doc\" />
-    <Folder Include="ToEndTests\" />
-    <Folder Include="ToEndTests\cntkv2Python\" />
-    <Folder Include="ToEndTests\cntkv2Python\Examples\" />
+    <Folder Include="EndToEndTests\" />
+    <Folder Include="EndToEndTests\cntkv2Python\" />
+    <Folder Include="Text\" />
+    <Folder Include="Text\CharacterLM\" />
+    <Folder Include="Text\CharacterLM\data\" />
+    <Folder Include="Text\WordLMWithSampledSoftmax\" />
+    <Folder Include="Text\WordLMWithSampledSoftmax\test\" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="{4aa09c20-bd30-41b0-b691-0beca389326c}\3.5" />
     <InterpreterReference Include="{c2abc240-2da9-4409-8b09-0ee30a5b56e2}\3.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Text\CharacterLM\data\tinyshakespeare.txt" />
+    <Content Include="Text\CharacterLM\README.md" />
+    <Content Include="Text\WordLMWithSampledSoftmax\README.md" />
+    <Content Include="Text\WordLMWithSampledSoftmax\test\freq.txt" />
+    <Content Include="Text\WordLMWithSampledSoftmax\test\text.txt" />
+    <Content Include="Text\WordLMWithSampledSoftmax\test\token2id.txt" />
   </ItemGroup>
   <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />

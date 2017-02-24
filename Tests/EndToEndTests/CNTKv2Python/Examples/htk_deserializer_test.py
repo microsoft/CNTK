@@ -1,9 +1,7 @@
 import cntk as C
 import numpy as np
 from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
-from cntk.blocks import LSTM, Placeholder, Input
-from cntk.layers import Recurrence, Dense, BatchNormalization
-from cntk.models import Sequential, For
+from cntk.layers import Recurrence, Dense, BatchNormalization, LSTM, Placeholder, Input, Sequential, For
 
 import os, sys
 abs_path = os.path.dirname(os.path.abspath(__file__))

@@ -18,7 +18,7 @@ from cntk.ops import splice
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "LanguageUnderstanding", "ATIS", "Python"))
 sys.path.append("../LanguageUnderstanding/ATIS/Python")
-from LanguageUnderstanding import data_dir, create_reader, create_model, train, emb_dim, hidden_dim, label_dim
+from LanguageUnderstanding import data_dir, create_reader, create_model_function, train, emb_dim, hidden_dim, label_dim
 
 def run_model_test(what, model, expected_train):
     print("--- {} ---".format(what))
@@ -237,7 +237,7 @@ def test_language_understanding(device_id):
     # test of the example itself
     # this emulates the main code in the PY file
     reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-    model = create_model()
+    model = create_model_function()
     loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
     expected_avg = [0.15570838301766451, 0.7846451368305728]
     assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)

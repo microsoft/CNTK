@@ -1490,7 +1490,7 @@ def softplus(x, steepness=1, name=''):
     '''
     Softplus operation. Computes the element-wise softplus
     of ``x``:
-     ``softplus(x) = log(1+ exp(x))``
+     ``softplus(x) = log(1 + exp(x))``
 
     The optional ``steepness`` allows to make the knee sharper (``steepness>1``) or softer, by computing
     ``softplus(x * steepness) / steepness``.
@@ -1502,6 +1502,9 @@ def softplus(x, steepness=1, name=''):
         >>> C.softplus([[-1, -0.5, 0, 1, 2]]).eval()
         array([[ 0.,  0.,  0.,  1.,  2.]], dtype=float32)
 
+        >>> C.softplus([[-1, -0.5, 0, 1, 2]], steepness=4).eval()
+        array([[ 0.,  0.,  0.,  1.,  2.]], dtype=float32)
+
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         steepness (float, optional): optional steepness factor
@@ -1510,12 +1513,13 @@ def softplus(x, steepness=1, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
     def softplus1(x):
-        return log_add_exp(0, x)
+        return log_add_exp(0, x) # numerically stable of writing log(1 + exp(x))
     xp = placeholder_variable()
     if steepness == 1:
         f = softplus1(xp)
     else:
         f = softplus1(steepness * xp) / steepness
+    x = sanitize_input(x)
     return as_block(f, [(xp, x)], 'softplus', name)
 
 

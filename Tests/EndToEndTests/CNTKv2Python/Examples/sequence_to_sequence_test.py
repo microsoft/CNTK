@@ -12,7 +12,7 @@ from cntk.device import set_default_device
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "SequenceToSequence", "CMUDict", "Python"))
 from Sequence2Sequence import create_reader, DATA_DIR, MODEL_DIR, TRAINING_DATA, VALIDATION_DATA, TESTING_DATA, \
-                              VOCAB_FILE, get_vocab, create_model, model_path_stem, train, test_metric
+                              VOCAB_FILE, get_vocab, create_model, model_path_stem, train, evaluate_metric
 
 TOLERANCE_ABSOLUTE = 1E-5
 
@@ -35,7 +35,7 @@ def test_sequence_to_sequence(device_id):
     # now test the model and print out test error (for automated test)
     model_filename = os.path.join(MODEL_DIR, model_path_stem + ".cmf.0")
     model = load_model(model_filename)
-    error = test_metric(test_reader, model, 10)
+    error = evaluate_metric(test_reader, model, 10)
 
     print(error)
 

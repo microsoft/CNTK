@@ -12,9 +12,7 @@ from cntk import Trainer, Axis
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.ops.functions import load_model
-from cntk.blocks import LSTM, Stabilizer
-from cntk.layers import Recurrence, Dense
-from cntk.models import For, Sequential
+from cntk.layers import Recurrence, Dense, LSTM, Stabilizer, For, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
 from data_reader import DataReader
 from math import log, exp
