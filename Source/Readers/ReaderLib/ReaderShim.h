@@ -34,7 +34,7 @@ public:
     explicit ReaderShim(ReaderFactory factory);
     explicit ReaderShim(ReaderPtr reader);
 
-    virtual ~ReaderShim() { }
+    virtual ~ReaderShim();
 
     virtual void Init(const ScriptableObjects::IConfigRecord& /*config*/) override
     {
@@ -166,6 +166,11 @@ private:
         size_t numRows,
         const StreamMinibatchPtr& stream,
         DataTransferer* transferer);
+
+    class AsyncExecutor;
+    AsyncExecutor* m_asyncExec;
+
+    void StartPrefetchTask();
 };
 
 }}}

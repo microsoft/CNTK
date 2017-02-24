@@ -8,11 +8,16 @@
 #define _CRT_SECURE_NO_WARNINGS
 
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
 #include <objbase.h>
 #endif
 
 #include <sstream>
 #include "Basics.h"
+
+#include <boost/thread.hpp>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/use_future.hpp>
 
 #define DATAREADER_EXPORTS // creating the exports here
 #include "DataReader.h"
@@ -21,6 +26,57 @@
 #include "PerformanceProfiler.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
+
+template<class ElemType>
+class ReaderShim<ElemType>::AsyncExecutor
+{
+private:
+    boost::asio::io_service m_io_service;
+    boost::thread_group m_threads;
+    std::unique_ptr<boost::asio::io_service::work> m_work; // to keep the service running
+
+public:
+    AsyncExecutor(int numThreads)
+    {
+        m_work.reset(new boost::asio::io_service::work(m_io_service));
+
+        for (int i = 0; i < numThreads; i++)
+        {
+            m_threads.create_thread(boost::bind(&boost::asio::io_service::run, &m_io_service));
+        }
+    }
+
+    template<typename Function>
+    auto async(Function&& f) -> std::future<decltype(f())>
+    {
+        using ReturnType = decltype(f());
+
+        struct PromiseFunc
+        {
+            std::promise<ReturnType> promise;
+            std::function<ReturnType()> function;
+
+            PromiseFunc(std::function<ReturnType()>&& f) : promise(std::promise<ReturnType>()), function(f) {}
+        };
+
+        auto work = std::make_shared<PromiseFunc>(std::move(f));
+        auto future = work->promise.get_future();
+        m_io_service.dispatch(
+            [work]()
+            {
+                try
+                {
+                    work->promise.set_value(work->function());
+                }
+                catch (...)
+                {
+                    work->promise.set_exception(std::current_exception());
+                }
+            });
+
+        return future;
+    }
+};
 
 template <class ElemType>
 ReaderShim<ElemType>::ReaderShim() :
@@ -33,6 +89,14 @@ ReaderShim<ElemType>::ReaderShim() :
     m_reader(nullptr),
     m_factory(nullptr)
 {
+    int numAsyncExecThreads = 1;
+    m_asyncExec = new ReaderShim<ElemType>::AsyncExecutor(numAsyncExecThreads);
+}
+
+template <class ElemType>
+ReaderShim<ElemType>::~ReaderShim()
+{
+    delete m_asyncExec;
 }
 
 template <class ElemType>
@@ -131,15 +195,7 @@ void ReaderShim<ElemType>::SetConfiguration(const ReaderConfiguration& config, c
     m_reader->SetCurrentSamplePosition(m_currentSamplePosition);
 
     // Start prefetch.
-    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
-    // Starting the prefetch task. There is always a single async read in flight.
-    // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
-    // and kick off the new prefetch.
-    m_prefetchTask = std::async(m_launchType,
-        [this, localCurrentDataTransferIndex]()
-    {
-        return PrefetchMinibatch(localCurrentDataTransferIndex);
-    });
+    StartPrefetchTask();
 }
 
 template <class ElemType>
@@ -197,15 +253,7 @@ void ReaderShim<ElemType>::StartEpoch(const EpochConfiguration& config, const st
     m_reader->StartEpoch(config, inputDescriptions);
     m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
 
-    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
-    // Starting the prefetch task. There is always a single async read in flight.
-    // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
-    // and kick off the new prefetch.
-    m_prefetchTask = std::async(m_launchType,
-    [this, localCurrentDataTransferIndex]()
-    {
-        return PrefetchMinibatch(localCurrentDataTransferIndex);
-    });
+    StartPrefetchTask();
 }
 
 string EnumerateInputs(const unordered_map<wstring, size_t>& nameToStreamId)
@@ -324,11 +372,7 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // It is time to issue the next prefetch.
     if (!m_endOfEpoch)
     {
-        // Starting the prefetch task. There is always a single async read in flight.
-        // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
-        // and kick off the new prefetch.
-        auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
-        m_prefetchTask = std::async(m_launchType, [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); });
+        StartPrefetchTask();
     }
 
     // Let's wait till the previous memcopy has finished.
@@ -336,6 +380,25 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
         m_dataTransferers[currentDataTransferIndex]->WaitForCopyCPUToGPU();
 
     return result.m_isDataAvailable;
+}
+
+template <class ElemType>
+void ReaderShim<ElemType>::StartPrefetchTask()
+{
+    // Starting the prefetch task. There is always a single async read in flight.
+    // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
+    // and kick off the new prefetch.
+    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
+    auto prefetchFunc = [this, localCurrentDataTransferIndex]() { return PrefetchMinibatch(localCurrentDataTransferIndex); };
+    if (m_launchType == std::launch::async)
+    {
+        // use fixed thread pool for async prefetch to avoid thread creation which causes Philly perf drop
+        m_prefetchTask = m_asyncExec->async(prefetchFunc);
+    }
+    else
+    {
+        m_prefetchTask = std::async(m_launchType, prefetchFunc);
+    }
 }
 
 template <class ElemType>
