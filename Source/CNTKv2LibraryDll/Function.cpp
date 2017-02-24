@@ -748,39 +748,6 @@ namespace CNTK
         });
     }
     
-    FunctionPtr NullaryOp(PrimitiveOpType op, Dictionary&& opConfig, const std::wstring& name)
-    {
-        std::vector<Variable> operands = { };
-        return AsComposite(MakeSharedObject<PrimitiveFunction>(op, operands, std::move(opConfig), name), name);
-    }
-
-    FunctionPtr RandomUniform(const NDShape& shape, float minVal, float maxVal, size_t seed, const std::wstring& name)
-    {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = shape;
-        additionalProperties[PrimitiveFunction::AttributeNameMinValue] = minVal;
-        additionalProperties[PrimitiveFunction::AttributeNameMaxValue] = maxVal;
-        additionalProperties[PrimitiveFunction::AttributeNameRngSeed]  = seed;
-
-        return NullaryOp(PrimitiveOpType::RandomUniform, std::move(additionalProperties), name);
-    }
-
-    FunctionPtr Zeros(const NDShape& shape, const std::wstring& name)
-    {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = shape;
-
-        return NullaryOp(PrimitiveOpType::Zeros, std::move(additionalProperties), name);
-    }
-
-    FunctionPtr Ones(const NDShape& shape, const std::wstring& name)
-    {
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameNewShape] = shape;
-
-        return NullaryOp(PrimitiveOpType::Ones, std::move(additionalProperties), name);
-    }
-
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand };
@@ -818,14 +785,14 @@ namespace CNTK
     }
 
     FunctionPtr Exp(const Variable& operand, const std::wstring& name)
-        {
+    {
         return UnaryOp(PrimitiveOpType::Exp, operand, Dictionary(), name);
     }
 
     FunctionPtr Log(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Log, operand, Dictionary(), name);
-        }
+    }
 
     FunctionPtr Square(const Variable& operand, const std::wstring& name)
     {
@@ -1341,13 +1308,7 @@ namespace CNTK
 
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
-        auto operandPlaceholder = PlaceholderVariable();
-        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
-        auto result = ElementSelect(lessThanZero, 
-            Minus(Exp(operandPlaceholder), Constant::Scalar(operand.GetDataType(), 1.0)),
-            operandPlaceholder);
-
-        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ELU", name);
+        return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
     }
 
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)

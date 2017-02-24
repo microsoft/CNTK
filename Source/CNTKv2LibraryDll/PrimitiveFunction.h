@@ -87,11 +87,12 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
-        { PrimitiveOpType::Block, L"Block" },
-        { PrimitiveOpType::Unpooling, L"Unpooling" },
-        { PrimitiveOpType::LambdaRank, L"LambdaRank" },
-        { PrimitiveOpType::NDCG, L"NDCG" },
-        { PrimitiveOpType::NoOp, L"NoOp" },
+        {PrimitiveOpType::Block, L"Block" },
+        {PrimitiveOpType::Unpooling, L"Unpooling" },
+        {PrimitiveOpType::LambdaRank, L"LambdaRank" },
+        {PrimitiveOpType::NDCG, L"NDCG" },
+        {PrimitiveOpType::NoOp, L"NoOp" },
+        {PrimitiveOpType::ELU, L"ELU" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)

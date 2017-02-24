@@ -98,6 +98,12 @@ DECL ElemType LinearRectifierDerivative(ElemType z)
 }
 
 template <class ElemType>
+DECL ElemType ExponentialLinearUnitDerivative(ElemType z)
+{
+    return z >= 0 ? (ElemType)1 : exp_(z);
+}
+
+template <class ElemType>
 DECL ElemType Sgn(ElemType z)
 {
     if (z > 0.0) return 1.0;
@@ -206,6 +212,7 @@ DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
+DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (exp_(a)-1));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -245,6 +252,7 @@ DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input
 DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
+DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivative, b >= 0 ? a : a*exp_(b)); // b = input;
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")

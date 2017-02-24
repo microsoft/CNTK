@@ -545,6 +545,9 @@ namespace CNTK
             case PrimitiveOpType::Sqrt:
                 computationNodePtr = New<SqrtNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::ELU:
+                computationNodePtr = New<ExponentialLinearUnitNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::Floor:
                 computationNodePtr = New<FloorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
