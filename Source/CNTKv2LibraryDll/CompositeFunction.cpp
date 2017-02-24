@@ -850,22 +850,34 @@ namespace CNTK
         }
         else
         {
-            computationNodePtr = New<UserDefinedV2FunctionNode<ElementType>>(network->GetDeviceId(), internalNodeName, function->shared_from_this());
-
-            // For user defined functions, we only attach unique inputs in the internal computation network since, the UDF 
-            // backward implementations directly compute aggregate gradient values for unique inputs
-            std::vector<ComputationNodeBasePtr> uniqueInputNodesBasePtrs;
-            for (auto inputNodeBasePtr : inputNodesBasePtrs)
+            auto outputs = function->RawOutputs();
+            if (variable == outputs[0])
             {
-                if (std::find(uniqueInputNodesBasePtrs.begin(), uniqueInputNodesBasePtrs.end(), inputNodeBasePtr) == uniqueInputNodesBasePtrs.end())
-                    uniqueInputNodesBasePtrs.push_back(inputNodeBasePtr);
-            }
+                computationNodePtr = New<UserDefinedV2FunctionNode<ElementType>>(network->GetDeviceId(), internalNodeName, function->shared_from_this());
 
-            inputNodesBasePtrs = uniqueInputNodesBasePtrs;
+                // For user defined functions, we only attach unique inputs in the internal computation network since, the UDF 
+                // backward implementations directly compute aggregate gradient values for unique inputs
+                std::vector<ComputationNodeBasePtr> uniqueInputNodesBasePtrs;
+                for (auto inputNodeBasePtr : inputNodesBasePtrs)
+                {
+                    if (std::find(uniqueInputNodesBasePtrs.begin(), uniqueInputNodesBasePtrs.end(), inputNodeBasePtr) == uniqueInputNodesBasePtrs.end())
+                        uniqueInputNodesBasePtrs.push_back(inputNodeBasePtr);
+                }
+
+                inputNodesBasePtrs = uniqueInputNodesBasePtrs;
+            }
+            else
+            {
+                size_t i = 1;
+                while (outputs[i] != variable) i++;
+                assert(i < outputs.size());
+
+                computationNodePtr = New<SelectUserDefinedV2FunctionOutputNode<ElementType>>(network->GetDeviceId(), CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name()), i);
+                inputNodesBasePtrs = { variableToNodeMap[outputs[0]] };
+            }
         }
 
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
-
         return computationNodePtr;
     }
 
@@ -1015,10 +1027,9 @@ namespace CNTK
             };
             PreorderTraverseFunctions(rootFunction, PatchBlockArgumentsMapping);
 
-            std::function<bool(const Variable&)> IsVariableRoot;
-            IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
+            std::function<bool(const Variable&)> IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
                 auto mappingVariable = GetMappingVariable(outputVar);
-                return (m_isVariableRootMap[outputVar] && ((mappingVariable == outputVar) || IsVariableRoot(mappingVariable)));
+                return (m_isVariableRootMap[outputVar] && !IsFirstOutputOfMultiOutputUDF(mappingVariable) && ((mappingVariable == outputVar) || IsVariableRoot(mappingVariable)));
             };
 
             // If any of the function or requested outputs is not a root node, we need to explicitly
