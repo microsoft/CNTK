@@ -157,7 +157,7 @@ DeclareUnaryElementWiseWithOpCodeNode(Sigmoid,               Sigmoid,           
 DeclareUnaryElementWiseWithOpCodeNode(Sin,                   Sin,                   ElementwiseProductWithSinDerivative,                             binaryWithInputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Sqrt,                  Sqrt,                  ElementwiseProductWithSqrtDerivative,                            binaryWithOutputGradient);
 DeclareUnaryElementWiseWithOpCodeNode(Tanh,                  Tanh,                  ElementwiseProductWithTanhDerivativeFromOutput,                  binaryWithOutputGradient);
-DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivative,           binaryWithInputGradient);
+DeclareUnaryElementWiseWithOpCodeNode(ExponentialLinearUnit, ExponentialLinearUnit, ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, binaryWithOutputGradient);
 
 #pragma pop_macro("DeclareUnaryElementWiseWithOpCodeNode")
 

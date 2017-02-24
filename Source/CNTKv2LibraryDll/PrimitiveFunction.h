@@ -93,7 +93,7 @@ namespace CNTK
         {PrimitiveOpType::NDCG, L"NDCG" },
         {PrimitiveOpType::NoOp, L"NoOp" },
         {PrimitiveOpType::StopGradient, L"StopGradient" },
-		{PrimitiveOpType::ELU, L"ELU" },
+        {PrimitiveOpType::ELU, L"ELU" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
