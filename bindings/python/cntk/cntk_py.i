@@ -1641,19 +1641,17 @@ DATA_TYPE.__eq__ = lambda a,b: (a is not None and b is not None and EQ(a,b)) or 
 %}
 %enddef
 
+%py_repr_for(Variable)
 %py_repr_for(Function)
 
 %py_eq_for(Variable, Variable_eq)
 %py_hash_for(Variable)
-%py_repr_for(Variable)
 
 %py_eq_for(Constant, Variable_eq)
 %py_hash_for(Constant)
-%py_repr_for(Constant)
 
 %py_eq_for(Parameter, Variable_eq)
 %py_hash_for(Parameter)
-%py_repr_for(Parameter)
 
 %py_eq_for(NDShape, NDShape_eq)
 %py_hash_for(NDShape)
