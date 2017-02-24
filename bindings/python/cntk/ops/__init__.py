@@ -1500,10 +1500,10 @@ def softplus(x, steepness=1, name=''):
 
     Example:
         >>> C.softplus([[-1, -0.5, 0, 1, 2]]).eval()
-        array([[ 0.,  0.,  0.,  1.,  2.]], dtype=float32)
+        array([[ 0.313262,  0.474077,  0.693147,  1.313262,  2.126928]], dtype=float32)
 
         >>> C.softplus([[-1, -0.5, 0, 1, 2]], steepness=4).eval()
-        array([[ 0.,  0.,  0.,  1.,  2.]], dtype=float32)
+        array([[ 0.004537,  0.031732,  0.173287,  1.004537,  2.000084]], dtype=float32)
 
     Args:
         x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
