@@ -158,5 +158,5 @@ If (Test-Path $basePath)
     Remove-Item $basePath -Recurse
 }
 
-# Return zero exit code code from here (N.B.: can be non-zero from robocopy above)
+# Return zero exit code code from here (N.B.: can be non-zero from robocopy or 7za above)
 exit 0
