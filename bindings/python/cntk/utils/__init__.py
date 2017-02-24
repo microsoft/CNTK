@@ -12,7 +12,7 @@ from numbers import Number
 from scipy import sparse
 
 from .. import cntk_py
-from cntk.device import use_default_device, cpu
+from ..device import use_default_device, cpu
 from .swig_helper import typemap
 from ..axis import Axis
 from .progress_print import *
@@ -105,11 +105,13 @@ def sanitize_shape(shape):
 
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """sanitize_input(arg, fallback_dtype=np.float32, reshape=None)
-    Convert to :class:`~cntk.ops.variables.Variable` so that it can be passed as Variable to the
-    CNTK operators.
+    Convert to :class:`~cntk.ops.variables.Variable` so that it can be passed
+    as Variable to the CNTK operators. 
 
-      * If ``arg`` is a NumPy array and its type is neither `np.float32` nor `np.float64`, it sets it to `np.float32`.
-      * If ``arg`` is an op, it is assumed that it has only one output, which will be returned.
+      * If ``arg`` is a NumPy array and its type is neither `np.float32` nor
+        `np.float64`, it sets it to `np.float32`.
+      * If ``arg`` is an op, it is assumed that it has only one output, which
+        will be returned. 
 
     Args:
         arg (number, NumPy array, :class:`~cntk.ops.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
@@ -323,19 +325,21 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     Sanitizes a dictionary of `Variable` s to input data such that it can be
     handed off to the evaluation methods
     (:meth:`~cntk.ops.functions.Function.forward`,
-    :meth:`~cntk.ops.functions.Function.backward`, :meth:`~cntk.Trainer.train_minibatch` and
+    :meth:`~cntk.ops.functions.Function.backward`,
+    :meth:`~cntk.Trainer.train_minibatch` and
     :meth:`~cntk.Trainer.test_minibatch`).
 
     Args:
-        op_arguments (:class:`~cntk.ops.functions.Function`): arguments of the root function. In
-         :meth:`~cntk.ops.functions.Function.forward` pass it is typically
-         `op.arguments`, in :meth:`~cntk.ops.functions.Function.backward` pass it is
-         `op.outputs`
-        arguments: maps variables to their input data. The interpretation depends on
-         the input type:
+        op_arguments (:class:`~cntk.ops.functions.Function`): arguments of the
+         root function. In :meth:`~cntk.ops.functions.Function.forward` pass it
+         is typically `op.arguments`, in
+         :meth:`~cntk.ops.functions.Function.backward` pass it is `op.outputs`
+        arguments: maps variables to their input data. The interpretation
+        depends on the input type:
 
-           * dict: keys are input variable or names, and values are the input data.
-           * any other type: if node has an unique input, arguments is
+           * dict: keys are input variable or names, and values are the input
+             data.
+           * any other type: if node has a unique input, arguments is
              mapped to this input.
          For nodes with more than one input, only dict is allowed.
 
@@ -364,20 +368,17 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          one of 'float' 'float32, 'double', 'float64', or None
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
-        extract_values_from_minibatch_data (`bool`, defaults to `True`): specifies
-         if :class:`~cntk.io.MinibatchData` instances in the arguments map are
-         converted to the underlying value (:class:`~cntk.core.Value`) instances (default),
-         or if they should remain intact, as they contain additional meta
-         information required by the Trainer (specifically, by the
-         :meth:`~cntk.Trainer.train_minibatch` method).
+        extract_values_from_minibatch_data (`bool`, defaults to `True`):
+         specifies if :class:`~cntk.io.MinibatchData` instances in the arguments
+         map are converted to the underlying value (:class:`~cntk.core.Value`)
+         instances (default), or if they should remain intact, as they contain
+         additional meta information required by the Trainer (specifically, by
+         the :meth:`~cntk.Trainer.train_minibatch` method).
 
     Returns:
         `dict` that maps variables to sanitized batches
     '''
     from ..io import MinibatchData
-
-    if not op_arguments:
-        return {}
 
     if isinstance(arguments, tuple):
         arguments, seq_starts = arguments
@@ -390,9 +391,16 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                              len(op_arguments))
         return {}
 
-    if len(arguments) < len(op_arguments):
-        raise ValueError('your graph has %i inputs, but you specified %i' %
-                        (len(op_arguments), len(arguments)))
+    if isinstance(arguments, cntk_py.Value):
+        if len(op_arguments) != 1:
+            raise ValueError('your graph has %i inputs, but you specified '
+                             'only one' % (len(op_arguments), len(arguments)))
+
+        arguments = { op_arguments[0]: arguments }
+
+    elif len(arguments) < len(op_arguments):
+        raise ValueError('your graph has %i inputs, but you specified data '
+                         'for %i' % (len(op_arguments), len(arguments)))
 
     if isinstance(arguments, dict):
         arg_names = [var.name for var in op_arguments]
