@@ -237,10 +237,11 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
         var (:class:`~cntk.ops.variables.Variable`): input variable into which
          ``batch`` is passed
         batch: batch input for `var`. It can be
-         * a single NumPy array denoting the full minibatch
-         * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
-         * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
-        seq_starts (list of `bool`s or None): if None, every sequence is
+
+           * a single NumPy array denoting the full minibatch
+           * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
+           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
+        seq_starts (list of bools or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans one for each sequence in the batch that tell whether a
          sequence is a new sequence (`True`) or a continuation of the sequence
@@ -249,7 +250,8 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
          this value should be put on
 
     Returns:
-        :class:`~cntk.core.Value`: converted batch that can be passed to the core API
+        batch converted to a :class:`~cntk.core.Value` instance that can be
+        passed to the core API
     '''
     if isinstance(batch, cntk_py.Value):
         if seq_starts is not None:
@@ -335,12 +337,12 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          is typically `op.arguments`, in
          :meth:`~cntk.ops.functions.Function.backward` pass it is `op.outputs`
         arguments: maps variables to their input data. The interpretation
-        depends on the input type:
+         depends on the input type:
 
-           * dict: keys are input variable or names, and values are the input
-             data.
-           * any other type: if node has a unique input, arguments is
-             mapped to this input.
+          * dict: keys are input variable or names, and values are the input
+            data.
+          * any other type: if node has a unique input, arguments is
+            mapped to this input.
          For nodes with more than one input, only dict is allowed.
 
          In both cases, every sample in the data will be interpreted
@@ -706,8 +708,10 @@ def _as_tuple(x):
 
 def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_profiler_buffer_size):
     '''
-    Start profiler to prepare performance statistics gathering. Note that profiler is not enabled after start.
-	[Example](https://github.com/Microsoft/CNTK/wiki/Performance-Profiler#for-python)
+    Start profiler to prepare performance statistics gathering. Note that
+    the profiler is not enabled after start
+    (`example
+    <https://github.com/Microsoft/CNTK/wiki/Performance-Profiler#for-python>`_).
 
     Args:
         dir: directory for profiler output
