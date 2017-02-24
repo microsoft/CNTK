@@ -8,7 +8,9 @@ Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki
 ***2017-02-23.* V 2.0 Beta 12 Release**  
 Highlights of this Release:
 * New and updated features: new activation functions, support of `Argmax` and `Argmin`, improved performance of `numpy` interop, new functionality of existing operators, and more.
-* [CNTK for CPU on Windows can now be installed via `pip install` on Anaconda 3](https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Python). Other configurations will be enabled soon.
+* [CNTK for CPU on Windows can now be installed via `pip install` on Anaconda 3](https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-your-machine). Other configurations will be enabled soon.
+* HTK deserializers are now exposed in Python. All deserializers are exposed in C++.
+* The memory pool implementation of CNTK has been updated with a new global optimization algorithm. Hyper memory compression has been removed.
 * New features in C++ API.
 * [New Eval examples for RNN models](https://github.com/Microsoft/CNTK/blob/master/Examples/Evaluation/CNTKLibraryCSEvalCPUOnlyExamples/CNTKLibraryCSEvalExamples.cs).
 * New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package) with CNTK V2 C++ Library.
