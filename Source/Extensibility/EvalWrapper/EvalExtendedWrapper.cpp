@@ -293,7 +293,7 @@ public:
         }
 
         // Hold all buffers that should be pinned during native operations
-        List<GCHandle>^ pinnedGCHandleList = gcnew List<GCHandle>; 
+        List<GCHandle>^ pinnedGCHandleList = gcnew List<GCHandle>;
 
         try
         {
@@ -442,7 +442,7 @@ private:
     {
         GCHandle h = GCHandle::Alloc(itemBuffer, GCHandleType::Pinned);
         pinnedGCHandleList->Add(h);
-        pin_ptr<ElemType> pp = &(itemBuffer[0]);
+        ElemType* pp = reinterpret_cast<ElemType *>(h.AddrOfPinnedObject().ToPointer());
         vb->m_buffer.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
     }
 
@@ -450,7 +450,7 @@ private:
     {
         GCHandle h = GCHandle::Alloc(itemBuffer, GCHandleType::Pinned);
         pinnedGCHandleList->Add(h);
-        pin_ptr<int> pp = &(itemBuffer[0]);
+        int* pp = reinterpret_cast<int *>(h.AddrOfPinnedObject().ToPointer());
         vb->m_indices.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
     }
 
@@ -458,7 +458,7 @@ private:
     {
         GCHandle h = GCHandle::Alloc(itemBuffer, GCHandleType::Pinned);
         pinnedGCHandleList->Add(h);
-        pin_ptr<int> pp = &(itemBuffer[0]);
+        int* pp = reinterpret_cast<int *>(h.AddrOfPinnedObject().ToPointer());
         vb->m_colIndices.InitFrom(pp, bufferSize, storageType == StorageType::Sparse ? bufferSize : 0);
     }
 
