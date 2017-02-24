@@ -255,7 +255,7 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
         # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
         if sequential:
             lpad = (rf_shape[0]-1) // 2  # even frames: take from right; odd frames: symmetric
-            # TODO: change ^^ [0] to -rf_rank for consistency after I have a test case, and factor into a variable seq_rf
+            # TODO: change ^^ [0] to -rf_rank for consistency after we have a test case, and factor into a variable seq_rf
             x = _window(x, axis=-rf_rank, begin=-lpad, end=-lpad+rf_shape[0], step=1, stride=strides[-rf_rank], initial_state=None)
         # actual convolution
         # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
@@ -387,7 +387,6 @@ def Deconvolution(rf_shape,        # e.g. (3,3)
     bias       = get_default_override(Deconvolution, bias=bias)
     init_bias  = get_default_override(Deconvolution, init_bias=init_bias)
 
-    # TODO: there must be a Python trick to do this as a function call on locals or so
     if reduction_rank != 1:
         NotImplementedError("Deconvolution: reduction_rank other than 1 currently not supported")
     if not sharing:
@@ -502,6 +501,7 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
     return maxunpool
 
 
+# TODO: call out that prob is 1-prob in TF
 def Dropout(prob, name=''):
     '''
     Layer factory function to create a drop-out layer.

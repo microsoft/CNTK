@@ -201,7 +201,8 @@ def plot(root, filename=None):
 
     def shape_desc(node):
         dyn_axes = node.dynamic_axes
-        dyn = '[*' + ',*' * (len(dyn_axes) - 1) + ']' if len(dyn_axes) > 0 else ''
+        dyn = '[#' + ',*' * (len(dyn_axes) - 1) + ']' if len(dyn_axes) > 0 else ''
+        # the '#' indicates the batch axis, while * indicate dynamic axes (which can be sequences)
         return dyn + str(node.shape)
         static_shape = str(node.shape)
         return '"#dyn: %i\nstatic: %s"'%(num_dyn_axes, static_shape)

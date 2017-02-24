@@ -20,7 +20,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
                    go_backwards=default_override_or(False),
                    enable_self_stabilization=default_override_or(True), name=''):
     '''
-    Layer factory function to create a function object that implements an attention model.
+    Layer factory function to create a function object that implements an attention model
+    as described in Bahdanau, et al., "Neural machine translation by jointly learning to align and translate."
     '''
 
     init                      = get_default_override(AttentionModel, init=init)
@@ -44,8 +45,7 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
         history_axis = h_dec # we use history_axis wherever we pass this only for the sake of passing its axis
         # TODO: pull this apart so that we can compute the encoder window only once and apply it to multiple decoders
         # --- encoder state window
-        h_enc_f = PastValueWindow(attention_span, axis=attention_axis, go_backwards=go_backwards)(h_enc) # BUGBUG: need to keep the Function due to ref-count bug
-        (h_enc, h_enc_valid) = h_enc_f.outputs
+        (h_enc, h_enc_valid) = PastValueWindow(attention_span, axis=attention_axis, go_backwards=go_backwards)(h_enc).outputs
         h_enc_proj = attn_proj_enc(h_enc)
         # window must be broadcast to every decoder time step
         h_enc_proj  = sequence.broadcast_as(h_enc_proj,  history_axis)
@@ -53,10 +53,9 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
         # --- decoder state
         # project decoder hidden state
         h_dec_proj = attn_proj_dec(h_dec)
-        # u = v * tanh(W1h + W2d)
         tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
         u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
-        u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator
+        u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator  TODO: use a less arbitrary number than 50
         attention_weights = softmax(u_masked, axis=attention_axis) #, name='attention_weights')
         attention_weights = Label('attention_weights')(attention_weights)
         # now take weighted sum over the encoder state vectors

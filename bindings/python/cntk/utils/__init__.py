@@ -680,7 +680,6 @@ class Record(dict):
             raise AttributeError("record has no attribute '{}'".format(key))
         return self[key]
     def __setattr__(self, key, value):
-        # TODO: try to delete __setattr__ to make it immutable
         raise AttributeError('record is immutable')
 
 # TODO: instead create an operator, so we can say r = r | Record(x=42), like the set type

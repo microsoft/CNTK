@@ -2684,13 +2684,6 @@ public:
 
         if (isFinalValidationPass)
         {
-#if 0       // this should have been addressed
-            // The current implementation requires that the gradient of the first operand/input be computed
-            // in order to compute gradients for the bias and scale parameters (2nd and 3rd inputs)
-            if (Environment().IsTraining() && ((Input(1)->NeedsGradient() || Input(2)->NeedsGradient()) && !Input(0)->NeedsGradient()))
-                InvalidArgument("%ls %ls currently supports learnable scale and bias parameters only if the first input also needs gradient (i.e. is dependent on at-least one learnable parameter).", NodeName().c_str(), OperationName().c_str());
-#endif
-
             if (m_convertRunningVariancePending)
             {
                 // Prior to CNTK CuDNN v5 support (and the CNTK engine of the same time), mean and inverse standard deviation

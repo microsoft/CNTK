@@ -1623,6 +1623,7 @@ def softmax(x, axis=None, name=''):
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
     # softmax over a specific axis: implemented explicitly
+    # TODO: move this into the C++ API.
     if axis is not None:
         from cntk.cntk_py import reduce_log_sum, exp, minus
         axis = sanitize_axis(axis)

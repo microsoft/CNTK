@@ -14,7 +14,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
                      element_select, alias, hardmax, placeholder_variable, combine, parameter, times, plus
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.initializer import glorot_uniform
-from cntk.utils import log_number_of_parameters, ProgressPrinter, debughelpers
+from cntk.utils import log_number_of_parameters, ProgressPrinter, debughelpers, one_hot
 from cntk.graph import plot
 from cntk.layers import *
 from cntk.layers.sequence import *
@@ -182,18 +182,8 @@ def create_criterion_function(model):
         ce   = cross_entropy_with_softmax(z, postprocessed_labels)
         errs = classification_error      (z, postprocessed_labels)
         return (ce, errs)
-    try:
-      pass
-      #debughelpers.dump_function(criterion)
-      #criterion.update_signature(InputSequence[Tensor[input_vocab_dim]], LabelSequence[Tensor[label_vocab_dim]])
-    except:
-      debughelpers.dump_function(criterion)
-      raise
-    #plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
-    #debughelpers.dump_signature(criterion)
-    #debughelpers.dump_function(criterion)
 
-    # render the Function graph to a PDF file
+    # use the following to render the Function graph to a PDF file
     #plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
     return criterion
 
@@ -215,13 +205,10 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # create the training wrapper for the s2smodel, as well as the criterion function
     model_train = create_model_train(s2smodel)
     criterion = create_criterion_function(model_train)
-    #from cntk.graph import plot
-    #plot(criterion, filename="c:/me/plot.pdf")
 
     # also wire in a greedy decoder so that we can properly log progress on a validation example
     # This is not used for the actual training process.
     model_greedy = create_model_greedy(s2smodel)
-    #print(model_greedy.type)
 
     # This does not need to be done in training generally though
     # Instantiate the trainer object to drive the model training
@@ -235,7 +222,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     trainer = Trainer(None, criterion, learner)
 
     # Get minibatches of sequences to train with and perform model training
-    i = 0
+    total_samples = 0
     mbs = 0
     eval_freq = 100
 
@@ -250,7 +237,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         print("Saving model to '%s'" % model_path(epoch))
         s2smodel.save(model_path(epoch))
 
-        while i < (epoch+1) * epoch_size:
+        while total_samples < (epoch+1) * epoch_size:
             # get next minibatch of training data
             mb_train = train_reader.next_minibatch(minibatch_size)
             trainer.train_minibatch(mb_train[train_reader.streams.features], mb_train[train_reader.streams.labels])
@@ -267,11 +254,11 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                 print("->")
                 print(format_sequences(e, i2w))
 
-                # debugging attention (uncomment to print out current attention window on validation sequence)
+                # debugging attention
                 if use_attention:
                     debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
 
-            i += mb_train[train_reader.streams.labels].num_samples
+            total_samples += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
 
         # log a summary of the stats for the epoch
@@ -287,7 +274,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 ########################
 
 # This decodes the test set and counts the string error rate.
-def test_decode(reader, s2smodel, i2w):
+def evaluate_decoding(reader, s2smodel, i2w):
     
     model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
 
@@ -321,7 +308,7 @@ def test_decode(reader, s2smodel, i2w):
 
 # This computes the metric on the test set.
 # Note that this is not decoding; just predicting words using ground-truth history, like in training.
-def test_metric(reader, s2smodel, num_minibatches=None):
+def evaluate_metric(reader, s2smodel, num_minibatches=None):
 
     model_train = create_model_train(s2smodel)
     criterion = create_criterion_function(model_train)
@@ -330,7 +317,7 @@ def test_metric(reader, s2smodel, num_minibatches=None):
 
     # Get minibatches of sequences to test and perform testing
     minibatch_size = 1024
-    i = 0
+    total_samples = 0
     total_error = 0.0
     while True:
         mb = reader.next_minibatch(minibatch_size)
@@ -339,7 +326,7 @@ def test_metric(reader, s2smodel, num_minibatches=None):
         mb_error = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
         num_samples = mb[reader.streams.labels].num_samples
         total_error += mb_error * num_samples
-        i += num_samples
+        total_samples += num_samples
 
         if num_minibatches != None:
             num_minibatches -= 1
@@ -347,8 +334,8 @@ def test_metric(reader, s2smodel, num_minibatches=None):
                 break
 
     # and return the test error
-    rate = total_error/i
-    print("error rate of {:.1f}% in {} samples".format(100 * rate, i))
+    rate = total_error/total_samples
+    print("error rate of {:.1f}% in {} samples".format(100 * rate, total_samples))
     return rate
 
 ########################
@@ -357,7 +344,7 @@ def test_metric(reader, s2smodel, num_minibatches=None):
 
 def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_label_length=20):
 
-    vdict = {vocab[i]:i for i in range(len(vocab))}
+    vdict = {v:i for i,v in enumerate(vocab)}
     try:
         w = [vdict["<s>"]] + [vdict[c] for c in tokens] + [vdict["</s>"]]
     except:
@@ -365,12 +352,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
         return []
 
     # convert to one_hot
-    # TODO: I think we have a function for this now.
-    features = np.zeros([len(w),len(vdict)], np.float32)
-    for t in range(len(w)):
-        features[t,w[t]] = 1
-    query = [features] # input is a list of parallel sequences in a batch
-
+    query = one_hot([w], len(vdict))
     pred = model_decoding(query)
     pred = pred[0] # first sequence (we only have one) -> [len, vocab size]
     if use_attention:
@@ -383,12 +365,13 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
     # show attention window (requires matplotlib, seaborn, and pandas)
     if use_attention and show_attention:
     
-        q = combine([model_decoding, model_decoding.attention_model.attention_weights])
-        _, att_value = q(query)
+        #att_value = model_decoding.attention_model.attention_weights(query)
+        # BUGBUG: fails with "Forward: Feature Not Implemented"
+        q = combine([model_decoding.attention_model.attention_weights])
+        att_value = q(query)
 
         # get the attention data up to the length of the output (subset of the full window)
         att_value = att_value[0,0:len(prediction),0:len(w),0,0] # -> (len, span)
-        #print(att_value)
 
         # set up the actual words/letters for the heatmap axis labels
         columns = [i2w[ww] for ww in prediction]
@@ -412,6 +395,7 @@ def interactive_session(s2smodel, vocab, i2w, show_attention=False):
 
     import sys
 
+    print('Enter one or more words to see their phonetic transcription.')
     while True:
         line = input("> ")
         if line.lower() == "quit":
@@ -444,7 +428,7 @@ def format_sequences(sequences, i2w):
 
 # to help debug the attention window
 def debug_attention(model, input):
-    q = combine([model, model.attention_model.attention_weights]) # TODO: can we do without combine, just eval the second?
+    q = combine([model, model.attention_model.attention_weights])
     words, p = q(input)
     len = words.shape[attention_axis-1]
     span = 7 #attention_span  #7 # test sentence is 7 tokens long
@@ -479,11 +463,11 @@ if __name__ == '__main__':
 
     # test string error rate on decoded output
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
-    test_decode(test_reader, model, i2w)
-
+    evaluate_decoding(test_reader, model, i2w)
+    
     # test same metric same as in training on test set
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
-    test_metric(test_reader, model)
+    evaluate_metric(test_reader, model)
 
     # try the model out in an interactive session
     interactive_session(model, vocab, i2w, show_attention=True)

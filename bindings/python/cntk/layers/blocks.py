@@ -196,7 +196,7 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
 
     cell_shape = _as_tuple(cell_shape) if cell_shape is not None else shape
     if len(shape) != 1 or len(cell_shape) != 1:
-        raise ValueError("LSTM: shape and cell_shape must be vectors (rank-1 tensors)")
+        raise ValueError("%s: shape and cell_shape must be vectors (rank-1 tensors)" % type)
         # otherwise we'd need to fix slicing and Param initializers
 
     stack_axis = -1  # for efficient computation, we stack multiple variables (along the fastest-changing one, to match BS)

@@ -82,7 +82,7 @@ def _sanitize_function(f):
 
 
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
-def RecurrenceFrom(over_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
+def RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
     Layer factory function to create a function that runs a cell function recurrently over a time sequence, with initial state.
     This form is meant for use in sequence-to-sequence scenarios.
@@ -92,13 +92,13 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
 
-    over_function = _sanitize_function(over_function)
+    step_function = _sanitize_function(step_function)
 
     # get signature of cell
-    #*prev_state_args, _ = over_function.signature  # Python 3
-    prev_state_args = over_function.signature[0:-1]
+    #*prev_state_args, _ = step_function.signature  # Python 3
+    prev_state_args = step_function.signature[0:-1]
 
-    if len(over_function.outputs) != len(prev_state_args):
+    if len(step_function.outputs) != len(prev_state_args):
         # TODO: better say right here what the requirement is!
         raise TypeError('RecurrenceFrom: number of state variables inconsistent between create_placeholder() and recurrent block')
 
@@ -111,10 +111,12 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
         out_vars_fwd = [ForwardDeclaration(name=state_var.name) for state_var in prev_state_args] # create list of placeholders for the state variables
 
         # previous function; that is, past or future_value with initial_state baked in
+        if len(out_vars_fwd) != len(initial_state):
+            raise ValueError('RecurrenceFrom() length mismatch between out_vars_fwd and initial_state. Should not happen')
         prev_out_vars = [sequence.delay(out_var, initial_state=init, time_step=-1 if go_backwards else +1) for out_var, init in zip(out_vars_fwd, initial_state)]  # delay (state vars)
 
-        # apply the recurrent block ('over_function')
-        out = over_function(*(prev_out_vars + [x]))  # over_function is a Function (previous outputs..., x) -> (state vars...)
+        # apply the recurrent block ('step_function')
+        out = step_function(*(prev_out_vars + [x]))  # step_function is a Function (previous outputs..., x) -> (state vars...)
 
         # connect the recurrent dependency
         for (var_fwd, var) in zip(out_vars_fwd, list(out.outputs)):
@@ -145,7 +147,7 @@ def RecurrenceFrom(over_function, go_backwards=default_override_or(False), retur
     return _inject_name(recurrence_from, name)
 
 
-def Recurrence(over_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
+def Recurrence(step_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
     Layer factory function to create a function that runs a cell function recurrently over a time sequence.
     This form is meant for use in regular recurrent-model scenarios.
@@ -157,13 +159,13 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
-    over_function = _sanitize_function(over_function)
+    step_function = _sanitize_function(step_function)
 
     # get signature of cell
-    #*prev_state_args, _ = over_function.signature  # Python 3
-    prev_state_args = over_function.signature[0:-1]
+    #*prev_state_args, _ = step_function.signature  # Python 3
+    prev_state_args = step_function.signature[0:-1]
 
-    if len(over_function.outputs) != len(prev_state_args):
+    if len(step_function.outputs) != len(prev_state_args):
         raise TypeError('Recurrence: number of state variables inconsistent between create_placeholder() and recurrent block')
 
     # initial state can be a single value or one per state variable (if more than one, like for LSTM)
@@ -174,7 +176,7 @@ def Recurrence(over_function, go_backwards=default_override_or(False), initial_s
         initial_state = tuple(initial_state for out_var in prev_state_args)
 
     # express it w.r.t. RecurrenceFrom
-    recurrence_from = RecurrenceFrom(over_function, go_backwards, return_full_state) # :: (x, state seq) -> (new state seq)
+    recurrence_from = RecurrenceFrom(step_function, go_backwards, return_full_state) # :: (x, state seq) -> (new state seq)
 
     # function that this layer represents
     @Function
@@ -255,7 +257,6 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         from ..utils import sanitize_input, typemap
         from ..cntk_py import reconcile_dynamic_axis
         new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
-        #new_state = combine([new_state])
         new_state = combine([new_state], name='unfold_new_state')
         state_fwd.resolve_to(new_state)
 
@@ -265,7 +266,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         # apply until_predicate if given
         if until_predicate is not None:
             valid_frames = Recurrence(lambda h, x: (1-past_value(x)) * h, initial_state=1, name='valid_frames')(until_predicate(output))
-            output = sequence.gather(output, valid_frames, name='chopped_output')
+            output = sequence.gather(output, valid_frames, name='valid_output')
 
         return output
 
