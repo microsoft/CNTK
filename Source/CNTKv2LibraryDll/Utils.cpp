@@ -953,4 +953,34 @@ namespace CNTK
             Data()->SetValue(0.0);
         }
     }
+
+    std::wstring DynamicAxesAsString(std::vector<Axis> da)
+    {
+        if (da.size() == 0)
+            return L"[]";
+        std::wstringstream wss;
+        wss << "[";
+        if (da == Axis::UnknownDynamicAxes())
+            wss << "???";
+        else
+        {
+            if (Internal::IsReversingTensorShapesInErrorMessagesEnabled())
+                std::reverse(da.begin(), da.end());
+            bool first = true;
+            for (auto d : da)
+            {
+                wss << (first ? "" : ", ");
+                if (d == Axis::DefaultBatchAxis())
+                    wss << "#";
+                else if (d == Axis::DefaultDynamicAxis())
+                    wss << "*";
+                else
+                    wss << d.Name();
+                first = false;
+            }
+        }
+        wss << "]";
+        return wss.str();
+    }
+
 }

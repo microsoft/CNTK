@@ -359,18 +359,27 @@ namespace CNTK
         ///
         std::wstring AsString() const
         {
-            std::wstringstream wStrStream;
-            wStrStream << L"[";
-            for (size_t i = 0; i < Rank(); i++)
+            if (IsUnknown())
             {
-                if (i != 0)
-                    wStrStream << L" x ";
-
-                wStrStream << m_shapeDims[i];
+                return L"[???]";
             }
+            else
+            {
+                std::wstringstream wStrStream;
+                wStrStream << L"[";
+                for (size_t i = 0; i < Rank(); i++)
+                {
+                    if (i != 0)
+                        wStrStream << L" x ";
 
-            wStrStream << L"]";
-            return wStrStream.str();
+                    if (m_shapeDims[i] != InferredDimension)
+                        wStrStream << m_shapeDims[i];
+                    else
+                        wStrStream << "?";
+                }
+                wStrStream << L"]";
+                return wStrStream.str();
+            }
         }
 
     private:
@@ -1612,6 +1621,11 @@ namespace CNTK
         ///
         CNTK_API bool NeedsGradient() const;
 
+        ///
+        /// Returns a string representation for this variable.
+        ///
+        CNTK_API std::wstring AsString() const;
+
     protected:
 #ifdef SWIG
     public:
@@ -2809,11 +2823,11 @@ namespace CNTK
         ///
         /// Returns a set comprising of all input variables of 'this' Function's variables that are not of kind 'Parameter' or 'Constant'.
         ///
-        std::vector<Variable> Arguments() const
+        std::vector<Variable> Arguments(bool reverseOrder = false) const
         {
             return FilteredInputs<Variable>([](const Variable& var) {
                 return (var.IsInput() || var.IsPlaceholder() || var.IsOutput());
-            });
+            }, reverseOrder);
         }
 
         ///
@@ -2918,6 +2932,11 @@ namespace CNTK
         CNTK_API void PrintGraph() const;
 
         ///
+        /// Returns a string representation of this Function
+        ///
+        CNTK_API std::wstring AsString() const;
+
+        ///
         /// Maximum number of outputs that is currently supported.
         ///
         static const int MaxNumOutputs = 64;
@@ -2983,11 +3002,11 @@ namespace CNTK
         CNTK_API std::vector<Variable>& InitOutputs();
 
         template <typename VariableType, typename FilterFunction>
-        std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc) const
+        std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc, bool reverseOrder = false) const
         {
             std::vector<VariableType> filteredInputs;
             std::unordered_set<Variable> uniqueFilteredInputs;
-            auto inputs = Inputs();
+            auto inputs = Inputs(reverseOrder);
             for (auto inputVar : inputs)
             {
                 if (filterFunc(inputVar) && (uniqueFilteredInputs.find(inputVar) == uniqueFilteredInputs.end()))

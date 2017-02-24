@@ -1615,12 +1615,25 @@ namespace CNTK {
 %define %py_hash_for(DATA_TYPE)
 %extend CNTK::DATA_TYPE {
     const size_t __hash__() {
-        //fliss
         return std::hash<CNTK::DATA_TYPE>()(*$self);
     }
 }
 %enddef
 
+//
+// Setting __str__ and __repr__ methods for frequently used Swig objects
+//
+%define %py_repr_for(TYPE)
+%extend CNTK::TYPE {
+    const std::wstring __str__() {
+        return self->AsString();
+    }
+
+    const std::wstring __repr__() {
+        return self->AsString();
+    }
+}
+%enddef
 
 %define %py_eq_for(DATA_TYPE, EQ)
 %pythoncode %{
@@ -1628,20 +1641,19 @@ DATA_TYPE.__eq__ = lambda a,b: (a is not None and b is not None and EQ(a,b)) or 
 %}
 %enddef
 
+%py_repr_for(Function)
+
 %py_eq_for(Variable, Variable_eq)
 %py_hash_for(Variable)
+%py_repr_for(Variable)
 
-%feature("python:slot", "tp_hash", functype="hashfunc") CNTK::Constant::hash;
-%rename(__hash__) CNTK::Constant::hash;
-
-%feature("python:slot", "tp_hash", functype="hashfunc") Constant::hash;
-%rename(__hash__) Constant::hash;
-
-//%py_eq_for(Constant, Variable_eq)
-//%py_hash_for(Constant)
+%py_eq_for(Constant, Variable_eq)
+%py_hash_for(Constant)
+%py_repr_for(Constant)
 
 %py_eq_for(Parameter, Variable_eq)
 %py_hash_for(Parameter)
+%py_repr_for(Parameter)
 
 %py_eq_for(NDShape, NDShape_eq)
 %py_hash_for(NDShape)
