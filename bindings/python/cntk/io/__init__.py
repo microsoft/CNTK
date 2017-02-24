@@ -115,7 +115,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
-        reader_config = ReaderConfig(
+        reader_config = _ReaderConfig(
             deserializers=deserializers,
             randomize=randomize,
             randomization_window=randomization_window,
@@ -123,7 +123,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             epoch_size=epoch_size,
             distributed_after=distributed_after,
             multithreaded_deserializer=multithreaded_deserializer)
-        source = minibatch_source(reader_config)
+        source = reader_config.minibatch_source()
         # transplant into this class instance
         self.__dict__ = source.__dict__
         # transplant all members of deserializers into a record called streams
@@ -259,7 +259,7 @@ def _py_dict_to_cntk_dict(py_dict):
 
 # TODO: This should be a private function; use MinibatchSource(deserializer, ...).
 @typemap
-def minibatch_source(config):
+def _minibatch_source(config):
     '''
     Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.
 
@@ -273,8 +273,7 @@ def minibatch_source(config):
     cntk_dict = _py_dict_to_cntk_dict(config)
     return cntk_py.create_composite_minibatch_source(cntk_dict)
 
-# TODO: This should be a private class.
-class ReaderConfig(dict):
+class _ReaderConfig(dict):
     '''
     Reader configuration.
 
@@ -327,7 +326,7 @@ class ReaderConfig(dict):
             cntk.io.MinibatchSource:
             An instance of :class:`MinibatchSource` from this instance.
         '''
-        return minibatch_source(self)
+        return _minibatch_source(self)
 
 def HTKFeatureDeserializer(streams):
     '''

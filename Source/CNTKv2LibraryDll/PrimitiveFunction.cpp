@@ -17,6 +17,7 @@
 #include "RNNNodes.h"
 #include "BlockFunction.h"
 #include "CompositeFunction.h"
+#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -144,6 +145,15 @@ namespace CNTK
         {
             outputDynamicAxes = std::vector<Axis>({});
         }
+        else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
+        {
+            auto reductionAxis = NormalizeAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0]);
+            for (auto inputDynamicAxis : inputs[0].DynamicAxes())
+            {
+                if (inputDynamicAxis != reductionAxis)
+                    outputDynamicAxes.push_back(inputDynamicAxis);
+            }
+        }
         else if (op == PrimitiveOpType::Where)
         {
             if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewDynamicAxes))
@@ -191,6 +201,8 @@ namespace CNTK
             outputDynamicAxes = inputs[1].DynamicAxes();
         else if (op == PrimitiveOpType::ReconcileDynamicAxis)
             outputDynamicAxes = inputs[1].DynamicAxes();
+        else if (op == PrimitiveOpType::PastValue || op == PrimitiveOpType::FutureValue)
+            outputDynamicAxes = inputs[0].DynamicAxes(); // second arg (initial state) may have different dynamic axis
         else
         {
             auto allInputDynamicAxesEmpty = std::find_if(inputs.begin(), inputs.end(), [](const Variable& input) { return !input.DynamicAxes().empty(); }) == inputs.end();
@@ -257,10 +269,7 @@ namespace CNTK
 
                         // TODO: We currently only support input operand with 1 dynamic axis for PastValue/FutureValue
                         if ((inputOperandVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (inputOperandVar.DynamicAxes().size() != 2))
-                            LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axis (1 sequence-axis and 1 batch-axis)");
-
-                        if (!initialStateVar.DynamicAxes().empty())
-                            LogicError("Currently PastValue/FutureValue Function does not support initial state operand with dynamic axes!");
+                            LogicError("Currently PastValue/FutureValue Function only supports input operand with 2 dynamic axes (1 sequence axis and 1 batch axis)");
                     }
 
                     outputShape = BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], true, true);
@@ -293,14 +302,18 @@ namespace CNTK
                         case PrimitiveOpType::Softmax:
                         case PrimitiveOpType::Hardmax:
                         case PrimitiveOpType::Dropout:
-                        case PrimitiveOpType::Where:
                         case PrimitiveOpType::LogSoftmax:
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Pass:
-                        case PrimitiveOpType::ELU:
+                        case PrimitiveOpType::StopGradient:
+						case PrimitiveOpType::ELU:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
+                            break;
+                        case PrimitiveOpType::Where:
+                            assert(m_inputs.size() == 1);
+                            outputShape = NDShape{}; // scalar
                             break;
                         case PrimitiveOpType::PackedIndex:
                             assert(m_inputs.size() == 2);
@@ -562,9 +575,11 @@ namespace CNTK
                         case PrimitiveOpType::ReduceElements:
                         {
                             assert(m_inputs.size() == 1);
-                            auto reductionAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape());
+                            auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
                             if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                                 outputShape = {};
+                            else if (reductionAxis.IsDynamicAxis())
+                                outputShape = m_inputs[0].Shape();
                             else
                             {
                                 std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
@@ -672,6 +687,7 @@ namespace CNTK
                             assert(m_inputs.size() == 2);
                             auto operand = m_inputs[0];
                             auto layout = m_inputs[1];
+                            // data operand can be a constant or a param matrix
                             if (layout.DynamicAxes().empty())
                                 InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
                             outputShape = operand.Shape();
@@ -750,7 +766,7 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op > PrimitiveOpType::NoOp)
+        if (op >= PrimitiveOpType::UnknownOP)
         {
             LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 

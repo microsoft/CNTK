@@ -92,7 +92,8 @@ namespace CNTK
         {PrimitiveOpType::LambdaRank, L"LambdaRank" },
         {PrimitiveOpType::NDCG, L"NDCG" },
         {PrimitiveOpType::NoOp, L"NoOp" },
-        {PrimitiveOpType::ELU, L"ELU" },
+        {PrimitiveOpType::StopGradient, L"StopGradient" },
+		{PrimitiveOpType::ELU, L"ELU" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -729,7 +730,7 @@ namespace CNTK
         // version 3: changed in df0ab4e58186738931968e806b61bc80d7b6e20e. TODO(pkrannen): add description.
         // version 4: added extra parameter (#6) for the running mean sample count in BatchNormalization.
         // Version 6: Add argmax and argmin to ReduceElement.
-        // Version 7: Add ELU node.
-        static const size_t s_serializationVersion = 7;
+        // Version 8: Add ELU node.
+        static const size_t s_serializationVersion = 8;
     };
 }

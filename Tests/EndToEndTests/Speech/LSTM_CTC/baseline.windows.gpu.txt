@@ -340,7 +340,7 @@ Memory Sharing: Out of 200 matrices, 71 are shared as 27, and 129 are not shared
 02/18/2017 09:28:11: Starting Epoch 1: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/18/2017 09:28:11: Starting minibatch loop.
-02/18/2017 09:28:13: Finished Epoch[ 1 of 10]: [Training] cr = 4.15554279 * 368; Err = 1.00000000 * 368; totalSamplesSeen = 368; learningRatePerSample = 0.0049999999; epochTime=1.03913s
+02/18/2017 09:28:13: Finished Epoch[ 1 of 10]: [Training] cr = 4.15554279 * 368; Err = 2.48529418 * 368; totalSamplesSeen = 368; learningRatePerSample = 0.0049999999; epochTime=1.03913s
 02/18/2017 09:28:13: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170218092651.300722\Speech_LSTM_CTC@release_gpu/models/simple.dnn.1'
 
 02/18/2017 09:28:13: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples

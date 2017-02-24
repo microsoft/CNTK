@@ -171,6 +171,8 @@ class Value(cntk_py.Value):
 
     @staticmethod
     def _as_best_data_type(var, sample):
+        convert_to_var_dtype = False
+
         if isinstance(sample, list):
             try:
                 sample = np.asarray(sample, dtype=var.dtype)
@@ -187,14 +189,24 @@ class Value(cntk_py.Value):
 
             if sample.dtype != var.dtype:
                 raise ValueError('could not convert sample data to '
-                        'NumPy array')
+                                 'NumPy array')
 
-        if np.issubdtype(sample.dtype, int):
-            sample = sample.astype(var.dtype)
-        elif sample.dtype not in (np.float32, np.float64):
-            raise ValueError('only integer, float32 and float64 are supported, '
-                    'you gave %s'%sample.dtype)
+        elif sample.dtype in (np.float32, np.float64):
+            if sample.dtype != var.dtype:
+                convert_to_var_dtype = True
+
+        elif np.issubdtype(sample.dtype, int):
+            convert_to_var_dtype = True
+
         else:
+            raise ValueError('only integer, float32 and float64 are '
+                             'supported, you gave %s' % sample.dtype)
+
+        if convert_to_var_dtype:
+            warnings.warn('your data is of type "%s", but your input'
+                          'expects "%s". Please convert your data '
+                          'beforehand to speed up training.' %
+                          (sample.dtype, str(var.dtype)))
             sample = sample.astype(var.dtype)
 
         return sample
@@ -233,7 +245,7 @@ class Value(cntk_py.Value):
         if not var.dynamic_axes:
             # No dynamic axes -> no batch
             data = Value._as_best_data_type(var, data)
-            ndav = NDArrayView.from_data(data, cpu_dev)
+            ndav = NDArrayView.from_data(data, device)
 
             return cntk_py.Value(ndav)
 
@@ -245,8 +257,13 @@ class Value(cntk_py.Value):
                         'of sequences, you need to pass them as a pure-Python list '
                         'of NumPy arrays')
 
-            # FIXME if not seq_starts: directly pass it to Value constructor
-            data = list(np.atleast_1d(data))
+            if seq_starts:
+                data = list(np.atleast_1d(data))
+            else:
+                data = Value._as_best_data_type(var, data)
+                ndav = NDArrayView.from_data(data, device)
+
+                return cntk_py.Value(ndav)
 
         if not isinstance(data, list):
             raise ValueError('batch has to be a list of NumPy arrays or '

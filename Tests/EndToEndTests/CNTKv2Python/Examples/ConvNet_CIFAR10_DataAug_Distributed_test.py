@@ -40,7 +40,7 @@ def mpiexec_test(device_id, script, params, expected_test_error, match_exactly=T
             os.kill(p.pid, signal.CTRL_C_EVENT)
             raise RuntimeError('Timeout in mpiexec, possibly hang')
     str_out = out.decode(sys.getdefaultencoding())
-    results = re.findall("Cross Validation \[.+?\]: Minibatch\[.+?\]: errs = (.+?)%", str_out)
+    results = re.findall("Finished Evaluation \[.+?\]: Minibatch\[.+?\]: metric = (.+?)%", str_out)
 
     assert len(results) == 2
     print(results)

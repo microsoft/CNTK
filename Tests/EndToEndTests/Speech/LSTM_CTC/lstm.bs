@@ -125,8 +125,8 @@ speechTrain = [
 
         // training
         graph = LabelsToGraph(labels)
-        cr = ForwardBackward(graph, LSTMoutputW, 132, tag="criterion") 
-        Err = EditDistanceError(labels, LSTMoutputW, tokensToIgnore = 132, tag="evaluation") 
+        cr = ForwardBackward(graph, LSTMoutputW, 132, delayConstraint=3, tag="criterion") 
+        Err = EditDistanceError(labels, LSTMoutputW, squashInputs=true, tokensToIgnore = 132, tag="evaluation") 
 
         // decoding
         logPrior = LogPrior(labels)

@@ -201,6 +201,12 @@ namespace CNTK
     class Trainer;
     typedef std::shared_ptr<Trainer> TrainerPtr;
 
+    class ProgressWriter;
+    typedef std::shared_ptr<ProgressWriter> ProgressWriterPtr;
+
+    class Accumulator;
+    typedef std::shared_ptr<Accumulator> AccumulatorPtr;
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");

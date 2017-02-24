@@ -13,7 +13,7 @@ set -e -o pipefail
 buildConfig=
 targetConfig=
 outputFile=BinaryDrops.tar.gz
-verbose=false
+verbose=
 
 # Process Command line parameters
 
@@ -168,10 +168,12 @@ extrasPath="Tools/cntk-binary-drop/linux/$targetConfig"
 # Make BinaryDrops directory
 mkdir -p $baseBinariesPath
 
-# Copy build binaries
+echo "Copying Python wheels..." >&3
+cp -p $buildPath/python/*.whl $basePath
+
 echo "Copying build binaries..." >&3
 cp -pr $buildPath/* $baseBinariesPath
-# Remove unnessesary file(s) if exist(s)
+# Remove unnecessary file(s) if exist(s)
 #
 # General TODO: Implement White List of Binary Drop contents.
 # For the time being "cherry pick"  removal of unneeded files
@@ -200,8 +202,6 @@ CopyFilesFromList $includePath20 includeFiles20[@] $baseIncludePath
 # Copy Examples
 echo "Copying Examples..." >&3
 cp -pr Examples $baseDropPath
-# Include CPPEvalV2Client examples in 2.0 Beta drop
-# rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
 
 # Copy Tutorials
 echo "Copying Tutorials..." >&3
@@ -264,14 +264,10 @@ fi
 echo "Making Archive and cleaning up..." >&3
 # Make GZipped TAR
 cd $basePath
-if [[ "$verbose" == true ]]; then
-    tar -cvzf "$outputFile" cntk
-else
-    tar -czf "$outputFile" cntk
-fi
+tar --owner=root ${verbose:+-v} -czf "$outputFile" cntk
 
-# Log the file hash
-sha256sum "$outputFile"
+# Log some file hashes
+sha256sum "$outputFile" *.whl
 
 # Remove TAR sources
 rm -r cntk
