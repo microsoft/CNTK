@@ -681,22 +681,20 @@ class Record(dict):
         return self[key]
     def __setattr__(self, key, value):
         raise AttributeError('record is immutable')
-
-# TODO: instead create an operator, so we can say r = r | Record(x=42), like the set type
-def RecordWith(record, **kwargs):
-    '''
-    Create a new Record from an existing one with members modified or added.
-    e.g. r = Record(x = 13) ; print(r.x) ; r = Recordwith(r, x = 42) ; print(r.x)
-
-    Args:
-        kwargs: keyword arguments to turn into the record members
-
-    Returns:
-        A singleton class instance that has all passed kw args as immutable class members.
-    '''
-    d = dict(**record) # make it mutable
-    d.update(kwargs)   # merge the new items
-    return Record(**d) # lock it up again
+    def updated_with(self, **kwargs):
+        '''
+        Create a new Record from an existing one with members modified or added.
+        e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
+    
+        Args:
+            kwargs: keyword arguments to turn into the record members
+    
+        Returns:
+            A singleton class instance that has all passed kw args as immutable class members.
+        '''
+        d = dict(**self)   # make it mutable
+        d.update(kwargs)   # merge the new items
+        return Record(**d) # lock it up again
 
 def _as_tuple(x):
     '''

@@ -10,7 +10,7 @@ typing -- basic CNTK type meta-classes for CNTK @Function type signatures
 
 from ..axis import Axis
 from ..ops.variables import Variable
-from ..utils import Record, RecordWith, sanitize_shape
+from ..utils import Record, sanitize_shape
 
 def _make_tensor_meta(cls_name, **kwargs):
     class TensorMeta(type):
@@ -43,7 +43,7 @@ Meta class to denote a data tensor (with batch axis) with unspecified dimensions
 def _make_seq_meta(cls_name, axes):
     class SeqMeta(type):
         def __getitem__(self, item_type):
-            return Variable.Type(**RecordWith(item_type, dynamic_axes=axes))
+            return Variable.Type(**item_type.updated_with(dynamic_axes=axes))
     return SeqMeta(cls_name, (), {})
 
 Sequence = _make_seq_meta('Sequence', Axis.default_input_variable_dynamic_axes())
