@@ -30,7 +30,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
     '''
 
     def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300,
-                 test_freq=None, test_first=0):
+                 test_freq=None, test_first=0, metric_is_pct=True):
         '''
         Constructor.
 
@@ -52,6 +52,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
             test_freq (`int` or `None`, default `None`): similar to ``freq``, but applies to printing intermediate
               test results.
             test_first (`int`, default 0): similar to ``first``, but applies to printing intermediate test results.
+            metric_is_pct (`bool`, default `True`): Treat metric as a percentage for output purposes.
         '''
         if freq is None:
             freq = sys.maxsize
@@ -79,6 +80,11 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         self.log_to_file = log_to_file
         self.gen_heartbeat = gen_heartbeat
         self.num_epochs = num_epochs
+        self.metric_is_pct = metric_is_pct
+        if metric_is_pct:
+            self.metric_multiplier = 100.0
+        else:
+            self.metric_multiplier = 1.0
 
         # print out data about CNTK build
         cntk_py.print_built_info()
@@ -342,8 +348,12 @@ class ProgressPrinter(cntk_py.ProgressWriter):
             if aggregate_metric is not None:
                 if aggregate_loss is not None:
                     format_str += ', '
-                format_str += 'metric = {:0.2f}% * {:d}'
-                format_args.extend([_avg(aggregate_metric, samples) * 100.0, samples[1] - samples[0]])
+                if self.metric_is_pct:
+                    format_str += 'metric = {:0.2f}% * {:d}'
+                else:
+                    format_str += 'metric = {:0.6f} * {:d}'
+
+                format_args.extend([_avg(aggregate_metric, samples) * self.metric_multiplier, samples[1] - samples[0]])
 
             format_str += ';'
 
@@ -362,9 +372,13 @@ class ProgressPrinter(cntk_py.ProgressWriter):
 
         if aggregate_metric is not None:
             avg_metric = _avg(aggregate_metric, samples)
-            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples per second);".format(
-                summaries, self.num_epochs, self.tag, avg_loss, samples, avg_metric * 100.0, samples,
-                elapsed_seconds, speed)
+            if self.metric_is_pct:
+                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples per second);"
+            else:
+                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second);"
+            msg = fmt_str.format(
+                    summaries, self.num_epochs, self.tag, avg_loss, samples, avg_metric * self.metric_multiplier,
+                    samples, elapsed_seconds, speed)
         else:
             msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second);".format(
                 summaries, self.num_epochs, self.tag, avg_loss, samples, elapsed_seconds, speed)
@@ -373,8 +387,12 @@ class ProgressPrinter(cntk_py.ProgressWriter):
 
     def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
         # Override for ProgressWriter.on_write_test_summary.
-        self.___logprint("Finished Evaluation [{}]: Minibatch[1-{}]: metric = {:0.2f}% * {};".format(
-            summaries, updates, _avg(aggregate_metric, samples) * 100.0, samples))
+        if self.metric_is_pct:
+            fmt_str = "Finished Evaluation [{}]: Minibatch[1-{}]: metric = {:0.2f}% * {};"
+        else:
+            fmt_str = "Finished Evaluation [{}]: Minibatch[1-{}]: metric = {:0.6f} * {};"
+        self.___logprint(fmt_str.format(summaries, updates,
+                            _avg(aggregate_metric, samples) * self.metric_multiplier, samples))
 
 
 class TensorBoardProgressWriter(cntk_py.ProgressWriter):
