@@ -626,6 +626,6 @@ namespace CNTK
         size_t   m_numUpdates;
     };
 
-    std::wstring DynamicAxesAsString(std::vector<Axis> da);
+    std::wstring DynamicAxesAsString(std::vector<Axis> da, bool rowMajor = false);
 
 }

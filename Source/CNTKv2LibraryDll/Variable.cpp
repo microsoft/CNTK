@@ -186,16 +186,16 @@ namespace CNTK
     std::wstring Variable::AsString() const
     {
         std::wstringstream wss;
-        wss << VariableKindName(Kind()) << "(";
+        wss << VariableKindName(Kind()) << "('";
         if (Name() != L"")
             wss << Name();
         else
             wss << Uid();
         bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
         if (reverse)
-            wss << ", " << DynamicAxesAsString(DynamicAxes()) << " + " << AsStringForErrorReporting(Shape()) << ")";
+            wss << "', " << DynamicAxesAsString(DynamicAxes(), reverse) << ", " << AsStringForErrorReporting(Shape()) << ")";
         else
-            wss << ", " << AsStringForErrorReporting(Shape()) << " + " << DynamicAxesAsString(DynamicAxes()) << ")";
+            wss << "', " << AsStringForErrorReporting(Shape()) << ", " << DynamicAxesAsString(DynamicAxes(), reverse) << ")";
         return wss.str();
     }
 
@@ -513,6 +513,4 @@ namespace CNTK
     {
         m_dataFields->SetValueInitialization(initializer, device);
     }
-
-    size_t Constant::hash() { return std::hash<::CNTK::Constant>{}(*this); }
 }

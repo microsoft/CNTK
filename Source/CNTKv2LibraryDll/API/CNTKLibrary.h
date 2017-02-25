@@ -1981,7 +1981,6 @@ private:
         {
             return Variable::Value();
         }
-        CNTK_API size_t hash(); 
 
     private:
         Constant(const NDArrayViewPtr& value, const std::wstring& name, const std::wstring& uid)
@@ -2823,11 +2822,11 @@ namespace CNTK
         ///
         /// Returns a set comprising of all input variables of 'this' Function's variables that are not of kind 'Parameter' or 'Constant'.
         ///
-        std::vector<Variable> Arguments(bool reverseOrder = false) const
+        std::vector<Variable> Arguments(bool rowMajor = false) const
         {
             return FilteredInputs<Variable>([](const Variable& var) {
                 return (var.IsInput() || var.IsPlaceholder() || var.IsOutput());
-            }, reverseOrder);
+            }, rowMajor);
         }
 
         ///
@@ -3002,11 +3001,11 @@ namespace CNTK
         CNTK_API std::vector<Variable>& InitOutputs();
 
         template <typename VariableType, typename FilterFunction>
-        std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc, bool reverseOrder = false) const
+        std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc, bool rowMajor = false) const
         {
             std::vector<VariableType> filteredInputs;
             std::unordered_set<Variable> uniqueFilteredInputs;
-            auto inputs = Inputs(reverseOrder);
+            auto inputs = Inputs(rowMajor);
             for (auto inputVar : inputs)
             {
                 if (filterFunc(inputVar) && (uniqueFilteredInputs.find(inputVar) == uniqueFilteredInputs.end()))

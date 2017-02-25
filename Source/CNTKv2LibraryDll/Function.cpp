@@ -753,15 +753,13 @@ namespace CNTK
         wstringstream wss;
         bool first = true;
         if (IsComposite())
-            wss << "Composite(";
+            wss << "Composite(" << RootFunction()->OpName() << "): ";
         else
-            wss << OpName() <<"(";
+            wss << OpName() <<": ";
         bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
         for (auto arg : Arguments(reverse))
             wss << (first ? (first = false, "") : ", ") << arg.AsString();
-        if(IsComposite())
-            wss << ", root=" << RootFunction()->OpName();
-        wss << ") -> ";
+        wss << " -> ";
         first = true;
         for (auto out : Outputs())
             wss << (first ? (first = false, "") : ", ") << out.AsString();

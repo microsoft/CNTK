@@ -954,7 +954,7 @@ namespace CNTK
         }
     }
 
-    std::wstring DynamicAxesAsString(std::vector<Axis> da)
+    std::wstring DynamicAxesAsString(std::vector<Axis> da, bool rowMajor)
     {
         if (da.size() == 0)
             return L"[]";
@@ -964,7 +964,7 @@ namespace CNTK
             wss << "???";
         else
         {
-            if (Internal::IsReversingTensorShapesInErrorMessagesEnabled())
+            if (rowMajor)
                 std::reverse(da.begin(), da.end());
             bool first = true;
             for (auto d : da)
