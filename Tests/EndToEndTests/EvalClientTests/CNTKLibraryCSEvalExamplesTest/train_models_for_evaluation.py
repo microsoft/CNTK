@@ -47,11 +47,12 @@ def train_language_understanding_atis_for_eval(test_device, output_dir):
 
     abs_path   = os.path.dirname(os.path.abspath(__file__))
     data_path  = os.path.join(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "LanguageUnderstanding", "ATIS", "Data"))
-    reader = LanguageUnderstanding.create_reader(data_path + "/atis.train.ctf")
-    model = LanguageUnderstanding.create_model()
+    reader = LanguageUnderstanding.create_reader(data_path + "/atis.train.ctf", True)
+    model = LanguageUnderstanding.create_model_function()
 
     # train
     LanguageUnderstanding.train(reader, model, max_epochs=1, model_dir=output_dir)
+    model.save(os.path.join(output_dir, "atis" + "_1.dnn"))
 
 if __name__=='__main__':
     

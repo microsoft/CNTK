@@ -160,8 +160,8 @@ def create_model_train(s2smodel):
 
 def create_model_greedy(s2smodel):
     # model used in (greedy) decoding (history is decoder's own output)
-    @Function
-    def model_greedy(input: InputSequence[Tensor[input_vocab_dim]]): # (input*) --> (word_sequence*)
+    @FunctionWithSignature
+    def model_greedy(input= InputSequence[Tensor[input_vocab_dim]]): # (input*) --> (word_sequence*)
 
         # Decoding is an unfold() operation starting from sentence_start.
         # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
@@ -174,8 +174,8 @@ def create_model_greedy(s2smodel):
     return model_greedy
 
 def create_criterion_function(model):
-    @Function
-    def criterion(input: InputSequence[Tensor[input_vocab_dim]], labels: LabelSequence[Tensor[label_vocab_dim]]):
+    @FunctionWithSignature
+    def criterion(input= InputSequence[Tensor[input_vocab_dim]], labels= LabelSequence[Tensor[label_vocab_dim]]):
         # criterion function must drop the <s> from the labels
         postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
         z = model(input, postprocessed_labels)
@@ -190,8 +190,8 @@ def create_criterion_function(model):
 # dummy for printing the input sequence below. Currently needed because input is sparse.
 def create_sparse_to_dense(input_vocab_dim):
     I = Constant(np.eye(input_vocab_dim))
-    @Function
-    def no_op(input: InputSequence[SparseTensor[input_vocab_dim]]):
+    @FunctionWithSignature
+    def no_op(input= InputSequence[SparseTensor[input_vocab_dim]]):
         return times(input, I)
     return no_op
 

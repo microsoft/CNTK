@@ -89,8 +89,10 @@ def create_convnet_cifar10_model(num_classes):
 #  takes:   Function: features -> prediction
 #  returns: Function: (features, labels) -> (loss, metric)
 def create_criterion_function(model, normalize=identity):
-    @Function
-    def criterion(x: Tensor[(num_channels, image_height, image_width)], y: Tensor[num_classes]):
+    #@Function    # Python 3
+    #def criterion(x: Tensor[(num_channels, image_height, image_width)], y: Tensor[num_classes]):
+    @FunctionWithSignature
+    def criterion(x= Tensor[(num_channels, image_height, image_width)], y= Tensor[num_classes]):
         z = model(normalize(x))
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)

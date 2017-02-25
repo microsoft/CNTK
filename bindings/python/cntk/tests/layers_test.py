@@ -27,12 +27,6 @@ def test_layers_name(device_id):
     e = Embedding(0, name='')(I)
     assert(e.root_function.name == '')
 
-def _getModelParameterDict(model, node_name):
-    node_dict = {}
-    for attr in getattr(model, node_name).parameters:
-        node_dict[attr.name] = np.matrix(attr.value)
-    return node_dict
-
 def assert_list_of_arrays_equal(r, exp, err_msg):
     for r_i, exp_i in zip(r, exp): # note: must compare seq by seq due to differing lengths
         np.testing.assert_array_equal(r_i, exp_i, err_msg=err_msg)
@@ -223,10 +217,7 @@ def test_layers_dense(device_id):
     p = Dense(2, activation=None, name='foo')(y)
     res = p(y).eval({y: dat})
 
-    # Get the network paramters
-    fooDict = _getModelParameterDict(p, 'foo')
-
-    npout = np.matrix(dat[0]) * fooDict['W'] + fooDict['b']
+    npout = np.matrix(dat[0]) * p.foo.W.value + p.foo.b.value
     print(res[0])
     print(npout)
     np.testing.assert_array_equal(res[0], npout, err_msg='Error in dense layer')
@@ -237,13 +228,10 @@ def test_layers_dense(device_id):
     p = Dense(2, activation=sigmoid, name='foo')(y)
     res = p(y).eval({y: dat})
 
-    # Get the network paramters
-    fooDict = _getModelParameterDict(p, 'foo')
-
     def _sigmoid(x):
         return 1./(1 + np.exp(-x))
 
-    npout = _sigmoid(np.matrix(dat[0]) * fooDict['W'] + fooDict['b'])
+    npout = _sigmoid(np.matrix(dat[0]) * p.foo.W.value + p.foo.b.value)
     print(res[0])
     print(npout)
 
@@ -256,12 +244,8 @@ def test_layers_dense(device_id):
     q = Dense(3, activation=None, name='bar')(p)
     res = q(y).eval({y: dat})
 
-    # Get the network paramters for the two layers
-    fooDict = _getModelParameterDict(q, 'foo')
-    barDict = _getModelParameterDict(q, 'bar')
-
-    npout1 = np.matrix(dat[0]) * fooDict['W'] + fooDict['b']
-    npout = npout1 * barDict['W'] + barDict['b']
+    npout1 = np.matrix(dat[0]) * p.foo.W.value + p.foo.b.value
+    npout = npout1 * q.bar.W.value + q.bar.b.value
 
     np.testing.assert_array_almost_equal(res[0], npout, decimal=7, err_msg='Error in 2-dense layer')
 
@@ -643,13 +627,8 @@ def test_layers_dropout(device_id):
     p = Dense(1, activation=None, name='foo')(y)
     z = Dropout(prob=0.75, name='bar')(p)
 
-    # Get the network paramters
-    fooDict = {}
-    for attr in getattr(p, 'foo').parameters:
-        fooDict[attr.name] = np.matrix(attr.value)
-
     res =  z(y).eval({y: dat})
-    expected_res = np.sum(fooDict['W'])
+    expected_res = np.sum(p.foo.W.value)
 
     np.testing.assert_array_almost_equal(res, expected_res, decimal=7, \
         err_msg="Error in dropout computation")
