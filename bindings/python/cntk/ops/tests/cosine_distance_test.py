@@ -29,18 +29,27 @@ def test_cosine_distance():
   assert np.allclose(val, expected)
 
 def test_cosine_distance_with_negative_samples():
-  a = np.array([[1., 0., 1., 0., 0.],
-                [0., 1., 0., 1., 1.],
-                [1., 1., 0., 0., 0.],
-                [0., 0., 1., 1., 1.]], dtype=np.float32)
-  b = np.array([[1., 0., 1., 0., 0.],
-                [0., 1., 0., 1., 1.],
-                [1., 1., 0., 0., 0.],
-                [0., 0., 1., 1., 1.]], dtype=np.float32)
+  a = np.array([[1., 1., 0., 0., 0.],
+                [0., 1., 1., 0., 0.],
+                [0., 0., 1., 1., 0.],
+                [0., 0., 0., 1., 1.]], dtype=np.float32)
+  b = np.array([[1., 1., 0., 0., 0.],
+                [0., 1., 1., 0., 0.],
+                [0., 0., 1., 1., 0.],
+                [0., 0., 0., 1., 1.]], dtype=np.float32)
 
   qry = input_variable(shape=(5))
   doc = input_variable(shape=(5))
-  model = cosine_distance_with_negative_samples(qry, doc, shift=1, num_negative_samples=1)
+  num_neg_samples = 2
+  model = cosine_distance_with_negative_samples(qry, doc, shift=1, num_negative_samples=num_neg_samples)
   result = model.eval({qry:[a], doc:[b]})
-  assert np.allclose(result, [[[1., 0.], [1., 0.408248], [1., 0.], [1., 0.408248]]])
+
+  # We expect 1 row per minibatch
+  np.testing.assert_equal(result.shape[1], a.shape[0])
+
+  # We expect the number of columns to be number of negative samples + 1
+  np.testing.assert_equal(result.shape[2], num_neg_samples+1)
+
+  # The first value is exact match, second ony 1 element match and last one is 0 match
+  np.testing.assert_array_almost_equal(result[0][0], [1, 0.5, 0.])
 

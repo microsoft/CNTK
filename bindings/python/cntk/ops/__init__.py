@@ -150,20 +150,29 @@ def cosine_distance(x, y, name=''):
 @typemap
 def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name=''):
     '''
-    Computes the cosine distance between ``x`` and ``y`` where BLAH BLAH:
+    Computes the cosine distance between ``x`` and ``y`` pairs of positive samples often derived 
+    from embeddings of textual data though the function can be used for any form of numeric encodings. 
+    In case of textual similarity on area thei sis where ``x`` represents search query term embedding 
+    and ``y`` represents a document embedding. The negative samples are formed on the fly by shifting 
+    the right side (``y``). The ``shift`` indicates how many samples in t``y`` one should shift to 
+    form each negative sample pair. It is often choose to be one. As the name suggests 
+    ``num_negative_samples`` indicates how many negative samples one would want to generate.
 
     Example:
-        >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
-        >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
-        >>> x = C.input_variable(shape=(2,))
-        >>> y = C.input_variable(shape=(2,))
-        >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
-        array([[-1.,  1.],
-               [ 1.,  0.],
-               [ 0., -1.]], dtype=float32)
+        >>> qry = np.asarray([1.,1.,0.,0.,0.,1.,1.,0., 0.,0.,1., 1.], dtype=np.float32).reshape(1,3,4)
+        >>> doc = np.asarray([1.,1.,0.,0.,0.,1.,1.,0., 0.,0.,1., 1.], dtype=np.float32).reshape(1,3,4)
+        >>> x = input_variable(shape=(4,))
+        >>> y = input_variable(shape=(4,))
+        >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
+        >>> np.round(model.eval({x: qry, y: doc}), decimals=2)
+        array([[[ 1., 0.5, 0.0]
+                [ 1., 0.5, 0.5]
+                [ 1., 0.0, 0.5]]])
 
     Args:
-        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        shift: non-zero positive integer representing number of shift to generate a negative sample
+        num_negative_samples: number of negative samples to generate, a non-zero positive integer 
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
