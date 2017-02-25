@@ -1,0 +1,60 @@
+#!/bin/bash
+
+. $TEST_ROOT_DIR/run-test-common
+
+set -x
+
+# Since we only use python to train a model for evaluation test, it is sufficient to train the model only with one python version.
+# Now it is trained with Python 2.7. If it is not supported anymore, need to use another python version.
+# TODO: have a better way to configure how run test only on a single python version
+PythonVer=$(python -c "import sys; sys.stdout.write(str(sys.version_info[0])); sys.stdout.flush()")
+if [ "$PythonVer" == "3" ]; then
+  echo Skip this test for Python 3.4/3.5. Run this test only on Python 2.7 to save test time.
+  # Simulate test completes.
+  set +x
+  echo Evaluation completes
+  exit 0
+fi
+
+# This test uses pre-trained resnet_20_cifar_10 model in $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY for tests on CPU device
+if [[ "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" == "" || ! -d "$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY" ]]; then
+  echo 'This test uses external data that is not part of the CNTK repository. Environment variable CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY must be set to point to the external test data location'
+  exit 1
+fi
+
+if [ "$OS" == "Windows_NT" ]; then
+  TestDataSourceDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
+else
+  TestDataSourceDir=$CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY
+fi
+
+# Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  export CUDA_VISIBLE_DEVICES=-1
+fi
+
+# Train resnet cifar model and atis model
+python train_models_for_evaluation.py -d $TEST_DEVICE || exit $?
+
+if [ "$TEST_DEVICE" == "cpu" ]; then
+  echo Use pre-trained resnet_20_cifar_10 model in $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY for tests on CPU device.
+  cp $TestDataSourceDir/PreTrainedModels/EvalModels/resnet20_cifar10_python.dnn resnet20.dnn
+else
+  echo Use the on-the-fly trained resnet_20_cifar_10 model for tests on GPU device.
+  mv resnet20_0.dnn resnet20.dnn || exit $?
+fi
+mv data/train/* . || exit $?
+mv atis_0.dnn atis.dnn || exit $?
+cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/query.wl . || exit $?
+cp $TEST_ROOT_DIR/../../Examples/LanguageUnderstanding/ATIS/BrainScript/slots.wl . || exit $?
+
+if [ "$OS" == "Windows_NT" ]; then
+  $TEST_BIN_DIR/CNTKLibraryCSEvalExamplesTest.exe
+else
+  echo Cannot run CNTKLibraryCSEvalExampleTest on Linux.
+  exit 1
+fi
+
+ExitCode=$?
+
+exit $ExitCode

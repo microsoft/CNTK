@@ -84,7 +84,7 @@ namespace CNTK
         void TensorBoardFileWriter::Init()
         {
             time_t time = std::time(0);
-            std::wstring filePath = Internal::GetNewFilePath(m_dir, time);
+            std::wstring filePath = GetNewFilePath(m_dir, time);
 
             msra::files::make_intermediate_dirs(filePath);
 
@@ -114,7 +114,7 @@ namespace CNTK
             summaryValue->set_tag(ToString(name));
             summaryValue->set_simple_value(value);
 
-            WriteRecord(Internal::Serialize(event));
+            WriteRecord(Serialize(event));
         }
 
         void TensorBoardFileWriter::WriteModel()
@@ -123,7 +123,7 @@ namespace CNTK
 
             // Convert the model to tensorflow GraphDef first.
             tensorflow::GraphDef graph;
-            TensorBoardUtils::CreateGraph(m_model->RootFunction(), graph);
+            CreateTensorBoardGraph(m_model->RootFunction(), graph);
 
             std::string graphStr;
             graph.AppendToString(&graphStr);
@@ -133,7 +133,7 @@ namespace CNTK
             event.set_wall_time(static_cast<double>(std::time(0)));
             event.set_graph_def(graphStr);
 
-            WriteRecord(Internal::Serialize(event));
+            WriteRecord(Serialize(event));
         }
 
         void TensorBoardFileWriter::WriteRecord(const std::string& data)
@@ -145,12 +145,12 @@ namespace CNTK
 
             // Header: record length (uint64_t) + masked CRC of that (uint32_t).
             char header[sizeof(uint64_t) + sizeof(uint32_t)];
-            Internal::Encode(header, static_cast<uint64_t>(data.size()));
-            Internal::Encode(header + sizeof(uint64_t), Internal::GetMaskedCrc(header, sizeof(uint64_t)));
+            Encode(header, static_cast<uint64_t>(data.size()));
+            Encode(header + sizeof(uint64_t), GetMaskedCrc(header, sizeof(uint64_t)));
 
             // Footer: marked CRC of the actual record.
             char footer[sizeof(uint32_t)];
-            Internal::Encode(footer, Internal::GetMaskedCrc(data.data(), data.size()));
+            Encode(footer, GetMaskedCrc(data.data(), data.size()));
 
             try
             {
@@ -178,7 +178,7 @@ namespace CNTK
             event.set_wall_time(static_cast<double>(time));
             event.set_file_version("brain.Event:2");
 
-            WriteRecord(Internal::Serialize(event));
+            WriteRecord(Serialize(event));
         }
 
         bool TensorBoardFileWriter::Flush()

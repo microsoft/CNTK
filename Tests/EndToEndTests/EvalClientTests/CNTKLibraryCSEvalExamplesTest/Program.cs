@@ -25,12 +25,16 @@ namespace CNTKLibraryCSEvalExamples
 
             CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.CPUDevice);
             CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
+            CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
+            CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
 
             if (IsGPUAvailable())
             {
                 Console.WriteLine(" ====== Evaluate model on GPU =====");
                 CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.GPUDevice(0));
+                CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.GPUDevice(0));
             }
 
             Console.WriteLine("======== Evaluation completes. ========");

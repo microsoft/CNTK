@@ -1709,13 +1709,13 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     SyncGuard syncGuard;
     if (sizeof(ElemType) == sizeof(float))
     {
-        CUSPARSE_CALL(cusparseScsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumElemAllocated(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(a.Buffer()),
+        CUSPARSE_CALL(cusparseScsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumNZElements(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(a.Buffer()),
                                      aRowLocation, aColLocation, reinterpret_cast<float*>(b.Data()),
                                      (int) b.GetNumRows(), reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(c.Data()), (int) c.GetNumRows()));
     }
     else
     {
-        CUSPARSE_CALL(cusparseDcsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumElemAllocated(), reinterpret_cast<double*>(&alpha), descr, reinterpret_cast<const double*>(a.Buffer()),
+        CUSPARSE_CALL(cusparseDcsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumNZElements(), reinterpret_cast<double*>(&alpha), descr, reinterpret_cast<const double*>(a.Buffer()),
                                      aRowLocation, aColLocation, reinterpret_cast<double*>(b.Data()),
                                      (int) b.GetNumRows(), reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(c.Data()), (int) c.GetNumRows()));
     }

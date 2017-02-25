@@ -365,18 +365,18 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::DoGatherColumnsOf(ElemType
     for (long j = 0; j < numCols; j++)
     {
         auto jInF = idx(0, j); // this is the column we need to get
-        if (std::isnan(jInF) || (jInF < 0))     // negative index means gap
-            continue;
-        size_t jIn = (size_t)jInF;
-
-        auto start = a.SecondaryIndexLocation()[jIn];
-        auto end = a.SecondaryIndexLocation()[jIn + 1];
-        for (auto p = start; p < end; p++, offset++)
+        if (jInF >= 0)     // negative or nan index means gap, but we still need to update the CompIndex
         {
-            GetUnCompIndex()[offset] = a.GetUnCompIndex()[p];
-            Buffer()[offset] = a.Buffer()[p] * alpha;
-        }
+            size_t jIn = (size_t)jInF;
 
+            auto start = a.SecondaryIndexLocation()[jIn];
+            auto end = a.SecondaryIndexLocation()[jIn + 1];
+            for (auto p = start; p < end; p++, offset++)
+            {
+                GetUnCompIndex()[offset] = a.GetUnCompIndex()[p];
+                Buffer()[offset] = a.Buffer()[p] * alpha;
+            }
+        }
         SecondaryIndexLocation()[j + 1] = CPUSPARSE_INDEX_TYPE(offset);
     }
 

@@ -748,6 +748,24 @@ namespace CNTK
         });
     }
 
+    std::wstring Function::AsString() const
+    {
+        wstringstream wss;
+        bool first = true;
+        if (IsComposite())
+            wss << "Composite(" << RootFunction()->OpName() << "): ";
+        else
+            wss << OpName() <<": ";
+        bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        for (auto arg : Arguments(reverse))
+            wss << (first ? (first = false, "") : ", ") << arg.AsString();
+        wss << " -> ";
+        first = true;
+        for (auto out : Outputs())
+            wss << (first ? (first = false, "") : ", ") << out.AsString();
+        return wss.str();
+    }
+
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand };
@@ -785,14 +803,14 @@ namespace CNTK
     }
 
     FunctionPtr Exp(const Variable& operand, const std::wstring& name)
-        {
+    {
         return UnaryOp(PrimitiveOpType::Exp, operand, Dictionary(), name);
     }
 
     FunctionPtr Log(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Log, operand, Dictionary(), name);
-        }
+    }
 
     FunctionPtr Square(const Variable& operand, const std::wstring& name)
     {
@@ -1311,13 +1329,7 @@ namespace CNTK
 
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
-        auto operandPlaceholder = PlaceholderVariable();
-        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
-        auto result = ElementSelect(lessThanZero, 
-            Minus(Exp(operandPlaceholder), Constant::Scalar(operand.GetDataType(), 1.0)),
-            operandPlaceholder);
-
-        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ELU", name);
+        return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
     }
 
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
@@ -1350,6 +1362,11 @@ namespace CNTK
     FunctionPtr Argmin(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgminReductionOpName, axis, name);
+    }
+
+    FunctionPtr StopGradient(const Variable& operand, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::StopGradient, operand, Dictionary(), name);
     }
 
     namespace Sequence
@@ -1467,6 +1484,9 @@ namespace CNTK
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
         {
+            if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
+                return Internal::ReduceElements(operand, reductionOpName, Axis::OperandSequenceAxis(), name);
+            
             using namespace std::placeholders;
 
             std::function<FunctionPtr(const Variable& leftOperand, const Variable& rightOperand)> reductionFunctor;
@@ -1568,7 +1588,13 @@ namespace CNTK
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
-            if (axis.IsStaticAxis() || (axis == Axis::AllStaticAxes()) || (axis == Axis::AllAxes()))
+            if (axis == Axis::DefaultBatchAxis())
+                LogicError("Reduction is currently unsupported along the batch axis only");
+
+            if (axis.IsStaticAxis() ||
+                (axis == Axis::AllStaticAxes()) ||
+                (axis == Axis::AllAxes()) ||
+                ((reductionOpName == PrimitiveFunction::InternalSumReductionOpName) && (axis == Axis::OperandSequenceAxis())))
             {
                 auto additionalProperties = Dictionary();
                 additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
@@ -1576,12 +1602,8 @@ namespace CNTK
                 return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
             }
 
-            if (axis == Axis::DefaultBatchAxis())
-                LogicError("Reduction is currently unsupported along the batch axis only");
-
             LogicError("CNTK::ReduceElements: Invalid axis argument provided. To reduce a sequence along its ordered dynamic axis use Sequence::ReduceElements.");
         }
-
 
         FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name)
         {
