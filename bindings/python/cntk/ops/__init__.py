@@ -449,19 +449,48 @@ def edit_distance_error(input_a, input_b, subPen=0, delPen=0, insPen=0, squashIn
     return edit_distance_error(input_a, input_b, subPen, delPen, insPen, squashInputs, tokensToIgnore, name)
 
 @typemap
-def labels_to_graph(input, name=''):
+def labels_to_graph(labels, name=''):
+    '''
+    Conversion node from labels to graph. Typically used as an input to ForwardBackward node. 
+    This node's objective is to transform input labels into a graph representing exact forward-backward criterion.
+    Example:
+        num_classes = 2
+        labels = cntk.input_variable((num_classes))
+        graph = cntk.labels_to_graph(labels)
+
+    Args:
+        labels: input training labels
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
     from cntk.cntk_py import labels_to_graph
-    dtype = get_data_type(input)
-    input = sanitize_input(input, dtype)
-    return labels_to_graph(input, name)
+    dtype = get_data_type(labels)
+    labels = sanitize_input(labels, dtype)
+    return labels_to_graph(labels, name)
 
 @typemap
-def forward_backward(features, graph, blankTokenId, delayConstraint=-1, name=''):
+def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name=''):
+    '''
+    Criterion node for training methods that rely on forward-backward Viterbi-like passes, e.g. Connectionist Temporal Classification (CTC) training
+    The node takes as the input the graph of labels, produced by the labels_to_graph operation that determines the exact forward/backward procedure. 
+    Example:
+        graph = cntk.labels_to_graph(labels)
+        networkOut = model(features)
+        fb = C.forward_backward(graph, networkOut, 132)
+
+    Args:
+        graph: labels graph
+        features: network output
+        blankTokenId: id of the CTC blank label
+        delayConstraint: label output delay constraint introduced during training that allows to have shorter delay during inference. This is using the original time information to enforce that CTC tokens only get aligned within a time margin. Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy. delayConstraint=-1 means no constraint
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
     from cntk.cntk_py import forward_backward
     dtype = get_data_type(features, graph)
     features = sanitize_input(features, dtype)
     graph = sanitize_input(graph, dtype)
-    return forward_backward(features, graph, blankTokenId, delayConstraint, name)
+    return forward_backward(graph, features, blankTokenId, delayConstraint, name)
 
 ##########################################################################
 # convolution ops
