@@ -456,6 +456,10 @@ namespace CNTK
 
                     opType = PrimitiveOpType::EditDistanceError;
                 }
+                else if (node->OperationName() == OperationNameOf(LabelsToGraphNode))
+                {
+                    opType = PrimitiveOpType::LabelsToGraph;
+                }
                 else if ((node->OperationName() == OperationNameOf(MeanNode)) || (node->OperationName() == OperationNameOf(InvStdDevNode)))
                 {
                     auto precomputeNode = node->As<MeanInvStdDevNodeBase<ElementType>>();

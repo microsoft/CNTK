@@ -448,6 +448,12 @@ def edit_distance_error(input_a, input_b, subPen=0, delPen=0, insPen=0, squashIn
     input_b = sanitize_input(input_b, dtype)
     return edit_distance_error(input_a, input_b, subPen, delPen, insPen, squashInputs, samplesToIgnore, name)
 
+@typemap
+def labels_to_graph(input):
+    from cntk.cntk_py import labels_to_graph
+    dtype = get_data_type(input)
+    input = sanitize_input(input, dtype)
+    return labels_to_graph(input)
 
 ##########################################################################
 # convolution ops
