@@ -5,6 +5,10 @@
 [CmdletBinding()]
 Param([Parameter(Mandatory=$true)][string]$Output)
 
+if (-not (Get-Command -ErrorAction SilentlyContinue 7za.exe)) {
+    throw "7za.exe not found in path"
+}
+
 Set-StrictMode -Version Latest
 
 $ErrorActionPreference = 'Stop'
@@ -29,8 +33,10 @@ Copy-Item -ErrorAction Stop -Verbose:$isVerbose -Recurse Examples, Tutorials -De
 Push-Location SamplesZip
 
 try {
-    Add-Type -assembly "System.IO.Compression.FileSystem"
-    [IO.Compression.ZipFile]::CreateFromDirectory((Get-Location).Path, $Output)
+    7za.exe a -bd $Output .
+    if ($LASTEXITCODE -ne 0) {
+        throw "7za.exe returned non-zero exit code $LASTEXITCODE"
+    }
 } finally {
     Pop-Location
 }

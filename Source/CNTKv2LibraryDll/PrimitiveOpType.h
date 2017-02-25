@@ -74,6 +74,7 @@ namespace CNTK
         NoOp = 62,
         LabelsToGraph = 63,
         StopGradient = 64,
+        ELU = 65,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

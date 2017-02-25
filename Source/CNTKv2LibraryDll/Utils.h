@@ -526,6 +526,8 @@ namespace CNTK
             InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
     }
 
+    bool IsFirstOutputOfMultiOutputUDF(const Variable& var);
+
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName);
 
     // Construct the dynamic axis name to be used internally for the CNTK InputNodes

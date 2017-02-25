@@ -333,7 +333,7 @@ namespace CNTK
                 LogicError("NDArrayView::SliceView: Currently only slices that can be realized a slice of the Matrix object underlying this NDArrayView, are allowed");
 
             auto slicedMatrixView = make_shared<Matrix<float>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
-            tensorView = new TensorView<float>(slicedMatrixView, AsTensorShape(sliceViewShape));
+            tensorView = new TensorView<float>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
             break;
         }
         case DataType::Double:
@@ -344,7 +344,7 @@ namespace CNTK
                 LogicError("NDArrayView::SliceView: Currently only slices that can be realized a slice of the Matrix object underlying this NDArrayView, are allowed");
 
             auto slicedMatrixView = make_shared<Matrix<double>>(currentMatrix->ColumnSlice(sliceMatrixColumnOffset, sliceViewMatrixDims.second));
-            tensorView = new TensorView<double>(slicedMatrixView, AsTensorShape(sliceViewShape));
+            tensorView = new TensorView<double>(slicedMatrixView, AsTensorViewShape(sliceViewShape));
             break;
         }
         default:

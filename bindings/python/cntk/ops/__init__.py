@@ -294,7 +294,7 @@ def lambda_rank(output, gain, group, name=''):
         >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1,1)
         >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
         >>> f = C.lambda_rank(score, gain, group)
-        >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score])[0],4)
+        >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score]),4)
         array([[[-0.2121]],
         <BLANKLINE>
                [[ 0.2121]],

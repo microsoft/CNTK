@@ -454,6 +454,18 @@ namespace CNTK
 #endif
     }
 
+    bool IsFirstOutputOfMultiOutputUDF(const Variable& var)
+    {
+        if (!var.IsOutput())
+            return false;
+
+        auto owner = var.Owner();
+        if (dynamic_cast<PrimitiveFunction*>(owner.get()))
+            return false;
+
+        return (var == owner->Outputs()[0]) && (owner->Outputs().size() > 1);
+    }
+
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
     {
         std::vector<Axis> inputVarDynamicAxes;

@@ -88,7 +88,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
             self.logfilename = self.log_to_file
 
             if rank is not None:
-                self.logfilename = self.logfilename + 'rank' + str(self.rank)
+                self.logfilename = self.logfilename + 'rank' + str(rank)
 
             # print to stdout
             print("Redirecting log to file " + self.logfilename)
