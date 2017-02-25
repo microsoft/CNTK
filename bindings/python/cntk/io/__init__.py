@@ -455,25 +455,25 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None, context=
 
     Args:
         field (str): this is the name of the stream:
-        
+
          * for CTFDeserializer the name is inside the CTF file
          * for ImageDeserializer the acceptable names are `image` or `label`
-         * for HTKFeatureDeserializer and HTKMLFDeserializer only the default 
+         * for HTKFeatureDeserializer and HTKMLFDeserializer only the default
            value of None is acceptable
-        
-        shape (int, tuple): dimensions of this stream. HTKFeatureDeserializer, 
+
+        shape (int, tuple): dimensions of this stream. HTKFeatureDeserializer,
          HTKMLFDeserializer, and CTFDeserializer read data
          as flat arrays. If you need different shapes you can
          :func:`~cntk.ops.reshape` it later.
         is_sparse (bool): whether the provided data is sparse.
          `False` by default, unless mlf is provided.
-        transforms (list): list of transforms to be applied by the Deserializer. 
+        transforms (list): list of transforms to be applied by the Deserializer.
          Currently only ImageDeserializer supports transforms.
-        context (tuple): left and right context to consider when reading in HTK 
+        context (tuple): left and right context to consider when reading in HTK
          data. Only supported by HTKFeatureDeserializer.
         scp (str, list): scp files for HTK data
         mlf (str, list): mlf files for HTK data
-        broadcast (bool): whether the features in this stream should be 
+        broadcast (bool): whether the features in this stream should be
          broadcast to the whole sequence (useful in e.g. ivectors with HTK)
     '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
@@ -592,5 +592,3 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
         lines.append('%i\t|' % seq_idx + ' |'.join(line))
 
     return '\n'.join(lines)
-
-
