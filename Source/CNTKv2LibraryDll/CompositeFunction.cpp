@@ -700,6 +700,9 @@ namespace CNTK
             case PrimitiveOpType::CosDistance:
                 computationNodePtr = New<CosDistanceNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::CosDistanceWithNegativeSamples:
+                computationNodePtr = New<CosDistanceWithNegativeSamplesNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::Logistic:
                 computationNodePtr = New<LogisticNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;

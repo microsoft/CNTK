@@ -148,6 +148,34 @@ def cosine_distance(x, y, name=''):
     return cosine_distance(x, y, name)
 
 @typemap
+def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name=''):
+    '''
+    Computes the cosine distance between ``x`` and ``y`` where BLAH BLAH:
+
+    Example:
+        >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
+        >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
+        >>> x = C.input_variable(shape=(2,))
+        >>> y = C.input_variable(shape=(2,))
+        >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
+        array([[-1.,  1.],
+               [ 1.,  0.],
+               [ 0., -1.]], dtype=float32)
+
+    Args:
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cosine_distance_with_negative_samples
+    dtype = get_data_type(x, y)
+    x = sanitize_input(x, dtype)
+    y = sanitize_input(y, dtype)
+
+    return cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name)
+
+@typemap
 def binary_cross_entropy(output, target, name=''):
     r'''
     Computes the binary cross entropy (aka logistic loss) between the ``output`` and ``target``.
