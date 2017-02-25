@@ -2079,6 +2079,12 @@ namespace CNTK
             return Create(sampleShape, sequences, {}, device, readOnly);
         }
 
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        ///
+        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
+
         ///
         /// Create a new Value object containing a collection of variable length sequences.
         /// The created Value object contains a copy of the specified 'sequences' data.
@@ -2455,8 +2461,6 @@ namespace CNTK
     private:
         template <typename ElementType>
         static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength);
-
-        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
 
         ///
         /// Copy the data stored in 'this' Value object to the buffer 'sequences' as a collection of variable length sequences.
