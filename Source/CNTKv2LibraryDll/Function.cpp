@@ -1108,6 +1108,15 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameBlankTokenId] = blankTokenId;
+        additionalProperties[PrimitiveFunction::AttributeNameDelayConstraint] = delayConstraint;
+
+        return BinaryOp(PrimitiveOpType::ForwardBackward, graph, features, std::move(additionalProperties), name);
+    }
+
     FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::LabelsToGraph, labels, Dictionary(), name);

@@ -68,6 +68,7 @@ namespace CNTK
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
+        {PrimitiveOpType::ForwardBackward, L"ForwardBackward" },
         {PrimitiveOpType::LabelsToGraph, L"LabelsToGraph" },
         {PrimitiveOpType::PastValue, L"PastValue"},
         {PrimitiveOpType::FutureValue, L"FutureValue"},
@@ -239,6 +240,8 @@ namespace CNTK
         static const std::wstring AttributeNameInsertionPenalty;
         static const std::wstring AttributeNameSquashInputs;
         static const std::wstring AttributeNameTokensToIgnore;
+        static const std::wstring AttributeNameDelayConstraint;
+        static const std::wstring AttributeNameBlankTokenId;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)

@@ -258,7 +258,7 @@ public:
     // maxValues (input): values of max elements in label input vectors
     // labels (input): 1-hot vector with frame-level phone labels
     // CTCPosterior (output): CTC posterior
-    // blankTokenId (input): id of the blank token
+    // blankTokenId (input): id of the blank token. If specified as SIZE_MAX, will be replaced with (numberOfLabels - 1)
     // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. This using the original time information to enforce that CTC tokens only get aligned within a time margin.
     //      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
     //      delayConstraint=-1 means no constraint
@@ -285,7 +285,7 @@ public:
         std::vector<size_t> phoneBound;
 
         ElemType finalScore = 0;
-        if (blankTokenId == INT_MIN)
+        if (blankTokenId == SIZE_MAX)
             blankTokenId = numRows - 1;
 
         size_t mbsize = numCols / numParallelSequences;

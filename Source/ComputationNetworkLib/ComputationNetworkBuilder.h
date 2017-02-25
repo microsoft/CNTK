@@ -126,7 +126,7 @@ public:
     ComputationNodePtr CosDistance(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr CrossEntropy(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
     ComputationNodePtr CrossEntropyWithSoftmax(const ComputationNodePtr label, const ComputationNodePtr prediction, const std::wstring nodeName = L"");
-    ComputationNodePtr ForwardBackward(const ComputationNodePtr label, const ComputationNodePtr prediction, int blankTokenId, int delayConstraint, const std::wstring nodeName = L"");
+    ComputationNodePtr ForwardBackward(const ComputationNodePtr graph, const ComputationNodePtr features, int blankTokenId, int delayConstraint, const std::wstring nodeName = L"");
     ComputationNodePtr DiagTimes(const ComputationNodePtr a, const ComputationNodePtr b, const std::wstring nodeName = L"");
     ComputationNodePtr Diagonal(const ComputationNodePtr a, const std::wstring nodeName = L"");
     ComputationNodePtr Dropout(const ComputationNodePtr a, const std::wstring nodeName = L"");
