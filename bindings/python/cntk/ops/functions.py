@@ -63,7 +63,7 @@ class Function(cntk_py.Function):
     @staticmethod
     def to_Function(f, make_block=False, op_name=None, name=None, with_27_signature=False):
         '''
-        construct a Function from a Python lambda
+        Construct a Function from a Python lambda
         where the Function's input signature is defined by the lambda
         Use this as a decorator, e.g.:
           @Function
