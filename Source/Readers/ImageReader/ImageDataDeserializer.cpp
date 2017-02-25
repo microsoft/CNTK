@@ -282,14 +282,14 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
             {
                 reader = std::make_shared<ZipFaceFileReader>(containerPath);
                 knownReaders[containerPath] = reader;
-                readerSequences[containerPath] = std::map<std::string, size_t>();
+                readerSequences[containerPath] = MultiMap();
             }
             else
             {
                 reader = (*r).second;
             }
 
-            readerSequences[containerPath][itemPath] = seqId;
+            readerSequences[containerPath][itemPath].push_back(seqId);
             m_readers[seqId] = reader;
 #else
             UNUSED(seqId);

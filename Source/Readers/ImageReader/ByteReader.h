@@ -77,7 +77,7 @@ public:
         }
     }
 
-    void Register(const std::map<std::string, size_t>&) override;
+    void Register(const MultiMap& sequences) override;
     cv::Mat Read(size_t seqId, const std::string& seqPath, bool grayscale) override;
 
     void SetBigFileId(size_t id)
@@ -133,7 +133,7 @@ class ZipFaceFileReader : public ByteReader
 public:
     ZipFaceFileReader(const std::string& zipPath);
 
-    void Register(const std::map<std::string, size_t>& sequences) override;
+    void Register(const MultiMap& sequences) override;
     cv::Mat Read(size_t seqId, const std::string& path, bool grayscale) override;
 
 private:
