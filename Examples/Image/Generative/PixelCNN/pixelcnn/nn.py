@@ -10,7 +10,7 @@ from cntk.utils import _as_tuple
 # some extra primitives and wrappers.
 #
 
-global_init = ct.normal(0.005)
+global_init = ct.normal(0.05)
 
 def maximum(l, r):
     return ct.element_select(ct.greater(l, r), l, r)
@@ -24,6 +24,10 @@ def softplus(x):
 def concat_elu(x):
     """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but then with ELU """
     return ct.elu(ct.splice(x, -x, axis=0))
+
+def concat_relu(x):
+    """ like concatenated ReLU (http://arxiv.org/abs/1603.05201) """
+    return ct.relu(ct.splice(x, -x, axis=0))
 
 def log_sum_exp(x):
     """ numerically stable log_sum_exp implementation that prevents overflow """

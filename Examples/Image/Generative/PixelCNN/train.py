@@ -56,10 +56,10 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     pe = ct.relu(1.0) # dummy value to make reporting progress happy.
 
     # training config
-    minibatch_size = 8 if (model == 'pixelcnnpp') else 64
+    minibatch_size = 16 if (model == 'pixelcnnpp') else 64
 
     # Set learning parameters
-    lr_per_sample    = 0.00001 if (model == 'pixelcnnpp') else 0.00001
+    lr_per_sample    = 0.00001 if (model == 'pixelcnnpp') else 0.000001
     lr_schedule      = ct.learning_rate_schedule(lr_per_sample, unit=ct.learner.UnitType.sample)
     mm_time_constant = 4096
     mm_schedule      = ct.learner.momentum_as_time_constant_schedule(mm_time_constant)
@@ -75,7 +75,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     }
 
     ct.utils.log_number_of_parameters(z) ; print()
-    progress_printer = ct.utils.ProgressPrinter(tag='Training') # freq=10, 
+    progress_printer = ct.utils.ProgressPrinter(freq=100, tag='Training') # freq=10, 
 
     # perform model training
     epoch_size     = 50000
