@@ -181,6 +181,10 @@ endif
   COMMON_FLAGS += -DUSE_MKL
 endif
 
+ifeq ($(CUDA_GDR),1)
+  COMMON_FLAGS += -DUSE_CUDA_GDR
+endif
+
 ifeq ("$(MATHLIB)","openblas")
   INCLUDEPATH += $(OPENBLAS_PATH)/include
   LIBPATH += $(OPENBLAS_PATH)/lib
