@@ -1034,6 +1034,15 @@ endif
   # temporarily adding to 1bit, need to work with others to fix it
 endif
 
+########################################
+# HDFS setup
+########################################
+ifdef HDFS_PATH
+  INCLUDEPATH += $(HDFS_PATH)/include
+  LIBPATH += $(HDFS_PATH)/lib/native
+  CPPFLAGS += -lhdfs
+  COMMON_FLAGS += -DUSE_HDFS
+endif
  
 ########################################
 # ASGD(multiverso) setup
