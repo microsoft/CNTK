@@ -23,6 +23,7 @@ namespace CNTKLibraryCSEvalExamples
             Console.WriteLine("======== Evaluate model on CPU using GPU build ========");
 #endif
 
+            KeranLi.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
             CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.CPUDevice);
             CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
