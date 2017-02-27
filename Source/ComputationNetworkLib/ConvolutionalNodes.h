@@ -349,6 +349,19 @@ public:
     {
         Matrix<ElemType> sliceOutputValue = ValueFor(fr);
         const Matrix<ElemType>& input0 = InputRef(0).ValueAsMatrix();
+
+        std::unique_ptr<ElemType[]> ref(input0.CopyToArray());
+        for (int i = 0; i < 20; i++)
+        {
+            if (ref[i] > 0)
+            {
+                printf("%d:%f\r\n", i, ref[i]);
+            }
+        }
+
+        printf("\r\n");
+
+
         Matrix<ElemType> sliceInput1Value = InputRef(1).ValueFor(fr);
         if (!m_transpose)
             m_convEng->Forward(sliceInput1Value, input0, sliceOutputValue, *m_tempMatrix);

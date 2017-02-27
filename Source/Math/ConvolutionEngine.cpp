@@ -192,30 +192,38 @@ protected:
             // m_k      w=3,    h=1,    c=49292 -> w=49292, h=3,    c=1
             // m_stride w=1,    h=1,    c=49292
 
-            //std::unique_ptr<ElemType[]> inRef(in.CopyToArray());
-            //for (int i = 0; i < 1000000; i++)
-            //{
-            //    if (inRef[i] > 0)
-            //    {
-            //        printf("%d:%f\r\n", i, inRef[i]);
-            //    }
-            //}
-
-            //printf("\r\n");
-
+            std::unique_ptr<ElemType[]> inRef(in.CopyToArray());
+            for (int j = 0; j < 3; j++)
+            {
+                int start = 49292 * 10 * j;
+                int end = 49292 * 10 * (j + 1);
+                int l = 0;
+                for (int ii = start; ii < end; ii++)
+                {
+                    int k = (ii - start) / 49292;
+                    if (inRef[ii] > 0)
+                    {
+                        printf("%d:%d:%f\r\n", k, l++, inRef[ii]);
+                    }
+                }
+            }
 
             size_t kRows1 = m_outDims.c();
             size_t kCols1 = kernel.GetNumRows() * kernel.GetNumCols() / kRows1;
             auto kernel1 = kernel.DeepClone();
             kernel1.Reshape(kRows1, kCols1);
-            Mat::ConvolveAndWeightedAdd(1, kernel1, false, in, false, 0, out, static_cast<int>(49292), 1, false, true);
+            Mat::ConvolveAndWeightedAdd(1, kernel1, false, in, false, 0, out, static_cast<int>(m_inDims.w()), 1, false, true);
 
-            std::unique_ptr<ElemType[]> ref(kernel1.CopyToArray());
-            for (int i = 0; i < 20; i++)
+            std::unique_ptr<ElemType[]> ref(out.CopyToArray());
+            for (int j = 0; j < 20; j++)
             {
-                if (ref[i] > 0)
+                for (int i = 0; i < 3; i++)
                 {
-                    printf("%d:%f\r\n", i, ref[i]);
+                    int k = 128 * j + i;
+                    if (ref[k] > 0)
+                    {
+                        printf("%d:%f\r\n", k, ref[k]);
+                    }
                 }
             }
 
@@ -234,7 +242,34 @@ protected:
 
     void BackwardKernelCore(const Mat& srcGrad, const Mat& in, Mat& kernelGrad, bool /*accumulateGradient*/, bool /*allowReuse*/, Mat& /*workspace*/) override
     {
-        srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
+        // if sparse
+        bool isGpuSparse = in.GetCurrentMatrixLocation() == CurrentDataLocation::GPU &&
+                           in.GetMatrixType() == MatrixType::SPARSE;
+        if (isGpuSparse)
+        {
+            printf("output = %d x %d\r\n", (int)srcGrad.GetNumRows(), (int)srcGrad.GetNumCols());
+            printf("input = %d x %d\r\n", (int)in.GetNumRows(), (int)in.GetNumCols());
+            printf("kernel = %d x %d\r\n", (int)kernelGrad.GetNumRows(), (int)kernelGrad.GetNumCols());
+            // output =   1,024 x 1,024
+            // input  = 492,920 x 1,024
+            // kernel =  49,292 x   384
+
+            size_t kRows0 = kernelGrad.GetNumRows();
+            size_t kCols0 = kernelGrad.GetNumCols();
+            size_t kCols1 = m_inDims.w();
+            size_t kRows1 = kRows0 * kCols0 / kCols1;
+            kernelGrad.Reshape(kRows1, kCols1);
+
+
+
+            kernelGrad.Reshape(kRows0, kCols0);
+
+            printf("\r\n");
+        }
+        else
+        {
+            srcGrad.ConvolutionBackwardKernel(in, m_mpRowCol, *m_mpRowIwht, *m_mpRowRun, *m_runs, kernelGrad);
+        }
     }
 
     void EnsurePoolingInitialized() override
@@ -402,12 +437,19 @@ protected:
                 inputSubBatch.Reshape(m_inT.c() * m_inT.w(), m_inT.h() * smallBatchSize);
                 Mat outputSubBatch = out.ColumnSlice(startSampleId, m_outT.h() * smallBatchSize);
 
-                std::unique_ptr<ElemType[]> ref(outputSubBatch.CopyToArray());
-                for (int ii = 0; ii < 20; ii++)
+                std::unique_ptr<ElemType[]> inRef(in.CopyToArray());
+                for (int j = 0; j < 3; j++)
                 {
-                    if (ref[ii] > 0)
+                    int start = 49292 * 10 * j;
+                    int end = 49292 * 10 * (j + 1);
+                    int l = 0;
+                    for (int ii = start; ii < end; ii++)
                     {
-                        printf("%d:%f\r\n", ii, ref[ii]);
+                        int k = (ii - start) / 49292;
+                        if (inRef[ii] > 0)
+                        {
+                            printf("%d:%d:%f\r\n", k, l++, inRef[ii]);
+                        }
                     }
                 }
 
@@ -436,11 +478,15 @@ protected:
         out.Reshape(m_outT.c() * outputSizePerChannel, batchSize); // each sample becomes a column
 
         std::unique_ptr<ElemType[]> outRef(out.CopyToArray());
-        for (int i = 0; i < 20; i++)
+        for (int j = 0; j < 20; j++)
         {
-            if (outRef[i] > 0)
+            for (int i = 0; i < 3; i++)
             {
-                printf("%d:%f\r\n", i, outRef[i]);
+                int k = 128 * j + i;
+                if (outRef[k] > 0)
+                {
+                    printf("%d:%f\r\n", k, outRef[k]);
+                }
             }
         }
 
@@ -539,6 +585,14 @@ protected:
                     Matrix<ElemType>::TensorShuffleScaleAndAdd(0.0f, outputGradientSubBatch.Transpose(), 1, m_outT.w(), 1, smallBatchSize * m_outT.h(), m_outT.c(), 1.0f, outputGradientSubBatchReordered, outputGradientSubBatchReordered);
 
                     kernelGrad.Reshape(m_outT.c() * m_kernelT.w(), m_inT.c());
+
+                    printf("output = %d x %d\r\n", (int)outputGradientSubBatchReordered.GetNumRows(), (int)outputGradientSubBatchReordered.GetNumCols());
+                    printf("input = %d x %d\r\n", (int)inputSubBatchSparseReordered.GetNumRows(), (int)inputSubBatchSparseReordered.GetNumCols());
+                    printf("kernel = %d x %d\r\n", (int)kernelGrad.GetNumRows(), (int)kernelGrad.GetNumCols());
+                    // output   =  8,192 x 128 (transpose)
+                    // input    = 10,240 x 49,292
+                    // kernel   =    384 x 49,292
+
                     Matrix<ElemType>::ConvolveAndWeightedAdd(1, outputGradientSubBatchReordered, true, inputSubBatchSparseReordered, false, 1, kernelGrad, smallBatchSize * m_inT.h(), m_strideT.w(), m_padding, false);
                     kernelGrad.Reshape(m_outT.c(), m_inT.c() * m_kernelT.w());
                 }
