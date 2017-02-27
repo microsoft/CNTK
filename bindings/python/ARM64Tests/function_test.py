@@ -20,3 +20,5 @@ def test_outputs():
     for arg in output.owner.arguments:
         print("Argument name: {}, argument owner name {}".format(arg.name, arg.owner.name))
 
+if __name__=='__main__':
+    test_outputs()

@@ -20,7 +20,7 @@ def test_load_save_constant(tmpdir):
     expected = [[[[5,15]]]]
     assert np.allclose(result, expected)
 
-    filename = str(tmpdir / 'c_plus_c.mod')
+    filename = str(tmpdir + '/c_plus_c.mod')
     root_node.save(filename)
 
     loaded_node = Function.load(filename)
@@ -42,7 +42,7 @@ def test_load_save_input_legacy_names(tmpdir):
     expected = [[[[1,2]]]]
     assert np.allclose(result, expected)
 
-    filename = str(tmpdir / 'i_plus_c_0.mod')
+    filename = str(tmpdir + '/i_plus_c_0.mod')
     root_node.save_model(filename)
 
     loaded_node = load_model(filename)
@@ -68,7 +68,7 @@ def test_load_save_inputs(tmpdir):
     expected = [[[[2,3],[3,4]]]]
     assert np.allclose(result, expected)
 
-    filename = str(tmpdir / 'i_plus_i_0.mod')
+    filename = str(tmpdir + '/i_plus_i_0.mod')
     root_node.save(filename)
 
     loaded_node = Function.load(filename)
@@ -92,7 +92,7 @@ def test_load_save_unique_input(tmpdir):
     expected = [[[[ 0.268941,  0.731059]]]]
     assert np.allclose(result, expected)
 
-    filename = str(tmpdir / 'i_plus_0.mod')
+    filename = str(tmpdir + '/i_plus_0.mod')
     root_node.save(filename)
 
     loaded_node = Function.load(filename)
@@ -106,3 +106,10 @@ def test_load_save_unique_input(tmpdir):
     loaded_node = Function.load(filename)
     loaded_result = loaded_node.eval(input1)
     assert np.allclose(loaded_result, expected)
+
+
+if __name__=='__main__':
+    tmpdir = '/tmp'
+    test_load_save_unique_input(tmpdir)
+    test_load_save_inputs(tmpdir)
+    test_load_save_constant(tmpdir)
