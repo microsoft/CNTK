@@ -36,7 +36,7 @@ def discretized_mix_logistic_loss(x,l):
     m3 = ct.reshape(means[:, :, 2, :] + coeffs[:, :, 1, :] * x[:, :, 0, :] + coeffs[:, :, 2, :] * x[:, :, 1, :], (xs[0],xs[1],1,nr_mix))
     means = ct.splice(ct.reshape(means[:,:,0,:], (xs[0],xs[1],1,nr_mix)), m2, m3, axis=2)
     centered_x = x - means
-    inv_stdv = ct.exp(-log_scales)
+    inv_stdv = nn.exp(-log_scales)
     plus_in = inv_stdv * (centered_x + 1./255.)
     cdf_plus = ct.sigmoid(plus_in)
     min_in = inv_stdv * (centered_x - 1./255.)
@@ -73,12 +73,10 @@ def discretized_mix_logistic_loss(x,l):
     return loss
 
 def softmax_256_loss(image_target, prediction):
-    # Cross Entropy.
+    # Based on PixelRNN paper (https://arxiv.org/pdf/1601.06759v3.pdf)
 
     # image_target: (256, 3*32*32)
     # predication: (3x256, 32, 32)
     image_pred = ct.reshape(prediction, (256, 3*32*32))
     train_loss = ct.reduce_sum(ct.ops.cross_entropy_with_softmax(image_pred, image_target, axis=-2))
-    # train_loss = ct.minus(ct.reduce_log_sum(image_pred, axis=-2), ct.reduce_sum(ct.element_times(image_target,image_pred), axis=-2))
-
     return train_loss

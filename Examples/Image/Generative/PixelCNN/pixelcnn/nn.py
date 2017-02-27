@@ -18,8 +18,11 @@ def maximum(l, r):
 def minimum(l, r):
     return ct.element_select(ct.less(l, r), l, r)
 
+def exp(x):
+    return ct.exp(ct.clip(x, -100, 75)) # Workaround NaN
+
 def softplus(x):
-    return ct.log(ct.exp(x) + 1)
+    return ct.log_add_exp(x, 0) # ct.log(exp(x) + 1)
 
 def concat_elu(x):
     """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but then with ELU """
@@ -76,6 +79,7 @@ def dense(input, num_units, nonlinearity = None, init=global_init):
 
     W = l2_normalize(W, 0)
     linear = b + ct.times(W, input)  # (n, HW)
+
     if nonlinearity == None:
         return linear
 
