@@ -337,7 +337,7 @@ namespace CNTK
                             std::unordered_map<Variable, ValuePtr>& outputs,
                             const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
-        Forward(arguments, outputs, computeDevice, {{}});
+        Forward(arguments, outputs, computeDevice, std::unordered_set<Variable>());
     }
 
     void Function::SaveModel(const std::wstring& modelFilePath)

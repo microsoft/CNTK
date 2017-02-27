@@ -568,10 +568,10 @@ namespace CNTK
             switch (dataType)
             {
             case DataType::Float:
-                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, {{}}, {{}}, {{}}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<float>(device, std::unordered_set<Variable>(), std::unordered_set<Variable>(), std::unordered_set<Variable>(), false);
                 break;
             case DataType::Double:
-                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {{}}, {{}}, {{}}, false);
+                computationNetwork = compositeFunction->GetComputationNetwork<double>(device, std::unordered_set<Variable>(), std::unordered_set<Variable>(), std::unordered_set<Variable>(), false);
                 break;
             default:
                 LogicError("Unknown DataType %s", DataTypeName(dataType));
