@@ -15,32 +15,33 @@ example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image"
 sys.path.append(example_dir)
 sys.path.append(abs_path)
 
+from distributed_common import mpiexec_test
 from prepare_test_data import prepare_CIFAR10_data
-from ConvNet_CIFAR10_DataAug_Distributed_test import mpiexec_test
 
 script_under_test = os.path.join(example_dir, "TrainResNet_CIFAR10_Distributed.py")
+
+mpiexec_params = [ "-n", "2"]
 
 def test_cifar_resnet_distributed(device_id):
     params = [ "-e", "2",
                "-datadir", prepare_CIFAR10_data(),
                "-q", "32",
                "-es", "512",
-               "-device", "0" ]
-    mpiexec_test(device_id, script_under_test, params, 0.86, False, 3)
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.86, False, 3)
 
 def test_cifar_resnet_distributed_1bitsgd(device_id):
     params = [ "-e", "2",
                "-datadir", prepare_CIFAR10_data(),
                "-q", "1",
                "-es", "512",
-               "-device", "0" ]
-    mpiexec_test(device_id, script_under_test, params, 0.86, False, 3)
-
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.86, False, 3)
 
 def test_cifar_resnet_distributed_block_momentum(device_id):
     params = [ "-e", "2",
                "-datadir", prepare_CIFAR10_data(),
                "-b", "3200",
                "-es", "512",
-               "-device", "0" ]
-    mpiexec_test(device_id, script_under_test, params, 0.89, False, 5)
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.89, False, 5)

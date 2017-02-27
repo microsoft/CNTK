@@ -103,6 +103,10 @@ class MinibatchSource(cntk_py.MinibatchSource):
           change their values on the sweep-by-sweep basis specified by the schedule.
         distributed_after (int, default to `INFINITE_SAMPLES`): sample count after which minibatch source becomes distributed
         multithreaded_deserializer (`bool`, default to `None`): using multi threaded deserializer
+        frame_mode (`bool`, default `False`): Specifies if data should be randomized and returned at the frame
+         or sequence level. When  true , input sequence are split into frames.
+        truncation_length (`int`): Specifies the truncation length in samples for BPTT (positive integer). If greater than zero
+         `frame_mode` cannot be used at the same time.
     '''
     def __init__(self,
         deserializers=None,
@@ -111,7 +115,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
         sample_based_randomization_window=False,
         epoch_size=INFINITELY_REPEAT,
         distributed_after=INFINITE_SAMPLES,
-        multithreaded_deserializer=None):
+        multithreaded_deserializer=None,
+        frame_mode=False,
+        truncation_length=0):
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
@@ -122,7 +128,9 @@ class MinibatchSource(cntk_py.MinibatchSource):
             sample_based_randomization_window=sample_based_randomization_window,
             epoch_size=epoch_size,
             distributed_after=distributed_after,
-            multithreaded_deserializer=multithreaded_deserializer)
+            multithreaded_deserializer=multithreaded_deserializer,
+            frame_mode=frame_mode,
+            truncation_length=truncation_length)
         source = reader_config.minibatch_source()
         # transplant into this class instance
         self.__dict__ = source.__dict__
@@ -315,6 +323,10 @@ class _ReaderConfig(dict):
           change their values on the sweep-by-sweep basis specified by the schedule.
         distributed_after (int, default to `INFINITE_SAMPLES`): sample count after which reader becomes distributed
         multithreaded_deserializer (`bool`, default to `None`): using multi threaded deserializer
+        frame_mode (`bool`, default `False`): Specifies if data should be randomized and returned at the frame
+         or sequence level. When  true , input sequence are split into frames.
+        truncation_length (`int`): Specifies the truncation length in samples for BPTT (positive integer). When using truncation,
+         frame mode cannot be used at the same time.
     '''
     def __init__(self,
         deserializers=None,
@@ -323,7 +335,10 @@ class _ReaderConfig(dict):
         sample_based_randomization_window=False,
         epoch_size=INFINITELY_REPEAT,
         distributed_after=INFINITE_SAMPLES,
-        multithreaded_deserializer=None):
+        multithreaded_deserializer=None,
+        frame_mode=False,
+        truncated=False,
+        truncation_length=0):
         self['epochSize'] = cntk_py.SizeTWrapper(epoch_size) # force to store in size_t
         if not isinstance(deserializers, (list, tuple)):
             deserializers = [deserializers]
@@ -334,6 +349,13 @@ class _ReaderConfig(dict):
         self['distributedAfterSampleCount'] = cntk_py.SizeTWrapper(distributed_after)
         if multithreaded_deserializer is not None:
             self['multiThreadedDeserialization'] = multithreaded_deserializer
+
+        if truncation_length > 0:
+            self['truncated'] = True
+            self['truncationLength'] = cntk_py.SizeTWrapper(truncation_length)
+            if frame_mode:
+                raise ValueError("FrameMode and truncated BPTT are mutually exclusive.")
+        self['frameMode'] = frame_mode
 
     @typemap
     def minibatch_source(self):

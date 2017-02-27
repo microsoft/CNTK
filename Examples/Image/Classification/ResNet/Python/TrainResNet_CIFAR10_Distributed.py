@@ -94,7 +94,7 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
         learner = block_momentum_distributed_learner(local_learner, block_size=block_size)
     else:
         learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
-
+    
     return Trainer(network['output'], (network['ce'], network['pe']), learner, progress_printer)
 
 # Train and test
@@ -148,7 +148,6 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
 
 
 if __name__=='__main__':
-
     data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 
     parser = argparse.ArgumentParser()
@@ -172,10 +171,14 @@ if __name__=='__main__':
         model_path = args['outputdir'] + "/models"
     if args['device'] != None:
         set_default_device(gpu(args['device']))
-    if args['datadir'] is not None:
-        data_path = args['datadir']
+
     if args['epoch_size'] is not None:
         epoch_size = args['epoch_size']
+
+    data_path = args['datadir']
+
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
 
     mean_data=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
