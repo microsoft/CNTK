@@ -6,17 +6,23 @@
 
 import os
 import re
+import sys
+import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","Detection","FastRCNN", "CNTK_FastRCNN_Eval.ipynb")
 
+# Skipping test for python 2.7 since FastRCNN implementatio does not support 2.7 at the moment
+@pytest.mark.skipif(sys.version_info < (3,4),
+                    reason="requires python3.4")
 def test_cntk_fastrcnn_eval_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
 
     assert errors == []
 
-
+@pytest.mark.skipif(sys.version_info < (3,4),
+                    reason="requires python3.4")
 def test_cntk_fastrcnn_eval_evalCorrect(nb):
     testCells = [cell for cell in nb.cells
                  if cell.cell_type == 'code' and
