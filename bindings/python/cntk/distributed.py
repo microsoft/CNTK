@@ -12,8 +12,9 @@ from .utils import typemap
 # If other OS has similar OpenMPI MPI_Init failure, add dll load to global here
 import platform
 import ctypes
-#if platform.system() == 'Linux':
-#    ctypes.CDLL("libmpi.so.12", mode=ctypes.RTLD_GLOBAL)
+if platform.system() == 'Linux':
+    if platform.machine() != 'aarch64':
+        ctypes.CDLL("libmpi.so.12", mode=ctypes.RTLD_GLOBAL)
 
 __doc__= '''\
 Distributed learners manage learners in distributed environment.

@@ -8,6 +8,7 @@ from setuptools import setup, Extension, find_packages
 import numpy
 
 IS_WINDOWS = platform.system() == 'Windows'
+IS_ARM64 = platform.machine() == 'aarch64'
 
 IS_PY2 = sys.version_info.major == 2
 
@@ -124,8 +125,10 @@ else:
     # Expecting the dependent libs (libcntklibrary-2.0.so, etc.) inside
     # site-packages/cntk/libs.
     runtime_library_dirs = ['$ORIGIN/cntk/libs']
-    #os.environ["CXX"] = "mpic++"
-    os.environ["CXX"] = "g++"
+    if IS_ARM64:
+        os.environ["CXX"] = "g++"
+    else:
+        os.environ["CXX"] = "mpic++"
 
 cntkV2LibraryInclude = os.path.join(CNTK_SOURCE_PATH, "CNTKv2LibraryDll", "API")
 cntkBindingCommon = os.path.join(CNTK_PATH, "bindings", "common")

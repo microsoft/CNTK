@@ -2,18 +2,21 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full licence information.
 //
+
+#include "stdafx.h"
+
 // This class implements a block handler based on the SSE intrinsics available on intel platforms.
 // Since we don't have SSE on ARM64 (NEON has similar functionality but is not identical) we cannot
 // use the BlockHandlerSSE implementation no ARM64.
 // Therefore, exclude the implementation on ARM64 builds for now.
 // TODO: In the future, we should provide a NEON based implementation instead.
 #if !defined(__aarch64__)
-
-#include "stdafx.h"
 #include "../../../Source/Math/BlockMultiplier.h"
+#endif
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace TEST {
 
+#if !defined(__aarch64__)
 //The simplest possible matrix multiplier, used here as a check.
 template<typename ScalarAT, typename ScalarBT, typename ScalarCT> class ReferenceMultiplier
 {
@@ -193,5 +196,7 @@ BOOST_AUTO_TEST_CASE(BlockMultiplyTestAllKFourRowsMultiThread)
 }
 
 BOOST_AUTO_TEST_SUITE_END()
-}}}} //end namespaces
 #endif
+
+}}}} //end namespaces
+
