@@ -105,7 +105,6 @@ def test_load_save_unique_input(tmpdir):
     loaded_result = loaded_node.eval(input1)
     assert np.allclose(loaded_result, expected)
 
-
 def test_large_model_serialization_float(tmpdir):
     import os; 
     from cntk.layers import Recurrence, LSTM, Dense
