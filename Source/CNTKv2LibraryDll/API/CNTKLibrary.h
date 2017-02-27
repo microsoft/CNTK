@@ -359,18 +359,27 @@ namespace CNTK
         ///
         std::wstring AsString() const
         {
-            std::wstringstream wStrStream;
-            wStrStream << L"[";
-            for (size_t i = 0; i < Rank(); i++)
+            if (IsUnknown())
             {
-                if (i != 0)
-                    wStrStream << L" x ";
-
-                wStrStream << m_shapeDims[i];
+                return L"[???]";
             }
+            else
+            {
+                std::wstringstream wStrStream;
+                wStrStream << L"[";
+                for (size_t i = 0; i < Rank(); i++)
+                {
+                    if (i != 0)
+                        wStrStream << L" x ";
 
-            wStrStream << L"]";
-            return wStrStream.str();
+                    if (m_shapeDims[i] != InferredDimension)
+                        wStrStream << m_shapeDims[i];
+                    else
+                        wStrStream << "?";
+                }
+                wStrStream << L"]";
+                return wStrStream.str();
+            }
         }
 
     private:
@@ -1612,6 +1621,11 @@ namespace CNTK
         ///
         CNTK_API bool NeedsGradient() const;
 
+        ///
+        /// Returns a string representation for this variable.
+        ///
+        CNTK_API std::wstring AsString() const;
+
     protected:
 #ifdef SWIG
     public:
@@ -2065,6 +2079,12 @@ namespace CNTK
             return Create(sampleShape, sequences, {}, device, readOnly);
         }
 
+
+        ///
+        /// Create a new Value object containing a collection of variable length sequences.
+        ///
+        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
+
         ///
         /// Create a new Value object containing a collection of variable length sequences.
         /// The created Value object contains a copy of the specified 'sequences' data.
@@ -2442,8 +2462,6 @@ namespace CNTK
         template <typename ElementType>
         static void AppendSparseSequenceData(const NDArrayViewPtr& sequenceData, std::vector<SparseIndexType>& colStarts, std::vector<SparseIndexType>& rowIndices, std::vector<char>& nonZeroValues, size_t maxSequenceLength);
 
-        CNTK_API static ValuePtr Create(const NDShape& sampleShape, const std::vector<NDArrayViewPtr>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly, bool createNewCopy);
-
         ///
         /// Copy the data stored in 'this' Value object to the buffer 'sequences' as a collection of variable length sequences.
         /// The output data is in the dense format.
@@ -2808,11 +2826,11 @@ namespace CNTK
         ///
         /// Returns a set comprising of all input variables of 'this' Function's variables that are not of kind 'Parameter' or 'Constant'.
         ///
-        std::vector<Variable> Arguments() const
+        std::vector<Variable> Arguments(bool rowMajor = false) const
         {
             return FilteredInputs<Variable>([](const Variable& var) {
                 return (var.IsInput() || var.IsPlaceholder() || var.IsOutput());
-            });
+            }, rowMajor);
         }
 
         ///
@@ -2917,6 +2935,11 @@ namespace CNTK
         CNTK_API void PrintGraph() const;
 
         ///
+        /// Returns a string representation of this Function
+        ///
+        CNTK_API std::wstring AsString() const;
+
+        ///
         /// Maximum number of outputs that is currently supported.
         ///
         static const int MaxNumOutputs = 64;
@@ -2982,11 +3005,11 @@ namespace CNTK
         CNTK_API std::vector<Variable>& InitOutputs();
 
         template <typename VariableType, typename FilterFunction>
-        std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc) const
+        std::vector<VariableType> FilteredInputs(FilterFunction&& filterFunc, bool rowMajor = false) const
         {
             std::vector<VariableType> filteredInputs;
             std::unordered_set<Variable> uniqueFilteredInputs;
-            auto inputs = Inputs();
+            auto inputs = Inputs(rowMajor);
             for (auto inputVar : inputs)
             {
                 if (filterFunc(inputVar) && (uniqueFilteredInputs.find(inputVar) == uniqueFilteredInputs.end()))

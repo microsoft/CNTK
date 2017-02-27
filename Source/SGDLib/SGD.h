@@ -200,6 +200,9 @@ protected:
     intargvector m_numSamples4Search;
     size_t m_numBestSearchEpoch;
 
+    // Threshold size in bytes for single gradient to do packing
+    size_t m_packThresholdSizeInBytes;
+
     LearningRateSearchAlgorithm m_autoLearnRateSearchType;
 
     AdaptationRegType m_adaptationRegType;

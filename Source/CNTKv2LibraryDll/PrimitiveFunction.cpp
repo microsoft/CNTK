@@ -307,6 +307,7 @@ namespace CNTK
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Pass:
                         case PrimitiveOpType::StopGradient:
+                        case PrimitiveOpType::ELU:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;

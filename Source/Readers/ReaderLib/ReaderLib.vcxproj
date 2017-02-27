@@ -87,6 +87,7 @@
     <ClCompile Include="FramePacker.cpp" />
     <ClCompile Include="ReaderBase.cpp" />
     <ClCompile Include="ReaderShim.cpp" />
+    <ClCompile Include="ReaderUtil.cpp" />
     <ClCompile Include="SequencePacker.cpp" />
     <ClCompile Include="SequenceRandomizer.cpp" />
     <ClCompile Include="TruncatedBpttPacker.cpp" />
