@@ -342,3 +342,5 @@ def test_MinibatchData_and_Value_as_input(tmpdir):
     assert res.eval(mb[f1_si].data) == [[200]]
     # Test NumPy (converted back from MinibatchData)
     assert res.eval(mb[f1_si].value) == [[200]]
+    # Test Value
+    assert res.eval(mb[f1_si].data) == [[200]]

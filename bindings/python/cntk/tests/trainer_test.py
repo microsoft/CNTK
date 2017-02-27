@@ -318,3 +318,13 @@ def test_disallow_seq_starts_with_Value_objects():
 
     with pytest.raises(ValueError):
         result = z.eval({in1: (batch, len(batch)*[True])})
+
+def test_scalar_input():
+    scalar = input_variable((1,), dtype=np.float32, name='tscalar')
+    op = scalar + 1
+
+    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
+    trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))
+    trainer.train_minibatch({scalar: np.zeros((2,1), dtype=np.float32)})
+
+    
