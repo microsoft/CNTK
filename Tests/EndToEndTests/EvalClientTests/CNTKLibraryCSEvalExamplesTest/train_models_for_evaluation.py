@@ -51,8 +51,8 @@ def train_language_understanding_atis_for_eval(test_device, output_dir):
     model = LanguageUnderstanding.create_model_function()
 
     # train
-    LanguageUnderstanding.train(reader, model, max_epochs=1, model_dir=output_dir)
-    model.save(os.path.join(output_dir, "atis" + "_1.dnn"))
+    LanguageUnderstanding.train(reader, model, max_epochs=1)
+    model.save(os.path.join(output_dir, "atis" + "_0.dnn"))
 
 if __name__=='__main__':
     
