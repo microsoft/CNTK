@@ -72,8 +72,8 @@ class Trainer(cntk_py.Trainer):
 
     def _train_test_mb_map_args(self, *args, **kwargs):
         '''helper function for mimicking Python calling convention in train/test_minibatch()'''
-        # one argument, which is an arg map
-        if len(args) == 1 and isinstance(args[0], dict):
+        # one argument, which is an arg map or a (map, bool) tuple
+        if len(args) == 1 and isinstance(args[0], (dict, tuple)):
             return args[0]
         # map to function arguments
         args = self.loss_function.argument_map(*args, **kwargs)
@@ -94,14 +94,14 @@ class Trainer(cntk_py.Trainer):
             arguments: maps variables to their input data. Empty map signifies
             end of local training data.
              The interpretation depends on the input type:
-               * `dict`: keys are input variable or names, and values are the input data.
-               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-                For nodes with more than one input, only `dict` is allowed.
-             In both cases, every sample in the data will be interpreted
+               * one or more data values in the same order and/or names as the loss function.
+               * a single `dict`: keys are input variable or names, and values are the input data.
+               * a `tuple(dict, List[bool])`: Same as the single-`dict` case with an additional continuation flag per sequence.
+             In the first two cases, every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
-             previous sequence, specify ``arguments`` as `tuple`: the
-             first element will be used as ``arguments``, and the second one will
-             be used as a list of bools, denoting whether a sequence is a new
+             previous sequence, use the third form: the
+             first tuple element will be used as a single-dictionary argument (second case), and the second
+             is a list of bools that denote whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
