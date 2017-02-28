@@ -1339,7 +1339,7 @@ namespace CNTK
     FunctionPtr Softplus(const Variable& operand, const std::wstring& name)
     {
         auto operandPlaceholder = PlaceholderVariable();
-        auto result = LogAddExp(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+        auto result = ReLU(operandPlaceholder) + Log(Constant::Scalar(operand.GetDataType(), 1.0) + Exp(Negate(Abs(operandPlaceholder))));
 
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softplus", name);
     }
