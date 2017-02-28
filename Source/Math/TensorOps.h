@@ -59,6 +59,12 @@ OverloadUnaryMathFns(log1p);
 template <class ElemType>
 DECL ElemType Sigmoid(ElemType z)
 {
+#if 1 // BUGBUG: Numerically bad. But if I don't use this, results change.
+    ElemType negElem = -z;
+    ElemType e = exp_(negElem);
+
+    return 1 / (e + 1);
+#else
 #if 1 // Efficient implementation that avoids to divergent CUDA code paths that both compute exp() [jdroppo]. This version compiles to PTX without branches.
     ElemType q = exp_(-fabs_(z));
     ElemType numer;
@@ -75,6 +81,7 @@ DECL ElemType Sigmoid(ElemType z)
         ElemType v = exp_(z);
         return v / (1 + v);
     }
+#endif
 #endif
 }
 
