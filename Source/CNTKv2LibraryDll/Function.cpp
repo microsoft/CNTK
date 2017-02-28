@@ -747,7 +747,25 @@ namespace CNTK
         CompositeFunction::PreorderTraverseFunctions(RootFunction(), [](const FunctionPtr& function) {
         });
     }
-    
+
+    std::wstring Function::AsString() const
+    {
+        wstringstream wss;
+        bool first = true;
+        if (IsComposite())
+            wss << "Composite(" << RootFunction()->OpName() << "): ";
+        else
+            wss << OpName() <<": ";
+        bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        for (auto arg : Arguments(reverse))
+            wss << (first ? (first = false, "") : ", ") << arg.AsString();
+        wss << " -> ";
+        first = true;
+        for (auto out : Outputs())
+            wss << (first ? (first = false, "") : ", ") << out.AsString();
+        return wss.str();
+    }
+
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand };

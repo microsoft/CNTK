@@ -454,6 +454,18 @@ namespace CNTK
 #endif
     }
 
+    bool IsFirstOutputOfMultiOutputUDF(const Variable& var)
+    {
+        if (!var.IsOutput())
+            return false;
+
+        auto owner = var.Owner();
+        if (dynamic_cast<PrimitiveFunction*>(owner.get()))
+            return false;
+
+        return (var == owner->Outputs()[0]) && (owner->Outputs().size() > 1);
+    }
+
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
     {
         std::vector<Axis> inputVarDynamicAxes;
@@ -953,4 +965,34 @@ namespace CNTK
             Data()->SetValue(0.0);
         }
     }
+
+    std::wstring DynamicAxesAsString(std::vector<Axis> da, bool rowMajor)
+    {
+        if (da.size() == 0)
+            return L"[]";
+        std::wstringstream wss;
+        wss << "[";
+        if (da == Axis::UnknownDynamicAxes())
+            wss << "???";
+        else
+        {
+            if (rowMajor)
+                std::reverse(da.begin(), da.end());
+            bool first = true;
+            for (auto d : da)
+            {
+                wss << (first ? "" : ", ");
+                if (d == Axis::DefaultBatchAxis())
+                    wss << "#";
+                else if (d == Axis::DefaultDynamicAxis())
+                    wss << "*";
+                else
+                    wss << d.Name();
+                first = false;
+            }
+        }
+        wss << "]";
+        return wss.str();
+    }
+
 }

@@ -1,5 +1,5 @@
- Tutorials
-===============
+Tutorials
+=========
 
 #.  *Classify cancer using simulated data (Logistic Regression)*
      CNTK 101: `Logistic Regression`_ with NumPy

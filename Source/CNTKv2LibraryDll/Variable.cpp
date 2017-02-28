@@ -183,6 +183,22 @@ namespace CNTK
         }
     }
 
+    std::wstring Variable::AsString() const
+    {
+        std::wstringstream wss;
+        wss << VariableKindName(Kind()) << "('";
+        if (Name() != L"")
+            wss << Name();
+        else
+            wss << Uid();
+        bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        if (reverse)
+            wss << "', " << DynamicAxesAsString(DynamicAxes(), reverse) << ", " << AsStringForErrorReporting(Shape()) << ")";
+        else
+            wss << "', " << AsStringForErrorReporting(Shape()) << ", " << DynamicAxesAsString(DynamicAxes(), reverse) << ")";
+        return wss.str();
+    }
+
     static const std::wstring InitializerTypeAttributeName = L"initializerType";
     static const std::wstring OutputRankAttributeName = L"outputRank";
     static const std::wstring FilterRankAttributeName = L"filterRank";

@@ -161,7 +161,7 @@ if IS_WINDOWS:
     kwargs = dict(data_files = [('.', [ os.path.join('cntk', lib) for lib in rt_libs ])],
                   package_data = package_data)
 else:
-    # On Linux copy all runtime libs into the cntk/lib folder. 
+    # On Linux copy all runtime libs into the cntk/lib folder.
     package_data['cntk'] += rt_libs
     kwargs = dict(package_data = package_data)
 

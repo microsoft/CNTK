@@ -1422,20 +1422,23 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 //
 %extend CNTK::NDArrayView {
 
-    NDArrayView(PyObject* pyobj, const CNTK::DeviceDescriptor& device, bool readOnly)
+    NDArrayView(PyObject* numpyArrayObject, const CNTK::DeviceDescriptor& device, bool readOnly, bool borrow)
     {
-        if (!PyArray_Check((PyArrayObject*)pyobj))
+        if (!PyArray_Check((PyArrayObject*)numpyArrayObject))
         {
             // Note that in contrast to numpy.i's implementation we demand NumPy arrays
             // and do not accept arbitrary sequences, which would needed to be copied around.
             throw std::logic_error("NumPy array expected");
         }
 
-        PyArrayObject* array = (PyArrayObject*)pyobj;
+        // Borrowing the memory is only allowed on CPU for now
+        borrow &= device == DeviceDescriptor::CPUDevice();
 
-        int rank = PyArray_NDIM(array); 
-        
-        npy_intp* np_shape = PyArray_SHAPE(array); 
+        PyArrayObject* array = (PyArrayObject*)numpyArrayObject;
+
+        int rank = PyArray_NDIM(array);
+
+        npy_intp* np_shape = PyArray_SHAPE(array);
         std::vector<size_t> shape(rank);
 
         npy_intp num_elements = 1;
@@ -1451,15 +1454,29 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
         NDArrayView* view;
         if (typecode == NPY_FLOAT)
         {
-            NDArrayView  tmp(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
-            view = new NDArrayView(DataType::Float, tmp.Shape(), device);
-            view->CopyFrom(tmp);
+            if (borrow)
+            {
+                 view = new NDArrayView(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                 NDArrayView  tmp(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Float, tmp.Shape(), device);
+                 view->CopyFrom(tmp);
+            }
         }
         else if (typecode == NPY_DOUBLE)
         {
-            NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
-            view = new NDArrayView(DataType::Double, tmp.Shape(), device);
-            view->CopyFrom(tmp);
+            if (borrow)
+            {
+                 view = new NDArrayView(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                 NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Double, tmp.Shape(), device);
+                 view->CopyFrom(tmp);
+            }
         }
         else
         {
@@ -1469,7 +1486,8 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
         return view;
     }
 
-    NDArrayView(const CNTK::NDShape& shape, PyObject* pyData, PyObject* pyColStarts, PyObject* pyRowIndices, const CNTK::DeviceDescriptor& device, bool readOnly) 
+
+    NDArrayView(const CNTK::NDShape& shape, PyObject* pyData, PyObject* pyColStarts, PyObject* pyRowIndices, const CNTK::DeviceDescriptor& device, bool readOnly, bool borrow)
     {
         //
         // pyData, pyColStarts, and pyRowIndices are fed by
@@ -1491,33 +1509,58 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
             throw std::logic_error("index pointers must be a NumPy array");
         }
 
+        // Borrowing the memory is only allowed on CPU for now
+        borrow &= device == DeviceDescriptor::CPUDevice();
+
         PyArrayObject* data = (PyArrayObject*)pyData;
         PyArrayObject* indices = (PyArrayObject*)pyColStarts;
         PyArrayObject* indptr = (PyArrayObject*)pyRowIndices;
 
         int typecode = PyArray_TYPE(data);
         size_t numNonZeroValues = PyArray_SIZE(data);
-        
+
         NDArrayView* view;
         if (typecode == NPY_FLOAT)
         {
-            NDArrayView  tmp(shape, 
-             (CNTK::SparseIndexType*)PyArray_DATA(indices), 
-             (CNTK::SparseIndexType*)PyArray_DATA(indptr), 
-             (float*)PyArray_DATA(data), numNonZeroValues, 
-             DeviceDescriptor::CPUDevice(), readOnly);
-            view = new NDArrayView(DataType::Float, StorageFormat::SparseCSC, tmp.Shape(), device);
-            view->CopyFrom(tmp);
+            if (borrow)
+            {
+                view = new NDArrayView(shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 (float*)PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                NDArrayView tmp(shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 (float*)PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+                view = new NDArrayView(DataType::Float, StorageFormat::SparseCSC, tmp.Shape(), device);
+                view->CopyFrom(tmp);
+            }
         }
         else if (typecode == NPY_DOUBLE)
         {
-            NDArrayView  tmp(shape, 
-             (CNTK::SparseIndexType*)PyArray_DATA(indices), 
-             (CNTK::SparseIndexType*)PyArray_DATA(indptr), 
-             (double*)PyArray_DATA(data), numNonZeroValues, 
-             DeviceDescriptor::CPUDevice(), readOnly);
-            view = new NDArrayView(DataType::Double, StorageFormat::SparseCSC, tmp.Shape(), device);
-            view->CopyFrom(tmp);
+            if (borrow)
+            {
+                view = new NDArrayView(shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 (double*)PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                NDArrayView tmp(shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 (double*)PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+                view = new NDArrayView(DataType::Double, StorageFormat::SparseCSC, tmp.Shape(), device);
+                view->CopyFrom(tmp);
+            }
         }
         else
         {
@@ -1607,6 +1650,7 @@ namespace CNTK {
   Py_END_ALLOW_THREADS;
 }
 
+
 //
 // Setting up hash calculation so that __hash__ on Swig objects
 // are redirected to the std::hash computation of the C++ API
@@ -1619,11 +1663,31 @@ namespace CNTK {
 }
 %enddef
 
+//
+// Setting __str__ and __repr__ methods for frequently used Swig objects
+//
+%define %py_repr_for(TYPE)
+%extend CNTK::TYPE {
+    const std::wstring __str__() {
+        return self->AsString();
+    }
+
+    const std::wstring __repr__() {
+        return self->AsString();
+    }
+}
+%enddef
+
 %define %py_eq_for(DATA_TYPE, EQ)
 %pythoncode %{
 DATA_TYPE.__eq__ = lambda a,b: (a is not None and b is not None and EQ(a,b)) or (a is None and b is None)
 %}
 %enddef
+
+%py_repr_for(Variable)
+%py_repr_for(Parameter)
+%py_repr_for(Constant)
+%py_repr_for(Function)
 
 %py_eq_for(Variable, Variable_eq)
 %py_hash_for(Variable)
