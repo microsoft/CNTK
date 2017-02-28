@@ -32,6 +32,16 @@ struct KeyType
     size_t m_sample : 24;
 };
 
+bool operator == (const KeyType& a, const KeyType& b)
+{
+    return a.m_sequence == b.m_sequence && a.m_sample == b.m_sample;
+}
+
+bool operator != (const KeyType& a, const KeyType& b)
+{
+    return !(a == b);
+}
+
 class Chunk;
 typedef std::shared_ptr<Chunk> ChunkPtr;
 

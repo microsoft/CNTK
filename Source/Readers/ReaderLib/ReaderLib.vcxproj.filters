@@ -94,6 +94,9 @@
     <ClInclude Include="ReaderConstants.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="AlignedBundler.h">
+      <Filter>Deserializers</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">
@@ -134,6 +137,9 @@
     </ClCompile>
     <ClCompile Include="Indexer.cpp">
       <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="AlignedBundler.cpp">
+      <Filter>Deserializers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

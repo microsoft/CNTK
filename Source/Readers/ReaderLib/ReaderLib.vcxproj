@@ -44,6 +44,7 @@
     </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="AlignedBundler.h" />
     <ClInclude Include="ConfigUtil.h" />
     <ClInclude Include="CorpusDescriptor.h" />
     <ClInclude Include="Bundler.h" />
@@ -77,6 +78,7 @@
     <ClInclude Include="TruncatedBpttPacker.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="AlignedBundler.cpp" />
     <ClCompile Include="Bundler.cpp" />
     <ClCompile Include="ChunkCache.cpp" />
     <ClCompile Include="ChunkRandomizer.cpp" />
