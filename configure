@@ -16,6 +16,9 @@ enable_cuda=
 
 enable_python=
 
+enable_java=
+jdk_include_path=
+
 # NCCL communication library
 have_nccl=no
 nccl_path=
@@ -86,6 +89,9 @@ py_check=bin/python
 py_versions=
 declare -A py_paths
 
+jdk_check=include/jni.h
+default_jdk="jvm/java-7-openjdk-amd64"
+
 mathlib=
 
 have_mpi=yes
@@ -101,7 +107,7 @@ default_use_asgd=yes
 enable_asgd=$default_use_asgd
 
 # List from best to worst choice
-default_path_list="/usr /usr/local /opt /opt/local"
+default_path_list="/usr /usr/local /opt /opt/local /lib /usr/lib"
 
 # List from best to worst choice
 default_mkls="CNTKCustomMKL"
@@ -319,6 +325,29 @@ function default_use_python ()
 }
 enable_python=$(default_use_python)
 
+function check_jdk ()
+{
+    local jdk_dir="$1"
+    local jdk_bin="$jdk_dir/$jdk_check"
+
+    # Check that jni header exists
+    test -f "$jdk_bin" || return $?
+
+    echo "$jdk_dir"
+}
+
+function find_jdk ()
+{
+    echo $(find_dir $default_jdk "$jdk_check")
+}
+
+
+function default_use_java ()
+{
+        echo no
+}
+enable_java=$(default_use_java)
+
 function show_default ()
 {
     if test x$1 = x
@@ -340,6 +369,7 @@ function show_help ()
     echo "  --asgd[=(yes|no)] use ASGD powered by Multiverso $(show_default $(default_use_asgd))"
     echo "  --cuda[=(yes|no)] use cuda GPU $(show_default $(default_use_cuda))"
     echo "  --python[=(yes|no)] with Python bindings $(show_default $(default_use_python))"
+    echo "  --java[=(yes|no)] with Java bindings $(show_default $(default_use_java))"
     echo "  --mpi[=(yes|no)] use MPI communication $(show_default ${default_use_mpi})"
     echo "  --with-cuda[=directory] $(show_default $(find_cuda))"
     echo "  --with-cub[=directory] $(show_default $(find_cub))"
@@ -518,6 +548,33 @@ do
                     swig_path=$optarg
                 else
                     echo "Invalid SWIG directory $optarg"
+                    exit 1
+                fi
+            fi
+            ;;
+        --java*)
+            if test x$optarg = xyes || test x$optarg = xno
+            then
+                enable_java=$optarg
+            else
+                echo "Invalid value for --java $optarg"
+                show_help
+                exit
+            fi
+            ;;
+
+        --with-jdk*)
+            enable_java=yes
+            if test x$optarg = x
+            then
+                echo "Please specify a value for --with-jdk"
+                exit 1
+            else
+                if check_jdk "$optarg"
+                then
+                    jdk_path=$optarg
+                else
+                    echo "Invalid JDK directory $optarg"
                     exit 1
                 fi
             fi
@@ -936,12 +993,12 @@ then
     fi
 fi
 
-if test $enable_python = yes && test x$swig_path = x
+if ( test $enable_java = yes || test $enable_python = yes ) && test x$swig_path = x
 then
     swig_path=$(find_swig)
     if test x$swig_path = x
     then
-        echo 'Cannot locate SWIG (>= 3.0.10), which is required Python support.'
+        echo 'Cannot locate SWIG (>= 3.0.10), which is required Python/Java support.'
         echo Check bindings/python/swig_install.sh for build instructions.
         exit 1
     fi
@@ -1091,9 +1148,11 @@ if test $enable_cuda = yes ; then
     echo CUDNN_PATH=$cudnn_path >> $config
     [ -z "$nccl_path" ] || echo NCCL_PATH=$nccl_path >> $config
 fi
+if test $enable_python = yes || test $enable_java = yes ; then
+    echo SWIG_PATH=$swig_path/bin >> $config
+fi
 if test $enable_python = yes ; then
     echo PYTHON_SUPPORT=true >> $config
-    echo SWIG_PATH=$swig_path/bin >> $config
     # N.B. PYTHON_VERSIONS at least needs to be parseable by bash (cf. Tools/generate_build_info)
     echo PYTHON_VERSIONS= >> $config
     for ver in $py_versions
@@ -1101,6 +1160,20 @@ if test $enable_python = yes ; then
         echo PYTHON_VERSIONS+=$ver >> $config
         echo PYTHON${ver}_PATH=${py_paths[$ver]}/$py_check >> $config
     done
+fi
+if test $enable_java = yes ; then
+    if test x${jdk_path} = x ; then
+        jdk_path=$(find_jdk)
+    fi
+    if test x${jdk_path} = x
+    then
+        echo Cannot locate JDK.
+        exit 1
+    else
+        echo Found JDK at $jdk_path
+        echo JAVA_SUPPORT=true >> $config
+        echo JDK_PATH=$jdk_path >> $config
+    fi
 fi
 if test x$kaldi_path != x ; then
     echo KALDI_PATH=$kaldi_path >> $config

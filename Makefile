@@ -109,6 +109,7 @@ SEPARATOR = "=-----------------------------------------------------------="
 ALL:=
 ALL_LIBS:=
 PYTHON_LIBS:=
+JAVA_LIBS:=
 LIBS_FULLPATH:=
 SRC:=
 
@@ -404,6 +405,7 @@ MATH_OBJ := $(patsubst %.cu, $(OBJDIR)/%.o, $(patsubst %.cpp, $(OBJDIR)/%.o, $(M
 CNTKMATH_LIB:= $(LIBDIR)/lib$(CNTKMATH).so
 ALL_LIBS += $(CNTKMATH_LIB)
 PYTHON_LIBS += $(CNTKMATH_LIB)
+JAVA_LIBS += $(CNTKMATH_LIB)
 SRC+=$(MATH_SRC)
 
 $(CNTKMATH_LIB): $(MATH_OBJ) | $(PERF_PROFILER_LIB)
@@ -503,6 +505,7 @@ CNTKLIBRARY_OBJ:=\
 CNTKLIBRARY_LIB:=$(LIBDIR)/lib$(CNTKLIBRARY).so
 ALL_LIBS+=$(CNTKLIBRARY_LIB)
 PYTHON_LIBS+=$(CNTKLIBRARY_LIB)
+JAVA_LIBS+=$(CNTKLIBRARY_LIB)
 SRC+=$(CNTKLIBRARY_SRC)
 
 $(CNTKLIBRARY_LIB): $(CNTKLIBRARY_OBJ) | $(CNTKMATH_LIB)
@@ -1317,6 +1320,30 @@ python: $(PYTHON_LIBS)
             done'
 
 ALL += python
+
+endif
+
+ifeq ("$(JAVA_SUPPORT)","true")
+
+BINDINGS_DIR=bindings
+JAVA_SWIG_DIR=$(BINDINGS_DIR)/java/Swig
+GENERATED_JAVA_DIR=$(JAVA_SWIG_DIR)/com/microsoft/CNTK
+JDK_BIN_PATH=$(JDK_PATH)/bin
+JDK_INCLUDE_PATH:=$(JDK_PATH)/include
+JDK_INCLUDE_PATH+=$(JDK_INCLUDE_PATH)/linux
+
+.PHONY: java
+java: $(JAVA_LIBS)
+	@echo $(SEPARATOR)
+	@echo creating $@ for $(ARCH) with build type $(BUILDTYPE)
+	mkdir -p $(GENERATED_JAVA_DIR)
+	rm -f $(GENERATED_JAVA_DIR)/*.java
+	$(SWIG_PATH)/swig -c++ -java -package com.microsoft.CNTK $(INCLUDEPATH:%=-I%) -I$(BINDINGS_DIR)/common -outdir $(GENERATED_JAVA_DIR) $(JAVA_SWIG_DIR)/cntk_java.i
+	$(JDK_BIN_PATH)/javac $(GENERATED_JAVA_DIR)/*.java
+	$(JDK_BIN_PATH)/jar -cvf $(JAVA_SWIG_DIR)/cntk.jar $(JAVA_SWIG_DIR)/com
+	$(CXX) -shared $(COMMON_FLAGS) $(CPPFLAGS) $(CXXFLAGS) -DSWIG $(INCLUDEPATH:%=-I%) $(JDK_INCLUDE_PATH:%=-I%) $(JAVA_SWIG_DIR)/cntk_java_wrap.cxx -L$(LIBDIR) -lcntkmath -lcntklibrary-2.0 -L$(PROTOBUF_PATH)/lib -lprotobuf -o $(LIBDIR)/libCNTKLibraryJavaBinding.so
+
+ALL += java
 
 endif
 

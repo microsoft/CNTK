@@ -1,4 +1,4 @@
-//This file contains exception handling common for Python and C#
+//This file contains exception handling common for Python, C# and Java
 %{
     #include "ExceptionWithCallStack.h"
 %}
