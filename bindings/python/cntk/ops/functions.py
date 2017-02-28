@@ -1,7 +1,8 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
 from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
-        sanitize_dtype_cntk, value_to_seq, _as_tuple, variable_value_to_seq, Record
+        sanitize_dtype_cntk, value_to_seq, _as_tuple, variable_value_to_seq, Record, \
+        get_python_function_arguments, map_function_arguments
 from cntk.utils.swig_helper import map_if_possible
 from cntk.ops.variables import Variable
 from enum import Enum, unique
@@ -61,7 +62,7 @@ class Function(cntk_py.Function):
     _placeholders_under_construction = set()
 
     @staticmethod
-    def to_Function(f, make_block=False, op_name=None, name=None, with_27_signature=False):
+    def to_Function(f, make_block=False, op_name=None, name=None):
         '''
         Construct a Function from a Python lambda
         where the Function's input signature is defined by the lambda
@@ -75,43 +76,15 @@ class Function(cntk_py.Function):
 
         The additional arguments are used to implement variants of the @Function decorator, specifically:
 
+        Under Python 2.7, this should be combined with the @Signature decorator, e.g.:
+          @Function
+          @Signature(Tensor(13))
+          def f(x): return x * x
+
         ``make_block=True`` is used to implement @BlockFunction(). If given the result will be wrapped
          in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
-
-        ``with_27_signature=True`` is used to implement the Python-2.7 approximation @FunctionWithSignature.
-         With this, type annotations are passed as default values (using `=`) instead of a Python 3 anotation (which uses `:`).
         '''
         f_name = f.__name__ # (only used for debugging and error messages)
-
-        # helper to get the parameter names and annotations of a Python function
-        def get_param_names(f):
-            # Note we only use non-optional params (assume any optional param is not specified).
-            # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
-            import sys
-            if sys.version_info.major >= 3:
-                from inspect import getfullargspec
-            else:
-                def getfullargspec(f):
-                    from inspect import getargspec
-                    a = getargspec(f)
-                    return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations={})
-            param_specs = getfullargspec(f)
-            # emulation for Python 2.7
-            if with_27_signature: # we are in @FunctionWithSignature: emulate annotations by taking them from optional arguments instead
-                if (param_specs.varargs or param_specs.varkw or param_specs.kwonlyargs or param_specs.kwonlydefaults or param_specs.annotations or
-                    not param_specs.args or not param_specs.defaults or len(param_specs.args) != len(param_specs.defaults)):
-                    raise SyntaxError("CNTK Function '{}': @FunctionWithSignature requires annotations for all arguments in the form 'arg=type', not 'arg:type'".format(f_name))
-                param_specs = Record( # turn the defaults array into an annotation dict
-                    args        = param_specs.args,
-                    annotations = {arg: default for arg, default in zip(param_specs.args, param_specs.defaults)},
-                    defaults    = None
-                )
-            annotations = param_specs.annotations
-            arg_names = param_specs.args
-            defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
-            if defaults:
-                arg_names = arg_names[:-len(defaults)] # we allow Function(functions with default arguments), but those args will always have default values since CNTK Functions do not support this
-            return (arg_names, annotations)
 
         # helper to create a CNTK placeholder or input for a given name
         # An input_variable is created if the parameter is annotated with a Tensor(...) type.
@@ -131,7 +104,7 @@ class Function(cntk_py.Function):
         with default_options(pure=True):
 
             # get the parameter list through inspection
-            arg_names, annotations = get_param_names(f)
+            arg_names, annotations = get_python_function_arguments(f)
 
             # The Python function is converted to a CNTK Function by executing it once
             # passing placeholders as inputs. This createss a piece of graph.
@@ -244,29 +217,9 @@ class Function(cntk_py.Function):
         '''
         params = self.signature    # function parameters
         if len(args) + len(kwargs) != len(params):
-            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(params), len(args)))
-
-        # start with positional arguments
-        arg_map = dict(zip(params, args))
-
-        # now look up keyword arguments
-        if len(kwargs) != 0:
-            params_dict = { arg.name: arg for arg in params }
-            for name, arg in kwargs.items():  # keyword args are matched by name
-                if name not in params_dict:
-                    raise TypeError("got an unexpected keyword argument '%s'" % name)
-                param = params_dict[name]
-                if param in arg_map:
-                    raise SyntaxError("got multiple values for argument '%s'" % name)
-                arg_map[param] = arg # add kw argument to dict
-                param_uid = param.uid
-                if isinstance(arg, (cntk_py.Variable, cntk_py.Function)): # for viewing in debugger
-                    arg_uid = arg.uid
-                    arg_name = arg.name
-        assert len(arg_map) == len(params)
-
-        return arg_map
-
+            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(params), len(args) + len(kwargs)))
+        params_dict = { arg.name: arg for arg in params }
+        return map_function_arguments(params, params_dict, *args, **kwargs)
 
     def update_signature(self, *arg_types, **kwarg_types):
         '''
@@ -317,6 +270,13 @@ class Function(cntk_py.Function):
 
 
     # TODO: we can use namedduple() for this
+    # This is currently only used by __call__ for returning numpy results.
+    # TODO: consider
+    #  - use a tuple
+    #  - make it work for any tuple of things with a .name property
+    #  - return Function.arguments, .inputs, .outputs, .parameters, .constants as OrderedRecords
+    #    so that all of them become accessible by index and by name, e.g. lstm.outputs.h
+    # It could be implemented by monkey-patching.
     class OrderedRecord(list):
         '''
         A container that behaves like a list and a class, in that the elements it stores
@@ -1147,31 +1107,6 @@ def save_model(model, filename): # legacy name
     warnings.warn('This will be removed in future versions. Please use '
             'model.save(...) instead', DeprecationWarning)
     return model.save(filename)
-
-
-def FunctionWithSignature(f):
-    '''
-    Python 2.7-compatible approximation of @Function decorator
-    for functions that use type annotations to declare Input() variables.
-    Since function annotations are not available prior to Python 3,
-    this decorator allows a very similar syntax using optional parameters.
-
-    Example, Python 3:
-        ``@Function
-        def g(x : Tensor[3,2]):
-            return x * x
-        r = g([[[2, 1], [5, 2], [1, 3]]])
-        print(r)``
-
-    Example, Python 2.7 approximation with ``FunctionWithSignature``:
-        ``@FunctionWithSignature   # different decorator
-        def g(x = Tensor[3,2]):  # : changed to =
-            return x * x``
-
-    You do not need to use this decorator for Functions that do not have type annotations;
-    those work equally in Python 2.7 and Python 3.
-    '''
-    return Function(f, with_27_signature=True)
 
 
 class UserFunction(Function):

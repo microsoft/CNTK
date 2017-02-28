@@ -70,12 +70,13 @@ def test_Function(device_id):
     ####################################################
     # Test 2: Function() with shapes and type
     ####################################################
-    # For 2.7 compat, use @FunctionWithSignature instead.
+    # For 2.7 compat, use @Function @Signature instead.
     # TODO: Once we no longer need to support 2.7, change back to @Function.
     #@Function
     #def g(x : Tensor[3,2]):
-    @FunctionWithSignature
-    def g(x = Tensor[3,2]):
+    @Function
+    @Signature(Tensor[3,2])
+    def g(x):
         return x * x
     assert g.shape == (3,2)
     r = g([[[2, 1], [5, 2], [1, 3]]])
@@ -119,8 +120,9 @@ def test_recurrence():
     # depend on what previous tests were run. Hence, use a constant (which is not realistic).
     # TODO: Find out how to reset the random generator, then remove the constant init.
     R = Recurrence(GRU(5, init=0.05), go_backwards=False, initial_state=0.1)
-    @FunctionWithSignature
-    def F(x = InputSequence[Tensor[5]]):
+    @Function
+    @Signature(InputSequence[Tensor[5]])
+    def F(x):
         return R(x)
     rt = F(x)
     np.testing.assert_array_almost_equal(rt[0], exp, decimal=6, err_msg='Error in Recurrence(GRU()) forward')
@@ -129,8 +131,9 @@ def test_recurrence():
     # Test 2: RecurrenceFrom(): initial state is data input
     ####################################################
     RF = RecurrenceFrom(GRU(5, init=0.05), go_backwards=False)
-    @FunctionWithSignature
-    def FF(s = StateSequence[Tensor[5]], x = InputSequence[Tensor[5]]):
+    @Function
+    @Signature(s = StateSequence[Tensor[5]], x = InputSequence[Tensor[5]])
+    def FF(s, x):
         return RF(s, x)
     s = np.ones((1,5,5)) * 0.1 # we pass the same value as the constant in the previous test to make the result the same
     rt = FF(s, x)
@@ -181,8 +184,9 @@ def test_unfold(device_id):
     # Test 1: simple unfold
     ####################################################
     UF = UnfoldFrom(double_up, initial_state=1)
-    @FunctionWithSignature
-    def FU(x = Sequence[Tensor[1]]):
+    @Function
+    @Signature(Sequence[Tensor[1]])
+    def FU(x):
         return UF(x)
     r = FU(x)
     exp = [[[ 2 ], [ 4 ], [ 8 ]],
@@ -193,8 +197,9 @@ def test_unfold(device_id):
     # Test 2: unfold with length increase and terminating condition
     ####################################################
     UF = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63),  initial_state=1, length_increase=1.6)
-    @FunctionWithSignature
-    def FU(x = Sequence[Tensor[1]]):
+    @Function
+    @Signature(Sequence[Tensor[1]])
+    def FU(x):
         return UF(x)
     r = FU(x)
     exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase

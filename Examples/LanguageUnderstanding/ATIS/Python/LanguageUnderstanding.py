@@ -81,9 +81,9 @@ def create_model_function():
 def create_criterion_function(model):
     #@Function
     #def criterion(query: Sequence[SparseTensor[vocab_size]], labels: Sequence[SparseTensor[num_labels]]):
-    from cntk.ops.functions import FunctionWithSignature
-    @FunctionWithSignature
-    def criterion(query= Sequence[SparseTensor[vocab_size]], labels= Sequence[SparseTensor[num_labels]]):
+    @Function
+    @Signature(query = Sequence[SparseTensor[vocab_size]], labels = Sequence[SparseTensor[num_labels]])
+    def criterion(query, labels):
         z = model(query)
         ce   = cross_entropy_with_softmax(z, labels)
         errs = classification_error      (z, labels)

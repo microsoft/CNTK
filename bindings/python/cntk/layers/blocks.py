@@ -15,6 +15,7 @@ from cntk import parameter, constant, input_variable, placeholder_variable, comb
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
 from cntk.utils import Record, _as_tuple
+from cntk.utils import Signature # for Python 2.7 compat
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
 from cntk.default_options import *
