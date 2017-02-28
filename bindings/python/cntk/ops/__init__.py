@@ -1465,13 +1465,13 @@ def softplus(x, name=''):
     '''
     Softplus operation. Computes the element-wise softplus of ``x``:
 
-    :math:`softplus(x) = {\log(1+\exp(x))}`
+    :math:`\textrm{softplus}(x) = {\log(1+\exp(x))}`
 
     The output tensor has the same shape as ``x``.
 
     Example:
         >>> C.softplus([[-1, -0.5, 0, 1, 2]]).eval()
-        array([[ 0.31326169,  0.47407702,  0.69314718,  1.31326175,  2.12692809]], dtype=float32)
+        array([[ 0.313262,  0.474077,  0.693147,  1.313262,  2.126928]], dtype=float32)
 
     Args:
         x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
