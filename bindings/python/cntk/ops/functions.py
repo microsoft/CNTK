@@ -64,22 +64,30 @@ class Function(cntk_py.Function):
     @staticmethod
     def to_Function(f, make_block=False, op_name=None, name=None):
         '''
-        Construct a Function from a Python lambda
-        where the Function's input signature is defined by the lambda
+        ``@Function`` constructs a Function from a Python lambda
+        where the Function's input signature is defined by the lambda.
+
         Use this as a decorator, e.g.:
-          @Function
-          def f(x): return x * x
-        or with given shapes:
-          @Function
-          def f(x:Tensor(13)): return x * x
-        The latter form will create a CNTK Function over Inputs; the former over Placeholders.
+          ``@Function
+          def f(x): return x * x``
 
-        The additional arguments are used to implement variants of the @Function decorator, specifically:
+        The above form creates a CNTK Function whose arguments are placeholder variables.
+        Such a function can only be combined with others symbolic functions.
 
-        Under Python 2.7, this should be combined with the @Signature decorator, e.g.:
-          @Function
-          @Signature(Tensor(13))
-          def f(x): return x * x
+        To train a Function or pass data to it, you need to declare the types
+        of the arguments. In this case, the @Function decorator creates a CNTK Function
+        whose arguments are input variables.
+
+        If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.:
+          ``@Function
+          def f(x:Tensor[13]):
+              return x * x``
+
+        If you are still working with Python 2.7, use CNTK's @Signature decorator instead:
+          ``@Function
+          @Signature(Tensor[13])
+          def f(x):
+              return x * x``
 
         ``make_block=True`` is used to implement @BlockFunction(). If given the result will be wrapped
          in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
