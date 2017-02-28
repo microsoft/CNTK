@@ -195,8 +195,6 @@ def evaluate(reader, model):
         metric = evaluator.test_minibatch(query=data[reader.streams.query], labels=data[reader.streams.slot_labels])
         # note: keyword syntax ^^ is optional; this is to demonstrate it
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
-    if model_dir:
-        model.save(os.path.join(model_dir, "atis" + "_{}.dnn".format(epoch)))
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     return loss, metric
