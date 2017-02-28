@@ -476,8 +476,8 @@ namespace CNTK
                 }
                 else
                     InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"
-                                    "This is likely a deprecated operation; loading BS/NDL models that contain deprecated operations, is not supported in Python/C++ API.\n"
-                                    "Please refer CNTK documentation and edit/modify your BrainScript model/script to replace the deprecated operation with a supported operation.\n" , node->OperationName().c_str());
+                                    "This is likely a deprecated operation; loading Brainscript/NDL models that contain deprecated operations, is not supported in Python/C++ API.\n"
+                                    "Please refer to CNTK documentation and edit/modify your Brainscript model/script to replace the deprecated operation with a supported operation.\n" , node->OperationName().c_str());
 
                 if (node->Is<RngUser>())
                 {

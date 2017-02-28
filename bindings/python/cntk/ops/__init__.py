@@ -2004,7 +2004,7 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
         begin_axis = Axis(0)
 
     if end_axis is None:
-        end_axis = Axis.end_static_axis()
+        end_axis = Axis.new_leading_axis()
 
     # Pass begin_axis as the end_axis and vice versa to account for
     # the automatic shape reversal across the python SWIG boundary
@@ -2015,10 +2015,10 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
         if not axis.is_static_axis:
             return axis
 
-        if (axis ==  Axis.end_static_axis()):
+        if (axis ==  Axis.new_leading_axis()):
             return Axis(0)
         elif (axis == Axis(0)):
-            return Axis.end_static_axis()
+            return Axis.new_leading_axis()
         else:
             return Axis(-axis.static_axis_index())
 
