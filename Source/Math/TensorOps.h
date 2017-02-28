@@ -48,6 +48,7 @@ OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
 OverloadUnaryMathFns(floor);
+OverloadUnaryMathFns(log1p);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
@@ -58,12 +59,6 @@ OverloadUnaryMathFns(floor);
 template <class ElemType>
 DECL ElemType Sigmoid(ElemType z)
 {
-#if 1 // BUGBUG: Numerically bad. But if I don't use this, results change.
-    ElemType negElem = -z;
-    ElemType e = exp_(negElem);
-
-    return 1 / (e + 1);
-#else
 #if 1 // Efficient implementation that avoids to divergent CUDA code paths that both compute exp() [jdroppo]. This version compiles to PTX without branches.
     ElemType q = exp_(-fabs_(z));
     ElemType numer;
@@ -80,7 +75,6 @@ DECL ElemType Sigmoid(ElemType z)
         ElemType v = exp_(z);
         return v / (1 + v);
     }
-#endif
 #endif
 }
 
@@ -147,21 +141,9 @@ template <typename ElemType>
 DECL ElemType LogAdd(ElemType x, ElemType y)
 {
     if (x < y)
-    {
-        ElemType temp = x;
-        x = y;
-        y = temp;
-    }
-    ElemType diff = y - x;
-    if (diff < (ElemType) MINLOGEXP)
-    {
-        return (x < (ElemType) LSMALL) ? (ElemType) LZERO : x;
-    }
-    else
-    {
-        ElemType z = exp_(diff);
-        return x + log_((ElemType) 1.0 + z);
-    }
+        std::swap(x, y);
+
+    return x + log1p_(exp_(y - x));
 }
 
 // IndexElement reindexes a tensor along one dimension.
