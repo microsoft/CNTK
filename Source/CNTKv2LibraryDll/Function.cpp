@@ -1354,6 +1354,14 @@ namespace CNTK
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"PReLU", name);
     }
 
+    FunctionPtr Softplus(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = ReLU(operandPlaceholder) + Log(Constant::Scalar(operand.GetDataType(), 1.0) + Exp(Negate(Abs(operandPlaceholder))));
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softplus", name);
+    }
+
     FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name)
     {
         return Internal::ReduceElements(operand, PrimitiveFunction::InternalArgmaxReductionOpName, axis, name);

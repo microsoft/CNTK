@@ -3603,6 +3603,11 @@ namespace CNTK
     CNTK_API FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in elementwise softplus operation 
+    ///
+    CNTK_API FunctionPtr Softplus(const Variable& operand, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
     ///
     CNTK_API FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name = L"");

@@ -1461,6 +1461,31 @@ def param_relu(alpha, x, name=''):
     return pre_lu(alpha, x, name)
 
 @typemap
+def softplus(x, name=''):
+    '''
+    Softplus operation. Computes the element-wise softplus of ``x``:
+
+    :math:`\textrm{softplus}(x) = {\log(1+\exp(x))}`
+
+    The output tensor has the same shape as ``x``.
+
+    Example:
+        >>> C.softplus([[-1, -0.5, 0, 1, 2]]).eval()
+        array([[ 0.313262,  0.474077,  0.693147,  1.313262,  2.126928]], dtype=float32)
+
+    Args:
+        x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        name (`str`, default to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        An instance of :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import softplus
+    x = sanitize_input(x)
+    return softplus(x, name)
+
+@typemap
 def sigmoid(x, name=''):
     '''
     Computes the element-wise sigmoid of ``x``:
