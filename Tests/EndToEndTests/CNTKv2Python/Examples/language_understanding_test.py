@@ -236,11 +236,12 @@ def test_language_understanding(device_id):
 
     # test of the example itself
     # this emulates the main code in the PY file
-    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-    model = create_model_function()
-    loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-    expected_avg = [0.15570838301766451, 0.7846451368305728]
-    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
+    if device_id >= 0: # sparse Adam currently does not run on CPU
+        reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
+        model = create_model_function()
+        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+        expected_avg = [0.15570838301766451, 0.7846451368305728]
+        assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
     # test of a config like in the example but with additions to test many code paths
     if device_id >= 0: # BatchNormalization currently does not run on CPU

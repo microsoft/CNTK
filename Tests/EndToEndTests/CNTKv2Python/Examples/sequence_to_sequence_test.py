@@ -39,5 +39,5 @@ def test_sequence_to_sequence(device_id):
 
     print(error)
 
-    expected_error =  0.992168
+    expected_error =  0.9943119920022192
     assert np.allclose(error, expected_error, atol=TOLERANCE_ABSOLUTE)

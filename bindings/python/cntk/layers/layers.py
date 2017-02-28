@@ -164,8 +164,8 @@ def _pad_to_shape(rf_shape, param, what):
 #    out    : ( (sample shape) +  (output shape) +                    + (shifting shape)  )
 # TODO: Add atrous (dilated) convolution once available.
 # TODO: sharing = false?
-# TODO: conflict of parameter order: filter_shape or num_filters first?
-#  - filter_shape first is logical for non-NN applications such as straight image filtering
+# TODO: conflict of parameter order: rf_shape or num_filters first?
+#  - rf_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
 # TODO: stride not supported for sequential
 def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
@@ -283,7 +283,7 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
 
 
 # TODO: make sure the xD versions have all the needed parameters
-def Convolution1D(rf_shape,         # e.g. (3)
+def Convolution1D(rf_shape,         # shape of receptive field, e.g. (3)
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
                   init=default_override_or(glorot_uniform()),
@@ -308,7 +308,7 @@ def Convolution1D(rf_shape,         # e.g. (3)
     return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution1D', name=name)
 
 
-def Convolution2D(rf_shape,         # a 2D tuple, e.g., (3,3) 
+def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must be a 2-element tuple.
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
                   init=default_override_or(glorot_uniform()),
@@ -333,7 +333,7 @@ def Convolution2D(rf_shape,         # a 2D tuple, e.g., (3,3)
     return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution2D', name=name)
 
 
-def Convolution3D(rf_shape,         # a 3D tuple, e.g., (3,3,3)
+def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Must be a 3-element tuple.
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
                   init=default_override_or(glorot_uniform()),
@@ -360,26 +360,26 @@ def Convolution3D(rf_shape,         # a 3D tuple, e.g., (3,3,3)
 
 # Deconvolution -- create a deconvolution layer with optional non-linearity
 # TODO: need to merge with above. Can it simply be transpose=True?
-def Deconvolution(rf_shape,        # e.g. (3,3)
-                num_filters,
-                num_input_filters,
-                activation=default_override_or(identity),
-                init=default_override_or(glorot_uniform()),
-                pad=default_override_or(False),
-                strides=1,
-                sharing=True,     # (must be True currently)
-                lower_pad=(0,),
-                upper_pad=(0,),
-                bias=default_override_or(True),
-                init_bias=default_override_or(0),
-                reduction_rank=1, # (must be 1 currently)
-                max_temp_mem_size_in_samples=0, 
-                name=''):
+def Deconvolution(rf_shape,        # shape of receptive field, e.g. (3,3)
+                  num_filters,
+                  num_input_filters,
+                  activation=default_override_or(identity),
+                  init=default_override_or(glorot_uniform()),
+                  pad=default_override_or(False),
+                  strides=1,
+                  sharing=True,     # (must be True currently)
+                  lower_pad=(0,),
+                  upper_pad=(0,),
+                  bias=default_override_or(True),
+                  init_bias=default_override_or(0),
+                  reduction_rank=1, # (must be 1 currently)
+                  max_temp_mem_size_in_samples=0, 
+                  name=''):
 
     '''
     Layer factory function to create a deconvolution layer.
     '''
-    UntestedBranchError("Deconvolution not tested after merge to new Layers lib")
+    #UntestedBranchError("Deconvolution not tested after merge to new Layers lib") # it's actually tested by a end-to-end test
 
     activation = get_default_override(Deconvolution, activation=activation)
     init       = get_default_override(Deconvolution, init=init)
@@ -422,7 +422,7 @@ def Deconvolution(rf_shape,        # e.g. (3,3)
 # TODO: add sequential mode like Convolution()
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
 def _Pooling(op,       # PoolingType_Max or _Average
-             rf_shape, # e.g. (3,3)
+             rf_shape, # shape of receptive field, e.g. (3,3)
              sequential=False, # pooling in time if True (rf_shape[0] corresponds to dynamic axis)
              strides=1,
              pad=False,
@@ -430,7 +430,7 @@ def _Pooling(op,       # PoolingType_Max or _Average
              name=''):
     '''
     Shared part of the various pooling layers.
-    Set the filter_shape to None to denote global pooling.
+    Set the rf_shape to None to denote global pooling.
     '''
 
     if sequential:
@@ -445,7 +445,7 @@ def _Pooling(op,       # PoolingType_Max or _Average
     return pool
 
 
-def MaxPooling(rf_shape,  # e.g. (3,3)
+def MaxPooling(rf_shape,  # shape of receptive field, e.g. (3,3)
                strides=1,
                pad=default_override_or(False),
                name=''):
@@ -456,7 +456,7 @@ def MaxPooling(rf_shape,  # e.g. (3,3)
     return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad, op_name='MaxPooling', name=name)
 
 
-def AveragePooling(rf_shape,  # e.g. (3,3)
+def AveragePooling(rf_shape,  # shape of receptive field, e.g. (3,3)
                    strides=1,
                    pad=default_override_or(False),
                    name=''):
@@ -484,7 +484,7 @@ def GlobalAveragePooling(name=''):
 
 # Create a max unpooling layer
 # TODO: merge this. Test: Tests\EndToEndTests\CNTKv2Python\Examples\deconv_MNIST_test.py, Tests\EndToEndTests\Examples\Image\GettingStarted\07_Deconvolution
-def MaxUnpooling(filter_shape,  # e.g. (3,3)
+def MaxUnpooling(rf_shape,  # shape of receptive field, e.g. (3,3)
                  strides=1,
                  pad=False,
                  lower_pad=0,
@@ -496,7 +496,7 @@ def MaxUnpooling(filter_shape,  # e.g. (3,3)
 
     @BlockFunction('MaxUnpooling', name)
     def maxunpool(x, y):
-        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad,
+        return unpooling (x, y, PoolingType_Max, rf_shape, strides=strides, auto_padding=pad,
                          lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
     return maxunpool
 
