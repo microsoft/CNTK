@@ -2810,8 +2810,10 @@ namespace CNTK
         Variable Output() const
         {
             auto outputs = Outputs();
-            if (outputs.size() > 1)
+            if (outputs.size() > 1) {
+                printf("number of ouputs %d\n", (int)outputs.size());
                 RuntimeError("A Function instance with more than one output cannot be implicitly converted to a Variable");
+            }
             return outputs[0];
         }
 

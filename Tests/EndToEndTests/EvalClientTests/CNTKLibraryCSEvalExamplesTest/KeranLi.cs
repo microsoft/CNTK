@@ -15,11 +15,15 @@ namespace CNTKLibraryCSEvalExamples
         public static void EvaluationBatchOfImages(DeviceDescriptor device)
         {
             const string outputName = "p";
+            // const string outputName = "z";
             const string inputName = "features";
             var inputDataMap = new Dictionary<Variable, Value>();
 
             // Load the model.
-            Function modelFunc = Function.LoadModel(@"C:\CNTKMisc\KeranLi\OpensetSample\InceptionV3.0", device);
+            Function rootFunc = Function.LoadModel(@"C:\CNTKMisc\KeranLi\OpensetSample\InceptionV3.0", device);
+            //var outputFunc = rootFunc.FindByName(outputName);
+            //var modelFunc = CNTKLib.AsComposite(outputFunc);
+            var modelFunc = rootFunc;
 
             // Get output variable based on name
             Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
@@ -45,7 +49,7 @@ namespace CNTKLibraryCSEvalExamples
 
             //var fileList = File.ReadAllLines("D:/Projects/CognitiveService/TestSet/TestMapSample_Kik_AdultRacy_20170215.txt").ToList();
             //fileList = fileList.Where(file => Math.Abs(file.GetHashCode() % 1000) == 0).ToList();
-            var fileList = new List<string>() { // @"C:\CNTKMisc\KeranLi\OpensetSample\1.jpg"
+            var fileList = new List<string>() {  // @"C:\CNTKMisc\KeranLi\OpensetSample\1.jpg",
                 @"C:\CNTKMisc\KeranLi\OpensetSample\2.jpg"
                 // @"C:\CNTKMisc\KeranLi\OpensetSample\3.jpg"
                 };
@@ -83,7 +87,43 @@ namespace CNTKLibraryCSEvalExamples
             outputVal.CopyVariableValueTo(outputVar, outputBuffer);
 
             // Output result
-            // PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+            
+            PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+        }
+
+        private static void PrintOutput<T>(uint sampleSize, List<List<T>> outputBuffer)
+        {
+            Console.WriteLine("The number of sequences in the batch: " + outputBuffer.Count);
+            int seqNo = 0;
+            uint outputSampleSize = sampleSize;
+            foreach (var seq in outputBuffer)
+            {
+                if (seq.Count % outputSampleSize != 0)
+                {
+                    throw new ApplicationException("The number of elements in the sequence is not a multiple of sample size");
+                }
+
+                Console.WriteLine(String.Format("Sequence {0} contains {1} samples.", seqNo++, seq.Count / outputSampleSize));
+                uint i = 0;
+                uint sampleNo = 0;
+                foreach (var element in seq)
+                {
+                    if (i++ % outputSampleSize == 0)
+                    {
+                        Console.Write(String.Format("    sample {0}: ", sampleNo));
+                    }
+                    Console.Write(element);
+                    if (i % outputSampleSize == 0)
+                    {
+                        Console.WriteLine(".");
+                        sampleNo++;
+                    }
+                    else
+                    {
+                        Console.Write(",");
+                    }
+                }
+            }
         }
 
     }

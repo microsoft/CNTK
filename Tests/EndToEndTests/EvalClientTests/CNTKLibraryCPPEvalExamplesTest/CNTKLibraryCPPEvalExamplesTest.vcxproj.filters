@@ -18,10 +18,10 @@
     <ClCompile Include="CNTKLibraryCPPEvalExamplesTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="EvalMultithreads.cpp">
+    <ClCompile Include="..\..\CNTKv2Library\Common\Common.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Common.cpp">
+    <ClCompile Include="..\..\..\..\..\..\CNTKMisc\GitHub1434HenryWhite\HenryWhite_EvalMultithreads.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

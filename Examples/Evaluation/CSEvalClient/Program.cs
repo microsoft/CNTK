@@ -60,7 +60,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         /// The location of the test image that is using in the image API tests.
         private static string imageFileName;
         // The width and height of the images that go into ResNet.
-        private static int resNetImageSize = 224;
+        private static int resNetImageSize = 299;
 
 
         /// <summary>
@@ -71,17 +71,17 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
         {
             initialDirectory = Environment.CurrentDirectory;
 
-            Console.WriteLine("====== EvaluateModelSingleLayer ========");
-            EvaluateModelSingleLayer();
+            //Console.WriteLine("====== EvaluateModelSingleLayer ========");
+            //EvaluateModelSingleLayer();
 
-            Console.WriteLine("\n====== EvaluateModelMultipleLayers ========");
-            EvaluateModelMultipleLayers();
+            //Console.WriteLine("\n====== EvaluateModelMultipleLayers ========");
+            //EvaluateModelMultipleLayers();
 
-            Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
-            EvaluateExtendedNetworkSingleLayerNoInput();
+            //Console.WriteLine("\n====== EvaluateExtendedNetworkSingleLayerNoInput ========");
+            //EvaluateExtendedNetworkSingleLayerNoInput();
 
-            Console.WriteLine("\n====== EvaluateMultipleModels ========");
-            EvaluateMultipleModels();
+            //Console.WriteLine("\n====== EvaluateMultipleModels ========");
+            //EvaluateMultipleModels();
 
             // The image tests require the Resnet model. 
             // The model can be downloaded from <see cref="https://www.cntk.ai/resnet/ResNet_18.model"/>
@@ -430,7 +430,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", resnetModelFilePath), deviceId: -1);
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", @"C:\CNTKMisc\KeranLi\OpensetSample\InceptionV3.0"), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);
@@ -440,7 +440,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                     }
 
                     // Transform the image
-                    Bitmap bmp = new Bitmap(Bitmap.FromFile(imageFileName));
+                    Bitmap bmp = new Bitmap(Bitmap.FromFile(@"C:\CNTKMisc\KeranLi\OpensetSample\2.jpg"));
                     var resized = bmp.Resize(resNetImageSize, resNetImageSize, true);
 
                     var resizedCHW = resized.ParallelExtractCHW();
@@ -448,6 +448,9 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
 
                     // We can call the evaluate method and get back the results (single layer output)...
                     var outDims = model.GetNodeDimensions(NodeGroup.Output);
+                    if (string.Compare(outDims.First().Key, "p") != 0)
+                        throw new Exception("Wrong input name");
+                        
                     outputs = model.Evaluate(inputs, outDims.First().Key);
                 }
 
@@ -486,7 +489,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.CSEvalClient
                 Environment.CurrentDirectory = initialDirectory;
                 using (var model = new IEvaluateModelManagedF())
                 {
-                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", resnetModelFilePath), deviceId: -1);
+                    model.CreateNetwork(string.Format("modelPath=\"{0}\"", @"C:\CNTKMisc\KeranLi\OpensetSample\InceptionV3.0"), deviceId: -1);
 
                     // Prepare input value in the appropriate structure and size
                     var inDims = model.GetNodeDimensions(NodeGroup.Input);

@@ -3421,7 +3421,8 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
     auto& us = *this;
     const int m = (int) GetNumRows();
     const int n = (int) GetNumCols();
-    assert(topK <= m);
+    if (topK > m)
+        RuntimeError("VectorMax: topK (%d) must be less or equal than the number of rows (%d).", topK, m);
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
