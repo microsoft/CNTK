@@ -5229,6 +5229,17 @@ Matrix<ElemType>& Matrix<ElemType>::AssignInnerProductOfMatrices(const Matrix<El
                                 NOT_IMPLEMENTED,
                                 NOT_IMPLEMENTED);
     }
+    else if (a.GetMatrixType() == SPARSE) // b is dense then.
+    {
+        SwitchToMatrixType(b.GetMatrixType(), b.GetFormat(), false);
+
+        DISPATCH_MATRIX_ON_FLAG(&b,
+            this,
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED,
+            NOT_IMPLEMENTED,
+            GPUSparseMatrix<ElemType>::InnerProduct(*a.m_GPUSparseMatrix, *b.m_GPUMatrix, *m_GPUMatrix, true));
+    }
     else
     {
         NOT_IMPLEMENTED;
