@@ -99,7 +99,7 @@
         "category": ["Image"],
         "name":  "MNIST Feed Forward OCR",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb",
-        "description":  "Use Feed Forward networks on an OCR problem.",
+        "description":  "Recognize hand written digits (OCR) with MNIST data.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -107,7 +107,7 @@
         "category": ["Image"],
         "name":  "MNIST Autoencoder Dim Reduction",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb",
-        "description":  "Use Autoencoder for dimensionality reduction.",
+        "description":  "Compress (using autoencoder) hand written digits from MNIST data with no human input (unsupervised learning).",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -131,7 +131,7 @@
         "category": ["Image"],
         "name":  "Generative Adversarial Networks (GAN)",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206_Basic_GAN.ipynb",
-        "description":  "This tutorial is a basic implementation of GAN networks. This allows us generate realistic looking MNIST images.",
+        "description":  "This tutorial is a basic implementation of GAN networks. This allows us generate realistic looking MNIST images with no human input (unsupervised learning).",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -203,7 +203,7 @@
         "category": ["Numeric"],
         "name":  "Feed Forward Classification",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_102_FeedForward.ipynb",
-        "description":  "Use Feed Forward networks on a classification problem with CNTK and NumPy.",
+        "description":  "Classify cancer using simulated data (Feed Forward) with Numpy",
         "language":  ["Python"],
         "type":  ["Tutorial"]
     },
@@ -219,7 +219,7 @@
         "category": ["Numeric"],
         "name":  "Logistic Regression",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_101_LogisticRegression.ipynb",
-        "description":  "Logistic regression example with Synthetic data.",
+        "description":  "Classify cancer using simulated data (Logistic Regression).",
         "language":  ["Python", "BrainScript"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -228,6 +228,14 @@
         "name":  "LSTM based Timeseries with Simulated Data",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb",
         "description":  "Timeseries modeling with LSTMs using simulated data.",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Numeric"],
+        "name":  "LSTM based Timeseries with real world data",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_106B_LSTM_Timeseries_with_IOT_Data.ipynb",
+        "description":  "Forecasting using data from an IOT device.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
@@ -339,7 +347,7 @@
         "category": ["Speech", "Text"],
         "name":  "Sequence-to-Sequence",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb",
-        "description":  "The input is a sequence with a dynamic length, and the output is also a sequence with some dynamic length. This is a natural fit for machine translation , automatic text summarization , word to pronunciation models and even parse tree generation.",
+        "description":  "Translate text from one domain (grapheme) to other (phoneme). The input is a sequence with a dynamic length, and the output is also a sequence with some dynamic length. This is a natural fit for machine translation , automatic text summarization , word to pronunciation models and even parse tree generation.",
         "language":  ["Python"],
         "type":  ["Tutorial"]
     },
@@ -360,10 +368,18 @@
         "type":  ["Tutorial", "Recipe"]
     },
     {
+        "category": [ "Text" ],
+        "name": "Neural Character Language Model",
+        "url": "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/CharacterLM",
+        "description": "A neural language model uses a recurrent neural network to predict words (or characters) with a richer context than traditional n-gram models allow.",
+        "language": [ "Python" ],
+        "type": [ "Recipe" ]
+    },
+    {
         "category": ["Text"],
-        "name":  "Neural Character Language Model",
-        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/CharacterLM",
-        "description":  "A neural language model uses a recurrent neural network to predict words (or characters) with a richer context than traditional n-gram models allow.",
+        "name":  "Word Based Language Model using Sampled Softmax",
+        "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Text/WordLMWithSampledSoftmax",
+        "description":  "An example on how to use sampled softmax to train a neural language model.",
         "language":  ["Python"],
         "type":  ["Recipe"]
     },

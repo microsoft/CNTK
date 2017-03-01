@@ -63,6 +63,7 @@
 %ignore_function CNTK::PlaceholderVariable;
 %ignore_function CNTK::InputVariable;
 %ignore_function CNTK::OutputVariable;
+%ignore_function CNTK::Internal::AddProgressWriters;
 
 %ignore_class CNTK::Variable::CompositeFunction;
 %ignore_class CNTK::Variable::Trainer;
@@ -237,8 +238,11 @@
 
 %ignore_class CNTK::TrainingSession;
 %ignore_function CNTK::CreateBasicTrainingSession;
+%ignore_function CNTK::CreateTrainingSession;
 %ignore_function CNTK::CreateDataParallelDistributedTrainer;
 %ignore_function CNTK::CreateQuantizedDataParallelDistributedTrainer;
+
+%ignore_class CNTK::ProgressWriter;
 
 %ignore_struct std::hash<::CNTK::DistributedWorkerDescriptor>;
 

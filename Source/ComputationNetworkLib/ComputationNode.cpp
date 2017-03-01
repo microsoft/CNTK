@@ -105,7 +105,7 @@ template<class ElemType>
     }
 
     std::shared_ptr<Matrix<ElemType>> unpackedData;
-    if ((maxNumTimeSteps == 1) || (numSequences == 1))
+    if ((maxNumTimeSteps == 1) || (numSequences == 1) || (batchMajor && (layout->GetNumParallelSequences() == layout->GetNumSequences())))
         unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
     else
     {
@@ -158,6 +158,7 @@ template<class ElemType>
 template<class ElemType>
 /*static*/ void ComputationNode<ElemType>::BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
                                                              const MBLayoutPtr& inputLayout,
+                                                             ElemType beta,
                                                              Matrix<ElemType>& broadcastTo,
                                                              const FrameRange& targetFrameRange,
                                                              const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage)
@@ -200,8 +201,12 @@ template<class ElemType>
     else
         gatherIdxMatrix->SetValue(1, broadcastTo.GetNumCols(), broadcastTo.GetDeviceId(), gatherIndicesVector.data());
 
-    broadcastTo.DoGatherColumnsOf(0, *gatherIdxMatrix, dataToBroadcast, 1);
+    broadcastTo.DoGatherColumnsOf(beta, *gatherIdxMatrix, dataToBroadcast, 1);
 }
+
+/*static*/ const std::wstring ComputationNodeBase::DefaultDynamicAxisName = L"*";
+/*static*/ const std::wstring ComputationNodeBase::DefaultNoSequenceAxisName = L"__noSequenceAxis";
+
 
 // -----------------------------------------------------------------------
 // subroutines for Validate() implementations

@@ -285,11 +285,8 @@ def test_op_elu(operand, device_id, precision):
 
     from cntk import elu
 
-    #BUGBUG: There is a bug in ElementSelect that cause nan in the output
-    #        for float32.
-    if PRECISION_TO_TYPE[precision] == np.float64:
-        _test_unary_op(precision, device_id, elu, operand,
-                       expected_forward, expected_backward)
+    _test_unary_op(precision, device_id, elu, operand,
+                   expected_forward, expected_backward)
 
 @pytest.mark.parametrize("operand", TENSORS)
 def test_op_leaky_relu(operand, device_id, precision):
@@ -331,6 +328,21 @@ def test_op_param_relu(operand, device_id, precision):
     _test_unary_op(precision, device_id, prelu, operand,
                     expected_forward, expected_backward)
 
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_softplus(operand, device_id, precision):
+    softplus_f = np.vectorize(lambda x: np.logaddexp(x, 0))
+    softplus_b = np.vectorize(lambda x: (1.0/(1.0+np.exp(-x))) if (x > -50) and (x != 0) else 0.0)
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = [[softplus_f(t)]]
+    expected_backward = {
+        'arg': [[softplus_b(t)]]
+    }
+
+    from .. import softplus
+    _test_unary_op(precision, device_id, softplus, operand,
+                   expected_forward, expected_backward)
 
 SAMPLES = [  # 2 samples having 4 classes
     [1, 1, 2, 3],

@@ -141,9 +141,9 @@ namespace CNTK
 
     inline std::wstring AsStringForErrorReporting(const NDShape& shape)
     {
-        bool invertShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        bool reverseShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
         auto displayShape = shape;
-        if (invertShape)
+        if (reverseShape)
         {
             for (size_t i = 0, j = shape.Rank() - 1; i < shape.Rank(); ++i, --j)
                 displayShape[i] = shape[j];
@@ -308,6 +308,7 @@ namespace CNTK
 
     static int const CNTKInternalIdxValueForAllStaticAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllStaticAxes;
     static int const CNTKInternalIdxValueForAllAxes = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForAllAxes;
+    static int const CNTKInternalIdxValueForSequenceAxis = Microsoft::MSR::CNTK::ReduceElementsNode<float>::CNTKInternalIdxValueForSequenceAxis;
 
     inline Axis AsAxis(int CNTKInternalAxisIdx)
     {
@@ -316,6 +317,9 @@ namespace CNTK
 
         if (CNTKInternalAxisIdx == CNTKInternalIdxValueForAllAxes)
             return Axis::AllAxes();
+
+        if (CNTKInternalAxisIdx == CNTKInternalIdxValueForSequenceAxis)
+            return Axis::OperandSequenceAxis();
 
         return Axis(CNTKInternalAxisIdx - 1);
     }
@@ -327,6 +331,9 @@ namespace CNTK
 
         if (axis == Axis::AllAxes())
             return CNTKInternalIdxValueForAllAxes;
+
+        if (axis.IsDynamicAxis() && axis.IsOrdered())
+            return CNTKInternalIdxValueForSequenceAxis;
 
         if (!axis.IsStaticAxis())
             LogicError("Only Axis that represent static indices can be converted to a CNTK internal axis index");
@@ -488,6 +495,28 @@ namespace CNTK
         return axis;
     }
 
+    inline Axis& NormalizeAxis(Axis& axis, const Variable& operand)
+    {
+        if (axis.IsDynamicAxis())
+        {
+            if (axis == Axis::OperandSequenceAxis())
+            {
+                auto operandDynamicAxes = operand.DynamicAxes();
+                assert(operandDynamicAxes != Axis::UnknownDynamicAxes());
+
+                auto numOrderedDynamicAxes = std::count_if(operandDynamicAxes.begin(), operandDynamicAxes.end(), [](const Axis& axis) { return axis.IsOrdered(); });
+                if (numOrderedDynamicAxes != 1)
+                    InvalidArgument("Axis argument of Axis::OperandSequenceAxis() cannot be resolved if the operand has no sequence axis or > 1 ordered dynamic axes!");
+
+                axis = *std::find_if(operandDynamicAxes.begin(), operandDynamicAxes.end(), [](const Axis& axis) { return axis.IsOrdered(); });
+            }
+
+            return axis;
+        }
+        else
+            return NormalizeStaticAxis(axis, operand.Shape());
+    }
+
     inline void VerifyStaticAxis(const Axis& axis, const NDShape& operandShape)
     {
         assert(axis.IsStaticAxis());
@@ -496,6 +525,8 @@ namespace CNTK
         if (axis.StaticAxisIndex() >= (int)operandShape.Rank())
             InvalidArgument("The specified axis index (%d) exceeds the static #axes (%d) of the corresponding operand", (int)axis.StaticAxisIndex(), (int)operandShape.Rank());
     }
+
+    bool IsFirstOutputOfMultiOutputUDF(const Variable& var);
 
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName);
 
@@ -582,4 +613,21 @@ namespace CNTK
 
         return namedListString;
     }
+
+    class Accumulator : public Value
+    {
+    public:
+        Accumulator() : Value(nullptr), m_numUpdates(0) {}
+
+        void Update(const ValuePtr& delta, const DeviceDescriptor& device);
+        void Reset();
+
+    private:
+        void ResetToZero();
+
+        size_t   m_numUpdates;
+    };
+
+    std::wstring DynamicAxesAsString(std::vector<Axis> da, bool rowMajor = false);
+
 }

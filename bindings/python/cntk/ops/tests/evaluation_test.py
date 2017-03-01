@@ -240,7 +240,7 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
     n = I((1,))
     f = lambda_rank(s, n, g)
 
-    actual_grad  = f.grad({s:score, n:gain, g:group}, [s])[0]
+    actual_grad  = f.grad({s:score, n:gain, g:group}, [s])
     actual_value = f.eval({s:score, n:gain, g:group})
 
     assert np.allclose(actual_value, expected_value)
@@ -289,3 +289,21 @@ def test_edit_distance_error(left_input, right_input, subPen, delPen, insPen, sq
     arguments = {i1 : left_input, i2 : right_input}
     a = edit_distance_error(i1, i2, subPen, delPen, insPen, squashInputs, samplesToIgnore)
     assert np.allclose(result, a.eval(arguments))
+
+def test_sequence_grad_as_numpy_false(device_id, precision):
+    from .. import sequence
+
+    a = I(shape=(1,), dtype=PRECISION_TO_TYPE[precision], needs_gradient=True, name='a')
+
+    sequence_sum_a_plus_sequence_sum_a = sequence.reduce_sum(a) + sequence.reduce_sum(a)
+
+    a_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
+
+    actual_grad = sequence_sum_a_plus_sequence_sum_a.grad({a: a_data}, [a], as_numpy=False)
+    
+    test_op = a + 1
+    result = test_op.eval({a : actual_grad})
+    assert np.array_equal(result[0], np.asarray([[3.]]))
+    assert np.array_equal(result[1], np.asarray([[3.], [3.]]))
+    assert np.array_equal(result[2], np.asarray([[3.], [3.], [3.]]))
+

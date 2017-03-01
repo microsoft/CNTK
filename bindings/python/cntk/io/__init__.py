@@ -115,7 +115,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         if not isinstance(deserializers, (list,tuple)):
             deserializers = [deserializers] # allow passing a single item or a list
-        reader_config = ReaderConfig(
+        reader_config = _ReaderConfig(
             deserializers=deserializers,
             randomize=randomize,
             randomization_window=randomization_window,
@@ -123,7 +123,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             epoch_size=epoch_size,
             distributed_after=distributed_after,
             multithreaded_deserializer=multithreaded_deserializer)
-        source = minibatch_source(reader_config)
+        source = reader_config.minibatch_source()
         # transplant into this class instance
         self.__dict__ = source.__dict__
         # transplant all members of deserializers into a record called streams
@@ -234,6 +234,26 @@ class MinibatchSource(cntk_py.MinibatchSource):
         '''
         return super(MinibatchSource, self).is_distributed()
 
+    @property
+    def current_position(self):
+        '''
+        Gets current position in the minibatch source.
+
+        Returns:
+            Minibatch position :class:`~cntk.cntk_py.Dictionary` on the global timeline.
+        '''
+        return self.get_checkpoint_state()
+
+    @current_position.setter
+    def current_position(self, position):
+        '''
+        Sets current position in the minibatch source.
+
+        Args:
+            position (:class:`~cntk.cntk_py.Dictionary`): position returned from :func:`~get_current_position`.
+        '''
+        self.restore_from_checkpoint(position)
+
 def _py_dict_to_cntk_dict(py_dict):
     '''
     Converts a Python dictionary into a CNTK Dictionary whose values are CNTK DictionaryValue instances.
@@ -259,7 +279,7 @@ def _py_dict_to_cntk_dict(py_dict):
 
 # TODO: This should be a private function; use MinibatchSource(deserializer, ...).
 @typemap
-def minibatch_source(config):
+def _minibatch_source(config):
     '''
     Instantiate the CNTK built-in composite minibatch source which is used to stream data into the network.
 
@@ -273,8 +293,7 @@ def minibatch_source(config):
     cntk_dict = _py_dict_to_cntk_dict(config)
     return cntk_py.create_composite_minibatch_source(cntk_dict)
 
-# TODO: This should be a private class.
-class ReaderConfig(dict):
+class _ReaderConfig(dict):
     '''
     Reader configuration.
 
@@ -327,7 +346,7 @@ class ReaderConfig(dict):
             cntk.io.MinibatchSource:
             An instance of :class:`MinibatchSource` from this instance.
         '''
-        return minibatch_source(self)
+        return _minibatch_source(self)
 
 def HTKFeatureDeserializer(streams):
     '''
@@ -456,25 +475,25 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None, context=
 
     Args:
         field (str): this is the name of the stream:
-        
+
          * for CTFDeserializer the name is inside the CTF file
          * for ImageDeserializer the acceptable names are `image` or `label`
-         * for HTKFeatureDeserializer and HTKMLFDeserializer only the default 
+         * for HTKFeatureDeserializer and HTKMLFDeserializer only the default
            value of None is acceptable
-        
-        shape (int, tuple): dimensions of this stream. HTKFeatureDeserializer, 
+
+        shape (int, tuple): dimensions of this stream. HTKFeatureDeserializer,
          HTKMLFDeserializer, and CTFDeserializer read data
          as flat arrays. If you need different shapes you can
          :func:`~cntk.ops.reshape` it later.
         is_sparse (bool): whether the provided data is sparse.
          `False` by default, unless mlf is provided.
-        transforms (list): list of transforms to be applied by the Deserializer. 
+        transforms (list): list of transforms to be applied by the Deserializer.
          Currently only ImageDeserializer supports transforms.
-        context (tuple): left and right context to consider when reading in HTK 
+        context (tuple): left and right context to consider when reading in HTK
          data. Only supported by HTKFeatureDeserializer.
         scp (str, list): scp files for HTK data
         mlf (str, list): mlf files for HTK data
-        broadcast (bool): whether the features in this stream should be 
+        broadcast (bool): whether the features in this stream should be
          broadcast to the whole sequence (useful in e.g. ivectors with HTK)
     '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
@@ -593,5 +612,3 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
         lines.append('%i\t|' % seq_idx + ' |'.join(line))
 
     return '\n'.join(lines)
-
-
