@@ -282,8 +282,9 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
      >>> from cntk.layers.typing import Sequence, Tensor
      >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
      >>> x = Input(**Sequence[Tensor[3,480,640]])
-     >>> #h = f(x)
-     >>> #h.shape
+     >>> h = f(x)
+     >>> h.shape
+         (128, 476, 637)
      >>> f.W.shape
          (128, 3, 2, 5, 4)
 
@@ -292,8 +293,9 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
      >>> x = Input((480,640))
      >>> h = f(x)
      >>> h.shape
-         (128, 478, 638)
+         (128, 480, 319)
      >>> f.W.shape
+         (128, 1, 3, 3)
 
     Returns:
         :class:`~cntk.ops.functions.Function` that accepts one input and applies the convolution operation to it
@@ -364,8 +366,8 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
         num_inserted_axes = sequential + num_emulated_axes
         if num_inserted_axes != 0:
             # x: (in_depth, spatial_shape)
-            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-rf_rank_without_seq, end_axis=-rf_rank_without_seq) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
-            # x: (in_depth, 1*, spatial_shape)
+            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-rf_rank_without_seq, end_axis=-rf_rank_without_seq if rf_rank_without_seq != 0 else None) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+            # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_rf_shape, spatial_shape)
         # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
         # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
         if sequential:
@@ -380,16 +382,16 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
         # if sequential and not padding, then strip the extraneous boundary values
         if sequential and not pad[-rf_rank]:
             r = sequence.slice(r, begin_index=lpad, end_index=-(rf_shape[-rf_rank]-1-lpad))
+        if bias:
+            r = r + b
         # if no output dimension is desired, then strip it
         # also need to strip the fake singleton axes, since they are not reduced away
         # BUGBUG: We still have those axes in the kernel. That can only be solved inside the C++ implementation.
         num_axes_to_remove = sequential + emulating_1D + emulating_output_depth
         if num_axes_to_remove > 0:
             # (out_depth, emulated axes, spatial_shape)
-            r = reshape(r, (), begin_axis=-rf_rank_without_seq - num_axes_to_remove, end_axis=-rf_rank_without_seq) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+            r = reshape(r, (), begin_axis=-rf_rank_without_seq - num_axes_to_remove, end_axis=-rf_rank_without_seq if rf_rank_without_seq != 0 else None) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
             # (out_depth, spatial_shape)
-        if bias:
-            r = r + b
         if activation is not None:
             r = activation(r)
         return r

@@ -554,10 +554,10 @@ def test_layers_convolution_2d(device_id):
 
 def test_sequential_convolution_without_reduction_dim(device_id):
     c = Convolution(3, init=np.array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
-    c.update_signature(1)
-    data = [np.array([[2], [6], [4], [8], [6]])]   # like a short audio sequence, in the dynamic dimension
+    c.update_signature(()) # input is a sequence of scalars
+    data = [np.array([2, 6, 4, 8, 6])]   # like a short audio sequence, in the dynamic dimension
     out = c(data)
-    exp = [[[24], [40], [38]]]
+    exp = [[24, 40, 38]]
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
 
 ####################################
@@ -566,7 +566,7 @@ def test_sequential_convolution_without_reduction_dim(device_id):
 
 def test_1D_convolution_without_reduction_dim(device_id):
     c = Convolution1D(3, init=np.array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
-    ## BUGBUG: pad seems ignored??
+    ## BUGBUG: pad seems ignored? (internally, pad becomes (False, False, True)
     c.update_signature(5)
     data = [np.array([[2, 6, 4, 8, 6]])]   # like a audio sequence, in a static dimension
     out = c(data)
