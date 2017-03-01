@@ -537,7 +537,7 @@ def sanitize_axis(axis):
         return Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
         return Axis(-axis - 1)
-    elif axis.is_static_axis:
+    elif axis.is_static_axis and (axis.static_axis_index() != Axis.new_leading_axis().static_axis_index()):
         return Axis(-1 - axis.static_axis_index())
     else:
         return axis
@@ -758,3 +758,5 @@ def disable_profiler():
     Disable profiler from gathering data.
     '''
     cntk_py.disable_profiler()
+
+

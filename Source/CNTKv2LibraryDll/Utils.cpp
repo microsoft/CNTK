@@ -525,7 +525,8 @@ namespace CNTK
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        bool isPackedValue = (dynamic_cast<PackedValue*>(value.get()) != nullptr);
+        auto packedValue = dynamic_cast<PackedValue*>(value.get());
+        bool isPackedValue = (packedValue != nullptr) && packedValue->IsPacked();
 
         // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
         if (!isPackedValue)
@@ -583,7 +584,7 @@ namespace CNTK
             LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
 
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
-        if (packedValue)
+        if (packedValue && packedValue->IsPacked())
             return packedValue->PackedData<ElementType>();
 
         auto varShape = var.Shape();
