@@ -150,24 +150,27 @@ def cosine_distance(x, y, name=''):
 @typemap
 def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name=''):
     '''
-    Computes the cosine distance between ``x`` and ``y`` pairs of positive samples often derived 
-    from embeddings of textual data though the function can be used for any form of numeric encodings. 
-    In case of textual similarity on area thei sis where ``x`` represents search query term embedding 
+
+    Given minibatches for ``x`` and ``y``, this function computes for each element in `x` the cosine distance between 
+    it and the corresponding `y` and additionally the cosine distance between ``x`` and some other elements of ``y`` 
+    (referred to a negative samples). The ``x`` and ``y`` pairs are samples often derived 
+    from embeddings of textual data, though the function can be used for any form of numeric encodings. 
+    When using this function to compute textual similarity, ``x`` represents search query term embedding 
     and ``y`` represents a document embedding. The negative samples are formed on the fly by shifting 
-    the right side (``y``). The ``shift`` indicates how many samples in t``y`` one should shift to 
-    form each negative sample pair. It is often choose to be one. As the name suggests 
+    the right side (``y``). The ``shift`` indicates how many samples in ``y`` one should shift while
+    forming each negative sample pair. It is often chosen to be 1. As the name suggests 
     ``num_negative_samples`` indicates how many negative samples one would want to generate.
 
     Example:
-        >>> qry = np.asarray([1.,1.,0.,0.,0.,1.,1.,0., 0.,0.,1., 1.], dtype=np.float32).reshape(1,3,4)
-        >>> doc = np.asarray([1.,1.,0.,0.,0.,1.,1.,0., 0.,0.,1., 1.], dtype=np.float32).reshape(1,3,4)
+        >>> qry = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
+        >>> doc = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
         >>> x = input_variable(shape=(4,))
         >>> y = input_variable(shape=(4,))
         >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
-        >>> np.round(model.eval({x: qry, y: doc}), decimals=2)
-        array([[[ 1., 0.5, 0.0]
-                [ 1., 0.5, 0.5]
-                [ 1., 0.0, 0.5]]])
+        >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
+        array([[[ 1., 0.5, 0.0]],
+               [[ 1., 0.5, 0.5]],
+               [[ 1., 0.0, 0.5]]])
 
     Args:
         x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
