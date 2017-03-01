@@ -7,12 +7,13 @@
 import numpy as np
 import sys
 import os
-from cntk import Trainer, training_session, minibatch_size_schedule
+from cntk import Trainer, minibatch_size_schedule 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, set_default_device
 from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
 from cntk.utils import ProgressPrinter
+from cntk.training_session import *
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "common"))
@@ -65,8 +66,6 @@ def simple_mnist():
     }
 
     lr_per_minibatch=learning_rate_schedule(0.2, UnitType.minibatch)
-    # Instantiate the trainer object to drive the model training
-    trainer = Trainer(z, (ce, pe), sgd(z.parameters, lr=lr_per_minibatch))
 
     # Get minibatches of images to train with and perform model training
     minibatch_size = 64
@@ -79,16 +78,17 @@ def simple_mnist():
         tag='Training',
         num_epochs=num_sweeps_to_train_with)
 
-    session = training_session(
-        training_minibatch_source = reader_train,
-        trainer = trainer,
-        mb_size_schedule = minibatch_size_schedule(minibatch_size),
-        progress_printer = progress_printer,
-        model_inputs_to_mb_source_mapping = input_map,
-        progress_frequency = num_samples_per_sweep,
-        max_training_samples = num_samples_per_sweep * num_sweeps_to_train_with)
-	
-    session.train()
+    # Instantiate the trainer object to drive the model training
+    trainer = Trainer(z, (ce, pe), sgd(z.parameters, lr=lr_per_minibatch), progress_printer)
+
+    training_session(
+        trainer=trainer, 
+        mb_source = reader_train,
+        mb_size = minibatch_size,
+        var_to_stream = input_map,
+        max_samples = num_samples_per_sweep * num_sweeps_to_train_with,
+        progress_frequency=num_samples_per_sweep
+    ).train()
     
     # Load test data
     path = os.path.normpath(os.path.join(data_dir, "Test-28x28_cntk_text.txt"))

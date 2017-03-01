@@ -141,9 +141,9 @@ namespace CNTK
 
     inline std::wstring AsStringForErrorReporting(const NDShape& shape)
     {
-        bool invertShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        bool reverseShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
         auto displayShape = shape;
-        if (invertShape)
+        if (reverseShape)
         {
             for (size_t i = 0, j = shape.Rank() - 1; i < shape.Rank(); ++i, --j)
                 displayShape[i] = shape[j];
@@ -627,4 +627,7 @@ namespace CNTK
 
         size_t   m_numUpdates;
     };
+
+    std::wstring DynamicAxesAsString(std::vector<Axis> da, bool rowMajor = false);
+
 }

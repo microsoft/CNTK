@@ -72,12 +72,12 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
 
 RESHAPE_SUBSHAPE_TEST_CASES = [
     #(input_shape, replacement_shape, begin_axis, end_axis, expected_output_shape)
-    ((2, 3),    (3, 2),                   0,                      Axis.end_static_axis(), (3, 2)),
-    ((2, 3),    (1),                      0,                      0,                      (1, 2, 3)),
-    ((2, 3),    (1, 1),                   Axis.end_static_axis(), Axis.end_static_axis(), (2, 3, 1, 1)),
-    ((2, 3, 5), (C.InferredDimension),    0,                      Axis(2),                (6, 5)),
-    ((2, 3, 5), (C.InferredDimension),    Axis(-3),               -1,                     (6, 5)),
-    ((6, 5),    (2, C.InferredDimension), 0,                      1,                      (2, 3, 5)),
+    ((2, 3),    (3, 2),                   0,                      Axis.new_leading_axis(),  (3, 2)),
+    ((2, 3),    (1),                      0,                      0,                        (1, 2, 3)),
+    ((2, 3),    (1, 1),                   Axis.new_leading_axis(),Axis.new_leading_axis(),  (2, 3, 1, 1)),
+    ((2, 3, 5), (C.InferredDimension),    0,                      Axis(2),                  (6, 5)),
+    ((2, 3, 5), (C.InferredDimension),    Axis(-3),               -1,                       (6, 5)),
+    ((6, 5),    (2, C.InferredDimension), 0,                      1,                        (2, 3, 5)),
 ]
 
 @pytest.mark.parametrize("input_shape, replacement_shape, begin_axis, end_axis, expected_output_shape", RESHAPE_SUBSHAPE_TEST_CASES)
@@ -289,6 +289,9 @@ def _test_op_slice_sequence(input_data, slice_params, expected_result, device_id
 SPLICE_TEST_CASES = [
     #(input_data1, input_data2, axis, expected_result)
     ([1], [2], 0, [1, 2]),
+    ([1], [2], -1, [1, 2]),
+    ([1], [2], Axis.new_leading_axis(), [[1], [2]]),
+    ([1], [2], -2, [[1], [2]]),
     ([[1, 2], [4, 5]], [[10, 20], [30, 40], [50, 60]], 0,
      [[1, 2], [4, 5], [10, 20], [30, 40], [50, 60]]),
     ([[1, 2], [4, 5]], [[10, 20, 30], [40, 50, 60]], 1,

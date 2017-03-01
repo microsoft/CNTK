@@ -5,6 +5,10 @@ Effective January 25, 2017 CNTK [1-bit Stochastic Gradient Descent (1bit-SGD)](h
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-02-28.* V 2.0 Beta 12 Release available at Docker Hub**  
+CNTK V 2.0 Beta 12 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
+See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
+
 ***2017-02-23.* V 2.0 Beta 12 Release**  
 Highlights of this Release:
 * New and updated features: new activation functions, support of `Argmax` and `Argmin`, improved performance of `numpy` interop, new functionality of existing operators, and more.
@@ -36,19 +40,6 @@ Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/
 ***2017-02-08.* V 2.0 Beta 10 Release available at Docker Hub**  
 CNTK V 2.0 Beta 10 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
-
-***2017-02-01.* V 2.0 Beta 10 Release**  
-* New and updated core and Python API features ([Operators with UserFunctions](https://www.cntk.ai/pythondocs/extend.html), [Tensorboard support](https://github.com/Microsoft/CNTK/wiki/Using-TensorBoard-for-Visualization), [Python API Fast R CNN](https://github.com/Microsoft/CNTK/wiki/Object-Detection-using-Fast-R-CNN)).
-* Improved speed of CrossEntropyWithSoftmax and ClassificationError for sparse labels.
-* New Tutorials and Examples:
-  * A Python version of the deconvolution layer and image auto encoder example was added ([Example **07_Deconvolution** in *Image - Getting Started*](https://github.com/Microsoft/CNTK/tree/v2.0.beta10.0/Examples/Image/GettingStarted)).
-  * A Python distributed training example for image classification using AlexNet was added, cf. [here](https://github.com/Microsoft/CNTK/tree/v2.0.beta10.0/Examples/Image/Classification/AlexNet/Python)
-  * [Basic implementation of Generative Adversarial Networks (GAN) networks](https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_206_Basic_GAN.ipynb)
-  * [Training with Sampled Softmax](https://github.com/Microsoft/CNTK/blob/v2.0.beta10.0/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb)
-* New [CNTK NuGet Packages](https://github.com/Microsoft/CNTK/wiki/NuGet-Package).
-
-See more in the [Release Notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_beta_10_Release_Notes).
-Get the Release from the [CNTK Releases page](https://github.com/Microsoft/CNTK/releases).
 
 See [all news](https://github.com/Microsoft/CNTK/wiki/News).
 

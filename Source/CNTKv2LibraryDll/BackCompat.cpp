@@ -22,6 +22,7 @@
 #include "RNNNodes.h"
 #include "PreComputeNodes.h"
 #include "DeprecatedNodes.h"
+#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -456,6 +457,14 @@ namespace CNTK
 
                     opType = PrimitiveOpType::EditDistanceError;
                 }
+                else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
+                {
+                    auto edNode = node->As<ForwardBackwardNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDelayConstraint] = edNode->DelayConstraint();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlankTokenId] = edNode->BlankTokenId();
+
+                    opType = PrimitiveOpType::ForwardBackward;
+                }
                 else if (node->OperationName() == OperationNameOf(CosDistanceWithNegativeSamplesNode))
                 {
                     opType = PrimitiveOpType::CosDistanceWithNegativeSamples;
@@ -479,7 +488,9 @@ namespace CNTK
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
                 }
                 else
-                    LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
+                    InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"
+                                    "This is likely a deprecated operation; loading Brainscript/NDL models that contain deprecated operations, is not supported in Python/C++ API.\n"
+                                    "Please refer to CNTK documentation and edit/modify your Brainscript model/script to replace the deprecated operation with a supported operation.\n" , node->OperationName().c_str());
 
                 if (node->Is<RngUser>())
                 {

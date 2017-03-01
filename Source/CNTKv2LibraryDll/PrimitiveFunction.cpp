@@ -81,6 +81,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameInsertionPenalty = L"InsertionPenalty";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSquashInputs = L"SquashInputs";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTokensToIgnore = L"TokensToIgnore";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDelayConstraint = L"DelayConstraint";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlankTokenId = L"BlankTokenId";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -306,6 +308,7 @@ namespace CNTK
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Pass:
+                        case PrimitiveOpType::LabelsToGraph:
                         case PrimitiveOpType::StopGradient:
                         case PrimitiveOpType::ELU:
                             assert(m_inputs.size() == 1);
@@ -541,6 +544,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::EditDistanceError:
+                        case PrimitiveOpType::ForwardBackward:
                         case PrimitiveOpType::Logistic:
                         case PrimitiveOpType::SquaredError:
                         case PrimitiveOpType::CrossEntropyWithSoftmax:

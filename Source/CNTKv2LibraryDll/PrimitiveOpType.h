@@ -75,7 +75,8 @@ namespace CNTK
         LabelsToGraph = 63,
         StopGradient = 64,
         ELU = 65,
-        CosDistanceWithNegativeSamples = 66,
+        ForwardBackward = 66,
+        CosDistanceWithNegativeSamples = 67,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

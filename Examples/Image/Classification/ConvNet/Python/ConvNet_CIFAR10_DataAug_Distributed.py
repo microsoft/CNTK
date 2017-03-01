@@ -12,6 +12,7 @@ import numpy as np
 import cntk
 import _cntk_py
 import cntk.io.transforms as xforms
+from cntk.training_session import *
 
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -90,7 +91,7 @@ def create_conv_network():
 
 
 # Create trainer
-def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up):
+def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers):
     # Set learning parameters
     lr_per_sample     = [0.0015625]*20 + [0.00046875]*20 + [0.00015625]*20 + [0.000046875]*10 + [0.000015625]
     lr_schedule       = cntk.learning_rate_schedule(lr_per_sample, unit=cntk.learner.UnitType.sample, epoch_size=epoch_size)
@@ -112,10 +113,10 @@ def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_
         parameter_learner = cntk.distributed.data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
 
     # Create trainer
-    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner)
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_writers)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_writers, minibatch_size, epoch_size, restore, profiling=False):
+def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling=False):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -123,26 +124,20 @@ def train_and_test(network, trainer, train_source, test_source, progress_writers
         network['label']: train_source.streams.labels
     }
 
-    training_session = cntk.training_session(
-        training_minibatch_source = train_source,
-        trainer = trainer,
-        model_inputs_to_mb_source_mapping = input_map,
-        mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
-        progress_printer = progress_writers,
-        checkpoint_frequency = epoch_size,
-        checkpoint_filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
-#        save_all_checkpoints = False,
-        progress_frequency=epoch_size,
-        cv_source = test_source,
-        cv_mb_size_schedule=cntk.minibatch_size_schedule(minibatch_size),
-#        cv_frequency = epoch_size,
-        restore=restore)
-
     # Train all minibatches
     if profiling:
         cntk.start_profiler(sync_gpu=True)
 
-    training_session.train()
+    training_session(
+        trainer=trainer, mb_source = train_source,
+        var_to_stream = input_map, 
+        mb_size = minibatch_size,
+        progress_frequency=epoch_size,
+        checkpoint_config = CheckpointConfig(frequency = epoch_size,
+                                             filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
+                                             restore = restore),
+        cv_config = CrossValidationConfig(source = test_source, mb_size=minibatch_size)
+    ).train()
 
     if profiling:
         cntk.stop_profiler()
@@ -169,10 +164,10 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64,
         rank=cntk.distributed.Communicator.rank(),
         model=network['output'])
 
-    trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up)
+    trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, [progress_printer, tensorboard_writer])
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, [progress_printer, tensorboard_writer], minibatch_size,
+    train_and_test(network, trainer, train_source, test_source, minibatch_size,
                    epoch_size, restore, profiling)
 
 
