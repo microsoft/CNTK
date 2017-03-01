@@ -1,3 +1,6 @@
+#include "Matrix.h"
+#include "Matrix.h"
+#include "Matrix.h"
 //
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
@@ -4427,6 +4430,36 @@ void Matrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t num
                             this,
                             m_CPUMatrix->ROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(grad.m_CPUMatrix), *(argmax.m_CPUMatrix)),
                             m_GPUMatrix->ROIPoolingBackward(numRois, numImg, channels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(grad.m_GPUMatrix), *(argmax.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template<class ElemType>
+void Matrix<ElemType>::PSROIPoolingForward(const size_t numRois, const size_t numImg, const size_t groupSize, const size_t outChannels, const size_t inChannels, 
+                                           const size_t width, const size_t height, const size_t pooledWidth, const size_t pooledHeight,
+                                           const Matrix<ElemType>& roiData, Matrix<ElemType>& output, Matrix<ElemType>& workspace) const
+{
+    DecideAndMoveToRightDevice(*this, output);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->PSROIPoolingForward(numRois, numImg, groupSize, outChannels, inChannels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(output.m_CPUMatrix), *(workspace.m_CPUMatrix)),
+                            m_GPUMatrix->PSROIPoolingForward(numRois, numImg, groupSize, outChannels, inChannels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(output.m_GPUMatrix), *(workspace.m_GPUMatrix)),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+}
+
+template<class ElemType>
+void Matrix<ElemType>::PSROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t groupSize, const size_t outChannels, const size_t inChannels, 
+                                            const size_t width, const size_t height, const size_t pooledWidth, const size_t pooledHeight, 
+                                            const Matrix<ElemType>& roiData, Matrix<ElemType>& grad, Matrix<ElemType>& workspace) const
+{
+    DecideAndMoveToRightDevice(*this, grad);
+
+    DISPATCH_MATRIX_ON_FLAG(this,
+                            this,
+                            m_CPUMatrix->PSROIPoolingBackward(numRois, numImg, groupSize, outChannels, inChannels, width, height, pooledWidth, pooledHeight, *(roiData.m_CPUMatrix), *(grad.m_CPUMatrix), *(workspace.m_CPUMatrix)),
+                            m_GPUMatrix->PSROIPoolingBackward(numRois, numImg, groupSize, outChannels, inChannels, width, height, pooledWidth, pooledHeight, *(roiData.m_GPUMatrix), *(grad.m_GPUMatrix), *(workspace.m_GPUMatrix)),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 }

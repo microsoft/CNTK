@@ -215,6 +215,8 @@ namespace CNTK
         static const std::wstring AttributeNameTranspose;
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;
         static const std::wstring AttributeNameROIOutputShape;
+        static const std::wstring AttributeNamePSROIGroupSize;
+        static const std::wstring AttributeNamePSROIOutputDim;
         static const std::wstring AttributeNamePoolingType;
         static const std::wstring AttributeNamePoolingWindowShape;
         static const std::wstring AttributeNameSpatial;

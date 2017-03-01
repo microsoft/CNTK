@@ -587,6 +587,12 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
     roi_output_shape = sanitize_shape(roi_output_shape)
     return roipooling(conv_feature_map, rois, roi_output_shape, name)
 
+@typemap
+def psroipooling(conv_feature_map, rois, ps_roi_group_size, ps_roi_output_dim, name=''):
+    from cntk.cntk_py import psroipooling
+    conv_feature_map = sanitize_input(conv_feature_map)
+    rois = sanitize_input(rois)
+    return psroipooling(conv_feature_map, rois, ps_roi_group_size, ps_roi_output_dim, name)
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max

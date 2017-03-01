@@ -169,6 +169,7 @@
 %ignore_function CNTK::PerDimMeanVarianceNormalize;
 %ignore_function CNTK::Convolution;
 %ignore_function CNTK::ROIPooling;
+%ignore_function CNTK::PSROIPooling;
 %ignore_function CNTK::Pooling;
 %ignore_function CNTK::Unpooling;
 %ignore_function CNTK::LambdaRank;

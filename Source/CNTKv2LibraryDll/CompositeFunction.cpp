@@ -615,6 +615,13 @@ namespace CNTK
                 computationNodePtr = New<ROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(roiOutputShape));
                 break;
             }
+            case PrimitiveOpType::PSROIPooling:
+            {
+                auto psROIGroupSize = functionConfig[PrimitiveFunction::AttributeNamePSROIGroupSize].Value<int>();
+                auto psROIOutputDim = functionConfig[PrimitiveFunction::AttributeNamePSROIOutputDim].Value<int>();
+                computationNodePtr = New<PSROIPoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, psROIGroupSize, psROIOutputDim);
+                break;
+            }
             case PrimitiveOpType::Pooling:
             {
                 PoolingType poolingType = (PoolingType)(functionConfig[PrimitiveFunction::AttributeNamePoolingType].Value<size_t>());

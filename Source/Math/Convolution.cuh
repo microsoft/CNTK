@@ -382,6 +382,126 @@ __global__ void kROIPoolingBackward(const int totalIterations,
     }
 }
 
+
+//#define ElemType float
+template <typename ElemType>
+__global__ void kPSRoiPoolingForward(const int totalIterations,
+    const int numROIs, const int numImg, const int groupSize,
+    const int outChannels, const int inChannels, 
+    const int width, const int height,
+    const int pooledWidth, const int pooledHeight, const ElemType* src,
+    const ElemType* roiData, ElemType* dst, ElemType* workspace)
+{
+    // index loops over all input locations (locations in the original input tensor).
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+        index < (totalIterations); index += blockDim.x * gridDim.x)
+    {
+        // output is [W x H x C x N]
+        // n is the global ROI index (the new batch index)
+        int w = index % pooledWidth;
+        int h = (index / pooledWidth) % pooledHeight;
+        int c = (index / pooledWidth / pooledHeight) % outChannels;
+        int n = index / pooledWidth / pooledHeight / outChannels;
+
+        // each ROI is 4 elements: (x, y, w, h)
+        roiData += n * 4;
+
+        // roi data is relative to original image size
+        int roiStartW = (int)(round_(roiData[0] * width));
+        int roiStartH = (int)(round_(roiData[1] * height));
+        int roiWidth = (int)(max(round_(roiData[2] * width), (ElemType)1));
+        int roiHeight = (int)(max(round_(roiData[3] * height), (ElemType)1));
+
+        ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
+        ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
+
+        // compute window for this output location.
+        int hstart = (int)(h * winH);
+        int wstart = (int)(w * winW);
+        int hend = (int)(ceilf((h + 1) * winH));
+        int wend = (int)(ceilf((w + 1) * winW));
+
+        // Add ROI offsets and clip to input boundaries
+        hstart = min(max(hstart + roiStartH, 0), height);
+        hend = min(max(hend + roiStartH, 0), height);
+        wstart = min(max(wstart + roiStartW, 0), width);
+        wend = min(max(wend + roiStartW, 0), width);
+
+        bool isEmpty = (hend <= hstart) || (wend <= wstart);
+        auto groupC = (c * groupSize + h) * groupSize + w;
+        auto imgIndex = n % numROIs;
+        src += (imgIndex * inChannels + groupC) * height * width;
+        ElemType outSum = 0;
+        for (int hIndex = hstart; hIndex < hend; hIndex++) 
+        {
+            for (int wIndex = wstart; wIndex < wend; wIndex++) 
+            {
+                outSum += src[hIndex * width + wIndex];
+            }
+        }
+
+        dst[index] = isEmpty ? (ElemType)0 : outSum / ((hend - hstart) * (wend - wstart));
+        workspace[index] = groupC;
+    }
+}
+
+template <typename ElemType>
+__global__ void kPSRoiPoolingBackward(const int totalIterations,
+    const int numROIs, const int numImg, const int groupSize,
+    const int outChannels, const int inChannels, 
+    const int width, const int height,
+    const int pooledWidth, const int pooledHeight, const ElemType* pooledGrad,
+    const ElemType* roiData, ElemType* grad, const ElemType* workspace)
+{
+    // index loops over all input locations (locations in the original input tensor).
+    for (int index = blockIdx.x * blockDim.x + threadIdx.x;
+        index < (totalIterations); index += blockDim.x * gridDim.x)
+    {
+        int w = index % pooledWidth;
+        int h = (index / pooledWidth) % pooledHeight;
+        int n = index / pooledWidth / pooledHeight / outChannels;
+
+        // each ROI is 4 elements: (x, y, w, h)
+        roiData += n * 4;
+
+        // roi data is relative to original image size
+        int roiStartW = (int)(round_(roiData[0] * width));
+        int roiStartH = (int)(round_(roiData[1] * height));
+        int roiWidth = (int)(max(round_(roiData[2] * width), (ElemType)1));
+        int roiHeight = (int)(max(round_(roiData[3] * height), (ElemType)1));
+
+        ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
+        ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
+
+        // compute window for this output location.
+        int hstart = (int)(h * winH);
+        int wstart = (int)(w * winW);
+        int hend = (int)(ceilf((h + 1) * winH));
+        int wend = (int)(ceilf((w + 1) * winW));
+
+        // Add ROI offsets and clip to input boundaries
+        hstart = min(max(hstart + roiStartH, 0), height);
+        hend = min(max(hend + roiStartH, 0), height);
+        wstart = min(max(wstart + roiStartW, 0), width);
+        wend = min(max(wend + roiStartW, 0), width);
+
+        bool isEmpty = (hend <= hstart) || (wend <= wstart);
+        int groupC = workspace[index];
+        auto imgIndex = n % numROIs;
+        ElemType* gradOffsetPtr = grad + (imgIndex * inChannels + groupC) * height * width;
+        ElemType avgDiff = isEmpty ? (ElemType)0 : pooledGrad[index] / ((hend - hstart) * (wend - wstart));
+        for (int hIndex = hstart; hIndex < hend; hIndex++)
+        {
+            for (int wIndex = wstart; wIndex < wend; wIndex++)
+            {
+                atomicAdd(gradOffsetPtr + hIndex * width + wIndex, avgDiff);
+            }
+        }
+    }
+}
+//#undef ElemType
+
+
 template <typename ElemType>
 __global__ void kMaxUnpooling(int batchSize, const int* mpRowCol, const int* mpRowIndices, const int* indices,
                               const ElemType* __restrict__ src, const ElemType* poolIn, int srcVecSize,

@@ -1852,6 +1852,20 @@ void GPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
 {
 }
 
+template<class ElemType>
+void GPUMatrix<ElemType>::PSROIPoolingForward(const size_t numRois, const size_t numImg, const size_t groupSize, 
+    const size_t inChannels, const size_t outChannels, const size_t width, const size_t height, const size_t pooledWidth, const size_t pooledHeight, 
+    const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& output, GPUMatrix<ElemType>& workspace) const
+{
+}
+
+template<class ElemType>
+void GPUMatrix<ElemType>::PSROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t groupSize, 
+    const size_t inChannels, const size_t outChannels, const size_t width, const size_t height, const size_t pooledWidth, const size_t pooledHeight, 
+    const GPUMatrix<ElemType>& roiData, GPUMatrix<ElemType>& grad, GPUMatrix<ElemType>& workspace) const
+{
+}
+
 template <class ElemType>
 void GPUMatrix<ElemType>::MaxPoolingForward(const GPUMatrix<int>& mpRowCol, const GPUMatrix<int>& mpRowIndices, const GPUMatrix<int>& indices, GPUMatrix<ElemType>& output) const
 {

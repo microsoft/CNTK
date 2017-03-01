@@ -4497,6 +4497,22 @@ void CPUMatrix<ElemType>::ROIPoolingBackward(const size_t numRois, const size_t 
     }
 }
 
+template<class ElemType>
+void CPUMatrix<ElemType>::PSROIPoolingForward(const size_t numRois, const size_t numImg, const size_t groupSize, const size_t outChannels, const size_t inChannels,
+                                              const size_t width, const size_t height, const size_t pooledWidth, const size_t pooledHeight,
+                                              const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& output, CPUMatrix<ElemType>& workspace) const
+{
+    NOT_IMPLEMENTED;
+}
+
+template<class ElemType>
+void CPUMatrix<ElemType>::PSROIPoolingBackward(const size_t numRois, const size_t numImg, const size_t groupSize, const size_t outChannels, const size_t inChannels,
+                                               const size_t width, const size_t height, const size_t pooledWidth, const size_t pooledHeight, 
+                                               const CPUMatrix<ElemType>& roiData, CPUMatrix<ElemType>& grad, CPUMatrix<ElemType>& argmax) const
+{
+    NOT_IMPLEMENTED;
+}
+
 template <class ElemType>
 void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices,
                                        const CPUMatrix<int>& indices, const CPUMatrix<ElemType>& poolInput,

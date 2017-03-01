@@ -1216,6 +1216,14 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::ROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
     }
 
+    CNTK_API FunctionPtr PSROIPooling(const Variable & convolutionMap, const Variable & rois, int psROIGroupSize, int psROIOutputDim, const std::wstring & name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNamePSROIGroupSize] = psROIGroupSize;
+        additionalProperties[PrimitiveFunction::AttributeNamePSROIOutputDim] = psROIOutputDim;
+        return BinaryOp(PrimitiveOpType::PSROIPooling, convolutionMap, rois, std::move(additionalProperties), name);
+    }
+
     FunctionPtr Pooling(const Variable& operand,
                         PoolingType poolingType,
                         const NDShape& poolingWindowShape,

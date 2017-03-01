@@ -1,3 +1,5 @@
+#include "ComputationNetworkBuilder.h"
+#include "ComputationNetworkBuilder.h"
 //
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
@@ -164,6 +166,7 @@ static shared_ptr<ComputationNode<ElemType>> CreateNode(const std::wstring& node
     else if (nodeType == OperationNameOf(LearnableParameter))       return New<LearnableParameter<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(MaxPoolingNode))           return New<MaxPoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else if (nodeType == OperationNameOf(ROIPoolingNode))           return New<ROIPoolingNode<ElemType>>(forward<_Types>(_Args)...);
+    else if (nodeType == OperationNameOf(PSROIPoolingNode))         return New<ROIPoolingNode<ElemType>>(forward<_Types>(_Args)...);
     else return CreateStandardNode<ElemType>(nodeType, forward<_Types>(_Args)...);
 }
 
@@ -303,6 +306,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
     return net.AddNodeToNetWithElemType(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, roiOutputShape));
 }
 
+template<class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePSROIPoolingNode(const std::wstring & nodeName, int groupSize, int outputDim)
+{
+    return net.AddNodeToNetWithElemType(New<PSROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, groupSize, outputDim));
+}
+
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateReconcileDynamicAxisNode(const std::wstring& nodeName)
 {
@@ -398,6 +407,12 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::ROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, const TensorShape& roiOutputShape, const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<ROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, roiOutputShape), { inputValues, inputROIs });
+}
+
+template<class ElemType>
+shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::PSROIPooling(const ComputationNodePtr inputValues, const ComputationNodePtr inputROIs, int groupSize, int outputDim, const std::wstring nodeName)
+{
+    return net.AddNodeToNetAndAttachInputs(New<PSROIPoolingNode<ElemType>>(net.GetDeviceId(), nodeName, groupSize, outputDim), { inputValues, inputROIs });
 }
 
 template <class ElemType>

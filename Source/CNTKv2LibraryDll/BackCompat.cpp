@@ -361,6 +361,14 @@ namespace CNTK
 
                     opType = PrimitiveOpType::ROIPooling;
                 }
+                else if (node->OperationName() == OperationNameOf(PSROIPoolingNode))
+                {
+                    auto psROIPoolingNode = node->As<PSROIPoolingNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePSROIGroupSize] = psROIPoolingNode->PSROIGroupSize();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNamePSROIOutputDim] = psROIPoolingNode->PSROIOutputDim();
+
+                    opType = PrimitiveOpType::PSROIPooling;
+                }
                 else if (node->OperationName() == OperationNameOf(MaxUnpoolingNode))
                 {
                     auto unpoolingNode = node->As<MaxUnpoolingNode<ElementType>>();
