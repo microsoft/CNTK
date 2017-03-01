@@ -33,12 +33,6 @@ If (-not $buildConfig) {Throw "buildConfig" + $usage}
 If (-not $targetConfig) {Throw "targetConfig" + $usage}
 If (-not $sharePath) {Throw "sharePath" + $usage}
 
-# Set Verbose mode
-If ($verbose)
-{
-     $VerbosePreference = "continue"
-}
-
 Write-Verbose "Making binary drops..."
 
 # If not a Release build quit
@@ -84,10 +78,7 @@ Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
-If (Test-Path $baseDropPath\cntk\CommandEval.exe)
-{
-    Remove-Item $baseDropPath\cntk\CommandEval.exe
-}
+Remove-Item $baseDropPath\cntk\CommandEval.exe -Force -ErrorAction SilentlyContinue
 Remove-Item $baseDropPath\cntk\Microsoft.VisualStudio.QualityTools.UnitTestFramework.*
 
 # Make Include folder
@@ -112,14 +103,8 @@ Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
 Write-Verbose "Copying Scripts ..."
 Copy-Item Scripts -Recurse -Destination $baseDropPath\Scripts
 # Remove some files if they exist
-If (Test-Path $baseDropPath\Scripts\pytest.ini)
-{
-    Remove-Item $baseDropPath\Scripts\pytest.ini
-}
-If (Test-Path $baseDropPath\Scripts\install\linux)
-{
-    Remove-Item -Recurse $baseDropPath\Scripts\install\linux
-}
+Remove-Item $baseDropPath\Scripts\pytest.ini -Force -ErrorAction SilentlyContinue
+Remove-Item -Recurse $baseDropPath\Scripts\install\linux -Force -ErrorAction SilentlyContinue
 
 # Copy all items from the share
 # For whatever reason Copy-Item in the line below does not work
@@ -156,10 +141,6 @@ Set-Location -Path $workSpace
 Get-FileHash -Algorithm SHA256 -Path $destination, *.whl
 
 # Remove ZIP sources
-If (Test-Path $basePath)
-{
-    Remove-Item $basePath -Recurse
-}
+Remove-Item -Recurse $basePath -Force -ErrorAction SilentlyContinue 
 
-# Return zero exit code code from here (N.B.: can be non-zero from robocopy or 7za above)
 exit 0
