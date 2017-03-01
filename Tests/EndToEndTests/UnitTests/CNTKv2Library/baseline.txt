@@ -498,7 +498,7 @@ Test module "V2LibraryTests" has passed with:
     Test case "TensorSuite/TensorPlusRightOperandWithoutAxes" has passed
 
   Test suite "UserDefinedFunctionSuite" has passed with:
-    4 test cases out of 4 passed
+    5 test cases out of 5 passed
 
     Test case "UserDefinedFunctionSuite/DuplicateVariablesInCPU" has passed
 
@@ -507,6 +507,8 @@ Test module "V2LibraryTests" has passed with:
     Test case "UserDefinedFunctionSuite/TimesAndPlusInCPU" has passed
 
     Test case "UserDefinedFunctionSuite/TimesAndPlusInGPU" has passed
+
+	Test case "UserDefinedFunctionSuite/UserTimesFunctionExample" has passed
 
   Test suite "ValueSuite" has passed with:
     30 test cases out of 30 passed
