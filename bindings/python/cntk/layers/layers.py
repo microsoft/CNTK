@@ -23,11 +23,35 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
           bias=default_override_or(True), init_bias=default_override_or(0),
           name=''):
     '''
-    Layer factory function to create a fully-connected linear layer with optional non-linear activation.
-    Note: shape may describe a tensor as well.
-    input_rank given: number of inferred axes to add to W (map_rank must not be given)
-    map_rank   given: expand W to leave exactly map_rank axes (input_rank must not be given)
-    none       given: expand W to all (same as map_rank=0)
+    Layer factory function to create an instance of a fully-connected linear layer of the form
+     `activation(input @ W + b)` with weights `W` and bias `b`, and `activation` and `b` being optional.
+    `shape` may describe a tensor as well.
+
+    A ``Dense`` layer instance owns its parameter tensors `W` and `b`, and exposes them as attributes ``.W`` and ``.b``.
+
+    Example:
+     >>> f = Dense(5, activation=C.relu)
+     >>> x = Input(3)
+     >>> h = f(x)
+     >>> h.shape
+         (5,)
+     >>> f.W.shape
+         (3, 5)
+     >>> f.b.value
+         array([ 0.,  0.,  0.,  0.,  0.], dtype=float32)
+
+    Args:
+     shape ((`int` or `tuple` of `int`s)): vector or tensor dimension of the output of this layer
+     activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, default `glorot_uniform()`): initial value of weights `W`
+     input_rank (int, optional): number of inferred axes to add to W (`map_rank` must not be given)
+     map_rank (int, optional): expand W to leave exactly `map_rank` axes (`input_rank` must not be given)
+     bias (boolean, optional, default `True`): the layer will have no bias if `False` is passed here
+     init_bias (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `b`
+     name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one input and applies the operation to it
     '''
 
     activation = get_default_override(Dense, activation=activation)
@@ -83,7 +107,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     '''
     Layer factory function to create a embedding layer.
 
-    An embedding is conceptually a lookup table. For every input token (e.g. word), the corresponding
+    An embedding is conceptually a lookup table. For every input token (e.g. a word or any category label), the corresponding
     entry in in the lookup table is returned.
 
     In CNTK, discrete items such as words are represented as one-hot vectors.
@@ -100,6 +124,46 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
 
     To initialize a learnable lookup table with a given numpy array that is to be used as
     the initial value, pass that array to the ``init`` parameter (not ``weights``).
+
+    An ``Embedding`` instance owns its weight parameter tensor `E`, and exposes it as an attribute ``.E``.
+
+    Example:
+     # learnable embedding
+     >>> f = Embedding(5)
+     >>> x = Input(3)
+     >>> e = f(x)
+     >>> e.shape
+         (5,)
+     >>> f.E.shape
+         (3, 5)
+
+     # user-supplied embedding
+     >>> f = Embedding(weights=[[.5, .3, .1, .4, .2], [.7, .6, .3, .2, .9]])
+     >>> f.E.value
+         array([[ 0.5,  0.3,  0.1,  0.4,  0.2],
+                [ 0.7,  0.6,  0.3,  0.2,  0.9]], dtype=float32)
+     >>> x = Input(2, is_sparse=True)
+     >>> e = f(x)
+     >>> e.shape
+         (5,)
+     >>> e(C.one_hot([[1], [0], [0], [1]], num_classes=2))
+     array([[[ 0.7,  0.6,  0.3,  0.2,  0.9]],
+     <BLANKLINE>
+            [[ 0.5,  0.3,  0.1,  0.4,  0.2]],
+     <BLANKLINE>
+            [[ 0.5,  0.3,  0.1,  0.4,  0.2]],
+     <BLANKLINE>
+            [[ 0.7,  0.6,  0.3,  0.2,  0.9]]], dtype=float32)
+
+    Args:
+     shape ((`int` or `tuple` of `int`s)): vector or tensor dimension of the output of this layer
+     init (scalar or NumPy array or :mod:`cntk.initializer`, default `glorot_uniform()`): (learnable embedding only) initial value of weights `E`
+     weights (NumPy array, mutually exclusive with ``init``): (user-supplied embedding only) the lookup table.
+      The matrix rows are the embedding vectors, ``weights[i,:]`` being the embedding that corresponds to input category `i`.
+     name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one input and applies the embedding operation to it
     '''
 
     if not is_default_override(init) and weights is not None:
@@ -184,6 +248,55 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
                 op_name='Convolution', name=''):
     '''
     Layer factory function to create a convolution layer.
+
+    An ``Convolution`` instance owns its weight parameter tensors `W` and `b`, and exposes them as an attributes ``.W`` and ``.b``1.
+
+    Args:
+     rf_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     num_filters (int, optional): number of filters (output feature-map depth). If this parameter is omitted, there will be one filter, but the output shape will have no depth axis.
+     sequential (boolean, default `False`): if `True`, also convolve along the dynamic axis. ``rf_shape[0]`` corresponds to dynamic axis.
+     activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, default `glorot_uniform()`): initial value of weights `W`
+     pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the filter will be shifted over the "valid"
+      area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
+      the filter will be applied to all input positions, and values outside the valid region will be considered zero.
+      Use a `tuple` to spiecfy a per-axis value.
+     strides (`int` or `tuple` of `int`s, default `): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to spiecfy a per-axis value.
+     bias (boolean, optional, default `True`): the layer will have no bias if `False` is passed here
+     init_bias (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `b`
+     reduction_rank (`int`, default 1): set to 0 if input has no depth dimension, e.g. an audio signal or a black-and-white image
+      that is stored with tensor shape (H,W) instead of (1,H,W)
+     name (str, optional): the name of the Function instance in the network
+
+    Example:
+     # 2D convolution of 5x4 receptive field with output feature-map depth 128:
+     >>> f = Convolution((5,4), 128, activation=C.relu)
+     >>> x = Input((3,480,640))  # 3-channel color image
+     >>> h = f(x)
+     >>> h.shape
+         (128, 476, 637)
+     >>> f.W.shape
+         (128, 3, 5, 4)
+
+     # 4D convolution along dynamic axis over a sequence of 2D color images
+     >>> from cntk.layers.typing import Sequence, Tensor
+     >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
+     >>> x = Input(**Sequence[Tensor[3,480,640]])
+     >>> #h = f(x)
+     >>> #h.shape
+     >>> f.W.shape
+         (128, 3, 2, 5, 4)
+
+     # 2D convolution over a one-channel black-and-white image, padding, and stride 2 along width dimension
+     >>> f = Convolution((3,3), 128, reduction_rank=0, pad=True, strides=(1,2), activation=C.relu)
+     >>> x = Input((480,640))
+     >>> h = f(x)
+     >>> h.shape
+         (128, 478, 638)
+     >>> f.W.shape
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one input and applies the convolution operation to it
     '''
 
     activation = get_default_override(Convolution, activation=activation)
@@ -208,17 +321,17 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
         raise NotImplementedError("Convolution: sharing option currently must be True")
     # The convolution() function currently requires exactly one input and one output depth axis.
     # So we emulate those dimensions on this level. TODO: Once this is suppored by the C++ code, remove the emulation here.
-    emulated_output_depth = num_filters == ()
-    emulated_input_depth  = reduction_rank == 0
+    emulating_output_depth = num_filters == ()
+    emulating_input_depth  = reduction_rank == 0
     # 1D convolution is not supported by cudnn, so we also add a fake dimension.
     emulating_1D = len(rf_shape) < 2
 
-    actual_output_channels_shape = num_filters                if not emulated_output_depth else (1,)
-    actual_reduction_shape       = _INFERRED * reduction_rank if not emulated_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
+    actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
+    actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
     actual_rf_shape              = (1,) * emulating_1D + rf_shape
 
     # add the dimension to the options as well
-    num_emulated_axes = emulated_input_depth + emulating_1D
+    num_emulated_axes = emulating_input_depth + emulating_1D
     strides = (1,)     * num_emulated_axes + strides
     sharing = (True,)  * num_emulated_axes + sharing
     pad     = (False,) * num_emulated_axes + pad
@@ -247,18 +360,18 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
     @BlockFunction('Convolution', name)
     def convolve(x):
         # insert additional axes for various purposes
-        sequential_rank = 1 if sequential else 0
-        num_inserted_axes = sequential_rank + num_emulated_axes
+        rf_rank_without_seq = rf_rank - sequential    # spatial_shape has rf_rank except if sequential: then first axis of rf_rank belongs to sequential dimension, must subtract
+        num_inserted_axes = sequential + num_emulated_axes
         if num_inserted_axes != 0:
-            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-rf_rank + sequential_rank, end_axis=-rf_rank + sequential_rank) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+            # x: (in_depth, spatial_shape)
+            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-rf_rank_without_seq, end_axis=-rf_rank_without_seq) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+            # x: (in_depth, 1*, spatial_shape)
         # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
         # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
         if sequential:
-            lpad = (rf_shape[0]-1) // 2  # even frames: take from right; odd frames: symmetric
-            # TODO: change ^^ [0] to -rf_rank for consistency after we have a test case, and factor into a variable seq_rf
-            x = _window(x, axis=-rf_rank, begin=-lpad, end=-lpad+rf_shape[0], step=1, stride=strides[-rf_rank], initial_state=None)
+            lpad = (rf_shape[-rf_rank]-1) // 2  # even frames: take from right; odd frames: symmetric
+            x = _window(x, axis=-rf_rank, begin=-lpad, end=-lpad+rf_shape[-rf_rank], step=1, stride=strides[-rf_rank], initial_state=None)
         # actual convolution
-        # TODO: update the parameter order of convolution() to match the optional ones as in here? (options order matches Keras)
         r = convolution (W, x,
                          strides=strides, sharing=sharing, auto_padding=pad,
                          # TODO: can we rename auto_padding to pad?
@@ -266,13 +379,15 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
         if sequential and not pad[-rf_rank]:
-            r = sequence.slice(r, begin_index=lpad, end_index=-(rf_shape[0]-1-lpad))
+            r = sequence.slice(r, begin_index=lpad, end_index=-(rf_shape[-rf_rank]-1-lpad))
         # if no output dimension is desired, then strip it
         # also need to strip the fake singleton axes, since they are not reduced away
         # BUGBUG: We still have those axes in the kernel. That can only be solved inside the C++ implementation.
-        num_axes_to_remove = sequential + emulating_1D + emulated_output_depth
+        num_axes_to_remove = sequential + emulating_1D + emulating_output_depth
         if num_axes_to_remove > 0:
-            r = reshape(r, (), begin_axis=-rf_rank-num_axes_to_remove, end_axis=-rf_rank) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+            # (out_depth, emulated axes, spatial_shape)
+            r = reshape(r, (), begin_axis=-rf_rank_without_seq - num_axes_to_remove, end_axis=-rf_rank_without_seq) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+            # (out_depth, spatial_shape)
         if bias:
             r = r + b
         if activation is not None:
@@ -296,7 +411,8 @@ def Convolution1D(rf_shape,         # shape of receptive field, e.g. (3)
                   name=''):
     '''
     Layer factory function to create a 1D convolution layer with optional non-linearity.
-    Same as Convolution() except that rf_shape is verified to be 1-dimensional.
+    Same as `Convolution()` except that rf_shape is verified to be 1-dimensional.
+    See `Convolution()` for description of parameters.
     '''
     activation = get_default_override(Convolution1D, activation=activation)
     init       = get_default_override(Convolution1D, init=init)
@@ -321,7 +437,8 @@ def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must
                   name=''):
     '''
     Layer factory function to create a 2D convolution layer with optional non-linearity.
-    Same as Convolution() except that rf_shape is verified to be 2-dimensional.
+    Same as `Convolution()` except that rf_shape is verified to be 2-dimensional.
+    See `Convolution()` for description of parameters.
     '''
     activation = get_default_override(Convolution2D, activation=activation)
     init       = get_default_override(Convolution2D, init=init)
@@ -346,7 +463,8 @@ def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Mu
                   name=''):
     '''
     Layer factory function to create a 3D convolution layer with optional non-linearity.
-    Same as Convolution() except that rf_shape is verified to be 3-dimensional.
+    Same as `Convolution()` except that rf_shape is verified to be 3-dimensional.
+    See `Convolution()` for description of parameters.
     '''
     activation = get_default_override(Convolution3D, activation=activation)
     init       = get_default_override(Convolution3D, init=init)
