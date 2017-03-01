@@ -566,7 +566,7 @@ def test_sequential_convolution_without_reduction_dim(device_id):
 
 def test_1D_convolution_without_reduction_dim(device_id):
     c = Convolution1D(3, init=np.array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
-    ## BUGBUG: pad seems ignored? (internally, pad becomes (False, False, True)
+    ## BUGBUG: pad seems ignored? It looks like auto_padding=(False, False, True) gets passed on as m_audoPad = { false, false, true }
     c.update_signature(5)
     data = [np.array([[2, 6, 4, 8, 6]])]   # like a audio sequence, in a static dimension
     out = c(data)
