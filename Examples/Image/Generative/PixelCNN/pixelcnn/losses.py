@@ -36,16 +36,16 @@ def discretized_mix_logistic_loss(x,l):
     m3 = ct.reshape(means[:, :, 2, :] + coeffs[:, :, 1, :] * x[:, :, 0, :] + coeffs[:, :, 2, :] * x[:, :, 1, :], (xs[0],xs[1],1,nr_mix))
     means = ct.splice(ct.reshape(means[:,:,0,:], (xs[0],xs[1],1,nr_mix)), m2, m3, axis=2)
     centered_x = x - means
-    inv_stdv = nn.exp(-log_scales)
+    inv_stdv = ct.exp(-log_scales)
     plus_in = inv_stdv * (centered_x + 1./255.)
     cdf_plus = ct.sigmoid(plus_in)
     min_in = inv_stdv * (centered_x - 1./255.)
     cdf_min = ct.sigmoid(min_in)
-    log_cdf_plus = plus_in - nn.softplus(plus_in) # log probability for edge case of 0 (before scaling)
-    log_one_minus_cdf_min = -nn.softplus(min_in) # log probability for edge case of 255 (before scaling)
+    log_cdf_plus = plus_in - ct.softplus(plus_in) # log probability for edge case of 0 (before scaling)
+    log_one_minus_cdf_min = -ct.softplus(min_in) # log probability for edge case of 255 (before scaling)
     cdf_delta = cdf_plus - cdf_min # probability for all other cases
     mid_in = inv_stdv * centered_x
-    log_pdf_mid = mid_in - log_scales - ct.constant(2) * nn.softplus(mid_in) # log probability in the center of the bin, to be used in extreme cases (not actually used in our code)
+    log_pdf_mid = mid_in - log_scales - ct.constant(2) * ct.softplus(mid_in) # log probability in the center of the bin, to be used in extreme cases (not actually used in our code)
 
     # now select the right output: left edge case, right edge case, normal case, extremely low prob case (doesn't actually happen for us)
 

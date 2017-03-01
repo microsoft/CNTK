@@ -6,7 +6,6 @@ import argparse
 
 import numpy as np
 import cntk as ct
-from cntk import Trainer
 import cntk.io.transforms as xforms
 
 from pixelcnn import models as m
@@ -44,7 +43,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
 
     # Input variables denoting the features and label data
     input_var  = ct.input_variable((num_channels, image_height, image_width))
-    target_var = ct.input_variable(shape=(256, 3*32*32)) if (loss == 'category') else ct.input_variable(shape=(num_channels, image_height, image_width))
+    target_var = ct.input_variable(shape=(256, num_channels*image_height*image_width)) if (loss == 'category') else ct.input_variable(shape=(num_channels, image_height, image_width))
     label_var  = ct.input_variable((num_classes))
 
     # apply model to input
@@ -63,10 +62,13 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     lr_schedule      = ct.learning_rate_schedule(lr_per_sample, unit=ct.learner.UnitType.sample)
     mm_time_constant = 4096
     mm_schedule      = ct.learner.momentum_as_time_constant_schedule(mm_time_constant)
-    
+
+    # Print progress
+    progress_writers = [ct.ProgressPrinter(tag='Training', freq=100, num_epochs=max_epochs)] # freq=10
+
     # trainer object
     learner = ct.learner.adam_sgd(z.parameters, lr=lr_schedule, momentum=mm_schedule, low_memory=False)
-    trainer = ct.Trainer(z, (ce, pe), learner)
+    trainer = ct.Trainer(z, (ce, pe), [learner], progress_writers)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -74,13 +76,13 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
         label_var: reader_train.streams.labels
     }
 
-    ct.utils.log_number_of_parameters(z) ; print()
-    progress_printer = ct.utils.ProgressPrinter(freq=100, tag='Training') # freq=10, 
+    ct.utils.log_number_of_parameters(z); print()
 
     # perform model training
     epoch_size     = 50000
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
+        training_loss = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             t0 = time.perf_counter()
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map) # fetch minibatch.
@@ -91,19 +93,36 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
                 image  = np.asarray(data[input_var].value, dtype=int).flatten()
                 target = np.zeros((256,) + image.shape)
                 target[image, np.arange(image.size)] = 1
-                target = np.ascontiguousarray(np.reshape(target, (-1, 1, 256, 3*32*32)))
+                target = np.ascontiguousarray(np.reshape(target, (-1, 1, 256, num_channels*image_height*image_width)))
                 trainer.train_minibatch({input_var:data[input_var].value, target_var:target})
             else:
                 trainer.train_minibatch({input_var:data[input_var].value})
 
             t2 = time.perf_counter()
 
-            #print("MB {} of {}: read time {} ms, train time {}.".format(sample_count / minibatch_size, epoch_size / minibatch_size, (t1-t0)*1000.0, (t2-t1)*1000.0))
-            sample_count += trainer.previous_minibatch_sample_count
-            progress_printer.update_with_trainer(trainer, with_metric=True)
+            sample_count  += trainer.previous_minibatch_sample_count
+            training_loss += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count
 
-        progress_printer.epoch_summary(with_metric=True)
+        # sample from the model
+        # new_x_gen = []
+        # for i in range(args.nr_gpu):
+        #     with tf.device('/gpu:%d' % i):
+        #         gen_par = model(xs[i], h_sample[i], ema=ema, dropout_p=0, **model_opt)
+        #         new_x_gen.append(nn.sample_from_discretized_mix_logistic(gen_par, args.nr_logistic_mix))
+        # def sample_from_model(sess):
+        #     x_gen = [np.zeros((args.batch_size,) + obs_shape, dtype=np.float32) for i in range(args.nr_gpu)]
+        #     for yi in range(obs_shape[0]):
+        #         for xi in range(obs_shape[1]):
+        #             new_x_gen_np = sess.run(new_x_gen, {xs[i]: x_gen[i] for i in range(args.nr_gpu)})
+        #             for i in range(args.nr_gpu):
+        #                 x_gen[i][:,yi,xi,:] = new_x_gen_np[i][:,yi,xi,:]
+        #     return np.concatenate(x_gen, axis=0)
 
+        trainer.summarize_training_progress()
+
+        # convert loss to bits/dim
+        bits_per_dim = training_loss/(np.log(2.)*np.prod((image_height,image_width,num_channels))*sample_count)
+        print("Bits per dimension: {}".format(bits_per_dim))
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()

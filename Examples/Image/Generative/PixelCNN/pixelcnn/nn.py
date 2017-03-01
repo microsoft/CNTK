@@ -18,12 +18,6 @@ def maximum(l, r):
 def minimum(l, r):
     return ct.element_select(ct.less(l, r), l, r)
 
-def exp(x):
-    return ct.exp(ct.clip(x, -100, 75)) # Workaround NaN
-
-def softplus(x):
-    return ct.log_add_exp(x, 0) # ct.log(exp(x) + 1)
-
 def concat_elu(x):
     """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but then with ELU """
     return ct.elu(ct.splice(x, -x, axis=0))
