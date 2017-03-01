@@ -40,18 +40,22 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
      >>> f.b.value
          array([ 0.,  0.,  0.,  0.,  0.], dtype=float32)
 
+     >>> # activation through default options
+     >>> with default_options(activation=C.relu):
+     ...     f = Dense(500)
+
     Args:
      shape ((`int` or `tuple` of `int`s)): vector or tensor dimension of the output of this layer
      activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
      init (scalar or NumPy array or :mod:`cntk.initializer`, default `glorot_uniform()`): initial value of weights `W`
      input_rank (int, optional): number of inferred axes to add to W (`map_rank` must not be given)
      map_rank (int, optional): expand W to leave exactly `map_rank` axes (`input_rank` must not be given)
-     bias (boolean, optional, default `True`): the layer will have no bias if `False` is passed here
+     bias (bool, optional, default `True`): the layer will have no bias if `False` is passed here
      init_bias (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `b`
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.functions.Function` that accepts one input and applies the operation to it
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the operation to it
     '''
 
     activation = get_default_override(Dense, activation=activation)
@@ -163,7 +167,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.functions.Function` that accepts one input and applies the embedding operation to it
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the embedding operation to it
     '''
 
     if not is_default_override(init) and weights is not None:
@@ -222,12 +226,15 @@ def _pad_to_shape(rf_shape, param, what):
 
 # BUGBUG: Can one pass a numpy array as initial values? TODO: add a test case
 # Convolution -- create a convolution layer with optional non-linearity
-#             ( (sample shape) +  (output shape) +  (reduction shape) + (shifting shape)  )
-#    in     : ( (sample shape) +                 +  (reduction shape) + (shifting shape)  )
+#             ( (sample shape) +  (output shape) +  (reduction shape) + (spatial shape)   )
+#    in     : ( (sample shape) +                 +  (reduction shape) + (spatial shape)   )
 #    kernel : (                +  (output shape) +  (reduction shape) + (rec field shape) )
-#    out    : ( (sample shape) +  (output shape) +                    + (shifting shape)  )
+#    out    : ( (sample shape) +  (output shape) +                    + (spatial shape)   )
 # TODO: Add atrous (dilated) convolution once available.
-# TODO: sharing = false?
+# TODO: sharing = false? I'd need that for speech feature extraction.
+# TODO: should we allow to pass fixed weights instead? Like for Embedding? E.g. audio filters
+# TODO: this is not a convolution but a correlation, and W's shape has input and output depth reverted.
+#       Transposition would do the right thing for both cases. Should we default to correctness, i.e. transpose?
 # TODO: conflict of parameter order: rf_shape or num_filters first?
 #  - rf_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
@@ -242,53 +249,52 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
                 sharing=True,     # (must be True currently)
                 bias=default_override_or(True),
                 init_bias=default_override_or(0),
-                reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
+                reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)  --TODO: call it item_rank?
                 transpose=False,  # (must be False currently)
                 max_temp_mem_size_in_samples=0,
                 op_name='Convolution', name=''):
     '''
     Layer factory function to create a convolution layer.
 
-    An ``Convolution`` instance owns its weight parameter tensors `W` and `b`, and exposes them as an attributes ``.W`` and ``.b``1.
+    This implements a convolution operation over items arranged on an N-dimensional grid, such as pixels in an image.
+    Typically, each item is a vector (e.g. pixel: R,G,B), and the result is, in turn, a vector.
+    The item-grid dimensions are referred to as the *spatial* dimensions (e.g. dimensions of an image),
+    while the vector dimensions of the individual items are often called *feature-map depth*.
 
-    Args:
-     rf_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
-     num_filters (int, optional): number of filters (output feature-map depth). If this parameter is omitted, there will be one filter, but the output shape will have no depth axis.
-     sequential (boolean, default `False`): if `True`, also convolve along the dynamic axis. ``rf_shape[0]`` corresponds to dynamic axis.
-     activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, default `glorot_uniform()`): initial value of weights `W`
-     pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the filter will be shifted over the "valid"
-      area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
-      the filter will be applied to all input positions, and values outside the valid region will be considered zero.
-      Use a `tuple` to spiecfy a per-axis value.
-     strides (`int` or `tuple` of `int`s, default `): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to spiecfy a per-axis value.
-     bias (boolean, optional, default `True`): the layer will have no bias if `False` is passed here
-     init_bias (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `b`
-     reduction_rank (`int`, default 1): set to 0 if input has no depth dimension, e.g. an audio signal or a black-and-white image
-      that is stored with tensor shape (H,W) instead of (1,H,W)
-     name (str, optional): the name of the Function instance in the network
+    For each item, convolution gathers a window ("receptive field") of items surrounding the item's position on the grid,
+    and applies a little fully-connected network to it (the same little network is applied to all item positions).
+    The size (spatial extent) of the receptive field is given by ``rf_shape``.
+    E.g. to specify a 2D convolution, ``rf_shape`` should be a tuple of two integers, such as `(5,5)`;
+    an example for a 3D convolution (e.g. video or an MRI scan) would be ``rf_shape=(3,3,3)``;
+    while for a 1D convolution (e.g. audio or text), ``rf_shape`` has one element, such as (3,).
+
+    The dimension of the input items (feature-map depth) is not specified, but known from the input.
+    The dimension of the output items generated for each item position is given by ``num_filters``.
+
+    If the input is a sequence, the sequence elements are by default treated independently.
+    To convolve along the sequence dimension as well, pass ``sequential=True``.
+    This is useful for variable-length inputs, such as video
+    or natural-language processing (word n-grams).
+    Note, however, that convolution does not support sparse inputs.
+
+    Both input and output items can be scalars intead of vectors. For scalar-valued input items,
+    such as pixels on a black-and-white image, or samples of an audio clip, specify ``reduction_rank=0``.
+    If the output items are scalar, pass ``num_filters=()`` or ``None``.
+
+    A ``Convolution`` instance owns its weight parameter tensors `W` and `b`, and exposes them as an attributes ``.W`` and ``.b``.
+    The weights will have the shape ``(num_filters, input_feature_map_depth, *rf_shape)``
 
     Example:
-     # 2D convolution of 5x4 receptive field with output feature-map depth 128:
+     >>> # 2D convolution of 5x4 receptive field with output feature-map depth 128:
      >>> f = Convolution((5,4), 128, activation=C.relu)
      >>> x = Input((3,480,640))  # 3-channel color image
      >>> h = f(x)
      >>> h.shape
          (128, 476, 637)
-     >>> f.W.shape
+     >>> f.W.shape  # will have the form (num_filters, input_depth, *rf_shape)
          (128, 3, 5, 4)
 
-     # 4D convolution along dynamic axis over a sequence of 2D color images
-     >>> from cntk.layers.typing import Sequence, Tensor
-     >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
-     >>> x = Input(**Sequence[Tensor[3,480,640]])
-     >>> h = f(x)
-     >>> h.shape
-         (128, 476, 637)
-     >>> f.W.shape
-         (128, 3, 2, 5, 4)
-
-     # 2D convolution over a one-channel black-and-white image, padding, and stride 2 along width dimension
+     >>> # 2D convolution over a one-channel black-and-white image, padding, and stride 2 along width dimension
      >>> f = Convolution((3,3), 128, reduction_rank=0, pad=True, strides=(1,2), activation=C.relu)
      >>> x = Input((480,640))
      >>> h = f(x)
@@ -297,8 +303,35 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
      >>> f.W.shape
          (128, 1, 3, 3)
 
+     >>> # 3D convolution along dynamic axis over a sequence of 2D color images
+     >>> from cntk.layers.typing import Sequence, Tensor
+     >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
+     >>> x = Input(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
+     >>> h = f(x)
+     >>> h.shape   # this is the shape per video frame
+         (128, 476, 637)
+     >>> f.W.shape
+         (128, 3, 2, 5, 4)
+
+    Args:
+     rf_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     num_filters (int, default `()`): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
+     sequential (bool, default `False`): if `True`, also convolve along the dynamic axis. ``rf_shape[0]`` corresponds to dynamic axis.
+     activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, default `glorot_uniform()`): initial value of weights `W`
+     pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the filter will be shifted over the "valid"
+      area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
+      the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
+      Use a `tuple` to specify a per-axis value.
+     strides (`int` or `tuple` of `int`s, default `): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to specify a per-axis value.
+     bias (bool, optional, default `True`): the layer will have no bias if `False` is passed here
+     init_bias (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `b`
+     reduction_rank (`int`, default 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
+      that is stored with tensor shape (H,W) instead of (1,H,W)
+     name (str, optional): the name of the Function instance in the network
+
     Returns:
-        :class:`~cntk.ops.functions.Function` that accepts one input and applies the convolution operation to it
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the convolution operation to it
     '''
 
     activation = get_default_override(Convolution, activation=activation)
@@ -358,6 +391,10 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
     W = Parameter(actual_output_channels_shape + kernel_shape,                init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
     b = Parameter(actual_output_channels_shape + (1,) * len(actual_rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
+    # TODO: Should we cater to the special case of 1D convolution for text? I.e. sequential only (rf_shape=()).
+    #       In that case, the convolution is the embedding, and we should use a matrix product to support sparse inputs.
+    #       Or add sparse support to splice().
+
     # expression
     @BlockFunction('Convolution', name)
     def convolve(x):
@@ -414,7 +451,7 @@ def Convolution1D(rf_shape,         # shape of receptive field, e.g. (3)
     '''
     Layer factory function to create a 1D convolution layer with optional non-linearity.
     Same as `Convolution()` except that rf_shape is verified to be 1-dimensional.
-    See `Convolution()` for description of parameters.
+    See `Convolution()` for extensive documentation.
     '''
     activation = get_default_override(Convolution1D, activation=activation)
     init       = get_default_override(Convolution1D, init=init)
@@ -440,7 +477,7 @@ def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must
     '''
     Layer factory function to create a 2D convolution layer with optional non-linearity.
     Same as `Convolution()` except that rf_shape is verified to be 2-dimensional.
-    See `Convolution()` for description of parameters.
+    See `Convolution()` for extensive documentation.
     '''
     activation = get_default_override(Convolution2D, activation=activation)
     init       = get_default_override(Convolution2D, init=init)
@@ -466,7 +503,7 @@ def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Mu
     '''
     Layer factory function to create a 3D convolution layer with optional non-linearity.
     Same as `Convolution()` except that rf_shape is verified to be 3-dimensional.
-    See `Convolution()` for description of parameters.
+    See `Convolution()` for extensive documentation.
     '''
     activation = get_default_override(Convolution3D, activation=activation)
     init       = get_default_override(Convolution3D, init=init)
@@ -571,6 +608,43 @@ def MaxPooling(rf_shape,  # shape of receptive field, e.g. (3,3)
                name=''):
     '''
     Layer factory function to create a max-pooling layer.
+
+    Like ``Convolution()``, ``MaxPooling()`` processes items arranged on an N-dimensional grid, such as an image.
+    Typically, each item is a vector.
+    For each item, max-pooling computes the element-wise maximum over a window ("receptive field") of items surrounding the item's position on the grid.
+
+    The size (spatial extent) of the receptive field is given by ``rf_shape``.
+    E.g. for 2D pooling, ``rf_shape`` should be a tuple of two integers, such as `(5,5)`.
+
+    Example:
+     >>> f = MaxPooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
+     >>> h = Input((32,240,320))  # e.g. 32-dim feature map
+     >>> hp = f(h)
+     >>> hp.shape  # spatial dimension has been halved due to stride, and lost one due to 3x3 window without padding
+         (32, 119, 159)
+
+     >>> f = MaxPooling((2,2), strides=2)
+     >>> f.update_signature((1,4,4))
+     >>> im = np.array([[[3, 5, 2, 6], [4, 2, 8, 3], [1, 6, 4, 7], [7, 3, 5, 9]]])  # a 4x4 image (feature-map depth 1 for simplicity)
+     >>> im
+         array([[[3, 5, 2, 6],
+                 [4, 2, 8, 3],
+                 [1, 6, 4, 7],
+                 [7, 3, 5, 9]]])
+     >>> f([[im]])  # due to strides=2, this picks the max out of each 2x2 sub-block
+         array([[[[[ 5.,  8.],
+                   [ 7.,  9.]]]]], dtype=float32)
+
+    Args:
+     rf_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the pooling operation will be shifted over the "valid"
+      area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
+      pooling will be applied to all input positions, and positions outside the valid region will be considered containing zero.
+      Use a `tuple` to specify a per-axis value.
+     strides (`int` or `tuple` of `int`s, default `): stride (increment when sliding over the input). Use a `tuple` to specify a per-axis value.
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the max-pooling operation to it
     '''
     pad = get_default_override(MaxPooling, pad=pad)
     return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad, op_name='MaxPooling', name=name)
@@ -582,15 +656,70 @@ def AveragePooling(rf_shape,  # shape of receptive field, e.g. (3,3)
                    name=''):
     '''
     Layer factory function to create an average-pooling layer.
+
+    Like ``Convolution()``, ``AveragePooling()`` processes items arranged on an N-dimensional grid, such as an image.
+    Typically, each item is a vector.
+    For each item, average-pooling computes the element-wise mean over a window ("receptive field") of items surrounding the item's position on the grid.
+
+    The size (spatial extent) of the receptive field is given by ``rf_shape``.
+    E.g. for 2D pooling, ``rf_shape`` should be a tuple of two integers, such as `(5,5)`.
+
+    Example:
+     >>> f = AveragePooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
+     >>> h = Input((32,240,320))  # e.g. 32-dim feature map
+     >>> hp = f(h)
+     >>> hp.shape  # spatial dimension has been halved due to stride, and lost one due to 3x3 window without padding
+         (32, 119, 159)
+
+     >>> f = AveragePooling((2,2), strides=2)
+     >>> f.update_signature((1,4,4))
+     >>> im = np.array([[[3, 5, 2, 6], [4, 2, 8, 3], [1, 6, 4, 7], [7, 3, 5, 9]]])  # a 4x4 image (feature-map depth 1 for simplicity)
+     >>> im
+         array([[[3, 5, 2, 6],
+                 [4, 2, 8, 3],
+                 [1, 6, 4, 7],
+                 [7, 3, 5, 9]]])
+     >>> f([[im]])  # due to strides=2, this computes the averages of each 2x2 sub-block
+         array([[[[[ 3.5 ,  4.75],
+                   [ 4.25,  6.25]]]]], dtype=float32)
+
+    Args:
+     rf_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the pooling operation will be shifted over the "valid"
+      area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
+      pooling will be applied to all input positions, and positions outside the valid region will be excluded from the averaging.
+      Use a `tuple` to specify a per-axis value.
+     strides (`int` or `tuple` of `int`s, default `): stride (increment when sliding over the input). Use a `tuple` to specify a per-axis value.
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the average-pooling operation to it
     '''
     pad = get_default_override(AveragePooling, pad=pad)
     return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad, op_name='AveragePooling', name=name)
 
 
-# TODO: Is this the same as reduce_max()?
 def GlobalMaxPooling(name=''):
     '''
     Layer factory function to create a global max-pooling layer.
+
+    The global max-pooling operation computes the element-wise maximum over all items on an N-dimensional grid, such as an image.
+
+    This operation is the same as applying ``reduce_max()`` to all grid dimensions.
+
+    Example:
+     >>> f = GlobalMaxPooling()
+     >>> f.update_signature((1,4,4))
+     >>> im = np.array([[[3, 5, 2, 6], [4, 2, 8, 3], [1, 6, 4, 7], [7, 3, 5, 9]]])  # a 4x4 image (feature-map depth 1 for simplicity)
+     >>> im
+         array([[[3, 5, 2, 6],
+                 [4, 2, 8, 3],
+                 [1, 6, 4, 7],
+                 [7, 3, 5, 9]]])
+     >>> f([[im]])
+         array([[[[[ 9.]]]]], dtype=float32)
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the operation to it
     '''
     return _Pooling(PoolingType_Max, NDShape.unknown.dimensions(), pad=False, op_name='GlobalMaxPooling', name=name)
 
@@ -598,6 +727,25 @@ def GlobalMaxPooling(name=''):
 def GlobalAveragePooling(name=''):
     '''
     Layer factory function to create a global average-pooling layer.
+
+    The global average-pooling operation computes the element-wise mean over all items on an N-dimensional grid, such as an image.
+
+    This operation is the same as applying ``reduce_mean()`` to all grid dimensions.
+
+    Example:
+     >>> f = GlobalAveragePooling()
+     >>> f.update_signature((1,4,4))
+     >>> im = np.array([[[3, 5, 2, 6], [4, 2, 8, 3], [1, 6, 4, 7], [7, 3, 5, 9]]])  # a 4x4 image (feature-map depth 1 for simplicity)
+     >>> im
+         array([[[3, 5, 2, 6],
+                 [4, 2, 8, 3],
+                 [1, 6, 4, 7],
+                 [7, 3, 5, 9]]])
+     >>> f([[im]])
+         array([[[[[ 4.6875]]]]], dtype=float32)
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the operation to it
     '''
     return _Pooling(PoolingType_Average, NDShape.unknown.dimensions(), pad=False, op_name='GlobalAveragePooling', name=name)
 
@@ -621,14 +769,40 @@ def MaxUnpooling(rf_shape,  # shape of receptive field, e.g. (3,3)
     return maxunpool
 
 
-# TODO: call out that prob is 1-prob in TF
-def Dropout(prob, name=''):
+# TODO: should the rate(s) be default_options?
+def Dropout(dropout_rate=None, keep_prob=None, name=''):
     '''
     Layer factory function to create a drop-out layer.
+
+    The dropout rate can be specified as the probability of *dropping* a value (``dropout_rate``).
+    E.g. ``Dropout(0.3)`` means "drop 30% o the activation values."
+    Alternatively, it can also be specified as the probability of *keeping* a value (``keep_prob``).
+
+    Example:
+     >>> f = Dropout(0.2)   # "drop 20% of activations"
+     >>> h = Input(3)
+     >>> hd = f(h)
+
+     >>> f = Dropout(keep_prob=0.8)   # "keep 80%"
+     >>> h = Input(3)
+     >>> hd = f(h)
+
+    Args:
+     dropout_rate (float): probability of dropping out an element, mutually exclusive with ``keep_prob``
+     keep_prob (float): probability of keeping an element, mutually exclusive with ``dropout_rate``
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the operation to it
     '''
+    if dropout_rate is None and keep_prob is None:
+        raise ValueError("Dense: either dropout_rate or keep_prob must be specified.")
+    elif dropout_rate is not None and keep_prob is not None:
+        raise ValueError("Dense: dropout_rate and keep_prob cannot be specified at the same time.")
+    elif keep_prob is not None:
+        dropout_rate = 1-keep_prob
     @BlockFunction('Dropout', name)
     def dropout_f(x):
-        return dropout(x, dropout_rate=prob)
+        return dropout(x, dropout_rate=dropout_rate)
     return dropout_f
 
 
@@ -639,6 +813,19 @@ def Activation(activation=default_override_or(identity), name=''):
     ``y = relu(x)`` and ``y = Activation(relu)(x)``.
     This layer is useful if one wants to configure the activation function
     with ``default_options``, or when its invocation should be named.
+
+    Example:
+     >>> model = Dense(500) >> Activation(C.relu) >> Dense(10)
+     >>> # is the same as
+     >>> model = Dense(500) >> C.relu >> Dense(10)
+     >>> # and also the same as
+     >>> model = Dense(500, activation=C.relu) >> Dense(10)
+
+    Args:
+     activation (:class:`~cntk.ops.functions.Function`, optional): function to apply at the end, e.g. `relu`
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the operation to it
     '''
     activation = get_default_override(Activation, activation=activation)
     @BlockFunction('Activation', name)
@@ -648,13 +835,42 @@ def Activation(activation=default_override_or(identity), name=''):
 
 
 # TODO: map_rank is broken. We should specify the #slowest-changing axes. E.g. 1 would work for images and vectors. Requires C++ change.
-def BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. 1 to tie all (h,w) in a (C, H, W)-shaped input
+def BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. pass 1 to tie all (h,w) in a (C, H, W)-shaped input
                        init_scale=1,
                        normalization_time_constant=default_override_or(5000), blend_time_constant=0,
                        epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(False),
                        name=''):
     '''
     Layer factory function to create a batch-normalization layer.
+
+    Batch normalization implements this formula:
+    ``y = (x - batch_mean) / (batch_stddev + epsilon) * scale + bias``
+    where ``batch_mean`` and ``batch_stddev`` are estimated on the minibatch and ``scale`` and ``bias`` are learned parameters.
+    TODO: add paper reference
+
+    During operation, this layer also estimates an aggregate running mean and stddev for use in inference.
+
+    A ``BatchNormalization`` layer instance owns its learnable parameter tensors and exposes them as attributes ``.scale`` and ``.bias``.
+    The aggregate estimates are exposed as attributes ``aggregate_mean``, ``aggregate_variance``, and ``aggregate_count``.
+
+    Example:
+     >>> # BatchNorm on an image with spatial pooling
+     >>> f = BatchNormalization(map_rank=1)
+     >>> f.update_signature((3,480,640))
+     >>> f.bias.shape, f.scale.shape  # due to spatial pooling (map_rank=1), there are only 3 biases and scales, shared across all pixel positions
+         ((3,), (3,))
+
+    Args:
+     map_rank (1 or ``None``): passing 1 means spatially-pooled batch-normalization, where normalization values will be tied across all pixel positions; while ``None``
+      will normalize all elements of the input tensor independently
+     init_scale (float, default 1): initial value for the ``scale`` parameter
+     normalization_time_constant (int, default 5000): time constant for smoothing the batch statistics in order to compute aggregate estimates for inference.
+     epsilon (float, default 0.00001): epsilon added to the variance to avoid division by 0
+     use_cntk_engine (bool, default ``False``): if ``True`` then use CNTK's own engine instead of NVidia's.
+     name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the operation to it
     '''
 
     map_rank                    = get_default_override(BatchNormalization, map_rank=map_rank)
@@ -668,9 +884,9 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
         UntestedBranchError("BatchNormalization map_rank can only be 1 or None for now")
     scale        = Parameter(norm_shape, init=init_scale, name='scale')
     bias         = Parameter(norm_shape, init=0,          name='bias')
-    run_mean     = Constant(0, shape=norm_shape, name='mean')  # note: these are not really constants; they are updated differently
-    run_variance = Constant(0, shape=norm_shape, name='variance')
-    run_count    = Constant(0, shape=(),         name='count')
+    run_mean     = Constant(0, shape=norm_shape, name='aggregate_mean')  # note: these are not really constants; they are updated differently
+    run_variance = Constant(0, shape=norm_shape, name='aggregate_variance')
+    run_count    = Constant(0, shape=(),         name='aggregate_count')
 
     # expression
     @BlockFunction('BatchNormalization', name)
@@ -684,13 +900,31 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
 def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override_or(0.00001), name=''):
     '''
     Layer factory function to create a function that implements layer normalization.
+
+    Layer normalization implements this formula:
+    ``y = (x - mean(x)) / (stddev(x) + epsilon) * scale + bias``
+    where ``scale`` and ``bias`` are learned scalar parameters.
+    TODO: add paper reference
+
+    Example:
+     >>> f = LayerNormalization(initial_scale=2, initial_bias=1)
+     >>> f.update_signature(5)
+     >>> f([np.array([[3,2,4,1,5]])])  # result has mean 1 and standard deviation 2, reflecting the initial values for scale and bias
+         array([[[ 1.      , -0.414203,  2.414203, -1.828407,  3.828407]]], dtype=float32)
+
+    Args:
+     initial_scale (float, default 1): initial value for the ``scale`` parameter
+     initial_bias (float, default 0): initial value for the ``bias`` parameter
+     name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and applies the operation to it
     '''
-    #UntestedBranchError("LayerNormalization")
     epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
 
     # parameters bound to this Function
-    scale = Parameter((1), init=initial_scale, name='scale')  # TODO: offer Softplus version for protection, as for Stabilizer
-    bias  = Parameter((1), init=initial_bias,  name='bias')
+    scale = Parameter((), init=initial_scale, name='scale')  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?
+    bias  = Parameter((), init=initial_bias,  name='bias')
 
     # expression
     @BlockFunction('LayerNormalization', name)
@@ -708,11 +942,22 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
 def Label(name):
     '''
     Layer factory function to create a dummy layer with a given name.
-    This can be used to access an intermediate value flowing through computation. E.g.
-      ``model = Dense(...) >> Label('hidden') >> Dense(...)
-        intermediate_val = model.hidden``
+    This can be used to access an intermediate value flowing through computation.
+
+    Args:
+     name (str): the name of the Function instance in the network
+
+    Example:
+     >>> model = Dense(500) >> Label('hidden') >> Dense(10)
+     >>> model.update_signature(10)
+     >>> intermediate_val = model.hidden
+     >>> intermediate_val.shape
+         (500,)
+
+    Returns:
+        :class:`~cntk.ops.functions.Function` that accepts one argument and returns it with the desired name attached
     '''
-    @Function  # cannot be a BlockFunction since that would hide the label
+    @Function  # note: cannot be a BlockFunction since that would hide the label
     def label(x):
         return alias(x, name=name)
     return label
