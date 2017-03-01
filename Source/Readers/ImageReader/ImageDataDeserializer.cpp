@@ -297,7 +297,8 @@ cv::Mat FileByteReader::Read(size_t, const std::string& seqPath, bool grayscale)
     assert(!seqPath.empty());
     auto path = Expand3Dots(seqPath, m_expandDirectory);
 
-    return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    int flags = grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR;
+    return cv::imread(path, flags | cv::IMREAD_ANYDEPTH);
 }
 
 bool ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
