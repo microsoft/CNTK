@@ -63,6 +63,7 @@
 %ignore_function CNTK::PlaceholderVariable;
 %ignore_function CNTK::InputVariable;
 %ignore_function CNTK::OutputVariable;
+%ignore_function CNTK::Internal::AddProgressWriters;
 
 %ignore_class CNTK::Variable::CompositeFunction;
 %ignore_class CNTK::Variable::Trainer;
@@ -178,6 +179,14 @@
 %ignore_function CNTK::ElementSelect;
 %ignore_function CNTK::Splice;
 %ignore_function CNTK::AsBlock;
+%ignore_function CNTK::ReaderCrop;
+%ignore_function CNTK::ReaderMean;
+%ignore_function CNTK::ReaderScale;
+%ignore_function CNTK::ReaderColor;
+%ignore_function CNTK::ImageDeserializer;
+%ignore_function CNTK::CTFDeserializer;
+%ignore_function CNTK::HTKFeatureDeserializer;
+%ignore_function CNTK::HTKMLFDeserializer;
 
 %ignore_namespace CNTK::Sequence;
 
@@ -229,8 +238,11 @@
 
 %ignore_class CNTK::TrainingSession;
 %ignore_function CNTK::CreateBasicTrainingSession;
+%ignore_function CNTK::CreateTrainingSession;
 %ignore_function CNTK::CreateDataParallelDistributedTrainer;
 %ignore_function CNTK::CreateQuantizedDataParallelDistributedTrainer;
+
+%ignore_class CNTK::ProgressWriter;
 
 %ignore_struct std::hash<::CNTK::DistributedWorkerDescriptor>;
 
@@ -269,10 +281,14 @@
 %ignore_function CNTK::Internal::SetFixedRandomSeed;
 %ignore_function CNTK::Internal::EnableForwardValuesSharing;
 %ignore_function CNTK::Internal::DisableForwardValuesSharing;
-%ignore_function CNTK::Internal::EnableHyperMemoryCompress;
-%ignore_function CNTK::Internal::DisableHyperMemoryCompress;
+%ignore CNTK::Internal::DefaultProfilerBufferSize;
+%ignore_function CNTK::Internal::StartProfiler;
+%ignore_function CNTK::Internal::StopProfiler;
+%ignore_function CNTK::Internal::EnableProfiler;
+%ignore_function CNTK::Internal::DisableProfiler;
 %ignore_function CNTK::Internal::AreEquivalent;
 %ignore_function CNTK::Internal::AreEqual;
+%ignore_function CNTK::PrintBuiltInfo;
 
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }

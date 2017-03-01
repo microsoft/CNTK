@@ -53,13 +53,13 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>SWIG;SWIGJAVA</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\Common\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\Common\Include;C:\Program Files\Java\jdk1.8.0_121\include;C:\Program Files\Java\jdk1.8.0_121\include\win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <FloatingPointModel>Fast</FloatingPointModel>
       <OpenMPSupport>true</OpenMPSupport>
-      <TreatWarningAsError>true</TreatWarningAsError>
+      <TreatWarningAsError>false</TreatWarningAsError>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -102,7 +102,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
   <ItemGroup>
-    <CustomBuild Include="cntk_cs.i">
+    <CustomBuild Include="cntk_java.i">
       <FileType>Document</FileType>
       <Command>$(SWIG_PATH)\swig.exe -c++ -java -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -package com.microsoft.CNTK -outdir  $(SolutionDir)bindings\java\CNTKLibraryManagedDll\SwigProxyClasses cntk_java.i</Command>
       <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h</Outputs>
@@ -112,7 +112,7 @@
   <ItemGroup>
     <ClCompile Include="cntk_java_wrap.cxx" />
   </ItemGroup>
-    <ItemGroup>
+  <ItemGroup>
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h" />
     <ClInclude Include="cntk_java_wrap.h" />
