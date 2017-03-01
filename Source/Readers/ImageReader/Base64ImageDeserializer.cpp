@@ -111,7 +111,8 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
             else
             {
-                image = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+                int flags = m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR;
+                image = cv::imdecode(decodedImage, flags | cv::IMREAD_ANYDEPTH);
             }
 
             m_deserializer.PopulateSequenceData(image, classId, copyId, sequence.m_key, result);
