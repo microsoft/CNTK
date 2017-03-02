@@ -808,7 +808,7 @@ public:
     {
     }
     PoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : PoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"includePad"), configp->Get(L"kernelShape"),
+        : PoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"poolPadMode"), configp->Get(L"kernelShape"),
                       configp->Get(L"strideShape"),
                       configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
                       ImageLayoutKindFrom(configp->Get(L"imageLayout")))

@@ -75,7 +75,7 @@ public:
     virtual bool ImplementsGradientOverwriteOptimization() const { return false; }
 
 protected:
-	ConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolPadMode)
+	ConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolPadMode=false)
 		: m_geometry(geometry), m_deviceId(deviceId), m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_poolKind(poolKind), m_poolPadMode(poolPadMode)
     {
         assert(m_geometry != nullptr);
