@@ -4543,7 +4543,7 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
+void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolPadMode) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
@@ -4564,7 +4564,9 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
                 assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
                 sum += (*this)(colBase + dcol, sample);
             }
-            // Note that we divide by size which is the number of actual elements (does not include padding).
+            // if poolPadMode == true, use avg_pool_include_pad
+			if (poolPadMode)
+				size = indices(0, 0);
             output(row, sample) = sum / size;
         }
     }

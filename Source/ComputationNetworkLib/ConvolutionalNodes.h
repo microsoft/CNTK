@@ -53,14 +53,14 @@ class ConvolutionNodeBase : public ComputationNode<ElemType>
 
 public:
     ConvolutionNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_poolKind(PoolKind::None), m_transpose(false), m_outputShape(TensorShape(0)), m_maxTempMemSizeInSamples(0)
+        : Base(deviceId, name), m_poolKind(PoolKind::None), m_poolPadMode(false), m_transpose(false), m_outputShape(TensorShape(0)), m_maxTempMemSizeInSamples(0)
     {
     }
     ConvolutionNodeBase(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                         const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                        PoolKind poolKind, bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+                        PoolKind poolKind, bool poolPadMode, bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
                         : Base(deviceId, name), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(strideShape), m_sharing(sharing),
-                        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad), m_poolKind(poolKind), m_transpose(transpose), m_outputShape(outputShape), 
+                        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad), m_poolKind(poolKind), m_poolPadMode(poolPadMode), m_transpose(transpose), m_outputShape(outputShape), 
                         m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
     {
     }
@@ -78,6 +78,7 @@ public:
         m_lowerPad.Save(fstream);
         m_upperPad.Save(fstream);
         fstream << (int32_t)m_poolKind;
+		fstream << m_poolPadMode;
         fstream << (int32_t)m_imageLayout;
         fstream << m_maxTempMemSizeInSamples;
         fstream << m_transpose;
@@ -101,6 +102,7 @@ public:
             int32_t k;
             fstream >> k;
             m_poolKind = (PoolKind)k;
+			fstream >> m_poolPadMode;
             int32_t layout;
             fstream >> layout;
             m_imageLayout = (ImageLayoutKind)layout;
@@ -130,6 +132,7 @@ public:
             node->m_lowerPad = m_lowerPad;
             node->m_upperPad = m_upperPad;
             node->m_poolKind = m_poolKind;
+			node->m_poolPadMode = m_poolPadMode;
             node->m_transpose = m_transpose;
             node->m_outputShape = m_outputShape; 
             node->m_imageLayout = m_imageLayout;
@@ -157,6 +160,7 @@ public:
     TensorShape OutputShape() const { return m_outputShape; }
     size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
     PoolKind PoolingKind() const { return m_poolKind; }
+	bool PoolPadMode() const { return m_poolPadMode; }
 
     // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
     template<class V, typename T>
@@ -223,6 +227,7 @@ protected:
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
     PoolKind m_poolKind;
+	bool m_poolPadMode;
     bool m_transpose; 
     TensorShape m_outputShape; 
     ImageLayoutKind m_imageLayout;
@@ -245,6 +250,7 @@ protected:                                  \
     using Base::m_lowerPad;                 \
     using Base::m_upperPad;                 \
     using Base::m_poolKind;                 \
+	using Base::m_poolPadMode;              \
     using Base::m_transpose;                \
     using Base::m_outputShape;              \
     using Base::m_imageLayout;              \
@@ -272,7 +278,7 @@ public:
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                     bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-                    : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, transpose, outputShape, imageLayout, maxTempMemSizeInSamples),
+                    : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, false, transpose, outputShape, imageLayout, maxTempMemSizeInSamples),
                     m_convolution2D(false)
     {
     }
@@ -324,6 +330,7 @@ public:
             fstream >> pad;
             fstream >> m_maxTempMemSizeInSamples;
             m_poolKind = PoolKind::None;
+			m_poolPadMode = false;
             m_convolution2D = true;
 
             m_kernelShape = TensorShape(kW, kH, 1);
@@ -522,7 +529,7 @@ public:
                                                                    m_kernelShape, m_mapCount, m_stride, 
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                m_maxTempMemSizeInSamples, m_poolKind, m_poolPadMode,
                                                                 ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms());
             }
 
@@ -794,14 +801,14 @@ public:
         : Base(deviceId, name)
     {
     }
-    PoolingNode(DEVICEID_TYPE deviceId, const wstring& name, PoolKind pool, const TensorShape& kernelShape, const TensorShape& strideShape,
+    PoolingNode(DEVICEID_TYPE deviceId, const wstring& name, PoolKind pool, const bool poolPadMode, const TensorShape& kernelShape, const TensorShape& strideShape,
                 const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                 ImageLayoutKind imageLayout)
-                : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, pool, false, TensorShape(0), imageLayout, 0)
+                : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, pool, poolPadMode, false, TensorShape(0), imageLayout, 0)
     {
     }
     PoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : PoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"kernelShape"),
+        : PoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"includePad"), configp->Get(L"kernelShape"),
                       configp->Get(L"strideShape"),
                       configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
                       ImageLayoutKindFrom(configp->Get(L"imageLayout")))
@@ -862,7 +869,7 @@ public:
                 auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                m_maxTempMemSizeInSamples, m_poolKind, m_poolPadMode,
                                                                 ConvolutionEngineKind::All, NodeName());
             }
         }
@@ -919,7 +926,7 @@ public:
     MaxUnpoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& strideShape,
                        const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                        ImageLayoutKind imageLayout)
-                       : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, PoolKind::Max, true, TensorShape(0), imageLayout, 0)
+                       : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, PoolKind::Max, false, true, TensorShape(0), imageLayout, 0)
     {
     }
     MaxUnpoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -991,7 +998,7 @@ public:
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 // Create reference engine as it's the only engine that implements unpooling.
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                m_maxTempMemSizeInSamples, m_poolKind, m_poolPadMode,
                                                                 ConvolutionEngineKind::Reference,
                                                                 NodeName());
             }
@@ -1271,7 +1278,7 @@ public:
         if (isFinalValidationPass && m_convEng == nullptr)
         {
             m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind,
-                                                            0, PoolKind::Max,
+                                                            0, PoolKind::Max, false,
                                                             ConvolutionEngineKind::All, NodeName());
         }
     }
@@ -1311,7 +1318,7 @@ public:
         if (isFinalValidationPass && m_convEng == nullptr)
         {
             m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind,
-                                                            0, PoolKind::Average, 
+                                                            0, PoolKind::Average, false,
                                                             ConvolutionEngineKind::All, NodeName());
         }
     }
