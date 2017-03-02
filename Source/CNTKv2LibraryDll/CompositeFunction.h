@@ -293,7 +293,7 @@ namespace CNTK
 
         bool m_networkMatricesAllocated;
 
-        std::vector<Microsoft::MSR::CNTK::ComputationNodeBasePtr> m_allNetworkRootsInGlobalEvalOrder;
+        std::unordered_set<Variable> m_allNetworkRoots;
 
         std::unordered_map<Parameter, size_t> m_lastRecordedParameterValueTimeStamps;
 

@@ -406,10 +406,6 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
         arguments = { op_arguments[0]: arguments }
 
-    elif len(arguments) < len(op_arguments):
-        raise ValueError('your graph has %i inputs, but you specified data '
-                         'for %i' % (len(op_arguments), len(arguments)))
-
     if isinstance(arguments, dict):
         arg_names = [var.name for var in op_arguments]
         name_counter = collections.Counter(arg_names)
