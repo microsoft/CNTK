@@ -957,3 +957,4 @@ Tutorials/slots.wl
 /Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.h
 /Source/CNTKv2LibraryDll/tensorboard/tensorboard.pb.cc
 /test.py
+/Source/CNTKv2LibraryDll/buildinfo.h
