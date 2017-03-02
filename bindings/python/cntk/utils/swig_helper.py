@@ -12,7 +12,7 @@ def map_if_possible(obj):
         # known, which is the case, when map_if_possible is called.
         from cntk.ops.variables import Variable, Parameter, Constant
         from cntk.ops.functions import Function
-        from cntk.learner import Learner
+        from cntk.learners import Learner
         from cntk.train.trainer import Trainer
         from cntk.train.training_session import TrainingSession
         from cntk.io import MinibatchSource, MinibatchData, StreamConfiguration

@@ -12,7 +12,7 @@ from ..ops import times, sequence, as_block, element_select
 from ..ops.tests.ops_test_utils import cntk_device
 from ..utils import one_hot
 from ..train.trainer import *
-from ..learner import *
+from ..learners import *
 from ..layers import *
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
         input_variable, times, plus, reduce_sum, Axis, cntk_py

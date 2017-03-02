@@ -6,7 +6,7 @@
 
 from __future__ import division
 import numpy as np
-from ..learner import *
+from ..learners import *
 from .. import parameter, input_variable
 
 import pytest

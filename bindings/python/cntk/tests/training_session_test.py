@@ -14,7 +14,7 @@ from ..ops.tests.ops_test_utils import cntk_device
 from ..utils import one_hot
 from ..train.trainer import *
 from ..train.training_session import *
-from ..learner import *
+from ..learners import *
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
     input_variable, times, plus, reduce_sum, Axis, cntk_py
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, FULL_DATA_SWEEP, INFINITELY_REPEAT

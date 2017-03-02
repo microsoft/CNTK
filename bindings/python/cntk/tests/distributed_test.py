@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 from .. import Function
 from ..train.trainer import *
-from ..learner import *
+from ..learners import *
 from .. import distributed
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
         input_variable, times, plus, reduce_sum

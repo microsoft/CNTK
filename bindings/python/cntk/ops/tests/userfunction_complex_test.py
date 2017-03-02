@@ -11,7 +11,7 @@ from __future__ import division, print_function
 import numpy as np
 
 from cntk import *
-from cntk.learner import *
+from cntk.learners import *
 from cntk.ops import *
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.ops.functions import UserFunction

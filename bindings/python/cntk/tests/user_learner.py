@@ -1,7 +1,7 @@
 from __future__ import print_function
 import numpy as np
 import cntk as C
-from cntk.learner import UserLearner, sgd, learning_rate_schedule, UnitType
+from cntk.learners import UserLearner, sgd, learning_rate_schedule, UnitType
 from cntk.utils import ProgressPrinter
 from cntk.layers import Dense, Sequential
 

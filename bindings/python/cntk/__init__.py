@@ -11,10 +11,8 @@ import numpy as np
 from .core import *
 from . import ops
 from . import cntk_py
-
 from .train import *
-
-from .learner import *
+from .learners import *
 from .initializer import *
 from .utils import *
 from .ops import *
