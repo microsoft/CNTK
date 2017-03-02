@@ -79,6 +79,9 @@ private:
 
     // Flag that indicates whether a single speech frames should be exposed as a sequence.
     bool m_frameMode;
+
+    // Track phone boundaries
+    bool m_withPhoneBoundaries;
 };
 
 }}}
