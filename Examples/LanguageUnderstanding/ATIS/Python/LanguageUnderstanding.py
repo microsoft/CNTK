@@ -135,8 +135,8 @@ def train(reader, model, max_epochs):
     labels = reader.streams.slot_labels
     #labels = reader.streams.intent_labels  # for intent classification
 
-    from cntk.graph import plot
-    plot(criterion, filename=data_dir + "/model.pdf")
+    #from cntk.graph import plot
+    #plot(criterion, filename=data_dir + "/model.pdf")
 
     # iteration parameters  --needed here because learner schedule needs it
     epoch_size = 36000
