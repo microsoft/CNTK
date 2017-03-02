@@ -7,13 +7,16 @@ import java.awt.Image
 import java.awt.Color
 import java.io.File
 import scala.collection.JavaConversions._
+import com.microsoft.CNTK.{Function => CNTKFunction, _}
 
-object ScalaEvalExample {//extends App {
-  System.loadLibrary("CNTKLib")
+
+object ScalaEvalExample extends App {
+  sys.env
+  System.loadLibrary("CNTKLibraryJavaBinding")
 
   val outputName = "Plus2060"
-  val dataPath   = "/home/ratan/Downloads/"
-  val modelFunc  = Function.LoadModel(dataPath + "z.model")
+  val dataPath   = "data/"
+  val modelFunc  = CNTKFunction.LoadModel(dataPath + "z.model")
   val outputVar  = modelFunc.getOutputs.get(0)
   val inputVar   = modelFunc.getArguments.get(0)
 

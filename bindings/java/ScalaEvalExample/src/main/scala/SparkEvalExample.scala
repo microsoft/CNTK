@@ -5,6 +5,7 @@ import javax.imageio.ImageIO
 import org.apache.spark.SparkFiles
 import org.apache.spark.input.PortableDataStream
 import org.apache.spark.sql.SparkSession
+import com.microsoft.CNTK.{Function => CNTKFunction, _}
 
 import Utils._
 
@@ -19,7 +20,7 @@ object SparkEvalExample extends App {
   val dataPath   = "/home/ratan/Downloads"
   sc.addFile(s"$dataPath/z.model")
 
-  def eval(model: Function)(img: Seq[Float]): Seq[Float] = {
+  def eval(model: CNTKFunction)(img: Seq[Float]): Seq[Float] = {
     val inputVar   = model.getArguments.get(0)
     val inputShape = inputVar.GetShape
 
@@ -48,7 +49,7 @@ object SparkEvalExample extends App {
   def applyModel(modelName: String)(
       iter: Iterator[(String, PortableDataStream)]): Iterator[(String, Array[Float])] = {
 
-    val model = Function.LoadModel(SparkFiles.get(modelName))
+    val model = CNTKFunction.LoadModel(SparkFiles.get(modelName))
 
     val inputVar    = model.getArguments.get(0)
     val inputShape  = inputVar.GetShape

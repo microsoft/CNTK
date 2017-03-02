@@ -1,5 +1,7 @@
 import java.awt.{Color, Image}
 import java.awt.image.BufferedImage
+import com.microsoft.CNTK.{Function => CNTKFunction, _}
+
 
 object Utils {
   def seqify(fvv: FloatVectorVector): Seq[Seq[Float]] = {

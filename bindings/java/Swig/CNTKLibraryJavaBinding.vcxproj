@@ -89,7 +89,7 @@
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -104,7 +104,7 @@
   <ItemGroup>
     <CustomBuild Include="cntk_java.i">
       <FileType>Document</FileType>
-      <Command>$(SWIG_PATH)\swig.exe -c++ -java -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -package com.microsoft.CNTK -outdir  $(SolutionDir)bindings\java\CNTKLibraryManagedDll\SwigProxyClasses cntk_java.i</Command>
+      <Command>$(SWIG_PATH)\swig.exe -c++ -java -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -package com.microsoft.CNTK -outdir  $(SolutionDir)bindings\java\CNTKLibraryManagedDll\SwigProxyClasses\com\microsoft\CNTK cntk_java.i</Command>
       <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h</Outputs>
       <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)bindings\java\Swig\std_unordered_map.i</AdditionalInputs>
     </CustomBuild>
