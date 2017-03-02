@@ -25,7 +25,7 @@ script_under_test = os.path.join(example_dir, "AlexNet_ImageNet_Distributed.py")
 
 def test_alexnet_imagenet_distributed(device_id):
     params = [ "-n", "2",
-               "-m", "8", 
+               "-m", "4", 
                "-e", "16",
                "-datadir", prepare_ImageNet_data(),
                "-q", "32",

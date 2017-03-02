@@ -22,10 +22,12 @@ struct Bundler::BundlerChunkDescription : public ChunkDescription
 
 Bundler::Bundler(
     const ConfigParameters& readerConfig,
-    IDataDeserializerPtr driver,
+    IDataDeserializerPtr primaryDeserializer,
     std::vector<IDataDeserializerPtr> deserializers,
     bool cleanse)
-    : m_deserializers(deserializers), m_driver(driver)
+    : DataDeserializerBase(true),
+      m_deserializers(deserializers),
+      m_primaryDeserializer(primaryDeserializer)
 {
     m_verbosity = readerConfig(L"verbosity", 0);
 
@@ -50,7 +52,7 @@ void Bundler::CreateChunkDescriptions()
     if (m_verbosity)
         fprintf(stderr, "Bundler::CreateChunkDescriptions(): started\n");
 
-    auto chunks = m_driver->GetChunkDescriptions();
+    auto chunks = m_primaryDeserializer->GetChunkDescriptions();
     if (chunks.size() < 1)
     {
         RuntimeError("Driving deserializer should at least provide one chunk.");
@@ -102,7 +104,7 @@ void Bundler::CreateChunkDescriptions()
         sequenceDescriptions.clear();
 
         // Iterating thru all sequences and identifying whether they are valid among all deserializers.
-        m_driver->GetSequencesForChunk(chunks[chunkIndex]->m_id, sequenceDescriptions);
+        m_primaryDeserializer->GetSequencesForChunk(chunks[chunkIndex]->m_id, sequenceDescriptions);
         std::set<size_t> invalid;
         for (size_t sequenceIndex = 0; sequenceIndex < sequenceDescriptions.size(); ++sequenceIndex)
         {
@@ -160,7 +162,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
 {
     BundlerChunkDescriptionPtr chunk = m_chunks[chunkId];
     ChunkDescriptionPtr original = chunk->m_original;
-    m_driver->GetSequencesForChunk(original->m_id, sequences);
+    m_primaryDeserializer->GetSequencesForChunk(original->m_id, sequences);
 
     std::vector<SequenceDescription> result;
     if (m_takePrimarySequenceLength) // No need to consult other deserializers.
@@ -175,7 +177,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
             }
 
             result.push_back(sequences[sequenceIndex]);
-            result.back().m_id = sequenceIndex;
+            result.back().m_indexInChunk = sequenceIndex;
         }
     }
     else // need to get the max sequence length from other deserializers.
@@ -198,7 +200,7 @@ void Bundler::GetSequencesForChunk(ChunkIdType chunkId, std::vector<SequenceDesc
                 sequenceSamples = std::max(sequenceSamples, s.m_numberOfSamples);
             }
             sequence.m_numberOfSamples = sequenceSamples;
-            sequence.m_id = sequenceIndex;
+            sequence.m_indexInChunk = sequenceIndex;
             result.push_back(sequence);
         }
     }
@@ -235,8 +237,8 @@ public:
         sequences.reserve(original->m_numberOfSequences);
 
         // Creating chunk mapping.
-        m_parent->m_driver->GetSequencesForChunk(original->m_id, sequences);
-        ChunkPtr drivingChunk = m_parent->m_driver->GetChunk(original->m_id);
+        m_parent->m_primaryDeserializer->GetSequencesForChunk(original->m_id, sequences);
+        ChunkPtr drivingChunk = m_parent->m_primaryDeserializer->GetChunk(original->m_id);
         m_sequenceToSequence.resize(deserializers.size() * sequences.size());
         m_innerChunks.resize(deserializers.size() * sequences.size());
         for (size_t sequenceIndex = 0; sequenceIndex < sequences.size(); ++sequenceIndex)
@@ -247,7 +249,7 @@ public:
             }
 
             size_t currentIndex = sequenceIndex * deserializers.size();
-            m_sequenceToSequence[currentIndex] = sequences[sequenceIndex].m_id;
+            m_sequenceToSequence[currentIndex] = sequences[sequenceIndex].m_indexInChunk;
             m_innerChunks[currentIndex] = drivingChunk;
         }
 
@@ -265,7 +267,7 @@ public:
 
                 size_t currentIndex = sequenceIndex * deserializers.size() + deserializerIndex;
                 deserializers[deserializerIndex]->GetSequenceDescription(sequences[sequenceIndex], s);
-                m_sequenceToSequence[currentIndex] = s.m_id;
+                m_sequenceToSequence[currentIndex] = s.m_indexInChunk;
 
                 ChunkPtr secondaryChunk = chunkTable[s.m_chunkId].lock();
                 if (!secondaryChunk)
@@ -279,11 +281,11 @@ public:
         }
     }
 
-    // Gets sequence by its id.
-    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
+    // Gets sequence by its index.
+    virtual void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
     {
         result.reserve(m_numberOfInputs);
-        size_t currentIndex = sequenceId * m_parent->m_deserializers.size();
+        size_t currentIndex = sequenceIndex * m_parent->m_deserializers.size();
         for (int i = 0; i < m_parent->m_deserializers.size(); ++i)
         {
             size_t originalSequenceId = m_sequenceToSequence[currentIndex + i];

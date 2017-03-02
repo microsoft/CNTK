@@ -188,6 +188,7 @@ core
 # prebuild file 
 Source/CNTK/buildinfo.h
 Source/CNTK/buildinfo.h$$
+Source/CNTKv2LibraryDll/buildinfo.h
 
 # Unit test output
 Tests/UnitTests/ReaderTests/Control/**/*_Output.txt

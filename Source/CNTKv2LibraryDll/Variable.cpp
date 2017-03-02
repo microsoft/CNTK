@@ -87,6 +87,13 @@ namespace CNTK
         return result;
     }
 
+    Variable Variable::NonCompositePreservingCopy() const
+    {
+        Variable copy = *this;
+        copy.m_outputComposite = nullptr;
+        return copy;
+    }
+
     void Variable::SetOwner(Function* ownerFunction)
     {
         if (Kind() != VariableKind::Output)
@@ -174,6 +181,22 @@ namespace CNTK
             // get a pointer to its value and simply copy the content of the supplied value.
             m_dataFields->m_value->CopyFrom(*value);
         }
+    }
+
+    std::wstring Variable::AsString() const
+    {
+        std::wstringstream wss;
+        wss << VariableKindName(Kind()) << "('";
+        if (Name() != L"")
+            wss << Name();
+        else
+            wss << Uid();
+        bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        if (reverse)
+            wss << "', " << DynamicAxesAsString(DynamicAxes(), reverse) << ", " << AsStringForErrorReporting(Shape()) << ")";
+        else
+            wss << "', " << AsStringForErrorReporting(Shape()) << ", " << DynamicAxesAsString(DynamicAxes(), reverse) << ")";
+        return wss.str();
     }
 
     static const std::wstring InitializerTypeAttributeName = L"initializerType";

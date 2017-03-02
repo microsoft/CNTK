@@ -454,12 +454,24 @@ namespace CNTK
 #endif
     }
 
+    bool IsFirstOutputOfMultiOutputUDF(const Variable& var)
+    {
+        if (!var.IsOutput())
+            return false;
+
+        auto owner = var.Owner();
+        if (dynamic_cast<PrimitiveFunction*>(owner.get()))
+            return false;
+
+        return (var == owner->Outputs()[0]) && (owner->Outputs().size() > 1);
+    }
+
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName)
     {
         std::vector<Axis> inputVarDynamicAxes;
-        if (internalDynamicAxisName.substr(0, CompositeFunction::InternalDefaultDynamicAxisName.length()) == CompositeFunction::InternalDefaultDynamicAxisName)
+        if (internalDynamicAxisName.substr(0, ComputationNodeBase::DefaultDynamicAxisName.length()) == ComputationNodeBase::DefaultDynamicAxisName)
             inputVarDynamicAxes = { Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() };
-        else if (internalDynamicAxisName.substr(0, CompositeFunction::InternalNoSequenceAxisName.length()) == CompositeFunction::InternalNoSequenceAxisName)
+        else if (internalDynamicAxisName.substr(0, ComputationNodeBase::DefaultNoSequenceAxisName.length()) == ComputationNodeBase::DefaultNoSequenceAxisName)
             inputVarDynamicAxes = { Axis::DefaultBatchAxis() };
         else
             inputVarDynamicAxes = { Axis(internalDynamicAxisName), Axis::DefaultBatchAxis() };
@@ -474,9 +486,9 @@ namespace CNTK
             LogicError("Empty dynamic axes set");
 
         if (dynamicAxes == std::vector<Axis>({ Axis::DefaultBatchAxis() }))
-            return CompositeFunction::InternalNoSequenceAxisName;
+            return ComputationNodeBase::DefaultNoSequenceAxisName;
         else if (dynamicAxes == std::vector<Axis>({ Axis::DefaultDynamicAxis(), Axis::DefaultBatchAxis() }))
-            return CompositeFunction::InternalDefaultDynamicAxisName;
+            return ComputationNodeBase::DefaultDynamicAxisName;
         else
             return dynamicAxes[0].Name();
     }
@@ -513,7 +525,8 @@ namespace CNTK
         if (var.GetDataType() != value->GetDataType())
             LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        bool isPackedValue = (dynamic_cast<PackedValue*>(value.get()) != nullptr);
+        auto packedValue = dynamic_cast<PackedValue*>(value.get());
+        bool isPackedValue = (packedValue != nullptr) && packedValue->IsPacked();
 
         // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
         if (!isPackedValue)
@@ -571,7 +584,7 @@ namespace CNTK
             LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
 
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
-        if (packedValue)
+        if (packedValue && packedValue->IsPacked())
             return packedValue->PackedData<ElementType>();
 
         auto varShape = var.Shape();
@@ -694,21 +707,10 @@ namespace CNTK
     template <typename ElementType>
     ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
     {
-        NDShape valueDataShape = sampleShape;
-
-        size_t maxNumTimeSteps = 1;
-        size_t numSequences = 1;
-        if (layout != nullptr)
-        {
-            maxNumTimeSteps = layout->GetNumTimeSteps();
-            numSequences = layout->GetNumSequences();
-            valueDataShape = valueDataShape.AppendShape({ maxNumTimeSteps, numSequences });
-        }
-
-        auto createMaskFunc = [](const MBLayoutPtr& layout, const DeviceDescriptor& device, std::vector<size_t>& sequencesShorterThanLongestSequence) {
+        auto CreateMask = [](const MBLayoutPtr& layout, const DeviceDescriptor& device) {
             std::vector<bool> sequenceBeginFlags;
             std::vector<size_t> sequenceLengths;
-            sequencesShorterThanLongestSequence.clear();
+            std::vector<size_t> sequencesShorterThanLongestSequence;
 
             size_t maxNumTimeSteps = layout->GetNumTimeSteps();
             size_t numSequences = layout->GetNumSequences();
@@ -760,56 +762,16 @@ namespace CNTK
         };
 
         // No data shuffling needed if no layout or the layout has just one time-step or just one sequence
-        std::vector<size_t> sequencesShorterThanLongestSequence;
-        if ((maxNumTimeSteps == 1) || (numSequences == 1))
-        {
-            // Just create a view over the existing matrix itself
-            auto tensorView = new TensorView<ElementType>(std::make_shared<Matrix<ElementType>>(matrix.AsReference()), AsTensorViewShape(valueDataShape));
-            auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), valueDataShape, readOnly, tensorView);
-            if (layout == nullptr)
-                return MakeSharedObject<Value>(data);
-            else
-            {
-                auto mask = createMaskFunc(layout, AsDeviceDescriptor(matrix.GetDeviceId()), sequencesShorterThanLongestSequence);
-                return MakeSharedObject<Value>(data, mask);
-            }
-        }
-
-        if (layout->GetNumCols() != matrix.GetNumCols())
-            LogicError("Bad MBLayout: The number of columns in the MBLayout does not match the number of columns in the data matrix!");
+        NDMaskPtr mask;
+        if (layout != nullptr)
+            mask = CreateMask(layout, AsDeviceDescriptor(matrix.GetDeviceId()));
 
         // Reshuffle to data to unpack and uninterleave the CNTK form packed data
-        // Now generate the scatter indices
-        auto shuffledMatrixData = std::make_shared<Matrix<ElementType>>(matrix.GetNumRows(), maxNumTimeSteps * numSequences, matrix.GetDeviceId(), matrix.GetMatrixType(), matrix.GetFormat());
-        auto mask = createMaskFunc(layout, AsDeviceDescriptor(matrix.GetDeviceId()), sequencesShorterThanLongestSequence);
-
-        // Set the target location of all gaps to be the last step of the first sequence that is shorter than the longest sequence in the batch
-        size_t targetColIdxForInvalidColumns = sequencesShorterThanLongestSequence.empty() ? 0 : (((sequencesShorterThanLongestSequence[0] + 1) * maxNumTimeSteps) - 1);
-        std::vector<ElementType> scatterIndicesVector(layout->GetNumCols(), (ElementType)targetColIdxForInvalidColumns);
-
-        size_t i = 0;
-        auto& layoutSequences = layout->GetAllSequences();
-        for (auto sequenceInfo : layoutSequences)
-        {
-            if (sequenceInfo.seqId != GAP_SEQUENCE_ID)
-            {
-                size_t targetParallelStreamIdx = sequenceInfo.s;
-                auto currentSequenceBeginIdx = std::max<ptrdiff_t>(0, sequenceInfo.tBegin);
-                auto currentSequenceEndIdx = std::min(maxNumTimeSteps, sequenceInfo.tEnd);
-                size_t currentSequenceLength = (currentSequenceEndIdx - currentSequenceBeginIdx);
-
-                for (size_t j = 0; j < currentSequenceLength; ++j)
-                    scatterIndicesVector[((currentSequenceBeginIdx + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElementType)((i * maxNumTimeSteps) + j);
-
-                i++;
-            }
-        }
-
-        auto scatterIdxMatrix = std::make_shared<Matrix<ElementType>>(1, layout->GetNumCols(), scatterIndicesVector.data(), matrix.GetDeviceId());
-        shuffledMatrixData->DoScatterColumnsOf(0, *scatterIdxMatrix, matrix, 1);
-
-        auto tensorView = new TensorView<ElementType>(shuffledMatrixData, AsTensorViewShape(valueDataShape));
-        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(shuffledMatrixData->GetFormat()), valueDataShape, readOnly, tensorView);
+        auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*maskGaps=*/ false);
+        auto dataShape = sampleShape;
+        if (layout != nullptr)
+            dataShape = dataShape.AppendShape({ layout->GetNumTimeSteps(), layout->GetNumSequences() });
+        auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), dataShape, readOnly, new TensorView<ElementType>(unpackedTensorView, AsTensorViewShape(dataShape)));
         return MakeSharedObject<Value>(data, mask);
     }
 
@@ -944,4 +906,94 @@ namespace CNTK
 
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const Variable& var, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const Variable& var, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+
+    void Accumulator::Update(const ValuePtr& delta, const DeviceDescriptor& device)
+    {
+        if (!delta)
+        {
+            InvalidArgument("Attempting to add a null value");
+        }
+
+        bool copied = false;
+        if (!Data() ||
+            GetDataType() != delta->GetDataType() ||
+            Shape() != delta->Shape() ||
+            Device() != device ||
+            Mask() != delta->Mask())
+        {
+            copied = true;
+            m_data = MakeSharedObject<NDArrayView>(delta->GetDataType(), delta->Shape(), device);
+            m_mask = delta->Mask();
+            ResetToZero();
+        }
+
+        if (delta->GetDataType() == DataType::Float)
+        {
+            Data()->GetWritableTensorView<float>()->AddCopyOf(*delta->Data()->GetTensorView<float>());
+        }
+        else
+        {
+            Data()->GetWritableTensorView<double>()->AddCopyOf(*delta->Data()->GetTensorView<double>());
+        }
+
+        if (copied && m_numUpdates != 0)
+        {
+            RuntimeError("Accumulation values are created when accumulated num updates not zero");
+        }
+
+        m_numUpdates++;
+    }
+
+    void Accumulator::Reset()
+    {
+        ResetToZero();
+        m_numUpdates = 0;
+    }
+
+    void Accumulator::ResetToZero()
+    {
+        if (Data() == nullptr)
+        {
+            return;
+        }
+
+        if (GetDataType() == DataType::Float)
+        {
+            Data()->SetValue(0.0f);
+        }
+        else
+        {
+            Data()->SetValue(0.0);
+        }
+    }
+
+    std::wstring DynamicAxesAsString(std::vector<Axis> da, bool rowMajor)
+    {
+        if (da.size() == 0)
+            return L"[]";
+        std::wstringstream wss;
+        wss << "[";
+        if (da == Axis::UnknownDynamicAxes())
+            wss << "???";
+        else
+        {
+            if (rowMajor)
+                std::reverse(da.begin(), da.end());
+            bool first = true;
+            for (auto d : da)
+            {
+                wss << (first ? "" : ", ");
+                if (d == Axis::DefaultBatchAxis())
+                    wss << "#";
+                else if (d == Axis::DefaultDynamicAxis())
+                    wss << "*";
+                else
+                    wss << d.Name();
+                first = false;
+            }
+        }
+        wss << "]";
+        return wss.str();
+    }
+
 }

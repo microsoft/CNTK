@@ -16,10 +16,9 @@ from cntk.utils import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.blocks import Placeholder, Block
-from cntk.layers import Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options
-from cntk.models import Sequential, LayerStack
+from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential, For
 from cntk.initializer import normal
+from cntk.training_session import *
 
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -33,8 +32,6 @@ image_width  = 224
 num_channels = 3  # RGB
 num_classes  = 1000
 model_name   = "VGG16.model"
-
-cntk.cntk_py.enable_hyper_memory_compress()
 
 # Create a minibatch source.
 def create_image_mb_source(map_file, is_training, total_number_of_samples):
@@ -79,31 +76,31 @@ def create_vgg16():
     with default_options(activation=None, pad=True, bias=True):
         z = Sequential([
             # we separate Convolution and ReLU to name the output for feature extraction (usually before ReLU) 
-            LayerStack(2, lambda i: [
+            For(range(2), lambda i: [
                 Convolution2D((3,3), 64, name='conv1_{}'.format(i)), 
                 Activation(activation=relu, name='relu1_{}'.format(i)), 
             ]),
             MaxPooling((2,2), (2,2), name='pool1'),
 
-            LayerStack(2, lambda i: [
+            For(range(2), lambda i: [
                 Convolution2D((3,3), 128, name='conv2_{}'.format(i)), 
                 Activation(activation=relu, name='relu2_{}'.format(i)), 
             ]),
             MaxPooling((2,2), (2,2), name='pool2'),
 
-            LayerStack(3, lambda i: [
+            For(range(3), lambda i: [
                 Convolution2D((3,3), 256, name='conv3_{}'.format(i)), 
                 Activation(activation=relu, name='relu3_{}'.format(i)), 
             ]),
             MaxPooling((2,2), (2,2), name='pool3'),
 
-            LayerStack(3, lambda i: [
+            For(range(3), lambda i: [
                 Convolution2D((3,3), 512, name='conv4_{}'.format(i)), 
                 Activation(activation=relu, name='relu4_{}'.format(i)), 
             ]),
             MaxPooling((2,2), (2,2), name='pool4'),
 
-            LayerStack(3, lambda i: [
+            For(range(3), lambda i: [
                 Convolution2D((3,3), 512, name='conv5_{}'.format(i)), 
                 Activation(activation=relu, name='relu5_{}'.format(i)), 
             ]),
@@ -135,7 +132,7 @@ def create_vgg16():
     }
 
 # Create trainer
-def create_trainer(network, epoch_size, num_quantization_bits):
+def create_trainer(network, epoch_size, num_quantization_bits, progress_printer):
     # Set learning parameters
     lr_per_mb         = [0.01]*20 + [0.001]*20 + [0.0001]*20 + [0.00001]*10 + [0.000001]
     lr_schedule       = cntk.learning_rate_schedule(lr_per_mb, unit=cntk.learner.UnitType.minibatch, epoch_size=epoch_size)
@@ -151,10 +148,10 @@ def create_trainer(network, epoch_size, num_quantization_bits):
         distributed_after=0)
 
     # Create trainer
-    return cntk.Trainer(network['output'], network['ce'], network['pe'], parameter_learner)
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_printer)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore):
+def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -162,23 +159,17 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         network['label']: train_source.streams.labels
     }
 
-    training_session = cntk.training_session(
-        training_minibatch_source = train_source, 
-        trainer = trainer,
-        model_inputs_to_mb_source_mapping = input_map, 
-        mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size), 
-        progress_printer = progress_printer, 
-#        checkpoint_frequency = epoch_size,
-        checkpoint_filename = os.path.join(model_path, model_name), 
-#        save_all_checkpoints = True,
-        progress_frequency = epoch_size, 
-        cv_source = test_source, 
-        cv_mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
-#        cv_frequency = epoch_size,
-        restore = restore)
+    mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size)
 
     # Train all minibatches 
-    training_session.train()
+    training_session(
+        trainer=trainer, mb_source = train_source,
+        var_to_stream = input_map,
+        mb_size_schedule = mb_size_schedule,
+        progress_frequency=epoch_size,
+        checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
+        cv_config = CrossValidationConfig(source=test_source, schedule=mb_size_schedule)
+    ).train()
 
 # Train and evaluate the network.
 def vgg16_train_and_eval(train_data, test_data, num_quantization_bits=32, minibatch_size=128, epoch_size = 1281167, max_epochs=80, 
@@ -194,10 +185,10 @@ def vgg16_train_and_eval(train_data, test_data, num_quantization_bits=32, miniba
         num_epochs=max_epochs)
 
     network = create_vgg16()
-    trainer = create_trainer(network, epoch_size, num_quantization_bits)
+    trainer = create_trainer(network, epoch_size, num_quantization_bits, progress_printer)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore)
  
 
 if __name__=='__main__':

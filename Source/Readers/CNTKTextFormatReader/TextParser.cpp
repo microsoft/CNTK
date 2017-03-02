@@ -61,8 +61,8 @@ struct TextParser<ElemType>::StreamInfo
 };
 
 template <class ElemType>
-TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool isPrimary) :
-TextParser(corpus, helper.GetFilePath(), helper.GetStreams(), isPrimary)
+TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool primary) :
+TextParser(corpus, helper.GetFilePath(), helper.GetStreams(), primary)
 {
     SetTraceLevel(helper.GetTraceLevel());
     SetMaxAllowedErrors(helper.GetMaxAllowedErrors());
@@ -74,7 +74,8 @@ TextParser(corpus, helper.GetFilePath(), helper.GetStreams(), isPrimary)
 
 // Internal, used for testing.
 template <class ElemType>
-TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool isPrimary) :
+TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool primary) :
+    DataDeserializerBase(primary),
     m_filename(filename),
     m_file(nullptr),
     m_streamInfos(streams.size()),
@@ -91,8 +92,7 @@ TextParser<ElemType>::TextParser(CorpusDescriptorPtr corpus, const std::wstring&
     m_numAllowedErrors(0),
     m_skipSequenceIds(false),
     m_numRetries(5),
-    m_corpus(corpus),
-    m_isPrimary(isPrimary)
+    m_corpus(corpus)
 {
     assert(streams.size() > 0);
 
@@ -168,8 +168,7 @@ void TextParser<ElemType>::Initialize()
                 "UTF-16 encoding is currently not supported.", m_filename.c_str());
         }
 
-        m_indexer = make_unique<Indexer>(m_file, m_isPrimary, m_skipSequenceIds, NAME_PREFIX, m_chunkSizeBytes);
-
+        m_indexer = make_unique<Indexer>(m_file, m_primary, m_skipSequenceIds, NAME_PREFIX, m_chunkSizeBytes);
         m_indexer->Build(m_corpus);
     });
 
@@ -218,7 +217,7 @@ void TextParser<ElemType>::GetSequencesForChunk(ChunkIdType chunkId, std::vector
     {
         result.push_back(
         {
-            s.m_id,
+            s.m_indexInChunk,
             s.m_numberOfSamples,
             s.m_chunkId,
             s.m_key
@@ -268,7 +267,7 @@ void TextParser<ElemType>::LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor&
     chunk->m_sequenceMap.resize(descriptor.m_sequences.size());
     for (const auto& sequenceDescriptor : descriptor.m_sequences)
     {
-        chunk->m_sequenceMap[sequenceDescriptor.m_id] = LoadSequence(sequenceDescriptor);
+        chunk->m_sequenceMap[sequenceDescriptor.m_indexInChunk] = LoadSequence(sequenceDescriptor);
     }
 }
 
@@ -452,12 +451,12 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             sequenceDsc.m_key.m_sequence, GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
-    FillSequenceMetadata(sequence, sequenceDsc.m_id);
+    FillSequenceMetadata(sequence, sequenceDsc.m_key);
     return sequence;
 }
 
 template<class ElemType>
-void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, size_t sequenceId)
+void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, const KeyType& sequenceKey)
 {
     for (size_t j = 0; j < m_streamInfos.size(); ++j)
     {
@@ -475,7 +474,7 @@ void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, si
             assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
         }
 
-        data->m_id = sequenceId;
+        data->m_key = sequenceKey;
     }
 }
 
@@ -1289,7 +1288,7 @@ std::wstring TextParser<ElemType>::GetFileInfo()
 template <class ElemType>
 bool TextParser<ElemType>::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
 {
-    if (m_isPrimary)
+    if (m_primary)
         LogicError("Matching by sequence key is not supported for primary deserilalizer.");
 
     const auto& keys = m_indexer->GetIndex().m_keyToSequenceInChunk;

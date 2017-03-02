@@ -31,6 +31,7 @@ DelayedValueNodeBase<ElemType, direction>::DelayedValueNodeBase(DEVICEID_TYPE de
     m_initialStateValueMatrix(make_shared<Matrix<ElemType>>(deviceId)),
     m_inputInvalidMatrix(make_shared<Matrix<ElemType>>(deviceId)),
     m_zeroMatrix(make_shared<Matrix<ElemType>>(deviceId)),
+    m_packedIndexMatrix(make_shared<Matrix<ElemType>>(deviceId)),
     m_delayedValue(make_shared<Matrix<ElemType>>(deviceId))
 {
     m_initialStateValue = initialState;
@@ -173,7 +174,7 @@ template<class ElemType, int direction>
 
     m_inputInvalidMatrix->SetValue(0);
 
-    // create the mask for invalid sequences
+    // --- create the mask for invalid sequences
     // The mask stores for every time step of every sequence whether that location is invalid; that is, when
     //  - the delayed time crosses a boundary, or
     //  - the current time is in a gap
@@ -220,6 +221,57 @@ template<class ElemType, int direction>
     // move to GPU
     // TODO: move this to the MBLayout where this can be done together with the creation of the other mask and is likely to further improve performance.
     m_inputInvalidMatrix->SetValue(1, m_inputInvalidMatrixTemp.size(), m_deviceId, m_inputInvalidMatrixTemp.data(), matrixFlagNormal);
+
+    // --- create the packed index in case of per-sequence initial state
+    // In this case, we use Gather() to select the respective columns from the input state.
+    if (GetNumInputs() > 1 && InputRef(1).HasMBLayout())
+    {
+        // ForwardProp() will first propagate a constant zero into the boundary frames.
+        // Gather() is then used with beta=1 to add the correct boundary value into those,
+        // while all other frames get added a 0.
+        // We must initialize the packed index as follows:
+        //  - packed index must have shape of 'this'
+        //  - packed index values are:
+        //     - matrix column indices into the initial state
+        //        - if initial-state sequence has >1 steps, then index from back
+        //        - if 1 step, then broadcast that to all
+        //     - or -1 for non-boundary entires
+
+        // our own output MB layout
+        let& outMBLayout = GetMBLayout();
+        vector<ElemType> buf(outMBLayout->GetNumCols(), -1); // -1 means non-boundary column
+        // MB layout of initial state
+        let& inMBLayout = InputRef(1).GetMBLayout();
+        // loop over all sequences (of the initial state)
+        let& inSequences = inMBLayout->GetAllSequences();
+        for (size_t i = 0; i < inSequences.size(); i++)
+        {
+            let& inSeq = inSequences[i];
+            if (inSeq.seqId == GAP_SEQUENCE_ID)
+                continue;
+            // find corresponding output sequence
+            let& outSeq = outMBLayout->FindMatchingSequence(inSequences, i);
+            let Tout = outSeq.GetNumTimeSteps(); // length of this output sequence
+            let Tin  =  inSeq.GetNumTimeSteps(); // length of initial state's sequence. 1 means broadcasting in case m_timeStep > 1.
+            // unless we are broadcasting, we will need m_timeStep values from the initial-state sequence
+            if (Tin != 1 && Tin < m_timeStep)
+                InvalidArgument("%ls %ls operation requires second argument (initialState) sequences to be either of length 1 or at least as long as the timestep (%d).", NodeName().c_str(), OperationName().c_str(), (int)m_timeStep);
+            // fill packed-index array
+            for (size_t dt = 0; dt < m_timeStep && dt < Tout; dt++) // we have this many boundary frames in each sequence
+            {
+                // For example, for m_timeStep = 2 and PastValue direction, and an initial-state length of 13,
+                // the index sequence would be [11, 12, -1, -1, ...].
+                // If the initial-state length is 1, we will broadcast and instead get [0, 0, -1, -1, ...].
+                let tout =                 direction < 0 ?                    dt : Tout      - 1 - dt;  // step index of boundary frame in output
+                let tin  = Tin == 1 ? 0 : (direction < 0 ? Tin - m_timeStep + dt : m_timeStep- 1 - dt); // and where in the initial state it comes from (Tin=1: broadcasting)
+                // now this must be mapped to matrix column indices relative to the respective MBLayout
+                let jout = outMBLayout->GetColumnIndex(outSeq, tout);
+                let jin  =  inMBLayout->GetColumnIndex(inSeq,  tin);
+                buf[jout] = (ElemType)jin;
+            }
+        }
+        m_packedIndexMatrix->SetValue(1, outMBLayout->GetNumCols(), m_packedIndexMatrix->GetDeviceId(), buf.data(), MatrixFormat::matrixFormatColMajor);
+    }
 }
 
 // update temporaries' column dimensions from MBLayout
@@ -229,8 +281,11 @@ template<class ElemType, int direction>
 {
     Base::UpdateFunctionMBSize();
 
-    // resize the temporary to their proper size
+    // resize the temporaries to their proper sizes
+    // TODO: Are we sharing memory correctly? (no big deal as these are small; yet would be nice)
     m_inputInvalidMatrix->Resize(1, GetMBLayout()->GetNumCols());
+    if (GetNumInputs() > 1 && InputRef(1).HasMBLayout())
+        m_packedIndexMatrix->Resize(1, GetMBLayout()->GetNumCols());
 }
 
 // retrieve the mask tensor for the current frame
@@ -306,18 +361,27 @@ template<class ElemType, int direction>
     // target tensor
     auto tgt = ValueTensorFor(rank, fr);
 
-    // init value tensor (a [1] tensor with broadcasting)
-    auto init = m_inputs.size() == 1
-        ? TensorView<ElemType>(m_initialStateValueMatrix, TensorShape(1)) // old form: initial state given as C++ constant
+    // init value tensor (in case of constant, this is a [1] tensor with broadcasting)
+    auto init = GetNumInputs() == 1 || InputRef(1).HasMBLayout()
+        ? TensorView<ElemType>(m_initialStateValueMatrix, TensorShape(1)) // old form or per-sequence: initial state given as C++ constant
         : InputRef(1).ValueTensorFor(rank, FrameRange());                 // initial state given as a tensor
 
     // now perform the copy operation
+    // In case of per-sequence state, we first pretend we have a constant init value of 0,
+    // and then add over it the actual per-sequence state in a Gather operation with beta=1.
     if (m_inputAllSeqValid[fr.t()]) // all frames are valid: copy as one tensor-copy operation
         tgt.AssignCopyOf(src);
     else if (m_inputAnySeqValid[fr.t()]) // some are valid, some are not: use a OpCond to select 'src' for valid and 'init' for invalid frames
         tgt.AssignCondOf(GetMaskTensor(rank, fr), init, src); // assign either input or init value, based on the mask
     else // no frame is valid: initialize from init value
         tgt.AssignCopyOf(init);
+    if (!m_inputAllSeqValid[fr.t()] && GetNumInputs() > 1 && InputRef(1).HasMBLayout())    // implant per-sequence state
+    {
+        let& idx   =             DataFor(*m_packedIndexMatrix, fr);  // column indices that guide the copy operation
+        auto tgt2  =             ValueFor                      (fr); // output goes here
+        let& init2 = InputRef(1).Value();                            // source data is the initial state. Not sliced, but we only copy parts.
+        tgt2.DoGatherColumnsOf(/*beta=*/1, idx, init2, /*alpha=*/1); // beta=1 so that we add to what we previously initialized to 0
+    }
 }
 
 template<class ElemType, int direction>
@@ -343,42 +407,58 @@ template<class ElemType, int direction>
 template<class ElemType, int direction>
 /*virtual*/ void DelayedValueNodeBase<ElemType,direction>::/*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) /*override*/
 {
-    // input 1 (initial state) can be done in bulk
+    // input 1 (initial state) is done in bulk
     if (inputIndex == 1)    
     {
         size_t rank = DetermineElementwiseTensorRank();
 
-        MaskMissingGradientColumnsToZero(fr); // we backprop invalid frames, including gaps; so zero them out
+        if (!InputRef(1).HasMBLayout())
+        {
+            MaskMissingGradientColumnsToZero(fr); // we backprop invalid frames, including gaps; so zero them out
 
-        auto src =                      GradientTensorFor(rank, fr); // incoming gradient from top
-        auto tgt = InputRef(inputIndex).GradientTensorFor(rank, FrameRange()); // outgoing gradient to initial state
-        TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
+            auto src =                      GradientTensorFor(rank, fr); // incoming gradient from top
+            auto tgt = InputRef(inputIndex).GradientTensorFor(rank, FrameRange()); // outgoing gradient to initial state
+            TensorView<ElemType> zero(m_zeroMatrix, TensorShape(1));
 
-        tgt.AddCondOf(GetMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
-        // This will drag along the gaps as well, hence we mask them to zero above. --TODO : this is not optimal.
-        // Alternative is a targeted copy using indices. Also needed to support initial state from nodes with time dimension.
-
-        return; // and done
+            tgt.AddCondOf(GetMaskTensor(rank, fr), src, zero); // when back-propping into initial state, we swap the args and propagate the invalid ones
+            // This will drag along the gaps as well, hence we mask them to zero above. --TODO : this is not optimal.
+            // Alternative is a targeted copy using indices. Also needed to support initial state from nodes with time dimension.
+        }
+        else // per-sequence initial state uses Scatter() instead
+        {
+            // In this case, we really only back-prop values we have.
+            // Non-determinism note:
+            // If timeStep > 1 and initial state sequences are broadcasting, we will have a reduction.
+            // That reduction may be non-deterministic.
+            // In the regular case (timeStep = 1), there will be no non-determinism.
+            let&  idx  =                 DataFor(*m_packedIndexMatrix, fr); // column indices that guide the copy operation
+            let&  src  =             GradientFor                      (fr); // gradient as received from top = source
+            auto& init = InputRef(1).Gradient();                            // target is the initial state. Not sliced, but we only copy parts.
+            init.DoScatterColumnsOf(/*beta=*/1, idx, src, /*alpha=*/1);
+        }
     }
-
-    // move the target matrix to the target device, since below it is accessed as slices which cannot move
-    // TODO: change below accesses to TensorView, then this is no longer needed. This is now the case, but need to test it.
-    InputRef(0).Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
-
-    // special case: DelayedValueNodes may be used outside of loops
-    // TODO: this should be a bulk operation; this implementation is a quick hack
-    if (fr.IsAllFrames())
+    else if (inputIndex == 0)
     {
-        // recursive call to ourselves
-        int dir = direction; // (this avoids a 'conditional expression is constant' warning)
-        FrameRangeIteration range(m_pMBLayout, -dir);
-        for (auto t = range.rbegin(); t != range.rend(); t++) // note: reverse iterator
-            BackpropTo(inputIndex, t);
-        return;
-    }
+        // special case: DelayedValueNodes may be used outside of loops
+        // TODO: this should be a bulk operation; this implementation is a quick hack
+        if (fr.IsAllFrames())
+        {
+            // recursive call to ourselves
+            int dir = direction; // (this avoids a 'conditional expression is constant' warning)
+            FrameRangeIteration range(m_pMBLayout, -dir);
+            for (auto t = range.rbegin(); t != range.rend(); t++) // note: reverse iterator
+                BackpropTo(inputIndex, t);
+            return;
+        }
 
-    if (inputIndex == 0)
-    {
+#if 0   // this should be removed; keep it around for a while in case we find it fail
+        // move the target matrix to the target device, since below it is accessed as slices which cannot move
+        // TODO: change below accesses to TensorView, then this is no longer needed. This is now the case, but need to test it.
+        // TODO: we seem to already use TensorView, so this thing may no longer be needed. Too scary to remove.
+        if (InputRef(0).NeedsGradient()) // (if not needs gradient then gradient matrix does not exist and therefore cannot be moved)
+            InputRef(0).Gradient().TransferToDeviceIfNotThere(m_deviceId, /*isBeingMoved=*/ true);
+#endif
+
         // if delayed input is within valid time range then add its gradient
         FrameRange frDelayed = fr.WithTimeOffset(direction * m_timeStep); // target frame
         if (!m_pMBLayout->IsBeyondMinibatch(frDelayed)) // only propagate if our target is inside the minibatch
@@ -412,8 +492,9 @@ template<class ElemType, int direction>
     if (isFinalValidationPass && !Input(0)->HasMBLayout())
         InvalidArgument("%ls %ls operation requires the main (first) input to have a dynamic axis.", NodeName().c_str(), OperationName().c_str());
 
-    if (isFinalValidationPass && m_inputs.size() >= 2 && Input(1)->HasMBLayout())
-        InvalidArgument("%ls %ls operation currently does not support the second input (initial state) to have a dynamic axis. It's coming though.", NodeName().c_str(), OperationName().c_str());
+    // if we have a per-sequence initial state, we leverage a scalar init value of 0 in the computation
+    if (isFinalValidationPass && GetNumInputs() > 1 && Input(1)->HasMBLayout() && m_initialStateValue != 0)
+        InvalidArgument("%ls %ls operation requires the scalar initial value to be 0 if the second input (initial state) has a dynamic axis.", NodeName().c_str(), OperationName().c_str());
 }
 
 template<class ElemType, int direction>

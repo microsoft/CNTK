@@ -40,7 +40,7 @@ def deconv_mnist(max_epochs=3):
     conv1   = cntk.layers.Convolution  ((5,5), cMap, pad=True, activation=cntk.ops.relu)(scaled_input)
     pool1   = cntk.layers.MaxPooling   ((4,4), (4,4))(conv1)
     unpool1 = cntk.layers.MaxUnpooling ((4,4), (4,4))(pool1, conv1)
-    z       = cntk.layers.Deconvolution((5,5), num_channels, cMap, lower_pad=(0,2,2), upper_pad=(0,2,2), bias=False, init=cntk.glorot_uniform(0.001))(unpool1)
+    z       = cntk.layers.ConvolutionTranspose((5,5), num_channels, cMap, pad=True, bias=False, init=cntk.glorot_uniform(0.001))(unpool1)
 
     # define rmse loss function (should be 'err = cntk.ops.minus(deconv1, scaled_input)')
     f2        = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
@@ -62,7 +62,7 @@ def deconv_mnist(max_epochs=3):
 
     # Instantiate the trainer object to drive the model training
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=True)
-    trainer = cntk.Trainer(z, rmse_loss, rmse_eval, learner)
+    trainer = cntk.Trainer(z, (rmse_loss, rmse_eval), learner)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -82,7 +82,7 @@ def deconv_mnist(max_epochs=3):
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
         progress_printer.epoch_summary(with_metric=True)
-        z.save_model(os.path.join(model_path, "07_Deconvolution_PY_{}.model".format(epoch)))
+        z.save(os.path.join(model_path, "07_Deconvolution_PY_{}.model".format(epoch)))
 
     # rename final model
     last_model_name = os.path.join(model_path, "07_Deconvolution_PY_{}.model".format(max_epochs - 1))

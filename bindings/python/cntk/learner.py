@@ -92,8 +92,8 @@ def _verify_momentum_type(momentum):
 
 class Learner(cntk_py.Learner):
     '''
-    Abstraction for learning a subset of parameters of a learnable function using first order gradient values
-    For e.g momentum, AdaGrad, RMSProp etc. are different types of learners with their own algorithms for
+    Abstraction for learning a subset of parameters of a learnable function using first order gradient values.
+    For example momentum, AdaGrad, RMSProp, etc. are different types of learners with their own algorithms for
     learning parameter values using first order gradients.
     To instantiate a concrete learner, use the factory methods in this module.
     '''
@@ -106,7 +106,7 @@ class Learner(cntk_py.Learner):
             gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
-            training_sample_count (int): training sample count
+            training_sample_count (int): number of samples in the minibatch
 
         Returns:
             `False` to indicate that learning has stopped for all of the parameters associated with this learner
@@ -114,7 +114,7 @@ class Learner(cntk_py.Learner):
         var_nd_map = { var: NDArrayView.from_data(val) for var, val in
                 gradient_values.items() }
 
-        return super(Learner, self).update(var_nd_map, training_sample_count)
+        return super(Learner, self)._update(var_nd_map, training_sample_count)
 
     @property
     @typemap
@@ -140,6 +140,56 @@ class Learner(cntk_py.Learner):
         Current learning rate.
         '''
         return super(Learner, self).learning_rate()
+
+class UserLearner(cntk_py.Learner):
+    '''
+    Base class of all user-defined learners. To implement your own learning
+    algorithm, derive from this class and override the :meth:`update`.
+
+    Certain optimizers (such as AdaGrad) require additional storage.
+    This can be allocated and initialized during construction.
+    '''
+
+    def __init__(self, parameters, learningRateSchedule):
+        super(UserLearner, self).__init__(parameters, learningRateSchedule)
+        self.__disown__()
+
+    def _update(self, gradient_values, training_sample_count, sweep_end):
+        '''
+        Update the parameters and related state associated with this learner.
+
+        Args:
+            gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
+             a NumPy array containing the gradient for the
+             Parameter w.r.t. the training objective.
+            training_sample_count (int): number of samples in the minibatch
+            sweep_end (bool): if the data is fed by a conforming reader, this indicates
+             whether a full pass over the dataset has just occured.
+
+        Returns:
+            `False` to indicate that learning has stopped for all of the parameters associated with this learner
+        '''
+        var_nd_map = { var: NDArrayView.from_data(val) for var, val in
+                gradient_values.items() }
+
+        return self.update(var_nd_map, training_sample_count, sweep_end)
+
+    def update(self, gradient_values, training_sample_count, sweep_end):
+        '''
+        Update the parameters associated with this learner.
+
+        Args:
+            gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
+             a NumPy array containing the first order gradient values for the
+             Parameter w.r.t. the training objective.
+            training_sample_count (int): number of samples in the minibatch
+            sweep_end (bool): if the data is fed by a conforming reader, this indicates
+             whether a full pass over the dataset has just occured.
+
+        Returns:
+            `False` to indicate that learning has stopped for all of the parameters associated with this learner
+        '''
+        raise NotImplementedError('UserLearner.update must be overriden')
 
 @typemap
 def training_parameter_schedule(schedule, unit, epoch_size=None):
@@ -215,7 +265,7 @@ def training_parameter_schedule(schedule, unit, epoch_size=None):
 @typemap
 def learning_rate_schedule(lr, unit, epoch_size=None):
     '''
-    Create a learning rate schedule (using the same semantics as 
+    Create a learning rate schedule (using the same semantics as
     :func:`training_parameter_schedule`).
 
     Args:
@@ -324,7 +374,7 @@ def sgd(parameters, lr,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''sgd(parameters, lr, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an SGD learner instance to learn the parameters. See [1] for more
     information on how to set the parameters.
 
@@ -370,7 +420,7 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0.0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates a Momentum SGD learner instance to learn the parameters.
 
     Args:
@@ -418,7 +468,7 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates a Nesterov SGD learner instance to learn the parameters. This was
     originally proposed by Nesterov [1] in 1983 and then shown to work well in
     a deep learning context by Sutskever, et al. [2].
@@ -477,7 +527,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''adagrad(parameters, lr, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an AdaGrad learner instance to learn the parameters. See [1] for
     more information.
 
@@ -528,7 +578,7 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), low_memory=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
 
@@ -536,14 +586,12 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
-        momentum (output of :func:`momentum_schedule` or 
-         :func:`momentum_as_time_constant_schedule`): momentum schedule.
+        momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
          <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
          to the value returned by :func:`default_unit_gain_value`.
-        variance_momentum (output of :func:`momentum_schedule` or
-         :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
+        variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
          to ``momentum_as_time_constant_schedule(720000)``.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -587,7 +635,7 @@ def rmsprop(parameters, lr,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''
+    '''rmsprop(parameters, lr, gamma, inc, dec, max, min, need_ave_multiplier=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an RMSProp learner instance to learn the parameters.
 
     Args:

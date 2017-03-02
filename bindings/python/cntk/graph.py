@@ -5,6 +5,7 @@
 # ==============================================================================
 
 import os
+from . import Variable
 
 def depth_first_search(node, visitor):
     '''
@@ -42,10 +43,11 @@ def depth_first_search(node, visitor):
                 pass
 
         if visitor(node):
-            if node.is_parameter:
-                node = node.as_parameter()
-            elif node.is_constant:
-                node = node.as_constant()
+            if isinstance(node, Variable):
+                if node.is_parameter:
+                    node = node.as_parameter()
+                elif node.is_constant:
+                    node = node.as_constant()
 
             accum.append(node)
 
@@ -106,55 +108,64 @@ def find_by_name(node, node_name):
     return result[0]
 
 
-def plot(node, to_file=None):
+def plot(root, filename=None):
     '''
-    Walks through every node of the graph starting at ``node``,
-    creates a network graph, and returns a network description. It `to_file` is
-    speicied, it outputs a DOT or PNG file depending on the file name's suffix.
+    Walks through every node of the graph starting at ``root``,
+    creates a network graph, and returns a network description. If ``filename`` is
+    specified, it outputs a DOT, PNG, PDF, or SVG file depending on the file name's suffix.
 
     Requirements:
 
      * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
-     * for PNG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
-       and `graphviz <http://graphviz.org>`_
+     * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
+       and `graphviz <[http://graphviz.org](http://graphviz.org)>_ (GraphViz executable has to be in the system's PATH).
 
     Args:
         node (graph node): the node to start the journey from
-        to_file (`str`, default None): file with either 'dot' or 'png' as
-        suffix to denote what format should be written. If `None` then nothing
-        will be plot, and the returned output can be used to debug the graph.
+        filename (`str`, default None): file with extension '.dot', 'png', 'pdf', or 'svg'
+        to denote what format should be written. If `None` then nothing
+        will be plotted. Instead, and the returned string can be used to debug the graph.
 
     Returns:
         `str` describing the graph
     '''
 
-    if to_file:
-        suffix = os.path.splitext(to_file)[1].lower()
-        if suffix not in ('.png', '.dot'):
-            raise ValueError('only suffix ".png" and ".dot" are supported')
+    if filename:
+        suffix = os.path.splitext(filename)[1].lower()
+        if suffix not in ('.svg', '.pdf', '.png', '.dot'):
+            raise ValueError('only file extensions ".svg", ".pdf", ".png", and ".dot" are supported')
     else:
         suffix = None
 
-    if to_file:
+    if filename:
         try:
             import pydot_ng as pydot
         except ImportError:
-            raise ImportError(
-                "PNG and DOT format requires pydot_ng package. Unable to import pydot_ng.")
+            raise ImportError("Unable to import pydot_ng, which is required to output SVG, PDF, PNG, and DOT format.")
 
         # initialize a dot object to store vertices and edges
         dot_object = pydot.Dot(graph_name="network_graph", rankdir='TB')
         dot_object.set_node_defaults(shape='rectangle', fixedsize='false',
                                      style='filled',
+                                     fillcolor='lightgray',
                                      height=.85, width=.85, fontsize=12)
         dot_object.set_edge_defaults(fontsize=10)
 
     # string to store model
     model = []
 
-    stack = [node.root_function]
+    root = root.root_function
+    root_uid = root.uid
+    stack = [root]
+    visited = set() # [uid] instead of node object itself, as this gives us duplicate entries for nodes with multiple outputs
 
-    visited = set()
+    primitive_op_map = {
+        'Plus': '+',
+        'Minus': '-',
+        'ElementTimes': '*',
+        'Times': '@',
+    }
+    function_nodes = {}  # [uid] -> dot node
 
     def node_desc(node):
         name = "<font point-size=\"10\" face=\"sans\">'%s'</font> <br/>"%node.name
@@ -168,57 +179,104 @@ def plot(node, to_file=None):
         return '<' + name + '>'
 
     def shape_desc(node):
+        dyn_axes = node.dynamic_axes
+        dyn = '[*' + ',*' * (len(dyn_axes) - 1) + ']' if len(dyn_axes) > 0 else ''
+        return dyn + str(node.shape)
         static_shape = str(node.shape)
-        num_dyn_axes = len(node.dynamic_axes)
-        return "#dyn: %i\nstatic: %s"%(num_dyn_axes, static_shape)
+        return '"#dyn: %i\nstatic: %s"'%(num_dyn_axes, static_shape)
 
     while stack:
         node = stack.pop(0)
 
-        if node in visited:
+        if node.uid in visited:
             continue
 
         try:
             # Function node
             node = node.root_function
+
             stack = list(node.root_function.inputs) + stack
+
+            # add current Function node
+            def lazy_create_node(node):
+                if node.uid in function_nodes: # dot node already exists
+                    return function_nodes[node.uid]
+                if node.is_primitive and not node.is_block and len(node.outputs) == 1 and node.output.name == node.name:     # skip the node name if redundant
+                    op_name = primitive_op_map.get(node.op_name, node.op_name)
+                    render_as_primitive = len(op_name) <= 4
+                    size = 0.4 if render_as_primitive else 0.6
+                    cur_node = pydot.Node(node.uid, label='"' + op_name + '"',
+                                          shape='ellipse'  if render_as_primitive else 'box',
+                                          fixedsize='true' if render_as_primitive else 'false', height=size, width=size,
+                                          fontsize=20  if render_as_primitive and len(op_name) == 1 else 12 ,
+                                          penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
+                    # TODO: Would be cool, if the user could pass a dictionary with overrides. But maybe for a later version.
+                else:
+                    f_name = '\n' + node.name + '()' if node.name else ''
+                    cur_node = pydot.Node(node.uid, label='"' + node.op_name + f_name + '"',
+                                          fixedsize='true', height=1, width=1.3,
+                                          penwidth=4 if node.op_name != 'Pass' and node.op_name != 'ParameterOrder' else 1)
+                dot_object.add_node(cur_node)
+                function_nodes[node.uid] = cur_node
+                return cur_node
 
             # add current node
             line = [node.op_name]
             line.append('(')
 
-            if to_file:
-                cur_node = pydot.Node(node.uid, label=node_desc(node),
-                        shape='circle')
+            if filename:
+                cur_node = lazy_create_node(node)
                 dot_object.add_node(cur_node)
 
             # add node's inputs
-            for i in range(len(node.inputs)):
-                child = node.inputs[i]
+            for i, input in enumerate(node.inputs):
+                # Suppress Constants inside BlockFunctions, since those are really private to the BlockFunction.
+                # Still show Parameters, so users know what parameters it learns, e.g. a layer.
+                from cntk import cntk_py
+                if node.is_block and isinstance (input, cntk_py.Variable) and input.is_constant:
+                    continue
 
-                line.append(child.uid)
+                line.append(input.uid)
                 if i != len(node.inputs) - 1:
                     line.append(', ')
 
-                if to_file:
-                    if child.is_input:
+                if filename:
+                    if input.is_input:
                         shape = 'invhouse'
                         color = 'yellow'
-                    elif child.is_parameter:
-                        shape = 'diamond'
-                        color = 'green'
-                    elif child.is_constant:
-                        shape = 'rectangle'
-                        color = 'lightblue'
-                    else:
+                    elif input.is_placeholder:
                         shape = 'invhouse'
                         color = 'grey'
-
-                    child_node = pydot.Node(child.uid, label=node_desc(child),
-                            shape=shape, color=color)
-                    dot_object.add_node(child_node)
-                    dot_object.add_edge(pydot.Edge(
-                        child_node, cur_node, label=shape_desc(child)))
+                    elif input.is_parameter:
+                        shape = 'diamond'
+                        color = 'green'
+                    elif input.is_constant:
+                        shape = 'rectangle'
+                        color = 'lightblue'
+                    else: # is_output
+                        shape = 'invhouse'
+                        color = 'grey'
+                    if isinstance (input, cntk_py.Variable) and not input.is_output:
+                        name = 'Parameter' if input.is_parameter else 'Constant' if input.is_constant else 'Input' if input.is_input else 'Placeholder'
+                        if input.name:
+                            if name == 'Parameter':  # don't say 'Parameter' for named parameters, it's already indicated by being a box
+                                name = input.name
+                            else:
+                                name = name + '\n' + input.name
+                        name += '\n' + shape_desc(input)
+                        if input.is_input or input.is_placeholder: # graph inputs are eggs (since dot has no oval)
+                            input_node = pydot.Node(input.uid, shape='egg', label=name, fixedsize='true', height=1, width=1.3, penwidth=4) # wish it had an oval
+                        elif not input.name and input.is_constant and (input.shape == () or input.shape == (1,)): # unnamed scalar constants are just shown as values
+                            input_node = pydot.Node(input.uid, shape='box', label=str(input.as_constant().value), color='white', fillcolor='white', height=0.3, width=0.4)
+                        else:                                      # parameters and constants are boxes
+                            input_node = pydot.Node(input.uid, shape='box', label=name, height=0.6, width=1)
+                    else: # output variables never get drawn except the final output
+                        assert(isinstance (input, cntk_py.Variable))
+                        input_node = lazy_create_node(input.owner)  # connect to where the output comes from directly, no need to draw it
+                    dot_object.add_node(input_node)
+                    label = input.name if input.name else input.uid # the Output variables have no name if the function has none
+                    label += '\n' + shape_desc(input)
+                    dot_object.add_edge(pydot.Edge(input_node, cur_node, label=label))
 
             # add node's output
             line.append(') -> ')
@@ -227,11 +285,13 @@ def plot(node, to_file=None):
             for n in node.outputs:
                 model.append(line + n.uid + ';\n')
 
-                if to_file:
-                    out_node = pydot.Node(n.uid, label=node_desc(n))
-                    dot_object.add_node(out_node)
-                    dot_object.add_edge(pydot.Edge(
-                        cur_node, out_node, label=shape_desc(node)))
+            if (filename):
+                if node.uid == root_uid: # only final network outputs are drawn
+                    for output in node.outputs:
+                        final_node = pydot.Node(output.uid, shape='egg', label=output.name + '\n' + shape_desc(output),
+                                                fixedsize='true', height=1, width=1.3, penwidth=4)
+                        dot_object.add_node(final_node)
+                        dot_object.add_edge(pydot.Edge(cur_node, final_node, label=shape_desc(output)))
 
         except AttributeError:
             # OutputVariable node
@@ -241,13 +301,17 @@ def plot(node, to_file=None):
             except AttributeError:
                 pass
 
-    visited.add(node)
+        visited.add(node.uid)
 
-    if to_file:
-        if suffix == '.png':
-            dot_object.write_png(to_file, prog='dot')
+    if filename:
+        if suffix == '.svg':
+            dot_object.write_svg(filename, prog='dot')
+        elif suffix == '.pdf':
+            dot_object.write_pdf(filename, prog='dot')
+        elif suffix == '.png':
+            dot_object.write_png(filename, prog='dot')
         else:
-            dot_object.write_raw(to_file)
+            dot_object.write_raw(filename)
 
     model = "\n".join(reversed(model))
 

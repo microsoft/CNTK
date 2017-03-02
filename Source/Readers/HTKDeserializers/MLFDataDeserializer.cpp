@@ -47,6 +47,7 @@ struct MLFUtterance : SequenceDescription
 };
 
 MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& cfg, bool primary)
+    : DataDeserializerBase(primary)
 {
     // TODO: This should be read in one place, potentially given by SGD.
     m_frameMode = (ConfigValue)cfg("frameMode", "true");
@@ -80,6 +81,7 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 }
 
 MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& labelConfig, const wstring& name)
+    : DataDeserializerBase(false)
 {
     // The frame mode is currently specified once per configuration,
     // not in the configuration of a particular deserializer, but on a higher level in the configuration.
@@ -341,13 +343,13 @@ bool MLFDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, Sequen
     if (m_frameMode)
     {
         size_t index = m_utteranceIndex[sequenceId] + key.m_sample;
-        result.m_id = index;
+        result.m_indexInChunk = index;
         result.m_numberOfSamples = 1;
     }
     else
     {
         assert(result.m_key.m_sample == 0);
-        result.m_id = sequenceId;
+        result.m_indexInChunk = sequenceId;
         result.m_numberOfSamples = (uint32_t) (m_utteranceIndex[sequenceId + 1] - m_utteranceIndex[sequenceId]);
     }
     return true;

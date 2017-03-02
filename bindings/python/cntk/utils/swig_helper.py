@@ -9,7 +9,7 @@ def map_if_possible(obj):
     global _typemap
     if _typemap is None:
         # We can do this only if cntk_py and the cntk classes are already
-        # known, which is the case, when map_if_possible is called. 
+        # known, which is the case, when map_if_possible is called.
         from cntk.ops.variables import Variable, Parameter, Constant
         from cntk.ops.functions import Function
         from cntk.learner import Learner
@@ -19,18 +19,18 @@ def map_if_possible(obj):
         from cntk.axis import Axis
         from cntk.distributed import WorkerDescriptor, Communicator, DistributedLearner
         from cntk import Value
-        _typemap = { 
+        _typemap = {
                 cntk_py.Variable: Variable,
                 cntk_py.Parameter: Parameter,
                 cntk_py.Constant: Constant,
-                cntk_py.Function: Function, 
-                cntk_py.Learner: Learner, 
-                cntk_py.Value: Value, 
+                cntk_py.Function: Function,
+                cntk_py.Learner: Learner,
+                cntk_py.Value: Value,
                 cntk_py.MinibatchSource: MinibatchSource,
                 cntk_py.Trainer: Trainer,
                 cntk_py.TrainingSession: TrainingSession,
                 cntk_py.MinibatchData: MinibatchData,
-                cntk_py.StreamConfiguration: StreamConfiguration, 
+                cntk_py.StreamConfiguration: StreamConfiguration,
                 cntk_py.Axis: Axis,
                 cntk_py.DistributedWorkerDescriptor: WorkerDescriptor,
                 cntk_py.DistributedCommunicator: Communicator,
@@ -48,7 +48,7 @@ def map_if_possible(obj):
             for k,v in obj.items():
                 map_if_possible(k)
                 map_if_possible(v)
-            
+
 def typemap(f):
     '''
     Decorator that upcasts return types from Swig types to cntk types that

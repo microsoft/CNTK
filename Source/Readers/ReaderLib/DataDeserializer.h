@@ -18,6 +18,10 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // sequence or sample mode, exposing only sequences.
 struct KeyType
 {
+    KeyType() : m_sequence(0), m_sample(0) {}
+
+    KeyType(size_t sequence, size_t sample) : m_sequence(sequence), m_sample(sample) {}
+
     // Possible sequence common prefix.
     // size_t m_prefix;
 
@@ -41,12 +45,15 @@ typedef uint32_t ChunkIdType;
 // A sequence is defined as an ordered set of samples (size == 1 is used for sample training).
 struct SequenceDescription
 {
-    size_t m_id;                               // Sequence id, uniquely identifies the sequence.
+    size_t m_indexInChunk;                     // Sequence index in chunk.
     uint32_t m_numberOfSamples;                // Number of samples in a sequence.
     ChunkIdType m_chunkId;                     // Each sequence belongs to an I/O chunk, how chunk is defined is specific to a
                                                // particular data deserializer (or bundler). The randomizer guarantees to request
                                                // sequences from only limited subset of chunks at any moment in time.
-    KeyType m_key;                             // Sequence key, used for correlations between sequences of different deserializers.
+    KeyType m_key;                             // Sequence key, uniquely identifies the sequence.
+                                               // When data is coming from different deserializers
+                                               // the reader will perform a form for SQL join operation on the m_key 
+                                               // to correlated the data between different streams.
 };
 
 typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
@@ -60,20 +67,19 @@ typedef std::shared_ptr<SequenceDescription> SequenceDescriptionPtr;
 // TODO: add type casts (As<T>() or AsRef<>() or AsPtr<>()) to subclasses as members here.
 struct SequenceDataBase
 {
-    SequenceDataBase() : m_id(0), m_numberOfSamples(0), m_elementType(ElementType::tvariant), m_isValid(true) {}
+    SequenceDataBase() : m_numberOfSamples(0), m_elementType(ElementType::tvariant), m_isValid(true) {}
     virtual ~SequenceDataBase() = default;
 
-    // Sequence id.
-    size_t m_id;
     uint32_t m_numberOfSamples;      // Number of samples in the sequence
 
     // Returns a pointer to the data buffer.
     // The actual size is provided for particular sequences,i.e. see DenseSequenceData, or SparseSequenceData.
     virtual const void* GetDataBuffer() = 0;
 
-    ElementType m_elementType;     // Sequence element type.
-    TensorShapePtr m_sampleLayout; // Sample layout, can be shared by several sequences.
-    bool m_isValid;                // Flag indicating if sequence is valid.
+    ElementType    m_elementType;     // Sequence element type.
+    TensorShapePtr m_sampleLayout;    // Sample layout, can be shared by several sequences.
+    bool           m_isValid;         // Flag indicating if sequence is valid.
+    KeyType        m_key;             // Sequence key.
 };
 typedef std::shared_ptr<SequenceDataBase> SequenceDataPtr;
 
@@ -115,10 +121,8 @@ typedef std::shared_ptr<SparseSequenceData> SparseSequenceDataPtr;
 class Chunk
 {
 public:
-    // Gets a sequence per input by its identifier.
-    // The sequence has a reference to the corresponding chunk. The chunk is not
-    // deallocated till all its sequences are released.
-    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) = 0;
+    // Gets a sequence per input by its index inside the chunk.
+    virtual void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) = 0;
 
     virtual ~Chunk() {};
 

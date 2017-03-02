@@ -88,24 +88,8 @@ namespace CNTK
 #endif
 
     template <class E>
-    __declspec_noreturn inline void ThrowFormatted(const char* format, ...)
-    {
-        va_list args;
-        va_start(args, format);
+    CNTK_API __declspec_noreturn void ThrowFormatted(const char* format, ...);
 
-        char buffer[1024] = { 0 }; // Note: pre-VS2015 vsnprintf() is not standards-compliant and may not add a terminator
-        int written = vsnprintf(buffer, _countof(buffer) - 1, format, args); // -1 because pre-VS2015 vsnprintf() does not always write a 0-terminator
-        // TODO: In case of EILSEQ error, choose between just outputting the raw format itself vs. continuing the half-completed buffer
-        //if (written < 0) // an invalid wide-string conversion may lead to EILSEQ
-        //    strncpy(buffer, format, _countof(buffer)
-        UNUSED(written); // pre-VS2015 vsnprintf() returns -1 in case of overflow, instead of the #characters written
-        if (strlen(buffer)/*written*/ >= (int)_countof(buffer) - 2)
-            sprintf(buffer + _countof(buffer) - 4, "...");
-
-        // TODO: Should use ExceptionWithCallStack; temporarily using std::exception to avoid duplicating headers
-        //throw ExceptionWithCallStack<E>(buffer, ExceptionWithCallStack<E>::GetCallStack(/*skipLevels=*/2, /*makeFunctionNamesStandOut=*/true));
-        throw E(buffer);
-    }
 #pragma warning(pop)
 
     // RuntimeError - throw a std::runtime_error with a formatted error string
@@ -150,6 +134,7 @@ namespace CNTK
 {
     // Forward declarations
     class Utils;
+    class NDShape; 
     class PrimitiveFunction;
     class CompositeFunction;
     class BlockFunction;
@@ -217,6 +202,12 @@ namespace CNTK
     class Trainer;
     typedef std::shared_ptr<Trainer> TrainerPtr;
 
+    class ProgressWriter;
+    typedef std::shared_ptr<ProgressWriter> ProgressWriterPtr;
+
+    class Accumulator;
+    typedef std::shared_ptr<Accumulator> AccumulatorPtr;
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
@@ -233,8 +224,14 @@ namespace CNTK
         CNTK_API FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name = L"");
         CNTK_API FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name = L"");
 
+        CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, const Variable& operand, const NDShape& strides, const std::vector<bool>& sharing, const std::vector<bool>& autoPadding,
+                                         const NDShape& lowerPad, const NDShape& upperPad, bool transpose, const NDShape& outputShape, size_t maxTempMemSizeInSamples, const std::wstring& name = L"");
+
         // This is meant for debugging purposes only and is very likely to be deprecated in the future.
         CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
+
+        // TODO: Workaround for back compat. Should not be used and will be removed in the next version.
+        CNTK_API void AddProgressWriters(const TrainerPtr&, const std::vector<ProgressWriterPtr>&);
 
         CNTK_API size_t NewUniqueId();
 
@@ -264,9 +261,6 @@ namespace CNTK
 
         CNTK_API void EnableForwardValuesSharing();
         CNTK_API void DisableForwardValuesSharing();
-
-        CNTK_API void EnableHyperMemoryCompress();
-        CNTK_API void DisableHyperMemoryCompress();
 
         CNTK_API void EnableGradientAccumulationOptimization();
         CNTK_API void DisableGradientAccumulationOptimization();

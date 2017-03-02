@@ -12,18 +12,20 @@ from numbers import Number
 from scipy import sparse
 
 from .. import cntk_py
-from cntk.device import use_default_device, cpu
+from ..device import use_default_device, cpu
 from .swig_helper import typemap
 from ..axis import Axis
 from .progress_print import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
+
 def is_string(s):
     '''
     Tests whether ``s`` is a string in a way that works on Python 2 and 3.
     '''
     return isinstance(s, ("".__class__, u"".__class__))
+
 
 def sanitize_precision(precision):
     '''
@@ -87,12 +89,14 @@ def one_hot(batch, num_classes, dtype=None, device=None):
 
     if data_type != int:
         raise ValueError('supplied data to one_hot() must be of type integer'
-                ' and not "%s" since it is index data.'%data_type)
+                         ' and not "%s" since it is index data.' % data_type)
 
     if dtype in [np.float32, None]:
-        value = cntk_py.Value.create_one_hot_float(num_classes, batch, device, False)
+        value = cntk_py.Value.create_one_hot_float(
+            num_classes, batch, device, False)
     elif dtype == np.float64:
-        value = cntk_py.Value.create_one_hot_double(num_classes, batch, device, False)
+        value = cntk_py.Value.create_one_hot_double(
+            num_classes, batch, device, False)
     return value
 
 
@@ -104,12 +108,14 @@ def sanitize_shape(shape):
 
 
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
-    """
-    Convert to :class:`~cntk.ops.variables.Variable` so that it can be passed as Variable to the
-    CNTK operators.
+    """sanitize_input(arg, fallback_dtype=np.float32, reshape=None)
+    Convert to :class:`~cntk.ops.variables.Variable` so that it can be passed
+    as Variable to the CNTK operators. 
 
-      * If ``arg`` is a NumPy array and its type is neither `np.float32` nor `np.float64`, it sets it to `np.float32`.
-      * If ``arg`` is an op, it is assumed that it has only one output, which will be returned.
+      * If ``arg`` is a NumPy array and its type is neither `np.float32` nor
+        `np.float64`, it sets it to `np.float32`.
+      * If ``arg`` is an op, it is assumed that it has only one output, which
+        will be returned. 
 
     Args:
         arg (number, NumPy array, :class:`~cntk.ops.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
@@ -137,7 +143,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
-    if not isinstance(arg, np.ndarray) or arg.dtype!=fallback_dtype:
+    if not isinstance(arg, np.ndarray) or arg.dtype != fallback_dtype:
         arg = np.asarray(arg, dtype=fallback_dtype)
         if arg.shape == ():
             arg.shape = (1,)
@@ -168,7 +174,7 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
-        if isinstance(arg, Variable) and arg.is_placeholder==True:
+        if isinstance(arg, Variable) and arg.is_placeholder == True:
             continue
         if isinstance(arg,
                       (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
@@ -226,6 +232,7 @@ def _is_dense(batch):
 
     return True
 
+
 @typemap
 def sanitize_batch(var, batch, seq_starts=None, device=None):
     '''
@@ -235,10 +242,11 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
         var (:class:`~cntk.ops.variables.Variable`): input variable into which
          ``batch`` is passed
         batch: batch input for `var`. It can be
-         * a single NumPy array denoting the full minibatch
-         * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
-         * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
-        seq_starts (list of `bool`s or None): if None, every sequence is
+
+           * a single NumPy array denoting the full minibatch
+           * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
+           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
+        seq_starts (list of bools or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans one for each sequence in the batch that tell whether a
          sequence is a new sequence (`True`) or a continuation of the sequence
@@ -247,17 +255,18 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
          this value should be put on
 
     Returns:
-        :class:`~cntk.core.Value`: converted batch that can be passed to the core API
+        batch converted to a :class:`~cntk.core.Value` instance that can be
+        passed to the core API
     '''
     if isinstance(batch, cntk_py.Value):
         if seq_starts is not None:
             raise ValueError('for directly passed Value objects sequence '
-                    'starts cannot be used yet.')
+                             'starts cannot be used yet.')
         return batch
 
-    if seq_starts and len(var.dynamic_axes)<=1:
+    if seq_starts and len(var.dynamic_axes) <= 1:
         raise ValueError('you specified sequence begin markers, but your '
-                'input_variable does not contain a sequence axis.')
+                         'input_variable does not contain a sequence axis.')
 
     if device is None:
         device = use_default_device()
@@ -313,9 +322,10 @@ def sanitize_function(arg):
 
     if not isinstance(arg, cntk_py.Function):
         raise TypeError("Object of type %s cannot be cast to Variable" %
-                str(type(arg)))
+                        str(type(arg)))
 
     return arg
+
 
 def sanitize_var_map(op_arguments, arguments, precision=None,
                      device=None, extract_values_from_minibatch_data=True):
@@ -323,23 +333,25 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     Sanitizes a dictionary of `Variable` s to input data such that it can be
     handed off to the evaluation methods
     (:meth:`~cntk.ops.functions.Function.forward`,
-    :meth:`~cntk.ops.functions.Function.backward`, :meth:`~cntk.Trainer.train_minibatch` and
+    :meth:`~cntk.ops.functions.Function.backward`,
+    :meth:`~cntk.Trainer.train_minibatch` and
     :meth:`~cntk.Trainer.test_minibatch`).
 
     Args:
-        op_arguments (:class:`~cntk.ops.functions.Function`): arguments of the root function. In
-         :meth:`~cntk.ops.functions.Function.forward` pass it is typically
-         `op.arguments`, in :meth:`~cntk.ops.functions.Function.backward` pass it is
-         `op.outputs`
-        arguments: maps variables to their input data. The interpretation depends on
-         the input type:
+        op_arguments (:class:`~cntk.ops.functions.Function`): arguments of the
+         root function. In :meth:`~cntk.ops.functions.Function.forward` pass it
+         is typically `op.arguments`, in
+         :meth:`~cntk.ops.functions.Function.backward` pass it is `op.outputs`
+        arguments: maps variables to their input data. The interpretation
+         depends on the input type:
 
-           * dict: keys are input variable or names, and values are the input data.
-           * any other type: if node has an unique input, arguments is
-             mapped to this input.
+          * dict: keys are input variable or names, and values are the input
+            data.
+          * any other type: if node has a unique input, arguments is
+            mapped to this input.
          For nodes with more than one input, only dict is allowed.
 
-         In both cases, every every sample in the data will be interpreted
+         In both cases, every sample in the data will be interpreted
          as a new sequence.
 
          Sequences can be marked as continuations of the same sequence in
@@ -364,20 +376,17 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          one of 'float' 'float32, 'double', 'float64', or None
         device (:class:`~cntk.device.DeviceDescriptor`, default None): device
          this value should be put on
-        extract_values_from_minibatch_data (`bool`, defaults to `True`): specifies
-         if :class:`~cntk.io.MinibatchData` instances in the arguments map are
-         converted to the underlying value (:class:`~cntk.core.Value`) instances (default),
-         or if they should remain intact, as they contain additional meta
-         information required by the Trainer (specifically, by the
-         :meth:`~cntk.Trainer.train_minibatch` method).
+        extract_values_from_minibatch_data (`bool`, defaults to `True`):
+         specifies if :class:`~cntk.io.MinibatchData` instances in the arguments
+         map are converted to the underlying value (:class:`~cntk.core.Value`)
+         instances (default), or if they should remain intact, as they contain
+         additional meta information required by the Trainer (specifically, by
+         the :meth:`~cntk.Trainer.train_minibatch` method).
 
     Returns:
         `dict` that maps variables to sanitized batches
     '''
     from ..io import MinibatchData
-
-    if not op_arguments:
-        return {}
 
     if isinstance(arguments, tuple):
         arguments, seq_starts = arguments
@@ -390,9 +399,16 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                              len(op_arguments))
         return {}
 
-    if len(arguments) < len(op_arguments):
-        raise ValueError('your graph has %i inputs, but you specified %i' %
-                        (len(op_arguments), len(arguments)))
+    if isinstance(arguments, cntk_py.Value):
+        if len(op_arguments) != 1:
+            raise ValueError('your graph has %i inputs, but you specified '
+                             'only one' % (len(op_arguments), len(arguments)))
+
+        arguments = { op_arguments[0]: arguments }
+
+    elif len(arguments) < len(op_arguments):
+        raise ValueError('your graph has %i inputs, but you specified data '
+                         'for %i' % (len(op_arguments), len(arguments)))
 
     if isinstance(arguments, dict):
         arg_names = [var.name for var in op_arguments]
@@ -405,7 +421,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
             var_name_map = dict([(op_arguments[0].name, op_arguments[0])])
             arguments = dict([(op_arguments[0], arguments)])
         else:
-            raise ValueError('non-dict argument (%s) is not supported for nodes with more than one input' % type(arguments).__name__)
+            raise ValueError(
+                'non-dict argument (%s) is not supported for nodes with more than one input' % type(arguments).__name__)
 
     if precision is not None:
         precision = sanitize_precision(precision)
@@ -428,8 +445,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         if isinstance(batch, tuple):
             if seq_starts is not None:
                 raise ValueError('you cannot provide sequence start '
-                        'information globally and for individual batches '
-                        'at the same time')
+                                 'information globally and for individual batches '
+                                 'at the same time')
 
             batch, seq_starts = batch
 
@@ -438,15 +455,16 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                     raise ValueError(
                         'if you specify sequence begin markers, it needs to be a list')
 
-                sample_size = batch.shape[0] if hasattr(batch, 'shape') else len(batch)
+                sample_size = batch.shape[0] if hasattr(
+                    batch, 'shape') else len(batch)
 
                 if len(seq_starts) != sample_size:
                     raise ValueError('you have %i sequences, but only %i '
-                            'sequence begin markers' % (sample_size, len(seq_starts)))
+                                     'sequence begin markers' % (sample_size, len(seq_starts)))
 
         if seq_starts is not None and isinstance(batch, cntk_py.Value):
             raise ValueError('for directly passed Value objects sequence '
-                    'starts cannot be used yet.')
+                             'starts cannot be used yet.')
 
         if isinstance(batch, MinibatchData) and extract_values_from_minibatch_data:
             batch = batch.data
@@ -468,6 +486,7 @@ def _ones_like(batch, precision):
         batch (list of NumPy arrays): a list of sequences, which are NumPy arrays
     '''
     return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
+
 
 def sanitize_dtype_numpy(dtype):
     is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
@@ -518,7 +537,7 @@ def sanitize_axis(axis):
         return Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
         return Axis(-axis - 1)
-    elif axis.is_static_axis:
+    elif axis.is_static_axis and (axis.static_axis_index() != Axis.new_leading_axis().static_axis_index()):
         return Axis(-1 - axis.static_axis_index())
     else:
         return axis
@@ -529,7 +548,7 @@ def sanitize_dynamic_axes(axes):
         axes = [axes]
     for ax in axes:
         if not isinstance(ax, cntk_py.Axis):
-            raise TypeError('type Axis expected, got %s instead'%type(ax))
+            raise TypeError('type Axis expected, got %s instead' % type(ax))
     axes = tuple(reversed(axes))
     return axes
 
@@ -560,7 +579,8 @@ def get_train_eval_criterion(trainer):
     return copy.copy(trainer.previous_minibatch_evaluation_average)
 
 
-# Obsolete: All usages should be replaced with the variable_value_to_seq procedure below
+# Obsolete: All usages should be replaced with the variable_value_to_seq
+# procedure below
 def value_to_seq(value):
     '''
     Convert a Value to a sequence of NumPy arrays that have their masked
@@ -644,7 +664,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
 
     if backward_pass:
         state, forward_output = op.forward(arguments, op.outputs, op.outputs,
-            device=device)
+                                           device=device)
 
         if expected_backward is None:
             expected_backward = arguments
@@ -656,22 +676,28 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         return forward_output, backward_output
 
     else:
-        state, forward_output = op.forward(arguments, op.outputs, None, device=device)
+        state, forward_output = op.forward(
+            arguments, op.outputs, None, device=device)
         return forward_output, None
 
 # helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
 # TODO: move to utils?
+
+
 class _ClassFromDict(dict):
+
     def __init__(self, args_dict):
         super(_ClassFromDict, self).__init__(args_dict)
         # TODO: try to delete __setattr__ to make it immutable
         self.__dict__.update(args_dict)
-        #for key in args_dict:   # self.__dict__.update(args_dict)
+        # for key in args_dict:   # self.__dict__.update(args_dict)
         #    self[key] = args_dict[key]
+
     def __getattr__(self, key):
         if key not in self:
             raise AttributeError("record has no attribute '{}'".format(key))
         return self[key]
+
     def __setattr__(self, key, value):
         raise AttributeError('record is immutable')
 
@@ -680,6 +706,7 @@ class _ClassFromDict(dict):
 # e.g. r = Record(x = 13, y = 42) ; x = r.x
 def Record(**kwargs):
     return _ClassFromDict(kwargs)
+
 
 def _as_tuple(x):
     '''
@@ -696,10 +723,13 @@ def _as_tuple(x):
         x = (x,)
     return tuple(x)
 
+
 def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_profiler_buffer_size):
     '''
-    Start profiler to prepare performance statistics gathering. Note that profiler is not enabled after start.
-	[Example](https://github.com/Microsoft/CNTK/wiki/Performance-Profiler#for-python)
+    Start profiler to prepare performance statistics gathering. Note that
+    the profiler is not enabled after start
+    (`example
+    <https://github.com/Microsoft/CNTK/wiki/Performance-Profiler#for-python>`_).
 
     Args:
         dir: directory for profiler output
@@ -707,21 +737,26 @@ def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_pr
         reserve_mem: size in byte for profiler memory reserved
     '''
     cntk_py.start_profiler(dir, sync_gpu, reserve_mem)
-    
+
+
 def stop_profiler():
     '''
     Stop profiler from gathering performance statistics and flush them to file
     '''
     cntk_py.stop_profiler()
-    
+
+
 def enable_profiler():
     '''
     Enable profiler to gather data. Note that in training_session, profiler would be enabled automatically after the first check point
     '''
     cntk_py.enable_profiler()
-    
+
+
 def disable_profiler():
     '''
     Disable profiler from gathering data.
     '''
     cntk_py.disable_profiler()
+
+

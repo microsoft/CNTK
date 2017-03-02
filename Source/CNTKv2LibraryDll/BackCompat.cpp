@@ -22,6 +22,7 @@
 #include "RNNNodes.h"
 #include "PreComputeNodes.h"
 #include "DeprecatedNodes.h"
+#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -144,6 +145,8 @@ namespace CNTK
                     opType = PrimitiveOpType::Sin;
                 else if (node->OperationName() == OperationNameOf(PassNode))
                     opType = PrimitiveOpType::Pass;
+                else if (node->OperationName() == OperationNameOf(LabelsToGraphNode))
+                    opType = PrimitiveOpType::LabelsToGraph;
                 else if (node->OperationName() == OperationNameOf(RectifiedLinearNode))
                     opType = PrimitiveOpType::ReLU;
                 else if (node->OperationName() == OperationNameOf(ExpNode))
@@ -347,6 +350,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(convolutionNode->LowerPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(convolutionNode->UpperPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTranspose] = convolutionNode->Transpose();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputShape] = AsNDShape(convolutionNode->OutputShape());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = convolutionNode->MaxTempMemSizeInSamples();
 
                     opType = PrimitiveOpType::Convolution;
@@ -450,9 +454,17 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDeletionPenalty] = edNode->DeletionPenalty();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSubstitutionPenalty] = edNode->SubstitutionPenalty();
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSquashInputs] = edNode->SquashInputs();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameSamplesToIgnore] = AsDictionaryValueVector(edNode->SamplesToIgnore());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTokensToIgnore] = AsDictionaryValueVector(edNode->TokensToIgnore());
 
                     opType = PrimitiveOpType::EditDistanceError;
+                }
+                else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
+                {
+                    auto edNode = node->As<ForwardBackwardNode<ElementType>>();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDelayConstraint] = edNode->DelayConstraint();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlankTokenId] = edNode->BlankTokenId();
+
+                    opType = PrimitiveOpType::ForwardBackward;
                 }
                 else if ((node->OperationName() == OperationNameOf(MeanNode)) || (node->OperationName() == OperationNameOf(InvStdDevNode)))
                 {
@@ -473,7 +485,9 @@ namespace CNTK
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
                 }
                 else
-                    LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
+                    InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"
+                                    "This is likely a deprecated operation; loading Brainscript/NDL models that contain deprecated operations, is not supported in Python/C++ API.\n"
+                                    "Please refer to CNTK documentation and edit/modify your Brainscript model/script to replace the deprecated operation with a supported operation.\n" , node->OperationName().c_str());
 
                 if (node->Is<RngUser>())
                 {

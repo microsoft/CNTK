@@ -6,10 +6,10 @@
 
 from __future__ import print_function
 from cntk import Trainer, UnitType, load_model
-from cntk.blocks import Placeholder, Constant
+from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, plot
 from cntk.initializer import glorot_uniform
-from cntk.io import ReaderConfig, ImageDeserializer, CTFDeserializer
+from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
 from cntk.ops import input_variable, parameter, cross_entropy_with_softmax, classification_error, times, combine
 from cntk.ops import roipooling
@@ -93,8 +93,7 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
     label_source.map_input(label_stream_name, dim=label_dim, format="dense")
 
     # define a composite reader
-    rc = ReaderConfig([image_source, roi_source, label_source], epoch_size=sys.maxsize, randomize=data_set == "train")
-    return rc.minibatch_source()
+    return MinibatchSource([image_source, roi_source, label_source], epoch_size=sys.maxsize, randomize=data_set == "train")
 
 
 # Defines the Fast R-CNN network model for detecting objects in images
@@ -160,7 +159,7 @@ def train_fast_rcnn(debug_output=False):
 
     # Instantiate the trainer object
     learner = momentum_sgd(frcn_output.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    trainer = Trainer(frcn_output, ce, pe, learner)
+    trainer = Trainer(frcn_output, (ce, pe), learner)
 
     # Get minibatches of images and perform model training
     print("Training Fast R-CNN model for %s epochs." % max_epochs)
@@ -176,7 +175,7 @@ def train_fast_rcnn(debug_output=False):
 
         progress_printer.epoch_summary(with_metric=True)
         if debug_output:
-            frcn_output.save_model(os.path.join(abs_path, "Output", "frcn_py_%s.model" % (epoch+1)))
+            frcn_output.save(os.path.join(abs_path, "Output", "frcn_py_%s.model" % (epoch+1)))
 
     return frcn_output
 
@@ -217,7 +216,7 @@ if __name__ == '__main__':
         trained_model = load_model(model_path)
     else:
         trained_model = train_fast_rcnn()
-        trained_model.save_model(model_path)
+        trained_model.save(model_path)
         print("Stored trained model at %s" % model_path)
 
     # Evaluate the test set

@@ -46,7 +46,7 @@ pushd $TestDataDir
 if [ "$OS" == "Windows_NT" ]; then
   $TEST_BIN_DIR/CNTKLibraryCPPEvalExamplesTest.exe
 else
-  $TEST_BIN_DIR/CNTKLibraryCPPEvalExamples
+  $TEST_BIN_DIR/CNTKLibraryCPPEvalExamplesTest
 fi
 
 ExitCode=$?
@@ -54,9 +54,5 @@ ExitCode=$?
 # Delete the test data
 popd
 rm -rf $TestDataDir
-
-if [ "$TEST_DEVICE" == "cpu" ]; then
-  unset CUDA_VISIBLE_DEVICES
-fi
 
 exit $ExitCode
