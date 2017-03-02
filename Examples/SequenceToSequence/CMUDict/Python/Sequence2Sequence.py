@@ -432,7 +432,10 @@ def format_sequences(sequences, i2w):
 # to help debug the attention window
 def debug_attention(model, input):
     q = combine([model, model.attention_model.attention_weights])
-    words, p = q(input)
+    #words, p = q(input) # Python 3
+    words_p = q(input)
+    words = words_p[0]
+    p     = words_p[1]
     len = words.shape[attention_axis-1]
     span = 7 #attention_span  #7 # test sentence is 7 tokens long
     p_sq = np.squeeze(p[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
