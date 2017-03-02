@@ -677,7 +677,7 @@ def train(model, train_data, max_epochs=1, save_model_flag=False, epoch_size=270
   # Instantiate the trainer object to drive the model training
   #learn = learner.adagrad(model.parameters, lr_schedule, gradient_clipping_threshold_per_sample = clipping_threshold_per_sample, gradient_clipping_with_truncation = gradient_clipping_with_truncation)
   #minibatch_size = 80000
-  minibatch_size = 50000
+  minibatch_size = 20000
   #minibatch_size = 24000
   #minibatch_size = 50000
   #minibatch_size = 24000
