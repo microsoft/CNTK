@@ -110,7 +110,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
         stab_out = Stabilizer()
         proj_out = Dense(label_vocab_dim, name='out_proj')
         # attention model
-        if use_attention:
+        if use_attention: # maps a decoder hidden state and the entire encoder state into an augmented decoder state
             attention_model = AttentionModel(attention_dim, attention_span, attention_axis, name='attention_model') # :: (h_enc*, h_dec) -> (h_dec augmented)
         # layer function
         @Function
@@ -132,6 +132,7 @@ def create_model(): # :: (history*, input*) -> logP(w)*
                     else:
                         r = Recurrence(rec_block)(r)
                 else:
+                    # unlike Recurrence(), the RecurrenceFrom() layer takes the initial hidden state as a data input
                     r = RecurrenceFrom(rec_block)(*(encoded_input.outputs + (r,))) # :: h0, c0, r -> h  (Python < 3.5)
                     #r = RecurrenceFrom(rec_block)(*encoded_input.outputs, r) # :: h0, c0, r -> h  (Python 3.5+)
             r = stab_out(r)
