@@ -27,6 +27,8 @@ ZipFaceFileReader::ZipFaceFileReader(const std::string& zipPath) :
 {
     assert(!m_zipPath.empty());
 
+    dump_index = 0;
+
     if (isCVReader)
     {
         m_relative_scale = 0;
@@ -39,6 +41,16 @@ ZipFaceFileReader::ZipFaceFileReader(const std::string& zipPath) :
     }
 }
 
+ZipFaceFileReader::~ZipFaceFileReader()
+{
+    assert(m_zipFile != nullptr);
+    int err = zip_close(m_zipFile);
+    assert(ZIP_ER_OK == err);
+#ifdef NDEBUG
+    UNUSED(err);
+#endif
+}
+
 ZipFaceFileReader::ZipPtr ZipFaceFileReader::OpenZip()
 {
     int err = ZIP_ER_OK;
@@ -46,15 +58,7 @@ ZipFaceFileReader::ZipPtr ZipFaceFileReader::OpenZip()
     if (ZIP_ER_OK != err)
         RuntimeError("Failed to open %s, zip library error: %s", m_zipPath.c_str(), GetZipError(err).c_str());
 
-    return ZipPtr(zip, [](zip_t* z)
-    {
-        assert(z != nullptr);
-        int err = zip_close(z);
-        assert(ZIP_ER_OK == err);
-#ifdef NDEBUG
-        UNUSED(err);
-#endif
-    });
+    return zip;
 }
 
 static void Bilinear(const float* pInput, int iWidth, int iHeight, int iChannels, int iStrideW, int iStrideH, int iStrideC,
@@ -149,18 +153,16 @@ void ZipFaceFileReader::CropAndScaleFaceImage(const cv::Mat &input_image, int in
 
 void ZipFaceFileReader::Register(const MultiMap& sequences)
 {
-    auto zipFile = m_zips.pop_or_create([this]()
-    {
-        return OpenZip();
-    });
+    m_zipFile = OpenZip();
+
     zip_stat_t stat;
     zip_stat_init(&stat);
 
     size_t numberOfEntries = 0;
-    size_t numEntries = zip_get_num_entries(zipFile.get(), 0);
+    size_t numEntries = zip_get_num_entries(m_zipFile, 0);
     for (size_t i = 0; i < numEntries; ++i)
     {
-        int err = zip_stat_index(zipFile.get(), i, 0, &stat);
+        int err = zip_stat_index(m_zipFile, i, 0, &stat);
         if (ZIP_ER_OK != err)
             RuntimeError("Failed to get file info for index %d, zip library error: %s", (int) i, GetZipError(err).c_str());
 
@@ -174,7 +176,6 @@ void ZipFaceFileReader::Register(const MultiMap& sequences)
             m_seqIdToIndex[sid] = std::make_pair(stat.index, stat.size);
         numberOfEntries++;
     }
-    m_zips.push(std::move(zipFile));
 
     if (numberOfEntries == sequences.size())
         return;
@@ -208,11 +209,12 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
     auto contents = m_workspace.pop_or_create([size]() { return vector<unsigned char>(size); });
     if (contents.size() < size)
         contents.resize(size);
-    auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
-    attempt(5, [&zipFile, &contents, &path, index, seqId, size]()
-    {
+
+    { 
+        std::lock_guard<std::mutex> g(m_readLocker);
+
         std::unique_ptr<zip_file_t, void(*)(zip_file_t*)> file(
-            zip_fopen_index(zipFile.get(), index, 0),
+            zip_fopen_index(m_zipFile, index, 0),
             [](zip_file_t* f)
             {
                 assert(f != nullptr);
@@ -226,7 +228,7 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
         if (nullptr == file)
         {
             RuntimeError("Could not open file %s in the zip file, sequence id = %lu, zip library error: %s",
-                         path.c_str(), (long)seqId, GetZipError(zip_error_code_zip(zip_get_error(zipFile.get()))).c_str());
+                         path.c_str(), (long)seqId, GetZipError(zip_error_code_zip(zip_get_error(m_zipFile))).c_str());
         }
         assert(contents.size() >= size);
         zip_uint64_t bytesRead = zip_fread(file.get(), contents.data(), size);
@@ -236,8 +238,9 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
             RuntimeError("Bytes read %lu != expected %lu while reading file %s",
                          (long)bytesRead, (long)size, path.c_str());
         }
-    });
-    m_zips.push(std::move(zipFile));
+
+        dump_index++;
+    }
 
     float landmarks[LANDMARK_POINTS_NUMBER * 2];
     auto data = contents.data();
@@ -253,6 +256,10 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
     cv::Mat inImg;
     cv::imdecode(imageContents, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR).convertTo(inImg, CV_32FC(3));;
     assert(nullptr != inImg.data);
+
+    char dump_name[100];
+    sprintf(dump_name, "dump_%d.png", dump_index);
+    cv::imwrite(dump_name, inImg);
 
     auto outImg = cv::Mat(m_batch_img_height, m_batch_img_width, CV_32FC(3));
     CropAndScaleFaceImage(inImg, inImg.cols, inImg.rows, inImg.channels(), landmarks, LANDMARK_POINTS_NUMBER, outImg);
