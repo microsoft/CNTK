@@ -355,10 +355,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Convo
 
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooling(const ComputationNodePtr inputValues,
-                                                                                   PoolKind poolKind, const bool poolPadMode, const TensorShape& kernelShape, const TensorShape& strideShape,
+                                                                                   PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                                                                    const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                                                                    ImageLayoutKind imageLayout,
-                                                                                   const std::wstring nodeName)
+                                                                                   const std::wstring nodeName, const bool poolPadMode)
 {
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                       poolKind, poolPadMode, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),

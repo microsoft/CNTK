@@ -87,10 +87,10 @@ public:
                                    bool transpose, const TensorShape& outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples,
                                    const std::wstring nodeName = L"");
     ComputationNodePtr Pooling(const ComputationNodePtr inputValues, 
-                               PoolKind poolKind, const bool poolPadMode, const TensorShape& kernelShape, const TensorShape& strideShape,
+                               PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                ImageLayoutKind imageLayout,
-                               const std::wstring nodeName = L"");
+                               const std::wstring nodeName = L"", const bool poolPadMode = false);
     ComputationNodePtr MaxUnpooling(const ComputationNodePtr unpoolInputValues,
                                     const ComputationNodePtr poolInputValues,
                                     const TensorShape& kernelShape, const TensorShape& strideShape,

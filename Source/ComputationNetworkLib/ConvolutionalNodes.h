@@ -529,8 +529,9 @@ public:
                                                                    m_kernelShape, m_mapCount, m_stride, 
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind, m_poolPadMode,
-                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms());
+                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                ConvolutionEngineKind::All, NodeName(), Globals::ShouldForceDeterministicAlgorithms(),
+																m_poolPadMode);
             }
 
             if (Input(0)->GetSampleLayout().GetNumElements() != m_kernelShape.GetNumElements() * m_convEng->Geometry()->KernelCount())
@@ -869,8 +870,8 @@ public:
                 auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind, m_poolPadMode,
-                                                                ConvolutionEngineKind::All, NodeName());
+                                                                m_maxTempMemSizeInSamples, m_poolKind,
+                                                                ConvolutionEngineKind::All, NodeName(), m_poolPadMode);
             }
         }
     }
@@ -998,9 +999,9 @@ public:
                                                                    m_sharing, m_autoPad, m_lowerPad, m_upperPad);
                 // Create reference engine as it's the only engine that implements unpooling.
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
-                                                                m_maxTempMemSizeInSamples, m_poolKind, m_poolPadMode,
+                                                                m_maxTempMemSizeInSamples, m_poolKind, 
                                                                 ConvolutionEngineKind::Reference,
-                                                                NodeName());
+                                                                NodeName(), m_poolPadMode);
             }
         }
     }
@@ -1278,7 +1279,7 @@ public:
         if (isFinalValidationPass && m_convEng == nullptr)
         {
             m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind,
-                                                            0, PoolKind::Max, false,
+                                                            0, PoolKind::Max,
                                                             ConvolutionEngineKind::All, NodeName());
         }
     }
@@ -1318,7 +1319,7 @@ public:
         if (isFinalValidationPass && m_convEng == nullptr)
         {
             m_convEng = ConvolutionEngine<ElemType>::Create(m_geometry, m_deviceId, m_imageLayoutKind,
-                                                            0, PoolKind::Average, false,
+                                                            0, PoolKind::Average,
                                                             ConvolutionEngineKind::All, NodeName());
         }
     }

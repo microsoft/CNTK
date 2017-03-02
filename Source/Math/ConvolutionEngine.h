@@ -61,8 +61,8 @@ public:
 
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
                                                                ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None,
-                                                               bool poolPadMode = false, ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
-                                                               std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false);
+                                                               ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
+                                                               std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false, bool poolPadMode = false);
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 

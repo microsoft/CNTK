@@ -413,10 +413,9 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                     nodePtr = builder.MaxUnpooling(NULL, NULL, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
                 else if (cnNodeType == OperationNameOf(PoolingNode))
                 {
-					auto poolPadMode = boolParamResolver("includePad", false);
                     auto parm = node->GetParentScript()->ParseVariable(reqParams[1]->GetValue(), false);
                     auto pool = PoolKindFrom(wstring(parm->GetValue()));
-                    nodePtr = builder.Pooling(NULL, pool, poolPadMode, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
+                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
                 }
                 else
                 {
