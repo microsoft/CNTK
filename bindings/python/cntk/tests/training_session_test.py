@@ -12,8 +12,8 @@ from .. import Function
 from ..ops import times, sequence, as_block, element_select
 from ..ops.tests.ops_test_utils import cntk_device
 from ..utils import one_hot
-from ..trainer import *
-from ..training_session import *
+from ..train.trainer import *
+from ..train.training_session import *
 from ..learner import *
 from .. import cross_entropy_with_softmax, classification_error, parameter, \
     input_variable, times, plus, reduce_sum, Axis, cntk_py

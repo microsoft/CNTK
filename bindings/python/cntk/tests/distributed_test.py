@@ -8,7 +8,7 @@ import math
 import numpy as np
 import pytest
 from .. import Function
-from ..trainer import *
+from ..train.trainer import *
 from ..learner import *
 from .. import distributed
 from .. import cross_entropy_with_softmax, classification_error, parameter, \

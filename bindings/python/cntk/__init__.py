@@ -12,7 +12,7 @@ from .core import *
 from . import ops
 from . import cntk_py
 
-from .trainer import *
+from .train import *
 from .learner import *
 from .initializer import *
 from .utils import *
@@ -22,7 +22,6 @@ from .debug import save_as_legacy_model
 from .device import *
 from .layers import *
 from .distributed import *
-from .training_session import *
 from .sample_installer import install_samples
 
 DATATYPE = np.float32

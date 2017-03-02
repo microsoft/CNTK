@@ -4,7 +4,7 @@
 # ==============================================================================
 
 from . import cntk_py
-from . import trainer
+from .train import trainer
 from .utils import typemap
 
 # Preload libmpi.so.12 for non-Windows platform to work around MPI_Init failure bug

@@ -4,10 +4,10 @@
 # ==============================================================================
 
 import sys
-from . import cntk_py
-from .device import use_default_device
-from .utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
-from .io import _py_dict_to_cntk_dict
+from .. import cntk_py
+from ..device import use_default_device
+from ..utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
+from ..io import _py_dict_to_cntk_dict
 
 __doc__ = '''\
 A training session encapsulates a typical training loop and binds together a minibatch source that is used for training, a :doc:`trainer <cntk.trainer>` and an optional cross validation minibatch source. A training session takes care of consistent checkpointing and progress printing with specified frequencies. 
