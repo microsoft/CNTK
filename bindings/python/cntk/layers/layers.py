@@ -908,9 +908,9 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
 
     Example:
      >>> f = LayerNormalization(initial_scale=2, initial_bias=1)
-     >>> f.update_signature(5)
-     >>> f([np.array([[3,2,4,1,5]])])  # result has mean 1 and standard deviation 2, reflecting the initial values for scale and bias
-         array([[[ 1.      , -0.414203,  2.414203, -1.828407,  3.828407]]], dtype=float32)
+     >>> f.update_signature(4)
+     >>> f([np.array([[4,0,0,4]])])  # result has mean 1 and standard deviation 2, reflecting the initial values for scale and bias
+         array([[[ 2.99999, -0.99999, -0.99999,  2.99999]]], dtype=float32)
 
     Args:
      initial_scale (float, default 1): initial value for the ``scale`` parameter
