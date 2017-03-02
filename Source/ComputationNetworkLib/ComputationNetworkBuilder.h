@@ -58,7 +58,7 @@ public:
     ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
                                              const size_t horizontalSubsample, const size_t verticalSubsample, 
                                              ImageLayoutKind imageLayoutKind, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
-    ComputationNodePtr CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
+    ComputationNodePtr CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const bool poolPadMode, const TensorShape& kernelShape, const TensorShape& strideShape,
                                          const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                          ImageLayoutKind imageLayout);
     ComputationNodePtr CreateMaxPoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
