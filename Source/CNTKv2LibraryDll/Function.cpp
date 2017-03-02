@@ -1241,6 +1241,7 @@ namespace CNTK
                         const std::vector<bool>& autoPadding,
                         const NDShape& lowerPad,
                         const NDShape& upperPad,
+						const bool poolPadMode,
                         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -1250,6 +1251,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
         additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
         additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+		additionalProperties[PrimitiveFunction::AttributeNameIncludePad] = poolPadMode;
 
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
     }

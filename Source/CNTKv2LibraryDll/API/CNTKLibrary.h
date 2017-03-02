@@ -3529,6 +3529,7 @@ namespace CNTK
                                  const std::vector<bool>& autoPadding = {false},
                                  const NDShape& lowerPad = {0},
                                  const NDShape& upperPad = {0},
+								 const bool poolPadMode = false,
                                  const std::wstring& name = L"");
 
     ///
