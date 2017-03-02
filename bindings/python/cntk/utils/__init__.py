@@ -708,7 +708,7 @@ def get_python_function_arguments(f):
     else:
         def getfullargspec(f):
             from inspect import getargspec
-            annotations = f.__annotations__ or {}
+            annotations = getattr(f, '__annotations__', {})
             #f.__annotations__ = None  # needed when faking it under Python 3 for debugging purposes
             a = getargspec(f)
             #f.__annotations__ = annotations
