@@ -9,12 +9,13 @@ from cntk import Trainer, UnitType, load_model
 from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, plot
 from cntk.initializer import glorot_uniform
-from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer
+from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer, StreamDefs, StreamDef
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
 from cntk.ops import input_variable, parameter, cross_entropy_with_softmax, classification_error, times, combine
 from cntk.ops import roipooling
 from cntk.ops.functions import CloneMethod
 from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.io.transforms import *
 from PARAMETERS import *
 import numpy as np
 import os, sys
@@ -80,17 +81,17 @@ def create_mb_source(img_height, img_width, img_channels, n_classes, n_rois, dat
                            (map_file, roi_file, label_file))
 
     # read images
-    image_source = ImageDeserializer(map_file)
-    image_source.ignore_labels()
-    image_source.map_features(features_stream_name,
-                              [ImageDeserializer.scale(width=img_width, height=img_height, channels=img_channels,
-                                                       scale_mode="pad", pad_value=114, interpolations='linear')])
+    transforms = [scale(width=img_width, height=img_height, channels=img_channels,
+                        scale_mode="pad", pad_value=114, interpolations='linear')]
+
+    image_source = ImageDeserializer(map_file, StreamDefs(
+        features = StreamDef(field='image', transforms=transforms)))
 
     # read rois and labels
-    roi_source = CTFDeserializer(roi_file)
-    roi_source.map_input(roi_stream_name, dim=rois_dim, format="dense")
-    label_source = CTFDeserializer(label_file)
-    label_source.map_input(label_stream_name, dim=label_dim, format="dense")
+    roi_source = CTFDeserializer(roi_file, StreamDefs(
+        rois = StreamDef(field=roi_stream_name, shape=rois_dim, is_sparse=False)))
+    label_source = CTFDeserializer(label_file, StreamDefs(
+        roiLabels = StreamDef(field=label_stream_name, shape=label_dim, is_sparse=False)))
 
     # define a composite reader
     return MinibatchSource([image_source, roi_source, label_source], epoch_size=sys.maxsize, randomize=data_set == "train")
@@ -139,9 +140,9 @@ def train_fast_rcnn(debug_output=False):
 
     # define mapping from reader streams to network inputs
     input_map = {
-        image_input: minibatch_source[features_stream_name],
-        roi_input: minibatch_source[roi_stream_name],
-        label_input: minibatch_source[label_stream_name]
+        image_input: minibatch_source.streams.features,
+        roi_input: minibatch_source.streams.rois,
+        label_input: minibatch_source.streams.roiLabels
     }
 
     # Instantiate the Fast R-CNN prediction model and loss function
