@@ -51,8 +51,11 @@ def train_language_understanding_atis_for_eval(test_device, output_dir):
     model = LanguageUnderstanding.create_model_function()
 
     # train
-    LanguageUnderstanding.train(reader, model, max_epochs=1)
-    model.save(os.path.join(output_dir, "atis" + "_0.dnn"))
+    if test_device == 'cpu':
+        print('train cifar_resnet only on GPU device. Use pre-trained models.')
+    else:
+        LanguageUnderstanding.train(reader, model, max_epochs=1)
+        model.save(os.path.join(output_dir, "atis" + "_0.dnn"))
 
 if __name__=='__main__':
     
