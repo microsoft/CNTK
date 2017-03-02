@@ -10,6 +10,10 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+class ConfigParameters;
+
+size_t GetRandomizationWindowFromConfig(const ConfigParameters& config);
+
 // Returns the size of the type.
 inline size_t GetSizeByType(ElementType type)
 {

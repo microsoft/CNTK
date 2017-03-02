@@ -748,6 +748,24 @@ namespace CNTK
         });
     }
 
+    std::wstring Function::AsString() const
+    {
+        wstringstream wss;
+        bool first = true;
+        if (IsComposite())
+            wss << "Composite(" << RootFunction()->OpName() << "): ";
+        else
+            wss << OpName() <<": ";
+        bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        for (auto arg : Arguments(reverse))
+            wss << (first ? (first = false, "") : ", ") << arg.AsString();
+        wss << " -> ";
+        first = true;
+        for (auto out : Outputs())
+            wss << (first ? (first = false, "") : ", ") << out.AsString();
+        return wss.str();
+    }
+
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand };
@@ -785,14 +803,14 @@ namespace CNTK
     }
 
     FunctionPtr Exp(const Variable& operand, const std::wstring& name)
-        {
+    {
         return UnaryOp(PrimitiveOpType::Exp, operand, Dictionary(), name);
     }
 
     FunctionPtr Log(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Log, operand, Dictionary(), name);
-        }
+    }
 
     FunctionPtr Square(const Variable& operand, const std::wstring& name)
     {
@@ -1090,6 +1108,20 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameBlankTokenId] = blankTokenId;
+        additionalProperties[PrimitiveFunction::AttributeNameDelayConstraint] = delayConstraint;
+
+        return BinaryOp(PrimitiveOpType::ForwardBackward, graph, features, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::LabelsToGraph, labels, Dictionary(), name);
+    }
+
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -1155,26 +1187,44 @@ namespace CNTK
                             const std::vector<bool>& autoPadding,
                             const NDShape& lowerPad,
                             const NDShape& upperPad,
-                            bool transpose,
                             size_t maxTempMemSizeInSamples,
                             const std::wstring& name)
     {
-        // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
-        // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
-        // the sample shape and considering the rest to be part of the batch axis
-        if (operand.DynamicAxes().empty())
-            LogicError("Convolution currently requires the main operand to have dynamic axes");
+        return Internal::Convolution(convolutionMap,
+                                     operand,
+                                     strides,
+                                     sharing,
+                                     autoPadding,
+                                     lowerPad,
+                                     upperPad,
+                                     false,
+                                     {0},
+                                     maxTempMemSizeInSamples,
+                                     name); 
+    }
 
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
-        additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
-        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
-        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
-        additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
-        additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
-
-        return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
+    FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
+        const Variable& operand,
+        const NDShape& strides,
+        const std::vector<bool>& sharing,
+        const std::vector<bool>& autoPadding,
+        const NDShape& lowerPad,
+        const NDShape& upperPad,
+        const NDShape& outputShape, 
+        size_t maxTempMemSizeInSamples,
+        const std::wstring& name)
+    {
+        return Internal::Convolution(convolutionMap,
+                                     operand,
+                                     strides,
+                                     sharing,
+                                     autoPadding,
+                                     lowerPad,
+                                     upperPad,
+                                     true,
+                                     outputShape,
+                                     maxTempMemSizeInSamples,
+                                     name);
     }
 
     FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
@@ -1312,13 +1362,7 @@ namespace CNTK
 
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
-        auto operandPlaceholder = PlaceholderVariable();
-        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
-        auto result = ElementSelect(lessThanZero, 
-            Minus(Exp(operandPlaceholder), Constant::Scalar(operand.GetDataType(), 1.0)),
-            operandPlaceholder);
-
-        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ELU", name);
+        return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
     }
 
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
@@ -1341,6 +1385,14 @@ namespace CNTK
             operandPlaceholder);
 
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"PReLU", name);
+    }
+
+    FunctionPtr Softplus(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = LogAddExp(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softplus", name);
     }
 
     FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name)
@@ -1606,6 +1658,37 @@ namespace CNTK
             // TODO: In V1 graph generation, ReconcileDynamicAxis() should be treated like a no-op if the axis is known to be the same.
             //       E.g. used for seq2seq.
             return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
+        }
+
+        FunctionPtr Convolution(const Variable& convolutionMap,
+            const Variable& operand,
+            const NDShape& strides,
+            const std::vector<bool>& sharing,
+            const std::vector<bool>& autoPadding,
+            const NDShape& lowerPad,
+            const NDShape& upperPad,
+            bool transpose,
+            const NDShape& outputShape,
+            size_t maxTempMemSizeInSamples,
+            const std::wstring& name)
+        {
+            // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
+            // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
+            // the sample shape and considering the rest to be part of the batch axis
+            if (operand.DynamicAxes().empty())
+                LogicError("Convolution currently requires the main operand to have dynamic axes");
+
+            auto additionalProperties = Dictionary();
+            additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+            additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+            additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+            additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
+            additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+            additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
+            additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
+            additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+
+            return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
         }
    }
 }

@@ -49,7 +49,8 @@
 #define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
 #define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
 #define CNTK_MODEL_VERSION_19 19 // batch norm: flag whether running mean count is 0
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_19
+#define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node 
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_20
 
 
 // helper mode for debugging
@@ -1417,13 +1418,13 @@ public:
     // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
     void InvalidateMissingValueColumns(const FrameRange& fr) override final
     {
-        // fprintf(stderr, "invalidating %ls %ls m_value column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
-        MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
+        if (m_value->GetMatrixType() != SPARSE) // Sparse matrices can only be masked with 0s
+            MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
     void InvalidateMissingGradientColumns(const FrameRange& fr) override final
     {
-        // fprintf(stderr, "invalidating %ls %ls m_gradient column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
-        MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
+        if (m_gradient->GetMatrixType() != SPARSE) // Sparse matrices can only be masked with 0s
+            MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
 
     static TensorView<ElemType> Unpack(const TensorShape& sampleShape,

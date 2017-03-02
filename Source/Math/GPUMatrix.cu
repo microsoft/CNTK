@@ -4299,7 +4299,10 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
     const std::vector<size_t> & uttFrameNum,
     const std::vector<size_t> & uttPhoneNum,
     const size_t numParallelSequences,
-    const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
+    const size_t maxFrameNum, 
+    const size_t blankTokenId,
+    const int delayConstraint, 
+    const bool isColWise)
 {
     if (isColWise)
     {
@@ -4340,13 +4343,13 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignCTCScore(const GPUMatrix<ElemTyp
         for (long t = 0; t < maxFrameNum; t++)
         {
             _assignAlphaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
-                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
+                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
         }
 
         for (long t = maxFrameNum - 1; t >= 0; t--)
         {
             _assignBetaScore << <block_tail, thread_tail, 0, t_stream >> >(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), gpuUttToChanInd,
-                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
+                gpuFrameNum, gpuBeginFrame, gpuPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
         }
 
         _assignTotalScore << <uttNum, 1, 0, t_stream >> > (beta.Data(), gpuScores, uttNum, gpuUttToChanInd, gpuBeginFrame, numParallelSequences, maxPhoneNum);

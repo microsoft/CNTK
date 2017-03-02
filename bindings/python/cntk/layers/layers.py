@@ -12,7 +12,7 @@ import numpy as np
 from ..ops.functions import Function
 from ..ops.variables import Variable
 from ..ops import parameter, input_variable, placeholder_variable, combine
-from ..ops import times, element_times, convolution, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
+from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from ..utils import Record, _as_tuple
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
@@ -443,7 +443,6 @@ def Convolution1D(rf_shape,         # shape of receptive field, e.g. (3)
                   init=default_override_or(glorot_uniform()),
                   pad=default_override_or(False),
                   strides=1,
-                  sharing=True,     # (must be True currently)
                   bias=default_override_or(True),
                   init_bias=default_override_or(0),
                   reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
@@ -460,7 +459,7 @@ def Convolution1D(rf_shape,         # shape of receptive field, e.g. (3)
     init_bias  = get_default_override(Convolution1D, init_bias=init_bias)
     if len(_as_tuple(rf_shape)) != 1: 
          raise ValueError('Convolution1D: rf_shape must be a scalar')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution1D', name=name)
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution1D', name=name)
 
 
 def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must be a 2-element tuple.
@@ -469,7 +468,6 @@ def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must
                   init=default_override_or(glorot_uniform()),
                   pad=default_override_or(False),
                   strides=1,
-                  sharing=True,     # (must be True currently)
                   bias=default_override_or(True),
                   init_bias=default_override_or(0),
                   reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
@@ -486,7 +484,7 @@ def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must
     init_bias  = get_default_override(Convolution2D, init_bias=init_bias)
     if len(rf_shape) != 2: 
          raise ValueError('Convolution2D: rf_shape must be a 2D tuple, e.g. (3,3)')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution2D', name=name)
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution2D', name=name)
 
 
 def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Must be a 3-element tuple.
@@ -495,7 +493,6 @@ def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Mu
                   init=default_override_or(glorot_uniform()),
                   pad=default_override_or(False),
                   strides=1,
-                  sharing=True,     # (must be True currently)
                   bias=default_override_or(True),
                   init_bias=default_override_or(0),
                   reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
@@ -512,42 +509,41 @@ def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Mu
     init_bias  = get_default_override(Convolution3D, init_bias=init_bias)
     if len(rf_shape) != 3: 
          raise ValueError('Convolution3D: rf_shape must be a 3D tuple, e.g. (3,3,3)')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=sharing, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution3D', name=name)
+    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution3D', name=name)
 
 
-# Deconvolution -- create a deconvolution layer with optional non-linearity
+# ConvolutionTranspose -- create a deconvolution layer with optional non-linearity
 # TODO: need to merge with above. Can it simply be transpose=True?
-def Deconvolution(rf_shape,        # shape of receptive field, e.g. (3,3)
-                  num_filters,
-                  num_input_filters,
-                  activation=default_override_or(identity),
-                  init=default_override_or(glorot_uniform()),
-                  pad=default_override_or(False),
-                  strides=1,
-                  sharing=True,     # (must be True currently)
-                  lower_pad=(0,),
-                  upper_pad=(0,),
-                  bias=default_override_or(True),
-                  init_bias=default_override_or(0),
-                  reduction_rank=1, # (must be 1 currently)
-                  max_temp_mem_size_in_samples=0, 
-                  name=''):
+def ConvolutionTranspose(rf_shape,        # shape of receptive field, e.g. (3,3)
+                         num_filters,
+                         num_input_filters,
+                         activation=default_override_or(identity),
+                         init=default_override_or(glorot_uniform()),
+                         pad=default_override_or(False),
+                         strides=1,
+                         sharing=True,     # (must be True currently)
+                         bias=default_override_or(True),
+                         init_bias=default_override_or(0),
+                         output_shape=(0,), 
+                         reduction_rank=1, # (must be 1 currently)
+                         max_temp_mem_size_in_samples=0, 
+                         name=''):
 
     '''
     Layer factory function to create a deconvolution layer.
     '''
-    #UntestedBranchError("Deconvolution not tested after merge to new Layers lib") # it's actually tested by a end-to-end test
+    #UntestedBranchError("ConvolutionTranspose not tested after merge to new Layers lib") # it's actually tested by a end-to-end test
 
-    activation = get_default_override(Deconvolution, activation=activation)
-    init       = get_default_override(Deconvolution, init=init)
-    pad        = get_default_override(Deconvolution, pad=pad)
-    bias       = get_default_override(Deconvolution, bias=bias)
-    init_bias  = get_default_override(Deconvolution, init_bias=init_bias)
+    activation = get_default_override(ConvolutionTranspose, activation=activation)
+    init       = get_default_override(ConvolutionTranspose, init=init)
+    pad        = get_default_override(ConvolutionTranspose, pad=pad)
+    bias       = get_default_override(ConvolutionTranspose, bias=bias)
+    init_bias  = get_default_override(ConvolutionTranspose, init_bias=init_bias)
 
     if reduction_rank != 1:
-        NotImplementedError("Deconvolution: reduction_rank other than 1 currently not supported")
+        NotImplementedError("ConvolutionTranspose: reduction_rank other than 1 currently not supported")
     if not sharing:
-        NotImplementedError("Deconvolution: sharing option currently must be True")
+        NotImplementedError("ConvolutionTranspose: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
     input_channels_shape = _as_tuple(num_input_filters)
     kernel_shape = output_channels_shape + rf_shape
@@ -559,22 +555,65 @@ def Deconvolution(rf_shape,        # shape of receptive field, e.g. (3,3)
     b = Parameter(output_channels_shape + (1,) * len(rf_shape), init=init_bias, name='b') if bias else None
 
     # expression
-    @BlockFunction('Deconvolution', name)
-    def deconvolve(x):
-        r = convolution (W, x,
-                         strides=_as_tuple(strides),
-                         sharing=_as_tuple(sharing),
-                         auto_padding=_as_tuple(pad),
-                         lower_pad=lower_pad,
-                         upper_pad=upper_pad,
-                         transpose=True,
-                         max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    @BlockFunction('ConvolutionTranspose', name)
+    def convolve_transposed(x):
+        r = convolution_transpose (W, x,
+                                   strides=_as_tuple(strides),
+                                   sharing=_as_tuple(sharing),
+                                   auto_padding=_as_tuple(pad),
+                                   output_shape=output_shape, 
+                                   max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         if bias:
             r = r + b
         if activation is not None:
             r = activation(r)
         return r
-    return deconvolve
+    return convolve_transposed
+
+# ConvolutionTranspose1D -- create a 1D convolution transpose layer with optional non-linearity
+def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3 
+                           num_filters=None,
+                           activation=activation_default_or_None,
+                           init=init_default_or_glorot_uniform,
+                           pad=pad_default_or_False,
+                           strides=1,
+                           bias=bias_default_or_True,
+                           init_bias=init_bias_default_or_0,
+                           output_shape=None, 
+                           name=''):
+    if len(filter_shape) != 1: 
+         raise ValueError('ConvolutionTranspose1D: filter_shape must be a scalar')
+    return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
+
+# ConvolutionTranspose2D -- create a 2D convolution transpose layer with optional non-linearity
+def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
+                           num_filters=None,
+                           activation=activation_default_or_None,
+                           init=init_default_or_glorot_uniform,
+                           pad=pad_default_or_False,
+                           strides=1,
+                           output_shape=None, 
+                           bias=bias_default_or_True,
+                           init_bias=init_bias_default_or_0,
+                           name=''):
+    if len(filter_shape) != 2: 
+         raise ValueError('ConvolutionTranspose2D: filter_shape must be a 2D tuple, e.g. (3,3)')
+    return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
+
+# ConvolutionTranspose3D -- create a 3D convolution transpose layer with optional non-linearity
+def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
+                           num_filters=None,
+                           activation=activation_default_or_None,
+                           init=init_default_or_glorot_uniform,
+                           pad=pad_default_or_False,
+                           strides=1,
+                           output_shape=None, 
+                           bias=bias_default_or_True,
+                           init_bias=init_bias_default_or_0,
+                           name=''):
+    if len(filter_shape) != 3: 
+         raise ValueError('ConvolutionTranspose3D: filter_shape must be a 3D tuple, e.g. (3,3,3)')
+    return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
 
 # TODO: add sequential mode like Convolution()
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape

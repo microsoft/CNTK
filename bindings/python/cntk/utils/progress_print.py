@@ -208,6 +208,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         self.epochs += 1
         epoch_end_time = time.time()
         elapsed_milliseconds = (epoch_end_time - self.epoch_start_time) * 1000
+        self.epoch_start_time = epoch_end_time # resetting starttime for use in the next epoch
 
         metric_since_start = self.metric_since_start if with_metric else None
         self.on_write_training_summary(self.samples_since_start, self.updates_since_start, self.epochs,

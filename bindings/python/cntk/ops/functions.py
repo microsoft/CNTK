@@ -1235,12 +1235,16 @@ class UserFunction(Function):
 
         map_if_possible(variables)
 
-        if len(variables)>1:
-            self.backward(state, root_gradients, variables)
-        else:
+        if len(root_gradients) == 1:
             for rg in root_gradients.values():
                 break
-            result = self.backward(state, rg)
+            root_gradients = rg
+        
+        possible_wrt = [input for input in self.inputs if input.needs_gradient]
+        if len(possible_wrt) > 1:
+            self.backward(state, root_gradients, variables)
+        else:
+            result = self.backward(state, root_gradients)
             for k in variables:
                 variables[k] = result
 

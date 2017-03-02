@@ -539,6 +539,9 @@ namespace CNTK
             case PrimitiveOpType::Sqrt:
                 computationNodePtr = New<SqrtNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::ELU:
+                computationNodePtr = New<ExponentialLinearUnitNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::Floor:
                 computationNodePtr = New<FloorNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
@@ -690,8 +693,15 @@ namespace CNTK
                 auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                 auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                NDShape outputShape = NDShape::Unknown; 
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
+                    outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                 auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
-                computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples);
+                computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, 
+                                                                       AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), 
+                                                                       sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, 
+                                                                       outputShape.IsUnknown()? TensorShape(0) : AsTensorShape(outputShape), 
+                                                                       ImageLayoutKind::CHW, maxTempMemSizeInSamples);
                 break;
             }
             case PrimitiveOpType::CosDistance:
@@ -717,6 +727,13 @@ namespace CNTK
                 auto squashInputs = functionConfig[PrimitiveFunction::AttributeNameSquashInputs].Value<bool>();
                 auto tokensToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameTokensToIgnore].Value<std::vector<DictionaryValue>>());
                 computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
+                break;
+            }
+            case PrimitiveOpType::ForwardBackward:
+            {
+                auto delayContraint = functionConfig[PrimitiveFunction::AttributeNameDelayConstraint].Value<int>();
+                auto blankTokenId = functionConfig[PrimitiveFunction::AttributeNameBlankTokenId].Value<size_t>();
+                computationNodePtr = New<ForwardBackwardNode<ElementType>>(network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
                 break;
             }
             case PrimitiveOpType::LambdaRank:
@@ -847,22 +864,34 @@ namespace CNTK
         }
         else
         {
-            computationNodePtr = New<UserDefinedV2FunctionNode<ElementType>>(network->GetDeviceId(), internalNodeName, function->shared_from_this());
-
-            // For user defined functions, we only attach unique inputs in the internal computation network since, the UDF 
-            // backward implementations directly compute aggregate gradient values for unique inputs
-            std::vector<ComputationNodeBasePtr> uniqueInputNodesBasePtrs;
-            for (auto inputNodeBasePtr : inputNodesBasePtrs)
+            auto outputs = function->RawOutputs();
+            if (variable == outputs[0])
             {
-                if (std::find(uniqueInputNodesBasePtrs.begin(), uniqueInputNodesBasePtrs.end(), inputNodeBasePtr) == uniqueInputNodesBasePtrs.end())
-                    uniqueInputNodesBasePtrs.push_back(inputNodeBasePtr);
-            }
+                computationNodePtr = New<UserDefinedV2FunctionNode<ElementType>>(network->GetDeviceId(), internalNodeName, function->shared_from_this());
 
-            inputNodesBasePtrs = uniqueInputNodesBasePtrs;
+                // For user defined functions, we only attach unique inputs in the internal computation network since, the UDF 
+                // backward implementations directly compute aggregate gradient values for unique inputs
+                std::vector<ComputationNodeBasePtr> uniqueInputNodesBasePtrs;
+                for (auto inputNodeBasePtr : inputNodesBasePtrs)
+                {
+                    if (std::find(uniqueInputNodesBasePtrs.begin(), uniqueInputNodesBasePtrs.end(), inputNodeBasePtr) == uniqueInputNodesBasePtrs.end())
+                        uniqueInputNodesBasePtrs.push_back(inputNodeBasePtr);
+                }
+
+                inputNodesBasePtrs = uniqueInputNodesBasePtrs;
+            }
+            else
+            {
+                size_t i = 1;
+                while (outputs[i] != variable) i++;
+                assert(i < outputs.size());
+
+                computationNodePtr = New<SelectUserDefinedV2FunctionOutputNode<ElementType>>(network->GetDeviceId(), CNTKInternalNodeNameFromUidAndName(variable.Uid(), variable.Name()), i);
+                inputNodesBasePtrs = { variableToNodeMap[outputs[0]] };
+            }
         }
 
         network->AddNodeToNetAndAttachInputs(computationNodePtr, inputNodesBasePtrs);
-
         return computationNodePtr;
     }
 
@@ -1012,10 +1041,9 @@ namespace CNTK
             };
             PreorderTraverseFunctions(rootFunction, PatchBlockArgumentsMapping);
 
-            std::function<bool(const Variable&)> IsVariableRoot;
-            IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
+            std::function<bool(const Variable&)> IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
                 auto mappingVariable = GetMappingVariable(outputVar);
-                return (m_isVariableRootMap[outputVar] && ((mappingVariable == outputVar) || IsVariableRoot(mappingVariable)));
+                return (m_isVariableRootMap[outputVar] && !IsFirstOutputOfMultiOutputUDF(mappingVariable) && ((mappingVariable == outputVar) || IsVariableRoot(mappingVariable)));
             };
 
             // If any of the function or requested outputs is not a root node, we need to explicitly
