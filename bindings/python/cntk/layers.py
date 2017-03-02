@@ -11,7 +11,7 @@
 from __future__ import division
 import numpy as np
 from .ops import parameter, input_variable, placeholder_variable, combine
-from .ops import times, convolution, convolution_transpose, pooling, batch_normalization, dropout, unpooling
+from .ops import times, convolution, pooling, batch_normalization, dropout, unpooling
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
 from .utils import Record, _as_tuple
 from .blocks import * # layers.py imports all of blocks and models
@@ -226,7 +226,7 @@ def ConvolutionTranspose(filter_shape,        # e.g. (3,3)
                          sharing=True,     # (must be True currently)
                          bias=bias_default_or_True,
                          init_bias=init_bias_default_or_0,
-                         output_shape=(0,), 
+                         output_shape=None, 
                          reduction_rank=1, # (must be 1 currently)
                          max_temp_mem_size_in_samples=0, 
                          name=''):
@@ -250,12 +250,13 @@ def ConvolutionTranspose(filter_shape,        # e.g. (3,3)
 
     # expression
     x = Placeholder(name='convolution_transpose_arg')
-    apply_x = convolution_transpose (W, x,
-                                    strides=_as_tuple(strides),
-                                    sharing=_as_tuple(sharing),
-                                    auto_padding=_as_tuple(pad),
-                                    output_shape=output_shape, 
-                                    max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+    apply_x = convolution (W, x,
+                           strides=_as_tuple(strides),
+                           sharing=_as_tuple(sharing),
+                           auto_padding=_as_tuple(pad),
+                           transpose = True, 
+                           output_shape=output_shape, 
+                           max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
     if bias:
         apply_x = apply_x + b
     apply_x = apply_x >> activation
