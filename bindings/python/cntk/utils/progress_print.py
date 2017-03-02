@@ -116,6 +116,15 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         if msg != "" and self.log_to_file is not None:
             self.___logprint(msg)
 
+    def log(self, message):
+        '''
+        Prints any message the user wishes to place in the log.
+
+        Args:
+            msg (`string`): message to print.
+        '''
+        self.___logprint(message)
+
     def avg_loss_since_start(self):
         '''
         DEPRECATED.
