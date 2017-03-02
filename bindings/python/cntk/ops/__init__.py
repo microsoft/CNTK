@@ -168,9 +168,11 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
         >>> y = input_variable(shape=(4,))
         >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
         >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
-        array([[[ 1., 0.5, 0.0]],
-               [[ 1., 0.5, 0.5]],
-               [[ 1., 0.0, 0.5]]])
+        array([[[ 1. ,  0.5,  0. ]],
+
+               [[ 1. ,  0.5,  0.5]],
+
+               [[ 1. ,  0. ,  0.5]]], dtype=float32)
 
     Args:
         x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
