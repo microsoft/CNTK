@@ -630,7 +630,7 @@ def test_layers_dropout(device_id):
     dat = np.array([[1., 1., 1., 1.]], dtype=np.float32)
     y = Input(4)
     p = Dense(1, activation=None, name='foo')(y)
-    z = Dropout(prob=0.75, name='bar')(p)
+    z = Dropout(0.75, name='bar')(p)
 
     res =  z(y).eval({y: dat})
     expected_res = np.sum(p.foo.W.value)
