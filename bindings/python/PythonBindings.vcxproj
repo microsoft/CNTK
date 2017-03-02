@@ -49,26 +49,34 @@
     <Text Include="vsbuild.bat" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="cntk\blocks.py" />
+    <None Include="build.bat" />
     <None Include="cntk\axis.py" />
-    <None Include="cntk\blocks.py" />
     <None Include="cntk\cntk_py.i" />
     <None Include="cntk\conftest.py" />
+    <None Include="cntk\core.py" />
+    <None Include="cntk\debug.py" />
+    <None Include="cntk\debugging\__init__.py" />
     <None Include="cntk\device.py" />
     <None Include="cntk\distributed.py" />
     <None Include="cntk\graph.py" />
     <None Include="cntk\initializer.py" />
+    <None Include="cntk\internal\__init__.py" />
     <None Include="cntk\layers.py" />
     <None Include="cntk\learner.py" />
+    <None Include="cntk\logging\__init__.py" />
+    <None Include="cntk\losses\__init__.py" />
+    <None Include="cntk\metrics\__init__.py" />
     <None Include="cntk\models.py" />
-    <None Include="cntk\persist.py" />
+    <None Include="cntk\optimizer\__init__.py" />
     <None Include="cntk\pytest.ini" />
+    <None Include="cntk\sample_installer.py" />
     <None Include="cntk\tensor.py" />
     <None Include="cntk\trainer.py" />
+    <None Include="cntk\training_session.py" />
+    <None Include="cntk\train\__init__.py" />
     <None Include="cntk\__init__.py" />
     <None Include="cntk\io\__init__.py" />
     <None Include="cntk\io\tests\io_tests.py" />
-    <None Include="cntk\io\tests\tf_data.txt" />
     <None Include="cntk\io\tests\__init__.py" />
     <None Include="cntk\ops\functions.py" />
     <None Include="cntk\ops\variables.py" />
@@ -107,8 +115,10 @@
     <None Include="cntk\utils\tests\swig_helper_tests.py" />
     <None Include="cntk\utils\tests\utils_test.py" />
     <None Include="cntk\utils\tests\__init__.py" />
+    <None Include="README.md" />
     <None Include="setup.py" />
     <None Include="swig_install.sh" />
+    <None Include="test.bat" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
