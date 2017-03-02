@@ -25,7 +25,6 @@ def dump_signature(root, tag=None):
     else:
         output_signature = format_arg_spec(outputs[0])
     print(f_name + '(' + ", ".join([format_arg_spec(param) for param in args]) + ') -> ' + output_signature)
-    raise ValueError('x')
 
 def dump_function(root, tag=None):
     from ...graph import depth_first_search

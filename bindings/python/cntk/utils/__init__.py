@@ -708,8 +708,11 @@ def get_python_function_arguments(f):
     else:
         def getfullargspec(f):
             from inspect import getargspec
+            annotations = f.__annotations__ or {}
+            #f.__annotations__ = None  # needed when faking it under Python 3 for debugging purposes
             a = getargspec(f)
-            return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations={})
+            #f.__annotations__ = annotations
+            return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations=annotations)
     param_specs = getfullargspec(f)
     annotations = param_specs.annotations
     arg_names = param_specs.args
@@ -786,10 +789,9 @@ def Signature(*args, **kwargs):
         annotations = {}
         if len(args) + len(kwargs) != len(param_names):
             raise TypeError("{} annotations provided for function to be decorated, but function has {} parameters".format(len(args) + len(kwargs), len(param_names)))
-        params_dict = { name: name for name in param_names }
-        annotations = map_function_arguments(param_names, params_dict, *args, **kwargs)
         # implant anotations into f
-        f.__annotations__ = annotations
+        params_dict = { name: name for name in param_names }
+        f.__annotations__ = map_function_arguments(param_names, params_dict, *args, **kwargs)
         return f # and return the updated function
     return add_annotations
 
