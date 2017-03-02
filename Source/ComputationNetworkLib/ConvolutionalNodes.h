@@ -775,7 +775,7 @@ public:
     PoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
         : PoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"kernelShape"),
                       configp->Get(L"strideShape"),
-                      configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"), false,
+                      configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"), configp->Get(L"ceilOut"),
                       ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
