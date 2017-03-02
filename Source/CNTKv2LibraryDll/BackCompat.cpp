@@ -466,6 +466,10 @@ namespace CNTK
 
                     opType = PrimitiveOpType::ForwardBackward;
                 }
+                else if (node->OperationName() == OperationNameOf(CosDistanceWithNegativeSamplesNode))
+                {
+                    opType = PrimitiveOpType::CosDistanceWithNegativeSamples;
+                }
                 else if ((node->OperationName() == OperationNameOf(MeanNode)) || (node->OperationName() == OperationNameOf(InvStdDevNode)))
                 {
                     auto precomputeNode = node->As<MeanInvStdDevNodeBase<ElementType>>();

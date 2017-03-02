@@ -714,6 +714,22 @@ namespace CNTK
                             outputShape = operand.Shape();
                             break;
                         }
+                        case PrimitiveOpType::CosDistanceWithNegativeSamples:
+                        {
+                            assert(m_inputs.size() == 4);
+
+                            auto shiftInput = m_inputs[2];
+                            auto numNegativeSamplesInput = m_inputs[3];
+                            auto IsConstantScalar = [](const Variable& var) {
+                                return var.IsConstant() && (var.Shape().TotalSize() == 1);
+                            };
+                            if (!IsConstantScalar(shiftInput) || !IsConstantScalar(numNegativeSamplesInput))
+                                InvalidArgument("CosDistanceWithNegativeSamples: Input(2) and Input(3) correpond to shift and numNegativeSamples inputs and must be scalar constants!");
+
+                            auto numNegativeSamples = (size_t)Constant(numNegativeSamplesInput).Value()->AsScalar<float>();
+                            outputShape = NDShape({ numNegativeSamples + 1 });
+                            break;
+                        }
                         default:
                             LogicError("Specified m_op %S not yet supported", PrimitiveOpTypeName(m_op).c_str());
                             break;

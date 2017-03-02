@@ -148,6 +148,48 @@ def cosine_distance(x, y, name=''):
     return cosine_distance(x, y, name)
 
 @typemap
+def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name=''):
+    '''
+
+    Given minibatches for ``x`` and ``y``, this function computes for each element in `x` the cosine distance between 
+    it and the corresponding `y` and additionally the cosine distance between ``x`` and some other elements of ``y`` 
+    (referred to a negative samples). The ``x`` and ``y`` pairs are samples often derived 
+    from embeddings of textual data, though the function can be used for any form of numeric encodings. 
+    When using this function to compute textual similarity, ``x`` represents search query term embedding 
+    and ``y`` represents a document embedding. The negative samples are formed on the fly by shifting 
+    the right side (``y``). The ``shift`` indicates how many samples in ``y`` one should shift while
+    forming each negative sample pair. It is often chosen to be 1. As the name suggests 
+    ``num_negative_samples`` indicates how many negative samples one would want to generate.
+
+    Example:
+        >>> qry = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
+        >>> doc = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
+        >>> x = input_variable(shape=(4,))
+        >>> y = input_variable(shape=(4,))
+        >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
+        >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
+        array([[[ 1. ,  0.5,  0. ]],
+        <BLANKLINE>
+               [[ 1. ,  0.5,  0.5]],
+        <BLANKLINE>
+               [[ 1. ,  0. ,  0.5]]], dtype=float32)
+
+    Args:
+        x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        shift: non-zero positive integer representing number of shift to generate a negative sample
+        num_negative_samples: number of negative samples to generate, a non-zero positive integer 
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cosine_distance_with_negative_samples
+    dtype = get_data_type(x, y)
+    x = sanitize_input(x, dtype)
+    y = sanitize_input(y, dtype)
+
+    return cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name)
+
+@typemap
 def binary_cross_entropy(output, target, name=''):
     r'''
     Computes the binary cross entropy (aka logistic loss) between the ``output`` and ``target``.
