@@ -414,7 +414,7 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
         r = convolution (W, x,
                          strides=strides, sharing=sharing, auto_padding=pad,
                          # TODO: can we rename auto_padding to pad?
-                         transpose=transpose,
+                         #transpose=transpose,
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
         if sequential and not pad[-rf_rank]:
@@ -573,12 +573,12 @@ def ConvolutionTranspose(rf_shape,        # shape of receptive field, e.g. (3,3)
 # ConvolutionTranspose1D -- create a 1D convolution transpose layer with optional non-linearity
 def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3 
                            num_filters=None,
-                           activation=activation_default_or_None,
-                           init=init_default_or_glorot_uniform,
-                           pad=pad_default_or_False,
+                           activation=default_override_or(identity),
+                           init=default_override_or(glorot_uniform()),
+                           pad=default_override_or(False),
                            strides=1,
-                           bias=bias_default_or_True,
-                           init_bias=init_bias_default_or_0,
+                           bias=default_override_or(True),
+                           init_bias=default_override_or(0),
                            output_shape=None, 
                            name=''):
     if len(filter_shape) != 1: 
@@ -588,13 +588,13 @@ def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3
 # ConvolutionTranspose2D -- create a 2D convolution transpose layer with optional non-linearity
 def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3) 
                            num_filters=None,
-                           activation=activation_default_or_None,
-                           init=init_default_or_glorot_uniform,
-                           pad=pad_default_or_False,
+                           activation=default_override_or(identity),
+                           init=default_override_or(glorot_uniform()),
+                           pad=default_override_or(False),
                            strides=1,
+                           bias=default_override_or(True),
+                           init_bias=default_override_or(0),
                            output_shape=None, 
-                           bias=bias_default_or_True,
-                           init_bias=init_bias_default_or_0,
                            name=''):
     if len(filter_shape) != 2: 
          raise ValueError('ConvolutionTranspose2D: filter_shape must be a 2D tuple, e.g. (3,3)')
@@ -603,13 +603,13 @@ def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3)
 # ConvolutionTranspose3D -- create a 3D convolution transpose layer with optional non-linearity
 def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3) 
                            num_filters=None,
-                           activation=activation_default_or_None,
-                           init=init_default_or_glorot_uniform,
-                           pad=pad_default_or_False,
+                           activation=default_override_or(identity),
+                           init=default_override_or(glorot_uniform()),
+                           pad=default_override_or(False),
                            strides=1,
+                           bias=default_override_or(True),
+                           init_bias=default_override_or(0),
                            output_shape=None, 
-                           bias=bias_default_or_True,
-                           init_bias=init_bias_default_or_0,
                            name=''):
     if len(filter_shape) != 3: 
          raise ValueError('ConvolutionTranspose3D: filter_shape must be a 3D tuple, e.g. (3,3,3)')
