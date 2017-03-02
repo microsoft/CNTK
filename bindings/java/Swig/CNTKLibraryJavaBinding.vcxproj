@@ -97,7 +97,7 @@
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
-    </ProjectReference>
+    </ProjectReference> 
   </ItemDefinitionGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />

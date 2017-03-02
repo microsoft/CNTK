@@ -12,11 +12,15 @@ import com.microsoft.CNTK.{Function => CNTKFunction, _}
 
 object ScalaEvalExample extends App {
   sys.env
+  println("here1")
+  System.loadLibrary("CNTKLibrary-2.0")
+  println("here2")
   System.loadLibrary("CNTKLibraryJavaBinding")
+  println("here3")
 
   val outputName = "Plus2060"
   val dataPath   = "data/"
-  val modelFunc  = CNTKFunction.LoadModel(dataPath + "z.model")
+  val modelFunc  = CNTKFunction.LoadModel(dataPath + "z.model",DeviceDescriptor.GetCPUDevice())
   val outputVar  = modelFunc.getOutputs.get(0)
   val inputVar   = modelFunc.getArguments.get(0)
 
