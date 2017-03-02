@@ -169,9 +169,9 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
         >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
         >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
         array([[[ 1. ,  0.5,  0. ]],
-
+        <BLANKLINE>
                [[ 1. ,  0.5,  0.5]],
-
+        <BLANKLINE>
                [[ 1. ,  0. ,  0.5]]], dtype=float32)
 
     Args:
