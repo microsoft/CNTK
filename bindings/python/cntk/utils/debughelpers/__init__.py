@@ -16,14 +16,16 @@ def dump_signature(root, tag=None):
     '''
     f_name = root.name if root.name else tag if tag else 'Function'
     args = root.signature
-    arg_names = [param.name for param in args]
-    output_names = [output.name if output.name else '_' for output in root.outputs]
-    if len(output_names) > 1:
-        output_signature = 'Tuple[' + ', '.join(output_names) + ']'
+    def format_arg_spec(v):
+        s = v.name + ': ' if v.name else ''
+        return s + str(v.type)
+    outputs = root.outputs
+    if len(outputs) > 1:
+        output_signature = 'Tuple[' + ', '.join(format_arg_spec(output) for output in outputs) + ']'
     else:
-        output_signature = output_names[0]
-    # attempting Python type hint syntax, although we use variable names instead of their types here
-    print(f_name + ': Callable[[' + ", ".join(arg_names) + '], ' + output_signature + ']')
+        output_signature = format_arg_spec(outputs[0])
+    print(f_name + '(' + ", ".join([format_arg_spec(param) for param in args]) + ') -> ' + output_signature)
+    raise ValueError('x')
 
 def dump_function(root, tag=None):
     from ...graph import depth_first_search

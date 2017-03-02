@@ -31,7 +31,7 @@ SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axe
 '''
 Meta class to denote a sparse data tensor (with batch axis). Use with dimensions, e.g. ``SparseTensor[129]``.
 '''
-ParameterTensor = _make_tensor_meta('ParameterTensor', is_sparse=True , dynamic_axes=[])
+ParameterTensor = _make_tensor_meta('ParameterTensor', is_sparse=False , dynamic_axes=[])
 '''
 Meta class to denote a parameter tensor (no batch axis). Use with dimensions, e.g. ``ParameterTensor[512,256]``.
 '''

@@ -151,6 +151,38 @@ class VariableMixin(object):
                 r['dynamic_axes'] = dynamic_axes
             super(Variable.Type, self).__init__(**r)
 
+        def __str__(self):
+            '''
+            Stringifies the Type record back to Python 3 syntax per layers.typing.
+            '''
+            # base type
+            is_sparse = hasattr(self, 'is_sparse') and self.is_sparse
+            has_axes = hasattr(self, 'dynamic_axes') and len(self.dynamic_axes) > 0 # it's a tuple of Axis
+            if is_sparse and not has_axes:
+                raise TypeError('Type: cannot be sparse and not have an axis')
+            if not hasattr(self, 'shape') or self.shape == (-2,):  #.is_unknown():  # TODO: how to do this right?
+                s = 'tensor'
+            elif self.shape == ():
+                s = 'float'
+            else:
+                s = 'Tensor[' + ','.join(str(dim) for dim in self.shape) + ']'
+                if is_sparse:
+                    s = "Sparse" + s
+                elif not has_axes:
+                    s = "Parameter" + s
+            # axis
+            if has_axes:
+                for axis in reversed(self.dynamic_axes):
+                    if axis.name == 'defaultBatchAxis':  # axis == Axis.default_batch_axis():  --TODO: how to do this right?
+                        continue
+                    if axis.name == 'defaultDynamicAxis' or axis.name == 'staticAxis_2147483645': # TODO: how to do this right?
+                        t = 'Sequence'
+                    else:
+                        t = 'SequenceOver[' + axis.name + ']'
+                    s = t + '[' + s + ']'
+            # We do not return dtype or needs_gradient. dtype is mostly redundant, and needs_gradient is not really part of the type.
+            return s
+
     @property
     def type(self):
         '''
