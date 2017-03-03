@@ -1604,7 +1604,7 @@ def softplus(x, steepness=1, name=''):
     if steepness == 1:
         return softplus(x, name)
     xp = placeholder_variable()
-    f = softplus(steepness * xp) / steepness
+    f = typemap(softplus)(steepness * xp) / steepness
     return as_block(f, [(xp, x)], 'softplus', name)
 
 
