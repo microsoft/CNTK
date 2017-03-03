@@ -10,7 +10,9 @@ import os
 import time
 from cntk import DeviceDescriptor, Trainer, Axis, StreamConfiguration
 from cntk.learners import sgd, adam_sgd
-from cntk.ops import parameter, input_variable, placeholder_variable, times, cross_entropy_with_softmax, combine, classification_error
+from cntk.ops import parameter, input_variable, placeholder_variable, times, combine
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 import itertools
 import cntk.utils
 

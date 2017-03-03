@@ -47,7 +47,7 @@ def test_op_cross_entropy_with_soft_max(output_vector, target_vector, device_id,
         'right_arg': [[-1*o]]
     }
 
-    from .. import cross_entropy_with_softmax
+    from cntk.losses import cross_entropy_with_softmax
     _test_binary_op(precision, device_id, cross_entropy_with_softmax,
                     output_vector, target_vector,
                     expected_forward, expected_backward)
@@ -102,7 +102,7 @@ def test_op_cross_entropy_with_soft_max_and_axis(output_vector, target_vector, a
         'right_arg': [[expected_backward_right]]
     }
 
-    from .. import cross_entropy_with_softmax
+    from cntk.losses import cross_entropy_with_softmax
     _test_binary_op(precision, device_id, cross_entropy_with_softmax,
                     output_vector, target_vector,
                     expected_forward, expected_backward, op_param_dict={'axis': axis})
@@ -122,7 +122,7 @@ def test_op_squared_error(output_vector, target_vector, device_id, precision):
         'right_arg': [[-1*backward]]
     }
 
-    from .. import squared_error
+    from cntk.losses import squared_error
     _test_binary_op(precision, device_id, squared_error,
                     output_vector, target_vector,
                     expected_forward, expected_backward)
@@ -155,7 +155,7 @@ def test_op_classification_error(output_vector, target_vector, device_id, precis
         'right_arg': [[right_backward]]
     }
 
-    from .. import classification_error
+    from cntk.metrics import classification_error
     _test_binary_op(precision, device_id, classification_error,
                     output_vector, target_vector,
                     expected_forward, expected_backward)
@@ -211,7 +211,7 @@ def test_op_classification_error_with_axis(output_vector, target_vector, axis, d
         'right_arg': expected_backward_right
     }
 
-    from .. import classification_error
+    from cntk.metrics import classification_error
     _test_binary_op(precision, device_id, classification_error,
                     output_vector, target_vector,
                     expected_forward, expected_backward, op_param_dict={'axis':axis})
@@ -233,7 +233,7 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
     expected_value = AA(value, dtype=dt)
     expected_grad  = AA(grad, dtype=dt)
 
-    from .. import lambda_rank
+    from cntk.metrics import lambda_rank
 
     g = I((1,))
     s = I((1,), needs_gradient=True)
@@ -262,7 +262,7 @@ def test_ndcg(value, output, gain, device_id, precision):
 
     expected_value = AA(value, dtype=dt)
 
-    from .. import ndcg_at_1
+    from cntk.metrics import ndcg_at_1
 
     g = I((1,))
     s = I((1,))

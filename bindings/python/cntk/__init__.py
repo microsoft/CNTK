@@ -13,6 +13,8 @@ from . import ops
 from . import cntk_py
 from .train import *
 from .learners import *
+from .losses import *
+from .metrics import *
 from .initializer import *
 from .utils import *
 from .ops import *

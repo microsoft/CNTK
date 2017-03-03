@@ -11,6 +11,7 @@ Unit tests for the cosine distance class.
 import numpy as np
 import pytest
 from .. import *
+from cntk.losses import *
 from ...axis import Axis
 from ... import sequence
 
