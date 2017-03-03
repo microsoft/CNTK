@@ -499,11 +499,9 @@ namespace CNTK
     {
         if (axis.IsDynamicAxis())
         {
-            if (axis == Axis::OperandSequenceAxis())
+            auto operandDynamicAxes = operand.DynamicAxes();
+            if (axis == Axis::OperandSequenceAxis() && (operandDynamicAxes != Axis::UnknownDynamicAxes()))
             {
-                auto operandDynamicAxes = operand.DynamicAxes();
-                assert(operandDynamicAxes != Axis::UnknownDynamicAxes());
-
                 auto numOrderedDynamicAxes = std::count_if(operandDynamicAxes.begin(), operandDynamicAxes.end(), [](const Axis& axis) { return axis.IsOrdered(); });
                 if (numOrderedDynamicAxes != 1)
                     InvalidArgument("Axis argument of Axis::OperandSequenceAxis() cannot be resolved if the operand has no sequence axis or > 1 ordered dynamic axes!");
