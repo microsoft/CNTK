@@ -17,14 +17,13 @@ rf = 5
 dropout = 0.2
 char_emb_dim = 8
 word_count_threshold = 10
-max_question_len = 15 # 65 is actual let's wait for a good window function
+max_question_len = 15 # 65 # actual value is 65 let's wait for a good window function
 highway_layers = 2
 char_count_threshold = 50
 max_context_len = 870
 
 C.set_default_device(C.cpu())
 
-# todo are the char cnns sharing parameters? yes
 def charcnn(x):
     return C.models.Sequential([
         C.layers.Embedding(char_emb_dim),
