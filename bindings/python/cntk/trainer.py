@@ -77,13 +77,15 @@ class Trainer(cntk_py.Trainer):
             return args[0]
         # map to function arguments
         args = self.loss_function.argument_map(*args, **kwargs)
-        # in this use case, all must have the same inputs
+        # in this use case, all must have the same inputs (subsets of loss) since they are all called as a single combined function
         if self.model:
-            if self.loss_function.arguments != self.model.arguments:
-                raise ValueError("model function must have the same signature and inputs as the loss function")
+            for arg in self.model.arguments:
+                if arg not in self.loss_function.arguments:
+                    raise ValueError("model function must share its arguments with the loss function")
         if self.evaluation_function:
-            if self.loss_function.arguments != self.evaluation_function.arguments:
-                raise ValueError("evaluation function must have the same signature and inputs as the loss function")
+            for arg in self.evaluation_function.arguments:
+                if arg not in self.loss_function.arguments:
+                    raise ValueError("evaluation function must have the same signature and inputs as the loss function")
         return args
 
     def train_minibatch(self, *arguments, **kwargs):
