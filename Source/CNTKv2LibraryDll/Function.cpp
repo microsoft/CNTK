@@ -1141,6 +1141,14 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::FutureValue, operand, initialState, std::move(additionalProperties), name);
     }
 
+	FunctionPtr OneHotOp(const Variable& operand, size_t numClass, const std::wstring& name)
+	{
+		auto additionalProperties = Dictionary();
+		additionalProperties[PrimitiveFunction::AttributeNameNumClass] = numClass;
+
+		return UnaryOp(PrimitiveOpType::OneHotOp, operand, std::move(additionalProperties), name);
+	}
+
     FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::SumAll, operand, Dictionary(), name);

@@ -85,6 +85,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTokensToIgnore = L"TokensToIgnore";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDelayConstraint = L"DelayConstraint";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlankTokenId = L"BlankTokenId";
+	/*static*/ const std::wstring PrimitiveFunction::AttributeNameNumClass = L"numClass";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -503,6 +504,15 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
                             outputShape = { 1 };
                             break;
+						case PrimitiveOpType::OneHotOp:
+						{
+							assert(m_inputs.size() == 1);
+							auto inputShape = m_inputs[0].Shape();
+							auto num_class = m_attributes[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
+							outputShape = { num_class };
+							outputShape = outputShape.AppendShape(inputShape);
+							break;
+						}
                         case PrimitiveOpType::Times:
                         {
                             assert(m_inputs.size() == 2);

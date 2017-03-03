@@ -3287,6 +3287,24 @@ ElemType Matrix<ElemType>::SumOfElements() const
 }
 
 template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, size_t num_class)
+{
+	if (a.IsEmpty())
+		LogicError("AssignOneHot: Matrix a is empty.");
+
+	//todo: sparse matrix type
+
+	DISPATCH_MATRIX_ON_FLAG(&a,
+		this,
+		m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
+		NOT_IMPLEMENTED,
+		NOT_IMPLEMENTED,
+		NOT_IMPLEMENTED);
+
+	return *this;
+}
+
+template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignSumOfElements(const Matrix<ElemType>& a)
 {
     if (a.IsEmpty())

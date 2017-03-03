@@ -646,6 +646,12 @@ namespace CNTK
             case PrimitiveOpType::SumAll:
                 computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+			case PrimitiveOpType::OneHotOp:
+			{
+				auto numClass = functionConfig[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
+				computationNodePtr = New<OneHotNode<ElementType>>(network->GetDeviceId(), numClass, internalNodeName);
+				break;
+			}
             case PrimitiveOpType::Plus:
                 computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
