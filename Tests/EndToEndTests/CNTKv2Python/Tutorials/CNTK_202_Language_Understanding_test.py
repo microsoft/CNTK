@@ -24,7 +24,7 @@ def test_cntk_202_language_understanding_trainerror(nb):
     for cell in nb.cells:
         try:
            if cell.cell_type == 'code':
-               m = re.search('\[Evaluation\].* metric = (?P<metric>\d+\.\d+)%', cell.outputs[0]['text'])
+               m = re.search('Finished Evaluation.* metric = (?P<metric>\d+\.\d+)%', cell.outputs[0]['text'])
                if m:
                    metrics.append(float(m.group('metric')))
         except IndexError:
