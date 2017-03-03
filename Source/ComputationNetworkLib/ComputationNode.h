@@ -49,7 +49,8 @@
 #define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
 #define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
 #define CNTK_MODEL_VERSION_19 19 // batch norm: add an input parameter to store running mean sample count.
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_19
+#define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node 
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_20
 
 
 // helper mode for debugging
@@ -1876,11 +1877,13 @@ protected:
 
     // matrixSize is per sample size, if unknown or hard to estimate, set matrixSize = 0
     // if the matrix's size will scale with minibatch size, set mbScale = true 
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false)
+    // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
+    // this is currently a workaround for workspace memory for convolutions
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false)
     {
         if (matrixPtr == nullptr)
         {
-            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale);
+            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
         }
     }
 

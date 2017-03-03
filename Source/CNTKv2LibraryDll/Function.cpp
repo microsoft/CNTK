@@ -1012,6 +1012,12 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::CosDistance, leftOperand, rightOperand, Dictionary(), name);
     }
 
+    FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, size_t shiftWindow, size_t numberOfNegativeSamples, const std::wstring& name)
+    {
+        std::vector<Variable> operands = {leftOperand, rightOperand, Constant::Scalar((float) shiftWindow),  Constant::Scalar((float) numberOfNegativeSamples) };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CosDistanceWithNegativeSamples, operands, Dictionary(), name), name);
+    }
+
     FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)
     {
         std::vector<Variable> operands = { prediction, targets };
@@ -1108,6 +1114,20 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameBlankTokenId] = blankTokenId;
+        additionalProperties[PrimitiveFunction::AttributeNameDelayConstraint] = delayConstraint;
+
+        return BinaryOp(PrimitiveOpType::ForwardBackward, graph, features, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::LabelsToGraph, labels, Dictionary(), name);
+    }
+
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -1167,15 +1187,16 @@ namespace CNTK
     }
 
     FunctionPtr Convolution(const Variable& convolutionMap,
-                            const Variable& operand,
-                            const NDShape& strides,
-                            const std::vector<bool>& sharing,
-                            const std::vector<bool>& autoPadding,
-                            const NDShape& lowerPad,
-                            const NDShape& upperPad,
-                            bool transpose,
-                            size_t maxTempMemSizeInSamples,
-                            const std::wstring& name)
+        const Variable& operand,
+        const NDShape& strides,
+        const std::vector<bool>& sharing,
+        const std::vector<bool>& autoPadding,
+        const NDShape& lowerPad,
+        const NDShape& upperPad,
+        bool transpose,
+        const NDShape& outputShape,
+        size_t maxTempMemSizeInSamples,
+        const std::wstring& name)
     {
         // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
         // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
@@ -1190,6 +1211,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
         additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
         additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
+        additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
         additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
 
         return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
@@ -1619,5 +1641,5 @@ namespace CNTK
             //       E.g. used for seq2seq.
             return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
         }
-   }
+    }
 }

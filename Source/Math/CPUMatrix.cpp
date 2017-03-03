@@ -5888,6 +5888,7 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
 // t (input): time stamp to process
 // maxPhoneNum (input): the max number of phones between utterances
 // totalPhoneNum (input): the total number of phones of all utterances
+// blankTokenId (input): id of the CTC blank token
 // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
 //      Alpha and Beta scores outside of the delay boundary are set to zero.
 //      Setting this parameter smaller will result in shorted delay between label output during decoding.
@@ -5907,6 +5908,7 @@ void _assignAlphaScore(
     const size_t  t,
     const size_t maxPhoneNum, // Maximum length of utterance in this MB
     const size_t totalPhoneNum, // Total number of phones
+    const size_t blankTokenId,
     const int delayConstraint)
 {
     for (size_t uttId = 0;uttId < uttNum;uttId++) {
@@ -5958,7 +5960,7 @@ void _assignAlphaScore(
                     {
                         size_t labelid_2 = labelid - 2;
                         // if current label is not blank and not equal prev non-blank label
-                        if ((size_t)(phoneSeq[labelid]) != totalPhoneNum - 1 && phoneId != (size_t)(phoneSeq[labelid_2]))
+                        if ((size_t)(phoneSeq[labelid]) != blankTokenId && phoneId != (size_t)(phoneSeq[labelid_2]))
                         {
                             x = LogAdd(x, alphaScore[alphaId_2]);
                         }
@@ -5980,13 +5982,13 @@ void _assignAlphaScore(
                     {
                         size_t labelid_r = labelid + 2;
                         size_t phoneBoundId_r = (size_t)(phoneBound[labelid_r]);
-                        if (phoneId == totalPhoneNum - 1)
+                        if (phoneId == blankTokenId)
                         {
                             // only constraint right side
                             if (t > phoneBoundId_r + delayConstraint - 1)
                                 alphaScore[alphaId] = LZERO;
                         }
-                        else if (phoneId != totalPhoneNum - 1)
+                        else if (phoneId != blankTokenId)
                         {
                             if (t > phoneBoundId_r + delayConstraint)
                                 alphaScore[alphaId] = LZERO;
@@ -6016,6 +6018,7 @@ void _assignBetaScore(
     const long  t,
     const size_t maxPhoneNum,
     const size_t totalPhoneNum,
+    const size_t blankTokenId,
     const int delayConstraint)
 {
     for (size_t uttId = 0;uttId < uttNum;uttId++) {
@@ -6055,7 +6058,7 @@ void _assignBetaScore(
                     ElemType ascore;
                     if (phoneSeqId < phoneNum - 3)
                     {
-                        if (phoneSeq[labelid] != totalPhoneNum - 1 && phoneId != phoneSeq[labelid_2])
+                        if (phoneSeq[labelid] != blankTokenId && phoneId != phoneSeq[labelid_2])
                         {
                             x = LogAdd(x, betaScore[betaid_2]);
                         }
@@ -6076,12 +6079,12 @@ void _assignBetaScore(
                     if (delayConstraint != -1)
                     {
                         size_t phoneBoundId_r = (size_t)(phoneBound[labelid_2]);
-                        if (phoneId == totalPhoneNum - 1)
+                        if (phoneId == blankTokenId)
                         {
                             if (t > phoneBoundId_r + delayConstraint - 1)
                                 betaScore[betaid] = LZERO;
                         }
-                        else if (phoneId != totalPhoneNum - 1)
+                        else if (phoneId != blankTokenId)
                         {
                             if (t > phoneBoundId_r + delayConstraint)
                                 betaScore[betaid] = LZERO;
@@ -6171,7 +6174,7 @@ template<class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
     const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
     const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
-    const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const int delayConstraint, const bool isColWise)
+    const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
 {
     // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
     if (isColWise)
@@ -6186,13 +6189,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
         for (size_t t = 0; t < maxFrameNum; t++)
         {
             _assignAlphaScore(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
-                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
+                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
         }
 
         for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
         {
             _assignBetaScore(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
-                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, delayConstraint);
+                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
         }
 
         std::vector<ElemType> scores(uttNum);
