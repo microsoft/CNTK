@@ -1138,6 +1138,7 @@ namespace CNTK
 
         if (!m_networkMatricesAllocated && allocateNetworkMatrices)
         {
+            m_allNetworkRoots = m_currentBackpropRoots;
             ComputationNodeBasePtr backpropRootNode;
             if (!m_currentBackpropRoots.empty())
                 backpropRootNode = m_variableToNodeMap.at(*m_currentBackpropRoots.begin());
@@ -1145,21 +1146,18 @@ namespace CNTK
             // Now recursively traverse the network in a top-down fashion
             auto rootFunction = RootFunction();
             auto rootFunctionOutputs = rootFunction->RawOutputs();
+            m_allNetworkRoots.insert(rootFunctionOutputs.begin(), rootFunctionOutputs.end());
             std::vector<ComputationNodeBasePtr> forwardRootNodes;
             for (auto rootOutput : rootFunctionOutputs)
                 forwardRootNodes.push_back(m_variableToNodeMap.at(rootOutput));
 
             std::vector<ComputationNodeBasePtr> forwardOutputNodes;
+            m_allNetworkRoots.insert(outputs.begin(), outputs.end());
             for (auto output : outputs)
                 forwardOutputNodes.push_back(m_variableToNodeMap.at(output));
 
             m_computationNetwork->AllocateAllMatrices(forwardRootNodes, forwardOutputNodes, backpropRootNode);
             m_networkMatricesAllocated = allocateNetworkMatrices;
-
-            std::unordered_set<ComputationNodeBasePtr> allNetworkRoots = { backpropRootNode };
-            allNetworkRoots.insert(forwardRootNodes.begin(), forwardRootNodes.end());
-            allNetworkRoots.insert(forwardOutputNodes.begin(), forwardOutputNodes.end());
-            m_allNetworkRootsInGlobalEvalOrder = m_computationNetwork->SortByGlobalEvalOrder(allNetworkRoots);
         }
         else
         {
@@ -1167,8 +1165,7 @@ namespace CNTK
             // in the cached computation network
             for (auto output : outputs)
             {
-                auto computationNode = m_variableToNodeMap.at(output);
-                if (std::find(m_allNetworkRootsInGlobalEvalOrder.begin(), m_allNetworkRootsInGlobalEvalOrder.end(), computationNode) == m_allNetworkRootsInGlobalEvalOrder.end())
+                if (m_allNetworkRoots.find(output) == m_allNetworkRoots.end())
                     LogicError("Changing requested outputs across different Forward calls on a CNTK composite Function is currently unsupported");
             }
         }
@@ -1501,16 +1498,7 @@ namespace CNTK
 
         ScopedNetworkOperationMode modeGuard(m_computationNetwork, outputsToRetainBackwardStateFor.empty() ? NetworkOperationMode::inferring : NetworkOperationMode::training);
 
-        // We may have to include additional nodes in the ForwardProp to align with how the memory sharing structure is setup
-        // We need to include all roots that lie earlier in the global eval order than the actual outputs we are interested
-        // in evaluation.
-        // TODO: This may incur additonal compute costs in some rare scenarios. We need to come up with a better way to handle this.
-        outputsToEvaluate = m_computationNetwork->SortByGlobalEvalOrder(outputsToEvaluate);
-        auto lastOutputInEvalOrder = outputsToEvaluate.back();
-        auto iterEndRootInEvalOrder = std::find(m_allNetworkRootsInGlobalEvalOrder.begin(), m_allNetworkRootsInGlobalEvalOrder.end(), lastOutputInEvalOrder) + 1;
-
-        auto augmentedOutputsToEvaluate = std::vector<ComputationNodeBasePtr>(m_allNetworkRootsInGlobalEvalOrder.begin(), iterEndRootInEvalOrder);
-        m_computationNetwork->ForwardProp(augmentedOutputsToEvaluate);
+        m_computationNetwork->ForwardProp(outputsToEvaluate);
 
         GetNetworkOutputs(outputs);
 
