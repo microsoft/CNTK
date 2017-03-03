@@ -15,6 +15,7 @@ from ..ops import parameter, input_variable, placeholder_variable, combine
 from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from ..utils import Record, _as_tuple
 from .blocks import *
+from .higher_order_layers import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
 
 
