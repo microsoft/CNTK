@@ -14,6 +14,7 @@ from cntk.ops import input_variable, cross_entropy_with_softmax, classification_
 from cntk.ops.functions import load_model
 from cntk.layers import Recurrence, Dense, LSTM, Stabilizer, For, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.utils import log_number_of_parameters
 from data_reader import DataReader
 from math import log, exp
 from cntk.device import set_default_device, cpu, gpu

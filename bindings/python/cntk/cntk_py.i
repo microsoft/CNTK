@@ -144,6 +144,7 @@
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
 %ignore CNTK::Internal::MaxNumCPUThreadsSet;
+%ignore CNTK::Internal::CosineDistanceWithNegativeSamples;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -151,7 +152,6 @@
 %ignore CNTK::Internal::IsRenamingFunctionsAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
-%ignore CNTK::Internal::Convolution; 
 
 %ignore CNTK::Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 

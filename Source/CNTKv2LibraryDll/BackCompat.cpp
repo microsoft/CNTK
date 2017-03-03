@@ -383,6 +383,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameCeilOutDim] = poolingNode->CeilOutDim();
 
                     opType = PrimitiveOpType::Pooling;
                 }
@@ -465,6 +466,10 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlankTokenId] = edNode->BlankTokenId();
 
                     opType = PrimitiveOpType::ForwardBackward;
+                }
+                else if (node->OperationName() == OperationNameOf(CosDistanceWithNegativeSamplesNode))
+                {
+                    opType = PrimitiveOpType::CosDistanceWithNegativeSamples;
                 }
                 else if ((node->OperationName() == OperationNameOf(MeanNode)) || (node->OperationName() == OperationNameOf(InvStdDevNode)))
                 {

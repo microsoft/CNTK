@@ -53,6 +53,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAutoPadding = L"autoPadding";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameLowerPad = L"lowerPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUpperPad = L"upperPad";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameCeilOutDim = L"ceilOutDim";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTranspose = L"transpose";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputShape = L"outputShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples = L"maxTempMemSizeInSamples";
@@ -154,6 +155,14 @@ namespace CNTK
             for (auto inputDynamicAxis : inputs[0].DynamicAxes())
             {
                 if (inputDynamicAxis != reductionAxis)
+                    outputDynamicAxes.push_back(inputDynamicAxis);
+            }
+        }
+        else if ((op == PrimitiveOpType::Times) && (functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>() == TimesReduceAllStaticAndSequenceAxes))
+        {
+            for (auto inputDynamicAxis : inputs[0].DynamicAxes())
+            {
+                if (inputDynamicAxis != Axis::OperandSequenceAxis())
                     outputDynamicAxes.push_back(inputDynamicAxis);
             }
         }
@@ -434,6 +443,11 @@ namespace CNTK
                             auto lowerPad = m_attributes[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                             auto upperPad = m_attributes[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                             auto autoPadding = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                            bool ceilOutDim = false;
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameCeilOutDim))
+                            {
+                                ceilOutDim = m_attributes[PrimitiveFunction::AttributeNameCeilOutDim].Value<bool>();
+                            }
                             NDShape outputMapCount = { 1 };
                             std::vector<bool> sharing = { true };
                             auto inputShape = m_inputs[0].Shape();
@@ -449,7 +463,7 @@ namespace CNTK
                                 m_attributes[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowsShape;
                             }
 
-                            outputShape = ConvolutionOpOutputShape(m_op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true);
+                            outputShape = ConvolutionOpOutputShape(m_op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true, ceilOutDim);
                             break;
                         }
                         case PrimitiveOpType::Unpooling:
@@ -712,6 +726,22 @@ namespace CNTK
                             if (layout.DynamicAxes().empty())
                                 InvalidArgument("ReconcileDynamicAxis: layout must have at least one dynamic axis");
                             outputShape = operand.Shape();
+                            break;
+                        }
+                        case PrimitiveOpType::CosDistanceWithNegativeSamples:
+                        {
+                            assert(m_inputs.size() == 4);
+
+                            auto shiftInput = m_inputs[2];
+                            auto numNegativeSamplesInput = m_inputs[3];
+                            auto IsConstantScalar = [](const Variable& var) {
+                                return var.IsConstant() && (var.Shape().TotalSize() == 1);
+                            };
+                            if (!IsConstantScalar(shiftInput) || !IsConstantScalar(numNegativeSamplesInput))
+                                InvalidArgument("CosDistanceWithNegativeSamples: Input(2) and Input(3) correpond to shift and numNegativeSamples inputs and must be scalar constants!");
+
+                            auto numNegativeSamples = (size_t)Constant(numNegativeSamplesInput).Value()->AsScalar<float>();
+                            outputShape = NDShape({ numNegativeSamples + 1 });
                             break;
                         }
                         default:

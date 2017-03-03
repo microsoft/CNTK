@@ -13,6 +13,10 @@ from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
 from ..axis import Axis
+from .. import cntk_py
+
+TIMES_REDUCE_ALL_STATIC_AXES               = cntk_py.TimesReduceAllStaticAxes
+TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES  = cntk_py.TimesReduceAllStaticAndSequenceAxes
 
 @typemap
 def combine(operands, name=''):
@@ -146,6 +150,48 @@ def cosine_distance(x, y, name=''):
     x = sanitize_input(x, dtype)
     y = sanitize_input(y, dtype)
     return cosine_distance(x, y, name)
+
+@typemap
+def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name=''):
+    '''
+
+    Given minibatches for ``x`` and ``y``, this function computes for each element in `x` the cosine distance between 
+    it and the corresponding `y` and additionally the cosine distance between ``x`` and some other elements of ``y`` 
+    (referred to a negative samples). The ``x`` and ``y`` pairs are samples often derived 
+    from embeddings of textual data, though the function can be used for any form of numeric encodings. 
+    When using this function to compute textual similarity, ``x`` represents search query term embedding 
+    and ``y`` represents a document embedding. The negative samples are formed on the fly by shifting 
+    the right side (``y``). The ``shift`` indicates how many samples in ``y`` one should shift while
+    forming each negative sample pair. It is often chosen to be 1. As the name suggests 
+    ``num_negative_samples`` indicates how many negative samples one would want to generate.
+
+    Example:
+        >>> qry = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
+        >>> doc = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
+        >>> x = input_variable(shape=(4,))
+        >>> y = input_variable(shape=(4,))
+        >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
+        >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
+        array([[[ 1. ,  0.5,  0. ]],
+        <BLANKLINE>
+               [[ 1. ,  0.5,  0.5]],
+        <BLANKLINE>
+               [[ 1. ,  0. ,  0.5]]], dtype=float32)
+
+    Args:
+        x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        shift: non-zero positive integer representing number of shift to generate a negative sample
+        num_negative_samples: number of negative samples to generate, a non-zero positive integer 
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import cosine_distance_with_negative_samples
+    dtype = get_data_type(x, y)
+    x = sanitize_input(x, dtype)
+    y = sanitize_input(y, dtype)
+
+    return cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name)
 
 @typemap
 def binary_cross_entropy(output, target, name=''):
@@ -499,12 +545,17 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                 auto_padding=[True], lower_pad=(0,), upper_pad=(0,), 
+                transpose=False, output_shape=None, 
                 max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
     This operation is used in image and language processing applications. It supports arbitrary
     dimensions, strides, sharing, and padding.
+
+    When the transpose argument is set to True, this function can compute the transposed convolution 
+    of ``convolution_map`` with ``operand`` (commonly an image or output of a previous convolution/pooling operation).
+    This is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``. 
 
     This function operates on input tensors with dimensions :math:`[C \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`. This can be understood as a rank-n
     object, where each entry consists of a :math:`C`-dimensional vector. For example, an RGB image would have dimensions
@@ -519,6 +570,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
 
     Example:
+        For convolution: 
         >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
         >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
@@ -528,68 +580,13 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                   [ 16.,  18.,  20.,  22.],
                   [ 26.,  28.,  30.,  32.],
                   [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
-
-    Args:
-        convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
-         where :math:`[m_1 \\times m_2 \\times \\ldots \\times m_n]` must be the kernel dimensions (spatial extent of the filter).
-        operand: convolution input. A tensor with dimensions :math:`[I \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`.
-        strides (tuple, optional): stride dimensions. If strides[i] > 1 then only pixel positions that are multiples of strides[i] are computed.
-         For example, a stride of 2 will lead to a halving of that dimension. The first stride dimension that lines up with the number
-         of input channels can be set to any non-zero value.
-        sharing (bool): sharing flags for each input dimension
-        auto_padding (bool): flags for each input dimension whether it should be padded automatically (that is,
-         symmetrically) or not padded at all. Padding means that the convolution kernel is applied to all pixel positions, where all
-         pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
-         positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
-         the input dimension. The last value that lines up with the number of input channels must be false.
-        lower_pad: precise lower padding for each input dimension.
-        upper_pad : precise upper padding for each input dimension.
-        output_shape: user expected output shape after convolution transpose. 
-        max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
-         operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
-         performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
-         samples.
-        name (str, optional): the name of the Function instance in the network
-    Returns:
-        :class:`~cntk.ops.functions.Function`
-    '''
-    from cntk.cntk_py import convolution
-    operand = sanitize_input(operand)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
-    return convolution(convolution_map, operand, strides, sharing, auto_padding,
-                       lower_pad, upper_pad, max_temp_mem_size_in_samples, name)
-
-@typemap
-def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
-                          auto_padding=[True], lower_pad=(0,), upper_pad=(0,), output_shape=(0,), 
-                          max_temp_mem_size_in_samples=0, name=''):
-    '''
-    Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
-    ``operand`` (commonly an image or output of a previous convolution/pooling operation).
-    This is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``. 
-    This operation is used in image and language processing applications. It supports arbitrary
-    dimensions, strides, sharing, and padding.
-
-    This function operates on input tensors with dimensions :math:`[C \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`. This can be understood as a rank-n
-    object, where each entry consists of a :math:`C`-dimensional vector. For example, an RGB image would have dimensions
-    :math:`[3 \\times W \\times H]`, i.e. a :math:`[W \\times H]`-sized structure, where each entry (pixel) consists of a 3-tuple.
-
-    `convolution_transpose` convolves the input ``operand`` with a :math:`n+2` rank tensor of (typically learnable) filters called
-    ``convolution_map`` of shape :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n ]` (typically :math:`m_i \\ll M_i`).
-    The first dimension, :math:`O`, is the nunber of convolution filters (i.e. the number of
-    channels in the output). The second dimension, :math:`I`, must match the number of channels in the input.
-    The last n dimensions are the spatial extent of the filter. I.e. for each output position, a vector of
-    dimension :math:`O` is computed. Hence, the total number of filter parameters is :math:`O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n`
-
-
-    Example:
+        
+        For convolution transpose: 
         >>> img = np.reshape(np.arange(9.0, dtype = np.float32), (1, 3, 3))
         >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
-        >>> np.round(C.convolution_transpose(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
+        >>> np.round(C.convolution(kernel, x, auto_padding = [False], transpose=True).eval({x: [img]}),5)
         array([[[[[  0.,   2.,   3.,  -2.],
                   [  6.,   4.,   6.,  -1.],
                   [  9.,  10.,  12.,   2.],
@@ -610,6 +607,8 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          the input dimension. The last value that lines up with the number of input channels must be false.
         lower_pad: precise lower padding for each input dimension.
         upper_pad : precise upper padding for each input dimension.
+        transpose (bool): set to true for convolution transpose (deconvolution).
+        output_shape: user expected output shape after convolution transpose. Invalid if transpose = False. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -618,16 +617,17 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
-    from cntk.cntk_py import convolution_transpose
+    from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
     strides = sanitize_shape(strides)
     lower_pad = sanitize_shape(lower_pad)
     upper_pad = sanitize_shape(upper_pad)
+    if output_shape is None: 
+        output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
-    return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
-                                 lower_pad, upper_pad, output_shape, 
-                                 max_temp_mem_size_in_samples, name)
-
+    return convolution(convolution_map, operand, strides, sharing, auto_padding,
+                       lower_pad, upper_pad, transpose, output_shape, 
+                       max_temp_mem_size_in_samples, name)
 
 @typemap
 def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
@@ -660,7 +660,7 @@ AVG_POOLING = PoolingType_Average
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
-            lower_pad=(0,), upper_pad=(0,), name=''):
+            lower_pad=(0,), upper_pad=(0,), ceil_out_dim=False, name=''):
     '''
     The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
     In the case of average pooling with padding, the average is only over the valid region.
@@ -682,9 +682,10 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         pooling_type: one of :const:`~cntk.ops.MAX_POOLING` or :const:`~cntk.ops.AVG_POOLING`
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
-        auto_padding: automatic padding flags for each input dimension.
-        lower_pad: precise lower padding for each input dimension
-        upper_pad: precise upper padding for each input dimension
+        auto_padding (default [False,]): automatic padding flags for each input dimension.
+        lower_pad (default (0,)): precise lower padding for each input dimension
+        upper_pad (default (0,)): precise upper padding for each input dimension
+        ceil_out_dim (default false): ceiling while computing output size
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -696,7 +697,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     lower_pad = sanitize_shape(lower_pad)
     upper_pad = sanitize_shape(upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
-                   lower_pad, upper_pad, name)
+                   lower_pad, upper_pad, ceil_out_dim, name)
 
 
 MAX_UNPOOLING = PoolingType_Max
@@ -1191,13 +1192,20 @@ def log_add_exp(left, right, name=''):
     right = sanitize_input(right, dtype)
     return cntk_py_log_add_exp(left, right, name)
 
+INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 
 @typemap
-def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
+def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AXES, name=''):
     '''
     The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. Sparse is supported in the left operand, if it is a matrix.
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
+    
+    For better performance on times operation on sequence which is followed by sequence.reduce_sum, use
+    infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES, i.e. replace following:
+        sequence.reduce_sum(times(seq1, seq2))
+    with:
+        times(seq1, seq2, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES)
 
     Example:
         >>> C.times([[1,2],[3,4]], [[5],[6]]).eval()

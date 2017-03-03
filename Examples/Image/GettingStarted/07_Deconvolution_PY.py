@@ -62,7 +62,8 @@ def deconv_mnist(max_epochs=3):
 
     # Instantiate the trainer object to drive the model training
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=True)
-    trainer = cntk.Trainer(z, (rmse_loss, rmse_eval), learner)
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training')
+    trainer = cntk.Trainer(z, (rmse_loss, rmse_eval), learner, progress_printer)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -70,7 +71,6 @@ def deconv_mnist(max_epochs=3):
     }
 
     cntk.utils.log_number_of_parameters(z) ; print()
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training')
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs
@@ -79,9 +79,8 @@ def deconv_mnist(max_epochs=3):
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
             sample_count += data[input_var].num_samples                     # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
-        progress_printer.epoch_summary(with_metric=True)
+        trainer.summarize_training_progress()
         z.save(os.path.join(model_path, "07_Deconvolution_PY_{}.model".format(epoch)))
 
     # rename final model

@@ -99,7 +99,11 @@ template <class ElemType>
     // Create a new layout if we are reducing the sequence axis
     if (ReduceSequenceAxis())
     {
-        GetMBLayout()->InitAsFrameMode(Input(0)->GetMBLayout()->GetNumSequences());
+        auto inputMBLayout = InputRef(0).GetMBLayout();
+        if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
+            LogicError("%ls: %s node cannot perform sequence axis reduction for truncated sequence.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+        GetMBLayout()->InitAsFrameMode(inputMBLayout->GetNumSequences());
         UpdateFunctionValuesSize();
     }
     // get the args

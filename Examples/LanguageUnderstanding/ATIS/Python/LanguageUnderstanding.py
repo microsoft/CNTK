@@ -225,6 +225,8 @@ def evaluate(reader, model):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='8')
+    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir',
+                        help='Directory where TensorBoard logs should be created', required=False, default=None)
 
     args = vars(parser.parse_args())
     max_epochs = int(args['epochs'])

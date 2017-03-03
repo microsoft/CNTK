@@ -658,6 +658,12 @@ namespace CNTK
         template <typename ElementType>
         CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
+        ///
+        /// If the value stored is a scalar, returns it. Otherwise, throws an error.
+        ///
+        template<typename ElementType>
+        ElementType AsScalar() const;
+
     private:
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;
@@ -3318,6 +3324,14 @@ namespace CNTK
     /// TODO: Specify the constraints on the shapes of the operands.
     /// TODO: Document inferInputRankToMap
     ///
+
+    // special values for Times inferInputRankToMap
+    enum : int
+    {
+        TimesReduceAllStaticAxes            = -1, // the default, reduce all static axes in the right operand that matches left
+        TimesReduceAllStaticAndSequenceAxes = -2, // reduce all static axes and sequence axis in the output of Times. Currently only support cases like (m x k x *s x *b) * (k x *s x *b) -> (m x *b)
+    };
+
     CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name = L"");
 
     ///
@@ -3327,7 +3341,7 @@ namespace CNTK
     ///
     inline FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = L"")
     {
-        return Times(leftOperand, rightOperand, outputRank, /*inferInputRankToMap =*/ -1, name);
+        return Times(leftOperand, rightOperand, outputRank, TimesReduceAllStaticAxes, name);
     }
 
     ///
@@ -3362,6 +3376,11 @@ namespace CNTK
     /// Create an instance of the CNTK built-in operation to compute the cosine distance for the specified input operands.
     ///
     CNTK_API FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation to compute the cosine distance with negative samplesfor the specified input operands.
+    ///
+    CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, size_t shiftWindow, size_t numberOfNegativeSamples, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in operation to compute binary cross-entropy for specified input operands.
@@ -3520,33 +3539,18 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"");
 
-    ///
-    /// TODO:
-    ///
-    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap,
-                                     const Variable& operand,
-                                     const NDShape& strides = {1},
-                                     const std::vector<bool>& sharing = {true},
-                                     const std::vector<bool>& autoPadding = {true},
-                                     const NDShape& lowerPad = {0},
-                                     const NDShape& upperPad = {0},
-                                     size_t maxTempMemSizeInSamples = 0,
+
+    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, 
+                                     const Variable& operand, 
+                                     const NDShape& strides = { 1 },
+                                     const std::vector<bool>& sharing = { true },
+                                     const std::vector<bool>& autoPadding = { true },
+                                     const NDShape& lowerPad = { 0 },
+                                     const NDShape& upperPad = { 0 },
+                                     bool transpose = false, 
+                                     const NDShape& outputShape = { 0 },
+                                     size_t maxTempMemSizeInSamples = 0, 
                                      const std::wstring& name = L"");
-
-    ///
-    /// TODO:
-    ///
-    CNTK_API FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
-                                              const Variable& operand,
-                                              const NDShape& strides = { 1 },
-                                              const std::vector<bool>& sharing = { true },
-                                              const std::vector<bool>& autoPadding = { true },
-                                              const NDShape& lowerPad = { 0 },
-                                              const NDShape& upperPad = { 0 },
-                                              const NDShape& outputShape = { 0 },
-                                              size_t maxTempMemSizeInSamples = 0,
-                                              const std::wstring& name = L"");
-
     ///
     /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
     ///
@@ -3571,6 +3575,7 @@ namespace CNTK
                                  const std::vector<bool>& autoPadding = {false},
                                  const NDShape& lowerPad = {0},
                                  const NDShape& upperPad = {0},
+                                 const bool ceilOutDim = false,
                                  const std::wstring& name = L"");
 
     ///

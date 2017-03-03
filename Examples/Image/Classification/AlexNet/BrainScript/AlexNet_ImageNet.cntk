@@ -38,7 +38,7 @@ Train = {
                 x2s = SplitDimension(x2, 3, 1) 
                 # 3D convolution with a filter that has a non 1-size only in the 3rd axis, and does not reduce since the reduction dimension is fake and 1
                 W = ParameterTensor{(1:1:2*n+1:1), learningRateMultiplier = 0, initValue = alpha/(2*n+1)}
-                y = Convolution (W, x2s, (1:1:2*n+1), mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, transpose = false, maxTempMemSizeInSamples = 0)
+                y = Convolution (W, x2s, (1:1:2*n+1), mapDims = 1, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, maxTempMemSizeInSamples = 0)
                 # reshape back to remove the fake singleton reduction dimension
                 b = FlattenDimensions(y, 3, 2)
                 den = Exp (beta .* Log(k + b)) 

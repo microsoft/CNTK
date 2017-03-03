@@ -12,7 +12,7 @@ import numpy as np
 from ..ops.functions import Function
 from ..ops.variables import Variable
 from ..ops import parameter, input_variable, placeholder_variable, combine
-from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
+from ..ops import times, element_times, convolution, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from ..utils import Record, _as_tuple
 from .blocks import *
 from .higher_order_layers import *
@@ -525,7 +525,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
                          sharing=True,     # (must be True currently)
                          bias=default_override_or(True),
                          init_bias=default_override_or(0),
-                         output_shape=(0,), 
+                         output_shape=None, 
                          reduction_rank=1, # (must be 1 currently)
                          max_temp_mem_size_in_samples=0, 
                          name=''):
@@ -558,12 +558,13 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     # expression
     @BlockFunction('ConvolutionTranspose', name)
     def convolve_transposed(x):
-        r = convolution_transpose (W, x,
-                                   strides=_as_tuple(strides),
-                                   sharing=_as_tuple(sharing),
-                                   auto_padding=_as_tuple(pad),
-                                   output_shape=output_shape, 
-                                   max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
+        r = convolution(W, x,
+                        strides=_as_tuple(strides),
+                        sharing=_as_tuple(sharing),
+                        auto_padding=_as_tuple(pad),
+                        transpose = True,
+                        output_shape=output_shape, 
+                        max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         if bias:
             r = r + b
         if activation is not None:
