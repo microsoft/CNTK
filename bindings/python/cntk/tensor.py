@@ -119,6 +119,9 @@ class TensorOpsMixin(object):
                             'indices have to be of type int and not "%s"' % type(idx))
                     r = ops.slice(r, axis=axis, begin_index=idx, end_index=idx + 1)
                     # TODO: this code is from master; I suspect it does not do what we think it does. Test case?
+            else:
+                raise IndexError(
+                    'type "%s" is not supported as index' % type(s))
         return r
 
     # old version; keeping temporarily for easier comparison, will be removed
