@@ -3090,7 +3090,7 @@ namespace CNTK
         template<class E, class... _Types>
         inline void ThrowFormatted(_Types&&... _Args) const
         {
-            ThrowFormatted<E>(std::forward<_Types>(_Args)...);
+            CNTK::ThrowFormatted<E>(std::forward<_Types>(_Args)...);
         }
 #endif
     public:
