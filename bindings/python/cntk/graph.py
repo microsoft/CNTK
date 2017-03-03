@@ -28,11 +28,9 @@ def depth_first_search(root, visitor):
     while stack:
         node, distance, depth = stack.pop(0)
         if node.uid in visited:
-            print('already visited:', node.name, node.uid)
             continue
         from cntk import cntk_py
         if isinstance(node, cntk_py.Function) and node.is_block:
-            print('entering block:', node.name, node.uid)
             composite = node.block_root
             # BlockFunction node
             mapping = node.block_arguments_mapping
@@ -43,25 +41,19 @@ def depth_first_search(root, visitor):
             visited.add(node.uid)
             if visitor(node):
                 accum.append(node)
-            print('exiting block', node.name, node.uid)
             continue
             # BlockFunctions are short-circuited, and not added to accum[]
         try:
             # Function node
-            print('Function node?', node.name, node.uid)
             stack = [(input, distance+1, depth) for input in node.root_function.inputs] + stack
-            print('Function node!', node.name, node.uid)
         except AttributeError:
             # OutputVariable node
             try:
-                print('Output node?', node.name, node.uid)
                 if node.is_output:
-                    print('Output node!', node.name, node.uid)
                     stack.insert(0, (node.owner, distance+1, depth))
                     visited.add(node.uid)
                     continue
             except AttributeError:
-                print('attribuite error', node.name, node.uid)
                 pass
 
         if visitor(node):
@@ -116,12 +108,7 @@ def find_by_name(node, node_name):
         raise ValueError('node name has to be a string. You gave '
                          'a %s' % type(node_name))
 
-    #result = depth_first_search(node, lambda x: x.name == node_name)
-    print('ll=', node.name, node.uid)
-    def ll(x):
-        print('ll=', x.name, x.uid)
-        return x.name == node_name
-    result = depth_first_search(node, ll)
+    result = depth_first_search(node, lambda x: x.name == node_name)
 
     if len(result) > 1:
         raise ValueError('found multiple functions matching "%s". '

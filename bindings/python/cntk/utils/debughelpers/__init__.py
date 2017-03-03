@@ -5,6 +5,7 @@
 # ==============================================================================
 
 from __future__ import division
+from __future__ import print_function
 
 '''
 Helper functions for debugging graphs.

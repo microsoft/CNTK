@@ -125,12 +125,12 @@ class Function(cntk_py.Function):
             # and always filtering .arguments against that list. This is done by the property .signature;
             # i.e. in all of this, do not use .arguments; use .signature instead.
             from .. import combine, alias, as_block
-            args = [make_arg_variable(name, annotations) for name in arg_names]
+            args = [make_arg_variable(arg_name, annotations) for arg_name in arg_names]
 
             # helpers
             #ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
             def force_order_args(fun_args):
-                block_args = [make_arg_variable(arg.name, annotations) for arg in fun_args]  # placeholders inside the BlockFunction
+                block_args = [make_arg_variable(fun_arg.name, annotations) for fun_arg in fun_args]  # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
