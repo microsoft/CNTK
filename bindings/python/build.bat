@@ -24,7 +24,7 @@ set DISTUTILS_USE_SDK=1
 python .\setup.py build_ext --inplace --force --compiler msvc
 if errorlevel 1 exit /b 1
 
-set PATH=%CD%\..\..\x64\Release_NoOpt;%PATH%
+set PATH=%CD%\..\..\x64\Release;%PATH%
 set PYTHONPATH=%CD%;%CD%\examples;%PYTHONPATH%
 
 pushd cntk\tests

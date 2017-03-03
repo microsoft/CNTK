@@ -402,7 +402,7 @@ class Function(cntk_py.Function):
         Access a member inside this object.
         Members of ``Function`` can be accessed directly.
         In addition, members of the Function's output, if only one, are accessed here.
-        Lastly, this also gives access to Functions and Variables inside this Function;s
+        Lastly, this also gives access to Functions and Variables inside this Function's
         graph by their user-specified name, e.g. ``model.embed.E``, as long as those names are not also
         member names of Function or Variable.
         '''
@@ -410,8 +410,13 @@ class Function(cntk_py.Function):
         # a user-named item in the graph.
         # (Known member names cannot be overridden by user-named items,
         # to ensure that the API functions.)
+        print('looking up:', name)
+        print(type(self))
+        print(hasattr(Variable, name))
+        print(hasattr(Function, name))
         if not hasattr(Variable, name) and not hasattr(Function, name) \
            and not name.startswith('_') and name not in ['outputs', 'output', 'this']:
+            print('looking up in the graph')
             # lookup of a named object inside the graph
             # When 'self' is a BlockFunction (e.g. a named layer), then we only search in there,
             # while when 'self' is a regular node (e.g. a named output using Label),
@@ -420,13 +425,18 @@ class Function(cntk_py.Function):
             # BUGBUG: That is a problem if, e.g., someone used a layer (=BlockFunction) twice
             # and then looks it up by name, as that will fail although both instances are identical.
             from ..graph import find_by_name
-            item = typemap(find_by_name)(self.block_root if self.is_block else self, name)
+            print('is_block:', self.is_block)
+            root = self.block_root if self.is_block else self
+            item = typemap(find_by_name)(root, name)
             if item:
+                print('found in the graph')
                 return item
+            print('not found in the graph')
 
         # If something is not found in Function, look it up in its output
         # variable, if it has only one.
         if name.startswith('_') or name in ['outputs', 'output', 'this']:
+            print('reserved name')
             # These should not be looked up in self's output.
             # 'outputs' and 'output' are required to fetch the attribute for
             # in the Variable.
@@ -435,6 +445,7 @@ class Function(cntk_py.Function):
             raise AttributeError("neither Function nor its output variable"
                     " has '%s'"%name)
 
+        print('finding outputs')
         # access an API member of 'output', such as .shape()
         outputs = self.__getattribute__('outputs')
         if len(outputs) != 1:
@@ -442,6 +453,7 @@ class Function(cntk_py.Function):
                     "be looked up in its outputs because it does not have "
                     "exactly one"%name)
 
+        print('trying on outputs[0]')
         return getattr(outputs[0], name)
 
     def __getitem__(self, arg):
