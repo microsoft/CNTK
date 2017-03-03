@@ -48,7 +48,7 @@ public:
             dims[dims.size() - 1 - i] = (int)filt[i];
         // Set map count(aka K) dimension.
         dims[0] = (int)mapCount;
-        CUDNN_CALL(cudnnSetFilterNdDescriptor_v4(m_kernel, dataType, FILTER_FORMAT, (int)dims.size(), dims.data()));
+        CUDNN_CALL(cudnnSetFilterNdDescriptor(m_kernel, dataType, FILTER_FORMAT, (int)dims.size(), dims.data()));
     }
 
     ~CuDnnKernel()
