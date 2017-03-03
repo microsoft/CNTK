@@ -157,6 +157,14 @@ namespace CNTK
                     outputDynamicAxes.push_back(inputDynamicAxis);
             }
         }
+        else if ((op == PrimitiveOpType::Times) && (functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>() == TimesReduceAllStaticAndSequenceAxes))
+        {
+            for (auto inputDynamicAxis : inputs[0].DynamicAxes())
+            {
+                if (inputDynamicAxis != Axis::OperandSequenceAxis())
+                    outputDynamicAxes.push_back(inputDynamicAxis);
+            }
+        }
         else if (op == PrimitiveOpType::Where)
         {
             if (functionConfig.Contains(PrimitiveFunction::AttributeNameNewDynamicAxes))
