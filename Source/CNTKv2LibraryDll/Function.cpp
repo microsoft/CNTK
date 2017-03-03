@@ -366,6 +366,33 @@ namespace CNTK
         }
     }
 
+    /*static*/ FunctionPtr Function::LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice)
+    {
+        // Considering that std::streambuf::setg() requires char *, and we want to avoid
+        // data copy, modelbuffer is defined as "char *" , instead of "const char *".
+        if ((modelBuffer == nullptr) || (modelBufferLength <= 0))
+            InvalidArgument("The model buffer should not be null and its length should be greater than 0");
+
+        struct modelStreamBuffer : std::streambuf
+        {
+            modelStreamBuffer(char* start, size_t size) {
+                this->setg(start, start, start + size);
+            }
+        };
+
+        if (Internal::IsLegacyModel(modelBuffer, modelBufferLength))
+            InvalidArgument("Loading a legacy model from byte array is not supported.");
+        else
+        {
+            modelStreamBuffer buf(modelBuffer, modelBufferLength);
+            std::istream modelStream(&buf);
+
+            Dictionary model;
+            modelStream >> model;
+            return Function::Deserialize(model, computeDevice);
+        }
+    }
+
     void Function::RestoreModel(const std::wstring& modelFilePath)
     {
         auto stream = GetFstream(modelFilePath, true);

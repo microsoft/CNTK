@@ -814,7 +814,56 @@ void TestCheckpointingWithStatefulNodes(const DeviceDescriptor& device)
     }
 }
 
+void TestLoadingModelFromMemoryBuffer()
+{
+    ifstream modelFileStream("batch.norm.no.sample.count.v2.bin", ifstream::binary);
+    modelFileStream.seekg(0, modelFileStream.end);
+    size_t length = modelFileStream.tellg();
+    modelFileStream.seekg(0, modelFileStream.beg);
+    char* modelBuffer = new char[length];
+    modelFileStream.read(modelBuffer, length);
+
+    auto model = Function::LoadModel(modelBuffer, length);
+    if (model == nullptr) {
+        ReportFailure("Failed to load a V2 model from memory buffer.");
+    }
+    delete[] modelBuffer;
+}
+
+void TestLoadingModelFromMemoryBufferWithException()
+{
+    ifstream modelFileStream("batch.norm.no.sample.count.v1.bin", ifstream::binary);
+    modelFileStream.seekg(0, modelFileStream.end);
+    size_t length = modelFileStream.tellg();
+    modelFileStream.seekg(0, modelFileStream.beg);
+    char* modelBuffer = new char[length];
+    modelFileStream.read(modelBuffer, length);
+
+    VerifyException([&length]() {
+        Function::LoadModel(nullptr, length);
+    }, "Was able to load model from nullptr memory buffer.");
+
+    VerifyException([&modelBuffer]() {
+        Function::LoadModel(modelBuffer, 0);
+    }, "Was able to load model from nullptr memory buffer.");
+
+    VerifyException([&modelBuffer, &length]() {
+        Function::LoadModel(modelBuffer, length);
+    }, "Was able to load legacy model from memory buffer."); 
+    delete[] modelBuffer;
+}
+
 BOOST_AUTO_TEST_SUITE(SerializationSuite)
+
+BOOST_AUTO_TEST_CASE(LoadingModelFromMemoryBuffer)
+{
+    TestLoadingModelFromMemoryBuffer();
+}
+
+BOOST_AUTO_TEST_CASE(LoadingModelFromMemoryBufferWithException)
+{
+    TestLoadingModelFromMemoryBufferWithException();
+}
 
 BOOST_AUTO_TEST_CASE(LoadingAModelWithALoadBatchNormFunction)
 {
