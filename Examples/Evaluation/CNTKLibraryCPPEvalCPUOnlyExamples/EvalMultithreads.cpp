@@ -110,7 +110,7 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
     std::vector<std::thread> threadList(threadCount);
     for (int th = 0; th < threadCount; ++th)
     {
-        threadList[th] = std::thread(RunEvaluationClassifier, classifierFunc->Clone(), device);
+        threadList[th] = std::thread(RunEvaluationClassifier, classifierFunc->Clone(ParameterCloningMethod::Share), device);
     }
 
     for (int th = 0; th < threadCount; ++th)
@@ -145,7 +145,7 @@ void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const i
     std::vector<std::thread> threadList(threadCount);
     for (int th = 0; th < threadCount; ++th)
     {
-        threadList[th] = std::thread(RunEvaluationOneHidden, modelFuncPtr->Clone(), device);
+        threadList[th] = std::thread(RunEvaluationOneHidden, modelFuncPtr->Clone(ParameterCloningMethod::Share), device);
     }
 
     for (int th = 0; th < threadCount; ++th)
