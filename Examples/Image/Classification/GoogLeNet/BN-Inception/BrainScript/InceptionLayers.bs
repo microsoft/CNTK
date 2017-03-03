@@ -4,8 +4,8 @@
 #
 
 ConvBNReLULayer {outChannels, kernel, stride, pad, bnScale, bnTimeConst} = Sequential(
-    ConvolutionalLayer{outChannels, kernel, stride = stride, pad = pad, bias = false} :
-    #BatchNormalizationLayer{spatialRank = 2, normalizationTimeConstant = bnTimeConst, initialScale = bnScale} :
+    ConvolutionalLayer{outChannels, kernel, init = 'heNormal', stride = stride, pad = pad, bias = false} :
+    BatchNormalizationLayer{spatialRank = 2, normalizationTimeConstant = bnTimeConst, initialScale = bnScale} :
     ReLU
 )
 

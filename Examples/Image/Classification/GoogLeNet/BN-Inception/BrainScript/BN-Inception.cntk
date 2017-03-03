@@ -7,15 +7,15 @@ RootDir = "."
 ParentDir = ".."
 
 ConfigDir = "$RootDir$"
-DataDir = "$RootDir$"
-OutputDir = "$RootDir$/Output"
+DataDir = "$ParentDir$/Data"
+OutputDir = "$ParentDir$/Output"
 ModelDir = "$OutputDir$/Models"
-MeanDir = "$RootDir$"
+MeanDir = "$ConfigDir$"
 
-#stderr = "$RootDir$/BN-Inception"
+stderr = "$OutputDir$/BN-Inception"
 
 precision = "float"
-deviceId = -1
+deviceId = "Auto"
 
 command = Train:Eval
 
@@ -65,8 +65,8 @@ Train = [
 
     SGD = [
         epochSize = 0
-        minibatchSize = 32 # 8 GPUs
-        learningRatesPerMB = 0.45*2:0.432
+        minibatchSize = 256 # 8 GPUs
+        learningRatesPerMB = 3.6*2:3.384
         momentumPerMB = 0.9
         maxEpochs = 300
         gradUpdateType = "None"
@@ -99,8 +99,8 @@ Train = [
             width = 224
             height = 224
             channels = 3
-            cropType = "RandomSide"
-            sideRatio = 0.46666:0.875
+            cropType = "Random"
+            cropRatio = 0.46666:0.875
             jitterType = "UniRatio"
             meanFile = "$MeanDir$/ImageNet1K_mean.xml"
         ]
