@@ -23,11 +23,11 @@ def depth_first_search(root, visitor):
     '''
     stack = [(root.root_function, 0, 0)] # node, distance, Block depth
     accum = []         # final result (list of all unique nodes)
-    visited = set()    # [node]
+    visited = set()    # [node.uid]
 
     while stack:
         node, distance, depth = stack.pop(0)
-        if node in visited:
+        if node.uid in visited:
             continue
         from cntk import cntk_py
         if isinstance(node, cntk_py.Function) and node.is_block:
@@ -36,9 +36,9 @@ def depth_first_search(root, visitor):
             mapping = node.block_arguments_mapping
             # redirect the composite's inputs to the true inputs
             stack.extend([(actual_input, distance+1, depth) for _, actual_input in mapping]) # traverse into actual composite inputs
-            visited |= {comp_input for comp_input, _ in mapping} # don't traverse into the mapped-away inputs
+            visited |= {comp_input.uid for comp_input, _ in mapping} # don't traverse into the mapped-away inputs
             stack.append((composite, distance+1, depth+1))
-            visited.add(node)
+            visited.add(node.uid)
             if visitor(node):
                 accum.append(node)
             continue
@@ -51,7 +51,7 @@ def depth_first_search(root, visitor):
             try:
                 if node.is_output:
                     stack.insert(0, (node.owner, distance+1, depth))
-                    visited.add(node)
+                    visited.add(node.uid)
                     continue
             except AttributeError:
                 pass
@@ -65,7 +65,7 @@ def depth_first_search(root, visitor):
 
             accum.append(node)
 
-        visited.add(node)
+        visited.add(node.uid)
 
     return accum
 
