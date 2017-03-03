@@ -277,46 +277,6 @@ class Function(cntk_py.Function):
         self.replace_placeholders(dict(zip(placeholders, args)))
 
 
-    # TODO: we can use namedduple() for this
-    # This is currently only used by __call__ for returning numpy results.
-    # TODO: consider
-    #  - use a tuple
-    #  - make it work for any tuple of things with a .name property
-    #  - return Function.arguments, .inputs, .outputs, .parameters, .constants as OrderedRecords
-    #    so that all of them become accessible by index and by name, e.g. lstm.outputs.h
-    # It could be implemented by monkey-patching.
-    class OrderedRecord(list):
-        '''
-        A container that behaves like a list and a class, in that the elements it stores
-        can be accessed by an index or as a named class member.
-        This is used as the return value of Function.__call__(numeric data)
-        '''
-        def __init__(self, item_list):
-            for item in item_list:
-                assert isinstance(item, tuple) and len(item)==2
-            super(Function.OrderedRecord, self).__init__(item_list)
-        def __getattr__(self, key):
-            for item in self: # linear search for name; assuming it's faster than a map since these tuples only have a handful of items
-                if item[0] == key:
-                    return item[1]
-            raise AttributeError("record has no attribute '{}'".format(key))
-        def __setattr__(self, key, value):
-            raise AttributeError('record is immutable')
-        def __getitem__(self, key):
-            return super(Function.OrderedRecord, self).__getitem__(key)[1]
-        def __setitem__(self, key, value):
-            raise AttributeError('record is immutable')
-        def __iter__(self):
-            class ValueIterator:
-                def __init__(self, base_iter):
-                    self.base_iter = base_iter
-                def __iter__(self):
-                    return self
-                def __next__(self):
-                    return self.base_iter.__next__()[1] # extract the values
-            return ValueIterator(super(Function.OrderedRecord, self).__iter__())
-        # __missing__, __iter__, __contains__, keys(), values(), __delitem__
-
     def __call__(self, *args, **kwargs):
         '''
         Call a Function, either on symbolic or numeric inputs.
@@ -331,11 +291,10 @@ class Function(cntk_py.Function):
 
         Args:
             *args, **kwargs: The arguments to pass to the Function.
-             Ellipsis (...) will create a new Placeholder. E.g. plus(...,3) creates a new lambda that adds 3.
 
         Returns:
              In case of symbolic inputs, returns another CNTK Function object with inputs bound to the arguments.
-             Otherwise returns an ordered record of numpy arrays for multi-output Functions, and a single numpy array otherwise.
+             Otherwise returns a list of numpy arrays for tuple-valued Functions, and a single numpy array otherwise.
         '''
 
         # parse argument list and map to the function's input
@@ -361,7 +320,7 @@ class Function(cntk_py.Function):
         _, output_map = self.forward(arg_map, outputs)
         assert len(output_map) == len(outputs)
         if len(output_map) > 1:
-            return Function.OrderedRecord([(output.name, output_map[output]) for output in outputs])
+            return [(output_map[output]) for output in outputs]
         else: # single value: return numpy array and that's it
             return list(output_map.values())[0]
 
