@@ -151,6 +151,9 @@ def cosine_distance(x, y, name=''):
     y = sanitize_input(y, dtype)
     return cosine_distance(x, y, name)
 
+
+# TODO: Per discussion with sayanp, the underlying C++ code is not fully functional, so this
+#       should be marked as deprecated (a final design would separate negative sampling and cosine distance).
 @typemap
 def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, name=''):
     '''

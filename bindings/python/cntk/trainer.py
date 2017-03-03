@@ -70,6 +70,7 @@ class Trainer(cntk_py.Trainer):
         # transplant into this class instance
         self.__dict__ = trainer.__dict__
 
+    # TODO: bring this back once the design has been settled
     def _train_test_mb_map_args(self, *args, **kwargs):
         '''helper function for mimicking Python calling convention in train/test_minibatch()'''
         # one argument, which is an arg map or a (map, bool) tuple
@@ -88,7 +89,7 @@ class Trainer(cntk_py.Trainer):
                     raise ValueError("evaluation function must have the same signature and inputs as the loss function")
         return args
 
-    def train_minibatch(self, *arguments, **kwargs):
+    def train_minibatch(self, arguments, outputs=None, device=None):
         '''
         Optimize model parameters using the specified 'arguments' minibatch of training samples.
 
@@ -96,14 +97,14 @@ class Trainer(cntk_py.Trainer):
             arguments: maps variables to their input data. Empty map signifies
             end of local training data.
              The interpretation depends on the input type:
-               * one or more data values in the same order and/or names as the loss function.
-               * a single `dict`: keys are input variable or names, and values are the input data.
-               * a `tuple(dict, List[bool])`: Same as the single-`dict` case with an additional continuation flag per sequence.
-             In the first two cases, every sample in the data will be interpreted
+               * `dict`: keys are input variable or names, and values are the input data.
+               * any other type: if node has an unique input, ``arguments`` is mapped to this input.
+                For nodes with more than one input, only `dict` is allowed.
+             In both cases, every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
-             previous sequence, use the third form: the
-             first tuple element will be used as a single-dictionary argument (second case), and the second
-             is a list of bools that denote whether a sequence is a new
+             previous sequence, specify ``arguments`` as `tuple`: the
+             first element will be used as ``arguments``, and the second one will
+             be used as a list of bools, denoting whether a sequence is a new
              one (`True`) or a continuation of the previous one (`False`).
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
@@ -117,19 +118,15 @@ class Trainer(cntk_py.Trainer):
              passing input data.
 
         Returns:
-            `bool` or `tuple`: 
+            `bool` or `tuple`:
             If ``outputs`` have not been provided, the returned value is `True`
             if updates have been performed, `False` if all parameter learners
             indicate end of learning (through their update). Otherwise, the
             return value is a tuple of the that `bool` and a dictionary that
             maps the variables in `outputs` to their respective NumPy arrays.
         '''
-        outputs, device, kwargs = (lambda outputs=None, device=None, **kwargs: (outputs, device, kwargs))(**kwargs) # Python 2.7 does not allow (self, *arguments, outputs=None, device=None, **kwargs)
         if not device:
             device = use_default_device()
-
-        # mimic Python function-call semantics unique input or multiple arguments are given
-        arguments = self._train_test_mb_map_args(*arguments, **kwargs)
 
         if arguments: # arguments must feed all inputs (model, loss, eval)
             all_args = set(self.loss_function.arguments)
@@ -170,16 +167,16 @@ class Trainer(cntk_py.Trainer):
 
         return updated
 
-    def test_minibatch(self, *arguments, **kwargs):
+    def test_minibatch(self, arguments, device=None):
         '''
         Test the model on the specified batch of samples using the evaluation
-        Function specified during construction of the Trainer. 
+        Function specified during construction of the Trainer.
 
         Args:
             arguments: maps variables to their
              input data. The interpretation depends on the input type:
 
-               * `dict`: keys are input variable or names, and values are the input data. 
+               * `dict`: keys are input variable or names, and values are the input data.
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
@@ -203,12 +200,8 @@ class Trainer(cntk_py.Trainer):
             `float`: the average evaluation criterion value per sample for the
               tested minibatch.
         '''
-        device, kwargs = (lambda device=None, **kwargs: (device, kwargs))(**kwargs) # Python 2.7 does not allow (self, *arguments, device=None, **kwargs)
         if not device:
             device = use_default_device()
-
-        # mimic Python function-call semantics unique input or multiple arguments are given
-        arguments = self._train_test_mb_map_args(*arguments, **kwargs)
 
         # pass all args of all parts (model, loss, eval)
         all_args = set(self.loss_function.arguments)

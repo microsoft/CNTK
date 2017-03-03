@@ -139,7 +139,8 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             mb = reader.next_minibatch(min(minibatch_size, epoch_size - sample_count)) # fetch minibatch.
-            trainer.train_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
+            #trainer.train_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
+            trainer.train_minibatch({criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels]})
             sample_count += mb[reader.streams.labels].num_samples                     # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
@@ -210,7 +211,8 @@ def evaluate(reader, model):
         mb = reader.next_minibatch(minibatch_size) # fetch minibatch
         if not mb:                                                      # until we hit the end
             break
-        metric = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels]) # evaluate minibatch
+        #metric = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels]) # evaluate minibatch
+        metric = evaluator.test_minibatch({criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels]}) # evaluate minibatch
         progress_printer.update(0, mb[reader.streams.labels].num_samples, metric) # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 

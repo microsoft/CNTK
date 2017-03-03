@@ -244,7 +244,8 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
         while total_samples < (epoch+1) * epoch_size:
             # get next minibatch of training data
             mb_train = train_reader.next_minibatch(minibatch_size)
-            trainer.train_minibatch(mb_train[train_reader.streams.features], mb_train[train_reader.streams.labels])
+            #trainer.train_minibatch(mb_train[train_reader.streams.features], mb_train[train_reader.streams.labels])
+            trainer.train_minibatch({criterion.arguments[0]: mb_train[train_reader.streams.features], criterion.arguments[1]: mb_train[train_reader.streams.labels]})
 
             progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
@@ -343,7 +344,8 @@ def evaluate_metric(reader, s2smodel, num_minibatches=None):
         mb = reader.next_minibatch(minibatch_size)
         if not mb: # finish when end of test set reached
             break
-        mb_error = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
+        #mb_error = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
+        mb_error = evaluator.test_minibatch({criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels]})
         num_samples = mb[reader.streams.labels].num_samples
         total_error += mb_error * num_samples
         total_samples += num_samples
