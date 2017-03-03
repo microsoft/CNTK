@@ -136,9 +136,9 @@ public:
             stride[j] = (int)geometry.GetStride(i);
             pad[j] = geometry.GetLowerPad(i);
         }
-		cudnnPoolingMode_t poolMode = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
-		if (poolPadMode)
-			poolMode = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
+        cudnnPoolingMode_t poolMode = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+        if (poolPadMode)
+            poolMode = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
                                                kind == PoolKind::Max && !forceDeterministicAlgorithms ? CUDNN_POOLING_MAX : poolMode,
@@ -511,7 +511,7 @@ private:
 
     // Flag indicating whether only deterministic algorithms should be used.
     bool m_forceDeterministicAlgorithms;
-	bool m_poolPadMode;
+    bool m_poolPadMode;
 };
 
 template <class ElemType>

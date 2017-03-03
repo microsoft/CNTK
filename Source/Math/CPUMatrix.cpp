@@ -4557,7 +4557,7 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-			assert(size > 0);
+            assert(size > 0);
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
@@ -4565,8 +4565,8 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
                 sum += (*this)(colBase + dcol, sample);
             }
             // if poolPadMode == true, use avg_pool_include_pad
-			if (poolPadMode)
-				size = indices(0, 0);
+            if (poolPadMode)
+                size = indices(0, 0);
             output(row, sample) = sum / size;
         }
     }
@@ -4585,13 +4585,13 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-			int tmp = size;
-			if (poolPadMode)
-				size = indices(0, 0);
-			assert(size > 0);
+            int tmp = size;
+            if (poolPadMode)
+                size = indices(0, 0);
+            assert(size > 0);
             ElemType g = (*this)(row, sample) / size;
-			size = tmp;
-			for (int i = 0; i < size; i++)
+            size = tmp;
+            for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());

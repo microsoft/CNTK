@@ -153,7 +153,7 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
-	using Base::m_poolPadMode;
+    using Base::m_poolPadMode;
 
     void EnsureCompatible() override
     {
@@ -280,7 +280,7 @@ protected:
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
     using Base::m_poolKind;
-	using Base::m_poolPadMode;
+    using Base::m_poolPadMode;
 
     void EnsureCompatible() override
     {
@@ -576,7 +576,7 @@ protected:
     using Base::m_deviceId;
     using Base::m_imageLayout;
     using Base::m_maxTempMemSizeInSamples;
-	using Base::m_poolPadMode;
+    using Base::m_poolPadMode;
 
     using Base::m_mpRowCol;
     using Base::m_mpRowIwht;

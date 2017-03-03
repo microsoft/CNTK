@@ -628,7 +628,7 @@ namespace CNTK
                 {
                     ceilOutDim = functionConfig[PrimitiveFunction::AttributeNameCeilOutDim].Value<bool>();
                 }
-				auto poolPadMode = functionConfig[PrimitiveFunction::AttributeNameIncludePad].Value<bool>();
+                auto poolPadMode = functionConfig[PrimitiveFunction::AttributeNameIncludePad].Value<bool>();
                 computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutDim, poolPadMode, ImageLayoutKind::CHW);
                 break;
             }

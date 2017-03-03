@@ -83,7 +83,7 @@ public:
         fstream << m_transpose;	
         m_outputShape.Save(fstream);
         fstream << m_ceilOutDim;
-		fstream << m_poolPadMode;
+        fstream << m_poolPadMode;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -119,7 +119,7 @@ public:
         if (modelVersion >= CNTK_MODEL_VERSION_21)
         {
             fstream >> m_ceilOutDim;
-			fstream >> m_poolPadMode;
+            fstream >> m_poolPadMode;
         }
     }
 
@@ -140,7 +140,7 @@ public:
             node->m_transpose = m_transpose;
             node->m_outputShape = m_outputShape;
             node->m_ceilOutDim = m_ceilOutDim;
-			node->m_poolPadMode = m_poolPadMode;
+            node->m_poolPadMode = m_poolPadMode;
             node->m_imageLayout = m_imageLayout;
             node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
         }
@@ -166,7 +166,7 @@ public:
     TensorShape OutputShape() const { return m_outputShape; }
     size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
     PoolKind PoolingKind() const { return m_poolKind; }
-	bool PoolPadMode() const { return m_poolPadMode; }
+    bool PoolPadMode() const { return m_poolPadMode; }
     bool CeilOutDim() const { return m_ceilOutDim; }
 
     // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
@@ -234,7 +234,7 @@ protected:
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
     PoolKind m_poolKind;
-	bool m_poolPadMode;
+    bool m_poolPadMode;
     bool m_transpose; 
     TensorShape m_outputShape;
     bool m_ceilOutDim;
@@ -258,7 +258,7 @@ protected:                                  \
     using Base::m_lowerPad;                 \
     using Base::m_upperPad;                 \
     using Base::m_poolKind;                 \
-	using Base::m_poolPadMode;              \
+    using Base::m_poolPadMode;              \
     using Base::m_transpose;                \
     using Base::m_outputShape;              \
     using Base::m_ceilOutDim;               \
