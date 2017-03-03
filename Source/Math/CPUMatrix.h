@@ -501,7 +501,7 @@ public:
 
         stream << us.m_numRows << us.m_numCols;
         for (size_t i = 0; i < us.GetNumElements(); ++i)
-            stream << us.Buffer()[i];
+            stream << us.Data()[i];
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }

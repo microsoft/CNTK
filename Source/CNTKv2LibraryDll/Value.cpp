@@ -309,7 +309,7 @@ namespace CNTK
         {
             auto& currentSequence = sequences[i];
             if ((currentSequence.size() % numElementsPerSample) != 0)
-                InvalidArgument("Value::Create:: The number of elements in the vector containing sequence data must be a multiple of the size of specified sampel shape");
+                InvalidArgument("Value::Create:: The number of elements in the vector containing sequence data must be a multiple of the size of specified sample shape");
 
             auto sequenceLength = currentSequence.size() / numElementsPerSample;
             auto sequenceDataShape = sampleShape.AppendShape({ sequenceLength });
