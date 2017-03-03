@@ -320,7 +320,7 @@ def test_layers_convolution_shape(device_id):
     # s: strides
     inC, inH, inW = 2, 6, 7
     y = Input((inC, inH, inW))
-    in_rf_shape = (3, 2)
+    in_filter_shape = (3, 2)
     out_num_filters = 4
 
     ##########################################################
@@ -329,17 +329,17 @@ def test_layers_convolution_shape(device_id):
     zeropad = False
     in_strides = 1
 
-    model = Convolution(rf_shape=in_rf_shape,
-                                 num_filters=out_num_filters,
-                                 activation=None,
-                                 pad=zeropad,
-                                 strides=in_strides, name='foo')
+    model = Convolution(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
     # shape should be
     model_shape = model(y).foo.shape
 
     expected_shape = (out_num_filters,
-                      _getConvOutShape(inH, in_rf_shape[0], zeropad, in_strides),
-                      _getConvOutShape(inW, in_rf_shape[1], zeropad, in_strides))
+                      _getConvOutShape(inH, in_filter_shape[0], zeropad, in_strides),
+                      _getConvOutShape(inW, in_filter_shape[1], zeropad, in_strides))
 
     np.testing.assert_array_equal(model_shape, expected_shape, \
         "Error in convolution with stride = 1 with no padding")
@@ -350,17 +350,17 @@ def test_layers_convolution_shape(device_id):
     zeropad = False
     in_strides_t = (2, 3)
 
-    model = Convolution(rf_shape=in_rf_shape,
-                                 num_filters=out_num_filters,
-                                 activation=None,
-                                 pad=zeropad,
-                                 strides=in_strides_t, name='foo')
+    model = Convolution(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides_t, name='foo')
     # shape should be
     model_shape = model(y).foo.shape
 
     expected_shape = (out_num_filters,
-                      _getConvOutShape(inH, in_rf_shape[0], zeropad, in_strides_t[0]),
-                      _getConvOutShape(inW, in_rf_shape[1], zeropad, in_strides_t[1]))
+                      _getConvOutShape(inH, in_filter_shape[0], zeropad, in_strides_t[0]),
+                      _getConvOutShape(inW, in_filter_shape[1], zeropad, in_strides_t[1]))
 
     np.testing.assert_array_equal(model_shape, expected_shape, \
         "Error in convolution with stride>1 with no padding")
@@ -371,17 +371,17 @@ def test_layers_convolution_shape(device_id):
     zeropad = True
     in_strides = 1
 
-    model = Convolution(rf_shape=in_rf_shape,
-                                 num_filters=out_num_filters,
-                                 activation=None,
-                                 pad=zeropad,
-                                 strides=in_strides, name='foo')
+    model = Convolution(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
     # shape should be
     model_shape = model(y).foo.shape
 
     expected_shape = (out_num_filters,
-                      _getConvOutShape(inH, in_rf_shape[0], zeropad, in_strides),
-                      _getConvOutShape(inW, in_rf_shape[1], zeropad, in_strides))
+                      _getConvOutShape(inH, in_filter_shape[0], zeropad, in_strides),
+                      _getConvOutShape(inW, in_filter_shape[1], zeropad, in_strides))
     print(expected_shape)
     np.testing.assert_array_equal(model_shape, expected_shape, \
         "Error in convolution with stride = 1 and padding")
@@ -392,18 +392,18 @@ def test_layers_convolution_shape(device_id):
     zeropad = True
     in_strides = 2
 
-    model = Convolution(rf_shape=in_rf_shape,
-                                 num_filters=out_num_filters,
-                                 activation=None,
-                                 pad=zeropad,
-                                 strides=in_strides, name='foo')
+    model = Convolution(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
 
     # shape should be
     model_shape = model(y).foo.shape
 
     expected_shape = (out_num_filters,
-                      _getConvOutShape(inH, in_rf_shape[0], zeropad, in_strides),
-                      _getConvOutShape(inW, in_rf_shape[1], zeropad, in_strides))
+                      _getConvOutShape(inH, in_filter_shape[0], zeropad, in_strides),
+                      _getConvOutShape(inW, in_filter_shape[1], zeropad, in_strides))
 
     np.testing.assert_array_equal(model_shape, expected_shape, \
         "Error in convolution with stride > 1 and padding")
@@ -412,7 +412,7 @@ def  test_layers_convolution_value(device_id):
 
     # Common parameters
     inC, inH, inW = 1, 3, 3
-    in_rf_shape = (3, 3)
+    in_filter_shape = (3, 3)
     out_num_filters = 1
     dat = np.ones([1, inC, inH, inW], dtype = np.float32)
 
@@ -423,11 +423,11 @@ def  test_layers_convolution_value(device_id):
     zeropad = False
     in_strides = 1
 
-    model = Convolution(rf_shape=in_rf_shape,
-                                 num_filters=out_num_filters,
-                                 activation=None,
-                                 pad=zeropad,
-                                 strides=in_strides, name='foo')
+    model = Convolution(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
     res = model(y).eval({y: dat})
 
     # Extract the W weight matrix
@@ -442,11 +442,11 @@ def  test_layers_convolution_value(device_id):
     zeropad = False
     in_strides = 2
 
-    model = Convolution(rf_shape=in_rf_shape,
-                                 num_filters=out_num_filters,
-                                 activation=None,
-                                 pad=zeropad,
-                                 strides=in_strides, name='foo')
+    model = Convolution(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
     res = model(y).eval({y: dat})
 
     # Extract the W weight matrix
@@ -461,11 +461,11 @@ def  test_layers_convolution_value(device_id):
     zeropad = True
     in_strides = 1
 
-    model = Convolution(rf_shape=in_rf_shape,
-                                 num_filters=out_num_filters,
-                                 activation=None,
-                                 pad=zeropad,
-                                 strides=in_strides, name='foo')
+    model = Convolution(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
     res = model(y).eval({y: dat})
 
     # Extract the W weight matrix
@@ -481,11 +481,11 @@ def  test_layers_convolution_value(device_id):
     zeropad = True
     in_strides = 2
 
-    model = Convolution(rf_shape=in_rf_shape,
-                                 num_filters=out_num_filters,
-                                 activation=None,
-                                 pad=zeropad,
-                                 strides=in_strides, name='foo')
+    model = Convolution(in_filter_shape,
+                        num_filters=out_num_filters,
+                        activation=None,
+                        pad=zeropad,
+                        strides=in_strides, name='foo')
     res = model(y).eval({y: dat})
 
     # Extract the W weight matrix
@@ -504,11 +504,11 @@ def  test_layers_convolution_3d(device_id):
     y = Input((inC,inH, inW, inD))
     dat = np.ones([1, inC, inH, inW, inD], dtype = np.float32)
 
-    model = Convolution3D(rf_shape=(3, 3, 3),
-                                 num_filters=1,
-                                 activation=None,
-                                 pad=False,
-                                 strides=1, name='foo')
+    model = Convolution3D((3, 3, 3),
+                          num_filters=1,
+                          activation=None,
+                          pad=False,
+                          strides=1, name='foo')
     # shape should be
     model_shape = model(y).foo.shape
 
@@ -531,11 +531,11 @@ def test_layers_convolution_2d(device_id):
 
     dat = np.ones([1, inC, inH, inW], dtype = np.float32)
 
-    model = Convolution2D(rf_shape=(3, 3),
-                                 num_filters=1,
-                                 activation=None,
-                                 pad=False,
-                                 strides=1, name='foo')
+    model = Convolution2D((3, 3),
+                          num_filters=1,
+                          activation=None,
+                          pad=False,
+                          strides=1, name='foo')
     # shape should be
     model_shape = model(y).foo.shape
     np.testing.assert_array_equal(model_shape, (1, 1, 1), \
@@ -610,7 +610,7 @@ def test_layers_conv_pool_unpool_deconv(device_id):
 #    print(z.faz.shape)
 #
 #    dat = np.arange(0,16, dtype=np.float32).reshape(1,1,4,4)
-#    maxpool   = MaxPooling   (rf_shape=(2,2), strides=(2,2), name='bar')
+#    maxpool   = MaxPooling(filter_shape=(2,2), strides=(2,2), name='bar')
 #    print(maxpool(y).shape)
 #
 #
@@ -618,8 +618,8 @@ def test_layers_conv_pool_unpool_deconv(device_id):
 #    print(res)
 #
 #    maxunpool = MaxUnpooling(filter_shape=(2,2),
-#                                      strides=(2,2),
-#                                      name='foo')((maxpool),(y))
+#                             strides=(2,2),
+#                             name='foo')((maxpool),(y))
 #
 #    # Add a few asserts (1 for value and other for shape once this is running)
 

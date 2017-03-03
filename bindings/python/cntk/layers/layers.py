@@ -215,13 +215,13 @@ def _window(x, axis, begin, end, step, stride, initial_state=None):
 
 
 # helper to expand options that can be specified as a single value
-def _pad_to_shape(rf_shape, param, what):
+def _pad_to_shape(filter_shape, param, what):
     param = _as_tuple(param)
     if len(param) == 1: # broadcast
-        while len(param) < len(rf_shape):
+        while len(param) < len(filter_shape):
             param = (param[0],) + param
-    if len(param) != len(rf_shape):
-        raise ValueError("{} parameter ({}) must be a scalar or have same number of elements as the rf_shape parameter ({})".format(what, param, rf_shape))
+    if len(param) != len(filter_shape):
+        raise ValueError("{} parameter ({}) must be a scalar or have same number of elements as the filter_shape parameter ({})".format(what, param, filter_shape))
     return param
 
 # BUGBUG: Can one pass a numpy array as initial values? TODO: add a test case
@@ -235,13 +235,13 @@ def _pad_to_shape(rf_shape, param, what):
 # TODO: should we allow to pass fixed weights instead? Like for Embedding? E.g. audio filters
 # TODO: this is not a convolution but a correlation, and W's shape has input and output depth reverted.
 #       Transposition would do the right thing for both cases. Should we default to correctness, i.e. transpose?
-# TODO: conflict of parameter order: rf_shape or num_filters first?
-#  - rf_shape first is logical for non-NN applications such as straight image filtering
+# TODO: conflict of parameter order: filter_shape or num_filters first?
+#  - filter_shape first is logical for non-NN applications such as straight image filtering
 #  - num_filters first is what Keras does
 # TODO: stride not supported for sequential
-def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
+def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
-                sequential=False, # time convolution if True (rf_shape[0] corresponds to dynamic axis)
+                sequential=False, # time convolution if True (filter_shape[0] corresponds to dynamic axis)
                 activation=default_override_or(identity),
                 init=default_override_or(glorot_uniform()),
                 pad=default_override_or(False),
@@ -263,10 +263,10 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
 
     For each item, convolution gathers a window ("receptive field") of items surrounding the item's position on the grid,
     and applies a little fully-connected network to it (the same little network is applied to all item positions).
-    The size (spatial extent) of the receptive field is given by ``rf_shape``.
-    E.g. to specify a 2D convolution, ``rf_shape`` should be a tuple of two integers, such as `(5,5)`;
-    an example for a 3D convolution (e.g. video or an MRI scan) would be ``rf_shape=(3,3,3)``;
-    while for a 1D convolution (e.g. audio or text), ``rf_shape`` has one element, such as (3,).
+    The size (spatial extent) of the receptive field is given by ``filter_shape``.
+    E.g. to specify a 2D convolution, ``filter_shape`` should be a tuple of two integers, such as `(5,5)`;
+    an example for a 3D convolution (e.g. video or an MRI scan) would be ``filter_shape=(3,3,3)``;
+    while for a 1D convolution (e.g. audio or text), ``filter_shape`` has one element, such as (3,).
 
     The dimension of the input items (feature-map depth) is not specified, but known from the input.
     The dimension of the output items generated for each item position is given by ``num_filters``.
@@ -282,7 +282,7 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
     If the output items are scalar, pass ``num_filters=()`` or ``None``.
 
     A ``Convolution`` instance owns its weight parameter tensors `W` and `b`, and exposes them as an attributes ``.W`` and ``.b``.
-    The weights will have the shape ``(num_filters, input_feature_map_depth, *rf_shape)``
+    The weights will have the shape ``(num_filters, input_feature_map_depth, *filter_shape)``
 
     Example:
      >>> # 2D convolution of 5x4 receptive field with output feature-map depth 128:
@@ -291,7 +291,7 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
      >>> h = f(x)
      >>> h.shape
          (128, 476, 637)
-     >>> f.W.shape  # will have the form (num_filters, input_depth, *rf_shape)
+     >>> f.W.shape  # will have the form (num_filters, input_depth, *filter_shape)
          (128, 3, 5, 4)
 
      >>> # 2D convolution over a one-channel black-and-white image, padding, and stride 2 along width dimension
@@ -314,9 +314,9 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
          (128, 3, 2, 5, 4)
 
     Args:
-     rf_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     filter_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      num_filters (int, default `()`): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
-     sequential (bool, default `False`): if `True`, also convolve along the dynamic axis. ``rf_shape[0]`` corresponds to dynamic axis.
+     sequential (bool, default `False`): if `True`, also convolve along the dynamic axis. ``filter_shape[0]`` corresponds to dynamic axis.
      activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
      init (scalar or NumPy array or :mod:`cntk.initializer`, default `glorot_uniform()`): initial value of weights `W`
      pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the filter will be shifted over the "valid"
@@ -341,12 +341,12 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
     init_bias  = get_default_override(Convolution, init_bias=init_bias)
 
     # tuplify all tuple inputs that can also be given as scalars if rank 1
-    rf_shape    = _as_tuple(rf_shape)
-    num_filters = _as_tuple(num_filters or ())
-    rf_rank = len(rf_shape)
-    strides     = _pad_to_shape(rf_shape, strides, 'strides')
-    sharing     = _pad_to_shape(rf_shape, sharing, 'sharing')
-    pad         = _pad_to_shape(rf_shape, pad, 'pad')
+    filter_shape = _as_tuple(filter_shape)
+    num_filters  = _as_tuple(num_filters or ())
+    filter_rank  = len(filter_shape)
+    strides      = _pad_to_shape(filter_shape, strides, 'strides')
+    sharing      = _pad_to_shape(filter_shape, sharing, 'sharing')
+    pad          = _pad_to_shape(filter_shape, pad, 'pad')
 
     if reduction_rank > 1:
         raise NotImplementedError("Convolution: reduction_rank other than 0 or 1 currently not supported")
@@ -359,11 +359,11 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
     emulating_output_depth = num_filters == ()
     emulating_input_depth  = reduction_rank == 0
     # 1D convolution is not supported by cudnn, so we also add a fake dimension.
-    emulating_1D = len(rf_shape) < 2
+    emulating_1D = len(filter_shape) < 2
 
     actual_output_channels_shape = num_filters                if not emulating_output_depth else (1,)
     actual_reduction_shape       = _INFERRED * reduction_rank if not emulating_input_depth  else _INFERRED  # BUGBUG: (1,) crashes
-    actual_rf_shape              = (1,) * emulating_1D + rf_shape
+    actual_filter_shape          = (1,) * emulating_1D + filter_shape
 
     # add the dimension to the options as well
     num_emulated_axes = emulating_input_depth + emulating_1D
@@ -371,7 +371,7 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
     sharing = (True,)  * num_emulated_axes + sharing
     pad     = (False,) * num_emulated_axes + pad
 
-    kernel_shape = actual_reduction_shape + actual_rf_shape # kernel := filter plus reductionDims
+    kernel_shape = actual_reduction_shape + actual_filter_shape # kernel := filter plus reductionDims
 
     # init can be an np.array, which must have the correct dimensions subject to faking depth
     # Once we no longer fake depth at this outer level, we can remove this.
@@ -379,19 +379,19 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
         if reduction_rank != 0:
             raise ValueError("a constant initializer can currently only used without reduction dimension")
         # BUGBUG: ^^ no need. Instead, take whatever reduction dimension is given here as that of the input.
-        nominal_W_shape = num_filters + rf_shape
+        nominal_W_shape = num_filters + filter_shape
         if init.shape != nominal_W_shape:
             raise ValueError("a constant initializer was passed that is of wrong shape")
         init_kernel = init.reshape(actual_output_channels_shape + kernel_shape) # make it fit
     else:
-        init_kernel = _initializer_for(init, Record(filter_rank=rf_rank, output_rank=-len(actual_output_channels_shape)))
+        init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-len(actual_output_channels_shape)))
         # BUGBUG: It is very confusing that output_rank is negative, esp. since that means count from the start. Solution: add a flag?
 
     # parameters bound to this Function
-    W = Parameter(actual_output_channels_shape + kernel_shape,                init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
-    b = Parameter(actual_output_channels_shape + (1,) * len(actual_rf_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
+    W = Parameter(actual_output_channels_shape + kernel_shape,                    init=init_kernel, name='W')                   # (K, C, H, W) aka [ W x H x C x K ]
+    b = Parameter(actual_output_channels_shape + (1,) * len(actual_filter_shape), init=init_bias,   name='b') if bias else None # (K,    1, 1) aka [ 1 x 1 x     K ]
 
-    # TODO: Should we cater to the special case of 1D convolution for text? I.e. sequential only (rf_shape=()).
+    # TODO: Should we cater to the special case of 1D convolution for text? I.e. sequential only (filter_shape=()).
     #       In that case, the convolution is the embedding, and we should use a matrix product to support sparse inputs.
     #       Or add sparse support to splice().
 
@@ -399,17 +399,17 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
     @BlockFunction('Convolution', name)
     def convolve(x):
         # insert additional axes for various purposes
-        rf_rank_without_seq = rf_rank - sequential    # spatial_shape has rf_rank except if sequential: then first axis of rf_rank belongs to sequential dimension, must subtract
+        filter_rank_without_seq = filter_rank - sequential    # spatial_shape has filter_rank except if sequential: then first axis of filter_rank belongs to sequential dimension, must subtract
         num_inserted_axes = sequential + num_emulated_axes
         if num_inserted_axes != 0:
             # x: (in_depth, spatial_shape)
-            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-rf_rank_without_seq, end_axis=-rf_rank_without_seq if rf_rank_without_seq != 0 else None) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
-            # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_rf_shape, spatial_shape)
+            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-filter_rank_without_seq, end_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else None) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+            # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_filter_shape, spatial_shape)
         # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
         # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
         if sequential:
-            lpad = (rf_shape[-rf_rank]-1) // 2  # even frames: take from right; odd frames: symmetric
-            x = _window(x, axis=-rf_rank, begin=-lpad, end=-lpad+rf_shape[-rf_rank], step=1, stride=strides[-rf_rank], initial_state=None)
+            lpad = (filter_shape[-filter_rank]-1) // 2  # even frames: take from right; odd frames: symmetric
+            x = _window(x, axis=-filter_rank, begin=-lpad, end=-lpad+filter_shape[-filter_rank], step=1, stride=strides[-filter_rank], initial_state=None)
         # actual convolution
         r = convolution (W, x,
                          strides=strides, sharing=sharing, auto_padding=pad,
@@ -417,8 +417,8 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
                          #transpose=transpose,
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
-        if sequential and not pad[-rf_rank]:
-            r = sequence.slice(r, begin_index=lpad, end_index=-(rf_shape[-rf_rank]-1-lpad))
+        if sequential and not pad[-filter_rank]:
+            r = sequence.slice(r, begin_index=lpad, end_index=-(filter_shape[-filter_rank]-1-lpad))
         if bias:
             r = r + b
         # if no output dimension is desired, then strip it
@@ -427,7 +427,7 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
         num_axes_to_remove = sequential + emulating_1D + emulating_output_depth
         if num_axes_to_remove > 0:
             # (out_depth, emulated axes, spatial_shape)
-            r = reshape(r, (), begin_axis=-rf_rank_without_seq - num_axes_to_remove, end_axis=-rf_rank_without_seq if rf_rank_without_seq != 0 else None) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+            r = reshape(r, (), begin_axis=-filter_rank_without_seq - num_axes_to_remove, end_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else None) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
             # (out_depth, spatial_shape)
         if activation is not None:
             r = activation(r)
@@ -437,7 +437,7 @@ def Convolution(rf_shape,         # shape of receptive field, e.g. (3,3)
 
 
 # TODO: make sure the xD versions have all the needed parameters
-def Convolution1D(rf_shape,         # shape of receptive field, e.g. (3)
+def Convolution1D(filter_shape,     # shape of receptive field, e.g. (3)
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
                   init=default_override_or(glorot_uniform()),
@@ -449,7 +449,7 @@ def Convolution1D(rf_shape,         # shape of receptive field, e.g. (3)
                   name=''):
     '''
     Layer factory function to create a 1D convolution layer with optional non-linearity.
-    Same as `Convolution()` except that rf_shape is verified to be 1-dimensional.
+    Same as `Convolution()` except that filter_shape is verified to be 1-dimensional.
     See `Convolution()` for extensive documentation.
     '''
     activation = get_default_override(Convolution1D, activation=activation)
@@ -457,12 +457,12 @@ def Convolution1D(rf_shape,         # shape of receptive field, e.g. (3)
     pad        = get_default_override(Convolution1D, pad=pad)
     bias       = get_default_override(Convolution1D, bias=bias)
     init_bias  = get_default_override(Convolution1D, init_bias=init_bias)
-    if len(_as_tuple(rf_shape)) != 1: 
-         raise ValueError('Convolution1D: rf_shape must be a scalar')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution1D', name=name)
+    if len(_as_tuple(filter_shape)) != 1: 
+         raise ValueError('Convolution1D: filter_shape must be a scalar')
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution1D', name=name)
 
 
-def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must be a 2-element tuple.
+def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must be a 2-element tuple.
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
                   init=default_override_or(glorot_uniform()),
@@ -474,7 +474,7 @@ def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must
                   name=''):
     '''
     Layer factory function to create a 2D convolution layer with optional non-linearity.
-    Same as `Convolution()` except that rf_shape is verified to be 2-dimensional.
+    Same as `Convolution()` except that filter_shape is verified to be 2-dimensional.
     See `Convolution()` for extensive documentation.
     '''
     activation = get_default_override(Convolution2D, activation=activation)
@@ -482,12 +482,12 @@ def Convolution2D(rf_shape,         # shape of receptive field, e.g. (3,3). Must
     pad        = get_default_override(Convolution2D, pad=pad)
     bias       = get_default_override(Convolution2D, bias=bias)
     init_bias  = get_default_override(Convolution2D, init_bias=init_bias)
-    if len(rf_shape) != 2: 
-         raise ValueError('Convolution2D: rf_shape must be a 2D tuple, e.g. (3,3)')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution2D', name=name)
+    if len(filter_shape) != 2: 
+         raise ValueError('Convolution2D: filter_shape must be a 2D tuple, e.g. (3,3)')
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution2D', name=name)
 
 
-def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Must be a 3-element tuple.
+def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Must be a 3-element tuple.
                   num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
                   activation=default_override_or(identity),
                   init=default_override_or(glorot_uniform()),
@@ -499,7 +499,7 @@ def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Mu
                   name=''):
     '''
     Layer factory function to create a 3D convolution layer with optional non-linearity.
-    Same as `Convolution()` except that rf_shape is verified to be 3-dimensional.
+    Same as `Convolution()` except that filter_shape is verified to be 3-dimensional.
     See `Convolution()` for extensive documentation.
     '''
     activation = get_default_override(Convolution3D, activation=activation)
@@ -507,14 +507,14 @@ def Convolution3D(rf_shape,         # shape of receptive field, e.g. (3,3,3). Mu
     pad        = get_default_override(Convolution3D, pad=pad)
     bias       = get_default_override(Convolution3D, bias=bias)
     init_bias  = get_default_override(Convolution3D, init_bias=init_bias)
-    if len(rf_shape) != 3: 
-         raise ValueError('Convolution3D: rf_shape must be a 3D tuple, e.g. (3,3,3)')
-    return Convolution(rf_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution3D', name=name)
+    if len(filter_shape) != 3: 
+         raise ValueError('Convolution3D: filter_shape must be a 3D tuple, e.g. (3,3,3)')
+    return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution3D', name=name)
 
 
 # ConvolutionTranspose -- create a deconvolution layer with optional non-linearity
 # TODO: need to merge with above. Can it simply be transpose=True?
-def ConvolutionTranspose(rf_shape,        # shape of receptive field, e.g. (3,3)
+def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (3,3)
                          num_filters,
                          num_input_filters,
                          activation=default_override_or(identity),
@@ -546,13 +546,13 @@ def ConvolutionTranspose(rf_shape,        # shape of receptive field, e.g. (3,3)
         NotImplementedError("ConvolutionTranspose: sharing option currently must be True")
     output_channels_shape = _as_tuple(num_filters)
     input_channels_shape = _as_tuple(num_input_filters)
-    kernel_shape = output_channels_shape + rf_shape
+    kernel_shape = output_channels_shape + filter_shape
     param_shape = input_channels_shape + kernel_shape
 
-    filter_rank = len(rf_shape)
+    filter_rank = len(filter_shape)
     init_kernel = _initializer_for(init, Record(filter_rank=filter_rank, output_rank=-1))
     W = Parameter(param_shape, init=init_kernel, name='W')
-    b = Parameter(output_channels_shape + (1,) * len(rf_shape), init=init_bias, name='b') if bias else None
+    b = Parameter(output_channels_shape + (1,) * len(filter_shape), init=init_bias, name='b') if bias else None
 
     # expression
     @BlockFunction('ConvolutionTranspose', name)
@@ -617,31 +617,31 @@ def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3)
 
 # TODO: add sequential mode like Convolution()
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average, NDShape
-def _Pooling(op,       # PoolingType_Max or _Average
-             rf_shape, # shape of receptive field, e.g. (3,3)
-             sequential=False, # pooling in time if True (rf_shape[0] corresponds to dynamic axis)
+def _Pooling(op,           # PoolingType_Max or _Average
+             filter_shape, # shape of receptive field, e.g. (3,3)
+             sequential=False, # pooling in time if True (filter_shape[0] corresponds to dynamic axis)
              strides=1,
              pad=False,
              op_name=None,
              name=''):
     '''
     Shared part of the various pooling layers.
-    Set the rf_shape to None to denote global pooling.
+    Set the filter_shape to None to denote global pooling.
     '''
 
     if sequential:
         raise NotImplementedError("Pooling: sequential option not implemented yet")
 
-    strides     = _pad_to_shape(rf_shape, strides, 'strides')
-    pad         = _pad_to_shape(rf_shape, pad, 'pad')
+    strides     = _pad_to_shape(filter_shape, strides, 'strides')
+    pad         = _pad_to_shape(filter_shape, pad, 'pad')
 
     @BlockFunction(op_name, name)
     def pool(x):
-        return pooling (x, op, rf_shape, strides=strides, auto_padding=pad)
+        return pooling (x, op, filter_shape, strides=strides, auto_padding=pad)
     return pool
 
 
-def MaxPooling(rf_shape,  # shape of receptive field, e.g. (3,3)
+def MaxPooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                strides=1,
                pad=default_override_or(False),
                name=''):
@@ -652,8 +652,8 @@ def MaxPooling(rf_shape,  # shape of receptive field, e.g. (3,3)
     Typically, each item is a vector.
     For each item, max-pooling computes the element-wise maximum over a window ("receptive field") of items surrounding the item's position on the grid.
 
-    The size (spatial extent) of the receptive field is given by ``rf_shape``.
-    E.g. for 2D pooling, ``rf_shape`` should be a tuple of two integers, such as `(5,5)`.
+    The size (spatial extent) of the receptive field is given by ``filter_shape``.
+    E.g. for 2D pooling, ``filter_shape`` should be a tuple of two integers, such as `(5,5)`.
 
     Example:
      >>> f = MaxPooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
@@ -675,7 +675,7 @@ def MaxPooling(rf_shape,  # shape of receptive field, e.g. (3,3)
                    [ 7.,  9.]]]]], dtype=float32)
 
     Args:
-     rf_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     filter_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the pooling operation will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       pooling will be applied to all input positions, and positions outside the valid region will be considered containing zero.
@@ -686,10 +686,10 @@ def MaxPooling(rf_shape,  # shape of receptive field, e.g. (3,3)
         :class:`~cntk.ops.functions.Function` that accepts one argument and applies the max-pooling operation to it
     '''
     pad = get_default_override(MaxPooling, pad=pad)
-    return _Pooling(PoolingType_Max, rf_shape, strides=strides, pad=pad, op_name='MaxPooling', name=name)
+    return _Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad, op_name='MaxPooling', name=name)
 
 
-def AveragePooling(rf_shape,  # shape of receptive field, e.g. (3,3)
+def AveragePooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                    strides=1,
                    pad=default_override_or(False),
                    name=''):
@@ -700,8 +700,8 @@ def AveragePooling(rf_shape,  # shape of receptive field, e.g. (3,3)
     Typically, each item is a vector.
     For each item, average-pooling computes the element-wise mean over a window ("receptive field") of items surrounding the item's position on the grid.
 
-    The size (spatial extent) of the receptive field is given by ``rf_shape``.
-    E.g. for 2D pooling, ``rf_shape`` should be a tuple of two integers, such as `(5,5)`.
+    The size (spatial extent) of the receptive field is given by ``filter_shape``.
+    E.g. for 2D pooling, ``filter_shape`` should be a tuple of two integers, such as `(5,5)`.
 
     Example:
      >>> f = AveragePooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
@@ -723,7 +723,7 @@ def AveragePooling(rf_shape,  # shape of receptive field, e.g. (3,3)
                    [ 4.25,  6.25]]]]], dtype=float32)
 
     Args:
-     rf_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     filter_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the pooling operation will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       pooling will be applied to all input positions, and positions outside the valid region will be excluded from the averaging.
@@ -734,7 +734,7 @@ def AveragePooling(rf_shape,  # shape of receptive field, e.g. (3,3)
         :class:`~cntk.ops.functions.Function` that accepts one argument and applies the average-pooling operation to it
     '''
     pad = get_default_override(AveragePooling, pad=pad)
-    return _Pooling(PoolingType_Average, rf_shape, strides=strides, pad=pad, op_name='AveragePooling', name=name)
+    return _Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad, op_name='AveragePooling', name=name)
 
 
 def GlobalMaxPooling(name=''):
@@ -791,19 +791,19 @@ def GlobalAveragePooling(name=''):
 
 # Create a max unpooling layer
 # TODO: merge this. Test: Tests\EndToEndTests\CNTKv2Python\Examples\deconv_MNIST_test.py, Tests\EndToEndTests\Examples\Image\GettingStarted\07_Deconvolution
-def MaxUnpooling(rf_shape,  # shape of receptive field, e.g. (3,3)
+def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                  strides=1,
                  pad=False,
                  lower_pad=0,
                  upper_pad=0, 
                  name=''):
 
-    strides     = _pad_to_shape(rf_shape, strides, 'strides')
-    pad         = _pad_to_shape(rf_shape, pad, 'pad')
+    strides     = _pad_to_shape(filter_shape, strides, 'strides')
+    pad         = _pad_to_shape(filter_shape, pad, 'pad')
 
     @BlockFunction('MaxUnpooling', name)
     def maxunpool(x, y):
-        return unpooling (x, y, PoolingType_Max, rf_shape, strides=strides, auto_padding=pad,
+        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad,
                          lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
     return maxunpool
 

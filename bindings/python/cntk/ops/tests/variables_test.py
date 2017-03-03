@@ -103,7 +103,7 @@ def test_convert_to_variable_dtype():
     assert result==[[[2]]]
     assert result.dtype == np.float32
 
-def test_slice():
+def test_getitem():
     x = input_variable(5)
     y = x+0
     f = y[3]
