@@ -9,7 +9,6 @@ class VariableMixin(object):
     '''
     Standard properties for :class:`Variable` and its derived classes
     :class:`Parameter` and :class:`Constant`.
-    Also included are postfix operations. Currently, that is __getitem__() which triggers a slice().
     '''
     @property
     @typemap
@@ -105,31 +104,6 @@ class VariableMixin(object):
         The internally generated unique name of the variable.
         '''
         return super(VariableMixin, self).uid()
-
-    def __getitem__(self, arg):
-        '''
-        Slicing of a Variable. E.g. var[2:3] will translate into slice(var, axis=0, begin_index=2, end_index=3)
-        '''
-        if not isinstance(arg, tuple): # normalize into a tuple
-            arg = (arg,)
-        r = self
-        axis0 = 0
-        for axis, s in enumerate(arg):
-            if s is Ellipsis:
-                axis0 = -len(arg)
-                continue
-            if not isinstance(s, slice): # normalize into a slice
-                s = slice(s, s+1)
-            begin = 0 if s.start is None else s.start
-            end   = 0 if s.stop  is None else s.stop
-            step  = 1 if s.step  is None else s.step
-            if step != 1:
-                raise ValueError("slicing with a step other than 1 is currently not supported") # TODO: This is not hard to implement in SliceNode.
-            # implement as a CNTK slice() operation
-            if begin != 0 or end != 0:
-                from .. import slice as cntk_slice # must rename to avoid naming confusion
-                r = cntk_slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
-        return r
 
     class Type(Record):
         '''

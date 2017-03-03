@@ -320,6 +320,7 @@ class Trainer(cntk_py.Trainer):
         return super(Trainer, self).reset_accumulation()
 
 
+# TODO: remove this [Nikos] once a real Evaluator implementation is available
 def Evaluator(model, criterion):
     '''
     Create an evaluator. This is really a Trainer object with dummy SGD parameters that we can call test_minibatch() on.

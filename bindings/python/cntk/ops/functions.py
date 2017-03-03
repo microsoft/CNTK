@@ -294,7 +294,7 @@ class Function(cntk_py.Function):
 
         Returns:
              In case of symbolic inputs, returns another CNTK Function object with inputs bound to the arguments.
-             Otherwise returns a list of numpy arrays for tuple-valued Functions, and a single numpy array otherwise.
+             Otherwise returns a tuple of numpy arrays for tuple-valued Functions, and a single numpy array otherwise.
         '''
 
         # parse argument list and map to the function's input
@@ -319,8 +319,8 @@ class Function(cntk_py.Function):
         outputs = self.outputs
         _, output_map = self.forward(arg_map, outputs)
         assert len(output_map) == len(outputs)
-        if len(output_map) > 1:
-            return [(output_map[output]) for output in outputs]
+        if len(output_map) > 1: # tuple-valued: return tuple
+            return (output_map[output] for output in outputs)
         else: # single value: return numpy array and that's it
             return list(output_map.values())[0]
 
@@ -414,12 +414,6 @@ class Function(cntk_py.Function):
 
         print('trying on outputs[0]')
         return getattr(outputs[0], name)
-
-    def __getitem__(self, arg):
-        '''
-        Slicing of a Function result.
-        '''
-        return self.output.__getitem__(arg)
 
     @property
     def type(self):

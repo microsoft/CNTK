@@ -84,7 +84,31 @@ class TensorOpsMixin(object):
     # 'for var in variables'.
     # __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
 
-    def __getitem__(self, key):
+    def __getitem__(self, arg):
+        '''
+        Slicing of a Variable. E.g. var[2:3] will translate into slice(var, axis=0, begin_index=2, end_index=3)
+        '''
+        if not isinstance(arg, tuple): # normalize into a tuple
+            arg = (arg,)
+        r = self
+        axis0 = 0
+        for axis, s in enumerate(arg):
+            if s is Ellipsis:
+                axis0 = -len(arg)
+                continue
+            if not isinstance(s, slice): # normalize into a slice
+                s = slice(s, s+1)
+            if s.step is not None and step != 1:
+                raise ValueError("slicing with a step other than 1 is currently not supported") # TODO: This is not hard to implement in SliceNode.
+            # implement as a CNTK slice() operation
+            begin = s.start or 0
+            end   = s.stop
+            if begin != 0 or end != None:
+                from . import ops
+                r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
+        return r
+
+    def __getitem__1(self, key):
         from . import ops
         if isinstance(key, int):
             # Case 1: e.g. data[3] -> key=3
