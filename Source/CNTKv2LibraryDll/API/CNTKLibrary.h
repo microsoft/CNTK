@@ -3087,10 +3087,13 @@ namespace CNTK
         }
 #else   // for gcc, LogicError etc. are just #defines that map to ThrowFormatted, so replicate this here
     public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
-        template<class E, class... _Types>
-        inline __declspec_noreturn void ThrowFormatted(const char* format, _Types&&... _Args) const
+        template<class E, typename... Args>
+        inline __declspec_noreturn void ThrowFormatted(Args&&... args) const
         {
-            ::CNTK::ThrowFormatted<E>(format, std::forward<_Types>(_Args)...);
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Werror" // gcc has problems with checking of printf format strings through variadic templates
+            ::CNTK::ThrowFormatted<E>(std::forward<Args>(args)...);
+#pragma GCC diagnostic pop
         }
 #endif
     public:
