@@ -147,6 +147,7 @@ DECL ElemType ClippedQuotient(ElemType a, ElemType b)
 template <typename ElemType>
 DECL ElemType LogAdd(ElemType x, ElemType y)
 {
+    // The reason that we don't use std::swap, is because this code is used in Cuda and not just cpu.
     if (x < y)
     {
         ElemType temp = x;
