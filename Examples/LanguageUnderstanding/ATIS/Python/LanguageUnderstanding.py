@@ -52,7 +52,7 @@ def create_model():
 # train action         #
 ########################
 
-def train(reader, model, max_epochs, model_dir=None):
+def train(reader, model, max_epochs, model_dir=None, tensorboard_logdir=None):
     # Input variables denoting the features and label data
     query = cntk.blocks.Input(input_dim,  is_sparse=False)
     slot_labels = cntk.blocks.Input(num_labels, is_sparse=True)  # TODO: make sparse once it works
@@ -73,16 +73,21 @@ def train(reader, model, max_epochs, model_dir=None):
     momentum_time_constant = cntk.learner.momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9))  
 
     # LR schedule over epochs (we don't run that many epochs, but if we did, these are good values)
-    lr_schedule = [0.003]*2+[0.0015]*12+[0.0003] 
-
-    # trainer object
+    lr_schedule = [0.003]*2+[0.0015]*12+[0.0003]
     lr_per_sample = cntk.learner.learning_rate_schedule(lr_schedule, cntk.learner.UnitType.sample, epoch_size)
     learner = cntk.learner.adam_sgd(z.parameters,
                                     lr=lr_per_sample, momentum=momentum_time_constant,
                                     low_memory=True,
                                     gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
 
-    trainer = cntk.Trainer(z, (ce, pe), [learner])
+    # Progress writers
+    progress_writers = [cntk.ProgressPrinter(freq=100, first=10, tag='Training', num_epochs=max_epochs)] # more detailed logging
+    #progress_writers = [cntk.ProgressPrinter(tag='Training', num_epochs=max_epochs)]
+    if tensorboard_logdir is not None:
+        progress_writers.append(cntk.TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z))
+
+    # trainer object
+    trainer = cntk.Trainer(z, (ce, pe), [learner], progress_writers)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -92,22 +97,30 @@ def train(reader, model, max_epochs, model_dir=None):
 
     # process minibatches and perform model training
     cntk.utils.log_number_of_parameters(z) ; print()
-    progress_printer = cntk.ProgressPrinter(freq=100, first=10, tag='Training', num_epochs=max_epochs) # more detailed logging
-    #progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     t = 0
+    aggregate_loss = 0
+    aggregate_error = 0
+    total_samples = 0
 
     # loop over epochs
     for epoch in range(max_epochs):
         epoch_end = (epoch+1) * epoch_size
+
+        aggregate_loss = 0
+        aggregate_error = 0
+        total_samples = 0
 
         # loop over minibatches on the epoch
         while t < epoch_end:
             # BUGBUG? The change of minibatch_size parameter vv has no effect.
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t), input_map=input_map) # fetch minibatch
             trainer.train_minibatch(data)                                   # update model with it
-            t += trainer.previous_minibatch_sample_count                    # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
+            samples = trainer.previous_minibatch_sample_count
+            t += samples
+            total_samples += samples
+            aggregate_loss += trainer.previous_minibatch_loss_average * samples
+            aggregate_error += trainer.previous_minibatch_evaluation_average * samples
 
             #def trace_node(name):
             #    nl = [n for n in z.parameters if n.name() == name]
@@ -117,9 +130,9 @@ def train(reader, model, max_epochs, model_dir=None):
             #trace_node('stabilizer_param')
         if model_dir:
             z.save(os.path.join(model_dir, "atis" + "_{}.dnn".format(epoch)))
-        loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
+        trainer.summarize_training_progress()
 
-    return loss, metric
+    return aggregate_loss / total_samples, aggregate_error / total_samples
 
 
 #############################
@@ -129,6 +142,8 @@ def train(reader, model, max_epochs, model_dir=None):
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-e', '--epochs', help='total epochs', required=False, default='8')
+    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir',
+                        help='Directory where TensorBoard logs should be created', required=False, default=None)
 
     args = vars(parser.parse_args())
     max_epochs = int(args['epochs'])
@@ -145,7 +160,7 @@ if __name__=='__main__':
 
     model_path = os.path.join(abs_path, "Models")
     # train
-    train(reader, model, max_epochs, model_path)
+    train(reader, model, max_epochs, model_path, args['tensorboard_logdir'])
 
     # test (TODO)
     reader = create_reader(data_dir + "/atis.test.ctf")

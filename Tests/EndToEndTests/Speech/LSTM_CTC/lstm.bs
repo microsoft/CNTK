@@ -48,7 +48,7 @@ speechTrain = [
                 input = [
                     labels = [
                         alias = "l"
-                        dim = 132
+                        dim = 133
                         format = "sparse"
                     ]
                 ]
@@ -98,7 +98,7 @@ speechTrain = [
         // define basic I/O
         baseFeatDim = 33
         featDim = 11 * baseFeatDim
-        labelDim = 132
+        labelDim = 133
 
         // hidden dimensions
         cellDim = 1024

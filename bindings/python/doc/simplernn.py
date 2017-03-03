@@ -65,17 +65,17 @@ def train_sequence_classifier(debug_output=False):
 
     lr_per_sample = learning_rate_schedule(0.0005, UnitType.sample)
     # Instantiate the trainer object to drive the model training
+    progress_printer = ProgressPrinter(0)
     trainer = Trainer(classifier_output, (ce, pe),
-                      sgd(classifier_output.parameters, lr=lr_per_sample))
+                      sgd(classifier_output.parameters, lr=lr_per_sample),
+                      progress_printer)
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200
 
-    pp = ProgressPrinter(0)
     for i in range(255):
         mb = reader.next_minibatch(minibatch_size, input_map=input_map)
         trainer.train_minibatch(mb)
-        pp.update_with_trainer(trainer, True)
 
     evaluation_average = float(trainer.previous_minibatch_evaluation_average)
     loss_average = float(trainer.previous_minibatch_loss_average)

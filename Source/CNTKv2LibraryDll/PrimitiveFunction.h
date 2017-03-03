@@ -68,6 +68,8 @@ namespace CNTK
         {PrimitiveOpType::CrossEntropyWithSoftmax, L"CrossEntropyWithSoftmax"},
         {PrimitiveOpType::ClassificationError, L"ClassificationError"},
         {PrimitiveOpType::EditDistanceError, L"EditDistanceError" },
+        {PrimitiveOpType::ForwardBackward, L"ForwardBackward" },
+        {PrimitiveOpType::LabelsToGraph, L"LabelsToGraph" },
         {PrimitiveOpType::PastValue, L"PastValue"},
         {PrimitiveOpType::FutureValue, L"FutureValue"},
         {PrimitiveOpType::ReduceElements, L"ReduceElements"},
@@ -87,12 +89,14 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
-        { PrimitiveOpType::Block, L"Block" },
-        { PrimitiveOpType::Unpooling, L"Unpooling" },
-        { PrimitiveOpType::LambdaRank, L"LambdaRank" },
-        { PrimitiveOpType::NDCG, L"NDCG" },
-        { PrimitiveOpType::NoOp, L"NoOp" },
-        { PrimitiveOpType::StopGradient, L"StopGradient" }
+        {PrimitiveOpType::Block, L"Block"},
+        {PrimitiveOpType::Unpooling, L"Unpooling"},
+        {PrimitiveOpType::LambdaRank, L"LambdaRank"},
+        {PrimitiveOpType::NDCG, L"NDCG"},
+        {PrimitiveOpType::NoOp, L"NoOp"},
+        {PrimitiveOpType::StopGradient, L"StopGradient"},
+        {PrimitiveOpType::ELU, L"ELU"},
+        {PrimitiveOpType::CosDistanceWithNegativeSamples, L"CosDistanceWithNegativeSamples"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -210,6 +214,7 @@ namespace CNTK
         static const std::wstring AttributeNameLowerPad;
         static const std::wstring AttributeNameUpperPad;
         static const std::wstring AttributeNameTranspose;
+        static const std::wstring AttributeNameOutputShape; 
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;
         static const std::wstring AttributeNameROIOutputShape;
         static const std::wstring AttributeNamePoolingType;
@@ -237,6 +242,8 @@ namespace CNTK
         static const std::wstring AttributeNameInsertionPenalty;
         static const std::wstring AttributeNameSquashInputs;
         static const std::wstring AttributeNameTokensToIgnore;
+        static const std::wstring AttributeNameDelayConstraint;
+        static const std::wstring AttributeNameBlankTokenId;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
@@ -728,6 +735,8 @@ namespace CNTK
         // version 2: changed in 7af3a7c0e46cb12f873f1289400a9c5d86746662. TODO(n17s): add description.
         // version 3: changed in df0ab4e58186738931968e806b61bc80d7b6e20e. TODO(pkrannen): add description.
         // version 4: added extra parameter (#6) for the running mean sample count in BatchNormalization.
-        static const size_t s_serializationVersion = 7;
+        // Version 6: Add argmax and argmin to ReduceElement.
+        // Version 8: Add ELU node.
+        static const size_t s_serializationVersion = 8;
     };
 }

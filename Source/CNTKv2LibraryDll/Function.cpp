@@ -748,6 +748,24 @@ namespace CNTK
         });
     }
 
+    std::wstring Function::AsString() const
+    {
+        wstringstream wss;
+        bool first = true;
+        if (IsComposite())
+            wss << "Composite(" << RootFunction()->OpName() << "): ";
+        else
+            wss << OpName() <<": ";
+        bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        for (auto arg : Arguments(reverse))
+            wss << (first ? (first = false, "") : ", ") << arg.AsString();
+        wss << " -> ";
+        first = true;
+        for (auto out : Outputs())
+            wss << (first ? (first = false, "") : ", ") << out.AsString();
+        return wss.str();
+    }
+
     FunctionPtr UnaryOp(PrimitiveOpType op, const Variable& operand, Dictionary&& opConfig, const std::wstring& name)
     {
         std::vector<Variable> operands = { operand };
@@ -785,14 +803,14 @@ namespace CNTK
     }
 
     FunctionPtr Exp(const Variable& operand, const std::wstring& name)
-        {
+    {
         return UnaryOp(PrimitiveOpType::Exp, operand, Dictionary(), name);
     }
 
     FunctionPtr Log(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::Log, operand, Dictionary(), name);
-        }
+    }
 
     FunctionPtr Square(const Variable& operand, const std::wstring& name)
     {
@@ -994,6 +1012,12 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::CosDistance, leftOperand, rightOperand, Dictionary(), name);
     }
 
+    FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, size_t shiftWindow, size_t numberOfNegativeSamples, const std::wstring& name)
+    {
+        std::vector<Variable> operands = {leftOperand, rightOperand, Constant::Scalar((float) shiftWindow),  Constant::Scalar((float) numberOfNegativeSamples) };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::CosDistanceWithNegativeSamples, operands, Dictionary(), name), name);
+    }
+
     FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name)
     {
         std::vector<Variable> operands = { prediction, targets };
@@ -1090,6 +1114,20 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::EditDistanceError, prediction, labels, std::move(additionalProperties), name);
     }
 
+    FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameBlankTokenId] = blankTokenId;
+        additionalProperties[PrimitiveFunction::AttributeNameDelayConstraint] = delayConstraint;
+
+        return BinaryOp(PrimitiveOpType::ForwardBackward, graph, features, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name)
+    {
+        return UnaryOp(PrimitiveOpType::LabelsToGraph, labels, Dictionary(), name);
+    }
+
     FunctionPtr PastValue(const Variable& operand, const Variable& initialState, size_t offset, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -1149,15 +1187,16 @@ namespace CNTK
     }
 
     FunctionPtr Convolution(const Variable& convolutionMap,
-                            const Variable& operand,
-                            const NDShape& strides,
-                            const std::vector<bool>& sharing,
-                            const std::vector<bool>& autoPadding,
-                            const NDShape& lowerPad,
-                            const NDShape& upperPad,
-                            bool transpose,
-                            size_t maxTempMemSizeInSamples,
-                            const std::wstring& name)
+        const Variable& operand,
+        const NDShape& strides,
+        const std::vector<bool>& sharing,
+        const std::vector<bool>& autoPadding,
+        const NDShape& lowerPad,
+        const NDShape& upperPad,
+        bool transpose,
+        const NDShape& outputShape,
+        size_t maxTempMemSizeInSamples,
+        const std::wstring& name)
     {
         // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
         // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
@@ -1172,6 +1211,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
         additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
         additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
+        additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
         additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
 
         return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
@@ -1311,13 +1351,7 @@ namespace CNTK
 
     FunctionPtr ELU(const Variable& operand, const std::wstring& name)
     {
-        auto operandPlaceholder = PlaceholderVariable();
-        auto lessThanZero = Less(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
-        auto result = ElementSelect(lessThanZero, 
-            Minus(Exp(operandPlaceholder), Constant::Scalar(operand.GetDataType(), 1.0)),
-            operandPlaceholder);
-
-        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"ELU", name);
+        return UnaryOp(PrimitiveOpType::ELU, operand, Dictionary(), name);
     }
 
     FunctionPtr LeakyReLU(const Variable& operand, const std::wstring& name)
@@ -1340,6 +1374,14 @@ namespace CNTK
             operandPlaceholder);
 
         return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"PReLU", name);
+    }
+
+    FunctionPtr Softplus(const Variable& operand, const std::wstring& name)
+    {
+        auto operandPlaceholder = PlaceholderVariable();
+        auto result = LogAddExp(operandPlaceholder, Constant::Scalar(operand.GetDataType(), 0.0));
+
+        return AsBlock(std::move(result), { { operandPlaceholder, operand } }, L"Softplus", name);
     }
 
     FunctionPtr Argmax(const Variable& operand, const Axis& axis, const std::wstring& name)
@@ -1599,5 +1641,5 @@ namespace CNTK
             //       E.g. used for seq2seq.
             return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
         }
-   }
+    }
 }

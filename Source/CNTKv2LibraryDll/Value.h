@@ -33,6 +33,8 @@ namespace CNTK
                 m_unpackedShape = m_unpackedShape.AppendShape({ packedDataLayout->GetNumTimeSteps(), packedDataLayout->GetNumSequences() });
         }
 
+        bool IsPacked() const { return m_isPacked; }
+
         void Unpack() const;
 
         const NDShape& Shape() const override { return m_unpackedShape; }

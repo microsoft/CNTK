@@ -6,6 +6,7 @@
 
 #include "Basics.h"
 #include "ComputationNode.h"
+#include "Constants.h"
 #include "Matrix.h"
 #include "TensorView.h"
 #include <unordered_set>
@@ -1371,6 +1372,10 @@ public:
             LogicError("The tensor dimension in the %ls %ls operation does not match.", NodeName().c_str(), OperationName().c_str());
         }
 
+        auto input3AsLearnableParameterNode = Input(3)->template As<LearnableParameter<ElemType>>();
+        if (isFinalValidationPass && (!input3AsLearnableParameterNode || input3AsLearnableParameterNode->GetLearningRateMultiplier() != 0) || (Input(3)->GetSampleLayout().GetNumElements() != 1))
+            LogicError("%ls %ls operation expects a constant scalar for Input(3) which corresponds to number of negative samples.", NodeName().c_str(), OperationName().c_str());
+
         // input(2) is shift, input(3) is the #neg
         size_t negNumber = (size_t) Input(3)->Get00Element();
 
@@ -1448,7 +1453,8 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
     shared_ptr<ComputationNetwork> net,
     set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
     shared_ptr<DistGradHeader> gradHeader,
-    shared_ptr<MPIWrapper> mpi);
+    shared_ptr<MPIWrapper> mpi,
+    size_t packThresholdSizeInBytes = (size_t)DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
 
 // -----------------------------------------------------------------------
 // EpochAccumulatorNode calculates mean values of all samples used in forward pass.
@@ -1499,7 +1505,8 @@ protected:
         shared_ptr<ComputationNetwork> net,
         set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
         shared_ptr<DistGradHeader> gradHeader,
-        shared_ptr<MPIWrapper> mpi);
+        shared_ptr<MPIWrapper> mpi,
+        size_t packThresholdSize);
 
     void Reset();
 
