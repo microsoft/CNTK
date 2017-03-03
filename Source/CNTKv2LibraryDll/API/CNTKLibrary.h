@@ -3088,7 +3088,7 @@ namespace CNTK
 #else   // for gcc, LogicError etc. are just #defines that map to ThrowFormatted, so replicate this here
     public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
         template<class E, class... _Types>
-        inline __declspec_noreturn void ThrowFormatted(const char* format, _Types&&... _Args) const __attribute__((format(printf, 1, 2)))
+        inline __declspec_noreturn void ThrowFormatted(const char* format, _Types&&... _Args) const
         {
             ::CNTK::ThrowFormatted<E>(format, std::forward<_Types>(_Args)...);
         }
