@@ -213,11 +213,8 @@ namespace CNTK
         static const std::wstring AttributeNameAutoPadding;
         static const std::wstring AttributeNameLowerPad;
         static const std::wstring AttributeNameUpperPad;
-<<<<<<< HEAD
-		static const std::wstring AttributeNameIncludePad;
-=======
         static const std::wstring AttributeNameCeilOutDim;
->>>>>>> refs/remotes/origin/v-yuxgu/include-pooling
+		static const std::wstring AttributeNameIncludePad;
         static const std::wstring AttributeNameTranspose;
         static const std::wstring AttributeNameOutputShape; 
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;

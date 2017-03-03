@@ -53,11 +53,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAutoPadding = L"autoPadding";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameLowerPad = L"lowerPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUpperPad = L"upperPad";
-<<<<<<< HEAD
-	/*static*/ const std::wstring PrimitiveFunction::AttributeNameIncludePad = L"includePad";
-=======
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCeilOutDim = L"ceilOutDim";
->>>>>>> refs/remotes/origin/v-yuxgu/include-pooling
+	/*static*/ const std::wstring PrimitiveFunction::AttributeNameIncludePad = L"includePad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTranspose = L"transpose";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputShape = L"outputShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples = L"maxTempMemSizeInSamples";
