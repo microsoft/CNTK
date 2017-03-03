@@ -14,12 +14,9 @@ sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Sequ
 from Sequence2Sequence import create_reader, DATA_DIR, MODEL_DIR, TRAINING_DATA, VALIDATION_DATA, TESTING_DATA, \
                               VOCAB_FILE, get_vocab, create_model, model_path_stem, train, evaluate_metric
 
-TOLERANCE_ABSOLUTE = 1E-5
+TOLERANCE_ABSOLUTE = 1E-2 # after 1 epoch with non-reproducable random init, we need a large tolerance (per recommendation by mhilleb)
 
 def test_sequence_to_sequence(device_id):
-    from _cntk_py import set_fixed_random_seed
-    set_fixed_random_seed(2)
-
     from cntk.ops.tests.ops_test_utils import cntk_device
     set_default_device(cntk_device(device_id))
 
