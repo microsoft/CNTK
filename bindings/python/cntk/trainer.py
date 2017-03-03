@@ -318,21 +318,3 @@ class Trainer(cntk_py.Trainer):
         accumulators.
         '''
         return super(Trainer, self).reset_accumulation()
-
-
-# TODO: remove this [Nikos] once a real Evaluator implementation is available
-def Evaluator(model, criterion):
-    '''
-    Create an evaluator. This is really a Trainer object with dummy SGD parameters that we can call test_minibatch() on.
-    '''
-    loss, metric = Trainer._get_loss_metric(criterion)
-    from .learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
-    parameters = set(loss.parameters)
-    if model:
-        parameters |= set(model.parameters)
-    if metric:
-        parameters |= set(metric.parameters)
-    dummy_learner = momentum_sgd(tuple(parameters), 
-                                 lr = learning_rate_schedule(1, UnitType.minibatch),
-                                 momentum = momentum_as_time_constant_schedule(0))
-    return Trainer(model, (loss, metric), dummy_learner)

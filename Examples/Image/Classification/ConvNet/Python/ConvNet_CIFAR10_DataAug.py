@@ -16,7 +16,7 @@ from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, Batc
 from cntk.layers.typing import *
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk import Trainer, Evaluator
+from cntk import Trainer
 from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk.ops import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import Function
@@ -178,6 +178,22 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
 ########################
 # eval action          #
 ########################
+
+# helper function to create a dummy Trainer that one can call test_minibatch() on
+# TODO: replace by a proper such class once available
+def Evaluator(model, criterion):
+    from cntk_py.trainer import Trainer
+    loss, metric = Trainer._get_loss_metric(criterion)
+    from .learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    parameters = set(loss.parameters)
+    if model:
+        parameters |= set(model.parameters)
+    if metric:
+        parameters |= set(metric.parameters)
+    dummy_learner = momentum_sgd(tuple(parameters), 
+                                 lr = learning_rate_schedule(1, UnitType.minibatch),
+                                 momentum = momentum_as_time_constant_schedule(0))
+    return Trainer(model, (loss, metric), dummy_learner)
 
 def evaluate(reader, model):
 

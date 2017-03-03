@@ -7,7 +7,7 @@
 from __future__ import print_function
 import numpy as np
 import os
-from cntk import Trainer, Evaluator, Axis
+from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learner import momentum_sgd, adam_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
@@ -309,6 +309,22 @@ def evaluate_decoding(reader, s2smodel, i2w):
 #######################
 # test metric         #
 #######################
+
+# helper function to create a dummy Trainer that one can call test_minibatch() on
+# TODO: replace by a proper such class once available
+def Evaluator(model, criterion):
+    from cntk_py.trainer import Trainer
+    loss, metric = Trainer._get_loss_metric(criterion)
+    from .learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    parameters = set(loss.parameters)
+    if model:
+        parameters |= set(model.parameters)
+    if metric:
+        parameters |= set(metric.parameters)
+    dummy_learner = momentum_sgd(tuple(parameters), 
+                                 lr = learning_rate_schedule(1, UnitType.minibatch),
+                                 momentum = momentum_as_time_constant_schedule(0))
+    return Trainer(model, (loss, metric), dummy_learner)
 
 # This computes the metric on the test set.
 # Note that this is not decoding; just predicting words using ground-truth history, like in training.

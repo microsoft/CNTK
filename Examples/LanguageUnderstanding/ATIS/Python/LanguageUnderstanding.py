@@ -12,7 +12,7 @@ from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk import Trainer, Evaluator
+from cntk import Trainer
 from cntk.learner import adam_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.ops import cross_entropy_with_softmax, classification_error, splice, relu
 
@@ -167,7 +167,8 @@ def train(reader, model, max_epochs):
             # BUGBUG: The change of minibatch_size parameter vv has no effect.
             # TODO: change all examples to this pattern; then remove this comment
             data = reader.next_minibatch(min(minibatch_size, epoch_end-t))     # fetch minibatch
-            trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
+            #trainer.train_minibatch(data[reader.streams.query], data[labels])  # update model with it
+            trainer.train_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[labels]})  # update model with it
             t += data[labels].num_samples                                      # count samples processed so far
             progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
         loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
@@ -178,6 +179,22 @@ def train(reader, model, max_epochs):
 ########################
 # eval action          #
 ########################
+
+# helper function to create a dummy Trainer that one can call test_minibatch() on
+# TODO: replace by a proper such class once available
+def Evaluator(model, criterion):
+    from cntk_py.trainer import Trainer
+    loss, metric = Trainer._get_loss_metric(criterion)
+    from .learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    parameters = set(loss.parameters)
+    if model:
+        parameters |= set(model.parameters)
+    if metric:
+        parameters |= set(metric.parameters)
+    dummy_learner = momentum_sgd(tuple(parameters), 
+                                 lr = learning_rate_schedule(1, UnitType.minibatch),
+                                 momentum = momentum_as_time_constant_schedule(0))
+    return Trainer(model, (loss, metric), dummy_learner)
 
 def evaluate(reader, model):
     criterion = create_criterion_function(model)
@@ -192,8 +209,9 @@ def evaluate(reader, model):
         data = reader.next_minibatch(minibatch_size) # fetch minibatch
         if not data:                                 # until we hit the end
             break
-        metric = evaluator.test_minibatch(query=data[reader.streams.query], labels=data[reader.streams.slot_labels])
+        #metric = evaluator.test_minibatch(query=data[reader.streams.query], labels=data[reader.streams.slot_labels])
         # note: keyword syntax ^^ is optional; this is to demonstrate it
+        metric = evaluator.test_minibatch({criterion.arguments[0]: data[reader.streams.query], criterion.arguments[1]: data[reader.streams.slot_labels]})
         progress_printer.update(0, data[reader.streams.slot_labels].num_samples, metric) # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
