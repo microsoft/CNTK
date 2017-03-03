@@ -88,26 +88,40 @@ class TensorOpsMixin(object):
         '''
         Slicing of a Variable. E.g. var[2:3] will translate into slice(var, axis=0, begin_index=2, end_index=3)
         '''
-        if not isinstance(arg, tuple): # normalize into a tuple
+        if not isinstance(arg, tuple): # int or slice: normalize into a tuple of int or tuple of slice
             arg = (arg,)
         r = self
         axis0 = 0
         for axis, s in enumerate(arg):
-            if s is Ellipsis:
+            if s is Ellipsis: # ellipsis means index relative to end after this point
                 axis0 = -len(arg)
                 continue
-            if not isinstance(s, slice): # normalize into a slice
+            if isinstance(s, int): # int: normalize into a slice
                 s = slice(s, s+1)
-            if s.step is not None and step != 1:
-                raise ValueError("slicing with a step other than 1 is currently not supported") # TODO: This is not hard to implement in SliceNode.
-            # implement as a CNTK slice() operation
-            begin = s.start or 0
-            end   = s.stop
-            if begin != 0 or end != None:
-                from . import ops
-                r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
+            if isinstance(s, slice):
+                if s.step is not None and s.step != 1:
+                    raise ValueError("slicing with a step other than 1 is currently not supported") # TODO: This is not hard to implement in SliceNode.
+                # implement as a CNTK slice() operation
+                begin = s.start or 0
+                end   = s.stop  or 0
+                if begin != 0 or end != None:
+                    from . import ops
+                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
+            elif isinstance(s, list):
+                # data[[0],[2,3]] aka "advanced indexing" ->
+                # s = ([0], [2,3])
+                # In NumPy we would have another dimension, but since
+                # data[0].shape != data[[0]].shape == data[[[0]]].shape ==
+                # we decided to have all shapes like data[0] in this case
+                for idx in s:
+                    if not isinstance(idx, int):
+                        raise IndexError(
+                            'indices have to be of type int and not "%s"' % type(idx))
+                    r = ops.slice(r, axis=axis, begin_index=idx, end_index=idx + 1)
+                    # TODO: this code is from master; I suspect it does not do what we think it does. Test case?
         return r
 
+    # old version; keeping temporarily for easier comparison, will be removed
     def __getitem__1(self, key):
         from . import ops
         if isinstance(key, int):
@@ -132,7 +146,7 @@ class TensorOpsMixin(object):
             # Case 3: e.g. data[2:4,1:,1:7] -> key will be an iterable of ints
             # (case 1) or slices (case 2)
             # objects.
-            # FIXME: we need to check that len(key) equals the node's rank
+            # FIXME: we need to check that len(key) equals the node's rank   ...no, this is valid numpy: np.array([[1, 2, 3],[4,5,6]])[1], np.array([[1, 2, 3],[4,5,6]])[...,1]
             node = self
             for ax_counter, so in enumerate(key):
                 if isinstance(so, int):
