@@ -305,9 +305,9 @@ POOLING_AVG_INCLUDE_PAD_DATA = [
     ([1, 1, 1, 7, 7],
      (3, 3),
      (3, 3),
-     [[[[2.22, 5.00, 4.44],
-        [15.0, 25.0, 18.3],
-        [17.7, 28.3, 20.0]]]]),
+     [[[[20./9, 45./9, 40./9],
+        [135./9, 225./9, 165./9],
+        [160./9, 255./9, 180./9]]]]),
 ]
 
 @pytest.mark.parametrize("input_size, pooling_window, strides, result", POOLING_AVG_INCLUDE_PAD_DATA)

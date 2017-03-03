@@ -2,7 +2,7 @@
 #define _BUILDINFO_H 
 #define _GIT_EXIST 
 #define _BUILDBRANCH_  "v-zhke"      
-#define _BUILDSHA1_    "f5842b048a2c3be9829158720043848468743b5b (modified)"
+#define _BUILDSHA1_    "af5b01474be09613b40f819c98f133b58f930e33 (modified)"
 #define _MATHLIB_ "mkl"
 #define _BUILDER_ "v-zhke"     
 #define _BUILDMACHINE_ "MSRAIG-GPU06"    

@@ -4557,7 +4557,7 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+			assert(size > 0);
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
@@ -4573,7 +4573,7 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad) const
+void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolPadMode) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
@@ -4585,9 +4585,13 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+			int tmp = size;
+			if (poolPadMode)
+				size = indices(0, 0);
+			assert(size > 0);
             ElemType g = (*this)(row, sample) / size;
-            for (int i = 0; i < size; i++)
+			size = tmp;
+			for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
