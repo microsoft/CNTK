@@ -15,7 +15,6 @@ from .. import cntk_py
 from ..device import use_default_device, cpu
 from .swig_helper import typemap
 from ..axis import Axis
-from .progress_print import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 

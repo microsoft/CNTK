@@ -19,9 +19,6 @@
     <Filter Include="cntk\utils\debughelpers">
       <UniqueIdentifier>{8203febc-a583-407c-a9d7-b6147b7f14c9}</UniqueIdentifier>
     </Filter>
-    <Filter Include="cntk\optimizer">
-      <UniqueIdentifier>{b7da7dbc-2cbf-447b-9f3e-1209e2dad0fe}</UniqueIdentifier>
-    </Filter>
     <Filter Include="cntk\train">
       <UniqueIdentifier>{fea88af5-d430-4e50-85b2-9ea439e1d032}</UniqueIdentifier>
     </Filter>
@@ -55,6 +52,9 @@
     <Filter Include="cntk\io\tests">
       <UniqueIdentifier>{fe718296-7da4-4c47-8504-d79808214d6e}</UniqueIdentifier>
     </Filter>
+    <Filter Include="cntk\learners">
+      <UniqueIdentifier>{be7c4f7a-7fde-4551-8d86-cf0c76963e6c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cntk\__init__.py">
@@ -72,9 +72,6 @@
     <None Include="cntk\layers.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\learner.py">
-      <Filter>cntk</Filter>
-    </None>
     <None Include="cntk\models.py">
       <Filter>cntk</Filter>
     </None>
@@ -82,9 +79,6 @@
       <Filter>cntk</Filter>
     </None>
     <None Include="cntk\tensor.py">
-      <Filter>cntk</Filter>
-    </None>
-    <None Include="cntk\trainer.py">
       <Filter>cntk</Filter>
     </None>
     <None Include="cntk\utils\swig_helper.py">
@@ -127,9 +121,6 @@
     </None>
     <None Include="cntk\train\__init__.py">
       <Filter>cntk\train</Filter>
-    </None>
-    <None Include="cntk\optimizer\__init__.py">
-      <Filter>cntk\optimizer</Filter>
     </None>
     <None Include="cntk\utils\tests\__init__.py">
       <Filter>cntk\utils\tests</Filter>
@@ -215,9 +206,6 @@
     <None Include="cntk\device.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\distributed.py">
-      <Filter>cntk</Filter>
-    </None>
     <None Include="cntk\graph.py">
       <Filter>cntk</Filter>
     </None>
@@ -254,8 +242,35 @@
     <None Include="cntk\sample_installer.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\training_session.py">
-      <Filter>cntk</Filter>
+    <None Include="cntk\train\trainer.py">
+      <Filter>cntk\train</Filter>
+    </None>
+    <None Include="cntk\train\training_session.py">
+      <Filter>cntk\train</Filter>
+    </None>
+    <None Include="cntk\tests\training_session_test.py">
+      <Filter>cntk\tests</Filter>
+    </None>
+    <None Include="cntk\tests\user_learner.py">
+      <Filter>cntk\tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\userfunction_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\train\distributed.py">
+      <Filter>cntk\train</Filter>
+    </None>
+    <None Include="cntk\learners\__init__.py">
+      <Filter>cntk\learners</Filter>
+    </None>
+    <None Include="cntk\ops\tests\userfunction_complex_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\combine_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\cosine_distance_test.py">
+      <Filter>cntk\ops\tests</Filter>
     </None>
   </ItemGroup>
 </Project>
