@@ -300,6 +300,41 @@ def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, 
                 device_id=device_id, precision=precision)
     assert np.allclose(p.eval(forward_input), q.eval(forward_input))
 
+
+POOLING_AVG_INCLUDE_PAD_DATA = [
+    ([1, 1, 1, 7, 7],
+     (3, 3),
+     (3, 3),
+     [[[[20./9, 45./9, 40./9],
+        [135./9, 225./9, 165./9],
+        [160./9, 255./9, 180./9]]]]),
+]
+
+
+@pytest.mark.parametrize("input_size, pooling_window, strides, result", POOLING_AVG_INCLUDE_PAD_DATA)
+def test_op_average_pooling_include_pad(input_size, pooling_window, strides, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    total_size = np.prod(input_size)
+    x = np.arange(1, total_size + 1, 1, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = I(shape=input_operand.shape[2:], dtype=sanitize_dtype_cntk(precision), needs_gradient=True, name='a')
+
+    backward = (1 / np.prod(pooling_window)) * np.ones_like(input_operand)
+
+    from cntk import pooling
+    input_op = pooling(a, AVG_POOLING, pooling_window, strides, auto_padding=[True], include_pad=True)
+
+    forward_input = {a: input_operand}
+
+    expected_forward = AA([result])
+    expected_backward = {a: backward}
+
+    unittest_helper(input_op, forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
+
+
 POOLING_CEIL_DATA = [
     ([1, 1, 1, 8, 8],                   # input_size
      (2, 2),                            # pooling_window
@@ -348,6 +383,7 @@ def test_op_pooling_ceil(input_size, pooling_window, strides, result, device_id,
 
     unittest_helper(input_op, forward_input, expected_forward, expected_backward, device_id=device_id,
                     precision=precision)
+
 
 # ROI pooling test setup
 # --- forward ---

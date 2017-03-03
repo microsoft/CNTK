@@ -4543,7 +4543,7 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
+void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolPadMode) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
@@ -4557,21 +4557,23 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+			assert(size > 0);
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
                 sum += (*this)(colBase + dcol, sample);
             }
-            // Note that we divide by size which is the number of actual elements (does not include padding).
+            // if poolPadMode == true, use avg_pool_include_pad
+			if (poolPadMode)
+				size = indices(0, 0);
             output(row, sample) = sum / size;
         }
     }
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad) const
+void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolPadMode) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
@@ -4583,9 +4585,13 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+			int tmp = size;
+			if (poolPadMode)
+				size = indices(0, 0);
+			assert(size > 0);
             ElemType g = (*this)(row, sample) / size;
-            for (int i = 0; i < size; i++)
+			size = tmp;
+			for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
                 assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());

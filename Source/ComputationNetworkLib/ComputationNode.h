@@ -50,7 +50,7 @@
 #define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
 #define CNTK_MODEL_VERSION_19 19 // batch norm: add an input parameter to store running mean sample count.
 #define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node
-#define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
+#define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size; add include pad func for average pooling
 #define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_21
 
 
