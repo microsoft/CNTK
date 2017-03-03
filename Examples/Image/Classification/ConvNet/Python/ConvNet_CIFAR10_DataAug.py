@@ -112,7 +112,7 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
 
     # criterion function. This is what is being trained trained.
     # Model gets "sandwiched" between normalization (not part of model proper) and criterion.
-    criterion = create_criterion_function(model, normalize=Placeholder() / 256)
+    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
     #debughelpers.dump_function(criterion, 'criterion')
 
     #from cntk.graph import plot
@@ -199,7 +199,7 @@ def Evaluator(model, criterion):
 def evaluate(reader, model):
 
     # criterion function. This is what is being evaluated
-    criterion = create_criterion_function(model, normalize=Placeholder() / 256)
+    criterion = create_criterion_function(model, normalize=lambda x: x / 256)
 
     # process minibatches and perform evaluation
     evaluator = Evaluator(None, criterion)
