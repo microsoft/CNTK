@@ -89,13 +89,14 @@ namespace CNTK
         {PrimitiveOpType::Sin, L"Sin"},
         {PrimitiveOpType::Cos, L"Cos"},
         {PrimitiveOpType::Pass, L"Pass"},
-        {PrimitiveOpType::Block, L"Block" },
-        {PrimitiveOpType::Unpooling, L"Unpooling" },
-        {PrimitiveOpType::LambdaRank, L"LambdaRank" },
-        {PrimitiveOpType::NDCG, L"NDCG" },
-        {PrimitiveOpType::NoOp, L"NoOp" },
-        {PrimitiveOpType::StopGradient, L"StopGradient" },
-        {PrimitiveOpType::ELU, L"ELU" },
+        {PrimitiveOpType::Block, L"Block"},
+        {PrimitiveOpType::Unpooling, L"Unpooling"},
+        {PrimitiveOpType::LambdaRank, L"LambdaRank"},
+        {PrimitiveOpType::NDCG, L"NDCG"},
+        {PrimitiveOpType::NoOp, L"NoOp"},
+        {PrimitiveOpType::StopGradient, L"StopGradient"},
+        {PrimitiveOpType::ELU, L"ELU"},
+        {PrimitiveOpType::CosDistanceWithNegativeSamples, L"CosDistanceWithNegativeSamples"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -212,7 +213,11 @@ namespace CNTK
         static const std::wstring AttributeNameAutoPadding;
         static const std::wstring AttributeNameLowerPad;
         static const std::wstring AttributeNameUpperPad;
+<<<<<<< HEAD
 		static const std::wstring AttributeNameIncludePad;
+=======
+        static const std::wstring AttributeNameCeilOutDim;
+>>>>>>> refs/remotes/origin/v-yuxgu/include-pooling
         static const std::wstring AttributeNameTranspose;
         static const std::wstring AttributeNameOutputShape; 
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;
@@ -630,7 +635,7 @@ namespace CNTK
 
         static NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
                                                 std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-                                                bool transpose, bool inferDimensions)
+                                                bool transpose, bool inferDimensions, bool ceilOutputDim = false)
         {
             if (inferDimensions)
             {
@@ -675,7 +680,7 @@ namespace CNTK
             else
                 computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeInputShape;
 
-            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad)));
+            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutputDim));
         }
 
         static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)

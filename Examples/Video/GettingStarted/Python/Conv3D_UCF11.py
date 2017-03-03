@@ -197,11 +197,11 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
     mm_schedule            = momentum_as_time_constant_schedule([momentum_time_constant], epoch_size=epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner     = momentum_sgd(z.parameters, lr_schedule, mm_schedule, True)
-    trainer     = Trainer(z, (ce, pe), learner)
+    learner = momentum_sgd(z.parameters, lr_schedule, mm_schedule, True)
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    trainer = Trainer(z, (ce, pe), learner, progress_printer)
 
     log_number_of_parameters(z) ; print()
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs
@@ -211,8 +211,7 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
             videos, labels, current_minibatch = train_reader.next_minibatch(minibatch_size)
             trainer.train_minibatch({input_var : videos, label_var : labels})
 
-            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
-        progress_printer.epoch_summary(with_metric=True)
+        trainer.summarize_training_progress()
     
     # Test data for trained model
     epoch_size     = 332

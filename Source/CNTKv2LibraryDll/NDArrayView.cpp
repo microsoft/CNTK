@@ -457,6 +457,34 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), device, StorageFormat::Dense, shape, false, tensorView);
     }
 
+    template <typename ElementType>
+    ElementType NDArrayView::AsScalar() const
+    {
+        auto scalarData = this->shared_from_this();
+        if (scalarData->Shape().TotalSize() != 1)
+            LogicError("Scalar Value object's has a size > 1");
+
+        ElementType scalar = std::numeric_limits<ElementType>::quiet_NaN();
+        std::shared_ptr<const NDArrayView> cpuData;
+        if (scalarData->Device() == DeviceDescriptor::CPUDevice())
+            cpuData = scalarData;
+        else
+        {
+            auto tmpCPUData = std::make_shared<NDArrayView>(scalarData->GetDataType(), scalarData->Shape(), CNTK::DeviceDescriptor::CPUDevice());
+            tmpCPUData->CopyFrom(*scalarData);
+            cpuData = tmpCPUData;
+        }
+
+        if (scalarData->GetDataType() == DataType::Float)
+            scalar = *(cpuData->DataBuffer<float>());
+        else if (scalarData->GetDataType() == DataType::Double)
+            scalar = static_cast<ElementType>(*(cpuData->DataBuffer<double>()));
+        else
+            LogicError("Unsupported DataType");
+
+        return scalar;
+    }
+
     // Explicit template instantiations
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<float>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
     template CNTK_API NDArrayViewPtr NDArrayView::RandomUniform<double>(const NDShape& shape, double rangeBegin, double rangeEnd, unsigned long seed, const DeviceDescriptor& device/* = DeviceDescriptor::UseDefaultDevice()*/);
@@ -480,4 +508,6 @@ namespace CNTK
 
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template CNTK_API NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const double* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template float NDArrayView::AsScalar<float>() const;
+    template double NDArrayView::AsScalar<double>() const;
 }

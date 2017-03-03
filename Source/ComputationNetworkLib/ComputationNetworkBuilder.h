@@ -58,8 +58,9 @@ public:
     ComputationNodePtr CreateConvolutionNode(const std::wstring& nodeName, const size_t kernelWidth, const size_t kernelHeight, const size_t outputChannels, 
                                              const size_t horizontalSubsample, const size_t verticalSubsample, 
                                              ImageLayoutKind imageLayoutKind, const bool zeroPadding = false, const size_t maxTempMemSizeInSamples = 0);
+
     ComputationNodePtr CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const bool poolPadMode, const TensorShape& kernelShape, const TensorShape& strideShape,
-                                         const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                                         const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim,
                                          ImageLayoutKind imageLayout);
     ComputationNodePtr CreateMaxPoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
     ComputationNodePtr CreateAveragePoolingNode(const std::wstring& nodeName, const size_t windowWidth, const size_t windowHeight, const size_t horizontalSubsample, const size_t verticalSubsample, ImageLayoutKind imageLayoutKind);
@@ -88,8 +89,13 @@ public:
                                    const std::wstring nodeName = L"");
     ComputationNodePtr Pooling(const ComputationNodePtr inputValues, 
                                PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
+<<<<<<< HEAD
                                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                                const bool poolPadMode, ImageLayoutKind imageLayout,
+=======
+                               const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim,
+                               ImageLayoutKind imageLayout,
+>>>>>>> refs/remotes/origin/v-yuxgu/include-pooling
                                const std::wstring nodeName = L"");
     ComputationNodePtr MaxUnpooling(const ComputationNodePtr unpoolInputValues,
                                     const ComputationNodePtr poolInputValues,
