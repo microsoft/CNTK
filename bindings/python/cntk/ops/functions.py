@@ -320,7 +320,7 @@ class Function(cntk_py.Function):
         _, output_map = self.forward(arg_map, outputs)
         assert len(output_map) == len(outputs)
         if len(output_map) > 1: # tuple-valued: return tuple
-            return (output_map[output] for output in outputs)
+            return tuple(output_map[output] for output in outputs)
         else: # single value: return numpy array and that's it
             return list(output_map.values())[0]
 
