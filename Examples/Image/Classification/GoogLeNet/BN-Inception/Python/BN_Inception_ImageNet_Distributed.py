@@ -13,6 +13,7 @@ import cntk
 import _cntk_py
 
 import cntk.io.transforms as xforms
+from cntk.training_session import *
 from cntk.utils import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
@@ -93,7 +94,7 @@ def create_bn_inception():
     }
 
 # Create trainer
-def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantization_bits):
+def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantization_bits, progress_printer):
     # Set learning parameters
 
     # CNTK weights new gradient by (1-momentum) for unit gain, 
@@ -122,10 +123,10 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
         distributed_after=0)
 
     # Create trainer
-    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner)
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, progress_printer)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore, profiling=False):
+def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling=False):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -134,19 +135,12 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
     }
 
     training_session = cntk.training_session(
-        training_minibatch_source = train_source, 
-        trainer = trainer,
-        model_inputs_to_mb_source_mapping = input_map, 
-        mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size), 
-        progress_printer = progress_printer, 
-        checkpoint_frequency = epoch_size,
-        checkpoint_filename = os.path.join(model_path, model_name), 
-        save_all_checkpoints = True,
-        progress_frequency = epoch_size, 
-        cv_source = test_source, 
-        cv_mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
-        cv_frequency = epoch_size,
-        restore = restore)
+        trainer = trainer, mb_source = train_source, 
+        var_to_stream = input_map, 
+        mb_size = minibatch_size,
+        checkpoint_config = CheckpointConfig(frequency=epoch_size, filename=model_name, restore=restore),
+        progress_frequency = epoch_size,
+        cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size))
 
     if profiling:
         start_profiler(sync_gpu=True)
@@ -177,10 +171,10 @@ def bn_inception_train_and_eval(train_data, test_data, mean_data, num_quantizati
         num_epochs=max_epochs)
 
     network = create_bn_inception()
-    trainer = create_trainer(network, epoch_size, max_epochs, minibatch_size, num_quantization_bits)
+    trainer = create_trainer(network, epoch_size, max_epochs, minibatch_size, num_quantization_bits, progress_printer)
     train_source = create_image_mb_source(train_data, mean_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, False, total_number_of_samples=FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore, profiling)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling)
  
  
 if __name__=='__main__':
