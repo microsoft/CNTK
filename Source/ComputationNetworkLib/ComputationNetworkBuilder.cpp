@@ -357,8 +357,8 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooling(const ComputationNodePtr inputValues,
                                                                                    PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                                                                    const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                   ImageLayoutKind imageLayout,
-                                                                                   const std::wstring nodeName, const bool poolPadMode)
+                                                                                   const bool poolPadMode, ImageLayoutKind imageLayout,
+                                                                                   const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
                                                                       poolKind, poolPadMode, kernelShape, strideShape, autoPadding, lowerPad, upperPad, imageLayout),

@@ -89,8 +89,8 @@ public:
     ComputationNodePtr Pooling(const ComputationNodePtr inputValues, 
                                PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                               ImageLayoutKind imageLayout,
-                               const std::wstring nodeName = L"", const bool poolPadMode = false);
+                               const bool poolPadMode, ImageLayoutKind imageLayout,
+                               const std::wstring nodeName = L"");
     ComputationNodePtr MaxUnpooling(const ComputationNodePtr unpoolInputValues,
                                     const ComputationNodePtr poolInputValues,
                                     const TensorShape& kernelShape, const TensorShape& strideShape,

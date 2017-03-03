@@ -300,6 +300,10 @@ def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, 
                 device_id=device_id, precision=precision)
     assert np.allclose(p.eval(forward_input), q.eval(forward_input))
 
+def test_op_averge_pooling_include_pad()
+    pass
+
+
 # ROI pooling test setup
 # --- forward ---
 # input convFeatureMap 3x3 map, values [[1,2,3][4,5,6][7,8,9]]

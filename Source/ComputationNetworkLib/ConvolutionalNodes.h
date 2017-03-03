@@ -78,10 +78,10 @@ public:
         m_lowerPad.Save(fstream);
         m_upperPad.Save(fstream);
         fstream << (int32_t)m_poolKind;
-		fstream << m_poolPadMode;
         fstream << (int32_t)m_imageLayout;
         fstream << m_maxTempMemSizeInSamples;
         fstream << m_transpose;
+		fstream << m_poolPadMode;
         m_outputShape.Save(fstream); 
     }
 
@@ -102,7 +102,6 @@ public:
             int32_t k;
             fstream >> k;
             m_poolKind = (PoolKind)k;
-			fstream >> m_poolPadMode;
             int32_t layout;
             fstream >> layout;
             m_imageLayout = (ImageLayoutKind)layout;
@@ -112,6 +111,10 @@ public:
         {
             fstream >> m_transpose;
         }
+		if (modelVersion >= CNTK_MODEL_VERSION_21)
+		{
+			fstream >> m_poolPadMode;
+		}
         if (modelVersion >= CNTK_MODEL_VERSION_20)
         {
             m_outputShape.Load(fstream); 
@@ -132,8 +135,8 @@ public:
             node->m_lowerPad = m_lowerPad;
             node->m_upperPad = m_upperPad;
             node->m_poolKind = m_poolKind;
-			node->m_poolPadMode = m_poolPadMode;
             node->m_transpose = m_transpose;
+			node->m_poolPadMode = m_poolPadMode;
             node->m_outputShape = m_outputShape; 
             node->m_imageLayout = m_imageLayout;
             node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
