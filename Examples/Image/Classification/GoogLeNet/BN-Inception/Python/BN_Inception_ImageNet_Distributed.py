@@ -138,7 +138,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         trainer = trainer, mb_source = train_source, 
         var_to_stream = input_map, 
         mb_size = minibatch_size,
-        checkpoint_config = CheckpointConfig(frequency=epoch_size, filename=model_name, restore=restore),
+        checkpoint_config = CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
         progress_frequency = epoch_size,
         cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size))
 
