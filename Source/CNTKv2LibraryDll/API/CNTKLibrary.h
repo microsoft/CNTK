@@ -3091,7 +3091,7 @@ namespace CNTK
         inline __declspec_noreturn void ThrowFormatted(Args&&... args) const
         {
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Werror" // gcc has problems with checking of printf format strings through variadic templates
+#pragma GCC diagnostic ignored "-Wformat-security" // gcc has problems with checking of printf format strings through variadic templates
             ::CNTK::ThrowFormatted<E>(std::forward<Args>(args)...);
 #pragma GCC diagnostic pop
         }
