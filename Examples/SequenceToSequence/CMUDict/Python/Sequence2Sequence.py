@@ -313,9 +313,9 @@ def evaluate_decoding(reader, s2smodel, i2w):
 # helper function to create a dummy Trainer that one can call test_minibatch() on
 # TODO: replace by a proper such class once available
 def Evaluator(model, criterion):
-    from cntk_py.trainer import Trainer
+    from cntk import Trainer
+    from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
     loss, metric = Trainer._get_loss_metric(criterion)
-    from .learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
     parameters = set(loss.parameters)
     if model:
         parameters |= set(model.parameters)
