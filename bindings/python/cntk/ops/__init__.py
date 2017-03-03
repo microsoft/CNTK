@@ -2061,6 +2061,13 @@ def splice(*inputs, **kw_axis_name):
 
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
+@typemap
+def onehot_test(x, num_class, name=''):
+    ''''''
+    from cntk.cntk_py import one_hot_op
+    x = sanitize_input(x)
+    return one_hot_op(x, num_class, name)
+
 ##########################################################################
 # reduction ops
 ##########################################################################
