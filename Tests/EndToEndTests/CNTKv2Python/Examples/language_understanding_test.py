@@ -256,17 +256,18 @@ def test_language_understanding(device_id):
 
         reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
         model = create_test_model()
-        loss_avg, evaluation_avg = train(reader, model, max_epochs=1, tensorboard_logdir=tb_logdir)
+        # TODO: update example to support tensorboard, or decide to not show it in all examples (in upcoming update of examples)
+        loss_avg, evaluation_avg = train(reader, model, max_epochs=1) #, tensorboard_logdir=tb_logdir)
         log_number_of_parameters(model, trace_level=1) ; print()
         expected_avg = [0.084, 0.407364]
         assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
         # Ensure that the TensorBoard log directory was created and contains exactly one file with the expected name.
-        tb_files = 0
-        for tb_file in os.listdir(tb_logdir):
-            assert tb_file.startswith("events.out.tfevents")
-            tb_files += 1
-        assert tb_files == 1
+        #tb_files = 0
+        #for tb_file in os.listdir(tb_logdir):
+        #    assert tb_file.startswith("events.out.tfevents")
+        #    tb_files += 1
+        #assert tb_files == 1
 
         # example also saves and loads; we skip it here, so that we get a test case of no save/load
         # (we save/load in all cases above)

@@ -310,4 +310,4 @@ class Trainer(cntk_py.Trainer):
         Updates the progress writers with the summary of test progress since start and resets the internal
         accumulators.
         '''
-        return super(Trainer, self).reset_accumulation()
+        return super(Trainer, self).summarize_test_progress()

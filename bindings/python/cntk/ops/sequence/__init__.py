@@ -357,23 +357,6 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
     return broadcast_as(operand, broadcast_as_operand, name)
 
 
-# TODO: rename to batch.broadcast_as()
-#@typemap
-#def constant_with_dynamic_axes_like(operand, broadcast_as_operand, name=''):
-#    '''
-#    Creates a sequence out of a constant by endowing the ``operand``
-#    with dynamic axes of the same type as the ``broadcast_as_operand``
-#    and broadcasting the value of the ``operand`` along those dynamic axes.
-#    The difference to `broadcast_as()` is that ``operand`` has no batch axis.
-#    '''
-#    # TODO: Can this be merged with broadcast_as() on the C++ level?
-#    from _cntk_py import reconcile_dynamic_axis
-#    operand = sanitize_input(operand, get_data_type(operand))
-#    broadcast_as_operand = sanitize_input(
-#        broadcast_as_operand, get_data_type(broadcast_as_operand))
-#    return reconcile_dynamic_axis(operand, broadcast_as_operand, name)
-
-
 @typemap
 def reduce_sum(seq, name=''):
     '''

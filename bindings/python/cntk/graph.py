@@ -21,12 +21,12 @@ def depth_first_search(root, visitor):
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
-    stack = [(root.root_function, 0, 0)] # node, distance, Block depth
+    stack = [root.root_function] # node
     accum = []         # final result (list of all unique nodes)
     visited = set()    # [node.uid]
 
     while stack:
-        node, distance, depth = stack.pop(0)
+        node = stack.pop(0)
         if node.uid in visited:
             continue
         from cntk import cntk_py
@@ -35,9 +35,9 @@ def depth_first_search(root, visitor):
             # BlockFunction node
             mapping = node.block_arguments_mapping
             # redirect the composite's inputs to the true inputs
-            stack.extend([(actual_input, distance+1, depth) for _, actual_input in mapping]) # traverse into actual composite inputs
-            visited |= {comp_input.uid for comp_input, _ in mapping} # don't traverse into the mapped-away inputs
-            stack.append((composite, distance+1, depth+1))
+            stack.extend([actual_input for _, actual_input in mapping]) # traverse into actual composite inputs
+            visited |= {comp_input.uid for comp_input, _ in mapping}    # don't traverse into the mapped-away inputs
+            stack.append(composite)
             visited.add(node.uid)
             if visitor(node):
                 accum.append(node)
@@ -45,12 +45,12 @@ def depth_first_search(root, visitor):
             # BlockFunctions are short-circuited, and not added to accum[]
         try:
             # Function node
-            stack = [(input, distance+1, depth) for input in node.root_function.inputs] + stack
+            stack = list(node.root_function.inputs) + stack
         except AttributeError:
             # OutputVariable node
             try:
                 if node.is_output:
-                    stack.insert(0, (node.owner, distance+1, depth))
+                    stack.insert(0, node.owner)
                     visited.add(node.uid)
                     continue
             except AttributeError:

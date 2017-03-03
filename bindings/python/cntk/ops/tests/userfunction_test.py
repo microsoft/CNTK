@@ -208,10 +208,7 @@ def test_ext_backpropstate(payload):
     z = m+p
 
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, (z+0, z+0), \
-            [sgd(z.parameters, lr_per_sample)])
-    # TODO: Final Layers lib merge will allow this:
-    #trainer = Trainer(None, (z), [sgd(z.parameters, lr_per_sample)])
+    trainer = Trainer(None, (z), [sgd(z.parameters, lr_per_sample)])
 
     for i in range(100):
         input_data = np.random.rand(dim)

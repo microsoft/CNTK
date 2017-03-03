@@ -928,8 +928,6 @@ class Function(cntk_py.Function):
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        # TODO: was this removed on master, or never merged?
-        #substitution = sanitize_substitution_var(substitution)
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap

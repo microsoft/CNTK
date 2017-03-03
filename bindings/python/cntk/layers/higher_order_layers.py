@@ -12,7 +12,7 @@ Note that sequential higher-order functions like Recurrence() are in sequence.py
 from ..utils import Record
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name
-from . import sequence # they are also higher-order functions
+from .sequence import * # they are also higher-order functions
 
 
 # TODO: should we have a parameter to specify the arity of the input?
