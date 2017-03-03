@@ -539,7 +539,7 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempMatrixForward, matrixPool);
+        RequestMatrixFromPool(m_tempMatrixForward, matrixPool, 0, false, true);
     }
 
     // m_tempMatrixForward is only used as workspace for convolution, we can release it immediately afterwards
@@ -552,7 +552,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempMatrixBackward, matrixPool);
+        RequestMatrixFromPool(m_tempMatrixBackward, matrixPool, 0, false, true);
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override

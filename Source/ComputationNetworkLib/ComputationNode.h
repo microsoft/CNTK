@@ -1877,11 +1877,13 @@ protected:
 
     // matrixSize is per sample size, if unknown or hard to estimate, set matrixSize = 0
     // if the matrix's size will scale with minibatch size, set mbScale = true 
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false)
+    // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
+    // this is currently a workaround for workspace memory for convolutions
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false)
     {
         if (matrixPtr == nullptr)
         {
-            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale);
+            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
         }
     }
 

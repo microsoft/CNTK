@@ -150,25 +150,25 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64,
 
     network = create_conv_network()
 
-    progress_printer = cntk.utils.ProgressPrinter(
+    progress_writers = [cntk.utils.ProgressPrinter(
         freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
         rank=cntk.distributed.Communicator.rank(),
         gen_heartbeat=gen_heartbeat,
-        num_epochs=max_epochs)
+        num_epochs=max_epochs)]
 
-    tensorboard_writer = cntk.utils.TensorBoardProgressWriter(
-        freq=num_mbs_per_log,
-        log_dir=tensorboard_logdir if tensorboard_logdir is not None else 'log',
-        rank=cntk.distributed.Communicator.rank(),
-        model=network['output'])
+    if tensorboard_logdir is not None:
+        progress_writers.append(cntk.utils.TensorBoardProgressWriter(
+            freq=num_mbs_per_log,
+            log_dir=tensorboard_logdir,
+            rank=cntk.distributed.Communicator.rank(),
+            model=network['output']))
 
-    trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, [progress_printer, tensorboard_writer])
+    trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, minibatch_size,
-                   epoch_size, restore, profiling)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling)
 
 
 if __name__=='__main__':
@@ -179,7 +179,7 @@ if __name__=='__main__':
     parser.add_argument('-datadir', '--datadir', help='Data directory where the CIFAR dataset is located', required=False, default=data_path)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
-    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where to tensorboard logs should be written', required=False, default='log')
+    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir', help='Directory where TensorBoard logs should be created', required=False, default=None)
     parser.add_argument('-n', '--num_epochs', help='Total number of epochs to train', type=int, required=False, default='160')
     parser.add_argument('-m', '--minibatch_size', help='Minibatch size', type=int, required=False, default='64')
     parser.add_argument('-e', '--epoch_size', help='Epoch size', type=int, required=False, default='50000')

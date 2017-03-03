@@ -159,21 +159,20 @@ def train_fast_rcnn(debug_output=False):
 
     # Instantiate the trainer object
     learner = momentum_sgd(frcn_output.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    trainer = Trainer(frcn_output, (ce, pe), learner)
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    trainer = Trainer(frcn_output, (ce, pe), learner, progress_printer)
 
     # Get minibatches of images and perform model training
     print("Training Fast R-CNN model for %s epochs." % max_epochs)
     log_number_of_parameters(frcn_output)
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=max_epochs)
     for epoch in range(max_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             data = minibatch_source.next_minibatch(min(mb_size, epoch_size-sample_count), input_map=input_map)
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
 
-        progress_printer.epoch_summary(with_metric=True)
+        trainer.summarize_training_progress()
         if debug_output:
             frcn_output.save(os.path.join(abs_path, "Output", "frcn_py_%s.model" % (epoch+1)))
 
