@@ -148,7 +148,11 @@ template <typename ElemType>
 DECL ElemType LogAdd(ElemType x, ElemType y)
 {
     if (x < y)
-        std::swap(x, y);
+    {
+        ElemType temp = x;
+        x = y;
+        y = temp;
+    }
 
     return x + log1p_(exp_(y - x));
 }
