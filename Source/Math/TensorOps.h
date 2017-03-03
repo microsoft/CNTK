@@ -48,6 +48,7 @@ OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
 OverloadUnaryMathFns(floor);
+OverloadUnaryMathFns(log1p);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
@@ -147,21 +148,9 @@ template <typename ElemType>
 DECL ElemType LogAdd(ElemType x, ElemType y)
 {
     if (x < y)
-    {
-        ElemType temp = x;
-        x = y;
-        y = temp;
-    }
-    ElemType diff = y - x;
-    if (diff < (ElemType) MINLOGEXP)
-    {
-        return (x < (ElemType) LSMALL) ? (ElemType) LZERO : x;
-    }
-    else
-    {
-        ElemType z = exp_(diff);
-        return x + log_((ElemType) 1.0 + z);
-    }
+        std::swap(x, y);
+
+    return x + log1p_(exp_(y - x));
 }
 
 // IndexElement reindexes a tensor along one dimension.

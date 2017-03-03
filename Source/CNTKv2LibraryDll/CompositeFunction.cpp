@@ -698,12 +698,22 @@ namespace CNTK
                 auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                 auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
+                NDShape outputShape = NDShape::Unknown; 
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
+                    outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                 auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
-                computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, ImageLayoutKind::CHW, maxTempMemSizeInSamples);
+                computationNodePtr = New<ConvolutionNode<ElementType>>(network->GetDeviceId(), internalNodeName, 
+                                                                       AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), 
+                                                                       sharing, autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), transpose, 
+                                                                       outputShape.IsUnknown()? TensorShape(0) : AsTensorShape(outputShape), 
+                                                                       ImageLayoutKind::CHW, maxTempMemSizeInSamples);
                 break;
             }
             case PrimitiveOpType::CosDistance:
                 computationNodePtr = New<CosDistanceNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
+            case PrimitiveOpType::CosDistanceWithNegativeSamples:
+                computationNodePtr = New<CosDistanceWithNegativeSamplesNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
             case PrimitiveOpType::Logistic:
                 computationNodePtr = New<LogisticNode<ElementType>>(network->GetDeviceId(), internalNodeName);
@@ -725,6 +735,13 @@ namespace CNTK
                 auto squashInputs = functionConfig[PrimitiveFunction::AttributeNameSquashInputs].Value<bool>();
                 auto tokensToIgnore = AsVector<size_t>(functionConfig[PrimitiveFunction::AttributeNameTokensToIgnore].Value<std::vector<DictionaryValue>>());
                 computationNodePtr = New<EditDistanceErrorNode<ElementType>>(network->GetDeviceId(), internalNodeName, subPen, delPen, insPen, squashInputs, tokensToIgnore);
+                break;
+            }
+            case PrimitiveOpType::ForwardBackward:
+            {
+                auto delayContraint = functionConfig[PrimitiveFunction::AttributeNameDelayConstraint].Value<int>();
+                auto blankTokenId = functionConfig[PrimitiveFunction::AttributeNameBlankTokenId].Value<size_t>();
+                computationNodePtr = New<ForwardBackwardNode<ElementType>>(network->GetDeviceId(), internalNodeName, blankTokenId, delayContraint);
                 break;
             }
             case PrimitiveOpType::LambdaRank:
