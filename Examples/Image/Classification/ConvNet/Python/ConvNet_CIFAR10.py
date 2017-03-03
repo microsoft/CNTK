@@ -43,13 +43,13 @@ def convnet_cifar10(debug_output=False):
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_removemean)
 
     with cntk.layers.default_options(activation=cntk.ops.relu, pad=True): 
-        z = cntk.models.Sequential([
-            cntk.models.For(range(2), lambda : [
+        z = cntk.layers.Sequential([
+            cntk.layers.For(range(2), lambda : [
                 cntk.layers.Convolution2D((3,3), 64), 
                 cntk.layers.Convolution2D((3,3), 64), 
                 cntk.layers.MaxPooling((3,3), (2,2))
             ]), 
-            cntk.models.For(range(2), lambda i: [
+            cntk.layers.For(range(2), lambda i: [
                 cntk.layers.Dense([256,128][i]), 
                 cntk.layers.Dropout(0.5)
             ]), 

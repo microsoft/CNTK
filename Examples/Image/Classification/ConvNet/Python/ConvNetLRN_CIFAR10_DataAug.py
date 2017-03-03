@@ -63,7 +63,7 @@ def LocalResponseNormalization(k, n, alpha, beta, name=''):
     b = cntk.ops.reshape(y, cntk.InferredDimension, 0, 2)
     den = cntk.ops.exp(beta * cntk.ops.log(k + b))
     apply_x = cntk.ops.element_divide(x, den)
-    return cntk.blocks.Block(apply_x, 'LocalResponseNormalization', name, make_block=True)
+    return apply_x
 
 # Train and evaluate the network.
 def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_epochs = 80):

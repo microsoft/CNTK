@@ -225,7 +225,6 @@ def test_language_understanding(device_id):
         # test of a config like in the example but with additions to test many code paths
         with default_options(enable_self_stabilization=True, use_peepholes=True):
                 run_model_test('alternate paths', Sequential([
-                Stabilizer(),
                 Embedding(emb_dim),
                 BatchNormalization(),
                 Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
