@@ -150,11 +150,11 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
         description.m_sequenceStart = m_classIds.size();
         uint32_t numberOfFrames = 0;
 
-        vector<size_t> sequencePhoneBoundaries; // Phone boundaries of given sequence
+        vector<size_t> sequencePhoneBoundaries(m_withPhoneBoundaries ? utterance.size() : 0); // Phone boundaries of given sequence
         foreach_index(i, utterance)
         {
             if (m_withPhoneBoundaries)
-                sequencePhoneBoundaries.push_back(utterance[i].firstframe);
+                sequencePhoneBoundaries[i] = utterance[i].firstframe;
             const auto& timespan = utterance[i];
             if ((i == 0 && timespan.firstframe != 0) ||
                 (i > 0 && utterance[i - 1].firstframe + utterance[i - 1].numframes != timespan.firstframe))
@@ -186,7 +186,8 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
             }
         }
 
-        m_phoneBoundaries.push_back(sequencePhoneBoundaries);
+        if (m_withPhoneBoundaries)
+            m_phoneBoundaries.push_back(sequencePhoneBoundaries);
 
         description.m_numberOfSamples = numberOfFrames;
         m_utteranceIndex.push_back(totalFrames);
@@ -280,7 +281,7 @@ struct MLFSequenceData : SparseSequenceData
     vector<ElemType> m_values;
     unique_ptr<IndexType[]> m_indicesPtr;
 
-    MLFSequenceData(size_t numberOfSamples, vector<size_t> phoneBoundaries) :
+    MLFSequenceData(size_t numberOfSamples) :
         m_values(numberOfSamples, 1),
         m_indicesPtr(new IndexType[numberOfSamples])
     {
@@ -291,13 +292,17 @@ struct MLFSequenceData : SparseSequenceData
                 numberOfSamples, (size_t)numeric_limits<IndexType>::max());
         }
 
-        for (size_t i = 0;i < phoneBoundaries.size();i++)
-            m_values[phoneBoundaries[i]] = 2.0;
-
         m_nnzCounts.resize(numberOfSamples, static_cast<IndexType>(1));
         m_numberOfSamples = (uint32_t) numberOfSamples;
         m_totalNnzCount = static_cast<IndexType>(numberOfSamples);
         m_indices = m_indicesPtr.get();
+    }
+
+    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries) :
+        MLFSequenceData(numberOfSamples)
+    {
+        for (auto boundary : phoneBoundaries)
+            m_values[boundary] = PHONE_BOUNDARY;
     }
 
     const void* GetDataBuffer() override
@@ -322,12 +327,18 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, vector<SequenceData
         SparseSequenceDataPtr s;
         if (m_elementType == ElementType::tfloat)
         {
-            s = make_shared<MLFSequenceData<float>>(numberOfSamples, m_phoneBoundaries[sequenceId]);
+            if (m_withPhoneBoundaries)
+                s = make_shared<MLFSequenceData<float>>(numberOfSamples, m_phoneBoundaries.at(sequenceId));
+            else
+                s = make_shared<MLFSequenceData<float>>(numberOfSamples);
         }
         else
         {
             assert(m_elementType == ElementType::tdouble);
-            s = make_shared<MLFSequenceData<double>>(numberOfSamples, m_phoneBoundaries[sequenceId]);
+            if (m_withPhoneBoundaries)
+                s = make_shared<MLFSequenceData<double>>(numberOfSamples, m_phoneBoundaries.at(sequenceId));
+            else
+                s = make_shared<MLFSequenceData<double>>(numberOfSamples);
         }
 
         for (size_t i = 0; i < numberOfSamples; i++)
