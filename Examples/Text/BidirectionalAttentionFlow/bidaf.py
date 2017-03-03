@@ -9,25 +9,31 @@ with open('vocabs.pkl', 'rb') as vf:
 
 word_size = 20
 w_dim = len(vocab)
-c_dim = len(chars)*word_size
+c_dim = len(chars) * word_size
 a_dim = 1
 dim = 100
 convs = 100
 rf = 5
+dropout = 0.2
+char_emb_dim = 8
+word_count_threshold = 10
+max_question_len = 15 # 65 is actual let's wait for a good window function
+highway_layers = 2
+char_count_threshold = 50
+max_context_len = 870
 
 C.set_default_device(C.cpu())
 
-# todo are the char cnns sharing parameters?
+# todo are the char cnns sharing parameters? yes
 def charcnn(x):
     return C.models.Sequential([
+        C.layers.Embedding(char_emb_dim),
+        C.layers.Dropout(0.2),
         C.layers.Convolution1D((5,), convs, activation=C.relu, init=C.glorot_uniform(), pad=[True], strides=1, bias=True, init_bias=True),
         C.GlobalMaxPooling()])(x)
 
-# todo are the lstms sharing parameters?
-def bilstm(x):
-    return C.splice(C.Recurrence(C.blocks.LSTM(dim))(x), C.Recurrence(C.blocks.LSTM(dim),go_backwards=True)(x))
-
-def combine_glove_and_learnable(known, vocab):
+# todo switch to this once splice can backprop sparse gradients
+def embed_via_splice(known, vocab):
     # load glove
     npglove = np.zeros((known,dim), dtype=np.float32)
     with open('glove.6B.100d.txt', encoding='utf-8') as f:
@@ -39,6 +45,23 @@ def combine_glove_and_learnable(known, vocab):
     glove = C.constant(npglove)
     nonglove = C.parameter(shape=(len(vocab) - known, dim), init=C.glorot_uniform())
     return C.splice(glove, nonglove, axis=0)
+
+# todo: this is not exactly the implementation in TP3 because the glove vectors are just used for initialization here
+def embed(known, vocab):
+    # load glove
+    n = len(vocab)
+    npglove = (np.random.rand(n, dim) * np.sqrt(6.0/(n + dim))).astype(np.float32)
+    with open('glove.6B.100d.txt', encoding='utf-8') as f:
+        for line in f:
+            parts = line.split()
+            word = parts[0].lower()
+            if word in vocab:
+                npglove[vocab[word],:] = np.asarray([float(p) for p in parts[1:]])
+    glove = C.parameter(shape=(n, dim), init=npglove)
+
+    def apply(x):
+        return C.times(x, glove)
+    return apply
 
 c = C.Axis.new_unique_dynamic_axis('c')
 q = C.Axis.new_unique_dynamic_axis('q')
@@ -71,29 +94,35 @@ input_map = {
 mb_data = mb_source.next_minibatch(256, input_map=input_map)
 print(mb_data)
 
-embedding = combine_glove_and_learnable(known, vocab)
+embedding = embed(known, vocab)
 
-qchars = C.reshape(qc,(qc.shape[0]//20,20))
+input_chars = C.placeholder_variable(shape=(c_dim,))
+input_words = C.placeholder_variable(shape=(w_dim,))
 
-# todo we need to reshape because GlobalMaxPooling is retaining a trailing singleton dimension
-q_spliced_input = C.splice(C.times(qw, embedding), C.reshape(charcnn(qchars), convs))
+# we need to reshape because GlobalMaxPooling is retaining a trailing singleton dimension
+# todo GlobalPooling should have a keepdims default to False
+embedded = C.splice(embedding(input_words), C.reshape(charcnn(C.reshape(input_chars, (C.InferredDimension, word_size))), convs))
 
-# todo highway network
+def BidirectionalRecurrence(fwd, bwd):
+    f = C.layers.Recurrence(fwd)
+    b = C.layers.Recurrence(bwd, go_backwards=True)
+    x = C.placeholder_variable()
+    return C.splice (f(x), b(x))
 
-# todo replace -2 with new_axis() once new_axis() is working properly
-pvw_input = bilstm(q_spliced_input)
-pvw = PastValueWindow(15, -2)(pvw_input)
+#todo add highway network
+input_layers = C.layers.Sequential([
+    # HighwayNetwork(2),
+    C.Dropout(0.2),
+    BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))
+])
 
-print(pvw[0])
+q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qw,qc])))
+c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cw,cc])))
+q_processed = input_layers(q_emb)
+c_processed = input_layers(c_emb)
 
-cchars = C.reshape(cc,(cc.shape[0]//20,20))
-
-# todo we need to reshape because GlobalMaxPooling is retaining a trailing singleton dimension
-c_spliced_input = C.splice(C.times(cw, embedding), C.reshape(charcnn(cchars), convs))
-
-# todo highway network
-c_lstm_output = bilstm(c_spliced_input)
-print('lstm output',c_lstm_output)
+pvw, mask = PastValueWindow(max_question_len, C.Axis.new_leading_axis())(q_processed)
+print('pvw', pvw)
 
 # This part deserves some explanation
 # It is the attention layer
@@ -105,29 +134,38 @@ ws1 = C.parameter(shape=(2 * dim, 1), init=C.glorot_uniform())
 ws2 = C.parameter(shape=(2 * dim, 1), init=C.glorot_uniform())
 ws3 = C.parameter(shape=(1, 2 * dim), init=C.glorot_uniform())
 
-wh = C.times (c_lstm_output, ws1)
-wu = C.reshape(C.times (pvw[0], ws2), (15,))
-whu = C.times_transpose(c_lstm_output, C.sequence.broadcast_as(C.element_times (pvw[0], ws3), c_lstm_output))
-S = wh + whu + C.sequence.broadcast_as(wu, c_lstm_output)
+wh = C.times (c_processed, ws1)
+wu = C.reshape(C.times (pvw, ws2), (max_question_len,))
+whu = C.times_transpose(c_processed, C.sequence.broadcast_as(C.element_times (pvw, ws3), c_processed))
+S = wh + whu + C.sequence.broadcast_as(wu, c_processed)
 q_logZ = C.reshape(C.reduce_log_sum_exp(S),(1,))
 q_attn = C.reshape(C.exp(S - q_logZ),(-1,1))
-utilde = C.reshape(C.reduce_sum(C.sequence.broadcast_as(pvw[0], q_attn) * q_attn, axis=0),(-1))
+utilde = C.reshape(C.reduce_sum(C.sequence.broadcast_as(pvw, q_attn) * q_attn, axis=0),(-1))
 print(utilde)
 
 max_col = C.reduce_max(S)
 c_logZ = seqlogZ(max_col)
 c_attn = C.exp(max_col - C.sequence.broadcast_as(c_logZ, max_col))
-htilde = C.sequence.reduce_sum(c_lstm_output * c_attn)
+htilde = C.sequence.reduce_sum(c_processed * c_attn)
 print(htilde)
-print(c_lstm_output)
+print(c_processed)
 
-Htilde = C.sequence.broadcast_as(htilde, c_lstm_output)
-modeling_layer_input = C.splice(c_lstm_output, utilde, c_lstm_output * utilde,  c_lstm_output * Htilde)
+Htilde = C.sequence.broadcast_as(htilde, c_processed)
+modeling_layer_input = C.splice(c_processed, utilde, c_processed * utilde,  c_processed * Htilde)
 print(modeling_layer_input)
 
-first_layer = bilstm(modeling_layer_input)
-second_layer = bilstm(first_layer)
-third_layer = bilstm(second_layer)
+#todo replace with optimized_rnnstack for training purposes once it supports dropout
+begin_model = C.layers.Sequential([
+    C.Dropout(0.2),
+    BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim)),
+    C.Dropout(0.2),
+    BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))
+])
+
+end_model = begin_model.clone(C.CloneMethod.clone)
+
+second_layer = begin_model(modeling_layer_input)
+fourth_layer = end_model(second_layer)
 
 def seqloss(logits, y):
     return C.sequence.last(C.sequence.gather(logits, y)) - seqlogZ(logits)
@@ -137,13 +175,12 @@ begin_weights = C.parameter(shape=(C.InferredDimension,1), init=C.glorot_uniform
 begin_logits = C.times(begin_input, begin_weights)
 begin_loss = seqloss(begin_logits, ab)
 
-end_input = C.splice(modeling_layer_input, third_layer)
+end_input = C.splice(modeling_layer_input, fourth_layer)
 end_weights = C.parameter(shape=(C.InferredDimension,1), init=C.glorot_uniform())
 end_logits = C.times(end_input, end_weights)
 end_loss = seqloss(end_logits, ae)
 
 loss = begin_loss + end_loss
 
-#print(loss.grad(mb_data))
-func = loss
-print([t.shape for t in func.grad(mb_data, wrt=loss.parameters)])
+print(loss)
+print([t.shape for t in loss.grad(mb_data, wrt=loss.parameters)])
