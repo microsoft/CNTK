@@ -77,14 +77,14 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
 
     with cntk.layers.default_options (activation=cntk.ops.relu, pad=True):
-        z = cntk.models.Sequential([
-            cntk.models.For(range(2), lambda : [
+        z = cntk.layers.Sequential([
+            cntk.layers.For(range(2), lambda : [
                 cntk.layers.Convolution2D((3,3), 64),
                 cntk.layers.Convolution2D((3,3), 64),
                 LocalResponseNormalization (1.0, 4, 0.001, 0.75),
                 cntk.layers.MaxPooling((3,3), (2,2))
             ]),
-            cntk.models.For(range(2), lambda i: [
+            cntk.layers.For(range(2), lambda i: [
                 cntk.layers.Dense([256,128][i]),
                 cntk.layers.Dropout(0.5)
             ]),
