@@ -699,7 +699,7 @@ class Function(cntk_py.Function):
         See also:
             :func:`find_all_with_name`
         '''
-        from .. import graph
+        from cntk.logging import graph
         return graph.find_by_name(self, name)
 
     @typemap

@@ -317,6 +317,58 @@ class Value(cntk_py.Value):
 
         return value
 
+    @staticmethod
+    @typemap
+    def one_hot(batch, num_classes, dtype=None, device=None):
+        '''
+        Converts ``batch`` into a :class:`~cntk.core.Value` object of ``dtype``
+        such that the integer data in ``batch`` is interpreted as the indices
+        representing one-hot vectors.
+
+        Example:
+            >>> num_classes = 6
+            >>> sparse_indices = [[1,5],[4]]
+            >>> i0 = C.input_variable(shape=num_classes, is_sparse=True)
+            >>> z = C.times(i0, np.eye(num_classes))
+            >>> value = C.one_hot(sparse_indices, num_classes)
+            >>> z.eval({i0: value})
+            [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
+                   [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
+
+        Args:
+            batch (list of lists of integers): batch input data of indices
+            num_classes (int): number of classes
+            dtype (`np.float32`, `np.float64`, default None): data type
+            device (:class:`~cntk.device.DeviceDescriptor`, default None): device
+             this value should be put on
+
+        Returns:
+            ``batch`` converted into a :class:`~Value` object that can be passed to
+            the forward or eval function.
+        '''
+        if device is None:
+            device = use_default_device()
+
+        if isinstance(batch, np.ndarray):
+            batch = batch.tolist()
+
+        try:
+            data_type = type(batch[0][0])
+        except:
+            raise ValueError('input must be a list of list of integers')
+
+        if data_type != int:
+            raise ValueError('supplied data to one_hot() must be of type integer'
+                             ' and not "%s" since it is index data.' % data_type)
+
+        if dtype in [np.float32, None]:
+            value = cntk_py.Value.create_one_hot_float(
+                num_classes, batch, device, False)
+        elif dtype == np.float64:
+            value = cntk_py.Value.create_one_hot_double(
+                num_classes, batch, device, False)
+        return value
+
     @property
     def shape(self):
         '''

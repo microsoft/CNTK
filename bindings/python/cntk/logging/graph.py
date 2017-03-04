@@ -5,7 +5,7 @@
 # ==============================================================================
 
 import os
-from . import Variable
+from .. import Variable
 
 def depth_first_search(node, visitor):
     '''

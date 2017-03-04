@@ -314,12 +314,12 @@ def test_op_transpose_times(left_operand, right_operand, device_id, precision):
 def test_op_times_sparse_grad(device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
-    from cntk import times, times_transpose, parameter, reshape, one_hot
+    from cntk import times, times_transpose, parameter, reshape, Value
     dim = 5
     num_sequences = 2
     seq = [i for i in range(dim)]
     identity = np.identity(dim, dtype=np.float32)
-    input_data = one_hot([seq]*num_sequences, dim)
+    input_data = Value.one_hot([seq]*num_sequences, dim)
     input_var  = I(shape=(dim), is_sparse=True, needs_gradient=False)
     e = parameter(shape = (dim, dim), init = identity)
     z = reshape(times_transpose(e, times(input_var, e)), dim)

@@ -11,7 +11,6 @@ import numpy as np
 from .. import Function
 from ..ops import times, sequence, as_block, element_select
 from ..ops.tests.ops_test_utils import cntk_device
-from ..utils import one_hot
 from ..train.trainer import *
 from ..train.training_session import *
 from ..learners import *

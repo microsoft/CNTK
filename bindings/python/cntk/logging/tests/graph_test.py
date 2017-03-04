@@ -5,8 +5,8 @@
 
 import numpy as np
 from ..graph import *
-from ..ops import *
-from ..axis import Axis
+from cntk.ops import *
+from cntk.axis import Axis
 
 
 def _graph_dict():
