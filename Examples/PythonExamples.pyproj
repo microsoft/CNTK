@@ -103,8 +103,10 @@
     </Compile>
     <Compile Include="common\nn.py" />
     <Compile Include="common\__init__.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNetLRN_CIFAR10_DataAug.py" />
     <Compile Include="Image\Classification\ConvNet\Python\ConvNet_CIFAR10.py" />
     <Compile Include="Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug_Distributed.py" />
     <Compile Include="Image\Classification\ConvNet\Python\ConvNet_MNIST.py" />
     <Compile Include="Image\Classification\MLP\Python\SimpleMNIST.py" />
     <Compile Include="Image\Classification\ResNet\Python\CifarResNet.py" />
