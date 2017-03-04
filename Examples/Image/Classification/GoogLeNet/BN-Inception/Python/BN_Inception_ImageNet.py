@@ -148,7 +148,7 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
 
     # Finished
     # Evaluation parameters
-    test_epoch_size = 320
+    test_epoch_size = 50000
     test_minibatch_size = 32
 
     # process minibatches and evaluate the model

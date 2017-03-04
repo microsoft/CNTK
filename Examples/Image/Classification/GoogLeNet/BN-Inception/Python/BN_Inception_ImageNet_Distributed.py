@@ -140,7 +140,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         mb_size = minibatch_size,
         checkpoint_config = CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
         progress_frequency = epoch_size,
-        cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size))
+        cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size, frequency=epoch_size))
 
     if profiling:
         start_profiler(sync_gpu=True)

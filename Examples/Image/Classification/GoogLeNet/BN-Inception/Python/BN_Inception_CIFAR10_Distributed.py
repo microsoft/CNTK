@@ -46,6 +46,10 @@ def create_image_mb_source(map_file, mean_file, is_training, total_number_of_sam
     if is_training:
         transforms += [
             xforms.crop(crop_type='randomside', side_ratio=0.8, jitter_type='uniratio') # train uses jitter
+            ]
+    else:
+        transforms += [
+            xforms.crop(crop_type='center', crop_size=image_width)
         ]
 
     transforms += [
@@ -136,7 +140,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         mb_size = minibatch_size,
         checkpoint_config = CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
         progress_frequency = epoch_size,
-        cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size))
+        cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size, frequency=epoch_size))
 
     if profiling:
         start_profiler(sync_gpu=True)
