@@ -84,7 +84,7 @@
         "name":  "GoogLeNet (BN-Inception)",
         "url":  "https://github.com/Microsoft/CNTK/tree/master/Examples/Image/Classification/GoogLeNet/BN-Inception#cntk-examples-imageclassificationgooglenetbn-inception",
         "description":  "GoogLeNet (BN-Inception) network for image classification.",
-        "language":  ["BrainScript"],
+        "language":  ["Python", "BrainScript"],
         "type":  ["Recipe"]
     },
     {
