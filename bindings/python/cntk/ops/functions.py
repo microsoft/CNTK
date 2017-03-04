@@ -128,16 +128,11 @@ class Function(cntk_py.Function):
             args = [make_arg_variable(arg_name, annotations) for arg_name in arg_names]
 
             # helpers
-            #ref_keeper = None  # BUGBUG: to work around the ref-counting issue with outputs
             def force_order_args(fun_args):
                 block_args = [make_arg_variable(fun_arg.name, annotations) for fun_arg in fun_args]  # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
-                #combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple')
-                #global ref_keeper   # TODO: should this really be 'nonlocal'?
-                #ref_keeper = combined_args    # BUGBUG workaround the ref-counting problem
-                #return combined_args.outputs
             def invoke(fun_args):
                 try:
                     # hide Placeholders of this function from .signature() of any function defined inside
@@ -256,7 +251,6 @@ class Function(cntk_py.Function):
         self.replace_placeholders(arg_map)
 
 
-    # TODO: find an old test that uses this, and turn it into a test case
     def declare_args(self, *arg_types):
         '''
         Back-compat wrapper for update_signature() (beta12 and before).
@@ -304,7 +298,6 @@ class Function(cntk_py.Function):
         # we must include them in the argmap, otherwise they will be cloned
         for arg in self.arguments:
             if arg not in arg_map:
-                #print('excluded placeholder detected:', arg.name)
                 arg_map[arg] = arg
 
         # determine whether this is eval() or clone()

@@ -223,9 +223,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
                        momentum = momentum_as_time_constant_schedule(1100),
                        gradient_clipping_threshold_per_sample=2.3,
                        gradient_clipping_with_truncation=True)
-    #trainer = Trainer(None, criterion, learner)
-    # BUGBUG: can't write to slice, which might actually be a mem-sharing issue
-    trainer = Trainer(criterion.outputs[0]+0, criterion, learner)
+    trainer = Trainer(None, criterion, learner)
 
     # Get minibatches of sequences to train with and perform model training
     total_samples = 0
