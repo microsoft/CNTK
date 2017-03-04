@@ -18,6 +18,10 @@ notebook_timeoutSeconds = 1200
 # Skipping test for python 2.7 since Fast-RCNN implementation does not support 2.7 at the moment
 @pytest.mark.skipif(sys.version_info < (3,4),
                     reason="requires python 3.4")
+@pytest.mark.skipif(sys.version_info > (3,4),
+                    reason="requires python 3.4")
+@pytest.mark.skipif(sys.platform == 'win32',
+                    reason="does not currently run on windows")
 def test_cntk_fastrcnn_eval_noErrors(nb):
     errors = [output for cell in nb.cells if 'outputs' in cell
               for output in cell['outputs'] if output.output_type == "error"]
@@ -27,6 +31,10 @@ def test_cntk_fastrcnn_eval_noErrors(nb):
 # Skipping test for python 2.7 since Fast-RCNN implementation does not support 2.7 at the moment
 @pytest.mark.skipif(sys.version_info < (3,4),
                     reason="requires python 3.4")
+@pytest.mark.skipif(sys.version_info > (3,4),
+                    reason="requires python 3.4")
+@pytest.mark.skipif(sys.platform == 'win32',
+                    reason="does not currently run on windows")
 def test_cntk_fastrcnn_eval_evalCorrect(nb):
     testCells = [cell for cell in nb.cells
                  if cell.cell_type == 'code' and
