@@ -49,7 +49,7 @@ namespace CNTK
     /*virtual*/ Dictionary CompositeFunction::Serialize() const
     {
         Dictionary dict = SerializeBlockComposite();
-
+       
         // Find cycles in the graph and "break" them by inserting placeholders.
         // This needs to be done on Save, since here we have easy access to the shape and 
         // dynamic axis info.
@@ -98,21 +98,21 @@ namespace CNTK
         std::reverse(std::begin(topoSortedPrimitiveFunctions), std::end(topoSortedPrimitiveFunctions));
 
         assert(topoSortedPrimitiveFunctions.back()->Uid() == RootFunction()->Uid());
-
+        
         std::vector<DictionaryValue> inputDictionaries;
         inputDictionaries.reserve(uniqueInputs.size());
         inputUids.clear();
         for (const auto& input : uniqueInputs)
         {
             if (inputUids.find(input.Uid()) != inputUids.end())
-                LogicError("Input uids must be unique");
+                LogicError("Function '%S' Serialize: Input uids must be unique.", AsString().c_str());
 
             inputUids.insert(input.Uid());
             inputDictionaries.push_back(input.Serialize());
         }
 
         dict[inputsKey] = std::move(inputDictionaries);
-
+       
         std::vector<DictionaryValue>  functionDictionaries;
         std::unordered_set<std::wstring> outputUids;
         for (const auto& primitiveFunction : topoSortedPrimitiveFunctions)
@@ -120,7 +120,7 @@ namespace CNTK
             for (const auto& output : primitiveFunction->RawOutputs())
             {
                 if (outputUids.find(output.Uid()) != outputUids.end())
-                    LogicError("Output uids of all primitive functions in a function graph must be unique");
+                    LogicError("Function '%S' Serialize: Output uids of all primitive functions in a function graph must be unique", AsString().c_str());
 
                 outputUids.insert(primitiveFunction->Uid());
             }
@@ -129,10 +129,10 @@ namespace CNTK
         }
 
         dict[functionsKey] = std::move(functionDictionaries);
-
+        
         // Now, collect and store the internal state for all non-pure (stateful) functions in the graph 
         // (with the corresponding nodes that subclass from RngUser: Dropout, RandomSample, etc).
-        Dictionary stateDictionary;
+        Dictionary stateDictionary; 
         for (const auto& kv : m_variableToNodeMap)
         {
             if (kv.second->Is<RngUser>() && kv.first.IsOutput())
@@ -198,7 +198,7 @@ namespace CNTK
     /*static*/ FunctionPtr CompositeFunction::Deserialize(const Dictionary& dict, const CNTK::DeviceDescriptor& device)
     {
         static const vector<std::wstring> s_requiredDictionaryKeys = { inputsKey, functionsKey };
-
+       
         size_t version = ValidateDictionary<CompositeFunction>(dict, s_requiredDictionaryKeys, s_compositeFunctionTypeValue, s_serializationVersion);
 
         const auto& inputs = dict[inputsKey].Value<vector<DictionaryValue>>();
@@ -210,9 +210,10 @@ namespace CNTK
 
             if (uidToInputMap.find(inputVar.Uid()) != uidToInputMap.end())
             {
-                CNTK::LogicError("Input uids are not unique (several inputs share '%ls' uid) "
-                    "(%s).", inputVar.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
+                CNTK::LogicError("CompositeFunction::Deserialize: Input uids are not unique (several inputs share '%ls' uid) (%s).",
+                                 inputVar.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
             }
+
             uidToInputMap[inputVar.Uid()] = inputVar;
         }
 
@@ -246,7 +247,7 @@ namespace CNTK
                     auto offset = state[rngOffsetKey].Value<size_t>();
                     primitiveFunction->m_attributes[PrimitiveFunction::AttributeNameRngSeed] = seed;
                     primitiveFunction->m_attributes[PrimitiveFunction::AttributeNameRngOffset] = offset;
-                }
+                }  
                 else if (Internal::GetComputationNetworkTraceLevel() > 0)
                 {
                     // TODO: all logging functionality should be refactored to live in a logging utility class. 
@@ -263,9 +264,8 @@ namespace CNTK
                 {
                     if (!it->second.IsPlaceholder())
                     {
-                        CNTK::LogicError("Unexpected variable type %ls instead of a Placeholder for input %ls variable (uid = %ls)"
-                            "(%s).", VariableKindName(it->second.Kind()), it->second.Name().c_str(), it->second.Uid().c_str(),
-                            GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
+                        CNTK::LogicError("CompositeFunction::Deserialize: Unexpected variable '%S' instead of a Placeholder (uid = %ls) (%s).",
+                                         it->second.AsString().c_str(), it->second.Uid().c_str(), GetVersionsString<CompositeFunction>(s_serializationVersion, version).c_str());
                     }
                     allPlaceholderReplacements[it->second] = output;
                 }
@@ -357,16 +357,16 @@ namespace CNTK
 
         // The DataType, Shape and DynamicAxes of the variable must be known by now
         if (variable.GetDataType() == DataType::Unknown)
-            CNTK::InvalidArgument("Variable%S with unknown DataType detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable '%S' with unknown DataType found when compiling the Function graph.", variable.AsString().c_str());
 
         if (variable.Shape().IsUnknown())
-            CNTK::InvalidArgument("Variable%S with unknown shape detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable '%S' with unknown shape found when compiling the Function graph.", variable.AsString().c_str());
 
         if (variable.Shape().HasInferredDimension())
-            CNTK::InvalidArgument("Variable%S with InferredDimension for at least one axis in its shape, detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable '%S' with partially unresolved shape %S found when compiling the Function graph.", variable.AsString().c_str(), variable.Shape().AsString().c_str());
 
         if (variable.DynamicAxes() == Axis::UnknownDynamicAxes())
-            CNTK::InvalidArgument("Variable%S with unknown dynamic axes detected when compiling the Function graph!", ParanthesizedName(variable.Name()).c_str());
+            InvalidArgument("Variable '%S' with unknown dynamic axes found when compiling the Function graph.", variable.AsString().c_str());
 
         // Lets add a null entry in the map for this variable, to break infinite recursion when processing recurrent graphs
         variableToNodeMap[variable] = nullptr;
@@ -400,14 +400,15 @@ namespace CNTK
             auto dynamicAxes = variable.DynamicAxes();
             auto foundDefaultBatchAxis = std::find(dynamicAxes.begin(), dynamicAxes.end(), Axis::DefaultBatchAxis());
             if (foundDefaultBatchAxis == dynamicAxes.end())
-                CNTK::LogicError("Currently Input Variables are required to have the DefaultBatchAxis as one of their dynamic axes");
+                CNTK::LogicError("Input Variable '%S' found without a DefaultBatchAxis dynamic axis; this is currently unsupported.", variable.AsString().c_str());
 
             if (dynamicAxes.back() != Axis::DefaultBatchAxis())
-                CNTK::LogicError("Currently Input Variables are required to have the DefaultBatchAxis as their last dynamic axes");
+                CNTK::LogicError("Input Variable '%S' does not have the DefaultBatchAxis as its last dynamic axis.", variable.AsString().c_str());
 
             // TODO: Support inputs with > 1 dynamic axes
             if ((dynamicAxes.size() < 1) || (dynamicAxes.size() > 2))
-                CNTK::LogicError("Currently only Input variables with 1 or 2 dynamic axis are supported");
+                CNTK::LogicError("Input Variable '%S' has %d dynamic axes; currently only inputs with 1 or 2 dynamic axes are supported.",
+                                 variable.AsString().c_str(), (int)dynamicAxes.size());
 
             // Construct the dynamic axis name to be used internally for the CNTK InputNodes
             std::wstring internalDynamicAxisName = InternalDynamicAxisNameFromDynamicAxes(dynamicAxes);
@@ -850,10 +851,10 @@ namespace CNTK
             {
                 auto computationNodeExpectedInputCount = computationNodePtr->As<INumInputs>()->GetExpectedNumInputs();
                 if (computationNodeExpectedInputCount != inputNodesBasePtrs.size())
-                    CNTK::LogicError("Input count mismatch: The Primitive function for op %S has %d inputs while the corresponding ComputationNode has %d inputs",
-                    PrimitiveOpTypeName(op).c_str(),
-                    (int)inputNodesBasePtrs.size(),
-                    (int)computationNodeExpectedInputCount);
+                    CNTK::LogicError("The Primitive Function '%S' has %d inputs while the corresponding ComputationNode expects %d inputs.",
+                                     function->AsString().c_str(),
+                                     (int)inputNodesBasePtrs.size(),
+                                     (int)computationNodeExpectedInputCount);
             }
 
             if (computationNodePtr->Is<RngUser>())
@@ -926,7 +927,7 @@ namespace CNTK
                 break;
             }
         }
-
+            
         // Create the nodes corresponding to the inputs
         std::vector<std::shared_ptr<ComputationNode<ElementType>>> inputNodes;
         for (auto& inputVar : functionInputs)
@@ -994,14 +995,16 @@ namespace CNTK
             // was last constructed, to just recreate a new network.
             // For now just disallow changing the backpropRoots after the network is created
             if (!backpropRoots.empty() && (m_currentBackpropRoots != backpropRoots))
-                LogicError("Changing backprop roots across different Forward calls on a CNTK composite Function is currently unsupported");
+                LogicError("Function '%S': Changing backprop roots (Current = '%S', New = '%S') across different Forward calls on a CNTK composite Function is currently unsupported.",
+                            AsString().c_str(), NamedListString(m_currentBackpropRoots).c_str(), NamedListString(backpropRoots).c_str());
 
             // TODO: Support changing the device across different invocations of the forward method on a Function instance
             if (AsDeviceDescriptor(m_computationNetwork->GetDeviceId()) != device)
-                LogicError("Changing device across different Forward calls on a CNTK composite Function is currently unsupported");
+                LogicError("Function '%S': Changing device (Current = '%S', New = %S') across different Forward calls on a CNTK composite Function is currently unsupported.",
+                            AsString().c_str(), AsDeviceDescriptor(m_computationNetwork->GetDeviceId()).AsString().c_str(), device.AsString().c_str());
             
             if (!backpropRoots.empty() && (inputsToExcludeGradientsFor != m_inputsExcludedFromGradientComputation))
-                LogicError("Changing the set of inputs to exclude from gradient computation, across different Forward calls on a CNTK composite Function, is currently unsupported");
+                LogicError("Function '%S': Changing the set of inputs to exclude from gradient computation, across different Forward calls on a CNTK composite Function, is currently unsupported.", AsString().c_str());
         }
         else
         {
@@ -1012,7 +1015,9 @@ namespace CNTK
             {
                 // Only inputs of the network can be excluded from gradient computation
                 if (std::find(networkInputs.begin(), networkInputs.end(), inputExcluded) == networkInputs.end())
-                    InvalidArgument("Function::Forward: Only inputs of a Function can be excluded from gradient computation");
+                    InvalidArgument("Variable '%S' specified for exclusion from gradient computation is not an input of the Function '%S'. "
+                                    "Only an input of the Function can be explicitly excluded from gradient computation.",
+                                    inputExcluded.AsString().c_str(), this->AsString().c_str());
             }
 
             m_inputsExcludedFromGradientComputation = NonOwnerPreservingCopy(inputsToExcludeGradientsFor);
@@ -1021,11 +1026,13 @@ namespace CNTK
 
             // TODO: We currently only support one backprop root
             if (backpropRoots.size() > 1)
-                LogicError("More than one backprop roots is currently unsupported");
+                LogicError("Function '%S': %d backprop roots specified; currently at most one backprop root is supported.", AsString().c_str(), (int)backpropRoots.size());
 
             auto placeholders = Placeholders();
             if (!placeholders.empty())
-                InvalidArgument("All placeholders of a Function must be bound before performing a Forward computation on the Function!");
+                InvalidArgument("%d unbound Placeholder(s) '%S' found in the Function. "
+                                "All Placeholders of a Function must be bound (to a variable) before performing a Forward computation.",
+                                (int)placeholders.size(), NamedListString(placeholders).c_str());
 
             // Now recursively create the network in a top-down fashion
             auto rootFunction = RootFunction();
@@ -1065,7 +1072,8 @@ namespace CNTK
                     auto computationNode = m_variableToNodeMap[output];
 
                     if (!computationNode)
-                        InvalidArgument("One of the requested outputs for the Function forward computation is not part of the graph underlying the Function");
+                        InvalidArgument("One of the requested outputs '%S' for the Function '%S' forward computation is not part of the graph underlying the Function.",
+                                        output.AsString().c_str(), this->AsString().c_str());
 
                     m_computationNetwork->AddToNodeGroup(L"output", computationNode);
                 }
@@ -1079,7 +1087,7 @@ namespace CNTK
             {
                 auto& currentComputationNode = varNodePair.second;
                 if (!currentComputationNode)
-                    LogicError("No computation node mapping exists for Variable %S", varNodePair.first.Name().c_str());
+                    LogicError("Function '%S': No computation node mapping exists for Variable %S.", AsString().c_str(), varNodePair.first.AsString().c_str());
 
                 auto& currentComputationNodeInputs = currentComputationNode->GetInputs();
                 auto& currentVar = varNodePair.first;
@@ -1124,7 +1132,8 @@ namespace CNTK
                     if (((outputShape.Rank() == 0) && (computationNodeSampleLayout[0] != 1)) ||
                         ((outputShape.Rank() != 0) && (computationNodeSampleLayout != AsTensorViewShape(outputShape)) && (computationNodeSampleLayout != AsTensorShape(outputShape))))
                     {
-                        LogicError("The output Variable shape %S does not match the SampleLayout shape %s of the corresponding ComputationNode in the network", outputShape.AsString().c_str(), ((std::string)computationNodeSampleLayout).c_str());
+                        LogicError("Function '%S': The output Variable '%S' shape %S does not match the SampleLayout shape %s of the corresponding ComputationNode in the network.",
+                                    AsString().c_str(), outputVar.AsString().c_str(), outputShape.AsString().c_str(), ((std::string)computationNodeSampleLayout).c_str());
                     }
                 }
             }
@@ -1166,7 +1175,9 @@ namespace CNTK
             for (auto output : outputs)
             {
                 if (m_allNetworkRoots.find(output) == m_allNetworkRoots.end())
-                    LogicError("Changing requested outputs across different Forward calls on a CNTK composite Function is currently unsupported");
+                    LogicError("Function '%S': Requested output '%S' is not part of the list of outputs '%S' that the Function was initially compiled for. "
+                                "Changing requested outputs across different Forward calls is currently unsupported.",
+                                AsString().c_str(), output.AsString().c_str(), NamedListString(m_allNetworkRoots).c_str());
             }
         }
 
@@ -1177,7 +1188,7 @@ namespace CNTK
     /*static*/ void CompositeFunction::PopulateComputationNodeValue(const std::pair<Variable, ValuePtr>& variableValue, ComputationNodeBasePtr& computationNode, std::unordered_map<MBLayoutPtr, Variable>& layoutsPopulated)
     {
         if (!computationNode->Is<InputValueBase<ElementType>>())
-            CNTK::LogicError("CompositeFunction::Forward: Illegal to populate value of computation node type other than InputValueBase!");
+            CNTK::LogicError("CompositeFunction::Forward: Illegal to populate value of a non-input Variable '%S'.", variableValue.first.AsString().c_str());
 
         std::pair<std::shared_ptr<const Matrix<ElementType>>, MBLayoutPtr> CNTKMatrixAndMBLayout = Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElementType>(variableValue.first, variableValue.second);
 
@@ -1195,7 +1206,9 @@ namespace CNTK
         else
         {
             if (*nodeLayout != *layout)
-                CNTK::InvalidArgument("Function::Forward: Different minibatch layouts detected (difference in sequence lengths or count or start flags) in data specified for 2 of the Function's argument ('%S', '%S') having same dynamic axes", variableValue.first.Name().c_str(), layoutsPopulated.at(nodeLayout).Name().c_str());
+                InvalidArgument("Different minibatch layouts detected (difference in sequence lengths or count or start flags) in data specified "
+                                "for the Function's arguments '%S' vs. '%S', though these arguments have the same dynamic axes '%S'",
+                                 variableValue.first.AsString().c_str(), layoutsPopulated.at(nodeLayout).AsString().c_str(), DynamicAxesAsString(variableValue.first.DynamicAxes()).c_str());
         }
     }
 
@@ -1220,7 +1233,7 @@ namespace CNTK
                 PopulateComputationNodeValue<double>({ argument, argumentValue }, argumentComputationNode, layoutsPopulated);
                 break;
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(argumentValue->GetDataType()));
+                LogicError("Function '%S' Forward: Unsupported DataType %s.", AsString().c_str(), DataTypeName(argumentValue->GetDataType()));
                 break;
             }
         }
@@ -1236,7 +1249,8 @@ namespace CNTK
         MBLayoutPtr layout = CNTKMatrixAndMBLayout.second;
         auto nodeLayout = computationNode->GetMBLayout();
         if (((layout == nullptr) != (nodeLayout == nullptr)) || ((layout != nullptr) && (*layout != *nodeLayout)))
-            CNTK::InvalidArgument("The layout of the specified gradient Value is incompatible with the layout of the corresponding Variable computed during Forward call");
+            InvalidArgument("The layout of the specified gradient Value for Variable '%S' is incompatible with the layout computed during Forward call.",
+                            variableGradient.first.AsString().c_str());
         computationNode->As<ComputationNode<ElementType>>()->AssignGradient(*CNTKMatrixAndMBLayout.first);
     }
 
@@ -1258,7 +1272,7 @@ namespace CNTK
                 PopulateComputationNodeGradient<double>(gradientVarValuePair, outputComputationNode);
                 break;
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(gradientValue->GetDataType()));
+                LogicError("Function '%S' Backward: Unsupported DataType %s.", AsString().c_str(), DataTypeName(gradientValue->GetDataType()));
                 break;
             }
         }
@@ -1292,7 +1306,8 @@ namespace CNTK
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
             if ((varValue->Shape() != valueShape) && (AsTensorShape(varValue->Shape()) != AsTensorShape(valueShape)))
-                CNTK::InvalidArgument("The shape %S of the specified Value object for %s does not match the actual shape %S", AsStringForErrorReporting(varValue->Shape()).c_str(), getGradient ? "gradient" : "output", AsStringForErrorReporting(valueShape).c_str());
+                ::InvalidArgument("The shape %S of the specified Value object for Variable '%S' %s does not match the actual shape %S",
+                                  varValue->Shape().AsString().c_str(), var.AsString().c_str(), getGradient ? "gradient" : "output", valueShape.AsString().c_str());
         }
 
         ValuePtr nodeValue;
@@ -1318,7 +1333,7 @@ namespace CNTK
             break;
         }
         default:
-            CNTK::LogicError("Unsupported DataType %s", DataTypeName(var.GetDataType()));
+            CNTK::LogicError("CompositeFunction::Forward/Backward: Unsupported DataType %s", DataTypeName(var.GetDataType()));
             break;
         }
 
@@ -1343,16 +1358,19 @@ namespace CNTK
         {
             // Only gradients corresponding to inputs of the network can be obtained
             if (std::find(networkInputs.begin(), networkInputs.end(), gradientVarValuePair.first) == networkInputs.end())
-                InvalidArgument("Backpropagated gradient values can only be obtained for inputs of a Function");
+                InvalidArgument("Gradient requested for Variable '%S' which is not an input of the Function '%S'.", gradientVarValuePair.first.AsString().c_str(), this->AsString().c_str());
 
             // Gradients can only be obtained for parameter variables or input variables that NeedsGradient
             if (!gradientVarValuePair.first.NeedsGradient() || (m_inputsExcludedFromGradientComputation.find(gradientVarValuePair.first) != m_inputsExcludedFromGradientComputation.end()))
-                InvalidArgument("Gradient value incorrectly requested for an Output or Constant Variable, an Input Variable with NeedsGradient setting of false, or an input for which gradient computation was explicitly excluded");
+                InvalidArgument("Gradient value incorrectly requested for Variable '%S', "
+                                "an Output or Constant or Input Variable with NeedsGradient setting of false, or an input for which gradient computation was explicitly excluded.",
+                                gradientVarValuePair.first.AsString().c_str());
 
             auto computationNodePtr = m_variableToNodeMap.at(gradientVarValuePair.first);
 
             if (!computationNodePtr->NeedsGradient())
-                LogicError("Backpropagated gradient value cannot be read from a ComputationNode that has NeedsGradient set to false");
+                LogicError("Function '%S': Backpropagated gradient value cannot be read from a Variable '%S' whose ComputationNode has NeedsGradient set to false.",
+                            AsString().c_str(), gradientVarValuePair.first.AsString().c_str());
 
             GetNodeOutputOrGradient(gradientVarValuePair.first, gradients[gradientVarValuePair.first], computationNodePtr, true /*getGradient*/);
         }
@@ -1392,7 +1410,7 @@ namespace CNTK
     {
         // Validate arguments and outputs
         if (outputs.empty())
-            InvalidArgument("CompositeFunction::Forward: At least one output has to be specified!");
+            InvalidArgument("At least one output has to be specified when calling Forward method of the Function '%S'.", this->AsString().c_str());
 
         // Make sure that the DataType of the variables and corresponding values match
         // TODO: We need a better way to determine the ElementType for the network
@@ -1402,7 +1420,7 @@ namespace CNTK
             if (dataType == DataType::Unknown)
                 dataType = variableValuePair.first.GetDataType();
             else if (dataType != variableValuePair.first.GetDataType())
-                LogicError("CompositeFunction::Forward: The DataType of all arguments of the Function must be same");
+                LogicError("Function '%S' Forward: The DataType of all arguments must be same.", this->AsString().c_str());
         }
 
         if (dataType == DataType::Unknown)
@@ -1452,8 +1470,8 @@ namespace CNTK
 
         if (!missingRequiredArguments.empty())
         {
-            std::wstring missingRequiredArgumentNames = NamedListString(missingRequiredArguments);
-            InvalidArgument("Function::Forward: Values for %d required arguments (%S), that the requested output(s) depend on, have not been provided", (int)missingRequiredArguments.size(), missingRequiredArgumentNames.c_str());
+            InvalidArgument("Values for %d required arguments '%S', that the requested output(s) '%S' depend on, have not been provided.",
+                            (int)missingRequiredArguments.size(), NamedListString(missingRequiredArguments).c_str(), NamedListString(requestedOutputVariables).c_str());
         }
 
         if (requiredArgumentValues.size() < arguments.size())
@@ -1469,7 +1487,7 @@ namespace CNTK
         list<ComputationNodeBasePtr> dropoutNodes = m_computationNetwork->GetNodesWithType(OperationNameOf(DropoutNode));
         for (auto& nodeIter : dropoutNodes)
             nodeIter->SetEvalTimeStampOutdatedWrtAll();
-
+        
         // Bump the timestamp of the parameter nodes whose values have changed
         for (auto& paramTimeStampRecord : m_lastRecordedParameterValueTimeStamps)
         {
@@ -1522,16 +1540,18 @@ namespace CNTK
     {
         auto backpropState = dynamic_cast<const CNTKBackPropState*>(state.get());
         if (backpropState == nullptr)
-            InvalidArgument("Invalid backprop state specified");
+            InvalidArgument("Function '%S' Backward: Invalid backprop state passed.", AsString().c_str());
 
         // TODO: Support multiple concurrent backprop states
         std::unordered_map<Variable, uint64_t> currentBackpropRootTimeStamps = GetCurrentBackpropRootsTimeStamps();
         if (backpropState->BackpropRootsForwardTimeStamps() != currentBackpropRootTimeStamps)
-            LogicError("The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified by subsequent Forward calls to the function."
-                       "This is not a user error but a shortcoming of the current implementation where multiple independent backprop states are not simultaneously supported");
+            LogicError("Function '%S' Backward: The specified backprop state specified cannot be used for backpropagation as the Function's internal state was modified "
+                        "by subsequent Forward calls to the function. This is not a user error but a shortcoming of the current implementation where multiple independent "
+                        "backprop states are not simultaneously supported.", AsString().c_str());
 
         if (rootGradientValues.size() > 1)
-            LogicError("Currently gradient backprop from only one of the Function Outputs is supported");
+            LogicError("Function '%S' Backward: %d root gradient values specified; currently gradient backprop from only one of the Function Outputs is supported.",
+                        AsString().c_str(), (int)rootGradientValues.size());
 
         // TODO: Avoid copying the data when possible
 

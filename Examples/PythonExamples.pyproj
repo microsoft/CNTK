@@ -336,6 +336,9 @@
     <Folder Include="Text\CharacterLM\data\" />
     <Folder Include="Text\WordLMWithSampledSoftmax\" />
     <Folder Include="Text\WordLMWithSampledSoftmax\test\" />
+    <Folder Include="ToEndTests\" />
+    <Folder Include="ToEndTests\cntkv2Python\" />
+    <Folder Include="ToEndTests\cntkv2Python\Examples\" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="{4aa09c20-bd30-41b0-b691-0beca389326c}\3.5" />
