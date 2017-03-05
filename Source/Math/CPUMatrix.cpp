@@ -824,7 +824,8 @@ void CPUMatrix<ElemType>::SetColumn(const CPUMatrix<ElemType>& valMat, size_t j)
 {
     if (IsEmpty())
         LogicError("SetColumn: Matrix is empty.");
-    assert(valMat.GetNumRows() == GetNumRows() && valMat.GetNumCols() == 1);
+    if (valMat.GetNumRows() != GetNumRows() || valMat.GetNumCols() != 1)
+        InvalidArgument("The valMat matrix has incorrect number of rows or columns.");
 
     auto& us = *this;
     long m = (long) GetNumRows();
@@ -1102,7 +1103,8 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         LogicError("SetUniformRandomValue: Matrix is empty.");
 
     CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
-    assert(cpuRNGHandle != nullptr);
+    if (cpuRNGHandle == nullptr)
+        InvalidArgument("rngHandle must be a CPURNGHandle.");
 
     auto& us = *this;
     boost::random::uniform_real_distribution<ElemType> r(0, 1);
@@ -1142,7 +1144,8 @@ ElemType CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients, const bool
         SetValue(0.0);
     }
 
-    assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols());
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols())
+        InvalidArgument("The matrix gradients must have the same rows and columns as this matrix.");
 
     ElemType *a = Data(), *d_v = gradients.Data();
     size_t n = GetNumElements();
@@ -1214,7 +1217,8 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
         SetValue(0.0);
     }
 
-    assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+        InvalidArgument("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
     ElemType* grad = gradients.Data();
@@ -1262,7 +1266,8 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
         SetValue(0.0);
     }
 
-    assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+    if (GetNumRows() != gradients.GetNumRows()  || GetNumCols() != numColsNeeded)
+        InvalidArgument("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
     ElemType* grad = gradients.Data();
@@ -1319,7 +1324,8 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     ElemType* signs = Data() + n;     // sign of previous gradient
     ElemType* steps = Data() + 2 * n; // current step size
 
-    assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols() * 3)
+        InvalidArgument("The matrix gradients does not have expected dimensions.");
 
     ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
     // int upd[] = {
@@ -1383,7 +1389,6 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 template <class ElemType>
 void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
-    assert(numRows * numCols == GetNumElements());
     if (numRows * numCols != GetNumElements())
         InvalidArgument("Reshape: Total number of elements does not match.");
 
@@ -1485,14 +1490,17 @@ void CPUMatrix<ElemType>::CopySection(size_t /*numRows*/, size_t /*numCols*/, El
 template <class ElemType>
 inline size_t CPUMatrix<ElemType>::LocateColumn(const size_t col) const
 {
-    assert(col == 0 || col < GetNumCols());
+    if (col != 0 && col >= GetNumCols())
+        InvalidArgument("The argument col must be within the scope of columns.");
     return col * m_numRows; // matrix in column-wise storage
 }
 
 template <class ElemType>
 inline size_t CPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) const
 {
-    assert(row < m_numRows);
+    if (row >= m_numRows)
+        InvalidArgument("The arguemnt row must be within the scope of rows.");
+
     return LocateColumn(col) + row; // matrix in column-wise storage
 }
 
@@ -1835,7 +1843,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementProductOf: The input matrix dimensions do not match.");
 
@@ -1871,7 +1878,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddElementProductOf(const CPUMatrix<El
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AddElementProductOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AddElementProductOf : The input matrix dimensions do not match.");
 
@@ -1910,7 +1916,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementDivisionOf(const CPUMatri
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementDivisionOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementDivisionOf : The input matrix dimensions do not match.");
 
@@ -1941,7 +1946,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementMultiplyWith(const CPUMat
     if (a.IsEmpty() || IsEmpty())
         LogicError("ColumnElementMultiplyWith: Matrix is empty.");
 
-    assert(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
     if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
         InvalidArgument("ColumnElementMultiplyWith: The input matrix should be a col vector and match [this]'s rows.");
 
@@ -1975,7 +1979,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::RowElementMultiplyWith(const CPUMatrix
     if (a.IsEmpty() || IsEmpty())
         LogicError("RowElementMultiplyWith: Matrix is empty.");
 
-    assert(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols());
     if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
         InvalidArgument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
@@ -2010,7 +2013,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::RowElementDivideBy(const CPUMatrix<Ele
     if (a.IsEmpty() || IsEmpty())
         LogicError("RowElementDivideBy: Matrix is empty.");
 
-    assert(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols());
     if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
         InvalidArgument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
 
@@ -2049,7 +2051,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementDivideBy(const CPUMatrix<
     if (a.IsEmpty() || IsEmpty())
         LogicError("ColumnElementDivideBy: Matrix is empty.");
 
-    assert(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
     if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
         InvalidArgument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
@@ -2924,7 +2925,8 @@ void CPUMatrix<ElemType>::VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<Elem
     const int m = (int) a.GetNumRows();
     const int n = (int) a.GetNumCols();
 
-    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
+    if ( m <= 0 || n <= 0)
+        LogicError("VectorSum: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
 
     if (isColWise) // col-wise
     {
@@ -2971,7 +2973,9 @@ void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWi
     const int m = (int) us.GetNumRows();
     const int n = (int) us.GetNumCols();
 
-    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0)
+        LogicError("VectorNorm1: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
+
 
     if (isColWise) // col-wise
     {
@@ -3025,7 +3029,8 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
     const int m = (int) us.GetNumRows();
     const int n = (int) us.GetNumCols();
 
-    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0)
+        LogicError("VectorNorm2: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
 
     ElemType* bufPtr = us.Data();
     if (isColWise) // col-wise
@@ -3092,7 +3097,8 @@ void CPUMatrix<ElemType>::VectorNormInf(CPUMatrix<ElemType>& c, const bool isCol
     const int m = (int) us.GetNumRows();
     const int n = (int) us.GetNumCols();
 
-    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0)
+        LogicError("VectorNormInf: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
 
     if (isColWise) // col-wise
     {
@@ -3148,7 +3154,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignKhatriRaoProductOf(const CPUMatr
         LogicError("AssignKhatriRaoProductOf: Matrix is empty.");
 
     long cols = (long) a.GetNumCols();
-    assert(cols == b.GetNumCols());
     if (cols != b.GetNumCols())
         InvalidArgument("a.GetNumCols() != b.GetNumCols()");
 
@@ -3187,7 +3192,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddColumnReshapeProductOf(const CPUMat
         LogicError("AddColumnReshapeProductOf: Matrix is empty.");
 
     long cols = (long) a.GetNumCols();
-    assert(cols == b.GetNumCols());
     if (cols != b.GetNumCols())
         InvalidArgument("AddColumnReshapeProductOf: a.GetNumCols() != b.GetNumCols()");
 
@@ -3421,9 +3425,11 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
     auto& us = *this;
     const int m = (int) GetNumRows();
     const int n = (int) GetNumCols();
-    assert(topK <= m);
+    if (topK > m)
+        InvalidArgument("VectorMax: TopK must be less or equal than the number of rows");
 
-    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0)
+        LogicError("VectorMax: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
 
     if (isColWise) // col-wise
     {
@@ -3516,7 +3522,9 @@ void CPUMatrix<ElemType>::VectorMin(CPUMatrix<ElemType>& minIndexes, CPUMatrix<E
     const int m = (int) GetNumRows();
     const int n = (int) GetNumCols();
 
-    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0)
+        LogicError("VectorMin: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
+
 
     if (isColWise) // col-wise
     {
@@ -3725,7 +3733,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
                                                                        const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample,
                                                                        const bool zeroPadding)
 {
-    assert(verticalSubsample <= kernelHeight && horizontalSubsample <= kernelWidth);
+    if (verticalSubsample > kernelHeight || horizontalSubsample > kernelWidth)
+        InvalidArgument("Arguments verticalSubsample (or horitzontalSubsample) must be less or equal than kernelHeight (or kernelWidth).");
 
     const size_t packedInputRows = kernelWidth * kernelHeight * inputChannels;
     const size_t packedInputColsPerSample = outputWidth * outputHeight; // output size per channel
@@ -3768,7 +3777,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
                 y1 = (long) (y - y0 * horizontalSubsample);                                                  // first posyInKernel
             }
 
-            assert(x1 >= 0 && x1 < kernelHeight && y1 >= 0 && y1 < kernelWidth);
+            if (x1 < 0 || x1 >= kernelHeight || y1 < 0 || y1 >= kernelWidth)
+                RuntimeError("Incorrect matrix.");
 
             // PACK_ELEM_ROWPOS(channel, posxInKernel, posyInKernel) = (channel * kernelWidth * kernelHeight + posxInKernel + posyInKernel * kernelHeight)
             // PACK_ELEM_COLPOS(sample, wrow, wcol) = (sample*packedInputColsPerSample + outputHeight*wcol + wrow
@@ -3799,7 +3809,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemT
                                                                  const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample,
                                                                  const bool zeroPadding) const
 {
-    assert(verticalSubsample <= kernelHeight && horizontalSubsample <= kernelWidth);
+    if (verticalSubsample > kernelHeight || horizontalSubsample > kernelWidth)
+        InvalidArgument("Arguments verticalSubsample (or horizonSubsample) must be less than or equal to kernelHeight (or kernelWidth).");
 
     const size_t packedInputColsPerSample = outputWidth * outputHeight; // output size per channel
     const size_t inputDim = inputWidth * inputHeight * inputChannels;
@@ -3838,7 +3849,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemT
                 y1 = (long) (y - y0 * horizontalSubsample);                                                  // first posyInKernel
             }
 
-            assert(x1 >= 0 && x1 < kernelHeight && y1 >= 0 && y1 < kernelWidth);
+            if (x1 < 0 || x1 >= kernelHeight || y1 < 0 || y1 >= kernelWidth)
+                RuntimeError("Incorrect matrix.");
+
 
             // PACK_ELEM_ROWPOS(channel, posxInKernel, posyInKernel) = (channel * kernelWidth * kernelHeight + posxInKernel + posyInKernel * kernelHeight)
             // PACK_ELEM_COLPOS(sample, wrow, wcol) = (sample*packedInputColsPerSample + outputHeight*wcol + wrow
@@ -4066,7 +4079,8 @@ void CPUMatrix<ElemType>::ConvolutionForward(const CPUMatrix<ElemType>& kernel, 
         {
             int colBase = mpRowCol(row, 0);
             int ivBase = mpRowIwht(row, 0);
-            assert(0 <= colBase && colBase < GetNumRows());
+            if (colBase < 0 || colBase >= GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
 
             ElemType sum = 0;
             int i0 = mpRowRun(row, 0);
@@ -4078,7 +4092,8 @@ void CPUMatrix<ElemType>::ConvolutionForward(const CPUMatrix<ElemType>& kernel, 
                 if (runs(imask + i, 0) == 0)
                     continue;
                 int dcol = runs(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= GetNumRows())
+                    RuntimeError("Matrix index out of range.");
                 sum += kernel.Data()[ivBase + skip + i] * (*this)(colBase + dcol, sample);
             }
             output(row, sample) = sum;
@@ -4097,7 +4112,8 @@ void CPUMatrix<ElemType>::ConvolutionBackwardData(const CPUMatrix<ElemType>& ker
         {
             int colBase = mpRowCol(row, 0);
             int ivBase = mpRowIwht(row, 0);
-            assert(0 <= colBase && colBase < grad.GetNumRows());
+            if (colBase  < 0 || colBase >= grad.GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
 
             ElemType curGrad = (*this)(row, sample);
 
@@ -4110,7 +4126,8 @@ void CPUMatrix<ElemType>::ConvolutionBackwardData(const CPUMatrix<ElemType>& ker
                 if (runs(imask + i, 0) == 0)
                     continue;
                 int dcol = runs(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= grad.GetNumRows())
+                    RuntimeError("Matrix index out of range.");
                 grad(colBase + dcol, sample) += curGrad * kernel.Data()[ivBase + skip + i];
             }
         }
@@ -4128,7 +4145,8 @@ void CPUMatrix<ElemType>::ConvolutionBackwardKernel(const CPUMatrix<ElemType>& i
         {
             int colBase = mpRowCol(row, 0);
             int ivBase = mpRowIwht(row, 0);
-            assert(0 <= colBase && colBase < in.GetNumRows());
+            if (colBase < 0  || colBase >= in.GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
 
             ElemType curGrad = (*this)(row, sample);
 
@@ -4141,7 +4159,8 @@ void CPUMatrix<ElemType>::ConvolutionBackwardKernel(const CPUMatrix<ElemType>& i
                 if (runs(imask + i, 0) == 0)
                     continue;
                 int dcol = runs(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < in.GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= in.GetNumRows())
+                    RuntimeError("Matrix index out of range.");
                 kernelGrad.Data()[ivBase + skip + i] += curGrad * in(colBase + dcol, sample);
             }
         }
@@ -4160,7 +4179,8 @@ void CPUMatrix<ElemType>::UnrollConvolutionInput(size_t unrollCols, size_t mapOu
         for (size_t row = 0; row < mapOutSize; row++)
         {
             int colBase = mpRowCol(row, 0);
-            assert(0 <= colBase && colBase < GetNumRows());
+            if (colBase < 0 || colBase >= GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
 
             int i0 = mpRowRun(row, 0);
             int skip = runs(i0++, 0);
@@ -4171,7 +4191,8 @@ void CPUMatrix<ElemType>::UnrollConvolutionInput(size_t unrollCols, size_t mapOu
                 if (runs(imask + i, 0) == 0)
                     continue;
                 int dcol = runs(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= GetNumRows())
+                    RuntimeError("Matrix index out of range.");
                 output.Data()[(row * batchSize + sample) * unrollCols + skip + i] = (*this)(colBase + dcol, sample);
             }
         }
@@ -4182,12 +4203,14 @@ template <class ElemType>
 void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const CPUMatrix<int>& mpRowCol,
                                                   const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
-    assert((mpRowCol.GetNumRows() % mapOutCount) == 0);
+    if (mpRowCol.GetNumRows() % mapOutCount != 0)
+        InvalidArgument("The number of rows in mpRowCol must be multiple of mapOutCount.");
     size_t mapOutSize = mpRowCol.GetNumRows() / mapOutCount;
     size_t batchSize = GetNumCols();
 
     size_t kernelSize = runs(1, 0);
-    assert((kernelSize % mapInCount) == 0);
+    if (kernelSize % mapInCount != 0)
+        InvalidArgument("kernelSize must be multiple of mapInCount.");
     size_t kernelMapSize = kernelSize / mapInCount;
 
 #pragma omp parallel for
@@ -4210,8 +4233,8 @@ void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapI
                 size_t idst = ((colBase + dcol) * batchSize + sample) * unrollCols + ((skip + i) % kernelMapSize) * mapOutCount;
                 for (size_t outMap = 0; outMap < mapOutCount; outMap++, isrc += mapOutSize)
                 {
-                    assert(isrc < GetNumElements());
-                    assert(idst + outMap < output.GetNumElements());
+                    if (isrc >= GetNumElements() || idst + outMap >= output.GetNumElements())
+                        RuntimeError("Matrix index out of range.");
 
                     output.Data()[idst + outMap] = (*this)(isrc, sample);
                 }
@@ -4233,7 +4256,8 @@ void CPUMatrix<ElemType>::UnrollConvolutionInputForKernelBackprop(size_t mapOutS
         for (size_t row = 0; row < mapOutSize; row++)
         {
             int colBase = mpRowCol(row, 0);
-            assert(0 <= colBase && colBase < GetNumRows());
+            if (colBase < 0 || colBase >= GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
 
             int i0 = mpRowRun(row, 0);
             int skip = runs(i0++, 0);
@@ -4244,9 +4268,11 @@ void CPUMatrix<ElemType>::UnrollConvolutionInputForKernelBackprop(size_t mapOutS
                 if (runs(imask + i, 0) == 0)
                     continue;
                 int dcol = runs(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= GetNumRows())
+                    RuntimeError("Matrix index out of range.");
                 size_t idst = (skip + i) * unrollCols + row * batchSize + sample;
-                assert(idst < output.GetNumElements());
+                if (idst >= output.GetNumElements())
+                    RuntimeError("Exceed output size.");
                 output.Data()[idst] = (*this)(colBase + dcol, sample);
             }
         }
@@ -4262,18 +4288,21 @@ void CPUMatrix<ElemType>::MaxPoolingForward(const CPUMatrix<int>& mpRowCol, cons
         for (size_t row = 0; row < output.GetNumRows(); row++)
         {
             int colBase = mpRowCol(row, 0);
-            assert(0 <= colBase && colBase < GetNumRows());
+            if (colBase < 0 || colBase >= GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
 
             assert(std::numeric_limits<ElemType>::has_infinity);
             ElemType res = -std::numeric_limits<ElemType>::infinity();
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+            if (size <= 0)
+                InvalidArgument("Invalid size data in indices.");
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= GetNumRows())
+                    RuntimeError("Matrix index out of range.");
                 res = std::max(res, (*this)(colBase + dcol, sample));
             }
             output(row, sample) = res;
@@ -4292,17 +4321,20 @@ void CPUMatrix<ElemType>::MaxPoolingBackward(const CPUMatrix<ElemType>& out, con
         for (size_t row = 0; row < GetNumRows(); row++)
         {
             int colBase = mpRowCol(row, 0);
-            assert(0 <= colBase && colBase < grad.GetNumRows());
+            if (colBase < 0 || colBase >= grad.GetNumRows())
+                InvalidArgument("invalid data in mpRowCol.");
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+            if (size <= 0)
+                InvalidArgument("Invalid size data in indices.");
             ElemType g = (*this)(row, sample);
             ElemType m = out(row, sample);
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= grad.GetNumRows())
+                    RuntimeError("Matrix index out of range.");
                 if (in(colBase + dcol, sample) >= m)
                 {
 #pragma omp atomic 
@@ -4508,11 +4540,13 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
         for (size_t row = 0; row < GetNumRows(); row++)
         {
             int colBase = mpRowCol(row, 0);
-            assert(0 <= colBase && colBase < input.GetNumRows());
+            if (colBase <0 || colBase >= input.GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+            if (size <= 0)
+                InvalidArgument("Invalid size data in indices.");
 
             ElemType curMax = poolInput(colBase + indices(i0, 0), sample);
             ElemType prevMax = curMax;
@@ -4520,7 +4554,8 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
             for (int i = 1; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < poolInput.GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= poolInput.GetNumRows())
+                    RuntimeError("Matrix index for poolInput out of range.");
                 curMax = std::max(curMax, poolInput(colBase + dcol, sample));
                 if (curMax > prevMax)
                 {
@@ -4530,7 +4565,8 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
             }
 
             int dcol = indices(i0 + imax, 0);
-            assert(0 <= colBase + dcol && colBase + dcol < input.GetNumRows());
+            if (colBase + dcol < 0 || colBase + dcol >= input.GetNumRows())
+                RuntimeError("Matrix index for input out of range.");
             input(colBase + dcol, sample) = (*this)(row, sample);
 
             //int i = (int)poolIn(row, sample);
@@ -4551,17 +4587,20 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
         for (size_t row = 0; row < output.GetNumRows(); row++)
         {
             int colBase = mpRowCol(row, 0);
-            assert(0 <= colBase && colBase < GetNumRows());
+            if (colBase <0 || colBase >= GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
 
             ElemType sum = 0;
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+            if (size <= 0)
+                InvalidArgument("Invalid size data in indices.");
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= GetNumRows())
+                    RuntimeError("Matrix index out of range.");
                 sum += (*this)(colBase + dcol, sample);
             }
             // Note that we divide by size which is the number of actual elements (does not include padding).
@@ -4579,16 +4618,20 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
         for (size_t row = 0; row < GetNumRows(); row++)
         {
             int colBase = mpRowCol(row, 0);
-            assert(0 <= colBase && colBase < grad.GetNumRows());
+            if (colBase <0 || colBase >= grad.GetNumRows())
+                InvalidArgument("Invalid data in mpRowCol.");
+
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
-            assert(size > 0);
+            if (size <= 0)
+                InvalidArgument("Invalid size data in indices.");
             ElemType g = (*this)(row, sample) / size;
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);
-                assert(0 <= colBase + dcol && colBase + dcol < grad.GetNumRows());
+                if (colBase + dcol < 0 || colBase + dcol >= grad.GetNumRows())
+                    RuntimeError("Matrix index out of range.");
 #pragma omp atomic 
                 grad(colBase + dcol, sample) += g;
             }
@@ -4601,7 +4644,8 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
                                                     CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance, CPUMatrix<ElemType>& out, double epsilon,
                                                     CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    assert((GetNumRows() % scale.GetNumRows()) == 0);
+    if (GetNumRows() % scale.GetNumRows()!= 0)
+        InvalidArgument("The number of rows of this matrx must be multiple of the number of rows of the scale matrix.");
 
     if (!inferenceOnly || expAvgFactor != 0 || blendFactor != 1)
         RuntimeError("Batch normalization training on CPU is not yet implemented.");
@@ -4700,8 +4744,8 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
         mklTransB = CBLAS_TRANSPOSE::CblasNoTrans;
     }
 
-    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
-    assert(k == l);
+    if (m <= 0 || k <= 0 || l <= 0 || n <= 0)
+        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
     if (k != l)
         InvalidArgument("CPUMatrix<ElemType>::MultiplyAndWeightedAdd : The inner dimensions of a and b must match.");
 
@@ -4738,7 +4782,8 @@ template <class ElemType>
 void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b,
                                                     ElemType beta, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumElements() == 1); // a is a scalar
+    if (a.GetNumElements() != 1)
+        InvalidArgument("the argument a must be a scalar"); // a is a scalar
 
     ElemType f = alpha * a.Get00Element();
     if (beta == 0) // don't even read the memory if beta is 0
@@ -4893,9 +4938,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<El
                             c(dim, sample) -= a(dim, instance_id) * tmp(sample_id, instance_id);
                 }
     }
-    else
+    else if (inputIndex == 3)
     {
-        assert(inputIndex == 3);
         // Assume only one block in k direction.
         // We don't need to explicitly block in the j direction.
         for (int instance_id = 0; instance_id < batch_size; instance_id++)
@@ -4905,6 +4949,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<El
                 c(0, sample) -= tmp(sample_id, instance_id);
             }
     }
+    else 
+        InvalidArgument("The argument inputIndex must be 1 or 2 or 3.");
     return *this;
 }
 
@@ -4989,8 +5035,8 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         const int incx = 1;
         const int incy = 1;
 
-        assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
-        assert((int) c.GetNumRows() == m && (int) c.GetNumCols() == n);
+        if (m <= 0 || n <= 0 || len <= 0)
+            LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
         if ((int) c.GetNumRows() != m || (int) c.GetNumCols() != n)
             InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
 
@@ -5029,7 +5075,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     else if (a.GetNumCols() == 1) // col vector, add it to all columns
     {
         int m = (int) c.GetNumRows();
-        assert(m == (int) a.GetNumRows());
         if (m != (int) a.GetNumRows())
             InvalidArgument("To add column vector, rows should match.");
 
@@ -5057,7 +5102,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     {
         int m = (int) c.GetNumRows();
         int n = (int) c.GetNumCols();
-        assert(n == (int) a.GetNumCols());
         if (n != (int) a.GetNumCols())
             InvalidArgument("To add row vector, cols should match.");
 
@@ -5091,9 +5135,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 template <class ElemType>
 void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
-           a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols());
-
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
           a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols()))
     {
@@ -5132,11 +5173,9 @@ void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMat
 template <class ElemType>
 void CPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
     {
-        InvalidArgument("AssignScaledDifference:  a, b must have same dimension.");
+        InvalidArgument("AssignScaledDifference: a, b must have same dimension.");
     }
 
     if (a.IsEmpty())
@@ -5212,8 +5251,7 @@ void CPUMatrix<ElemType>::AssignElementToElement(const CPUMatrix<ElemType>& a, c
 template <class ElemType>
 void CPUMatrix<ElemType>::AddScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(alpha.GetNumElements() == 1);
-    if (!(alpha.GetNumElements() == 1))
+    if (alpha.GetNumElements() != 1)
         InvalidArgument("AddScaledDifference:  alpha must be a 1X1 matrix.");
 
     AddScaledDifference(alpha(0, 0), a, b, c);
@@ -5228,8 +5266,7 @@ void CPUMatrix<ElemType>::AddScaledDifference(const CPUMatrix<ElemType>& alpha, 
 template <class ElemType>
 void CPUMatrix<ElemType>::AssignScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(alpha.GetNumElements() == 1);
-    if (!(alpha.GetNumElements() == 1))
+    if (alpha.GetNumElements() != 1)
         InvalidArgument("AddScaledDifference:  alpha must be a 1X1 matrix.");
 
     AssignScaledDifference(alpha(0, 0), a, b, c);
@@ -5247,7 +5284,8 @@ template <class ElemType>
     const int m = (int) a.GetNumRows();
     const int n = (int) a.GetNumCols();
 
-    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0)
+        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
     c.RequireSize(m, n);
 
     ElemType* aBufPtr = a.Data();
@@ -5290,7 +5328,8 @@ template <class ElemType>
     const int len = m * n;
     const int incx = 1;
 
-    assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0 || len <= 0)
+        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
 
     if (alpha == 0 && incx == 1)
     {
@@ -5331,8 +5370,8 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     const int k = (int) b.GetNumRows();
     const int l = (int) b.GetNumCols();
 
-    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0 || k <= 0 || l <= 0)
+        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5402,8 +5441,8 @@ ElemType CPUMatrix<ElemType>::InnerProductOfMatrices(const CPUMatrix<ElemType>& 
     const int k = (int) b.GetNumRows();
     const int l = (int) b.GetNumCols();
 
-    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0 || k <= 0 || l <= 0)
+        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProductOfMatrices: Matrices a and b should have same dimension.");
 
@@ -5490,9 +5529,11 @@ void CPUMatrix<ElemType>::TensorShuffleScaleAndAdd(ElemType keepWeight, const CP
         size_t k = (na / D / S / M) % K;
         size_t t = (na / D / S / M / K) % T;
         // compute index for the a and b/c tensors
-        assert(na == (((t * K + k) * M + m) * S + s) * D + d); // input tensor of dimension (D x S x M x K x T)
+        if (na != (((t * K + k) * M + m) * S + s) * D + d)
+            RuntimeError("Tensor dimension does not match."); // input tensor of dimension (D x S x M x K x T)
         size_t nb = (((t * S + s) * M + m) * K + k) * D + d;   // output tensor of dimension (D x K x M x S x T): k/K and s/S swapped
-        assert(nb < N);
+        if (nb >= N)
+            RuntimeError("Exceed the dimension size.");
         // perform the computation
         ElemType cval = keepWeight ? keepWeight * pb[nb] : 0; // if weight is 0 then don't bother to read memory (efficiency) or to multiply (NaN-safe)
         cval += scaleFactor * pa[na];
@@ -5579,7 +5620,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
 
@@ -5622,8 +5662,8 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
     const int k = (int) b.GetNumRows();
     const int l = (int) b.GetNumCols();
 
-    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0 || k <= 0 || l <= 0)
+        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5707,7 +5747,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::GetARowByIndex(const CPUMatrix<ElemTyp
     if (index < 0 || index >= m)
         LogicError("GetARowByIndex:  the row index is out of range.");
 
-    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0)
+        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
 
     auto& us = *this;
     RequireSize(1, n);
@@ -5763,8 +5804,8 @@ void CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const CPUMatrix<Ele
     const int k = (int) b.GetNumRows();
     const int l = (int) b.GetNumCols();
 
-    assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == 1 && n == l);                 // converting from size_t to int may cause overflow
+    if (m <= 0 || n <= 0 || k <= 0 || l <= 0)
+        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
     if (m != 1 || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5803,8 +5844,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
 
     if (a.GetNumRows() != 1)
