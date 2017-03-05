@@ -15,10 +15,8 @@ notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","De
 # setting a large timeout in case we need to download the Fast-RCNN pretrained model
 notebook_timeoutSeconds = 1200
 
-# Skipping test for python 2.7 since Fast-RCNN implementation does not support 2.7 at the moment
-@pytest.mark.skipif(sys.version_info < (3,4),
-                    reason="requires python 3.4")
-@pytest.mark.skipif(sys.version_info > (3,4),
+# Skipping test for python 2.7,3.5 since Fast-RCNN implementation does not support 2.7 at the moment
+@pytest.mark.skipif(sys.version_info != (3,4),
                     reason="requires python 3.4")
 @pytest.mark.skipif(sys.platform == 'win32',
                     reason="does not currently run on windows")
@@ -28,10 +26,8 @@ def test_cntk_fastrcnn_eval_noErrors(nb):
 
     assert errors == []
 
-# Skipping test for python 2.7 since Fast-RCNN implementation does not support 2.7 at the moment
-@pytest.mark.skipif(sys.version_info < (3,4),
-                    reason="requires python 3.4")
-@pytest.mark.skipif(sys.version_info > (3,4),
+# Skipping test for python 2.7,3.5 since Fast-RCNN implementation does not support 2.7 at the moment
+@pytest.mark.skipif(sys.version_info != (3,4),
                     reason="requires python 3.4")
 @pytest.mark.skipif(sys.platform == 'win32',
                     reason="does not currently run on windows")
