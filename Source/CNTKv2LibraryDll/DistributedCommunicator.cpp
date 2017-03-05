@@ -13,6 +13,7 @@
 #include "CUDAPageLockedMemAllocator.h"
 #include "MatrixQuantizerImpl.h"
 #include "GPUDataTransferer.h"
+#include "Utils.h"
 #include <numeric>
 #include "Utils.h"
 
@@ -90,6 +91,7 @@ namespace CNTK
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
     {
         assert(CPUDEVICE < 0); // just in case somebody decides to change CPUDEVICE macro.
+
         DeviceDescriptor lastGpuDevice = DeviceDescriptor::CPUDevice();
         m_gpuDataTransferers.resize(values.size());
         m_intermediateCPUBuffers.resize(values.size());
@@ -354,11 +356,14 @@ namespace CNTK
             mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
         }
 
+        // BUGBUG: assuming the all values on the same device
+        NcclComm m_nccl(AsCNTKImplDeviceId(inputValues[0]->Device()), m_mpi);
+
         // for all values residing on GPU initiate async transfer to CPU buffers.
         for (auto i = 0; i < numValues; ++i)
         {
             auto view = valuesToAggregate[i];
-            if (view->Device() != DeviceDescriptor::CPUDevice())
+            if (!m_nccl.IsSupported() && view->Device() != DeviceDescriptor::CPUDevice())
             {
                 auto& transferer = m_gpuDataTransferers[i];
                 auto& buffer = m_intermediateCPUBuffers[i];
@@ -366,12 +371,12 @@ namespace CNTK
             }
         }
 
-        std::vector<MPI_Request> allReduceRequests(numValues);
+        std::vector<MPI_Request> allReduceRequests;
         for (auto i = 0; i < numValues; ++i)
         {
             auto inputValue = valuesToAggregate[i];
 
-            if (inputValue->Device() != DeviceDescriptor::CPUDevice())
+            if (!m_nccl.IsSupported() && inputValue->Device() != DeviceDescriptor::CPUDevice())
             {
                 // TODO: actually, we can start reducing all cpu values first, and then wait for the gpu->cpu transfer to finish.
                 m_gpuDataTransferers[i]->WaitForCopyGPUToCPUAsync();
@@ -386,31 +391,49 @@ namespace CNTK
             assert(dataType == outputValue->GetDataType());
             assert(inputValue->Device() == outputValue->Device());
 
-            void* inputData = (inputValue->Device() != DeviceDescriptor::CPUDevice()) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(inputValue);
-            void* outputData = (inputValue->Device() != DeviceDescriptor::CPUDevice()) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(outputValue);
+            if (!m_nccl.IsSupported() || inputValue->Device() == DeviceDescriptor::CPUDevice())
+            {
+                void* inputData = (inputValue->Device() != DeviceDescriptor::CPUDevice()) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(inputValue);
+                void* outputData = (inputValue->Device() != DeviceDescriptor::CPUDevice()) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(outputValue);
 
-            if (dataType == DataType::Float)
-            {
-                if (inputData == outputData)
-                    m_mpi->AllReduceAsync(static_cast<float*>(outputData), numElements, &allReduceRequests[i]);
+                allReduceRequests.push_back(MPI_Request());
+                if (dataType == DataType::Float)
+                {
+                    if (inputData == outputData)
+                        m_mpi->AllReduceAsync(static_cast<float*>(outputData), numElements, &allReduceRequests.back());
+                    else
+                        m_mpi->AllReduceAsync(static_cast<float*>(inputData), static_cast<float*>(outputData), numElements, &allReduceRequests.back());
+                }
+                else if (dataType == DataType::Double)
+                {
+                    if (inputData == outputData)
+                        m_mpi->AllReduceAsync(static_cast<double*>(outputData), numElements, &allReduceRequests.back());
+                    else
+                        m_mpi->AllReduceAsync(static_cast<double*>(inputData), static_cast<double*>(outputData), numElements, &allReduceRequests.back());
+                }
                 else
-                    m_mpi->AllReduceAsync(static_cast<float*>(inputData), static_cast<float*>(outputData), numElements, &allReduceRequests[i]);
-            }
-            else if (dataType == DataType::Double)
-            {
-                if (inputData == outputData)
-                    m_mpi->AllReduceAsync(static_cast<double*>(outputData), numElements, &allReduceRequests[i]);
-                else
-                    m_mpi->AllReduceAsync(static_cast<double*>(inputData), static_cast<double*>(outputData), numElements, &allReduceRequests[i]);
+                    LogicError("MPICommunicator: Unknown DataType.");
             }
             else
-                LogicError("MPICommunicator: Unknown DataType.");
+            {
+                if (dataType == DataType::Float)
+                    m_nccl.AllReduce(static_cast<float*>(GetDataBuffer(inputValue)), static_cast<float*>(GetDataBuffer(outputValue)), numElements);
+                else if (dataType == DataType::Double)
+                    m_nccl.AllReduce(static_cast<double*>(GetDataBuffer(inputValue)), static_cast<double*>(GetDataBuffer(outputValue)), numElements);
+                else
+                    LogicError("DistributedCommunicator: Unknown DataType.");
+            }
+        }
+
+        if (m_nccl.IsSupported())
+        {
+            m_nccl.Sync();
         }
 
         // wait for async all reduce to complete. As soon as one of the requests is finished,
         // check if corresponding value is gpu bound and, if it is the case, initiate a cpu-to-gpu transfer.
         size_t numAllReduceRequestsCompleted = 0;
-        while (numAllReduceRequestsCompleted < numValues)
+        while (numAllReduceRequestsCompleted < allReduceRequests.size())
         {
             int idx = MPI_UNDEFINED;
             m_mpi->WaitAny(allReduceRequests.data(), (int)allReduceRequests.size(), &idx);
@@ -520,5 +543,4 @@ namespace CNTK
             }
         }
     }
-
 }

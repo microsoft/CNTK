@@ -7,6 +7,7 @@
 
 #include "CNTKLibrary.h"
 #include "Constants.h"
+#include "NcclComm.h"
 #include <MatrixQuantizerImpl.h>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
