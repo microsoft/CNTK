@@ -72,6 +72,8 @@ Train = [
         gradUpdateType = "None"
         L2RegWeight = 0.0001
         numMBsToShowResult = 100
+
+        disableRegInBatchNormalization = true
         
         autoAdjust = [
             autoAdjustLR = "adjustAfterEpoch"
