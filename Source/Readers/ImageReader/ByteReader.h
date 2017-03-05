@@ -150,8 +150,6 @@ private:
     float m_relative_scale;
     float m_relative_trans;
 
-    int dump_index;
-
     using ZipPtr = zip_t*;
     ZipPtr OpenZip();
 

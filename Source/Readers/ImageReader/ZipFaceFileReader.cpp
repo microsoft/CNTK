@@ -27,8 +27,6 @@ ZipFaceFileReader::ZipFaceFileReader(const std::string& zipPath) :
 {
     assert(!m_zipPath.empty());
 
-    dump_index = 0;
-
     if (isCVReader)
     {
         m_relative_scale = 0;
@@ -238,8 +236,6 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
             RuntimeError("Bytes read %lu != expected %lu while reading file %s",
                          (long)bytesRead, (long)size, path.c_str());
         }
-
-        dump_index++;
     }
 
     float landmarks[LANDMARK_POINTS_NUMBER * 2];
@@ -256,10 +252,6 @@ cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool gray
     cv::Mat inImg;
     cv::imdecode(imageContents, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR).convertTo(inImg, CV_32FC(3));;
     assert(nullptr != inImg.data);
-
-    char dump_name[100];
-    sprintf(dump_name, "dump_%d.png", dump_index);
-    cv::imwrite(dump_name, inImg);
 
     auto outImg = cv::Mat(m_batch_img_height, m_batch_img_width, CV_32FC(3));
     CropAndScaleFaceImage(inImg, inImg.cols, inImg.rows, inImg.channels(), landmarks, LANDMARK_POINTS_NUMBER, outImg);
