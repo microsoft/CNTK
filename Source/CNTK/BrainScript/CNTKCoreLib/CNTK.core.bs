@@ -129,13 +129,13 @@ ConvolutionTransposeLayer {numOutputChannels,
 _PoolingLayer {poolKind,            # "max" or "average"
                filterShape,         # e.g. (3:3)
                stride = 1, pad = false,
-               lowerPad = 0, upperPad = 0, ceilOutDim = false} = # TODO: support this
+               lowerPad = 0, upperPad = 0, ceilOutDim = false, includePad = false} = # TODO: support this
 {
     apply (x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, ceilOutDim = ceilOutDim, includePad = includePad)
 }.apply
 MaxPoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0, ceilOutDim = false} =
     _PoolingLayer {"max", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad, ceilOutDim = ceilOutDim, includePad = false}
-AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0, ceilOutDim = false} =
+AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0, ceilOutDim = false, includePad = false} =
     _PoolingLayer {"average", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad, ceilOutDim = ceilOutDim, includePad = includePad}
 
 MaxUnpoolingLayer {filterShape,     # e.g. (3:3)
