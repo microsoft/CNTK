@@ -1218,7 +1218,7 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
     }
 
     if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
-        InvalidArgument("The matrix gradients does not have expected dimensions.");
+        LogicError("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
     ElemType* grad = gradients.Data();
@@ -1267,7 +1267,7 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
     }
 
     if (GetNumRows() != gradients.GetNumRows()  || GetNumCols() != numColsNeeded)
-        InvalidArgument("The matrix gradients does not have expected dimensions.");
+        LogicError("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
     ElemType* grad = gradients.Data();
@@ -1325,7 +1325,7 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     ElemType* steps = Data() + 2 * n; // current step size
 
     if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols() * 3)
-        InvalidArgument("The matrix gradients does not have expected dimensions.");
+        LogicError("The matrix gradients does not have expected dimensions.");
 
     ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
     // int upd[] = {
@@ -3730,7 +3730,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
                                                                        const bool zeroPadding)
 {
     if (verticalSubsample > kernelHeight || horizontalSubsample > kernelWidth)
-        InvalidArgument("Arguments verticalSubsample (or horitzontalSubsample) must be less or equal than kernelHeight (or kernelWidth).");
+        LogicError("Arguments verticalSubsample (or horitzontalSubsample) must be less or equal than kernelHeight (or kernelWidth).");
 
     const size_t packedInputRows = kernelWidth * kernelHeight * inputChannels;
     const size_t packedInputColsPerSample = outputWidth * outputHeight; // output size per channel
@@ -3805,7 +3805,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemT
                                                                  const bool zeroPadding) const
 {
     if (verticalSubsample > kernelHeight || horizontalSubsample > kernelWidth)
-        InvalidArgument("Arguments verticalSubsample (or horizonSubsample) must be less than or equal to kernelHeight (or kernelWidth).");
+        LogicError("Arguments verticalSubsample (or horizonSubsample) must be less than or equal to kernelHeight (or kernelWidth).");
 
     const size_t packedInputColsPerSample = outputWidth * outputHeight; // output size per channel
     const size_t inputDim = inputWidth * inputHeight * inputChannels;
