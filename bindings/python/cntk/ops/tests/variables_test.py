@@ -9,7 +9,7 @@ Unit tests for Variable and its descendents.
 """
 
 from ..variables import *
-from .. import times, placeholder_variable, constant, plus, input_variable
+from .. import times, placeholder_variable, constant, plus, input_variable, alias
 import numpy as np
 
 import pytest
@@ -103,3 +103,21 @@ def test_convert_to_variable_dtype():
     assert result==[[[2]]]
     assert result.dtype == np.float32
 
+def test_getitem():
+    x = input_variable(5)
+    y = x+0
+    f = y[3]
+    r = f.eval([np.array([[1, 2, 3, 4, 5]])])
+    assert np.allclose(r, [[[4]]])
+    f = y[2:4:1]
+    r = f.eval([np.array([[1, 2, 3, 4, 5]])])
+    assert np.allclose(r, [[[3,4]]])
+    f = y[2::]
+    r = f.eval([np.array([[1, 2, 3, 4, 5]])])
+    assert np.allclose(r, [[[3,4,5]]])
+    f = y[:3]
+    r = f.eval([np.array([[1, 2, 3, 4, 5]])])
+    assert np.allclose(r, [[[1,2,3]]])
+    with pytest.raises(ValueError):
+        f = y[1:4:2]
+        r = f.eval([np.array([[1, 2, 3, 4, 5]])])

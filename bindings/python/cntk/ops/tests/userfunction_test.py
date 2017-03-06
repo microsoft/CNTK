@@ -151,8 +151,8 @@ def test_ext_train():
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, (z+0, z+0), \
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                True)])
+                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+                      True)])
 
     i = 0
     while i<100:
@@ -208,8 +208,7 @@ def test_ext_backpropstate(payload):
     z = m+p
 
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, (z+0, z+0), \
-            [sgd(z.parameters, lr_per_sample)])
+    trainer = Trainer(None, (z), [sgd(z.parameters, lr_per_sample)])
 
     for i in range(100):
         input_data = np.random.rand(dim)
@@ -261,8 +260,8 @@ def test_ext_lambdafunc():
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, (z+0, z+0), \
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                True)])
+                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+                      True)])
 
     i = 0
     input_data = 0.1 * np.ones(dim)

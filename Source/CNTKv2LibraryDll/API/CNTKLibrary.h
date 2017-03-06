@@ -2878,7 +2878,7 @@ namespace CNTK
         FunctionPtr FindByName(const std::wstring& name, bool nestedSearchInsideBlockFunction = false)
         {
             FunctionPtr  foundFunction = nullptr;
-            PreorderTraverseFunctions(RootFunction(), [&foundFunction, &name](const FunctionPtr& function) {
+            PreorderTraverseFunctions(RootFunction(), [&foundFunction, &name, this](const FunctionPtr& function) {
                 if (name.compare(function->Name()) == 0)
                 {
                     if (foundFunction != nullptr)
@@ -3000,7 +3000,7 @@ namespace CNTK
                                                      std::unordered_set<Variable>& replacedPlaceholders);
 
     protected:
-        static bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate);
+        /*static*/ bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate) const;
 
         // Returns a outputs without ref-counting the owner.
         CNTK_API std::vector<Variable>& RawOutputs() const;
@@ -3052,6 +3052,50 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
+        ///
+        /// Helpers to inject the node name into error messages. For now Windows only.
+        ///
+#ifdef _MSC_VER
+    private:
+        std::wstring DiagnosticsName() const
+        {
+            std::wstring name = Name();
+            if (name.empty())
+                name = Uid();
+            if (name.empty() && m_rootFunction)
+                name = m_rootFunction->DiagnosticsName();
+            return OpName() + L" " + name;
+        }
+    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
+        template <class... _Types>
+        __declspec_noreturn inline void RuntimeError(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::runtime_error>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
+        template <class... _Types>
+        __declspec_noreturn inline void LogicError(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::logic_error>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
+        template <class... _Types>
+        __declspec_noreturn inline void InvalidArgument(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::invalid_argument>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
+#else   // for gcc, LogicError etc. are just #defines that map to ThrowFormatted, so replicate this here
+    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
+        template<class E, typename... Args>
+        inline __declspec_noreturn void ThrowFormatted(Args&&... args) const
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security" // gcc has problems with checking of printf format strings through variadic templates
+            ::CNTK::ThrowFormatted<E>(std::forward<Args>(args)...);
+#pragma GCC diagnostic pop
+        }
+#endif
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
@@ -3153,6 +3197,7 @@ namespace CNTK
 
     ///
     /// Create an instance of the CNTK built-in softmax operation on specified tensor input operand
+    /// TODO: this Softmax() needs to support specifying the axis
     ///
     CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
 
@@ -3558,7 +3603,7 @@ namespace CNTK
                                             const Variable& bias,
                                             const Variable& runningMean,
                                             const Variable& runningInvStd,
-                                            const Variable& runningSampleCount,
+                                            const Variable& runningCount,
                                             bool spatial,
                                             double normalizationTimeConstant = 0,
                                             double blendTimeConstant = 0,
@@ -3578,7 +3623,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise choice operation using a condition tensor for specified tensor operands.
     ///
-    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& thenOperand, const Variable& elseOperand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in splice operation to splice together all the specified tensor operands into a single output tensor

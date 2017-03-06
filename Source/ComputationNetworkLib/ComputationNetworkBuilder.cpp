@@ -217,6 +217,7 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
     return net.AddNodeToNetWithElemType(New<LearnableParameter<ElemType>>(net.GetDeviceId(), paramName, rows, cols));
 }
 
+// this is used in V2
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreateLearnableParameter(const std::wstring& paramName, const TensorShape& tensorShape)
 {
@@ -895,12 +896,12 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Looku
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::BatchNormalization(const ComputationNodePtr input,
                                                                                               const ComputationNodePtr scale, const ComputationNodePtr bias,
-                                                                                              const ComputationNodePtr runMean, const ComputationNodePtr runVariance, const ComputationNodePtr runSampleCount,
+                                                                                              const ComputationNodePtr runMean, const ComputationNodePtr runVariance, const ComputationNodePtr runCount,
                                                                                               bool spatial, double normalizationTimeConstant, double blendTimeConstant, double epsilon, bool useCntkEngine,
                                                                                               ImageLayoutKind imageLayoutKind,
                                                                                               const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runVariance, runSampleCount });
+    return net.AddNodeToNetAndAttachInputs(New<BatchNormalizationNode<ElemType>>(net.GetDeviceId(), nodeName, spatial, normalizationTimeConstant, blendTimeConstant, epsilon, useCntkEngine, imageLayoutKind), { input, scale, bias, runMean, runVariance, runCount });
 }
 
 template class ComputationNetworkBuilder<float>;

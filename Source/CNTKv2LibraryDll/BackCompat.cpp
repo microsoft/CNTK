@@ -475,7 +475,7 @@ namespace CNTK
                 {
                     auto precomputeNode = node->As<MeanInvStdDevNodeBase<ElementType>>();
                     if (!precomputeNode->HasComputed())
-                        InvalidArgument("Loading a CNTK legacy V1 model containing a Mean/InvStdDev precompute node, whose computation is unfinished, is not supported!");
+                        InvalidArgument("Loading a CNTK legacy V1 model containing a Mean/InvStdDev precompute node whose computation is unfinished is not supported!");
 
                     return CreateParameterOrConstantFromNodeValue<ElementType>(node, /* isConstant =*/ true);
                 }

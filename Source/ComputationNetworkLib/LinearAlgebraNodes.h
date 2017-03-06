@@ -224,9 +224,9 @@ public:
     static void BackpropToImpl(classType& c, const size_t inputIndex, const FrameRange& fr, bool allowBroadcast)
     {
         size_t rank = c.DetermineElementwiseTensorRank();
-        auto gradient        =                     c.GradientTensorFor(rank, fr);
-        auto inputGradient   =     c.Input(inputIndex)->GradientTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
-        auto otherInputValue = c.Input(1 - inputIndex)->ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        auto gradient        =                        c.GradientTensorFor(rank, fr);
+        auto inputGradient   = c.Input(    inputIndex)->GradientTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        auto otherInputValue = c.Input(1 - inputIndex)->ValueTensorFor   (rank, allowBroadcast ? fr.AllowBroadcast() : fr);
 
         // if reduction then mask the respective input(s) (zero out the gaps)
         if (c.Input(inputIndex)->ReducesInTimeWrt(c.shared_from_this()))
@@ -533,6 +533,7 @@ public:
                         Matrix<ElemType>::InnerProduct(input0, input1, value, true/*isColWise*/);
                     else
                         Matrix<ElemType>::InnerProduct(input1, input0, value, true/*isColWise*/);
+                    // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
                 }
                 else
                 {
@@ -596,6 +597,8 @@ public:
                         (ElemType)1.0, inputValue, false, gradientDiagonal, true,
                         Input(inputIndex)->ParentOverwritesGradient() ? (ElemType)0.0 : (ElemType)1.0,
                         inputGradient);
+                    // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
+                    // Note: We do not need to mask gaps here, since this code branch operates sample by sample (no reduction over samples).
                 }
                 else
                 {

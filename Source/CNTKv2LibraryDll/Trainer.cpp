@@ -464,6 +464,7 @@ namespace CNTK
 
     double Trainer::PreviousMinibatchLossAverage() const
     {
+        // TODO: better return 0; it is then still valid to compute lossAverage * numSamples
         if (m_prevMinibatchNumSamples == 0)
             RuntimeError("There was no preceeding call to TrainMinibatch or the minibatch was empty.");
 
