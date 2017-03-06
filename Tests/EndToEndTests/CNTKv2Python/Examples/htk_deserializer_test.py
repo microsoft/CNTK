@@ -1,13 +1,11 @@
 import cntk as C
-import numpy as np
 from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
-from cntk.blocks import LSTM, Placeholder, Input
-from cntk.layers import Recurrence, Dense, BatchNormalization
-from cntk.models import Sequential, For
+from cntk.layers import Recurrence, Dense, LSTM, Sequential, For
 
-import os, sys
+import os
 abs_path = os.path.dirname(os.path.abspath(__file__))
 data_path = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Speech", "AN4", "Data")
+
 
 def test_htk_deserializers():
     mbsize = 640
@@ -46,16 +44,15 @@ def test_htk_deserializers():
                     momentum=C.momentum_as_time_constant_schedule(1000),
                     low_memory=True,
                     gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
-    trainer = C.Trainer(z, (ce, errs), learner)
+    progress_printer = C.ProgressPrinter(freq=0)
+    trainer = C.Trainer(z, (ce, errs), learner, progress_printer)
 
     input_map={ features: reader.streams.amazing_features, labels: reader.streams.awesome_labels }
 
-    pp = C.ProgressPrinter(freq=0)
     # just run and verify it doesn't crash
     for i in range(3):
         mb_data = reader.next_minibatch(mbsize, input_map=input_map)
         trainer.train_minibatch(mb_data)
-        pp.update_with_trainer(trainer, with_metric=True)
     assert True
     os.chdir(abs_path)
 

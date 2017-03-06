@@ -467,13 +467,13 @@ Here are the ones that don't share memory:
 02/22/2017 21:20:37: Starting Epoch 1: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/22/2017 21:20:37: Starting minibatch loop.
-02/22/2017 21:20:38: Finished Epoch[ 1 of 10]: [Training] cr = 4.15554279 * 368; Err = 2.48529418 * 368; totalSamplesSeen = 368; learningRatePerSample = 0.0049999999; epochTime=0.926568s
+02/22/2017 21:20:38: Finished Epoch[ 1 of 10]: [Training] cr = 4.16293534 * 368; Err = 2.52941181 * 368; totalSamplesSeen = 368; learningRatePerSample = 0.0049999999; epochTime=0.926568s
 02/22/2017 21:20:38: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.1'
 
 02/22/2017 21:20:38: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/22/2017 21:20:38: Starting minibatch loop.
-02/22/2017 21:20:40: Finished Epoch[ 2 of 10]: [Training] cr = 3.68123707 * 438; Err = 1.00000000 * 438; totalSamplesSeen = 806; learningRatePerSample = 0.0049999999; epochTime=1.07618s
+02/22/2017 21:20:40: Finished Epoch[ 2 of 10]: [Training] cr = 3.68804096 * 438; Err = 1.00000000 * 438; totalSamplesSeen = 806; learningRatePerSample = 0.0049999999; epochTime=1.07618s
 02/22/2017 21:20:40: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.2'
 
 02/22/2017 21:20:40: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
@@ -485,25 +485,25 @@ Here are the ones that don't share memory:
 02/22/2017 21:20:40: Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/22/2017 21:20:40: Starting minibatch loop.
-02/22/2017 21:20:41: Finished Epoch[ 4 of 10]: [Training] cr = 2.09131158 * 368; Err = 1.00000000 * 368; totalSamplesSeen = 1174; learningRatePerSample = 0.0049999999; epochTime=0.749923s
+02/22/2017 21:20:41: Finished Epoch[ 4 of 10]: [Training] cr = 2.14839720 * 368; Err = 1.00000000 * 368; totalSamplesSeen = 1174; learningRatePerSample = 0.0049999999; epochTime=0.749923s
 02/22/2017 21:20:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.4'
 
 02/22/2017 21:20:41: Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/22/2017 21:20:41: Starting minibatch loop.
-02/22/2017 21:20:41: Finished Epoch[ 5 of 10]: [Training] cr = 464.94304435 * 248; Err = 1.00000000 * 248; totalSamplesSeen = 1422; learningRatePerSample = 0.0049999999; epochTime=0.369816s
+02/22/2017 21:20:41: Finished Epoch[ 5 of 10]: [Training] cr = 383.36570691 * 248; Err = 1.00000000 * 248; totalSamplesSeen = 1422; learningRatePerSample = 0.0049999999; epochTime=0.369816s
 02/22/2017 21:20:43: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.5'
 
 02/22/2017 21:20:43: Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/22/2017 21:20:43: Starting minibatch loop.
-02/22/2017 21:20:43: Finished Epoch[ 6 of 10]: [Training] cr = 1.84468571 * 248; Err = 1.00000000 * 248; totalSamplesSeen = 1670; learningRatePerSample = 0.0049999999; epochTime=0.626039s
+02/22/2017 21:20:43: Finished Epoch[ 6 of 10]: [Training] cr = 1.82054569 * 248; Err = 1.00000000 * 248; totalSamplesSeen = 1670; learningRatePerSample = 0.0049999999; epochTime=0.626039s
 02/22/2017 21:20:43: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.6'
 
 02/22/2017 21:20:44: Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/22/2017 21:20:44: Starting minibatch loop.
-02/22/2017 21:20:44: Finished Epoch[ 7 of 10]: [Training] cr = 1.71730425 * 358; Err = 1.00000000 * 358; totalSamplesSeen = 2028; learningRatePerSample = 0.0049999999; epochTime=0.607594s
+02/22/2017 21:20:44: Finished Epoch[ 7 of 10]: [Training] cr = 1.70413839 * 358; Err = 1.00000000 * 358; totalSamplesSeen = 2028; learningRatePerSample = 0.0049999999; epochTime=0.607594s
 02/22/2017 21:20:44: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.7'
 
 02/22/2017 21:20:44: Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
@@ -515,13 +515,13 @@ Here are the ones that don't share memory:
 02/22/2017 21:20:45: Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/22/2017 21:20:45: Starting minibatch loop.
-02/22/2017 21:20:46: Finished Epoch[ 9 of 10]: [Training] cr = 1.20227734 * 308; Err = 1.00000000 * 308; totalSamplesSeen = 2336; learningRatePerSample = 0.0049999999; epochTime=0.754015s
+02/22/2017 21:20:46: Finished Epoch[ 9 of 10]: [Training] cr = 1.19612221 * 308; Err = 1.00000000 * 308; totalSamplesSeen = 2336; learningRatePerSample = 0.0049999999; epochTime=0.754015s
 02/22/2017 21:20:46: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.9'
 
 02/22/2017 21:20:46: Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
 
 02/22/2017 21:20:46: Starting minibatch loop.
-02/22/2017 21:20:47: Finished Epoch[10 of 10]: [Training] cr = 1.33477251 * 608; Err = 1.00000000 * 608; totalSamplesSeen = 2944; learningRatePerSample = 0.0049999999; epochTime=1.0302s
+02/22/2017 21:20:47: Finished Epoch[10 of 10]: [Training] cr = 1.33511985 * 608; Err = 1.00000000 * 608; totalSamplesSeen = 2944; learningRatePerSample = 0.0049999999; epochTime=1.0302s
 02/22/2017 21:20:47: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn'
 
 02/22/2017 21:20:48: Action "train" complete.

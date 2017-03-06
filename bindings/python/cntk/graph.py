@@ -7,28 +7,42 @@
 import os
 from . import Variable
 
-def depth_first_search(node, visitor):
+
+def depth_first_search(root, visitor):
     '''
-    Generic function that walks through the graph starting at ``node`` and
+    Generic function that walks through the graph starting at ``root`` and
     uses function ``visitor`` on each node to check whether it should be
     returned.
 
     Args:
-        node (graph node): the node to start the journey from
+        root (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the root to start the journey from
         visitor (Python function or lambda): function that takes a node as
          argument and returns ``True`` if that node should be returned.
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
-    stack = [node.root_function]
-    accum = []
-    visited = set()
+    stack = [root.root_function] # node
+    accum = []         # final result (list of all unique nodes)
+    visited = set()    # [node.uid]
 
     while stack:
         node = stack.pop(0)
-        if node in visited:
+        if node.uid in visited:
             continue
-
+        from cntk import cntk_py
+        if isinstance(node, cntk_py.Function) and node.is_block:
+            composite = node.block_root
+            # BlockFunction node
+            mapping = node.block_arguments_mapping
+            # redirect the composite's inputs to the true inputs
+            stack.extend([actual_input for _, actual_input in mapping]) # traverse into actual composite inputs
+            visited |= {comp_input.uid for comp_input, _ in mapping}    # don't traverse into the mapped-away inputs
+            stack.append(composite)
+            visited.add(node.uid)
+            if visitor(node):
+                accum.append(node)
+            continue
+            # BlockFunctions are short-circuited, and not added to accum[]
         try:
             # Function node
             stack = list(node.root_function.inputs) + stack
@@ -37,7 +51,7 @@ def depth_first_search(node, visitor):
             try:
                 if node.is_output:
                     stack.insert(0, node.owner)
-                    visited.add(node)
+                    visited.add(node.uid)
                     continue
             except AttributeError:
                 pass
@@ -51,10 +65,9 @@ def depth_first_search(node, visitor):
 
             accum.append(node)
 
-        visited.add(node)
+        visited.add(node.uid)
 
     return accum
-
 
 def find_all_with_name(node, node_name):
     '''
@@ -62,11 +75,11 @@ def find_all_with_name(node, node_name):
     search.
 
     Args:
-        node (graph node): the node to start the journey from
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
 
     Returns:
-        List of primitive functions having the specified name
+        List of primitive (or block) functions having the specified name
 
     See also:
         :func:`~cntk.ops.functions.Function.find_all_with_name` in class
@@ -74,18 +87,17 @@ def find_all_with_name(node, node_name):
     '''
     return depth_first_search(node, lambda x: x.name == node_name)
 
-
 def find_by_name(node, node_name):
     '''
     Finds a function in the graph starting from ``node`` and doing a depth-first
     search. It assumes that the name occurs only once.
 
     Args:
-        node (graph node): the node to start the journey from
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
 
     Returns:
-        Primitive function having the specified name
+        Primitive (or block) function having the specified name
 
     See also:
         :func:`~cntk.ops.functions.Function.find_by_name` in class
@@ -180,7 +192,8 @@ def plot(root, filename=None):
 
     def shape_desc(node):
         dyn_axes = node.dynamic_axes
-        dyn = '[*' + ',*' * (len(dyn_axes) - 1) + ']' if len(dyn_axes) > 0 else ''
+        dyn = '[#' + ',*' * (len(dyn_axes) - 1) + ']' if len(dyn_axes) > 0 else ''
+        # the '#' indicates the batch axis, while * indicate dynamic axes (which can be sequences)
         return dyn + str(node.shape)
         static_shape = str(node.shape)
         return '"#dyn: %i\nstatic: %s"'%(num_dyn_axes, static_shape)

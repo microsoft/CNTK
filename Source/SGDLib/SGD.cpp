@@ -1570,10 +1570,10 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     LOGPRINTF(stderr, "Precomputing --> %lu PreCompute nodes found.\n\n", (unsigned long)nodes.size());
     if (m_traceLevel > 0)
     {
-    for (const auto & node : nodes)
-    {
-        LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
-    }
+        for (const auto & node : nodes)
+        {
+            LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
+        }
     }
 
     // compute

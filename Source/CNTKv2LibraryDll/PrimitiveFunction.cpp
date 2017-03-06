@@ -53,7 +53,9 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAutoPadding = L"autoPadding";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameLowerPad = L"lowerPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUpperPad = L"upperPad";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameCeilOutDim = L"ceilOutDim";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTranspose = L"transpose";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputShape = L"outputShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples = L"maxTempMemSizeInSamples";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameROIOutputShape = L"roiOutputShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNamePoolingType = L"poolingType";
@@ -81,6 +83,8 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameInsertionPenalty = L"InsertionPenalty";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameSquashInputs = L"SquashInputs";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTokensToIgnore = L"TokensToIgnore";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameDelayConstraint = L"DelayConstraint";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlankTokenId = L"BlankTokenId";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -109,7 +113,7 @@ namespace CNTK
                 {
                     // The DataType of all operands should match except for Constants where we allow coercion
                     if ((inputDataType != DataType::Unknown) && (inputDataType != outputDataType) && !input.IsConstant())
-                        InvalidArgument("Primitive function with op type %S has operands with different DataTypes %s and %s", PrimitiveOpTypeName(op).c_str(), DataTypeName(outputDataType), DataTypeName(inputDataType));
+                        CNTK::InvalidArgument("Primitive function with op type %S has operands with different DataTypes %s and %s", PrimitiveOpTypeName(op).c_str(), DataTypeName(outputDataType), DataTypeName(inputDataType));
                 }
             }
         }
@@ -130,7 +134,7 @@ namespace CNTK
         return outputDataType;
     }
 
-    /*static*/ std::vector<Axis> PrimitiveFunction::GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig)
+    /*static*/ std::vector<Axis> PrimitiveFunction::GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, PrimitiveFunction* owner, Dictionary& functionConfig)
     {
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
@@ -151,6 +155,14 @@ namespace CNTK
             for (auto inputDynamicAxis : inputs[0].DynamicAxes())
             {
                 if (inputDynamicAxis != reductionAxis)
+                    outputDynamicAxes.push_back(inputDynamicAxis);
+            }
+        }
+        else if ((op == PrimitiveOpType::Times) && (functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>() == TimesReduceAllStaticAndSequenceAxes))
+        {
+            for (auto inputDynamicAxis : inputs[0].DynamicAxes())
+            {
+                if (inputDynamicAxis != Axis::OperandSequenceAxis())
                     outputDynamicAxes.push_back(inputDynamicAxis);
             }
         }
@@ -219,7 +231,7 @@ namespace CNTK
                         else
                         {
                             if (currentInputDynamicAxes != outputDynamicAxes)
-                                LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
+                                owner->LogicError("Currently if an operand of a elementwise operation has any dynamic axes, those must match the dynamic axes of the other operands");
                         }
                     }
                 }
@@ -238,7 +250,7 @@ namespace CNTK
         else
         {
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
-            std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, m_attributes);
+            std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
 
             NDShape outputShape = NDShape::Unknown;
             bool allInputShapesUnknown = (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == m_inputs.end());
@@ -247,7 +259,7 @@ namespace CNTK
             {
                 switch (m_op)
                 {
-                    // Elementwise operators' shapes are a zip of inputs and can be determined even if some of the input shapes are unknown
+                // Elementwise operators' shapes are a zip of inputs and can be determined even if some of the input shapes are unknown
                 case PrimitiveOpType::Plus:
                 case PrimitiveOpType::LogPlus:
                 case PrimitiveOpType::Minus:
@@ -306,6 +318,7 @@ namespace CNTK
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Pass:
+                        case PrimitiveOpType::LabelsToGraph:
                         case PrimitiveOpType::StopGradient:
                         case PrimitiveOpType::ELU:
                             assert(m_inputs.size() == 1);
@@ -430,6 +443,11 @@ namespace CNTK
                             auto lowerPad = m_attributes[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                             auto upperPad = m_attributes[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                             auto autoPadding = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
+                            bool ceilOutDim = false;
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameCeilOutDim))
+                            {
+                                ceilOutDim = m_attributes[PrimitiveFunction::AttributeNameCeilOutDim].Value<bool>();
+                            }
                             NDShape outputMapCount = { 1 };
                             std::vector<bool> sharing = { true };
                             auto inputShape = m_inputs[0].Shape();
@@ -445,7 +463,7 @@ namespace CNTK
                                 m_attributes[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowsShape;
                             }
 
-                            outputShape = ConvolutionOpOutputShape(m_op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true);
+                            outputShape = ConvolutionOpOutputShape(m_op, inputShape, poolingWindowsShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true, ceilOutDim);
                             break;
                         }
                         case PrimitiveOpType::Unpooling:
@@ -519,6 +537,9 @@ namespace CNTK
                             auto& strides = m_attributes[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
                             auto& lowerPad = m_attributes[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                             auto& upperPad = m_attributes[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
+                            NDShape tmpShape = NDShape::Unknown; 
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameOutputShape))
+                                tmpShape = m_attributes[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                             auto sharing = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
                             auto autoPadding = AsVector<bool>(m_attributes[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                             bool transpose = m_attributes[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
@@ -528,7 +549,20 @@ namespace CNTK
                             NDShape outputMapCount, kernelShape;
                             std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(m_inputs[0].Shape(), m_inputs[1].Shape());
                             auto originalKernelShape = kernelShape;
-                            outputShape = ConvolutionOpOutputShape(m_op, m_inputs[1].Shape(), kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, true);
+
+                            auto inputShape = m_inputs[1].Shape();
+                            if (!transpose || tmpShape.IsUnknown() || tmpShape[0] == 0)
+                            {
+                                outputShape = ConvolutionOpOutputShape(m_op, inputShape, kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, transpose, true);
+                            }
+                            else
+                            {
+                                NDShape inferredInputShape = ConvolutionOpOutputShape(m_op, tmpShape, kernelShape, outputMapCount, strides, sharing, autoPadding, lowerPad, upperPad, false, true);
+                                if (inferredInputShape != inputShape)
+                                    RuntimeError("The shape of the convolution transpose operand %ls is different from the result of convoluting the specified output argument using the provided options %ls", inputShape.AsString().c_str(), inferredInputShape.AsString().c_str());
+                                outputShape = tmpShape; 
+                            }
+
                             if (originalKernelShape != kernelShape)
                             {
                                 for (size_t i2 = 0; i2 < kernelShape.Rank(); ++i2)
@@ -541,6 +575,7 @@ namespace CNTK
                         }
                         case PrimitiveOpType::CosDistance:
                         case PrimitiveOpType::EditDistanceError:
+                        case PrimitiveOpType::ForwardBackward:
                         case PrimitiveOpType::Logistic:
                         case PrimitiveOpType::SquaredError:
                         case PrimitiveOpType::CrossEntropyWithSoftmax:
@@ -693,6 +728,22 @@ namespace CNTK
                             outputShape = operand.Shape();
                             break;
                         }
+                        case PrimitiveOpType::CosDistanceWithNegativeSamples:
+                        {
+                            assert(m_inputs.size() == 4);
+
+                            auto shiftInput = m_inputs[2];
+                            auto numNegativeSamplesInput = m_inputs[3];
+                            auto IsConstantScalar = [](const Variable& var) {
+                                return var.IsConstant() && (var.Shape().TotalSize() == 1);
+                            };
+                            if (!IsConstantScalar(shiftInput) || !IsConstantScalar(numNegativeSamplesInput))
+                                InvalidArgument("CosDistanceWithNegativeSamples: Input(2) and Input(3) correpond to shift and numNegativeSamples inputs and must be scalar constants!");
+
+                            auto numNegativeSamples = (size_t)Constant(numNegativeSamplesInput).Value()->AsScalar<float>();
+                            outputShape = NDShape({ numNegativeSamples + 1 });
+                            break;
+                        }
                         default:
                             LogicError("Specified m_op %S not yet supported", PrimitiveOpTypeName(m_op).c_str());
                             break;
@@ -768,10 +819,10 @@ namespace CNTK
         // This also applies to other enums (DataType, VariableKind, etc.)
         if (op >= PrimitiveOpType::UnknownOP)
         {
-            LogicError("Unexpected op '%ls':'%u' (%s).", 
-                        opKey.c_str(), 
-                        static_cast<std::underlying_type<CNTK::PrimitiveOpType>::type>(op),
-                        GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
+            CNTK::LogicError("Unexpected op '%ls':'%u' (%s).", 
+                             opKey.c_str(), 
+                             static_cast<std::underlying_type<CNTK::PrimitiveOpType>::type>(op),
+                             GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
         }
 
         const auto& uid = dict[uidKey].Value<std::wstring>();
@@ -789,8 +840,8 @@ namespace CNTK
             const auto& inputUid = dictionaryValue.Value<std::wstring>();
             if (uidToVariableMap.find(inputUid) == uidToVariableMap.end())
             {
-                LogicError("There are no inputs corresponding to input uid = '%ls' "
-                        "(%s).", inputUid.c_str(), GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
+                CNTK::LogicError("There are no inputs corresponding to input uid = '%ls' "
+                                 "(%s).", inputUid.c_str(), GetVersionsString<PrimitiveFunction>(s_serializationVersion, version).c_str());
             }
             inputs.push_back(uidToVariableMap.at(inputUid));
         }
@@ -814,7 +865,7 @@ namespace CNTK
             auto blockArgumentsMapKeys = AsVector<std::wstring>(dict[blockFunctionCompositeArgumentsMapKeysKey].Value<std::vector<DictionaryValue>>());
             auto blockArgumentsMapValues = AsVector<std::wstring>(dict[blockFunctionCompositeArgumentsMapValuesKey].Value<std::vector<DictionaryValue>>());
             if (blockArgumentsMapKeys.size() != blockArgumentsMapValues.size())
-                RuntimeError("Invalid block function dictionary found during deserialization; Number of block argument map keys does not match the number of map values");
+                CNTK::RuntimeError("Invalid block function dictionary found during deserialization; Number of block argument map keys does not match the number of map values");
 
             std::vector<std::pair<Variable, Variable>> argumentsMap;
             for (size_t i = 0; i < blockArgumentsMapKeys.size(); ++i)

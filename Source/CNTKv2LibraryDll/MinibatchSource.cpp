@@ -305,7 +305,7 @@ namespace CNTK
                 ValuePtr minibatchValuePtr;
                 if (!hasData)
                 {
-                    m_minibatchData[currentStreamInfo] = {nullptr, 0, 0 };
+                    m_minibatchData[currentStreamInfo] = { nullptr, 0, 0 };
                     continue;
                 }
 

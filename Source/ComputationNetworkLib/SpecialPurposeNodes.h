@@ -767,10 +767,10 @@ template class DummyCriterionNode<double>;
 // ForwardBackwardNode (graph, prediction, delayConstraint)
 // CTC training criterion, primarily based on the paper "Connectionist Temporal Classification: Labelling Unsegmented
 // Sequence Data with Recurrent Neural Networks", ftp://ftp.idsia.ch/pub/juergen/icml2006.pdf
-//
+// blankTokenId (input): id of the blank token. If specified as SIZE_MAX, will be replaced with (numberOfLabels - 1)
 // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference. 
 //      This using the original time information to enforce that CTC tokens only get aligned within a time margin.
-//      Setting this parameter smaller will result in shorted delay between label output during decoding, yet may hurt accuracy.
+//      Setting this parameter smaller will result in shorter delay between label output during decoding, yet may hurt accuracy.
 //      delayConstraint=-1 means no constraint
 // -----------------------------------------------------------------------
 
@@ -785,7 +785,7 @@ class ForwardBackwardNode : public  ComputationNodeNonLooping<ElemType>, public 
     }
 public:
     DeclareConstructorFromConfigWithNumInputs(ForwardBackwardNode);
-    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, int blankTokenId=INT_MIN, int delayConstraint=-1) :
+    ForwardBackwardNode(DEVICEID_TYPE deviceId, const wstring & name, size_t blankTokenId=SIZE_MAX, int delayConstraint=-1) :
         Base(deviceId, name), m_blankTokenId(blankTokenId), m_delayConstraint(delayConstraint)
     {
     }
@@ -936,6 +936,9 @@ public:
         m_maxValues->Resize(1, cols);
     }
 
+    int DelayConstraint() { return m_delayConstraint; }
+    size_t BlankTokenId() { return m_blankTokenId; }
+
 protected:
     virtual bool NodeDoesItsOwnCustomizedMissingColumnsMasking() { return true; }
     shared_ptr<Matrix<ElemType>> m_logSoftmaxOfRight;
@@ -945,7 +948,7 @@ protected:
     shared_ptr<Matrix<ElemType>> m_maxValues;
 
     msra::lattices::GammaCalculation<ElemType> m_GammaCal;
-    int m_blankTokenId;
+    size_t m_blankTokenId;
     int m_delayConstraint;
 };
 
@@ -955,6 +958,7 @@ template class ForwardBackwardNode<double>;
 // -----------------------------------------------------------------------
 // StopGradientNode (Input)
 // Outputs its input as it and prevents any gradient contribution from its output to its input.
+// TODO: This could be more easily implemented as a unary operation, like PassNode.
 // -----------------------------------------------------------------------
 template <class ElemType>
 class StopGradientNode : public UnaryElementWiseNode<ElemType>

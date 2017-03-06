@@ -247,7 +247,7 @@ MBLayoutPtr SequencePacker::PackSparseStream(const StreamBatch& batch, size_t st
     memcpy(destination, &nnzCount, sizeof(nnzCount));
 
     // create two pointers to the memory blocks inside the buffer,
-    // one for data portion and anther -- for indices.
+    // one for data portion and another -- for indices.
     auto* dataDst = destination + sizeof(nnzCount);
     auto* indicesDst = dataDst + elementSize* nnzCount;
     // column index for the current sample (= number of nnz value packed so far).

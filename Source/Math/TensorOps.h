@@ -48,6 +48,7 @@ OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
 OverloadUnaryMathFns(floor);
+OverloadUnaryMathFns(log1p);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
@@ -146,22 +147,15 @@ DECL ElemType ClippedQuotient(ElemType a, ElemType b)
 template <typename ElemType>
 DECL ElemType LogAdd(ElemType x, ElemType y)
 {
+    // The reason that we don't use std::swap, is because this code is used in Cuda and not just cpu.
     if (x < y)
     {
         ElemType temp = x;
         x = y;
         y = temp;
     }
-    ElemType diff = y - x;
-    if (diff < (ElemType) MINLOGEXP)
-    {
-        return (x < (ElemType) LSMALL) ? (ElemType) LZERO : x;
-    }
-    else
-    {
-        ElemType z = exp_(diff);
-        return x + log_((ElemType) 1.0 + z);
-    }
+
+    return x + log1p_(exp_(y - x));
 }
 
 // IndexElement reindexes a tensor along one dimension.

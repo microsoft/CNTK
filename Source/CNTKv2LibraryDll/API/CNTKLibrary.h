@@ -658,6 +658,12 @@ namespace CNTK
         template <typename ElementType>
         CNTK_API static NDArrayViewPtr RandomUniform(const NDShape& shape, double rangeStart, double rangeEnd, unsigned long seed = SentinelValueForAutoSelectRandomSeed, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
+        ///
+        /// If the value stored is a scalar, returns it. Otherwise, throws an error.
+        ///
+        template<typename ElementType>
+        ElementType AsScalar() const;
+
     private:
         // Disallow copy and move construction and assignment
         NDArrayView(const NDArrayView&) = delete; NDArrayView& operator=(const NDArrayView&) = delete; NDArrayView& operator=(NDArrayView&&) = delete; NDArrayView(NDArrayView&& other) = delete;
@@ -999,6 +1005,7 @@ namespace std {
         }
     };
 }
+
 
 namespace CNTK
 {
@@ -2782,7 +2789,7 @@ namespace CNTK
 
         ///
         /// Returns the root of the Function graph underlying this block Function.
-        /// Throws an exception of this is not a block Function
+        /// Throws an exception if this is not a block Function
         ///
         CNTK_API FunctionPtr BlockRoot() const;
 
@@ -2871,7 +2878,7 @@ namespace CNTK
         FunctionPtr FindByName(const std::wstring& name, bool nestedSearchInsideBlockFunction = false)
         {
             FunctionPtr  foundFunction = nullptr;
-            PreorderTraverseFunctions(RootFunction(), [&foundFunction, &name](const FunctionPtr& function) {
+            PreorderTraverseFunctions(RootFunction(), [&foundFunction, &name, this](const FunctionPtr& function) {
                 if (name.compare(function->Name()) == 0)
                 {
                     if (foundFunction != nullptr)
@@ -2993,7 +3000,7 @@ namespace CNTK
                                                      std::unordered_set<Variable>& replacedPlaceholders);
 
     protected:
-        static bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate);
+        /*static*/ bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate) const;
 
         // Returns a outputs without ref-counting the owner.
         CNTK_API std::vector<Variable>& RawOutputs() const;
@@ -3045,6 +3052,50 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
+        ///
+        /// Helpers to inject the node name into error messages. For now Windows only.
+        ///
+#ifdef _MSC_VER
+    private:
+        std::wstring DiagnosticsName() const
+        {
+            std::wstring name = Name();
+            if (name.empty())
+                name = Uid();
+            if (name.empty() && m_rootFunction)
+                name = m_rootFunction->DiagnosticsName();
+            return OpName() + L" " + name;
+        }
+    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
+        template <class... _Types>
+        __declspec_noreturn inline void RuntimeError(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::runtime_error>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
+        template <class... _Types>
+        __declspec_noreturn inline void LogicError(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::logic_error>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
+        template <class... _Types>
+        __declspec_noreturn inline void InvalidArgument(const char* format, _Types&&... _Args) const
+        {
+            auto formatString = std::string("%S: ") + format;
+            ThrowFormatted<std::invalid_argument>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
+        }
+#else   // for gcc, LogicError etc. are just #defines that map to ThrowFormatted, so replicate this here
+    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
+        template<class E, typename... Args>
+        inline __declspec_noreturn void ThrowFormatted(Args&&... args) const
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-security" // gcc has problems with checking of printf format strings through variadic templates
+            ::CNTK::ThrowFormatted<E>(std::forward<Args>(args)...);
+#pragma GCC diagnostic pop
+        }
+#endif
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
@@ -3146,6 +3197,7 @@ namespace CNTK
 
     ///
     /// Create an instance of the CNTK built-in softmax operation on specified tensor input operand
+    /// TODO: this Softmax() needs to support specifying the axis
     ///
     CNTK_API FunctionPtr Softmax(const Variable& operand, const std::wstring& name = L"");
 
@@ -3275,6 +3327,14 @@ namespace CNTK
     /// TODO: Specify the constraints on the shapes of the operands.
     /// TODO: Document inferInputRankToMap
     ///
+
+    // special values for Times inferInputRankToMap
+    enum : int
+    {
+        TimesReduceAllStaticAxes            = -1, // the default, reduce all static axes in the right operand that matches left
+        TimesReduceAllStaticAndSequenceAxes = -2, // reduce all static axes and sequence axis in the output of Times. Currently only support cases like (m x k x *s x *b) * (k x *s x *b) -> (m x *b)
+    };
+
     CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name = L"");
 
     ///
@@ -3284,7 +3344,7 @@ namespace CNTK
     ///
     inline FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = L"")
     {
-        return Times(leftOperand, rightOperand, outputRank, /*inferInputRankToMap =*/ -1, name);
+        return Times(leftOperand, rightOperand, outputRank, TimesReduceAllStaticAxes, name);
     }
 
     ///
@@ -3321,6 +3381,11 @@ namespace CNTK
     CNTK_API FunctionPtr CosineDistance(const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
 
     ///
+    /// Create an instance of the CNTK built-in operation to compute the cosine distance with negative samplesfor the specified input operands.
+    ///
+    CNTK_API FunctionPtr CosineDistanceWithNegativeSamples(const Variable& leftOperand, const Variable& rightOperand, size_t shiftWindow, size_t numberOfNegativeSamples, const std::wstring& name = L"");
+
+    ///
     /// Create an instance of the CNTK built-in operation to compute binary cross-entropy for specified input operands.
     ///
     CNTK_API FunctionPtr BinaryCrossEntropy(const Variable& prediction, const Variable& targets, const std::wstring& name = L"");
@@ -3351,7 +3416,18 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in operation for computing the edit distance error for specified operands.
     ///
-    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, const std::vector<size_t>& samplesToIgnore, const std::wstring& name = L"");
+    CNTK_API FunctionPtr EditDistanceError(const Variable& prediction, const Variable& labels, float substitutionPenalty, float deletionPenalty, float insertionPenalty, bool squashInputs, const std::vector<size_t>& tokensToIgnore, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation for computing the forwardbackward for specified operands.
+    ///
+    CNTK_API FunctionPtr ForwardBackward(const Variable& graph, const Variable& features, size_t blankTokenId, int delayConstraint, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in operation for computing the labels to graph for input operands.
+    ///
+    CNTK_API FunctionPtr LabelsToGraph(const Variable& labels, const std::wstring& name = L"");
+
 
     ///
     /// Create an instance of the CNTK built-in operation for computing the classification prediction error for specified operands.
@@ -3466,20 +3542,18 @@ namespace CNTK
     ///
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"");
 
-    ///
-    /// TODO:
-    ///
-    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap,
-                                     const Variable& operand,
-                                     const NDShape& strides = {1},
-                                     const std::vector<bool>& sharing = {true},
-                                     const std::vector<bool>& autoPadding = {true},
-                                     const NDShape& lowerPad = {0},
-                                     const NDShape& upperPad = {0},
-                                     bool transpose = false,
-                                     size_t maxTempMemSizeInSamples = 0,
-                                     const std::wstring& name = L"");
 
+    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, 
+                                     const Variable& operand, 
+                                     const NDShape& strides = { 1 },
+                                     const std::vector<bool>& sharing = { true },
+                                     const std::vector<bool>& autoPadding = { true },
+                                     const NDShape& lowerPad = { 0 },
+                                     const NDShape& upperPad = { 0 },
+                                     bool transpose = false, 
+                                     const NDShape& outputShape = { 0 },
+                                     size_t maxTempMemSizeInSamples = 0, 
+                                     const std::wstring& name = L"");
     ///
     /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
     ///
@@ -3504,6 +3578,7 @@ namespace CNTK
                                  const std::vector<bool>& autoPadding = {false},
                                  const NDShape& lowerPad = {0},
                                  const NDShape& upperPad = {0},
+                                 const bool ceilOutDim = false,
                                  const std::wstring& name = L"");
 
     ///
@@ -3528,7 +3603,7 @@ namespace CNTK
                                             const Variable& bias,
                                             const Variable& runningMean,
                                             const Variable& runningInvStd,
-                                            const Variable& runningSampleCount,
+                                            const Variable& runningCount,
                                             bool spatial,
                                             double normalizationTimeConstant = 0,
                                             double blendTimeConstant = 0,
@@ -3548,7 +3623,7 @@ namespace CNTK
     ///
     /// Create an instance of the CNTK built-in elementwise choice operation using a condition tensor for specified tensor operands.
     ///
-    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& leftOperand, const Variable& rightOperand, const std::wstring& name = L"");
+    CNTK_API FunctionPtr ElementSelect(const Variable& condition, const Variable& thenOperand, const Variable& elseOperand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in splice operation to splice together all the specified tensor operands into a single output tensor
@@ -3601,6 +3676,11 @@ namespace CNTK
     /// with the specified input operand and learning parameter alpha.
     ///
     CNTK_API FunctionPtr PReLU(const Variable& alpha, const Variable& operand, const std::wstring& name = L"");
+
+    ///
+    /// Create an instance of the CNTK built-in elementwise softplus operation 
+    ///
+    CNTK_API FunctionPtr Softplus(const Variable& operand, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the CNTK built-in argmax operation on specified tensor input operand along the specified axis
@@ -4256,6 +4336,9 @@ namespace CNTK
         void UpdateTestProgress(size_t numSamples, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
         void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters);
 
+        // TODO: Workaround for back compat. Should not be used and will be removed in the next version.
+        friend CNTK_API void ::CNTK::Internal::AddProgressWriters(const TrainerPtr&, const std::vector<ProgressWriterPtr>&);
+
         FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
         FunctionPtr m_lossFunction;
@@ -4680,6 +4763,55 @@ namespace CNTK
     CNTK_API QuantizedDistributedCommunicatorPtr QuantizedMPICommunicator(bool zeroThresholdFor1Bit, bool useQuantizationForSelfStripe, size_t numQuantizationBits);
 
     ///
+    /// Cross validation configuration
+    ///
+    struct CrossValidationConfig
+    {
+    public:
+        /// Cross validation configuration.
+        /// crossValidationSource: a minibatch source that will be used for cross validation.
+        /// crossValidationSchedule : a minibatch size schedule for cross validation.
+        /// crossValidationFrequencyInSamples: frequency in samples when to perform cross validation.
+        ///
+        CNTK_API CrossValidationConfig(const MinibatchSourcePtr& crossValidationSource,
+            const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(1),
+            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max());
+
+    private:
+        friend class TrainingSession;
+        const MinibatchSourcePtr m_source;
+        const MinibatchSizeSchedule m_mbSize;
+        const size_t m_frequency;
+    };
+
+    ///
+    /// Checkpoint configuration
+    ///
+    struct CheckpointConfig
+    {
+    public:
+        ///
+        /// Checkpoint configuration.
+        /// checkPointFileName: a file name where the checkpoint will be stored.
+        /// checkpointFrequencyInSamples: frequency in samples when to perform checkpointing.
+        /// restoreFromCheckpointIfExists: if flag is set, the training session will try to restore before training.
+        /// preserveAllCheckpoints: if flag is set, all checkpoints will be preserved.
+        ///
+        CNTK_API CheckpointConfig(
+            const std::wstring& checkPointFileName,
+            size_t checkpointFrequencyInSamples = std::numeric_limits<size_t>::max(),
+            bool restoreFromCheckpointIfExists = true,
+            bool preserveAllCheckpoints = false);
+
+    private:
+        friend class TrainingSession;
+        const std::wstring m_fileName;
+        const bool m_restore;
+        const bool m_preserveAll;
+        const size_t m_frequency;
+    };
+
+    ///
     /// Base abstract class that represents a training session.
     /// Derived classes can redefine different aspects of training, overriding base virtual methods (GetMinibatchSize, OnMinibatchStart, etc.)
     ///
@@ -4690,12 +4822,31 @@ namespace CNTK
             size_t frequency;
             size_t currentIndex;
             size_t sampleCountWhenLastCalled;
-            std::function<void(size_t currentIndex, const DeviceDescriptor&)> action;
+            std::function<bool(size_t currentIndex, const DeviceDescriptor&)> action;
         };
 
     public:
-        /// 
+        ///
         /// Constructor of the training session:
+        /// trainer : an instance of a trainer
+        /// trainingSource: minibatch source
+        /// minibatchSizeSchedule: mb size schedule
+        /// inputVarToStream: var to stream mapping
+        /// maxNumTrainingSamples: max number of training samples
+        /// progress : a training configuration
+        ///
+        CNTK_API TrainingSession(
+            const TrainerPtr& trainer,
+            const MinibatchSourcePtr& trainingSource,
+            const MinibatchSizeSchedule& minibatchSizeSchedule,
+            const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
+            size_t maxNumTrainingSamples,
+            size_t progressFrequency,
+            const CheckpointConfig& checkpointing,
+            const CrossValidationConfig& crossValidation);
+
+        /// !!! DEPRECATED !!!
+        /// Constructor of the training session: 
         /// trainingSource : a minibatch source that will be used for training
         /// trainer : an instance of a trainer
         /// modelInputsToMinibatchSourceMapping : mapping between the input node of the model and the corresponding stream
@@ -4746,7 +4897,7 @@ namespace CNTK
         ///
         virtual size_t GetMinibatchSize()
         {
-            return m_minibatchSizeSchedule[Trainer()->TotalNumberOfSamplesSeen()];
+            return m_mbSize[Trainer()->TotalNumberOfSamplesSeen()];
         }
 
         ///
@@ -4756,8 +4907,9 @@ namespace CNTK
 
         ///
         /// Optionally overridable callback that is invoked after each minibatch.
+        /// If return value is false, the training will be stopped.
         ///
-        CNTK_API virtual void OnMinibatchEnd() {};
+        CNTK_API virtual bool OnMinibatchEnd() { return true; };
 
         ///
         /// Optionally overridable callback that is invoked before each checkpoint.
@@ -4776,16 +4928,18 @@ namespace CNTK
 
         ///
         /// Optionally overridable callback that is invoked after each cross validation.
+        /// If return value is false, the training will be stopped.
         ///
-        CNTK_API virtual void OnCrossValidationEnd(size_t /*validationIndex*/, double /*averageError*/, size_t /*numberOfSamples*/, size_t /*numberOfMinibatches*/) {};
+        CNTK_API virtual bool OnCrossValidationEnd(size_t /*validationIndex*/, double /*averageError*/, size_t /*numberOfSamples*/, size_t /*numberOfMinibatches*/)
+        {
+            return true;
+        }
 
     protected:
         ///
         /// Accessors.
         ///
         TrainerPtr Trainer() const { return m_trainer; }
-
-        MinibatchSourcePtr TrainingMinibatchSource() const { return m_trainingSource; }
 
     private:
         /// Disallow copy and move construction and assignment
@@ -4800,32 +4954,30 @@ namespace CNTK
         void SaveCheckpoint(size_t currentIndex);
         void SaveFinalCheckpoint();
 
-        void CrossValidate(size_t currentIndex, const DeviceDescriptor& computeDevice);
+        bool CrossValidate(size_t currentIndex, const DeviceDescriptor& computeDevice);
         void ReportProgress(size_t currentIndex);
 
-        // Checkpointing
-        const std::wstring m_checkPointFileName;
-        const bool m_restoreFromCheckpointIfExists;
-        const bool m_saveAllCheckpoints;
-
-        // Training
-        MinibatchSourcePtr m_trainingSource;
-        TrainerPtr m_trainer;
-        std::unordered_map<Variable, StreamInformation> m_modelInputToMinibatchSourceStream;
         size_t m_parallelAfterSamples;
         size_t m_workerRank;
         size_t m_numberOfWorkers;
-        const MinibatchSizeSchedule m_minibatchSizeSchedule;
-        const size_t m_maxNumberOfSamples;
-
-        // Cross validation.
-        MinibatchSourcePtr m_crossValidationSource;
-        const MinibatchSizeSchedule m_crossValidationSchedule;
 
         std::vector<PeriodicAction> m_actions;
+
+        // Training.
+        TrainerPtr m_trainer;
+        const MinibatchSourcePtr m_source;
+        const MinibatchSizeSchedule m_mbSize;
+        const std::unordered_map<Variable, StreamInformation> m_varToStream;
+        const size_t m_maxNumSamples;
+        const size_t m_progressFrequency;
+
+        // Additional configuration.
+        CheckpointConfig m_checkpoint;
+        CrossValidationConfig m_cv;
     };
 
     ///
+    /// !!! DEPRECATED !!!
     /// Creates an instance of the training session class. Parameters match the paramters of the TrainingSession constructor.
     ///
     CNTK_API TrainingSessionPtr CreateBasicTrainingSession(
@@ -4942,6 +5094,18 @@ namespace CNTK
         std::unique_ptr<Impl> m_training;
         std::unique_ptr<Impl> m_test;
     };
+
+    /// Creates an instance of the training session class. Parameters match the parameters of the TrainingSession constructor.
+    ///
+    CNTK_API TrainingSessionPtr CreateTrainingSession(
+        const TrainerPtr& trainer,
+        const MinibatchSourcePtr& trainingSource,
+        const MinibatchSizeSchedule& minibatchSizeSchedule,
+        const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
+        size_t maxNumTrainingSamples,
+        size_t progressFrequency,
+        const CheckpointConfig& checkpointing,
+        const CrossValidationConfig& crossValidation);
 }
 
 

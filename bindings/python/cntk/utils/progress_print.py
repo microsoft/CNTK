@@ -4,11 +4,11 @@
 # for full license information.
 # ==============================================================================
 from __future__ import print_function
-import os
 import sys
 import time
 
 from cntk import cntk_py
+
 
 def _warn_deprecated(message):
     from warnings import warn
@@ -26,32 +26,33 @@ def _avg(numerator, denominator):
 # TODO: Let's switch to import logging in the future instead of print. [ebarsoum]
 class ProgressPrinter(cntk_py.ProgressWriter):
     '''
-    Allows printing various training time statistics (e.g. loss and metric) and printing them as training progresses.
+    Allows printing various statistics (e.g. loss and metric) as training/evaluation progresses.
+
+    Args:
+        freq (`int` or `None`, default `None`):  determines how often printing of training progress will occur.
+          A value of 0 means a geometric schedule (1,2,4,...).
+          A value > 0 means an arithmetic schedule (print for minibatch number: ``freq``,
+          print for minibatch number: 2*``freq``, print for minibatch number: 3*``freq``,...).
+          A value of None means no per-minibatch log.
+        first (`int`, default 0): Only start printing after the training minibatch number is greater or equal to
+          ``first``.
+        tag (`string`, default EmptyString): prepend minibatch log lines with your own string
+        log_to_file (`string` or `None`, default `None`): if None, output log data to stdout.
+          If a string is passed, the string is path to a file for log data.
+        rank (`int` or `None`, default `None`): set this to distributed.rank if you are using distributed
+          parallelism -- each rank's log will go to separate file.
+        gen_heartbeat (`bool`, default `False`): If True output a progress message every 10 seconds or so to stdout.
+        num_epochs (`int`, default 300): The total number of epochs to be trained.  Used for some metadata.
+          This parameter is optional.
+        test_freq (`int` or `None`, default `None`): similar to ``freq``, but applies to printing intermediate
+          test results.
+        test_first (`int`, default 0): similar to ``first``, but applies to printing intermediate test results.
     '''
 
     def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300,
                  test_freq=None, test_first=0):
         '''
         Constructor.
-
-        Args:
-            freq (`int` or `None`, default `None`):  determines how often
-              printing will occur. The value of 0 means an geometric
-              schedule (1,2,4,...). A value > 0 means a arithmetic schedule
-              (a log print for minibatch number: ``freq``, a log print for minibatch number: 2*``freq``,
-              a log print for minibatch number: 3*``freq``,...), and a value of None means no per-minibatch log.
-            first (`int`, default 0): Only start logging after the minibatch number is greater or equal to ``first``.
-            tag (`string`, default EmptyString): prepend minibatch log lines with your own string
-            log_to_file (`string` or `None`, default `None`): if None, output log data to stdout.
-              If a string is passed, the string is path to a file for log data.
-            rank (`int` or `None`, default `None`): set this to distributed.rank if you are using distributed
-              parallelism -- each rank's log will go to separate file.
-            gen_heartbeat (`bool`, default `False`): If True output a progress message every 10 seconds or so to stdout.
-            num_epochs (`int`, default 300): The total number of epochs to be trained.  Used for some metadata.
-              This parameter is optional.
-            test_freq (`int` or `None`, default `None`): similar to ``freq``, but applies to printing intermediate
-              test results.
-            test_first (`int`, default 0): similar to ``first``, but applies to printing intermediate test results.
         '''
         if freq is None:
             freq = sys.maxsize
@@ -115,6 +116,15 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         self.___logprint('CNTKCommandTrainEnd: train')
         if msg != "" and self.log_to_file is not None:
             self.___logprint(msg)
+
+    def log(self, message):
+        '''
+        Prints any message the user wishes to place in the log.
+
+        Args:
+            msg (`string`): message to print.
+        '''
+        self.___logprint(message)
 
     def avg_loss_since_start(self):
         '''
@@ -208,6 +218,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         self.epochs += 1
         epoch_end_time = time.time()
         elapsed_milliseconds = (epoch_end_time - self.epoch_start_time) * 1000
+        self.epoch_start_time = epoch_end_time # resetting starttime for use in the next epoch
 
         metric_since_start = self.metric_since_start if with_metric else None
         self.on_write_training_summary(self.samples_since_start, self.updates_since_start, self.epochs,
@@ -279,7 +290,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
 
     def update_with_trainer(self, trainer, with_metric=False):
         '''
-        DEPRECATED. Use :func:`cntk.utils.ProgressPrinter.update_training` instead.
+        DEPRECATED.
 
         Update the current loss, the minibatch size and optionally the metric using the information from the
         ``trainer``.
@@ -290,7 +301,8 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         '''
         if self.total_updates == 0:
             # Only warn once to avoid flooding with warnings.
-            _warn_deprecated('Use ProgressPrinter.update_progress() instead.')
+            _warn_deprecated('Inefficient. '
+                             'Please pass an instance of ProgressPrinter to Trainer upon construction.')
 
         if trainer is not None and trainer.previous_minibatch_sample_count != 0:
             self.update(
@@ -362,11 +374,11 @@ class ProgressPrinter(cntk_py.ProgressWriter):
 
         if aggregate_metric is not None:
             avg_metric = _avg(aggregate_metric, samples)
-            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples per second);".format(
+            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples/s);".format(
                 summaries, self.num_epochs, self.tag, avg_loss, samples, avg_metric * 100.0, samples,
                 elapsed_seconds, speed)
         else:
-            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second);".format(
+            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);".format(
                 summaries, self.num_epochs, self.tag, avg_loss, samples, elapsed_seconds, speed)
 
         self.___logprint(msg)
@@ -379,25 +391,25 @@ class ProgressPrinter(cntk_py.ProgressWriter):
 
 class TensorBoardProgressWriter(cntk_py.ProgressWriter):
     '''
-    Allows tracking various training time statistics (e.g. loss and metric) and write them as TensorBoard event files.
+    Allows writing various statistics (e.g. loss and metric) to TensorBoard event files during training/evaluation.
     The generated files can be opened in TensorBoard to visualize the progress.
+
+    Args:
+        freq (`int` or `None`, default `None`): frequency at which training progress is written.
+          For example, the value of 2 will cause the progress to be logged every second time when
+          `:func:cntk.util.TensorBoardFileWriter.update_with_trainer` is invoked.
+          None indicates that progress is logged only when
+          `:func:cntk.util.TensorBoardFileWriter.summarize_progress` is invoked.
+          Must be a positive integer otherwise.
+        log_dir (`string`, default '.'): directory where to create a TensorBoard event file.
+        rank (`int` or `None`, default `None`): rank of a worker when using distributed training, or `None` if
+         training locally. If not `None`, event files will be created only by rank 0.
+        model (:class:`cntk.ops.Function` or `None`, default `None`): model graph to plot.
     '''
 
     def __init__(self, freq=None, log_dir='.', rank=None, model=None):
         '''
         Constructor.
-
-        Args:
-            freq (`int` or `None`, default `None`): frequency at which progress is logged.
-              For example, the value of 2 will cause the progress to be logged every second time when
-              `:func:cntk.util.TensorBoardFileWriter.update_with_trainer` is invoked.
-              None indicates that progress is logged only when
-              `:func:cntk.util.TensorBoardFileWriter.summarize_progress` is invoked.
-              Must be a positive integer otherwise.
-            log_dir (`string`, default '.'): directory where to create a TensorBoard event file.
-            rank (`int` or `None`, default `None`): rank of a worker when using distributed training, or `None` if
-             training locally. If not `None`, event files will be created in log_dir/rank[rank] rather than log_dir.
-            model (:class:`cntk.ops.Function` or `None`, default `None`): model graph to plot.
         '''
         if freq is None:
             freq = sys.maxsize
@@ -477,8 +489,12 @@ def log_number_of_parameters(model, trace_level=0):
     parameters = model.parameters
     from functools import reduce
     from operator import add, mul
-    total_parameters = reduce(add, [reduce(mul, p1.shape) for p1 in parameters], 0)
-    # BUGBUG: If model has uninferred dimensions, we should catch that and fail here
+    from _cntk_py import InferredDimension
+    if any(any(dim == InferredDimension for dim in p.shape) for p in parameters):
+        total_parameters = 'so far unspecified number of'
+    else:
+        total_parameters = sum([reduce(mul, p.shape + (1,)) for p in parameters])
+        # the +(1,) is needed so that this works for empty shapes (scalars)
     print("Training {} parameters in {} parameter tensors.".format(total_parameters, len(parameters)))
     if trace_level > 0:
         print()

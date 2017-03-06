@@ -16,6 +16,7 @@
 %implicitconv CNTK::Variable;
 
 %rename(_forward) CNTK::Function::Forward;
+%rename(_add_progress_writers) CNTK::Internal::AddProgressWriters;
 %rename(_backward) CNTK::Function::Backward;
 %rename(_infer_outputs) CNTK::Function::InferOutputs;
 %rename(_update) CNTK::Learner::Update;
@@ -143,6 +144,7 @@
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
 %ignore CNTK::Internal::MaxNumCPUThreadsSet;
+%ignore CNTK::Internal::CosineDistanceWithNegativeSamples;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;

@@ -25,7 +25,7 @@ function DisplayStartMessage
 {
 "
 
-This script will setup the CNTK prequisites and the CNTK Python environment onto the machine.
+This script will setup the CNTK prerequisites and the CNTK Python environment onto the machine.
 More help is given by calling 'get-help .\install.ps1' in your powershell environment.
 
 The script will analyse your machine and will determine which components are required. 
