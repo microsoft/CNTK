@@ -137,6 +137,7 @@
     <None Include="data\batch.norm.no.sample.count.v1.bin" />
     <None Include="data\batch.norm.no.sample.count.v2.bin" />
     <None Include="data\future.dictionary.proto.bin" />
+    <None Include="data\learner.checkpoint.backcompat.bin" />
     <None Include="data\past.dictionary.proto.bin" />
     <None Include="data\v2.0.beta1.0.dictionary.proto.bin" />
   </ItemGroup>

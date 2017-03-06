@@ -730,19 +730,6 @@ namespace CNTK
         for (int i = 0; i < parameters.size(); i++)
         {
             assert(Internal::AreEquivalent(parameters[i], restoredParameters[i]));
-
-            //TODO (backcompat): this test would fail if we were to load a stale model 
-            // (i.e. saved before the sample count was added as an extra input to BatchNorm) into
-            // a graph constructed using the updated API (i.e. the call to Constant ctor to intantiate 
-            // the sample count will bump up the id counter and shift the whole uid sequence).
-
-            // Additionally, to be super-safe, compare parameter UIDs.
-            if (parameters[i].Uid() != restoredParameters[i].Uid())
-            {
-                 InvalidArgument("Function being restored '%S' parameters UIDs do not match loaded Function '%S' parameter UIDs.",
-                                 this->AsString().c_str(), restoredFunction->AsString().c_str());
-            }
-
             parameters[i].Value()->CopyFrom(*(restoredParameters[i].Value().get()));
         }
 
