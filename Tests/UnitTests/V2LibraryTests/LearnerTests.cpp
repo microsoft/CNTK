@@ -314,8 +314,9 @@ struct LearnerSuiteFixture
         : unitGain{ true, false }
     {
         srand(1);
-        devices.push_back(DeviceDescriptor::CPUDevice());
-        if (IsGPUAvailable())
+        if (ShouldRunOnCpu())
+            devices.push_back(DeviceDescriptor::CPUDevice());
+        if (ShouldRunOnGpu())
             devices.push_back(DeviceDescriptor::GPUDevice(0));
 
         numParameters = 1 + rand() % 5;
@@ -345,12 +346,12 @@ BOOST_AUTO_TEST_CASE(TrainingParametersSchedule)
 }
 
 BOOST_AUTO_TEST_CASE(CreateAndUpdateSGDLearner)
-    {
+{
     for (auto& device : devices)
     {
         TestSGDLearner<double>(numParameters, numMinibatches, device);
     }
-    }
+}
 
 BOOST_AUTO_TEST_CASE(CreateAndUpdateAdaGradLearner)
 {
