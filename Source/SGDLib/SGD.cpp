@@ -3040,9 +3040,9 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
             m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriodPerWorker", ConfigRecordType::Array(intargvector(vector<int>{256})));
 #if 1       // legacy option
-			if (configBMSGD.Exists(L"syncPeriod"))
+			if (configDataParallelASGD.Exists(L"syncPeriod"))
 			{
-				if (configBMSGD.Exists(L"syncPeriodPerWorker"))
+				if (configDataParallelASGD.Exists(L"syncPeriodPerWorker"))
 					InvalidArgument("syncPeriod is a deprecated alias of syncPeriodPerWorker. It is not allowed to specify both of them");
 				m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
 			}
