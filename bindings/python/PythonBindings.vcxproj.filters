@@ -55,6 +55,24 @@
     <Filter Include="cntk\learners">
       <UniqueIdentifier>{be7c4f7a-7fde-4551-8d86-cf0c76963e6c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="cntk\logging\tests">
+      <UniqueIdentifier>{5b4ce614-19b8-4426-ab76-7d7ba5141114}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\losses\tests">
+      <UniqueIdentifier>{ab4b240d-bab1-4606-848e-2b19d939ff3f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\metrics\tests">
+      <UniqueIdentifier>{930876a8-a08f-4681-8544-9d8cb771cb4f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\internal\tests">
+      <UniqueIdentifier>{25ec352d-55a6-49d1-8797-030634900c0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\learners\tests">
+      <UniqueIdentifier>{45087966-454d-4f91-9a21-2bc4e574d7b6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\train\tests">
+      <UniqueIdentifier>{33e44175-5e05-42a9-ad1b-1d316f8fb1e1}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cntk\__init__.py">
@@ -158,9 +176,6 @@
     <None Include="cntk\tests\initializer_test.py">
       <Filter>cntk\tests</Filter>
     </None>
-    <None Include="cntk\tests\graph_test.py">
-      <Filter>cntk\tests</Filter>
-    </None>
     <None Include="cntk\io\tests\io_tests.py">
       <Filter>cntk\io\tests</Filter>
     </None>
@@ -206,12 +221,6 @@
     <None Include="cntk\device.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\graph.py">
-      <Filter>cntk</Filter>
-    </None>
-    <None Include="cntk\utils\progress_print.py">
-      <Filter>cntk\utils</Filter>
-    </None>
     <None Include="cntk\utils\tests\swig_helper_tests.py">
       <Filter>cntk\utils\tests</Filter>
     </None>
@@ -234,9 +243,6 @@
     <None Include="README.md" />
     <None Include="test.bat" />
     <None Include="cntk\core.py">
-      <Filter>cntk</Filter>
-    </None>
-    <None Include="cntk\debug.py">
       <Filter>cntk</Filter>
     </None>
     <None Include="cntk\sample_installer.py">
@@ -271,6 +277,33 @@
     </None>
     <None Include="cntk\ops\tests\cosine_distance_test.py">
       <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\logging\progress_print.py">
+      <Filter>cntk\logging</Filter>
+    </None>
+    <None Include="cntk\logging\graph.py">
+      <Filter>cntk\logging</Filter>
+    </None>
+    <None Include="cntk\debugging\debug.py">
+      <Filter>cntk\debugging</Filter>
+    </None>
+    <None Include="cntk\logging\tests\graph_test.py">
+      <Filter>cntk\logging\tests</Filter>
+    </None>
+    <None Include="cntk\losses\tests\__init__.py">
+      <Filter>cntk\losses\tests</Filter>
+    </None>
+    <None Include="cntk\metrics\tests\__init__.py">
+      <Filter>cntk\metrics\tests</Filter>
+    </None>
+    <None Include="cntk\internal\tests\__init__.py">
+      <Filter>cntk\internal\tests</Filter>
+    </None>
+    <None Include="cntk\learners\tests\__init__.py">
+      <Filter>cntk\learners\tests</Filter>
+    </None>
+    <None Include="cntk\train\tests\__init__.py">
+      <Filter>cntk\train\tests</Filter>
     </None>
   </ItemGroup>
 </Project>
