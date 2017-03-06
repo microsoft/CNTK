@@ -13,6 +13,10 @@ from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes, typemap
 from ..axis import Axis
+from .. import cntk_py
+
+TIMES_REDUCE_ALL_STATIC_AXES               = cntk_py.TimesReduceAllStaticAxes
+TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES  = cntk_py.TimesReduceAllStaticAndSequenceAxes
 
 @typemap
 def combine(operands, name=''):
@@ -115,7 +119,6 @@ def alias(x, name=''):
     from cntk.cntk_py import alias
     x = sanitize_input(x)
     return alias(x, name)
-
 @typemap
 def labels_to_graph(labels, name=''):
     '''
@@ -166,13 +169,18 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), transpose=False,
+                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), 
+                transpose=False, output_shape=None, 
                 max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
     This operation is used in image and language processing applications. It supports arbitrary
     dimensions, strides, sharing, and padding.
+
+    When the transpose argument is set to True, this function can compute the transposed convolution 
+    of ``convolution_map`` with ``operand`` (commonly an image or output of a previous convolution/pooling operation).
+    This is also known as ``fractionally strided convolutional layers``, or, ``deconvolution``. 
 
     This function operates on input tensors with dimensions :math:`[C \\times M_1 \\times M_2 \\times \\ldots \\times M_n]`. This can be understood as a rank-n
     object, where each entry consists of a :math:`C`-dimensional vector. For example, an RGB image would have dimensions
@@ -187,6 +195,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
 
     Example:
+        For convolution: 
         >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
         >>> x = C.input_variable(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
@@ -196,6 +205,17 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
                   [ 16.,  18.,  20.,  22.],
                   [ 26.,  28.,  30.,  32.],
                   [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+        
+        For convolution transpose: 
+        >>> img = np.reshape(np.arange(9.0, dtype = np.float32), (1, 3, 3))
+        >>> x = C.input_variable(img.shape)
+        >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
+        >>> kernel = C.constant(value = filter)
+        >>> np.round(C.convolution(kernel, x, auto_padding = [False], transpose=True).eval({x: [img]}),5)
+        array([[[[[  0.,   2.,   3.,  -2.],
+                  [  6.,   4.,   6.,  -1.],
+                  [  9.,  10.,  12.,   2.],
+                  [ -6.,   5.,   6.,  16.]]]]], dtype=float32)
 
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
@@ -212,7 +232,8 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          the input dimension. The last value that lines up with the number of input channels must be false.
         lower_pad: precise lower padding for each input dimension.
         upper_pad : precise upper padding for each input dimension.
-        transpose (bool): set to true for deconvolution.
+        transpose (bool): set to true for convolution transpose (deconvolution).
+        output_shape: user expected output shape after convolution transpose. Invalid if transpose = False. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -226,10 +247,12 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     strides = sanitize_shape(strides)
     lower_pad = sanitize_shape(lower_pad)
     upper_pad = sanitize_shape(upper_pad)
+    if output_shape is None: 
+        output_shape = (0,)
+    output_shape = sanitize_shape(output_shape)
     return convolution(convolution_map, operand, strides, sharing, auto_padding,
-                       lower_pad, upper_pad, transpose,
+                       lower_pad, upper_pad, transpose, output_shape, 
                        max_temp_mem_size_in_samples, name)
-
 
 @typemap
 def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
@@ -262,7 +285,7 @@ AVG_POOLING = PoolingType_Average
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
-            lower_pad=(0,), upper_pad=(0,), name=''):
+            lower_pad=(0,), upper_pad=(0,), ceil_out_dim=False, name=''):
     '''
     The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
     In the case of average pooling with padding, the average is only over the valid region.
@@ -284,9 +307,10 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         pooling_type: one of :const:`~cntk.ops.MAX_POOLING` or :const:`~cntk.ops.AVG_POOLING`
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
-        auto_padding: automatic padding flags for each input dimension.
-        lower_pad: precise lower padding for each input dimension
-        upper_pad: precise upper padding for each input dimension
+        auto_padding (default [False,]): automatic padding flags for each input dimension.
+        lower_pad (default (0,)): precise lower padding for each input dimension
+        upper_pad (default (0,)): precise upper padding for each input dimension
+        ceil_out_dim (default false): ceiling while computing output size
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -298,7 +322,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     lower_pad = sanitize_shape(lower_pad)
     upper_pad = sanitize_shape(upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
-                   lower_pad, upper_pad, name)
+                   lower_pad, upper_pad, ceil_out_dim, name)
 
 
 MAX_UNPOOLING = PoolingType_Max
@@ -697,6 +721,7 @@ def element_times(left, right, name=''):
     return cntk_py_element_times(left, right, name)
 
 
+# TODO: move element_max/min to C++
 @associative_multi_arg
 @typemap
 def element_max(left, right, name=''):
@@ -792,13 +817,20 @@ def log_add_exp(left, right, name=''):
     right = sanitize_input(right, dtype)
     return cntk_py_log_add_exp(left, right, name)
 
+INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 
 @typemap
-def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
+def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AXES, name=''):
     '''
     The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. Sparse is supported in the left operand, if it is a matrix.
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
+    
+    For better performance on times operation on sequence which is followed by sequence.reduce_sum, use
+    infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES, i.e. replace following:
+        sequence.reduce_sum(times(seq1, seq2))
+    with:
+        times(seq1, seq2, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES)
 
     Example:
         >>> C.times([[1,2],[3,4]], [[5],[6]]).eval()
@@ -826,7 +858,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=-1, name=''):
     Args:
         left: left side matrix or tensor
         right: right side matrix or tensor
-        output_rank (int): in case we have tensors as arguemnts, output_rank represents
+        output_rank (int): in case we have tensors as arguments, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
         infer_input_rank_to_map ('int'): meant for internal use only. Always use default value
@@ -1171,12 +1203,17 @@ def param_relu(alpha, x, name=''):
     x = sanitize_input(x)
     return pre_lu(alpha, x, name)
 
+
 @typemap
-def softplus(x, name=''):
+def softplus(x, steepness=1, name=''):
     '''
     Softplus operation. Computes the element-wise softplus of ``x``:
 
     :math:`\textrm{softplus}(x) = {\log(1+\exp(x))}`
+
+    The optional ``steepness`` allows to make the knee sharper (``steepness>1``) or softer, by computing
+    ``softplus(x * steepness) / steepness``.
+    (For very large steepness, this approaches a linear rectifier).
 
     The output tensor has the same shape as ``x``.
 
@@ -1184,17 +1221,25 @@ def softplus(x, name=''):
         >>> C.softplus([[-1, -0.5, 0, 1, 2]]).eval()
         array([[ 0.313262,  0.474077,  0.693147,  1.313262,  2.126928]], dtype=float32)
 
+        >>> C.softplus([[-1, -0.5, 0, 1, 2]], steepness=4).eval()
+        array([[ 0.004537,  0.031732,  0.173287,  1.004537,  2.000084]], dtype=float32)
+
     Args:
         x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
+        steepness (float, optional): optional steepness factor
         name (`str`, default to ''): the name of the Function instance in the network
-
     Returns:
         cntk.ops.functions.Function:
         An instance of :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import softplus
     x = sanitize_input(x)
-    return softplus(x, name)
+    if steepness == 1:
+        return softplus(x, name)
+    xp = placeholder_variable()
+    f = typemap(softplus)(steepness * xp) / steepness
+    return as_block(f, [(xp, x)], 'softplus', name)
+
 
 @typemap
 def sigmoid(x, name=''):
@@ -1324,6 +1369,7 @@ def softmax(x, axis=None, name=''):
     from cntk.cntk_py import softmax
     x = sanitize_input(x)
     # softmax over a specific axis: implemented explicitly
+    # TODO: move this into the C++ API.
     if axis is not None:
         from cntk.cntk_py import reduce_log_sum, exp, minus
         axis = sanitize_axis(axis)
@@ -1558,6 +1604,9 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     the current sample is the last one in the tensor) then the ``initial_state``
     value is returned.
 
+    The initial state can be a constant (scalar or tensor), a learnable tensor
+    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
+
     Example:
         >>> x = C.input_variable(shape=(3,2))
         >>> # Create one sequence with 4 tensors of shape (3, 2)
@@ -1610,11 +1659,34 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     the current sample is the first one in the tensor)  then the ``initial_state``
     value is returned.
 
+    The initial state can be a constant (scalar or tensor), a learnable tensor
+    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
+
     Example:
-        >>> x = C.input_variable(shape=(3,2))
-        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> # create example input: one sequence with 4 tensors of shape (3, 2)
+        >>> from cntk.layers import Input
+        >>> from cntk.layers.typing import Tensor, Sequence
+        >>> x = Input(**Sequence[Tensor[3,2]])
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
-        >>> y = C.past_value(x) # using initial state of 0 by default
+        >>> x0
+        array([[[[  0.,   1.],
+                 [  2.,   3.],
+                 [  4.,   5.]],
+        <BLANKLINE>
+                [[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]]]], dtype=float32)
+
+        >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
+        >>> y = C.past_value(x) # initial_state is 0 by default
         >>> y.eval({x:x0})
         array([[[[  0.,   0.],
                  [  0.,   0.],
@@ -1632,6 +1704,31 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 14.,  15.],
                  [ 16.,  17.]]]], dtype=float32)
 
+        >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
+        >>> s = Input(**Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
+        >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
+        >>> s0
+        array([[[[ 0. ,  0.5],
+                 [ 1. ,  1.5],
+                 [ 2. ,  2.5]]]], dtype=float32)
+        >>> y = C.past_value(x, initial_state=s)
+        >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
+        array([[[[  0. ,   0.5],
+                 [  1. ,   1.5],
+                 [  2. ,   2.5]],
+        <BLANKLINE>
+                [[  0. ,   1. ],
+                 [  2. ,   3. ],
+                 [  4. ,   5. ]],
+        <BLANKLINE>
+                [[  6. ,   7. ],
+                 [  8. ,   9. ],
+                 [ 10. ,  11. ]],
+        <BLANKLINE>
+                [[ 12. ,  13. ],
+                 [ 14. ,  15. ],
+                 [ 16. ,  17. ]]]], dtype=float32)
+
     Args:
         x: the tensor (or its name) from which the past value is obtained
         initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
@@ -1648,6 +1745,8 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     if initial_state is None:
         initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+    else:
+        initial_state = sanitize_input(initial_state)
 
     x = sanitize_input(x)
     return past_value(x, initial_state, time_step, name)
@@ -2341,10 +2440,6 @@ def dropout(x, dropout_rate=0.0, name=''):
 
 from cntk.device import use_default_device
 from cntk.axis import Axis
-
-# TODO: if we end up using only factory methods, we should get rid of the
-# class Variable in variables.py
-
 
 @typemap
 def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,

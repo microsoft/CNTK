@@ -114,23 +114,22 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
     lr_schedule = learning_rate_schedule(lr_per_mb, unit=UnitType.minibatch)
     mm_schedule = momentum_schedule(momentum_per_mb)
     learner = momentum_sgd(tl_model.parameters, lr_schedule, mm_schedule, l2_regularization_weight=l2_reg_weight)
-    trainer = Trainer(tl_model, (ce, pe), learner)
+    progress_printer = ProgressPrinter(tag='Training', num_epochs=num_epochs)
+    trainer = Trainer(tl_model, (ce, pe), learner, progress_printer)
 
     # Get minibatches of images and perform model training
     print("Training transfer learning model for {0} epochs (epoch_size = {1}).".format(num_epochs, epoch_size))
     log_number_of_parameters(tl_model)
-    progress_printer = ProgressPrinter(tag='Training', num_epochs=num_epochs)
     for epoch in range(num_epochs):       # loop over epochs
         sample_count = 0
         while sample_count < epoch_size:  # loop over minibatches in the epoch
             data = minibatch_source.next_minibatch(min(mb_size, epoch_size-sample_count), input_map=input_map)
             trainer.train_minibatch(data)                                    # update model with it
             sample_count += trainer.previous_minibatch_sample_count          # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True)  # log progress
             if sample_count % (100 * mb_size) == 0:
                 print ("Processed {0} samples".format(sample_count))
 
-        progress_printer.epoch_summary(with_metric=True)
+        trainer.summarize_training_progress()
 
     return tl_model
 

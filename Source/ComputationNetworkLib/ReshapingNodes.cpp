@@ -99,7 +99,11 @@ template <class ElemType>
     // Create a new layout if we are reducing the sequence axis
     if (ReduceSequenceAxis())
     {
-        GetMBLayout()->InitAsFrameMode(Input(0)->GetMBLayout()->GetNumSequences());
+        auto inputMBLayout = InputRef(0).GetMBLayout();
+        if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
+            LogicError("%ls: %s node cannot perform sequence axis reduction for truncated sequence.", Base::NodeDescription().c_str(), typeid(*this).name());
+
+        GetMBLayout()->InitAsFrameMode(inputMBLayout->GetNumSequences());
         UpdateFunctionValuesSize();
     }
     // get the args
@@ -189,8 +193,8 @@ template <class ElemType>
         break;
         case ElementWiseOperator::opElementwiseProduct:
         {
-            auto input = InputRef(inputIndex).ValueTensorFor(rank, frInput);
-            auto output = ValueTensorFor(rank, fr.AllowBroadcast());
+            auto input  = InputRef(inputIndex).ValueTensorFor(rank, frInput);
+            auto output =                      ValueTensorFor(rank, fr.AllowBroadcast());
             sliceInputGrad.AddElementwiseProductWithQuotientOf(sliceOutputGrad, output, input);
             break;
         }
@@ -444,7 +448,7 @@ template <class ElemType>
     let& sourceMBLayout = InputRef(SOURCEDATA).GetMBLayout(); // only used for index conversion
     let& indexMBLayout  = InputRef(INDEXDATA).GetMBLayout();
     let&  index  = InputRef(INDEXDATA).Value(); // per-seq index values that are to be mapped
-    auto& result =                   Value(); // packed index values as mapped to sourceData's layout
+    auto& result =                     Value(); // packed index values as mapped to sourceData's layout
     // loop over sourceSequences
     // Input matrix contains time indices for each sequence that refer to frames inside that sequence.
     // We replace every per-sequence index by the resolved column index w.r.t. the same MBLayout.
@@ -455,7 +459,7 @@ template <class ElemType>
         if (sourceSeq.seqId == GAP_SEQUENCE_ID)
             continue;
         let& indexSeq = indexMBLayout->FindMatchingSequence(sourceSequences, i); // find corresponding entry in indexMBLayout
-        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++) // map all index values in index sequence
+        for (size_t tIndex = 0; tIndex < indexSeq.GetNumTimeSteps(); tIndex++)   // map all index values in index sequence
         {
             let jIndex  = indexMBLayout->GetColumnIndex(indexSeq, tIndex);    // map time index to actual location in the matrix storage object
             let tSource = (size_t)index(0, jIndex);                           // the new time location (relative to source sequence)

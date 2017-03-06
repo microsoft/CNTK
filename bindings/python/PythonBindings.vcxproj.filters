@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Text Include="vsbuild.bat" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="cntk">
       <UniqueIdentifier>{d0b22515-db40-470b-8388-d255e04fd3a6}</UniqueIdentifier>
     </Filter>
@@ -90,7 +87,6 @@
     <None Include="cntk\layers.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\models.py">
       <Filter>cntk</Filter>
     </None>
     <None Include="cntk\pytest.ini">
@@ -117,8 +113,6 @@
     <None Include="cntk\utils\__init__.py">
       <Filter>cntk\utils</Filter>
     </None>
-    <None Include="setup.py" />
-    <None Include="swig_install.sh" />
     <None Include="cntk\utils\debughelpers\__init__.py">
       <Filter>cntk\utils\debughelpers</Filter>
     </None>
@@ -305,5 +299,10 @@
     <None Include="cntk\train\tests\__init__.py">
       <Filter>cntk\train\tests</Filter>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="vsbuild.bat">
+      <Filter>cntk\sort_these</Filter>
+    </Text>
   </ItemGroup>
 </Project>

@@ -49,7 +49,6 @@
     <Text Include="vsbuild.bat" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="build.bat" />
     <None Include="cntk\axis.py" />
     <None Include="cntk\cntk_py.i" />
     <None Include="cntk\conftest.py" />

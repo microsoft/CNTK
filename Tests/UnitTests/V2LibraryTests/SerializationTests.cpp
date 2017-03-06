@@ -328,7 +328,8 @@ void CheckEnumValuesNotModified() {
                   static_cast<size_t>(PrimitiveOpType::LabelsToGraph) == 63 &&
                   static_cast<size_t>(PrimitiveOpType::StopGradient) == 64 &&
                   static_cast<size_t>(PrimitiveOpType::ELU) == 65 &&
-                  static_cast<size_t>(PrimitiveOpType::ForwardBackward) == 66,
+                  static_cast<size_t>(PrimitiveOpType::ForwardBackward) == 66 &&
+                  static_cast<size_t>(PrimitiveOpType::CosDistanceWithNegativeSamples) == 67,
                   "PrimitiveOpType enum value was modified.");
 }
 

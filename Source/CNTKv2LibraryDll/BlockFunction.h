@@ -32,7 +32,7 @@ namespace CNTK
             for (auto argument : arguments)
             {
                 if (argument.BlockFunctionVariableMapping() == Variable())
-                    LogicError("BlockFunction (%S) with OpName (%S) does not have a mapping for argument (%S)", Name().c_str(), OpName().c_str(), argument.Name().c_str());
+                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for argument '%S'.", AsString().c_str(), OpName().c_str(), argument.AsString().c_str());
 
                 argumentsMap.push_back({ argument, argument.BlockFunctionVariableMapping() });
             }
@@ -58,7 +58,7 @@ namespace CNTK
             for (auto output : outputs)
             {
                 if (output.BlockFunctionVariableMapping() == Variable())
-                    LogicError("BlockFunction (%S) with OpName (%S) does not have a mapping for output (%S)", Name().c_str(), OpName().c_str(), output.Name().c_str());
+                    LogicError("BlockFunction '%S' with OpName '%S' does not have a mapping for output '%S'", AsString().c_str(), OpName().c_str(), output.AsString().c_str());
 
                 outputsMap[output] = output.BlockFunctionVariableMapping();
             }
@@ -80,14 +80,14 @@ namespace CNTK
         }
 
     private:
-        static std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName)
+        /*static*/ std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName) const
         {
             std::unordered_map<Variable, Variable> argumentsMappingAsMap;
             for (auto argumentMapping : argumentsMap)
             {
                 auto wasInserted = argumentsMappingAsMap.insert(argumentMapping).second;
                 if (!wasInserted)
-                    InvalidArgument("CNTK::AsBlock: Multiple mappings provided for the argument (%S) of the block composite", argumentMapping.first.Name().c_str());
+                    InvalidArgument("Multiple mappings provided for argument '%S' of the Block composite '%S'", argumentMapping.first.AsString().c_str(), composite->AsString().c_str());
             }
 
             std::vector<Variable> blockFunctionInputs;
@@ -103,9 +103,9 @@ namespace CNTK
                 {
                     if (!compositeInput.IsPlaceholder())
                     {
-                        InvalidArgument("The composite implementing block (%S) has an argument (%S) which is not a placeholder. "
-                            "All arguments of the composite underlying a block must be placeholders",
-                            blockName.c_str(), compositeInput.Name().c_str());
+                        InvalidArgument("The composite implementing Block '%S' has an argument '%S' which is not a placeholder. "
+                                        "All arguments of the composite underlying a Block must be placeholders",
+                                        blockName.c_str(), compositeInput.AsString().c_str());
                     }
 
                     // Verify that a mapping was provided for each argument of the composite
@@ -116,8 +116,8 @@ namespace CNTK
 
             if (!unmappedArguments.empty())
             {
-                auto unmappedArgumentsNames = NamedListString(unmappedArguments);
-                InvalidArgument("%d arguments (%S) of the underlying composite Function of block (%S) have not been mapped when encapsulating the composite as a block", (int)unmappedArguments.size(), unmappedArgumentsNames.c_str(), blockName.c_str());
+                InvalidArgument("%zu of the arguments '%S' of the underlying composite Function of Block '%S' have not been mapped when encapsulating the composite as a Block.",
+                                unmappedArguments.size(), NamedListString(unmappedArguments).c_str(), blockName.c_str());
             }
 
             // We now append the mapped arguments of the composite to the block inputs in the order of the map

@@ -382,7 +382,7 @@ def test_session_cv_callback_with_cross_validation_3_times(tmpdir, device_id):
             mb = cv_mbs.next_minibatch(2, input_map=input_map)
             if not mb:
                 break
-            mb_error = t.test_minibatch(mb, device)
+            mb_error = t.test_minibatch(mb, device=device)
             total_error += mb_error * mb[label].num_samples
 
         total_samples = 25  # Please see input data

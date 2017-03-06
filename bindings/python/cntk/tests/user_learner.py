@@ -50,20 +50,17 @@ def ffnet(optimizer):
 
     # Instantiate the trainer object to drive the model training
     lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
-    trainer = C.Trainer(z, (ce, pe), [optimizer(z.parameters, lr_per_minibatch)])
+    progress_printer = ProgressPrinter(0)
+    trainer = C.Trainer(z, (ce, pe), [optimizer(z.parameters, lr_per_minibatch)], progress_printer)
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
     num_minibatches_to_train = 63
 
-    pp = ProgressPrinter(0)
     for i in range(num_minibatches_to_train):
         train_features, labels = generate_random_data(minibatch_size, inputs, outputs)
         # Specify the mapping of input variables in the model to actual minibatch data to be trained with
         trainer.train_minibatch({features : train_features, label : labels})
-        pp.update_with_trainer(trainer)
-
-    last_avg_error = pp.avg_loss_since_start()
 
     test_features, test_labels = generate_random_data(minibatch_size, inputs, outputs)
     avg_error = trainer.test_minibatch({features : test_features, label : test_labels})

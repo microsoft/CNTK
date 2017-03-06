@@ -12,6 +12,11 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+
+// A constant used in 1-hot vectors to identify the first frame of a phone.
+// Used primarily in CTC-type training.
+static float PHONE_BOUNDARY = 2.0f;
+
 // Class represents an MLF deserializer.
 // Provides a set of chunks/sequences to the upper layers.
 class MLFDataDeserializer : public DataDeserializerBase
@@ -57,6 +62,9 @@ private:
     // Array of all labels.
     msra::dbn::biggrowablevector<msra::dbn::CLASSIDTYPE> m_classIds;
 
+    // Phone boundaries in each sequence
+    vector<vector<size_t>> m_phoneBoundaries;
+
     // Index of utterances in the m_classIds (index of the first frame of the utterance)
     msra::dbn::biggrowablevector<size_t> m_utteranceIndex;
 
@@ -76,6 +84,10 @@ private:
 
     // Flag that indicates whether a single speech frames should be exposed as a sequence.
     bool m_frameMode;
+
+    // Track phone boundaries
+    bool m_withPhoneBoundaries;
 };
+
 
 }}}
