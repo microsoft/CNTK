@@ -825,7 +825,7 @@ void CPUMatrix<ElemType>::SetColumn(const CPUMatrix<ElemType>& valMat, size_t j)
     if (IsEmpty())
         LogicError("SetColumn: Matrix is empty.");
     if (valMat.GetNumRows() != GetNumRows() || valMat.GetNumCols() != 1)
-        InvalidArgument("The valMat matrix has incorrect number of rows or columns.");
+        LogicError("The valMat matrix has incorrect number of rows or columns.");
 
     auto& us = *this;
     long m = (long) GetNumRows();
@@ -1104,7 +1104,7 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
 
     CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
     if (cpuRNGHandle == nullptr)
-        InvalidArgument("rngHandle must be a CPURNGHandle.");
+        LogicError("rngHandle must be a CPURNGHandle.");
 
     auto& us = *this;
     boost::random::uniform_real_distribution<ElemType> r(0, 1);
@@ -1145,7 +1145,7 @@ ElemType CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients, const bool
     }
 
     if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols())
-        InvalidArgument("The matrix gradients must have the same rows and columns as this matrix.");
+        LogicError("The matrix gradients must have the same rows and columns as this matrix.");
 
     ElemType *a = Data(), *d_v = gradients.Data();
     size_t n = GetNumElements();
@@ -3428,8 +3428,7 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
     if (topK > m)
         InvalidArgument("VectorMax: TopK must be less or equal than the number of rows");
 
-    if (m <= 0 || n <= 0)
-        LogicError("VectorMax: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
+    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     if (isColWise) // col-wise
     {
@@ -3522,9 +3521,7 @@ void CPUMatrix<ElemType>::VectorMin(CPUMatrix<ElemType>& minIndexes, CPUMatrix<E
     const int m = (int) GetNumRows();
     const int n = (int) GetNumCols();
 
-    if (m <= 0 || n <= 0)
-        LogicError("VectorMin: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
-
+    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     if (isColWise) // col-wise
     {
@@ -3777,8 +3774,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
                 y1 = (long) (y - y0 * horizontalSubsample);                                                  // first posyInKernel
             }
 
-            if (x1 < 0 || x1 >= kernelHeight || y1 < 0 || y1 >= kernelWidth)
-                RuntimeError("Incorrect matrix.");
+            assert(x1 >= 0 && x1 < kernelHeight && y1 >= 0 && y1 < kernelWidth);
 
             // PACK_ELEM_ROWPOS(channel, posxInKernel, posyInKernel) = (channel * kernelWidth * kernelHeight + posxInKernel + posyInKernel * kernelHeight)
             // PACK_ELEM_COLPOS(sample, wrow, wcol) = (sample*packedInputColsPerSample + outputHeight*wcol + wrow
@@ -3849,9 +3845,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemT
                 y1 = (long) (y - y0 * horizontalSubsample);                                                  // first posyInKernel
             }
 
-            if (x1 < 0 || x1 >= kernelHeight || y1 < 0 || y1 >= kernelWidth)
-                RuntimeError("Incorrect matrix.");
-
+            assert(x1 >= 0 && x1 < kernelHeight && y1 >= 0 && y1 < kernelWidth);
 
             // PACK_ELEM_ROWPOS(channel, posxInKernel, posyInKernel) = (channel * kernelWidth * kernelHeight + posxInKernel + posyInKernel * kernelHeight)
             // PACK_ELEM_COLPOS(sample, wrow, wcol) = (sample*packedInputColsPerSample + outputHeight*wcol + wrow
@@ -4716,8 +4710,7 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
         mklTransB = CBLAS_TRANSPOSE::CblasNoTrans;
     }
 
-    if (m <= 0 || k <= 0 || l <= 0 || n <= 0)
-        LogicError("Invalid matrix dimension, probably due to overflow."); // converting from size_t to int may cause overflow
+    assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
     if (k != l)
         InvalidArgument("CPUMatrix<ElemType>::MultiplyAndWeightedAdd : The inner dimensions of a and b must match.");
 
