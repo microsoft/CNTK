@@ -58,6 +58,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Cntk.Core.Managed-$(CntkCsAssemblyVersion), Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64" />
+    <Reference Include="amoclib">
+      <HintPath>..\..\..\..\..\..\CNTKMisc\RenBo\TestCntk.Debug\amoclib.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
   </ItemGroup>
