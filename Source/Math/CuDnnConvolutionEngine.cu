@@ -117,7 +117,7 @@ private:
 class CuDnnPool
 {
 public:
-    CuDnnPool(const ConvolveGeometry& geometry, PoolKind kind, bool forceDeterministicAlgorithms)
+    CuDnnPool(const ConvolveGeometry& geometry, PoolKind kind, bool forceDeterministicAlgorithms, bool poolPadMode)
         : m_pool(nullptr)
     {
         assert(kind == PoolKind::Max || kind == PoolKind::Average);
@@ -136,10 +136,12 @@ public:
             stride[j] = (int)geometry.GetStride(i);
             pad[j] = geometry.GetLowerPad(i);
         }
-
+        cudnnPoolingMode_t poolMode = CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING;
+        if (poolPadMode)
+            poolMode = CUDNN_POOLING_AVERAGE_COUNT_INCLUDE_PADDING;
         // Must use CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING to get the same results as in reference engine.
         CUDNN_CALL(cudnnSetPoolingNdDescriptor(m_pool,
-                                               kind == PoolKind::Max && !forceDeterministicAlgorithms ? CUDNN_POOLING_MAX : CUDNN_POOLING_AVERAGE_COUNT_EXCLUDE_PADDING,
+                                               kind == PoolKind::Max && !forceDeterministicAlgorithms ? CUDNN_POOLING_MAX : poolMode,
                                                CUDNN_PROPAGATE_NAN,
                                                (int)dims.size(), dims.data(), pad.data(), stride.data()));
     }
@@ -180,13 +182,14 @@ public:
 
 public:
     CuDnnConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
-                           size_t maxTempMemSizeInSamples, PoolKind poolKind, bool forceDeterministicAlgorithms)
+                           size_t maxTempMemSizeInSamples, PoolKind poolKind, bool forceDeterministicAlgorithms, bool poolPadMode)
                            : Base(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind),
                            m_cudnn(CuDnn::Instance()),
                            m_dataType(CuDnnTensor::GetDataType<ElemType>()),
                            m_inT(geometry->InputShape(), m_dataType),
                            m_outT(geometry->OutputShape(), m_dataType),
-                           m_forceDeterministicAlgorithms(forceDeterministicAlgorithms)
+                           m_forceDeterministicAlgorithms(forceDeterministicAlgorithms),
+                           m_poolPadMode(poolPadMode)
     {
     }
 
@@ -350,7 +353,7 @@ protected:
     void EnsurePoolingInitialized() override
     {
         if (m_pool == nullptr)
-            m_pool = std::make_unique<CuDnnPool>(*m_geometry, m_poolKind, m_forceDeterministicAlgorithms);
+            m_pool = std::make_unique<CuDnnPool>(*m_geometry, m_poolKind, m_forceDeterministicAlgorithms, m_poolPadMode);
     }
 
     void ForwardPoolingCore(const Mat& in, Mat& out) override
@@ -508,15 +511,16 @@ private:
 
     // Flag indicating whether only deterministic algorithms should be used.
     bool m_forceDeterministicAlgorithms;
+    bool m_poolPadMode;
 };
 
 template <class ElemType>
 std::unique_ptr<ConvolutionEngine<ElemType>> CuDnnConvolutionEngineFactory<ElemType>::Create(ConvolveGeometryPtr geometry,
                                                                                              DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout,
                                                                                              size_t maxTempMemSizeInSamples, PoolKind poolKind,
-                                                                                             bool forceDeterministicAlgorithms)
+                                                                                             bool forceDeterministicAlgorithms, bool poolPadMode)
 {
-    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, forceDeterministicAlgorithms);
+    return std::make_unique<CuDnnConvolutionEngine<ElemType>>(geometry, deviceId, imageLayout, maxTempMemSizeInSamples, poolKind, forceDeterministicAlgorithms, poolPadMode);
 }
 
 template <class ElemType>

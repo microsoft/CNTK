@@ -624,11 +624,16 @@ namespace CNTK
                 auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                 auto ceilOutDim = false;
+                auto poolPadMode = false;
                 if (functionConfig.Contains(PrimitiveFunction::AttributeNameCeilOutDim))
                 {
                     ceilOutDim = functionConfig[PrimitiveFunction::AttributeNameCeilOutDim].Value<bool>();
                 }
-                computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutDim, ImageLayoutKind::CHW);
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameIncludePad))
+                {
+                    poolPadMode = functionConfig[PrimitiveFunction::AttributeNameIncludePad].Value<bool>();
+                }
+                computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutDim, poolPadMode, ImageLayoutKind::CHW);
                 break;
             }
             case PrimitiveOpType::Unpooling:

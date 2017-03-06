@@ -663,7 +663,7 @@ AVG_POOLING = PoolingType_Average
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
-            lower_pad=(0,), upper_pad=(0,), ceil_out_dim=False, name=''):
+            lower_pad=(0,), upper_pad=(0,), ceil_out_dim=False, include_pad=False, name=''):
     '''
     The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
     In the case of average pooling with padding, the average is only over the valid region.
@@ -689,6 +689,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         lower_pad (default (0,)): precise lower padding for each input dimension
         upper_pad (default (0,)): precise upper padding for each input dimension
         ceil_out_dim (default false): ceiling while computing output size
+        include_pad(default false): include pad while average pooling
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -700,7 +701,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     lower_pad = sanitize_shape(lower_pad)
     upper_pad = sanitize_shape(upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
-                   lower_pad, upper_pad, ceil_out_dim, name)
+                   lower_pad, upper_pad, ceil_out_dim, include_pad, name)
 
 
 MAX_UNPOOLING = PoolingType_Max

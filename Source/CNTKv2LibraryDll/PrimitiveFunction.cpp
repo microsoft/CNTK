@@ -54,6 +54,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameLowerPad = L"lowerPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUpperPad = L"upperPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCeilOutDim = L"ceilOutDim";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameIncludePad = L"includePad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTranspose = L"transpose";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputShape = L"outputShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples = L"maxTempMemSizeInSamples";

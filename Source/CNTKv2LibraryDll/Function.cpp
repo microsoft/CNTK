@@ -1232,6 +1232,7 @@ namespace CNTK
                         const NDShape& lowerPad,
                         const NDShape& upperPad,
                         const bool ceilOutDim,
+                        const bool poolPadMode,
                         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -1242,6 +1243,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
         additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
         additionalProperties[PrimitiveFunction::AttributeNameCeilOutDim] = ceilOutDim;
+        additionalProperties[PrimitiveFunction::AttributeNameIncludePad] = poolPadMode;
 
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
     }
