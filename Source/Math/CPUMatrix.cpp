@@ -2925,8 +2925,7 @@ void CPUMatrix<ElemType>::VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<Elem
     const int m = (int) a.GetNumRows();
     const int n = (int) a.GetNumCols();
 
-    if ( m <= 0 || n <= 0)
-        LogicError("VectorSum: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
+    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     if (isColWise) // col-wise
     {
@@ -2973,8 +2972,7 @@ void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWi
     const int m = (int) us.GetNumRows();
     const int n = (int) us.GetNumCols();
 
-    if (m <= 0 || n <= 0)
-        LogicError("VectorNorm1: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
+    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     if (isColWise) // col-wise
     {
@@ -3028,8 +3026,7 @@ void CPUMatrix<ElemType>::VectorNorm2(CPUMatrix<ElemType>& c, const bool isColWi
     const int m = (int) us.GetNumRows();
     const int n = (int) us.GetNumCols();
 
-    if (m <= 0 || n <= 0)
-        LogicError("VectorNorm2: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
+    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     ElemType* bufPtr = us.Data();
     if (isColWise) // col-wise
@@ -3096,8 +3093,7 @@ void CPUMatrix<ElemType>::VectorNormInf(CPUMatrix<ElemType>& c, const bool isCol
     const int m = (int) us.GetNumRows();
     const int n = (int) us.GetNumCols();
 
-    if (m <= 0 || n <= 0)
-        LogicError("VectorNormInf: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
+    assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
     if (isColWise) // col-wise
     {
