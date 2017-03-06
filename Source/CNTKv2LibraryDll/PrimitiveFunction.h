@@ -213,6 +213,7 @@ namespace CNTK
         static const std::wstring AttributeNameAutoPadding;
         static const std::wstring AttributeNameLowerPad;
         static const std::wstring AttributeNameUpperPad;
+        static const std::wstring AttributeNameCeilOutDim;
         static const std::wstring AttributeNameTranspose;
         static const std::wstring AttributeNameOutputShape; 
         static const std::wstring AttributeNameMaxTempMemSizeInSamples;
@@ -301,7 +302,7 @@ namespace CNTK
             return operandShape;
         }
 
-        static NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions)
+        /*static*/ NDShape ReshapeOutputShape(const NDShape& operandShape, NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, bool inferDimensions) const
         {
             int beginAxisIdx = beginAxis.StaticAxisIndex();
             int endAxisIdx = endAxis.StaticAxisIndex();
@@ -366,7 +367,7 @@ namespace CNTK
             return maxRank;
         }
 
-        static NDShape SpliceOutputShape(const std::vector<Variable>& inputs, size_t axis)
+        /*static*/ NDShape SpliceOutputShape(const std::vector<Variable>& inputs, size_t axis) const
         {
             // We must fuse all tensor shapes
 
@@ -436,7 +437,7 @@ namespace CNTK
         }
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions)
+        /*static*/ NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions) const
         {
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
@@ -496,7 +497,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions)
+        /*static*/ NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions) const
         {
             assert(operands.size() > 1);
 
@@ -509,7 +510,7 @@ namespace CNTK
         }
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
-        static NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions)
+        /*static*/ NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions) const
         {
             auto leftOperandShape = leftOperand.Shape();
             auto rightOperandShape = rightOperand.Shape();
@@ -596,7 +597,7 @@ namespace CNTK
             return leftOperandShape.SubShape(0, outputRank).AppendShape(rightOperandShape.SubShape(numReductionAxes));
         }
 
-        static NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<int>& reductionAxes, bool preserveReductionAxes)
+        /*static*/ NDShape ReductionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, const std::vector<int>& reductionAxes, bool preserveReductionAxes) const
         {
             if (reductionAxes.size() > operandShape.Rank())
                 RuntimeError("The number of reduction axes %d exceeds the rank in the operand shape %S of the reduction operation %S",
@@ -628,9 +629,9 @@ namespace CNTK
             shape = NDShape(dims);
         }
 
-        static NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
+        /*static*/ NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
                                                 std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-                                                bool transpose, bool inferDimensions)
+                                                bool transpose, bool inferDimensions, bool ceilOutputDim = false) const
         {
             if (inferDimensions)
             {
@@ -675,40 +676,43 @@ namespace CNTK
             else
                 computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeInputShape;
 
-            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad)));
+            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutputDim));
         }
 
-        static NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions)
+        /*static*/ NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions) const
         {
             NDShape mainOperandShape = operands[0].Shape();
-            for (size_t i = 1; i < operands.size() - 1; i++) // all but first and last arguments must match the first; last one must be a [1]
+            for (size_t i = 1; i < operands.size(); i++) // all but first and last arguments must match the first; last one must be a scalar
             {
                 if (!operands[i].DynamicAxes().empty())
                     InvalidArgument("BatchNormalization: Input[%d] has a dynamic axis that is not allowed!", (int)i);
 
                 // Infer dimensions of learnable parameters
                 auto paramShape = operands[i].Shape();
-              
-                if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
+                if (i < operands.size() - 1)
                 {
-                    size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
-                    paramShape[0] = total;
-                    std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
-                    UpdateOperandShapes(newParamShape);
-                }
+                    if (inferDimensions && ((paramShape.Rank() == 1) && paramShape.HasInferredDimension()) && !mainOperandShape.HasInferredDimension())
+                    {
+                        size_t total = spatial ? mainOperandShape[mainOperandShape.Rank() - 1] : mainOperandShape.TotalSize();
+                        paramShape[0] = total;
+                        std::vector<std::pair<Variable, NDShape>> newParamShape = { { operands[i], paramShape } };
+                        UpdateOperandShapes(newParamShape);
+                    }
 
-                if (!paramShape.HasInferredDimension() && !operands[1].Shape().HasInferredDimension() && (paramShape != operands[1].Shape()))
-                    InvalidArgument("BatchNormalization: Input[%d] has a shape (%S) different from Input[1] (%S), but they must be identical.", 
-                                    (int)i,
-                                    AsStringForErrorReporting(paramShape).c_str(),
-                                    AsStringForErrorReporting(operands[1].Shape()).c_str());
-                
-            }
-            const auto& runCount = operands[operands.size() - 1];
-            auto runCountRank = runCount.Shape().Rank();
-            if (runCountRank > 1 || (runCountRank == 1 && runCount.Shape()[0] != 1)) // last arguments is count, must be a scalar
-            {
-                InvalidArgument("BatchNormalization: Input[%d] (running mean sample count) must be a scalar.", (int)(operands.size() - 1));
+                    if (!paramShape.HasInferredDimension() && !operands[1].Shape().HasInferredDimension() && (paramShape != operands[1].Shape()))
+                        InvalidArgument("BatchNormalization: Input[%d] has a shape (%S) different from Input[1] (%S), but they must be identical.", 
+                                        (int)i,
+                                        AsStringForErrorReporting(paramShape).c_str(),
+                                        AsStringForErrorReporting(operands[1].Shape()).c_str());
+                }
+                else if (paramShape != NDShape()
+#if 1
+                         && paramShape != NDShape({ 1 })  // a beta version wrote it as 1-dim vectors instead
+#endif
+                         ) // last arguments is count, must be a scalar
+                {
+                    InvalidArgument("BatchNormalization: Input[%d] must be a scalar.", (int)i);
+                }
             }
 
             return UnaryElementwiseOpOutputShape(mainOperandShape);
@@ -717,7 +721,7 @@ namespace CNTK
         // TODO: Reconcile this with the ComputationNode::Validate functionality in core CNTK to avoid duplication of inference logic
         // Returns a pair of determined output variables and a bool indicating if any input operand shape was modified
         static DataType GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions);
-        static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, Dictionary& functionConfig);
+        static std::vector<Axis> GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, PrimitiveFunction* owner, Dictionary& functionConfig);
 
         void InferOutputs(std::vector<Variable>& outputs) override;
 

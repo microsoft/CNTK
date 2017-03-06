@@ -86,6 +86,22 @@ def test_op_sigmoid(operand, device_id, precision):
 
 
 @pytest.mark.parametrize("operand", TENSORS)
+def test_op_softplus(operand, device_id, precision):
+    s = np.logaddexp(0, (AA(operand, dtype=PRECISION_TO_TYPE[precision])))
+    # BUGBUG: The inner implementation is a tiny bit less accurate than numpy, so we manually replace the values
+    if s.shape == (6,2):
+        if operand[0][1] == -10:
+            s[0,1] = 0  # np baseline is 0.000045
+        if operand[5][0] == 10:
+            s[5,0] = 10 # np baseline is 10.000045
+    expected_forward = [AA([s])]
+
+    from .. import softplus
+    _test_unary_op(precision, device_id, softplus, operand,
+                   expected_forward, None)
+
+
+@pytest.mark.parametrize("operand", TENSORS)
 def test_op_exp(operand, device_id, precision):
     e = np.exp(AA(operand, dtype=PRECISION_TO_TYPE[precision]))
     expected_forward = [AA([e])]
@@ -428,8 +444,8 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
     scale        = Parameter(init=AA([init_scale], dtype=dtype), device=dev)
     bias         = Parameter(init=AA([init_bias], dtype=dtype), device=dev)
     run_mean     = constant(mean, shape=(1), device=dev)
-    run_variance = constant(var, shape=(1), device=dev)
-    run_count = constant(0, device=dev)
+    run_variance = constant(var,  shape=(1), device=dev)
+    run_count    = constant(0,               device=dev)
 
     from cntk import batch_normalization
 

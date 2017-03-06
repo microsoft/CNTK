@@ -385,14 +385,13 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         if aggregate_metric is not None:
             avg_metric = _avg(aggregate_metric, samples)
             if self.metric_is_pct:
-                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples per second);"
+                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.2f}% * {} {:0.3f}s ({:5.1f} samples/s);"
             else:
-                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second);"
-            msg = fmt_str.format(
-                    summaries, self.num_epochs, self.tag, avg_loss, samples, avg_metric * self.metric_multiplier,
+                fmt_str = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {}, metric = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);"
+            msg = fmt_str.format(summaries, self.num_epochs, self.tag, avg_loss, samples, avg_metric * self.metric_multiplier,
                     samples, elapsed_seconds, speed)
         else:
-            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples per second);".format(
+            msg = "Finished Epoch[{} of {}]: {}loss = {:0.6f} * {} {:0.3f}s ({:5.1f} samples/s);".format(
                 summaries, self.num_epochs, self.tag, avg_loss, samples, elapsed_seconds, speed)
 
         self.___logprint(msg)
@@ -507,8 +506,12 @@ def log_number_of_parameters(model, trace_level=0):
     parameters = model.parameters
     from functools import reduce
     from operator import add, mul
-    total_parameters = reduce(add, [reduce(mul, p1.shape) for p1 in parameters], 0)
-    # BUGBUG: If model has uninferred dimensions, we should catch that and fail here
+    from _cntk_py import InferredDimension
+    if any(any(dim == InferredDimension for dim in p.shape) for p in parameters):
+        total_parameters = 'so far unspecified number of'
+    else:
+        total_parameters = sum([reduce(mul, p.shape + (1,)) for p in parameters])
+        # the +(1,) is needed so that this works for empty shapes (scalars)
     print("Training {} parameters in {} parameter tensors.".format(total_parameters, len(parameters)))
     if trace_level > 0:
         print()

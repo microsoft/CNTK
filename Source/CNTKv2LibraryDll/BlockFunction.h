@@ -80,7 +80,7 @@ namespace CNTK
         }
 
     private:
-        static std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName)
+        /*static*/ std::vector<Variable> DetermineInputs(const FunctionPtr& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockName) const
         {
             std::unordered_map<Variable, Variable> argumentsMappingAsMap;
             for (auto argumentMapping : argumentsMap)

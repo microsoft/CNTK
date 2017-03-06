@@ -104,7 +104,7 @@ class Axis(cntk_py.Axis):
     @typemap
     def all_axes():
         '''
-        Axis object representing all the axes of an operand.
+        Axis object representing all the axes--static and dynamic--of an operand.
 
         Returns:
             :class:`Axis`: all axes

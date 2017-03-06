@@ -6,254 +6,493 @@
 
 from __future__ import print_function
 import numpy as np
-import sys
 import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.device import cpu, set_default_device
-from cntk.learner import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
-from cntk.ops.functions import CloneMethod
+from cntk.learner import momentum_sgd, adam_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
+                     element_select, alias, hardmax, placeholder_variable, combine, parameter, times, plus
+from cntk.ops.functions import CloneMethod, load_model, Function
+from cntk.initializer import glorot_uniform
+from cntk.utils import log_number_of_parameters, ProgressPrinter, debughelpers, one_hot
+from cntk.graph import plot
+from cntk.layers import *
+from cntk.layers.sequence import *
+from cntk.models.attention import *
+from cntk.layers.typing import *
 
-abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "common"))
-from nn import LSTMP_component_with_self_stabilization, stabilize, linear_layer, print_training_progress
+########################
+# variables and stuff  #
+########################
 
-# Given a vocab and tensor, print the output
-def print_sequences(sequences, i2w):
-    for s in sequences:
-        print([i2w[np.argmax(w)] for w in s], sep=" ")
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data")
+MODEL_DIR = "."
+TRAINING_DATA = "cmudict-0.7b.train-dev-20-21.ctf"
+TESTING_DATA = "cmudict-0.7b.test.ctf"
+VALIDATION_DATA = "tiny.ctf"
+VOCAB_FILE = "cmudict-0.7b.mapping"
 
-def create_reader(path, randomize, input_vocab_dim, label_vocab_dim, size=INFINITELY_REPEAT):
+# model dimensions
+input_vocab_dim  = 69
+label_vocab_dim  = 69
+hidden_dim = 512
+num_layers = 2
+attention_dim = 128
+attention_span = 20
+attention_axis = -3
+use_attention = True
+use_embedding = True
+embedding_dim = 200
+vocab = ([w.strip() for w in open(os.path.join(DATA_DIR, VOCAB_FILE)).readlines()]) # all lines of VOCAB_FILE in a list
+length_increase = 1.5
+
+# sentence-start symbol as a constant
+sentence_start = Constant(np.array([w=='<s>' for w in vocab], dtype=np.float32))
+sentence_end_index = vocab.index('</s>')
+# TODO: move these where they belong
+
+model_path_stem = os.path.join(MODEL_DIR, "model_att_{}".format(use_attention)) # encode as many config vars as desired
+def model_path(epoch):
+    return model_path_stem + ".cmf." + str(epoch)
+
+
+########################
+# define the reader    #
+########################
+
+def create_reader(path, is_training):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
-        features  = StreamDef(field='S0', shape=input_vocab_dim,  is_sparse=True),
-        labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
-    )), randomize=randomize, epoch_size = size)
+        features = StreamDef(field='S0', shape=input_vocab_dim, is_sparse=True),
+        labels   = StreamDef(field='S1', shape=label_vocab_dim, is_sparse=True)
+    )), randomize = is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
-# helper function to find variables by name
-# which is necessary when cloning or loading the model
-def find_arg_by_name(name, expression):
-    vars = [i for i in expression.arguments if i.name == name]
-    assert len(vars) == 1
-    return vars[0]
+########################
+# define the model     #
+########################
 
-# Average of evaluation errors of all test minibatches
-def translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim, debug_output=False):
-    # now setup a test run
-    test_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "cmudict-0.7b.test.ctf")
+# type annotations for the two sequence types; later use InputSequence[Tensor[input_vocab_dim]]
+# CNTK considers these two different types since they run over different sequence indices.
+inputAxis = Axis('inputAxis')
+labelAxis = Axis('labelAxis')
+InputSequence = SequenceOver[inputAxis]
+LabelSequence = SequenceOver[labelAxis]
 
-    test_reader = create_reader(test_path, False, input_vocab_dim, label_vocab_dim, FULL_DATA_SWEEP)
+# create the s2s model
+def create_model(): # :: (history*, input*) -> logP(w)*
+    # Embedding: (input*) --> embedded_input*
+    # Right now assumes shared embedding and shared vocab size.
+    embed = Embedding(embedding_dim, name='embed') if use_embedding else identity
 
-    test_bind = {
-        find_arg_by_name('raw_input',z)  : test_reader.streams.features,
-        find_arg_by_name('raw_labels',z) : test_reader.streams.labels
-    }
+    # Encoder: (input*) --> (h0, c0)
+    # Create multiple layers of LSTMs by passing the output of the i-th layer
+    # to the (i+1)th layer as its input
+    # This is the plain s2s encoder. The attention encoder will keep the entire sequence instead.
+    # Note: We go_backwards for the plain model, but forward for the attention model.
+    with default_options(enable_self_stabilization=True, go_backwards=not use_attention):
+        LastRecurrence = Fold if not use_attention else Recurrence
+        encode = Sequential([
+            embed,
+            Stabilizer(),
+            For(range(num_layers-1), lambda:
+                Recurrence(LSTM(hidden_dim))),
+            LastRecurrence(LSTM(hidden_dim), return_full_state=True),
+            (Label('encoded_h'), Label('encoded_c')),
+        ])
 
-    test_minibatch_size = 1024
+    # Decoder: (history*, input*) --> unnormalized_word_logp*
+    # where history is one of these, delayed by 1 step and <s> prepended:
+    #  - training: labels
+    #  - testing:  its own output hardmax(z) (greedy decoder)
+    with default_options(enable_self_stabilization=True):
+        # sub-layers
+        stab_in = Stabilizer()
+        rec_blocks = [LSTM(hidden_dim) for i in range(num_layers)]
+        stab_out = Stabilizer()
+        proj_out = Dense(label_vocab_dim, name='out_proj')
+        # attention model
+        if use_attention: # maps a decoder hidden state and the entire encoder state into an augmented decoder state
+            attention_model = AttentionModel(attention_dim, attention_span, attention_axis, name='attention_model') # :: (h_enc*, h_dec) -> (h_dec augmented)
+        # layer function
+        @Function
+        def decode(history, input):
+            encoded_input = encode(input)
+            r = history
+            r = embed(r)
+            r = stab_in(r)
+            for i in range(num_layers):
+                rec_block = rec_blocks[i]   # LSTM(hidden_dim)  # :: (dh, dc, x) -> (h, c)
+                if use_attention:
+                    if i == 0:
+                        @Function
+                        def lstm_with_attention(dh, dc, x):
+                            h_att = attention_model(encoded_input.outputs[0], dh)
+                            x = splice(x, h_att) # TODO: should this be added instead? (cf. BS example)
+                            return rec_block(dh, dc, x)
+                        r = Recurrence(lstm_with_attention)(r)
+                    else:
+                        r = Recurrence(rec_block)(r)
+                else:
+                    # unlike Recurrence(), the RecurrenceFrom() layer takes the initial hidden state as a data input
+                    r = RecurrenceFrom(rec_block)(*(encoded_input.outputs + (r,))) # :: h0, c0, r -> h  (Python < 3.5)
+                    #r = RecurrenceFrom(rec_block)(*encoded_input.outputs, r) # :: h0, c0, r -> h  (Python 3.5+)
+            r = stab_out(r)
+            r = proj_out(r)
+            r = Label('out_proj_out')(r)
+            return r
 
-    # Get minibatches of sequences to test and perform testing
-    i = 0
-    total_error = 0.0
-    while True:
-        mb = test_reader.next_minibatch(test_minibatch_size, input_map=test_bind)
-        if not mb: break
-        mb_error = trainer.test_minibatch(mb)
-        total_error += mb_error
+    return decode
 
-        if debug_output:
-            print("Minibatch {}, Error {} ".format(i, mb_error))
-        i += 1
-    return total_error/i
+########################
+# train action         #
+########################
 
+def create_model_train(s2smodel):
+    # model used in training (history is known from labels)
+    # note: the labels must not contain the initial <s>
+    @Function
+    def model_train(input, labels): # (input*, labels*) --> (word_logp*)
 
-# Creates and trains a sequence to sequence translation model
+        # The input to the decoder always starts with the special label sequence start token.
+        # Then, use the previous value of the label sequence (for training) or the output (for execution).
+        # BUGBUG: This will currently fail with sparse input.
+        past_labels = Delay(initial_state=sentence_start)(labels)
+        return s2smodel(past_labels, input)
+    return model_train
 
-def sequence_to_sequence_translator(debug_output=False, run_test=False):
+def create_model_greedy(s2smodel):
+    # model used in (greedy) decoding (history is decoder's own output)
+    @Function
+    @Signature(InputSequence[Tensor[input_vocab_dim]])
+    def model_greedy(input): # (input*) --> (word_sequence*)
 
-    input_vocab_dim = 69
-    label_vocab_dim = 69
+        # Decoding is an unfold() operation starting from sentence_start.
+        # We must transform s2smodel (history*, input* -> word_logp*) into a generator (history* -> output*)
+        # which holds 'input' in its closure.
+        unfold = UnfoldFrom(lambda history: s2smodel(history, input) >> hardmax,
+                            until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
+                            length_increase=length_increase, initial_state=sentence_start)
+        # TODO: The signature should be changed, so that the initial_state is passed as data.
+        return unfold(dynamic_axes_like=input)
+    return model_greedy
 
-    # network complexity; initially low for faster testing
-    hidden_dim = 256
-    num_layers = 1
+def create_criterion_function(model):
+    @Function
+    @Signature(input = InputSequence[Tensor[input_vocab_dim]], labels = LabelSequence[Tensor[label_vocab_dim]])
+    def criterion(input, labels):
+        # criterion function must drop the <s> from the labels
+        postprocessed_labels = sequence.slice(labels, 1, 0) # <s> A B C </s> --> A B C </s>
+        z = model(input, postprocessed_labels)
+        ce   = cross_entropy_with_softmax(z, postprocessed_labels)
+        errs = classification_error      (z, postprocessed_labels)
+        return (ce, errs)
 
-    # Source and target inputs to the model
-    batch_axis = Axis.default_batch_axis()
-    input_seq_axis = Axis('inputAxis')
-    label_seq_axis = Axis('labelAxis')
+    # use the following to render the Function graph to a PDF file
+    #plot(criterion, filename=os.path.join(MODEL_DIR, "model") + '.pdf')
+    return criterion
 
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    raw_input = input_variable(
-        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes, name='raw_input')
+# dummy for printing the input sequence below. Currently needed because input is sparse.
+def create_sparse_to_dense(input_vocab_dim):
+    I = Constant(np.eye(input_vocab_dim))
+    @Function
+    @Signature(InputSequence[SparseTensor[input_vocab_dim]])
+    def no_op(input):
+        return times(input, I)
+    return no_op
 
-    label_dynamic_axes = [batch_axis, label_seq_axis]
-    raw_labels = input_variable(
-        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes, name='raw_labels')
+def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_size):
 
-    # Instantiate the sequence to sequence translation model
-    input_sequence = raw_input
+    # Note: We would like to set the signature of 's2smodel' (s2smodel.update_signature()), but that will cause
+    # an error since the training criterion uses a reduced sequence axis for the labels.
+    # This is because it removes the initial <s> symbol. Hence, we must leave the model
+    # with unspecified input shapes and axes.
 
-    # Drop the sentence start token from the label, for decoder training
-    label_sequence = sequence.slice(raw_labels, 1, 0) # <s> A B C </s> --> A B C </s>
-    label_sentence_start = sequence.first(raw_labels)        # <s>
+    # create the training wrapper for the s2smodel, as well as the criterion function
+    model_train = create_model_train(s2smodel)
+    criterion = create_criterion_function(model_train)
 
-    is_first_label = sequence.is_first(label_sequence)       # <s> 0 0 0 ...
-    label_sentence_start_scattered = sequence.scatter(
-        label_sentence_start, is_first_label)
+    # also wire in a greedy decoder so that we can properly log progress on a validation example
+    # This is not used for the actual training process.
+    model_greedy = create_model_greedy(s2smodel)
 
-    # Encoder
-    encoder_outputH = stabilize(input_sequence)
-    for i in range(0, num_layers):
-        (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            encoder_outputH.output, hidden_dim, hidden_dim, future_value, future_value)
-
-    thought_vectorH = sequence.first(encoder_outputH)
-    thought_vectorC = sequence.first(encoder_outputC)
-
-    thought_vector_broadcastH = sequence.broadcast_as(
-        thought_vectorH, label_sequence)
-    thought_vector_broadcastC = sequence.broadcast_as(
-        thought_vectorC, label_sequence)
-
-    # Decoder
-    decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_sequence
-
-    decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
-        decoder_history_hook))
-
-    decoder_outputH = stabilize(decoder_input)
-    for i in range(0, num_layers):
-        if (i > 0):
-            recurrence_hookH = past_value
-            recurrence_hookC = past_value
-        else:
-            isFirst = sequence.is_first(label_sequence)
-            recurrence_hookH = lambda operand: element_select(
-                isFirst, thought_vector_broadcastH, past_value(operand))
-            recurrence_hookC = lambda operand: element_select(
-                isFirst, thought_vector_broadcastC, past_value(operand))
-
-        (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            decoder_outputH.output, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)
-
-    decoder_output = decoder_outputH
-
-    # Softmax output layer
-    z = linear_layer(stabilize(decoder_output), label_vocab_dim)
-
-    # Criterion nodes
-    ce = cross_entropy_with_softmax(z, label_sequence)
-    errs = classification_error(z, label_sequence)
-
-    # network output for decoder history
-    net_output = hardmax(z)
-
-    # make a clone of the graph where the ground truth is replaced by the network output
-    ng = z.clone(CloneMethod.share, {decoder_history_hook.output : net_output.output})
-
+    # This does not need to be done in training generally though
     # Instantiate the trainer object to drive the model training
-    lr_per_minibatch = learning_rate_schedule(0.5, UnitType.minibatch)
-    momentum_time_constant = momentum_as_time_constant_schedule(1100)
-    clipping_threshold_per_sample = 2.3
-    gradient_clipping_with_truncation = True
-    learner = momentum_sgd(z.parameters, 
-                           lr_per_minibatch, momentum_time_constant,
-                           gradient_clipping_threshold_per_sample=clipping_threshold_per_sample, 
-                           gradient_clipping_with_truncation=gradient_clipping_with_truncation)
-    trainer = Trainer(z, (ce, errs), learner)
-
-    # setup data
-    train_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "cmudict-0.7b.train-dev-20-21.ctf")
-    valid_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "tiny.ctf")
-
-    # readers
-    randomize_data = True
-    if run_test:
-        randomize_data = False # because we want to get an exact error
-
-    train_reader = create_reader(train_path, randomize_data, input_vocab_dim, label_vocab_dim)
-    train_bind = {
-        raw_input  : train_reader.streams.features,
-        raw_labels : train_reader.streams.labels
-    }
-
-    # get the vocab for printing output sequences in plaintext
-    vocab_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Data", "cmudict-0.7b.mapping")
-    vocab = [w.strip() for w in open(vocab_path).readlines()]
-    i2w = { i:ch for i,ch in enumerate(vocab) }
+    minibatch_size = 72
+    lr = 0.001 if use_attention else 0.005   # TODO: can we use the same value for both?
+    learner = adam_sgd(model_train.parameters,
+                       lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], UnitType.sample, epoch_size),
+                       momentum = momentum_as_time_constant_schedule(1100),
+                       gradient_clipping_threshold_per_sample=2.3,
+                       gradient_clipping_with_truncation=True)
+    trainer = Trainer(None, criterion, learner)
 
     # Get minibatches of sequences to train with and perform model training
-    i = 0
+    total_samples = 0
     mbs = 0
-    minibatch_size = 72
-    epoch_size = 908241
-    max_epochs = 10
-    training_progress_output_freq = 500
+    eval_freq = 100
 
-    # make things more basic for running a quicker test
-    if run_test:
-        epoch_size = 5000
-        max_epochs = 1
-        training_progress_output_freq = 30
+    # print out some useful training information
+    log_number_of_parameters(model_train) ; print()
+    progress_printer = ProgressPrinter(freq=30, tag='Training')
+    #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=model_path_stem + ".log") # use this to log to file
 
-    valid_reader = create_reader(valid_path, False, input_vocab_dim, label_vocab_dim)
-    valid_bind = {
-            find_arg_by_name('raw_input',ng)  : valid_reader.streams.features,
-            find_arg_by_name('raw_labels',ng) : valid_reader.streams.labels
-        }
+    sparse_to_dense = create_sparse_to_dense(input_vocab_dim)
 
     for epoch in range(max_epochs):
-        loss_numer = 0
-        metric_numer = 0
-        denom = 0
+        print("Saving model to '%s'" % model_path(epoch))
+        s2smodel.save(model_path(epoch))
 
-        while i < (epoch+1) * epoch_size:
+        while total_samples < (epoch+1) * epoch_size:
             # get next minibatch of training data
-            mb_train = train_reader.next_minibatch(minibatch_size, input_map=train_bind)
-            trainer.train_minibatch(mb_train)
+            mb_train = train_reader.next_minibatch(minibatch_size)
+            #trainer.train_minibatch(mb_train[train_reader.streams.features], mb_train[train_reader.streams.labels])
+            trainer.train_minibatch({criterion.arguments[0]: mb_train[train_reader.streams.features], criterion.arguments[1]: mb_train[train_reader.streams.labels]})
 
-            # collect epoch-wide stats
-            samples = trainer.previous_minibatch_sample_count
-            loss_numer += trainer.previous_minibatch_loss_average * samples
-            metric_numer += trainer.previous_minibatch_evaluation_average * samples
-            denom += samples
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
             # every N MBs evaluate on a test sequence to visually show how we're doing
-            if mbs % training_progress_output_freq == 0:
-                mb_valid = valid_reader.next_minibatch(minibatch_size, input_map=valid_bind)
-                e = ng.eval(mb_valid)
-                print_sequences(e, i2w)
+            if mbs % eval_freq == 0:
+                mb_valid = valid_reader.next_minibatch(1)
 
-            print_training_progress(trainer, mbs, training_progress_output_freq)
-            i += mb_train[raw_labels].num_samples
+                # run an eval on the decoder output model (i.e. don't use the groundtruth)
+                e = model_greedy(mb_valid[valid_reader.streams.features])
+                print(format_sequences(sparse_to_dense(mb_valid[valid_reader.streams.features]), i2w))
+                print("->")
+                print(format_sequences(e, i2w))
+
+                # debugging attention
+                if use_attention:
+                    debug_attention(model_greedy, mb_valid[valid_reader.streams.features])
+
+            total_samples += mb_train[train_reader.streams.labels].num_samples
             mbs += 1
 
-        print("--- EPOCH %d DONE: loss = %f, errs = %f ---" % (epoch, loss_numer/denom, 100.0*(metric_numer/denom)))
+        # log a summary of the stats for the epoch
+        progress_printer.epoch_summary(with_metric=True)
 
+    # done: save the final model
+    print("Saving final model to '%s'" % model_path(max_epochs))
+    s2smodel.save(model_path(max_epochs))
+    print("%d epochs complete." % max_epochs)
 
-    error1 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
+########################
+# test decoding        #
+########################
 
-    z.save("seq2seq.dnn")
-    z.restore("seq2seq.dnn")
+# This decodes the test set and counts the string error rate.
+def evaluate_decoding(reader, s2smodel, i2w):
+    
+    model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
 
-    label_seq_axis = Axis('labelAxis')
-    label_sequence = sequence.slice(find_arg_by_name('raw_labels',z), 1, 0)
-    ce = cross_entropy_with_softmax(z, label_sequence)
-    errs = classification_error(z, label_sequence)
-    trainer = Trainer(z, (ce, errs), [momentum_sgd(
-                    z.parameters, lr_per_minibatch, momentum_time_constant, True,
-                    clipping_threshold_per_sample, gradient_clipping_with_truncation)])
+    progress_printer = ProgressPrinter(tag='Evaluation')
 
-    error2 = translator_test_error(z, trainer, input_vocab_dim, label_vocab_dim)
+    sparse_to_dense = create_sparse_to_dense(input_vocab_dim)
 
-    assert error1 == error2
+    minibatch_size = 1024
+    num_total = 0
+    num_wrong = 0
+    while True:
+        mb = reader.next_minibatch(minibatch_size)
+        if not mb: # finish when end of test set reached
+            break
+        e = model_decoding(mb[reader.streams.features])
+        outputs = format_sequences(e, i2w)
+        labels  = format_sequences(sparse_to_dense(mb[reader.streams.labels]), i2w)
+        # prepend sentence start for comparison
+        outputs = ["<s> " + output for output in outputs]
 
-    return error1
+        num_total += len(outputs)
+        num_wrong += sum([label != output for output, label in zip(outputs, labels)])
+        
+    rate = num_wrong / num_total
+    print("string error rate of {:.1f}% in {} samples".format(100 * rate, num_total))
+    return rate
+
+#######################
+# test metric         #
+#######################
+
+# helper function to create a dummy Trainer that one can call test_minibatch() on
+# TODO: replace by a proper such class once available
+def Evaluator(model, criterion):
+    from cntk import Trainer
+    from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    loss, metric = Trainer._get_loss_metric(criterion)
+    parameters = set(loss.parameters)
+    if model:
+        parameters |= set(model.parameters)
+    if metric:
+        parameters |= set(metric.parameters)
+    dummy_learner = momentum_sgd(tuple(parameters), 
+                                 lr = learning_rate_schedule(1, UnitType.minibatch),
+                                 momentum = momentum_as_time_constant_schedule(0))
+    return Trainer(model, (loss, metric), dummy_learner)
+
+# This computes the metric on the test set.
+# Note that this is not decoding; just predicting words using ground-truth history, like in training.
+def evaluate_metric(reader, s2smodel, num_minibatches=None):
+
+    model_train = create_model_train(s2smodel)
+    criterion = create_criterion_function(model_train)
+
+    evaluator = Evaluator(None, criterion)
+
+    # Get minibatches of sequences to test and perform testing
+    minibatch_size = 1024
+    total_samples = 0
+    total_error = 0.0
+    while True:
+        mb = reader.next_minibatch(minibatch_size)
+        if not mb: # finish when end of test set reached
+            break
+        #mb_error = evaluator.test_minibatch(mb[reader.streams.features], mb[reader.streams.labels])
+        mb_error = evaluator.test_minibatch({criterion.arguments[0]: mb[reader.streams.features], criterion.arguments[1]: mb[reader.streams.labels]})
+        num_samples = mb[reader.streams.labels].num_samples
+        total_error += mb_error * num_samples
+        total_samples += num_samples
+
+        if num_minibatches != None:
+            num_minibatches -= 1
+            if num_minibatches == 0:
+                break
+
+    # and return the test error
+    rate = total_error/total_samples
+    print("error rate of {:.1f}% in {} samples".format(100 * rate, total_samples))
+    return rate
+
+########################
+# interactive session  #
+########################
+
+def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_label_length=20):
+
+    vdict = {v:i for i,v in enumerate(vocab)}
+    try:
+        w = [vdict["<s>"]] + [vdict[c] for c in tokens] + [vdict["</s>"]]
+    except:
+        print('Input contains an unexpected token.')
+        return []
+
+    # convert to one_hot
+    query = one_hot([w], len(vdict))
+    pred = model_decoding(query)
+    pred = pred[0] # first sequence (we only have one) -> [len, vocab size]
+    if use_attention:
+        pred = pred[:,0,0,:] # attention has extra dimensions
+
+    # print out translation and stop at the sequence-end tag
+    prediction = np.argmax(pred, axis=-1)
+    translation = [i2w[i] for i in prediction]
+    
+    # show attention window (requires matplotlib, seaborn, and pandas)
+    if use_attention and show_attention:
+    
+        #att_value = model_decoding.attention_model.attention_weights(query)
+        # BUGBUG: fails with "Forward: Feature Not Implemented"
+        q = combine([model_decoding.attention_model.attention_weights])
+        att_value = q(query)
+
+        # get the attention data up to the length of the output (subset of the full window)
+        att_value = att_value[0,0:len(prediction),0:len(w),0,0] # -> (len, span)
+
+        # set up the actual words/letters for the heatmap axis labels
+        columns = [i2w[ww] for ww in prediction]
+        index = [i2w[ww] for ww in w]
+
+        # show the attention weight heatmap
+        import matplotlib.pyplot as plt
+        import seaborn as sns
+        import pandas as pd
+
+        dframe = pd.DataFrame(data=np.fliplr(att_value.T), columns=columns, index=index)
+        sns.heatmap(dframe)
+        print('close the heatmap window to continue')
+        plt.show()
+
+    return translation
+
+def interactive_session(s2smodel, vocab, i2w, show_attention=False):
+
+    model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
+
+    import sys
+
+    print('Enter one or more words to see their phonetic transcription.')
+    while True:
+        line = input("> ")
+        if line.lower() == "quit":
+            break
+        # tokenize. Our task is letter to sound.
+        out_line = []
+        for word in line.split():
+            in_tokens = [c.upper() for c in word]
+            out_tokens = translate(in_tokens, model_decoding, vocab, i2w, show_attention=True)
+            out_line.extend(out_tokens)
+        out_line = [" " if tok == '</s>' else tok[1:] for tok in out_line]
+        print("=", " ".join(out_line))
+        sys.stdout.flush()
+
+########################
+# helper functions     #
+########################
+
+def get_vocab(path):
+    # get the vocab for printing output sequences in plaintext
+    vocab = [w.strip() for w in open(path).readlines()]
+    i2w = { i:w for i,w in enumerate(vocab) }
+    w2i = { w:i for i,w in enumerate(vocab) }
+    
+    return (vocab, i2w, w2i)
+
+# Given a vocab and tensor, print the output
+def format_sequences(sequences, i2w):
+    return [" ".join([i2w[np.argmax(w)] for w in s]) for s in sequences]
+
+# to help debug the attention window
+def debug_attention(model, input):
+    q = combine([model, model.attention_model.attention_weights])
+    #words, p = q(input) # Python 3
+    words_p = q(input)
+    words = words_p[0]
+    p     = words_p[1]
+    len = words.shape[attention_axis-1]
+    span = 7 #attention_span  #7 # test sentence is 7 tokens long
+    p_sq = np.squeeze(p[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
+    opts = np.get_printoptions()
+    np.set_printoptions(precision=5)
+    print(p_sq)
+    np.set_printoptions(**opts)
+
+#############################
+# main function boilerplate #
+#############################
 
 if __name__ == '__main__':
-    # Specify the target device to be used for computing, if you do not want to
-    # use the best available one, e.g.
-    #set_default_device(cpu())
 
-    error = sequence_to_sequence_translator(debug_output=False, run_test=True)
-    print("Error: %f" % error)
+    from _cntk_py import set_fixed_random_seed
+    set_fixed_random_seed(1)
+
+    # hook up data
+    vocab, i2w, w2i = get_vocab(os.path.join(DATA_DIR, VOCAB_FILE))
+
+    # create inputs and create model
+    model = create_model()
+    
+    # train
+    train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
+    valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
+    train(train_reader, valid_reader, vocab, i2w, model, max_epochs=30, epoch_size=908241)
+
+    test_epoch = 10
+    model = Function.load(model_path(test_epoch))
+
+    # test string error rate on decoded output
+    test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    evaluate_decoding(test_reader, model, i2w)
+    
+    # test same metric same as in training on test set
+    test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
+    evaluate_metric(test_reader, model)
+
+    # try the model out in an interactive session
+    interactive_session(model, vocab, i2w, show_attention=True)

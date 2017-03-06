@@ -254,7 +254,7 @@ namespace CNTK
                                                       std::unordered_set<Variable>& /*replacedPlaceholders*/)
     {}
 
-    bool Function::ValidateOrUpdateOutput(const Variable& currentOutputVar, const Variable& newOutputVar, bool alwaysUpdate)
+    bool Function::ValidateOrUpdateOutput(const Variable& currentOutputVar, const Variable& newOutputVar, bool alwaysUpdate) const
     {
         bool updated = false;
         if (!alwaysUpdate)
@@ -511,7 +511,7 @@ namespace CNTK
                                 std::unordered_map<Variable, Variable>& placeholderReplacements)
     {
         if (cloneMap.find(clonee.get()) != cloneMap.end())
-            LogicError("Cloning an already visited Function");
+            clonee->LogicError("Cloning an already visited Function");
 
         cloneMap[clonee.get()] = nullptr;
 
@@ -557,7 +557,7 @@ namespace CNTK
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             default:
-                                LogicError("Unknown ParameterCloningMethod");
+                                clonee->LogicError("Unknown ParameterCloningMethod");
                             }
                         }
                         else
@@ -1231,6 +1231,7 @@ namespace CNTK
                         const std::vector<bool>& autoPadding,
                         const NDShape& lowerPad,
                         const NDShape& upperPad,
+                        const bool ceilOutDim,
                         const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -1240,6 +1241,7 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
         additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
         additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+        additionalProperties[PrimitiveFunction::AttributeNameCeilOutDim] = ceilOutDim;
 
         return UnaryOp(PrimitiveOpType::Pooling, operand, std::move(additionalProperties), name);
     }
@@ -1271,7 +1273,7 @@ namespace CNTK
                                    const Variable& bias,
                                    const Variable& runningMean,
                                    const Variable& runningInvStd,
-                                   const Variable& runningSampleCount,
+                                   const Variable& runningCount,
                                    bool spatial,
                                    double normalizationTimeConstant,
                                    double blendTimeConstant,
@@ -1286,11 +1288,12 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameEpsilon] = epsilon;
         additionalProperties[PrimitiveFunction::AttributeNameUseCuDNNEngine] = useCuDNNEngine;
 
-        std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningSampleCount };
-        return AsComposite(
-            MakeSharedObject<PrimitiveFunction>(
-                PrimitiveOpType::BatchNormalization, operands, std::move(additionalProperties), name),
-                                         name);
+        std::vector<Variable> operands = { operand, scale, bias, runningMean, runningInvStd, runningCount };
+        return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::BatchNormalization,
+                                            operands,
+                                            std::move(additionalProperties),
+                                            name),
+                           name);
     }
 
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)
@@ -1499,17 +1502,7 @@ namespace CNTK
         {
             auto operandPlaceholder = PlaceholderVariable(L"operand");
             auto broadcastAsPlaceholder = PlaceholderVariable(L"broadcastAs");
-#if 1       // from master, requires latest update to ReconcileDynamicAxes(), not sure if works correctly inside a recurrent loop
             return AsBlock(Internal::ReconcileDynamicAxes(operandPlaceholder, broadcastAsPlaceholder), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
-#else
-            // We broadcast using a PastValue() operation that is normally outside of a loop,
-            // although it works inside the loop as well.
-            // The PastValue() uses an "infinite" delay such that every single time step reaches outside
-            // and gets the initial value, which is the value we want to broadcast.
-            // PastValue() also requires a data input, which is a dummy since it will never ever be used.
-            auto output = PastValue(Internal::ZeroesWithDynamicAxesLike(broadcastAsPlaceholder), /*initialState=*/ operandPlaceholder, /*offset=*/ INT_MAX);
-            return AsBlock(std::move(output), { { operandPlaceholder, operand },{ broadcastAsPlaceholder, broadcastAs } }, L"Sequence::BroadcastAs", name);
-#endif
         }
 
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const std::wstring& name)
@@ -1571,6 +1564,13 @@ namespace CNTK
         {
             std::vector<Variable> operands = { operand, packedIndex, condition };
             return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ScatterPacked, operands, Dictionary(), name), name);
+        }
+
+        FunctionPtr ReconcileDynamicAxis(const Variable& operand, const Variable& layout, const std::wstring& name)
+        {
+            // TODO: In V1 graph generation, ReconcileDynamicAxis() should be treated like a no-op if the axis is know to be the same.
+            //       E.g. used for seq2seq.
+            return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, layout, Dictionary(), name);
         }
 
         FunctionPtr ZeroesWithDynamicAxesLike(const Variable& operand)

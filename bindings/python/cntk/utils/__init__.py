@@ -319,6 +319,8 @@ def sanitize_function(arg):
 
     if isinstance(arg, cntk_py.Variable):
         arg = combine([arg])
+        if len(arg.outputs) != 1: # BUGBUG: This seems to happen with BlockFunctions?
+            raise TypeError("casting Variable to Function unexpectedly returned a tuple")
 
     if not isinstance(arg, cntk_py.Function):
         raise TypeError("Object of type %s cannot be cast to Variable" %
@@ -405,10 +407,6 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                              'only one' % (len(op_arguments), len(arguments)))
 
         arguments = { op_arguments[0]: arguments }
-
-    elif len(arguments) < len(op_arguments):
-        raise ValueError('your graph has %i inputs, but you specified data '
-                         'for %i' % (len(op_arguments), len(arguments)))
 
     if isinstance(arguments, dict):
         arg_names = [var.name for var in op_arguments]
@@ -680,19 +678,20 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
             arguments, op.outputs, None, device=device)
         return forward_output, None
 
-# helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
-# TODO: move to utils?
+class Record(dict):
+    '''
+    Easy construction of a record (=immutable singleton class) from keyword arguments.
+    e.g. r = Record(x = 13, y = 42) ; x = r.x
 
+    Args:
+        kwargs: keyword arguments to turn into the record members
 
-class _ClassFromDict(dict):
-
-    def __init__(self, args_dict):
-        super(_ClassFromDict, self).__init__(args_dict)
-        # TODO: try to delete __setattr__ to make it immutable
+    Returns:
+        A singleton class instance that has all passed kw args as immutable class members.
+    '''
+    def __init__(self, **args_dict):
+        super(Record, self).__init__(args_dict)
         self.__dict__.update(args_dict)
-        # for key in args_dict:   # self.__dict__.update(args_dict)
-        #    self[key] = args_dict[key]
-
     def __getattr__(self, key):
         if key not in self:
             raise AttributeError("record has no attribute '{}'".format(key))
@@ -700,12 +699,119 @@ class _ClassFromDict(dict):
 
     def __setattr__(self, key, value):
         raise AttributeError('record is immutable')
+    def updated_with(self, **kwargs):
+        '''
+        Create a new Record from an existing one with members modified or added.
+        e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
+    
+        Args:
+            kwargs: keyword arguments to turn into the record members
+    
+        Returns:
+            A singleton class instance that has all passed kw args as immutable class members.
+        '''
+        d = dict(**self)   # make it mutable
+        d.update(kwargs)   # merge the new items
+        return Record(**d) # lock it up again
 
+def get_python_function_arguments(f):
+    '''
+    Helper to get the parameter names and annotations of a Python function.
+    '''
+    # Note that we only return non-optional arguments (we assume that any optional args are not specified).
+    # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
+    import sys
+    if sys.version_info.major >= 3:
+        from inspect import getfullargspec
+    else:
+        def getfullargspec(f):
+            from inspect import getargspec
+            annotations = getattr(f, '__annotations__', {})
+            #f.__annotations__ = None  # needed when faking it under Python 3 for debugging purposes
+            a = getargspec(f)
+            #f.__annotations__ = annotations
+            return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations=annotations)
+    param_specs = getfullargspec(f)
+    annotations = param_specs.annotations
+    arg_names = param_specs.args
+    defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
+    if defaults:
+        arg_names = arg_names[:-len(defaults)] # we allow Function(functions with default arguments), but those args will always have default values since CNTK Functions do not support this
+    return (arg_names, annotations)
 
-# easier construction of records
-# e.g. r = Record(x = 13, y = 42) ; x = r.x
-def Record(**kwargs):
-    return _ClassFromDict(kwargs)
+def map_function_arguments(params, params_dict, *args, **kwargs):
+    '''
+    Helper to determine the argument map for use with various call operations.
+    Returns a dictionary from parameters to whatever arguments are passed.
+    Accepted are both positional and keyword arguments.
+    This mimics Python's argument interpretation, except that keyword arguments are not optional.
+    This does not require the arguments to be Variables or Functions. It is also called by train_minibatch() and @Signature.
+    '''
+    # start with positional arguments
+    arg_map = dict(zip(params, args))
+
+    # now look up keyword arguments
+    if len(kwargs) != 0:
+        for name, arg in kwargs.items():  # keyword args are matched by name
+            if name not in params_dict:
+                raise TypeError("got an unexpected keyword argument '%s'" % name)
+            param = params_dict[name]
+            if param in arg_map:
+                raise SyntaxError("got multiple values for argument '%s'" % name)
+            arg_map[param] = arg # add kw argument to dict
+    assert len(arg_map) == len(params)
+
+    return arg_map
+
+def Signature(*args, **kwargs):
+    '''
+    ``@Signature`` is a decorator to implement the function-argument annotations in Python-2.7,
+    as needed by the ``@Function`` decorator.
+    This is only needed when you have not yet migrated to Python 3.x.
+
+    Note: Although this is aimed at enabling ``@Function`` syntax with type annotations
+    in Python 2.7, ``@Signature`` is independent of CNTK and can be used for any argument annotation.
+
+    Args:
+        *args: types of arguments of the function that this decorator is applied to, in the same order.
+        **kwargs: types of arguments with optional names, e.g. `x=Tensor[42]`. Use this second form for
+           longer argument lists.
+
+    Example:
+     ``# Python 3:
+     @Function
+     def f(x: Tensor[42]):
+         return sigmoid(x)
+     # Python 2.7:
+     @Function
+     @Signature(Tensor[42])
+     def f(x):
+         return sigmoid(x)
+
+     # note that this:
+     @Function
+     @Signature(x:int)
+     def sqr(x):
+         return x*x
+     # is identical to:
+     def sqr(x):
+         return x*x
+     sqr.__annotations__ = {'x': int}``
+    '''
+    # this function returns another function which is the actual decorator applied to the def:
+    def add_annotations(f):
+        # prepare the signature
+        param_names, annotations = get_python_function_arguments(f)
+        if annotations:
+            raise ValueError('@Signature cannot be applied to functions that already have annotations')
+        annotations = {}
+        if len(args) + len(kwargs) != len(param_names):
+            raise TypeError("{} annotations provided for function to be decorated, but function has {} parameters".format(len(args) + len(kwargs), len(param_names)))
+        # implant anotations into f
+        params_dict = { name: name for name in param_names }
+        f.__annotations__ = map_function_arguments(param_names, params_dict, *args, **kwargs)
+        return f # and return the updated function
+    return add_annotations
 
 
 def _as_tuple(x):

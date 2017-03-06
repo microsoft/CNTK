@@ -68,7 +68,7 @@ def test_cifar_convnet_distributed(device_id):
                "-q", "32",
                "-r",
                "-device", "0" ]
-    mpiexec_test(device_id, script_under_test, params, 0.75, True)
+    mpiexec_test(device_id, script_under_test, params, 0.75, False, per_minibatch_tolerance=1e-2) # False since different workers may have different #cores
 
     # Ensure that the TensorBoard log directory was created and contains exactly one file with the expected name.
     tb_files = 0
@@ -85,7 +85,7 @@ def test_cifar_convnet_distributed_1bitsgd(device_id):
                "-q", "1",
                "-r",
                "-device", "0" ]
-    mpiexec_test(device_id, script_under_test, params, 0.75, True)
+    mpiexec_test(device_id, script_under_test, params, 0.75, False, per_minibatch_tolerance=1e-2)
 
 
 def test_cifar_convnet_distributed_block_momentum(device_id):

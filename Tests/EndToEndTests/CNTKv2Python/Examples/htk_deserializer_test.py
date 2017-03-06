@@ -1,8 +1,6 @@
 import cntk as C
 from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer, StreamDef, StreamDefs
-from cntk.blocks import LSTM
-from cntk.layers import Recurrence, Dense
-from cntk.models import Sequential, For
+from cntk.layers import Recurrence, Dense, LSTM, Sequential, For
 
 import os
 abs_path = os.path.dirname(os.path.abspath(__file__))

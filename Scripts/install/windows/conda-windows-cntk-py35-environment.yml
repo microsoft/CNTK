@@ -21,3 +21,4 @@ dependencies:
   - sphinx-rtd-theme==0.1.9
   - twine==1.8.1
   - gym==0.5.2
+  - pydot-ng==1.0.0

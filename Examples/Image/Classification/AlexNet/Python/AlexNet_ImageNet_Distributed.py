@@ -18,7 +18,7 @@ from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
 import cntk.io.transforms as xforms
-from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
+from cntk.layers import Placeholder, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
 from cntk.initializer import normal
 
 # default Paths relative to current python file.
@@ -81,7 +81,7 @@ def LocalResponseNormalization(k, n, alpha, beta, name=''):
     b = cntk.ops.reshape(y, cntk.InferredDimension, 0, 2)
     den = cntk.ops.exp(beta * cntk.ops.log(k + b))
     apply_x = cntk.ops.element_divide(x, den)
-    return cntk.blocks.Block(apply_x, 'LocalResponseNormalization', name, make_block=True)
+    return apply_x
 
 # Create the network.
 def create_alexnet():
