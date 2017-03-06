@@ -19,11 +19,6 @@ from cntk.axis import Axis
 from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 
-EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
-# the backward result returned by CNTK log() for epsilon
-BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36
-LOG_OF_EPS_IN_LOG = -85.1  # log(EPS_IN_LOG)
-
 RESHAPE_TEST_CASES = [
     # (input_shape, output_shape, expected_output_shape)
     ((2, 3),    (3, 2), (3, 2)),
@@ -129,9 +124,9 @@ def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axi
 def test_op_reshape_gradient_accumulation(device_id, precision):
     from .. import reshape
 
-    input_shape = (2,3)
-    output_shape = (3,2)
-    expected_output_shape = (3,2)
+    input_shape = (2, 3)
+    output_shape = (3, 2)
+    expected_output_shape = (3, 2)
 
     num_tensor_elements = np.multiply.reduce(input_shape)
     input_tensor = np.arange(
@@ -232,6 +227,65 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
                    {'begin_index': slice_params[0],
                     'end_index': slice_params[1],
                     'axis': slice_params[2]})
+
+
+SLICE_OVERLOAD_TEST_CASES_STATIC = [
+    # (input_data, slices, axis, expected_result)
+
+    ([[1, 2, 3], [-4, 5, 6]],
+        # Selecting from row 1 the column 2
+        (1, 2),
+        [[6]]),
+
+    # slicing with a list of indices
+    ([[1, 2, 3], [-4, 5, 6]],
+        # Selecting from both rows columns 1 and 2
+        (0, [1, 2]),
+        [[2, 3]]),
+]
+
+
+@pytest.mark.parametrize("input_data, slices, expected_result",
+                         SLICE_OVERLOAD_TEST_CASES_STATIC)
+def test_op_slice_overload(input_data, slices, expected_result,
+                           device_id, precision):
+
+    dtype = PRECISION_TO_TYPE[precision]
+    input_data = AA(input_data, dtype=dtype)
+
+    # Backward pass test
+    # ==================
+    # The gradient of the slice operator is a tensor of the same shape as the
+    # input tensor, having 1 for elements that were taken and 0 for elements
+    # that were dropped.
+
+    def grad_slice(x, slices):
+        res = np.zeros_like(x)
+        res[slices] = 1
+        return res
+
+    value = AA(input_data, dtype=dtype)
+
+    expected_forward = [AA([expected_result], dtype=dtype)]
+    expected_backward = [[grad_slice(input_data, slices)]]
+
+    a = I(shape=value.shape,
+          dtype=sanitize_dtype_cntk(dtype),
+          needs_gradient=True,
+          name='a')
+
+    f = a+0
+
+    # create batch
+    value.shape = (1, 1) + value.shape
+
+    input_op = f[slices]
+
+    forward_input = {a: value}
+    expected_backward = {a: expected_backward}
+    unittest_helper(input_op,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 
 
 SLICE_TEST_CASES_DYNAMIC = [
