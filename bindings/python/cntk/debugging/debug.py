@@ -64,23 +64,23 @@ following command-line interface::
     State: None
     Root gradients:
     [[[-0.79412955  0.79412955]]
-    
+
      [[-0.79412955  0.79412955]]
-    
+
      [[ 0.20587046 -0.20587045]]
-    
+
      [[ 0.20587046 -0.20587045]]
-    
+
      [[ 0.20587046 -0.20587045]]
-    
+
      [[ 0.20587046 -0.20587045]]
-    
+
      [[-0.79412955  0.79412955]]
-    
+
      [[ 0.20587046 -0.20587045]]
-    
+
      [[ 0.20587039 -0.20587039]]
-    
+
      [[-0.79412961  0.79412961]]]
 
 At every stop the following information is given:
@@ -105,12 +105,14 @@ def save_as_legacy_model(root_op, filename):
     '''
     cntk_py.save_as_legacy_model(root_op, filename)
 
+
 class _DebugState(object):
+
     def __init__(self, all_nodes):
         self.commands = []
         self.last_pass = 'f'
         self.all_nodes = all_nodes
-        self.name_to_node = defaultdict(lambda:[])
+        self.name_to_node = defaultdict(lambda: [])
         for n in self.all_nodes:
             self.name_to_node[n.name].append(n)
 
@@ -209,43 +211,19 @@ class DebugNode(UserFunction):
 
         return understood
 
-    def _format_status(self):
-        if isinstance(self.after, Constant):
-            node_type = 'Constant'
-        elif isinstance(self.after, Parameter):
-            node_type = 'Parameter'
-
-        elif isinstance(self.after, Function):
-            node_type = self.after.op_name
-
-        else:
-            node_type = type(self.after)
-
-        if self.after.is_sparse:
-            node_type += ' (sparse)'
-
-        if self.after.name:
-            name = "name='%s' " % self.after.name
-        else:
-            name = ''
-
-        dyn_axes = '[%s]' % ','.join(['*']*len(self.after.dynamic_axes))
-        
-        return "%s node with %suid='%s' shape=%s%s" % \
-               (node_type, name, self.after.uid, dyn_axes, self.after.shape)
-
     def _print_status(self, current_pass):
         if current_pass != DebugNode._last_pass:
             if current_pass == 'f':
                 print()
-                print('='*40 + ' forward  ' + '='*40)
+                print('=' * 40 + ' forward  ' + '=' * 40)
             else:
-                print('='*40 + ' backward ' + '='*40)
+                print('=' * 40 + ' backward ' + '=' * 40)
 
         if current_pass == 'f':
-            print("Forward after %s" % self._format_status())
+            status = "Forward after"
         else:
-            print("Backward before %s" % self._format_status())
+            status = "Backward before"
+        print("%s %s with uid '%s'" % (status, str(self.after), self.after.uid))
 
     def forward(self, argument, device=None, outputs_to_retain=None):
         self._print_status('f')
@@ -344,17 +322,25 @@ class DebugNode(UserFunction):
         return [output_variable(self.inputs[0].shape, self.inputs[0].dtype,
                                 self.inputs[0].dynamic_axes)]
 
+    def __str__(self):
+        return "DebugNode(after=%s)"%str(self.after)
+
 
 def debug_model(model):
     '''
     Returns a cloned model that has debug nodes inserted everywhere. When the
     graph is evaluated or trained, those nodes will allow to inspect the graph.
+
+    Args:
+      model (root node): root node until which the nodes are to be debugged
+
+    Returns:
+      a clone of the model that has debugging enabled
     '''
     from cntk.graph import depth_first_search
     nodes = depth_first_search(model, lambda x: True)
 
     dbg_state = _DebugState(nodes)
     mod = {n: DebugNode(n, dbg_state) for n in nodes}
-    model = model.clone(CloneMethod.share, mod)
 
-    return model
+    return model.clone(CloneMethod.share, mod)
