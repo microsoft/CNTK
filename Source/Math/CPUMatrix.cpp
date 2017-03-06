@@ -2976,7 +2976,6 @@ void CPUMatrix<ElemType>::VectorNorm1(CPUMatrix<ElemType>& c, const bool isColWi
     if (m <= 0 || n <= 0)
         LogicError("VectorNorm1: invalid matrix dimensions, probably due to overflow."); // converting from size_t to int may cause overflow
 
-
     if (isColWise) // col-wise
     {
         c.RequireSize(1, n);
