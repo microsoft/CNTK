@@ -308,6 +308,17 @@ POOLING_AVG_INCLUDE_PAD_DATA = [
      [[[[20./9, 45./9, 40./9],
         [135./9, 225./9, 165./9],
         [160./9, 255./9, 180./9]]]]),
+    # ([1, 2, 2, 4, 3],  # input_size
+    #  (2, 2, 1),  # pooling_window
+    #  (2, 2, 1),  # strides
+    #  [[[[8.5, 9.5, 10.5],
+    #     [14.5, 15.5, 16.5]]],
+    #   [[[32.5, 33.5, 34.5],
+    #     [38.5, 39.5, 40.5]]]]),  # result
+    # ([1, 1, 2, 2, 4],
+    #  (2, 2, 1),
+    #  (2, 2, 1),
+    #  [[[[7., 8., 9., 10.]]]])
 ]
 
 
@@ -325,9 +336,10 @@ def test_op_average_pooling_include_pad(input_size, pooling_window, strides, res
 
     from cntk import pooling
     input_op = pooling(a, AVG_POOLING, pooling_window, strides, auto_padding=[True], include_pad=True)
+    # input_op = pooling(a, AVG_POOLING, pooling_window, strides, auto_padding=[False], lower_pad=1, upper_pad=1,
+    #                    include_pad=True)
 
     forward_input = {a: input_operand}
-
     expected_forward = AA([result])
     expected_backward = {a: backward}
 

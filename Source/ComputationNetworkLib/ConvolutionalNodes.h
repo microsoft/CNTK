@@ -80,7 +80,7 @@ public:
         fstream << (int32_t)m_poolKind;
         fstream << (int32_t)m_imageLayout;
         fstream << m_maxTempMemSizeInSamples;
-        fstream << m_transpose;	
+        fstream << m_transpose;
         m_outputShape.Save(fstream);
         fstream << m_ceilOutDim;
         fstream << m_poolPadMode;
@@ -119,6 +119,9 @@ public:
         if (modelVersion >= CNTK_MODEL_VERSION_21)
         {
             fstream >> m_ceilOutDim;
+        }
+        if (modelVersion >= CNTK_MODEL_VERSION_22)
+        {
             fstream >> m_poolPadMode;
         }
     }
@@ -339,7 +342,7 @@ public:
             fstream >> pad;
             fstream >> m_maxTempMemSizeInSamples;
             m_poolKind = PoolKind::None;
-			m_poolPadMode = false;
+            m_poolPadMode = false;
             m_convolution2D = true;
 
             m_kernelShape = TensorShape(kW, kH, 1);
