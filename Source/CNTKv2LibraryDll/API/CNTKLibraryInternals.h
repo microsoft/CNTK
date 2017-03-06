@@ -237,7 +237,7 @@ namespace CNTK
         // Internal hooks for testing and higher-level bindings
         // These should not be directly called by C++ API users
         CNTK_API void EnableReversingTensorShapesInErrorMessages();
-        bool IsReversingTensorShapesInErrorMessagesEnabled();
+        CNTK_API bool IsReversingTensorShapesInErrorMessagesEnabled();
 
         CNTK_API void AlwaysAllowSettingDefaultDevice();
         bool IsSettingDefaultDeviceAlwaysAllowed();

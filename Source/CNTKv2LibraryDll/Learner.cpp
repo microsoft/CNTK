@@ -185,9 +185,7 @@ namespace CNTK
         std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());
 
         if (uniqueParameters.size() != parameters.size())
-        {
             LogicError("Learner parameters contain duplicates.");
-        }
 
         if (allocateSmoothGradients)
         {
@@ -234,9 +232,7 @@ namespace CNTK
 
         // make sure trainingSampleCount is a valid value
         if (trainingSampleCount == 0)
-        {
-            InvalidArgument("Learner::Update(): cannot perform an update with an empty minibatch.");
-        }
+            InvalidArgument("Learner::Update() cannot perform an update with an empty minibatch.");
 
         for (const auto& parameter : Parameters())
         {
@@ -323,9 +319,7 @@ namespace CNTK
         for (const auto& parameter : Parameters())
         {
             if (checkpoint.Contains(parameter.Uid()))
-            {
                 LogicError("Parameter uids must be unique");
-            }
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
             checkpoint[parameter.Uid()] = *smoothedGradientValue;
@@ -351,25 +345,19 @@ namespace CNTK
         for (const auto& parameter : parameters)
         {
             if (!checkpoint.Contains(parameter.Uid()))
-            {
-                LogicError("Checkpoint does not contain state for parameter %ls", parameter.Uid().c_str());
-            }
+                LogicError("Checkpoint does not contain smoothed gradient value for parameter '%S' (uid=%S).", parameter.AsString().c_str(), parameter.Uid().c_str());
 
             const auto& smoothedGradientValue = m_smoothedGradientValues.at(parameter);
 
             const NDArrayView& checkpointedValue = checkpoint[parameter.Uid()].Value<NDArrayView>();
 
             if (smoothedGradientValue->GetDataType() != checkpointedValue.GetDataType())
-            {
-                LogicError("A value restored from a checkpoint for the smoothed gradient data type for parameter %ls does not match the expected value",
-                           parameter.Uid().c_str());
-            }
+                LogicError("DataType of smoothed gradient value restored from checkpoint for the parameter '%S' (uid = %ls) does not match the expected value.",
+                            parameter.AsString().c_str(), parameter.Uid().c_str());
 
             if (smoothedGradientValue->Shape() != checkpointedValue.Shape())
-            {
-                LogicError("A value restored from a checkpoint for the smoothed gradient shape for parameter %ls does not match the expected value",
-                           parameter.Uid().c_str());
-            }
+                LogicError("Shape '%S' of the smoothed gradient value restored from checkpoint for the parameter '%S' (uid = %ls) does not match the expected value.",
+                           smoothedGradientValue->Shape().AsString().c_str(), parameter.AsString().c_str(), parameter.Uid().c_str());
 
             smoothedGradientValue->CopyFrom(checkpointedValue);
         }

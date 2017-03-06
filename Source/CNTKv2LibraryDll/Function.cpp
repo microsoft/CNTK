@@ -107,7 +107,7 @@ namespace CNTK
                 !inputVar.IsConstant() &&
                 !inputVar.IsPlaceholder())
             {
-                InvalidArgument("Function input has invalid VariableKind!");
+                InvalidArgument("Function '%S' input has invalid VariableKind.", inputVar.AsString().c_str());
             }
         }
     }
@@ -136,7 +136,7 @@ namespace CNTK
             else
             {
                 if (arguments.find(input) == arguments.end())
-                    InvalidArgument("Function::Forward: No value specified for input variable (Name=%S, Uid=%S)", input.Name().c_str(), input.Uid().c_str());
+                    InvalidArgument("No value specified for input Variable '%S' of Function '%S'.", input.AsString().c_str(), this->AsString().c_str());
 
                 inputValue = arguments.at(input);
             }
@@ -157,7 +157,7 @@ namespace CNTK
     void Function::SetName(const std::wstring& name)
     {
         if (!Name().empty() && !Internal::IsRenamingFunctionsAllowed())
-            InvalidArgument("Function::SetName: Illegal to set name of a Function with an existing name (%S)", Name().c_str());
+            InvalidArgument("Illegal to set name of a Function '%S' with an existing name '%S'", this->AsString().c_str(), Name().c_str());
 
         m_name = name;
     }
@@ -171,7 +171,7 @@ namespace CNTK
     FunctionPtr Function::BlockRoot() const
     {
         if (!IsBlock())
-            InvalidArgument("Function::BlockRoot() cannot be called for a Function which is not a block");
+            InvalidArgument("Function::BlockRoot() called for a Function '%S' which is not a block.", this->AsString().c_str());
 
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
         return blockFunction->Composite()->RootFunction();
@@ -180,7 +180,7 @@ namespace CNTK
     std::shared_ptr<std::vector<std::pair<Variable, Variable>>> Function::BlockArgumentsMappingImpl() const
     {
         if (!IsBlock())
-            InvalidArgument("Function::BlockArgumentsMapping() cannot be called for a Function which is not a block");
+            InvalidArgument("Function::BlockArgumentsMapping() called for a Function '%S' which is not a block.", this->AsString().c_str());
 
         auto blockFunction = dynamic_cast<const BlockFunction*>(this);
         return std::shared_ptr<std::vector<std::pair<Variable, Variable>>>(new std::vector<std::pair<Variable, Variable>>(std::move(blockFunction->CompositeArgumentsMap())), [](std::vector<std::pair<Variable, Variable>>* ptr) { delete ptr; });
@@ -254,7 +254,7 @@ namespace CNTK
                                                       std::unordered_set<Variable>& /*replacedPlaceholders*/)
     {}
 
-    bool Function::ValidateOrUpdateOutput(const Variable& currentOutputVar, const Variable& newOutputVar, bool alwaysUpdate) const
+    /*static*/ bool Function::ValidateOrUpdateOutput(const Variable& currentOutputVar, const Variable& newOutputVar, bool alwaysUpdate)
     {
         bool updated = false;
         if (!alwaysUpdate)
@@ -281,7 +281,10 @@ namespace CNTK
                 ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
                 ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
             {
-                InvalidArgument("Inconsistency in output variable shape, DataType or Dynamic axes computed after replaced placeholders vs. existing output properties, for the Recurrent Function");
+                InvalidArgument("New output Variable Shape, DataType or Dynamic axes after replaced placeholders does not match previous output Variable, for the Recurrent Function.\n"
+                                "New = %S\n"
+                                "Previous = %S\n",
+                                newOutputVar.AsString().c_str(), currentOutputVar.AsString().c_str());
             }
         }
         else
@@ -381,7 +384,8 @@ namespace CNTK
         auto loadedModelLeafVariables = loadedModelFunction->Inputs();
         auto trainerModelLeafVariables = Inputs();
         if (trainerModelLeafVariables.size() != loadedModelLeafVariables.size())
-            InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
+            InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
+                            loadedModelFunction->AsString().c_str(), this->AsString().c_str());
 
         std::map<std::wstring, Variable> loadedModelLeafVariablesMap;
         for (auto leafVar : loadedModelLeafVariables)
@@ -431,7 +435,8 @@ namespace CNTK
             auto correspondingLoadedModelVar = loadedModelLeafVariablesMap.at(trainerModelLeafVar.Uid());
 
             if (!areVariablesEquivalent(correspondingLoadedModelVar, trainerModelLeafVar))
-                InvalidArgument("The loaded model's leaf variables do not match the trainer model's leaf variables");
+                InvalidArgument("The loaded Function '%S' leaf variables do not match those of the Function '%S' being restored.",
+                                loadedModelFunction->AsString().c_str(), this->AsString().c_str());
 
             if ((trainerModelLeafVar.IsConstant() && !Constant(trainerModelLeafVar).Value()->IsReadOnly()) || trainerModelLeafVar.IsParameter())
             {
@@ -462,7 +467,11 @@ namespace CNTK
     {
         auto placeholders = Placeholders();
         if (placeholders.size() != 1)
-            InvalidArgument("Function::ReplacePlaceholders called with a single replacement variable but this Function has %d placeholders", (int)placeholders.size());
+            InvalidArgument("ReplacePlaceholder called with a single replacement Variable '%S' but this Function '%S' has %d placeholders '%S'",
+                            placeholderReplacement.AsString().c_str(),
+                            this->AsString().c_str(),                            
+                            (int)placeholders.size(),
+                            NamedListString(placeholders).c_str());
 
         return ReplacePlaceholders({ { *(placeholders.begin()), placeholderReplacement } });
     }
@@ -492,12 +501,14 @@ namespace CNTK
         } while (recurrentNodeOutputModified && (numValidationPasses < maxNumValidationPassesAllowed));
 
         if (numValidationPasses >= maxNumValidationPassesAllowed)
-            LogicError("A recurrent node output shape change happened in max allowed (%d) successive validation passes indicating a potential infinite inference loop!", (int)numValidationPasses);
+            LogicError("Function '%S' ReplacePlaceholders: A recurrent node output shape change happened in max allowed (%d) successive validation passes "
+                       "indicating a potential infinite inference loop.", AsString().c_str(), (int)numValidationPasses);
 
         for (auto replacementPair : placeholderReplacements)
         {
             if (replacedPlaceholders.find(replacementPair.first) == replacedPlaceholders.end())
-                InvalidArgument("At least one of the placeholders specified for replacement was not found in the function");
+                InvalidArgument("Placeholder '%S' specified for replacement not found in the Function '%S'.",
+                                replacementPair.first.AsString().c_str(), this->AsString().c_str());
         }
 
         return this->shared_from_this();
@@ -511,7 +522,7 @@ namespace CNTK
                                 std::unordered_map<Variable, Variable>& placeholderReplacements)
     {
         if (cloneMap.find(clonee.get()) != cloneMap.end())
-            clonee->LogicError("Cloning an already visited Function");
+            LogicError("Function::Clone: Cloning an already visited Function '%S'.", clonee->AsString().c_str());
 
         cloneMap[clonee.get()] = nullptr;
 
@@ -557,7 +568,7 @@ namespace CNTK
                                 leafVariablesCloneMap[cloneeInput] = clonedInput;
                                 break;
                             default:
-                                clonee->LogicError("Unknown ParameterCloningMethod");
+                                LogicError("Function::Clone: Unknown ParameterCloningMethod.");
                             }
                         }
                         else
@@ -635,7 +646,7 @@ namespace CNTK
     {
         const CompositeFunction* compositeFunction = dynamic_cast<const CompositeFunction*>(this);
         if (compositeFunction == nullptr)
-            LogicError("Currently only cloning of composite functions is supported");
+            LogicError("Function '%S': Currently only cloning of composite functions is supported.", AsString().c_str());
 
         std::unordered_map<const Function*, FunctionPtr> cloneMap;
         std::unordered_map<Variable, Variable> leafVariablesCloneMap;
@@ -700,7 +711,7 @@ namespace CNTK
     {
         CompositeFunction* compositeFunction = dynamic_cast<CompositeFunction*>(this);
         if (compositeFunction == nullptr)
-            InvalidArgument("Primitive (aka non-composite) Function instances cannot be restored from a checkpoint.");
+            InvalidArgument("Primitive Function '%S' instance cannot be restored from a checkpoint.", this->AsString().c_str());
 
         auto restoredFunction = Function::Deserialize(modelDictionary, DeviceDescriptor::CPUDevice());
 
@@ -708,7 +719,8 @@ namespace CNTK
         // by patching up restored functions on the fly during deserialization (e.g., by 
         // inserting an extra input for the sample count in case of BatchNorm).
         if (!Internal::AreEquivalent(shared_from_this(), restoredFunction))
-            InvalidArgument("'This' function is not equivalent (isomorphic) to the function restored from a checkpoint.");
+            InvalidArgument("Function '%S' being restored is not equivalent (isomorphic) to the Function '%S' loaded from checkpoint.",
+                            this->AsString().c_str(), restoredFunction->AsString().c_str());
 
         auto parameters = Parameters();
         auto restoredParameters = restoredFunction->Parameters();
@@ -727,7 +739,8 @@ namespace CNTK
             // Additionally, to be super-safe, compare parameter UIDs.
             if (parameters[i].Uid() != restoredParameters[i].Uid())
             {
-                 InvalidArgument("'This' function parameters and restored function parameters do not have identical UIDs.");
+                 InvalidArgument("Function being restored '%S' parameters UIDs do not match loaded Function '%S' parameter UIDs.",
+                                 this->AsString().c_str(), restoredFunction->AsString().c_str());
             }
 
             parameters[i].Value()->CopyFrom(*(restoredParameters[i].Value().get()));
@@ -748,7 +761,7 @@ namespace CNTK
         });
     }
 
-    std::wstring Function::AsString() const
+    std::wstring Function::AsString(bool doNotInferOutputs) const
     {
         wstringstream wss;
         bool first = true;
@@ -759,10 +772,16 @@ namespace CNTK
         bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
         for (auto arg : Arguments(reverse))
             wss << (first ? (first = false, "") : ", ") << arg.AsString();
+
         wss << " -> ";
-        first = true;
-        for (auto out : Outputs())
-            wss << (first ? (first = false, "") : ", ") << out.AsString();
+        if (doNotInferOutputs && m_outputs.empty())
+            wss << "Unknown";
+        else
+        {
+            first = true;
+            for (auto out : Outputs())
+                wss << (first ? (first = false, "") : ", ") << out.AsString();
+        }
         return wss.str();
     }
 
@@ -868,28 +887,21 @@ namespace CNTK
     FunctionPtr Transpose(const Variable& operand, const std::wstring& name)
     {
         if (operand.Shape().Rank() <= 2)
-            InvalidArgument("Transpose can already be called for 1D or 2D operands");
+            InvalidArgument("Transpose called with operand '%S'; only 1D or 2D operands are supported", operand.AsString().c_str());
 
         return TransposeAxes(operand, Axis(0), Axis(1), name);
     }
 
     FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
     {
-        if (((endIndex > 0 && beginIndex >= 0) || (beginIndex < 0 && endIndex <= 0))
-            && (endIndex - beginIndex) <= 0)
-        {
-            // range check only applies if both begin and end are from start or both are from end,
-            // otherwise we can't determine anything without knowing the actual dimensions
-            InvalidArgument("CNTK::Slice: endIndex (%d) - beginIndex (%d) must be a positive number", endIndex, beginIndex);
-        }
 
         if (axis.IsStaticAxis())
             return Internal::Slice(operand, axis, beginIndex, endIndex, name);
 
         if (axis == Axis::DefaultBatchAxis())
-            LogicError("Slice is currently unsupported along the batch axis");
+            LogicError("Slice along the dynamic batch axis is currently unsupported.");
 
-        LogicError("CNTK::Slice: Invalid axis argument provided. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
+        LogicError("Slice: Invalid axis argument provided. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
     }
 
     FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name)
@@ -921,7 +933,7 @@ namespace CNTK
     FunctionPtr Reshape(const Variable& operand, const NDShape& replacementShape, const Axis& beginAxis, const Axis& endAxis, const std::wstring& name)
     {
         if (!beginAxis.IsStaticAxis() || !endAxis.IsStaticAxis())
-            LogicError("Reshape operation does not support reshaping dynamic axis");
+            LogicError("Reshape: operation does not support reshaping dynamic axis");
 
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameNewShape] = replacementShape;
@@ -1070,7 +1082,7 @@ namespace CNTK
     FunctionPtr ClassificationError(const Variable& prediction, const Variable& labels, size_t topN, const Axis& axis, const std::wstring& name)
     {
         if (topN == 0)
-            InvalidArgument("ClassificationError: The topN argument must be > 0!");
+            InvalidArgument("ClassificationError: The topN argument must be > 0.");
 
         if (topN == 1)
         {
@@ -1095,7 +1107,7 @@ namespace CNTK
         else
         {
             if (axis != Axis(0))
-                LogicError("ClassificationError along a specific axis does not support topN!");
+                LogicError("ClassificationError: The topN feature is not supported along a specific axis.");
 
             std::vector<Variable> operands = { prediction, labels, Constant::Scalar((float)topN) };
             return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::ClassificationError, operands, Dictionary(), name), name);
@@ -1202,7 +1214,7 @@ namespace CNTK
         // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
         // the sample shape and considering the rest to be part of the batch axis
         if (operand.DynamicAxes().empty())
-            LogicError("Convolution currently requires the main operand to have dynamic axes");
+            LogicError("Convolution currently requires the main operand '%S' to have dynamic axes.", operand.AsString().c_str());
 
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
@@ -1293,7 +1305,7 @@ namespace CNTK
                                             operands,
                                             std::move(additionalProperties),
                                             name),
-                           name);
+                                         name);
     }
 
     FunctionPtr Clip(const Variable& operand, const Variable& min, const Variable& max, const std::wstring& name)
@@ -1331,7 +1343,7 @@ namespace CNTK
     FunctionPtr AsBlock(FunctionPtr&& composite, const std::vector<std::pair<Variable, Variable>>& argumentsMap, const std::wstring& blockOpName, const std::wstring& blockName)
     {
         if (!composite->IsComposite())
-            InvalidArgument("Block functions can only be created from a composite function");
+            InvalidArgument("Composite argument '%S' to AsBlock is not a composite Function.", composite->AsString().c_str());
 
         return AsComposite(MakeSharedObject<BlockFunction>(std::move(composite), argumentsMap, blockOpName, Dictionary(), blockName), blockName);
     }
@@ -1516,7 +1528,7 @@ namespace CNTK
             if (reductionOpName == PrimitiveFunction::InternalSumReductionOpName)
                 reductionFunctor = std::bind(Plus, _1, _2, L"");
             else
-                LogicError("%S reduction along dynamic axis is currently unsupported", reductionOpName.c_str());
+                LogicError("ReduceElements: operand '%S'; %S reduction op is currently unsupported along dynamic axis.", operand.AsString().c_str(), reductionOpName.c_str());
 
             auto operandPlaceholder = PlaceholderVariable(L"operand");
 
@@ -1542,7 +1554,7 @@ namespace CNTK
             Sequence::VerifyIsSequence(operand);
 
             if (offset == 0)
-                InvalidArgument("CNTK::Sequence::IsWithin: The offset must be positive");
+                InvalidArgument("Sequence::IsWithin: The offset cannot be 0.");
 
             if (offset > 0)
                 return PastValue(Internal::ZeroesWithDynamicAxesLike(operand), Constant::Scalar(1.0f), offset, name);
@@ -1619,7 +1631,7 @@ namespace CNTK
         FunctionPtr ReduceElements(const Variable& operand, const std::wstring& reductionOpName, const Axis& axis, const std::wstring& name)
         {
             if (axis == Axis::DefaultBatchAxis())
-                LogicError("Reduction is currently unsupported along the batch axis only");
+                LogicError("ReduceElements: operand %S; Reduction along the batch axis alone is currently unsupported.", operand.AsString().c_str());
 
             if (axis.IsStaticAxis() ||
                 (axis == Axis::AllStaticAxes()) ||
@@ -1632,7 +1644,8 @@ namespace CNTK
                 return UnaryOp(PrimitiveOpType::ReduceElements, operand, std::move(additionalProperties), name);
             }
 
-            LogicError("CNTK::ReduceElements: Invalid axis argument provided. To reduce a sequence along its ordered dynamic axis use Sequence::ReduceElements.");
+            LogicError("ReduceElements: operand %S; Invalid axis argument provided. To reduce an operand along its ordered dynamic axis use Sequence::ReduceElements.",
+                       operand.AsString().c_str());
         }
 
         FunctionPtr ReconcileDynamicAxes(const Variable& operand, const Variable& axesAsOperand, const std::wstring& name)

@@ -80,7 +80,7 @@ namespace CNTK
         else if (dataType == DataType::Double)
             return "Double";
         else
-            LogicError("Unknown DataType");
+            LogicError("Unknown DataType.");
     }
 
     inline size_t DataTypeSize(DataType dataType)
@@ -90,7 +90,7 @@ namespace CNTK
         else if (dataType == DataType::Double)
             return sizeof(double);
         else
-            LogicError("Unknown DataType");
+            LogicError("Unknown DataType.");
     }
 
     ///
@@ -117,6 +117,19 @@ namespace CNTK
         GPU,
         // TODO: FPGA
     };
+
+    inline const wchar_t* DeviceKindName(DeviceKind deviceKind)
+    {
+        switch (deviceKind)
+        {
+        case DeviceKind::CPU:
+            return L"CPU";
+        case DeviceKind::GPU:
+            return L"GPU";
+        default:
+            LogicError("Unknown DeviceKind.");
+        }
+    }
 
     /// A collection of additional information needed for the distributed trainer to aggregate the gradients
     struct MinibatchInfo
@@ -189,6 +202,15 @@ namespace CNTK
         /// Static method to get a list of descriptors of all available/supported devices.
         ///
         CNTK_API static const std::vector<DeviceDescriptor>& AllDevices();
+
+        std::wstring AsString() const
+        {
+            std::wstring str = DeviceKindName(Type());
+            if (Type() == DeviceKind::GPU)
+                str = str + L"[" + std::to_wstring(Id()) + L"]";
+
+            return str;
+        }
 
     private:
         DeviceDescriptor(unsigned int deviceId, DeviceKind deviceType)
@@ -313,7 +335,7 @@ namespace CNTK
         {
             endAxisId = (endAxisId == SIZE_MAX) ? Rank() : endAxisId;
             if ((endAxisId < beginAxisId) || (endAxisId > Rank()))
-                InvalidArgument("NDShape::SubShape : The specified endAxisId (%d) cannot exceed the rank (%d) of 'this' NDShape and must be >= than the specified beginAxisId (%d)", (int)endAxisId, (int)Rank(), (int)beginAxisId);
+                InvalidArgument("NDShape::SubShape: The specified endAxisId (%zu) must not exceed the rank (%zu) of 'this' NDShape and must be >= than the specified beginAxisId (%zu)", endAxisId, Rank(), beginAxisId);
 
             std::vector<size_t> subShapeDims(m_shapeDims.begin() + beginAxisId, m_shapeDims.begin() + endAxisId);
             return subShapeDims;
@@ -333,7 +355,7 @@ namespace CNTK
         size_t TotalSize() const
         {
             if (HasInferredDimension())
-                RuntimeError("NDShape::TotalSize : TotalSize cannot be determined for a NDShape with one or more dimensions being InferredDimension");
+                RuntimeError("NDShape::TotalSize: TotalSize cannot be determined for a NDShape '%S' with one or more dimensions being InferredDimension.", AsString().c_str());
 
             size_t totalSize = 1;
             for (auto dim : m_shapeDims)
@@ -365,6 +387,14 @@ namespace CNTK
             }
             else
             {
+                bool reverseShape = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+                auto displayShape = *this;
+                if (reverseShape)
+                {
+                    for (size_t i = 0, j = Rank() - 1; i < Rank(); ++i, --j)
+                        displayShape[i] = (*this)[j];
+                }
+
                 std::wstringstream wStrStream;
                 wStrStream << L"[";
                 for (size_t i = 0; i < Rank(); i++)
@@ -372,8 +402,8 @@ namespace CNTK
                     if (i != 0)
                         wStrStream << L" x ";
 
-                    if (m_shapeDims[i] != InferredDimension)
-                        wStrStream << m_shapeDims[i];
+                    if (displayShape[i] != InferredDimension)
+                        wStrStream << displayShape[i];
                     else
                         wStrStream << "?";
                 }
@@ -498,7 +528,8 @@ namespace CNTK
             : NDArrayView(viewShape, sourceContainer.data(), sourceContainer.size(), DeviceDescriptor::CPUDevice())
         {
             if (sourceContainer.size() != viewShape.TotalSize())
-                InvalidArgument("The size of the STL container does not match the size of the specified viewShape");
+                InvalidArgument("The size (%zu) of the STL container does not match the size (%zu) of the specified viewShape '%S'.",
+                                sourceContainer.size(), viewShape.TotalSize(), viewShape.AsString().c_str());
         }
 
         ///
@@ -529,7 +560,7 @@ namespace CNTK
                 SetValue(value);
                 break;
             default:
-                LogicError("Unsupported DataType %s", DataTypeName(m_dataType));
+                LogicError("Unsupported DataType %s.", DataTypeName(m_dataType));
                 break;
             }
 
@@ -1070,7 +1101,7 @@ namespace CNTK
             case Type::NDArrayView:
                 return "NDArrayView";
             default:
-                LogicError("Unknown DictionaryValue::Type");
+                LogicError("Unknown DictionaryValue::Type.");
             }
         }
 
@@ -1482,7 +1513,7 @@ namespace CNTK
         case VariableKind::Placeholder:
             return L"Placeholder";
         default:
-            LogicError("Unknown VariableKind");
+            LogicError("Unknown VariableKind.");
         }
     }
 
@@ -1879,7 +1910,7 @@ private:
             : Variable(variable)
         {
             if (!IsParameter())
-                InvalidArgument("A non-parameter Variable being converted to a Parameter");
+                InvalidArgument("A non-parameter Variable '%S' cannot be converted to a Parameter.", variable.AsString().c_str());
         }
 
         ///
@@ -1978,7 +2009,7 @@ private:
             : Variable(variable)
         {
             if (!IsConstant())
-                InvalidArgument("A non-constant Variable being converted to a Constant");
+                InvalidArgument("A non-constant Variable '%S' being converted to a Constant.", variable.AsString().c_str());
         }
 
         ///
@@ -2431,7 +2462,8 @@ namespace CNTK
         void CopyVariableValueTo(const Variable& outputVariable, std::vector<std::vector<ElementType>>& sequences)
         {
             if (outputVariable.GetDataType() != GetDataType())
-                InvalidArgument("The outputVariable has a different data type than the Value object.");
+                InvalidArgument("The outputVariable '%S' has a different data type than the Value object.", outputVariable.AsString().c_str());
+
             ResizeOutputBuffer(outputVariable, sequences);
             CopyVariableValueToVector<ElementType>(outputVariable, sequences);
         }
@@ -2446,7 +2478,7 @@ namespace CNTK
         {
             auto dataType = GetDataType();
             if (outputVariable.GetDataType() != dataType)
-                InvalidArgument("The outputVariable has a different data type than the Value object.");
+                InvalidArgument("The outputVariable '%S' has a different data type than the Value object.", outputVariable.AsString().c_str());
 
             ResizeOutputBuffer(outputVariable, sequences);
             if (dataType == DataType::Float)
@@ -2506,7 +2538,8 @@ namespace CNTK
         {
             auto shape = outputVariable.Shape();
             if (shape == NDShape::Unknown || shape.HasInferredDimension())
-                RuntimeError("It is not supported that the outputVariable has a unknown shape or inferred dimension.");
+                RuntimeError("The outputVariable '%S' shape '%S' is unknown shape or has inferred dimension for at least one axis.",
+                              outputVariable.AsString().c_str(), shape.AsString().c_str());
 
             size_t numOfSequences;
             size_t maxSequenceLen;
@@ -2818,7 +2851,8 @@ namespace CNTK
         {
             auto outputs = Outputs();
             if (outputs.size() > 1)
-                RuntimeError("A Function instance with more than one output cannot be implicitly converted to a Variable");
+                RuntimeError("A Function instance '%S' with more than one output cannot be implicitly converted to a Variable.", AsString().c_str());
+
             return outputs[0];
         }
 
@@ -2882,7 +2916,7 @@ namespace CNTK
                 if (name.compare(function->Name()) == 0)
                 {
                     if (foundFunction != nullptr)
-                        RuntimeError("Multiple functions with the same name are found in the Function graph underlying 'this' Function.");
+                        RuntimeError("FindByName: Multiple functions with the name '%S' are found in the Function graph underlying 'this' Function.", name.c_str());
                     else
                         foundFunction = function;
                 }
@@ -2944,7 +2978,7 @@ namespace CNTK
         ///
         /// Returns a string representation of this Function
         ///
-        CNTK_API std::wstring AsString() const;
+        CNTK_API std::wstring AsString(bool doNotInferOutputs = true) const;
 
         ///
         /// Maximum number of outputs that is currently supported.
@@ -3000,7 +3034,7 @@ namespace CNTK
                                                      std::unordered_set<Variable>& replacedPlaceholders);
 
     protected:
-        /*static*/ bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate) const;
+        static bool ValidateOrUpdateOutput(const Variable& output, const Variable& newOutput, bool alwaysUpdate);
 
         // Returns a outputs without ref-counting the owner.
         CNTK_API std::vector<Variable>& RawOutputs() const;
@@ -3052,50 +3086,6 @@ namespace CNTK
         // Disallow copy and move construction and assignment
         Function(const Function&) = delete; Function(Function&&) = delete; Function& operator=(const Function&) = delete; Function& operator=(Function&&) = delete;
 
-        ///
-        /// Helpers to inject the node name into error messages. For now Windows only.
-        ///
-#ifdef _MSC_VER
-    private:
-        std::wstring DiagnosticsName() const
-        {
-            std::wstring name = Name();
-            if (name.empty())
-                name = Uid();
-            if (name.empty() && m_rootFunction)
-                name = m_rootFunction->DiagnosticsName();
-            return OpName() + L" " + name;
-        }
-    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
-        template <class... _Types>
-        __declspec_noreturn inline void RuntimeError(const char* format, _Types&&... _Args) const
-        {
-            auto formatString = std::string("%S: ") + format;
-            ThrowFormatted<std::runtime_error>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
-        }
-        template <class... _Types>
-        __declspec_noreturn inline void LogicError(const char* format, _Types&&... _Args) const
-        {
-            auto formatString = std::string("%S: ") + format;
-            ThrowFormatted<std::logic_error>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
-        }
-        template <class... _Types>
-        __declspec_noreturn inline void InvalidArgument(const char* format, _Types&&... _Args) const
-        {
-            auto formatString = std::string("%S: ") + format;
-            ThrowFormatted<std::invalid_argument>(formatString.c_str(), DiagnosticsName().c_str(), std::forward<_Types>(_Args)...);
-        }
-#else   // for gcc, LogicError etc. are just #defines that map to ThrowFormatted, so replicate this here
-    public: // public so that we can call it from PrimitiveFunction::GetOutputVariables()
-        template<class E, typename... Args>
-        inline __declspec_noreturn void ThrowFormatted(Args&&... args) const
-        {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wformat-security" // gcc has problems with checking of printf format strings through variadic templates
-            ::CNTK::ThrowFormatted<E>(std::forward<Args>(args)...);
-#pragma GCC diagnostic pop
-        }
-#endif
     public:
         CNTK_API Function(const std::vector<Variable>& inputs, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
@@ -4144,10 +4134,10 @@ namespace CNTK
               m_distributeAfterSamples(distributeAfterSamples)
         {
             if (!m_learner)
-                InvalidArgument("Learner is not allowed to be null.");
+                InvalidArgument("Learner passed to a Distributed learner ctor must not be null.");
 
             if (!m_communicator)
-                InvalidArgument("Communicator is not allowed to be null.");
+                InvalidArgument("Communicator passed to a Distributed learner ctor must not be null.");
         }
 
         const LearnerPtr m_learner;
@@ -4191,6 +4181,11 @@ namespace CNTK
         StorageFormat m_storageFormat; // Storage format of the stream
         DataType m_elementType;        // Element type of the stream
         NDShape m_sampleLayout;        // Layout of the sample for the stream
+
+        std::wstring AsString() const
+        {
+            return m_name + L"(" + m_sampleLayout.AsString() + L")";
+        }
     };
 
     inline bool operator==(const StreamInformation& left, const StreamInformation& right)
