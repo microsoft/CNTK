@@ -1266,7 +1266,7 @@ void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemTyp
         SetValue(0.0);
     }
 
-    if (GetNumRows() != gradients.GetNumRows()  || GetNumCols() != numColsNeeded)
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
         LogicError("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
@@ -4605,7 +4605,7 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
                                                     CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance, CPUMatrix<ElemType>& out, double epsilon,
                                                     CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    if (GetNumRows() % scale.GetNumRows()!= 0)
+    if (GetNumRows() % scale.GetNumRows() != 0)
         LogicError("The number of rows of this matrx must be multiple of the number of rows of the scale matrix.");
 
     if (!inferenceOnly || expAvgFactor != 0 || blendFactor != 1)
