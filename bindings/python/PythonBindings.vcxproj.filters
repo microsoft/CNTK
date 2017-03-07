@@ -1,9 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Text Include="vsbuild.bat" />
-  </ItemGroup>
-  <ItemGroup>
     <Filter Include="cntk">
       <UniqueIdentifier>{d0b22515-db40-470b-8388-d255e04fd3a6}</UniqueIdentifier>
     </Filter>
@@ -19,12 +16,21 @@
     <Filter Include="cntk\utils\debughelpers">
       <UniqueIdentifier>{8203febc-a583-407c-a9d7-b6147b7f14c9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="cntk\layers">
+      <UniqueIdentifier>{841d2680-ba22-4a73-9297-34248a404bdd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\models">
+      <UniqueIdentifier>{5405fbf1-16b8-4e1a-9d93-cb704108cbca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\all_tests">
+      <UniqueIdentifier>{8f30e077-2156-4cfc-b40b-424484e90a15}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\sort_these">
+      <UniqueIdentifier>{9cb0222e-9031-42a3-a828-5f5fdb8f9626}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cntk\__init__.py">
-      <Filter>cntk</Filter>
-    </None>
-    <None Include="cntk\blocks.py">
       <Filter>cntk</Filter>
     </None>
     <None Include="cntk\cntk_py.i">
@@ -36,13 +42,7 @@
     <None Include="cntk\initializer.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\layers.py">
-      <Filter>cntk</Filter>
-    </None>
     <None Include="cntk\learner.py">
-      <Filter>cntk</Filter>
-    </None>
-    <None Include="cntk\models.py">
       <Filter>cntk</Filter>
     </None>
     <None Include="cntk\pytest.ini">
@@ -72,10 +72,159 @@
     <None Include="cntk\utils\__init__.py">
       <Filter>cntk\utils</Filter>
     </None>
-    <None Include="setup.py" />
-    <None Include="swig_install.sh" />
     <None Include="cntk\utils\debughelpers\__init__.py">
       <Filter>cntk\utils\debughelpers</Filter>
     </None>
+    <None Include="cntk\blocks.py" />
+    <None Include="cntk\layers\__init__.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\layers\blocks.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\layers\higher_order_layers.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\layers\layers.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\layers\models.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\models\attention.py">
+      <Filter>cntk\models</Filter>
+    </None>
+    <None Include="cntk\tests\attributes_test.py">
+      <Filter>cntk\models</Filter>
+    </None>
+    <None Include="cntk\axis.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\tests\axis_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\comparison_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\tests\distributed_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\evaluation_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\function_tests.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\default_options.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\tests\graph_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\tests\initializer_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\kernel_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\tests\learner_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\linear_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\non_diff_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\non_linear_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\random_sample_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\utils\tests\swig_helper_tests.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\ops\tests\variables_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\tests\trainer_test.py">
+      <Filter>cntk\all_tests</Filter>
+    </None>
+    <None Include="cntk\utils\tests\__init__.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\ops\sequence\__init__.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\io\tests\__init__.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\ops\tests\__init__.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\tests\__init__.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\device.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\distributed.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\graph.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\io\tests\io_tests.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\ops\tests\ops_test_utils.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\persist.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\tests\persist_test.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\utils\progress_print.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\ops\tests\recurrent_test.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\ops\tests\reduction_test.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\ops\tests\reshaping_test.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="setup.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="swig_install.sh">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\tests\tensor_test.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\tests\test_utils.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\io\tests\tf_data.txt">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\utils\tests\utils_test.py">
+      <Filter>cntk\sort_these</Filter>
+    </None>
+    <None Include="cntk\tests\layers_test.py" />
+    <None Include="cntk\layers\typing.py">
+      <Filter>cntk\layers</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="vsbuild.bat">
+      <Filter>cntk\sort_these</Filter>
+    </Text>
   </ItemGroup>
 </Project>

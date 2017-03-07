@@ -33,10 +33,13 @@ namespace CNTK
             auto maskShape = mask->Shape();
 
             if (maskShape.Rank() > dataShape.Rank())
-                InvalidArgument("The rank (%d) of the mask of a Value object cannot exceed the rank (%d) of the data NDArrayView object", (int)maskShape.Rank(), (int)dataShape.Rank());
+                InvalidArgument("The rank (%zu) of the mask of a Value object cannot exceed the rank (%zu) of the data NDArrayView object", maskShape.Rank(), dataShape.Rank());
 
             if (dataShape.SubShape(dataShape.Rank() - maskShape.Rank()) != maskShape)
-                InvalidArgument("Invalid Value object; the data and mask are incompatible. The trailing dimensions of the data with shape %S do not match the dimensions of the mask with shape %S", AsStringForErrorReporting(dataShape).c_str(), AsStringForErrorReporting(maskShape).c_str());
+                InvalidArgument("Invalid Value object: data and mask are incompatible. The %s dimensions of the data with shape '%S' "
+                                "do not match the dimensions of the mask with shape '%S'", 
+                                Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "leading" : "trailing",
+                                dataShape.AsString().c_str(), maskShape.AsString().c_str());
         }
     }
 
@@ -45,7 +48,8 @@ namespace CNTK
         size_t numSequences = sequenceLengths.size();
 
         if (!sequenceStartFlags.empty() && (sequenceStartFlags.size() != numSequences))
-            InvalidArgument("Value::Create:: The number of sequence start flags does not match the number of sequences");
+            InvalidArgument("Value::Create:: The number (%zu) of sequence start flags does not match the number (%zu) of sequences,",
+                            sequenceStartFlags.size(), numSequences);
 
         std::vector<bool> actualStarts = sequenceStartFlags;
         if (actualStarts.empty())
@@ -96,7 +100,7 @@ namespace CNTK
     /*static*/ ValuePtr Value::Create(size_t dimension, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/)
     {
         if (oneHotSequences.size() == 0)
-            InvalidArgument("Value::Create:: The number of sequences is 0");
+            InvalidArgument("Value::Create:: The number of sequences must be > 0");
 
         NDMaskPtr deviceValueMask = CreateMask(1, oneHotSequences, sequenceStartFlags, DeviceDescriptor::CPUDevice());
         // If deviceValueMask is null, all the sequences have the same length.
@@ -118,7 +122,7 @@ namespace CNTK
                 colStarts[(i * maxSequenceLength) + j] = (SparseIndexType)nonZeroValues.size();
                 nonZeroValues.push_back(1);
                 if (oneHotSequences[i][j] >= dimension)
-                    InvalidArgument("Value::Create: one-hot data exceeds vocabulary size");
+                    InvalidArgument("Value::Create: one-hot index value (%zu) exceeds vocabulary size (%zu).", oneHotSequences[i][j], dimension);
                 rowIndices.push_back((SparseIndexType)(oneHotSequences[i][j]));
             }
 
@@ -159,7 +163,7 @@ namespace CNTK
     {
         auto numSequences = sequences.size();
         if (numSequences == 0)
-            InvalidArgument("Value::Create:: The number of sequences is 0");
+            InvalidArgument("Value::Create:: The number of sequences must be > 0");
 
         std::vector<size_t> sequenceLengths(numSequences);
         size_t maxSequenceLength = 0;
@@ -169,13 +173,13 @@ namespace CNTK
         {
             auto currentSequenceData = sequences[i];
             if (currentSequenceData->GetDataType() != dataType)
-                InvalidArgument("Value::Create:: The data for all sequences/samples must have the same data type");
+                InvalidArgument("Value::Create: The data for all sequences/samples must have the same data type");
 
             if (currentSequenceData->GetStorageFormat() != storageFormat)
-                InvalidArgument("Value::Create:: All NDArrayView objects must have the same storage format");
+                InvalidArgument("Value::Create: All NDArrayView objects must have the same storage format");
 
             if ((numSequences > 1) && (currentSequenceData->Device() != DeviceDescriptor::CPUDevice()))
-                InvalidArgument("Value::Create:: All NDArrayView objects must be located on the CPU");
+                InvalidArgument("Value::Create: All NDArrayView objects must be located on the CPU");
 
             auto currentSequenceDataShape = currentSequenceData->Shape();
 
@@ -185,7 +189,7 @@ namespace CNTK
                 currentSequenceDataShape = NDShape(1, 1).AppendShape(currentSequenceDataShape);
 
             if ((currentSequenceDataShape.Rank() < sampleShape.Rank()) || (currentSequenceDataShape.Rank() > (sampleShape.Rank() + 1)) || (currentSequenceDataShape.SubShape(0, sampleShape.Rank()) != sampleShape))
-                InvalidArgument("Value::Create:: The shape of the sequence %lu (%S) is not compatible with the sample shape (%S)", (unsigned long)i, AsStringForErrorReporting(currentSequenceData->Shape()).c_str(), AsStringForErrorReporting(sampleShape).c_str());
+                InvalidArgument("Value::Create: The shape '%S' of the sequence %zu is not compatible with the sample shape '%S'", currentSequenceData->Shape().AsString().c_str(), i, sampleShape.AsString().c_str());
 
             sequenceLengths[i] = currentSequenceDataShape.SubShape(sampleShape.Rank()).TotalSize();
             maxSequenceLength = std::max(maxSequenceLength, sequenceLengths[i]);
@@ -193,7 +197,8 @@ namespace CNTK
 
         bool isDataSparse = sequences[0]->IsSparse();
         if (isDataSparse && (sampleShape[0] != sampleShape.TotalSize()))
-            InvalidArgument("Value::Create:: The sample shape's leading axis dimensionality must equal the total size of the sample for sparse data");
+            InvalidArgument("Value::Create: For sparse data, the sample shape '%S' %s axis dimensionality must equal the total size (%zu) of the sample.",
+                            sampleShape.AsString().c_str(), Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading", sampleShape.TotalSize());
 
         NDMaskPtr deviceValueMask = CreateMask(sequenceLengths, sequenceStartFlags, DeviceDescriptor::CPUDevice());
 
@@ -214,7 +219,7 @@ namespace CNTK
             if (isDataSparse)
             {
                 if (storageFormat != StorageFormat::SparseCSC)
-                    LogicError("Value::Create currently only SparseCSC format data is supported");
+                    LogicError("Value::Create currently only SparseCSC format sparse data is supported");
 
                 std::vector<SparseIndexType> colStarts;
                 std::vector<SparseIndexType> rowIndices;
@@ -309,7 +314,8 @@ namespace CNTK
         {
             auto& currentSequence = sequences[i];
             if ((currentSequence.size() % numElementsPerSample) != 0)
-                InvalidArgument("Value::Create:: The number of elements in the vector containing sequence data must be a multiple of the size of specified sampel shape");
+                InvalidArgument("Value::Create: The number of elements (%zu) in the vector containing sequence data must be a multiple of the size (%zu) of specified sample shape '%S'",
+                                currentSequence.size(), numElementsPerSample, sampleShape.AsString().c_str());
 
             auto sequenceLength = currentSequence.size() / numElementsPerSample;
             auto sequenceDataShape = sampleShape.AppendShape({ sequenceLength });
@@ -324,7 +330,9 @@ namespace CNTK
     {
         auto shapeSize = sampleShape.TotalSize();
         if (batchData.size() % shapeSize != 0)
-            InvalidArgument("The number of elements in the batch must be a multiple of the size of the shape");
+            InvalidArgument("The number of elements (%zu) in the vector containing batch data must be a multiple of the size (%zu) of the sample shape '%S'.",
+                            batchData.size(), shapeSize, sampleShape.AsString().c_str());
+
         auto numOfSequences = batchData.size() / shapeSize;
         std::vector<NDArrayViewPtr> sequencesView(numOfSequences);
         for (size_t i = 0; i < numOfSequences; i++)
@@ -342,7 +350,9 @@ namespace CNTK
     {
         auto shapeSize = sampleShape.TotalSize();
         if (sequenceData.size() % shapeSize != 0)
-            InvalidArgument("The number of elements in the sequence must be a multiple of the size of the shape");
+            InvalidArgument("The number of elements (%zu) in the sequence data must be a multiple of the size (%zu) of the sample shape '%S'", 
+                            sequenceData.size(), shapeSize, sampleShape.AsString().c_str());
+
         auto sequenceLength = sequenceData.size() / shapeSize;
         std::vector<NDArrayViewPtr> sequencesView(1);
         auto sequenceDataShape = sampleShape.AppendShape({ sequenceLength });
@@ -404,7 +414,7 @@ namespace CNTK
         // TODO: Check if this is a derived type and throw an exception in that case
         Data()->CopyFrom(*source.Data());
         if ((Mask() == nullptr) && (source.Mask() != nullptr))
-            InvalidArgument("Value::CopyFrom: Invalid source object; Cannot copy a Value with a mask into 'this' Value that does not have a mask.");
+            InvalidArgument("Value::CopyFrom: Invalid source object; Cannot copy a Value with a mask into 'this' Value which does not have a mask.");
 
         if (source.Mask() != nullptr)
             Mask()->CopyFrom(*source.Mask());
@@ -442,7 +452,7 @@ namespace CNTK
             else if (firstMaskEntry == MaskKind::Valid)
                 sequenceBeginIndices[i] = Microsoft::MSR::CNTK::SentinelValueIndicatingUnspecifedSequenceBeginIdx;
             else
-                LogicError("The first entry of a mask should be Valid or SequenceBegin");
+                LogicError("The first entry of a Value mask must be Valid or SequenceBegin");
 
             size_t currentSequenceLength = 1;
             bool currentSequenceEndAlreadyFound = false;
@@ -453,7 +463,7 @@ namespace CNTK
                 else
                 {
                     if (currentSequenceEndAlreadyFound)
-                        InvalidArgument("Invalid Value object; only trailing steps of a sequence can be masked");
+                        InvalidArgument("Invalid Value object; only trailing steps of a sequence can be masked.");
 
                     currentSequenceLength++;
                 }
@@ -483,9 +493,9 @@ namespace CNTK
     void Value::CopyVariableValueToVector(const Variable& outputVariable, std::vector<std::vector<size_t>>& sequences)
     {
         if (outputVariable.Shape()[0] != outputVariable.Shape().TotalSize())
-        {
-            InvalidArgument("The outputVariable's leading axis dimensionality must equal the total size of the variable for sparse data.");
-        }
+            InvalidArgument("For sparse data, the outputVariable's leading axis dimensionality (%zu) must equal the total size (%zu) of the Variable '%S'.",
+                            outputVariable.Shape()[0], outputVariable.Shape().TotalSize(), outputVariable.AsString().c_str());
+
         CopyVariableValueToImpl<ElementType, size_t>(outputVariable, sequences);
     }
 
@@ -498,7 +508,7 @@ namespace CNTK
         std::tie(maxSequenceLen, numOfSequences) = GetSequenceAndBatchLength(outputVariable);
 
         if (sequences.size() < numOfSequences)
-            RuntimeError("The size of output buffer is too small");
+            RuntimeError("The size of output buffer (%zu) is smaller than the number (%zu) of sequences.", sequences.size(), numOfSequences);
 
         // Copy data to the CPU device if required.
         const ValueType *valueData;
@@ -564,30 +574,9 @@ namespace CNTK
     ElementType Value::AsScalar() const
     {
         if (Mask())
-            LogicError("Scalar Value object cannot have an associated mask");
+            LogicError("Value::AsScalar: Scalar Value object must not have an associated mask");
 
-        auto scalarData = Data();
-        if (scalarData->Shape().TotalSize() != 1)
-            LogicError("Scalar Value object's has a size > 1");
-
-        ElementType scalar = std::numeric_limits<ElementType>::quiet_NaN();
-        NDArrayViewPtr cpuData;
-        if (scalarData->Device() == DeviceDescriptor::CPUDevice())
-            cpuData = scalarData;
-        else
-        {
-            cpuData = std::make_shared<NDArrayView>(scalarData->GetDataType(), scalarData->Shape(), CNTK::DeviceDescriptor::CPUDevice());
-            cpuData->CopyFrom(*scalarData);
-        }
-
-        if (scalarData->GetDataType() == DataType::Float)
-            scalar = *(cpuData->DataBuffer<float>());
-        else if (scalarData->GetDataType() == DataType::Double)
-            scalar = static_cast<ElementType>(*(cpuData->DataBuffer<double>()));
-        else
-            LogicError("Unsupported DataType");
-
-        return scalar;
+        return Data()->AsScalar<ElementType>();
     }
 
     void PackedValue::Unpack() const
@@ -619,7 +608,8 @@ namespace CNTK
             m_isPacked = false;
 
             if (m_unpackedShape != m_data->Shape())
-                LogicError("The computed unpacked shape of the PackedValue object does not match the actual Data NDArrayView's shape after unpacking");
+                LogicError("The computed unpacked shape '%S' of the PackedValue object does not match the actual Data NDArrayView's shape '%S' after unpacking.",
+                           m_unpackedShape.AsString().c_str(), m_data->Shape().AsString().c_str());
         }
     }
 
@@ -627,11 +617,12 @@ namespace CNTK
     void DirectCopy(const ElementType *source, const size_t elementCount, std::vector<DestType>& dest)
     {
         if (!std::is_same<ElementType, DestType>::value)
-            RuntimeError("Source and destination must be the same data type.");
+            RuntimeError("Copy: Source and destination must be the same data type.");
 
         DestType *destData = dest.data();
         if (elementCount > dest.size())
-            RuntimeError("The output buffer is too small.");
+            RuntimeError("Copy: The output buffer size (%zu) is smaller than the number (%zu) of source elements to copy.", dest.size(), elementCount);
+
         std::copy(source, source + elementCount, reinterpret_cast<ElementType *>(destData));
     }
 
@@ -639,9 +630,7 @@ namespace CNTK
     void CopyDenseToOneHot(const ElementType *source, const size_t sampleCount, const size_t sampleSize, std::vector<DestType>& dest)
     {
         if (!std::is_same<DestType, size_t>::value)
-        {
-            RuntimeError("The destination data type must be size_t.");
-        }
+            RuntimeError("Copy: The destination data type must be size_t.");
 
         const ElementType *currentp = source;
         const ElementType *lastp = source + sampleCount * sampleSize;
@@ -655,16 +644,19 @@ namespace CNTK
                 if (*currentp == 1)
                 {
                     if (found)
-                        RuntimeError("Cannot convert to onehot vector: more than one non-zero value in the sample.");
+                        RuntimeError("CopyDenseToOneHot: Cannot convert to onehot vector; more than one non-zero value in the sample.");
+
                     index = i;
                     found = true;
                 }
                 else if (*currentp != 0)
-                    RuntimeError("Cannot convert to onehot vector: contain value other than 0 and 1.");
+                    RuntimeError("CopyDenseToOneHot: Cannot convert to onehot vector; contains value other than 0/1.");
+
                 currentp++;
             }
             if (!found)
-                RuntimeError("Cannot convert to onehot vector: the sample does not have any non-zero value.");
+                RuntimeError("CopyDenseToOneHot: Cannot convert to onehot vector; the sample does not have any non-zero value.");
+
             assert(index != sampleSize);
             dest[destIndex++] = static_cast<DestType>(index);
         }

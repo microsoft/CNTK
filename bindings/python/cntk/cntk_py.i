@@ -144,6 +144,7 @@
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
 %ignore CNTK::Internal::MaxNumCPUThreadsSet;
+%ignore CNTK::Internal::CosineDistanceWithNegativeSamples;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;

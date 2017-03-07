@@ -235,6 +235,33 @@ BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
             [](std::runtime_error const& ex) { return string("Invalid map file format, must contain 2 or 3 tab-delimited columns, line 2 in file ./ImageReaderBadMap_map.txt.") == ex.what(); });
 }
 
+BOOST_AUTO_TEST_CASE(ImageAndImageTwoStreamsSameName)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageDeserializers.cntk",
+            testDataPath() + "/Control/ImageAndImageReaderSimple_Control.txt",
+            testDataPath() + "/Control/ImageAndImageReaderSimple_Output.txt",
+            "TwoStreamsSameName",
+            "reader",
+            4,
+            4,
+            1,
+            2,
+            2,
+            0,
+            1,
+            false,
+            false,
+            true,
+            { L"MapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" }),
+        std::runtime_error,
+        [](std::runtime_error const& ex) 
+    { 
+        return string("Two streams with the same name 'feature' have been found. Please rename the duplicate.") == ex.what(); 
+    });
+}
+
 BOOST_AUTO_TEST_CASE(ImageReaderBadLabel)
 {
     BOOST_REQUIRE_EXCEPTION(

@@ -44,9 +44,11 @@ namespace CNTK
         if (m_fileName.empty())
         {
             if (checkpointFrequencyInSamples != 0 && checkpointFrequencyInSamples != std::numeric_limits<size_t>::max())
-                InvalidArgument("Checkpoint file name is not allowed to be empty if checkpoint frequency is non zero.");
+                InvalidArgument("Checkpoint file name must not be empty if checkpoint frequency is non zero.");
+
             if (preserveAllCheckpoints)
-                InvalidArgument("Checkpoint file name is not allowed to be empty if 'preserve all checkpoints' is specified.");
+                InvalidArgument("Checkpoint file name must not be empty if 'preserve all checkpoints' option is specified.");
+
             checkpointFrequencyInSamples = 0;
         }
     }
@@ -163,7 +165,7 @@ namespace CNTK
         m_numberOfWorkers(1)
     {
         if (!m_trainer)
-            InvalidArgument("Trainer is not allowed to be null.");
+            InvalidArgument("Trainer must not be null.");
 
         if (!m_source)
             InvalidArgument("Training source must not be null.");

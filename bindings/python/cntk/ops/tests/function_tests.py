@@ -14,8 +14,8 @@ from ..functions import *
 from ...trainer import *
 from ...initializer import glorot_uniform
 from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value, sequence, as_composite, combine, convolution, splice
-from ... import InferredDimension
-from .ops_test_utils import compare_lists_of_np_arrays, AA
+from ... import InferredDimension, gpu, cpu
+from .ops_test_utils import compare_lists_of_np_arrays, AA, cntk_device
 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef
 
@@ -344,3 +344,32 @@ def test_MinibatchData_and_Value_as_input(tmpdir):
     assert res.eval(mb[f1_si].value) == [[200]]
     # Test Value
     assert res.eval(mb[f1_si].data) == [[200]]
+
+
+def test_output_subset_evaluation(device_id):
+    
+    try:
+        gpu_device = gpu(0)
+    except ValueError:
+        pytest.skip('Test only runs when GPU available')
+
+    device = cntk_device(device_id)
+    x1 = input_variable(shape=())
+    op1 = constant(value=1, shape=(1), device=device) + (constant(value=1, shape=(1), device=device) + x1)
+
+    x2 = input_variable(shape=(1))
+
+    # Deliberately locate the parameter on a different device
+    # instead of the actual compute target device, so that
+    # if we try to use this parameter, it results in an error
+    if (device.type() == 0):
+        parameter_device = gpu_device
+    else:
+        parameter_device = cpu()
+    p = parameter(shape=(1), init=glorot_uniform(), device=parameter_device)
+    op2 = (x2 - constant(value=10, shape=(1), device=device)) - p
+    
+    op = combine([op1, op2]);
+
+    _, result = op.forward({x1 : np.asarray([1, 2, 3])}, [op1], device=device)
+    assert np.array_equal(result[op1], np.asarray([[[3], [4], [5]]]))
