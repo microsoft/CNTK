@@ -114,14 +114,13 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
             for y in range(image_height):
                 for x in range(image_width):
                     new_x_gen    = z.eval({input_var:[x_gen]})
-                    new_x_gen_np = np.asarray(sp.sample_from_discretized_mix_logistic(new_x_gen, nr_logistic_mix).eval())
+                    new_x_gen_np = np.asarray(sp.np_sample_from_discretized_mix_logistic(new_x_gen, nr_logistic_mix))
                     x_gen[:,y,x] = new_x_gen_np[:,y,x]
             x_gen += -1 # [0, 2]
             x_gen *= 127.5
             image = Image.fromarray(np.ascontiguousarray(np.transpose(x_gen, (1, 2, 0))).astype('uint8'))
             image.save("image_{}.png".format(epoch))
         t4 = time.perf_counter()
-        print("Sample took {} seconds.".format(t4-t3))
 
         trainer.summarize_training_progress()
 
