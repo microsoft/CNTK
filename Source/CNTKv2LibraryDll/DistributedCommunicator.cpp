@@ -274,17 +274,6 @@ namespace CNTK
         const std::vector<NDArrayViewPtr>& values,
         const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers)
     {
-        auto device = GetNonCPUDevice(values);
-        if (device.Type() != DeviceKind::CPU)
-        {
-            // Since we will be copying the gradients asynchronously, let us
-            // ensure that the gradient matrices have been computed before starting to aggregate
-            // them asynchronously on another thread. This essentially means that when we are using
-            // a GPU device, we will synchronize on the main GPU compute stream before starting
-            // the gradient aggregation asynchronously on a separate stream
-            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(device.Id()));
-            mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
-        }
         AggregateImpl(values, values, sendToWorkers);
     }
 
@@ -343,6 +332,19 @@ namespace CNTK
         numValues = valuesToAggregate.size();
 
         Initialize(valuesToAggregate);
+
+        // We need to make sure no compuatation happens on the main CUDA stream.
+        auto device = GetNonCPUDevice(valuesToAggregate);
+        if (device.Type() != DeviceKind::CPU)
+        {
+            // Since we will be copying the gradients asynchronously, let us
+            // ensure that the gradient matrices have been computed before starting to aggregate
+            // them asynchronously on another thread. This essentially means that when we are using
+            // a GPU device, we will synchronize on the main GPU compute stream before starting
+            // the gradient aggregation asynchronously on a separate stream
+            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(device.Id()));
+            mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
+        }
 
         // for all values residing on GPU initiate async transfer to CPU buffers.
         for (auto i = 0; i < numValues; ++i)
