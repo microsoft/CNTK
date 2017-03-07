@@ -623,6 +623,28 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixAdam, RandomSeedFixture)
     BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
 }
 
+BOOST_FIXTURE_TEST_CASE(GPUMatrixOneHot, RandomSeedFixture)
+{
+	GPUMatrix<double> result(c_deviceIdZero);
+	const size_t num_class = 6;
+
+	double data[4] = { 1,2,3,4 };
+	GPUMatrix<double> m0(2, 2, c_deviceIdZero);
+    m0.SetValue(2, 2, c_deviceIdZero, data, matrixFormatRowMajor);
+
+    double exp_data[24];
+    memset(&exp_data[0], 0, sizeof(double) * 24);
+    exp_data[1] = exp_data[9] = exp_data[14] = exp_data[22] = 1;
+    GPUMatrix<double> exp(12, 2, c_deviceIdZero);
+    exp.SetValue(12, 2, c_deviceIdZero, exp_data, matrixFormatColMajor);
+	
+    result.AssignOneHot(m0, num_class);
+	
+	BOOST_CHECK(result.GetNumCols() == 2);
+	BOOST_CHECK(result.GetNumRows() == 12);
+    BOOST_CHECK(result.IsEqualTo(exp, 1e-6));
+}
+
 #if 0 // Temporarily disabling
 BOOST_FIXTURE_TEST_CASE(GPUMatrixLargeInequality, RandomSeedFixture)
 {
