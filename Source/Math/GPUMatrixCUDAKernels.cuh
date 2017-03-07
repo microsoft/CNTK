@@ -5480,6 +5480,19 @@ __global__ void _assignTotalScore(ElemType *betaScore,
     }
 }
 
+template<class ElemType>
+__global__ void _assignOneHot(ElemType *indices,
+                                  ElemType *targetBuffer,
+                                  size_t num_class,
+                                  size_t num_element)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_element)
+    {
+        targetBuffer[(size_t)(index * num_class + indices[index])] = 1;
+    }
+}
+
 }
 }
 }

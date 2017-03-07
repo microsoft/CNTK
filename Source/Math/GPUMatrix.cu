@@ -4216,6 +4216,24 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
 }
 
 template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, size_t num_class)
+{
+    if(a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    auto nCols = a.GetNumCols();
+    auto nRows = num_class * a.GetNumRows();
+    this->RequireSize(nRows, nCols);
+    this->PrepareDevice();
+    
+    CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
+    int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+    _assignOneHot<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data(), Data(), num_class, N);
+
+    return *this;
+}
+
+template <class ElemType>
 void GPUMatrix<ElemType>::InnerProductWithShiftNeg(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& b, GPUMatrix<ElemType>& c, const size_t shift, const size_t nt)
 {
     if (a.GetComputeDeviceId() != b.GetComputeDeviceId() || b.GetComputeDeviceId() != c.GetComputeDeviceId()) // different GPUs
