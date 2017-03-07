@@ -331,6 +331,7 @@ def test_op_times_reduce_sequence_axis(device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
     from cntk import times, one_hot, TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES
+    from cntk import sequence
     dim = 10
     seq = [[0,1,2], [3], [4,5,6,7,8,9]]
     right_data = one_hot(seq, dim, dtype=dt_precision)
@@ -339,6 +340,9 @@ def test_op_times_reduce_sequence_axis(device_id, precision):
     left_var = I(shape=(1), dtype=dt_precision)
 
     func = times(left_var, right_var, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES)
+    func2 = sequence.reduce_sum(times(left_var, right_var))
+
+    assert func.dynamic_axes == func2.dynamic_axes
 
     _, forward_output = func.forward({left_var:left_data, right_var:right_data})
     

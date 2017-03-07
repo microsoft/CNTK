@@ -137,6 +137,16 @@ namespace CNTK
 
     /*static*/ std::vector<Axis> PrimitiveFunction::GetOutputDynamicAxes(PrimitiveOpType op, std::vector<Variable>& inputs, PrimitiveFunction* owner, Dictionary& functionConfig)
     {
+        auto reduceAxis = [](Axis reductionAxis, Variable input, std::vector<Axis>& outputDynamicAxes)
+        {
+            reductionAxis = NormalizeAxis(reductionAxis, input);
+            for (auto inputDynamicAxis : input.DynamicAxes())
+            {
+                if (inputDynamicAxis != reductionAxis)
+                    outputDynamicAxes.push_back(inputDynamicAxis);
+            }
+        };
+
         // We currently require that the inputs' dynamic axes, if any, match
         std::vector<Axis> outputDynamicAxes;
         if ((op == PrimitiveOpType::SumAll) ||
@@ -152,20 +162,11 @@ namespace CNTK
         }
         else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
         {
-            auto reductionAxis = NormalizeAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0]);
-            for (auto inputDynamicAxis : inputs[0].DynamicAxes())
-            {
-                if (inputDynamicAxis != reductionAxis)
-                    outputDynamicAxes.push_back(inputDynamicAxis);
-            }
+            reduceAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0], outputDynamicAxes);
         }
         else if ((op == PrimitiveOpType::Times) && (functionConfig[PrimitiveFunction::AttributeNameInferInputRankToMap].Value<int>() == TimesReduceAllStaticAndSequenceAxes))
         {
-            for (auto inputDynamicAxis : inputs[0].DynamicAxes())
-            {
-                if (inputDynamicAxis != Axis::OperandSequenceAxis())
-                    outputDynamicAxes.push_back(inputDynamicAxis);
-            }
+            reduceAxis(Axis::OperandSequenceAxis(), inputs[0], outputDynamicAxes);
         }
         else if (op == PrimitiveOpType::Where)
         {
