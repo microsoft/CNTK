@@ -175,6 +175,27 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
     ZeroValues();
 }
 
+template <class ElemType>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, size_t num_class)
+{
+	if (a.IsEmpty())
+		LogicError("AssignOneHot: Matrix a is empty.");
+
+	auto& us = *this;
+	auto nCols = a.GetNumCols();
+	auto nRows = num_class * a.GetNumRows();
+	us.RequireSize(nRows, nCols);
+	RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
+
+	for (long i = 0; i < nCols; i++)
+	{
+		for (long j = 0; j < a.GetNumRows(); j++)
+			us.SetValue((size_t)(j * num_class + a(j, i)), i, 1);
+	}
+
+	return *this;
+}
+
 #pragma endregion Constructors and Destructor
 
 #pragma region Basic Operators
