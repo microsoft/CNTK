@@ -53,7 +53,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <PreprocessorDefinitions>SWIG;SWIGJAVA</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\Common\Include;C:\Program Files\Java\jdk1.8.0_121\include;C:\Program Files\Java\jdk1.8.0_121\include\win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\Common\Include;$(JAVA_HOME)\include;$(JAVA_HOME)\include\win32;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <WarningLevel>Level4</WarningLevel>
       <SDLCheck>true</SDLCheck>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -89,7 +89,7 @@
       <EnableParallelCodeGeneration>true</EnableParallelCodeGeneration>
       <FloatingPointExceptions>false</FloatingPointExceptions>
       <AdditionalOptions>/d2Zi+ %(AdditionalOptions)</AdditionalOptions>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
@@ -97,16 +97,16 @@
     </Link>
     <ProjectReference>
       <LinkLibraryDependencies>true</LinkLibraryDependencies>
-    </ProjectReference> 
+    </ProjectReference>
   </ItemDefinitionGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup />
   <ItemGroup>
     <CustomBuild Include="cntk_java.i">
       <FileType>Document</FileType>
-      <Command>$(SWIG_PATH)\swig.exe -c++ -java -I$(SolutionDir)Source\CNTKv2LibraryDll\API -I$(SolutionDir)bindings\common -package com.microsoft.CNTK -outdir  $(SolutionDir)bindings\java\CNTKLibraryManagedDll\SwigProxyClasses\com\microsoft\CNTK cntk_java.i</Command>
+      <Command>$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd $(SolutionDir)</Command>
       <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h</Outputs>
-      <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)bindings\java\Swig\std_unordered_map.i</AdditionalInputs>
+      <AdditionalInputs></AdditionalInputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>
@@ -116,6 +116,10 @@
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibrary.h" />
     <ClInclude Include="..\..\..\Source\CNTKv2LibraryDll\API\CNTKLibraryInternals.h" />
     <ClInclude Include="cntk_java_wrap.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\common\CNTKValueExtend.i" />
+    <None Include="..\..\common\CNTK_ExceptionHandling.i" />
   </ItemGroup>
   <Target Name="CheckDependencies">
     <Warning Condition="!$(HasSwig)" Text="The project requires SWIG to be installed. Please see https://github.com/Microsoft/CNTK/wiki/Setup-CNTK-on-Windows#optional-cntk-cnet-library-for-evaluation for installation instructions." />

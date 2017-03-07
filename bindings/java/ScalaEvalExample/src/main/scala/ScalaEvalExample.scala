@@ -11,12 +11,7 @@ import com.microsoft.CNTK.{Function => CNTKFunction, _}
 
 
 object ScalaEvalExample extends App {
-  sys.env
-  println("here1")
-  System.loadLibrary("CNTKLibrary-2.0")
-  println("here2")
   System.loadLibrary("CNTKLibraryJavaBinding")
-  println("here3")
 
   val outputName = "Plus2060"
   val dataPath   = "data/"
