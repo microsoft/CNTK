@@ -4,7 +4,7 @@
 # ==============================================================================
 
 from . import cntk_py
-from .utils import typemap
+from cntk.internal import typemap
 
 class Axis(cntk_py.Axis):
     '''

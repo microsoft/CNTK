@@ -13,8 +13,8 @@ from scipy import sparse
 
 from .. import cntk_py
 from ..device import use_default_device, cpu
-from .swig_helper import typemap
 from ..axis import Axis
+from cntk.internal import typemap
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 

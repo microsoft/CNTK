@@ -9,7 +9,7 @@ from scipy import sparse
 
 from . import cntk_py
 from .device import use_default_device, cpu, DeviceKind
-from .utils.swig_helper import typemap
+from cntk.internal import typemap
 
 
 def _is_c_contiguous(data):

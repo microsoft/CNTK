@@ -3,7 +3,7 @@ from cntk.device import DeviceDescriptor
 from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
         sanitize_dtype_cntk, value_to_seq, _as_tuple, variable_value_to_seq, Record, \
         get_python_function_arguments, map_function_arguments
-from cntk.utils.swig_helper import map_if_possible
+from cntk.internal import map_if_possible
 from cntk.ops.variables import Variable
 from enum import Enum, unique
 import numpy as np
