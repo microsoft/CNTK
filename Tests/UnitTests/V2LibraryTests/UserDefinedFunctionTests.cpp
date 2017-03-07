@@ -6,6 +6,7 @@
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
+#include "UserMatrixMultiplicationOp.h"
 
 using namespace CNTK;
 // TODO: Need to further cleanup/simplify definition of user defined functions
@@ -389,6 +390,11 @@ BOOST_AUTO_TEST_CASE(TimesAndPlusInGPU)
         TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false);
         TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false);
     }
+}
+
+BOOST_AUTO_TEST_CASE(UserTimesFunctionExample)
+{
+    UserTimesFunctionExample();
 }
 
 BOOST_AUTO_TEST_SUITE_END()

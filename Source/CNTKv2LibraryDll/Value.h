@@ -33,6 +33,8 @@ namespace CNTK
                 m_unpackedShape = m_unpackedShape.AppendShape({ packedDataLayout->GetNumTimeSteps(), packedDataLayout->GetNumSequences() });
         }
 
+        bool IsPacked() const { return m_isPacked; }
+
         void Unpack() const;
 
         const NDShape& Shape() const override { return m_unpackedShape; }
@@ -80,19 +82,19 @@ namespace CNTK
 
         ValuePtr Alias(bool /*readOnly = false*/) const override
         {
-            LogicError("Alias is currently unsupported for PackedValue objects");
+            LogicError("Value::Alias is currently unsupported for PackedValue objects.");
         }
 
         void CopyFrom(const Value& /*source*/) override
         {
-            LogicError("CopyFrom is currently unsupported for PackedValue objects");
+            LogicError("Value::CopyFrom is currently unsupported for PackedValue objects");
         }
 
         template <typename ElementType>
         std::pair<std::shared_ptr<const Microsoft::MSR::CNTK::Matrix<ElementType>>, std::shared_ptr<Microsoft::MSR::CNTK::MBLayout>> PackedData()
         {
             if (!m_isPacked)
-                InvalidArgument("PackedValue::PackedData called on a Value object that has already been unpacked");
+                InvalidArgument("PackedValue::PackedData called on a Value object that has already been unpacked.");
 
             return { m_packedData->GetMatrix<ElementType>(), m_packedDataLayout };
         }

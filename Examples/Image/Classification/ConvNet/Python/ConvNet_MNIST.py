@@ -56,6 +56,7 @@ def convnet_mnist(debug_output=False):
     # training config
     epoch_size = 60000                    # for now we manually specify epoch size
     minibatch_size = 128
+    max_epochs = 40
 
     # Set learning parameters
     lr_per_sample    = [0.001]*10 + [0.0005]*10 + [0.0001]
@@ -65,7 +66,8 @@ def convnet_mnist(debug_output=False):
 
     # Instantiate the trainer object to drive the model training
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule)
-    trainer = cntk.Trainer(z, (ce, pe), learner)
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    trainer = cntk.Trainer(z, (ce, pe), learner, progress_printer)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -74,8 +76,6 @@ def convnet_mnist(debug_output=False):
     }
 
     cntk.utils.log_number_of_parameters(z) ; print()
-    max_epochs = 40
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs
@@ -84,9 +84,8 @@ def convnet_mnist(debug_output=False):
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
             sample_count += data[label_var].num_samples                     # count samples processed so far
-            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
-        progress_printer.epoch_summary(with_metric=True)
+        trainer.summarize_training_progress()
         z.save(os.path.join(model_path, "ConvNet_MNIST_{}.dnn".format(epoch)))
     
     # Load test data

@@ -100,7 +100,8 @@ namespace CNTK
         }
 
         if (!learnerParametersNotPartOfModel.empty())
-            InvalidArgument("Trainer ctor: %d of the learner parameters are not part of the model specified", (int)learnerParametersNotPartOfModel.size());
+            InvalidArgument("Trainer ctor: %d of the learner parameters '%S' are not part of the model specified", 
+                            (int)learnerParametersNotPartOfModel.size(), NamedListString(learnerParametersNotPartOfModel).c_str());
 
         if (!m_modelParametersNotCoveredByLearners.empty())
             fprintf(stderr, "[Note:] Trainer ctor: %d of the model parameters are not covered by any of the specified Learners; these parameters will not be learned\n", (int)m_modelParametersNotCoveredByLearners.size());
@@ -114,7 +115,8 @@ namespace CNTK
         size_t numMaskedSamples = value->MaskedCount();
         size_t numSamplesInDataArrayView = valueDataShape.SubShape(var.Shape().Rank()).TotalSize();
         if (numMaskedSamples > numSamplesInDataArrayView)
-            LogicError("Number of masked values cannot exceed the number of samples that the Value object's Data NDArrayView can hold");
+            LogicError("Number (%d) of masked values cannot exceed the number (%d) of samples that the Value object's Data NDArrayView can hold.",
+                       (int)numMaskedSamples, (int)numSamplesInDataArrayView);
 
         return (numSamplesInDataArrayView - numMaskedSamples);
     }
@@ -151,7 +153,7 @@ namespace CNTK
     double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, size_t& sampleCount)
     {
         if (!m_aggregatedEvaluationFunction)
-            InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction");
+            InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction.");
 
         // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
         std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
@@ -464,6 +466,7 @@ namespace CNTK
 
     double Trainer::PreviousMinibatchLossAverage() const
     {
+        // TODO: better return 0; it is then still valid to compute lossAverage * numSamples
         if (m_prevMinibatchNumSamples == 0)
             RuntimeError("There was no preceeding call to TrainMinibatch or the minibatch was empty.");
 

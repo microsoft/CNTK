@@ -234,6 +234,26 @@ class MinibatchSource(cntk_py.MinibatchSource):
         '''
         return super(MinibatchSource, self).is_distributed()
 
+    @property
+    def current_position(self):
+        '''
+        Gets current position in the minibatch source.
+
+        Returns:
+            Minibatch position :class:`~cntk.cntk_py.Dictionary` on the global timeline.
+        '''
+        return self.get_checkpoint_state()
+
+    @current_position.setter
+    def current_position(self, position):
+        '''
+        Sets current position in the minibatch source.
+
+        Args:
+            position (:class:`~cntk.cntk_py.Dictionary`): position returned from :func:`~get_current_position`.
+        '''
+        self.restore_from_checkpoint(position)
+
 def _py_dict_to_cntk_dict(py_dict):
     '''
     Converts a Python dictionary into a CNTK Dictionary whose values are CNTK DictionaryValue instances.

@@ -12,10 +12,9 @@ from cntk import Trainer, Axis
 from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
 from cntk.ops.functions import load_model
-from cntk.blocks import LSTM, Stabilizer
-from cntk.layers import Recurrence, Dense
-from cntk.models import For, Sequential
+from cntk.layers import Recurrence, Dense, LSTM, Stabilizer, For, Sequential
 from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.utils import log_number_of_parameters
 from data_reader import DataReader
 from math import log, exp
 from cntk.device import set_default_device, cpu, gpu
@@ -59,10 +58,10 @@ def cross_entropy_with_full_softmax(
     vocab_dim,      # Vocabulary size
     hidden_dim      # Dimension of the hidden vector
     ):
-    bias = C.Parameter(shape = (vocab_dim, 1), init = C.init_bias_default_or_0)
-    weights = C.Parameter(shape = (vocab_dim, hidden_dim), init = C.init_default_or_glorot_uniform)
+    bias = C.Parameter(shape = (vocab_dim, 1), init = 0)
+    weights = C.Parameter(shape = (vocab_dim, hidden_dim), init = C.initializer.glorot_uniform())
 
-    z = C.reshape( C.times_transpose(weights, hidden_vector) + bias, (1,vocab_dim))
+    z = C.reshape(C.times_transpose(weights, hidden_vector) + bias, (1,vocab_dim))
     zT = C.times_transpose(z, target_vector)
     ce = C.reduce_log_sum_exp(z) - zT
     zMax = C.reduce_max(z)
@@ -79,8 +78,8 @@ def cross_entropy_with_sampled_softmax(
     sampling_weights,        # Node providing weights to be used for the weighted sampling
     allow_duplicates = False # Boolean flag to control whether to use sampling with replacement (allow_duplicates == True) or without replacement.
     ):
-    bias = C.Parameter(shape = (vocab_dim, 1), init = C.init_bias_default_or_0)
-    weights = C.Parameter(shape = (vocab_dim, hidden_dim), init = C.init_default_or_glorot_uniform)
+    bias = C.Parameter(shape = (vocab_dim, 1), init = 0)
+    weights = C.Parameter(shape = (vocab_dim, hidden_dim), init = C.initializer.glorot_uniform())
 
     sample_selector_sparse = C.random_sample(sampling_weights, num_samples, allow_duplicates) # sparse matrix [num_samples * vocab_size]
     if use_sparse:

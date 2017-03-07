@@ -23,6 +23,7 @@ class NcclComm
 private:
     enum class DataType : int {FLOAT, DOUBLE};
     void AllReduceImpl(void* buffer, size_t count, DataType dtype);
+    void BroadcastImpl(void* buffer, size_t count, MPI_Datatype dtype, int root);
     cudaStream_t m_stream;
     ncclComm_t m_ncclComm;
 #endif
@@ -53,6 +54,20 @@ public:
         RuntimeError("NcclComm: CNTK was built without NCCL support.");
 #endif
     }
+
+#pragma warning( push )
+#pragma warning ( disable : 4100 ) // Disable warning 4100 in Broadcast function
+
+    void Broadcast(void* buffer, size_t count, MPI_Datatype dtype, int root)
+    {
+#ifdef USE_NCCL
+        BroadcastImpl(buffer, count, dtype, root);
+#else
+        RuntimeError("NcclComm: CNTK was built without NCCL support.");
+#endif
+    }
 };
+
+#pragma warning( pop )
 
 }}}

@@ -282,12 +282,12 @@ EDIT_DISTANCE_ERROR_TEST_CASES = [
     ([[1, 3], [2, 0]], [[2, 0], [2, 0]], 0, 1, 1, True, [1], 2.0),
 ]
 
-@pytest.mark.parametrize("left_input, right_input, subPen, delPen, insPen, squashInputs, samplesToIgnore, result", EDIT_DISTANCE_ERROR_TEST_CASES)
-def test_edit_distance_error(left_input, right_input, subPen, delPen, insPen, squashInputs, samplesToIgnore, result, device_id, precision):
+@pytest.mark.parametrize("left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result", EDIT_DISTANCE_ERROR_TEST_CASES)
+def test_edit_distance_error(left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result, device_id, precision):
     i1 = input_variable(shape=(2,))
     i2 = input_variable(shape=(2,))
     arguments = {i1 : left_input, i2 : right_input}
-    a = edit_distance_error(i1, i2, subPen, delPen, insPen, squashInputs, samplesToIgnore)
+    a = edit_distance_error(i1, i2, subPen, delPen, insPen, squashInputs, tokensToIgnore)
     assert np.allclose(result, a.eval(arguments))
 
 def test_sequence_grad_as_numpy_false(device_id, precision):

@@ -275,7 +275,7 @@ Test module "V2LibraryTests" has passed with:
       4 assertions out of 4 passed
 
 + /cygdrive/c/repos/CNTK/x64/release/V2LibraryTests.exe --report_level=detailed '--run_test=!DeviceSelectionSuite'
-Running 105 test cases...
+Running 108 test cases...
 Minibatch 0: CrossEntropy loss = 3.3893967, Evaluation criterion = 0.82421875
 Minibatch 1: CrossEntropy loss = 3.1829572, Evaluation criterion = 0.7421875
 Minibatch 2: CrossEntropy loss = 3.254487, Evaluation criterion = 0.8046875
@@ -298,7 +298,7 @@ Minibatch 8: CrossEntropy loss = 2.9493382, Evaluation criterion = 0.7265625
 Minibatch 9: CrossEntropy loss = 3.0834334, Evaluation criterion = 0.734375
 
 Test module "V2LibraryTests" has passed with:
-  105 test cases out of 105 passed
+  108 test cases out of 108 passed
   2424 assertions out of 2424 passed
 
   Test suite "BlockSuite" has passed with:
@@ -401,6 +401,8 @@ Test module "V2LibraryTests" has passed with:
 
     Test case "FeedForwardSuite/ReduceableTransposeTimesInCPU" has passed
 
+    Test case "FeedForwardSuite/TimesReduceSequenceAxis" has passed
+
     Test case "FeedForwardSuite/FFTimesAndPlusInGPU" has passed with:
       1 assertion out of 1 passed
 
@@ -498,7 +500,7 @@ Test module "V2LibraryTests" has passed with:
     Test case "TensorSuite/TensorPlusRightOperandWithoutAxes" has passed
 
   Test suite "UserDefinedFunctionSuite" has passed with:
-    4 test cases out of 4 passed
+    5 test cases out of 5 passed
 
     Test case "UserDefinedFunctionSuite/DuplicateVariablesInCPU" has passed
 
@@ -507,6 +509,8 @@ Test module "V2LibraryTests" has passed with:
     Test case "UserDefinedFunctionSuite/TimesAndPlusInCPU" has passed
 
     Test case "UserDefinedFunctionSuite/TimesAndPlusInGPU" has passed
+
+	Test case "UserDefinedFunctionSuite/UserTimesFunctionExample" has passed
 
   Test suite "ValueSuite" has passed with:
     30 test cases out of 30 passed

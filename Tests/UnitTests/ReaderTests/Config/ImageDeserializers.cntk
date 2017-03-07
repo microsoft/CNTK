@@ -109,3 +109,32 @@ SimpleZip = {
         })
     }
 }
+
+TwoStreamsSameName= {
+    reader = {
+        deserializers = ({
+            type = "ImageDeserializer" ;  module = "ImageReader"
+            file = "$MapFile$"
+
+            input = { 
+                feature = {
+                    transforms (
+                        { type = "Transpose" }
+                    )
+                } 
+                labels1 = { labelDim = 4 } 
+            }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$MapFile$"
+
+            input = { 
+                feature = {
+                    transforms (
+                        { type = "Transpose" }
+                    )
+                } 
+                labels2 = { labelDim = 4 } }
+        })
+    }
+}
