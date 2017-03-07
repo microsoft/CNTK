@@ -5,3 +5,5 @@
 # ==============================================================================
 
 from .swig_helper import typemap, map_if_possible
+from .sanitize import *
+from .sanitize import _as_tuple

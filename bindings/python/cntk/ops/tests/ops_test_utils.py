@@ -15,7 +15,7 @@ from cntk.tests.test_utils import *
 
 from cntk.device import cpu, gpu
 from ...ops.functions import Function
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 from ...utils import eval as cntk_eval
 from .. import constant, input_variable
 

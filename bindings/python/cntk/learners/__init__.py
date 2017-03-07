@@ -5,7 +5,7 @@
 
 import math
 from .. import cntk_py, NDArrayView
-from ..utils import typemap
+from cntk.internal import typemap
 from enum import Enum, unique
 import numpy as np
 

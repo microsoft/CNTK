@@ -3,8 +3,8 @@
 # for full license information.
 # ==============================================================================
 
-from ...utils import sanitize_input, get_data_type
-from cntk.internal import typemap
+from ...utils import get_data_type
+from cntk.internal import typemap, sanitize_input
 
 ##########################################################################
 # sequence ops

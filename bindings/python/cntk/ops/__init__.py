@@ -11,7 +11,8 @@ from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
-from ..utils import sanitize_input, sanitize_shape, get_data_type, sanitize_axis, sanitize_dynamic_axes
+from ..utils import get_data_type
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes
 from cntk.internal import typemap
 from ..axis import Axis
 from .. import cntk_py
@@ -1639,7 +1640,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
 
-    from ..utils import sanitize_dtype_cntk
+    from cntk.internal import sanitize_dtype_cntk
     from ..cntk_py import Constant
     from cntk.cntk_py import future_value
 
@@ -1740,7 +1741,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
 
-    from ..utils import sanitize_dtype_cntk
+    from cntk.internal import sanitize_dtype_cntk
     from ..cntk_py import Constant
     from cntk.cntk_py import past_value
 
@@ -2461,7 +2462,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
         :class:`~cntk.ops.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
-    from ..utils import sanitize_shape, sanitize_dtype_cntk
+    from cntk.internal import sanitize_shape, sanitize_dtype_cntk
 
     shape = sanitize_shape(shape)
 
@@ -2491,7 +2492,7 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
         :class:`~cntk.ops.variables.Variable` that is of output type
     '''
     from cntk.cntk_py import output_variable
-    from ..utils import sanitize_shape, sanitize_dtype_cntk
+    from cntk.internal import sanitize_shape, sanitize_dtype_cntk
 
     shape = sanitize_shape(shape)
 

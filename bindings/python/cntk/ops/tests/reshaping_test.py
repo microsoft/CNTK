@@ -15,7 +15,7 @@ from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA
 import cntk as C
 from cntk import Value
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
@@ -89,7 +89,7 @@ def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axi
     # test if they get wrongly permuted during test. To this end we multiply
     # the reshaping result with itself.
     dev = cntk_device(device_id)
-    from ...utils import sanitize_dtype_cntk
+    from cntk.internal import sanitize_dtype_cntk
     from .. import reshape, element_times
 
     num_tensor_elements = np.multiply.reduce(input_shape)

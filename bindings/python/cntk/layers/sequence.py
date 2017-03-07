@@ -254,7 +254,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         # apply map_state_function if given
         new_state = map_state_function(new_state)
         # implant the dynamic axis (from dynamic_axes_like)
-        from ..utils import sanitize_input, typemap
+        from cntk.internal import sanitize_input, typemap
         from ..cntk_py import reconcile_dynamic_axis
         new_state = typemap(reconcile_dynamic_axis)(sanitize_input(new_state), sanitize_input(out_axis))
         new_state = combine([new_state], name='unfold_new_state')

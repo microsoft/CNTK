@@ -22,7 +22,7 @@ def test_eval_scalar():
     assert np.all((c+[3,4]).eval() == [5,6])
 
 def test_numpy_conversion():
-    from ..utils import sanitize_value
+    from cntk.internal import sanitize_value
     from ..cntk_py import Value
 
     # check NDArrayView

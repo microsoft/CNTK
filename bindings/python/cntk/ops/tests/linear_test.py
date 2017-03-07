@@ -13,7 +13,8 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
-from ...utils import sanitize_dtype_cntk, _ones_like, eval
+from ...utils import _ones_like, eval
+from cntk.internal import sanitize_dtype_cntk
 
 TENSOR_PAIRS = [
     ([30.], [10.]),

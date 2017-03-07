@@ -34,7 +34,7 @@ class NDArrayView(cntk_py.NDArrayView):
     '''
 
     def __init__(self, shape, data_type, device=None):
-        from .utils import sanitize_shape, sanitize_dtype_cntk
+        from cntk.internal import sanitize_shape, sanitize_dtype_cntk
         shape = sanitize_shape(shape)
         data_type = sanitize_dtype_cntk(data_type)
         if device is None:
@@ -306,7 +306,7 @@ class Value(cntk_py.Value):
                                                borrow=borrow)
                          for sample in data]
 
-        from .utils import sanitize_shape
+        from cntk.internal import sanitize_shape
         value = cntk_py.Value_create(
             sanitize_shape(var.shape),
             list_of_ndavs,

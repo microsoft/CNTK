@@ -12,7 +12,7 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant, cntk_device
 from cntk.ops import AVG_POOLING, MAX_POOLING, MAX_UNPOOLING
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 
 CONVOLUTION_OPERANDS = [
     ([[[5., 6.],  # (1, 2, 2) map

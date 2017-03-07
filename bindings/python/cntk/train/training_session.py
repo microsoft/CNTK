@@ -6,7 +6,8 @@
 import sys
 from .. import cntk_py
 from ..device import use_default_device
-from ..utils import sanitize_var_map, sanitize_function, typemap, value_to_seq
+from ..utils import value_to_seq
+from cntk.internal import sanitize_var_map, sanitize_function, typemap
 from ..io import _py_dict_to_cntk_dict
 
 __doc__ = '''\

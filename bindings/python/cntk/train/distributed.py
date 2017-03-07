@@ -5,7 +5,7 @@
 
 from .. import cntk_py
 from ..train import trainer
-from ..utils import typemap
+from cntk.internal import typemap
 
 # Preload libmpi.so.12 for non-Windows platform to work around MPI_Init failure bug
 # https://xrunhprof.wordpress.com/2014/11/04/an-openmpi-python-and-dlopen-issue/
