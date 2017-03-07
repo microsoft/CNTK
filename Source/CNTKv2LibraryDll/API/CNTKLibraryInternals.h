@@ -48,6 +48,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class TensorView;
 
     class ComputationNetwork;
+    typedef std::shared_ptr<ComputationNetwork> ComputationNetworkPtr;
 
     template <typename ElemType>
     class ComputationNetworkBuilder;
@@ -298,6 +299,12 @@ namespace CNTK
             /// in an external tool.
             ///
             CNTK_API explicit TensorBoardFileWriter(const std::wstring& dir, const FunctionPtr& modelToVisualize = nullptr);
+
+            ///
+            /// Construct a TensorBoardFileWriter to log metrics as files in the given directory.
+            /// An network argument allows serializing the model as well, so that it can be visualized in an external tool.
+            ///
+            CNTK_API explicit TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
 
             ///
             /// Destruct the TensorBoardFileWriter and close any open files.

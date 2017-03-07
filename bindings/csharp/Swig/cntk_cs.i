@@ -292,6 +292,8 @@
 %ignore_function CNTK::Internal::AreEqual;
 %ignore_function CNTK::PrintBuiltInfo;
 
+%ignore_class CNTK::Internal::TensorBoardFileWriter;
+
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }
 %apply double INPUT[]  { double *dataBuffer }
