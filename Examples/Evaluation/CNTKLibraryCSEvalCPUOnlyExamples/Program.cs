@@ -22,6 +22,9 @@ namespace CNTKLibraryCSEvalExamples
             // Evaluate a batch of images
             CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
 
+            // Evaluate multiple sample requests in parallel
+            CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);
+
             // Evaluate a single sequence with one-hot vector
             CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
 
