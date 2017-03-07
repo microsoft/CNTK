@@ -649,7 +649,8 @@ namespace CNTK
 			case PrimitiveOpType::OneHotOp:
 			{
 				auto numClass = functionConfig[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
-				computationNodePtr = New<OneHotNode<ElementType>>(network->GetDeviceId(), numClass, internalNodeName);
+				auto is_sparse = functionConfig[PrimitiveFunction::AttributeNameOneHotOutputSparse].Value<bool>();
+				computationNodePtr = New<OneHotNode<ElementType>>(network->GetDeviceId(), numClass, is_sparse, internalNodeName);
 				break;
 			}
             case PrimitiveOpType::Plus:

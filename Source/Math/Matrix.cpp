@@ -3287,19 +3287,49 @@ ElemType Matrix<ElemType>::SumOfElements() const
 }
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, size_t num_class)
+Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, size_t num_class, bool is_sparse)
 {
 	if (a.IsEmpty())
 		LogicError("AssignOneHot: Matrix a is empty.");
 
-	//todo: sparse matrix type
+	if (a.GetMatrixType() == SPARSE)
+		NOT_IMPLEMENTED;
 
-	DISPATCH_MATRIX_ON_FLAG(&a,
+	//todo: sparse matrix type
+	if (is_sparse && GetMatrixType() != SPARSE)
+	{
+		SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+	}
+
+	DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
 		this,
 		m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
-		NOT_IMPLEMENTED,
-		NOT_IMPLEMENTED,
-		NOT_IMPLEMENTED);
+		{
+			// TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
+
+			CPUMatrix<ElemType> tempA(a.GetNumRows(), a.GetNumCols());
+			ElemType* arr = a.m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
+			tempA.SetValue(a.m_GPUMatrix->GetNumRows(), a.m_GPUMatrix->GetNumCols(), arr);
+
+			CPUMatrix<ElemType> tempThis(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols());
+			ElemType* arr2 = m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
+			tempThis.SetValue(m_GPUMatrix->GetNumRows(), m_GPUMatrix->GetNumCols(), arr2);
+
+			tempThis.AssignOneHot(tempA, num_class);
+			m_GPUMatrix->SetValue(tempThis.GetNumRows(), tempThis.GetNumCols(), this->GetDeviceId(), tempThis.Data());
+		},
+		m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
+		{
+			// TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
+			CPUMatrix<ElemType> tempA(a.GetNumRows(), a.GetNumCols());
+			ElemType* arr = a.m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
+			tempA.SetValue(a.m_GPUMatrix->GetNumRows(), a.m_GPUMatrix->GetNumCols(), arr);
+
+			CPUSparseMatrix<ElemType> tempThis(GetFormat(), GetNumRows(), GetNumCols(), GetNumElements());
+			tempThis.AssignOneHot(tempA, num_class);
+			m_GPUSparseMatrix->SetValue(tempThis);
+		}
+		);
 
 	return *this;
 }

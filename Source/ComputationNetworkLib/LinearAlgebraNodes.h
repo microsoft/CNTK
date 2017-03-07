@@ -1066,14 +1066,17 @@ class OneHotNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<
 	}
 
 public:
-	OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, const wstring& name) : Base(deviceId, name)
+	OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, bool is_sparse, const wstring& name) : Base(deviceId, name)
 	{
 		m_num_class = num_class;
 		m_needsGradient = false;
+		m_sparse = is_sparse;
 	}
 	//do we really need this?
 	OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name), m_num_class(0)
 	{
+		m_needsGradient = false;
+		m_sparse = false;
 	}
 
 	OneHotNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -1088,7 +1091,7 @@ public:
 		FrameRange fr(input.GetMBLayout());
 		auto& output = Value();
 		// TODO: change to TensorView and AssignCopyOf() with reduction
-		output.AssignOneHot(InputRef(0).Value(), m_num_class);
+		output.AssignOneHot(InputRef(0).Value(), m_num_class, m_sparse);
 	}
 
 	virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -1118,6 +1121,7 @@ public:
 
 protected:
 	size_t m_num_class;
+	bool m_sparse;
 };
 
 template class OneHotNode<float>;

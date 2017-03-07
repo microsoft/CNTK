@@ -247,6 +247,7 @@ namespace CNTK
         static const std::wstring AttributeNameDelayConstraint;
         static const std::wstring AttributeNameBlankTokenId;
 		static const std::wstring AttributeNameNumClass;
+		static const std::wstring AttributeNameOneHotOutputSparse;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
