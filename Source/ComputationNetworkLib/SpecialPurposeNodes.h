@@ -958,6 +958,7 @@ template class ForwardBackwardNode<double>;
 // -----------------------------------------------------------------------
 // StopGradientNode (Input)
 // Outputs its input as it and prevents any gradient contribution from its output to its input.
+// TODO: This could be more easily implemented as a unary operation, like PassNode.
 // -----------------------------------------------------------------------
 template <class ElemType>
 class StopGradientNode : public UnaryElementWiseNode<ElemType>

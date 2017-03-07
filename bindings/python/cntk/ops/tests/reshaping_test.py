@@ -504,4 +504,13 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(res[1], np.asarray([[10.]]))
     assert np.array_equal(res[2], np.asarray([[18.]]))
 
+    # Verify that calling sequence reduction on a placeholder with known
+    # shape but unknown dynamic axes does not result in a problem
+    p = C.placeholder_variable(shape=(1,))
+    r = sequence.reduce_sum(p)
+    r.replace_placeholder(a)
     
+    res = r.eval({a: a_data})
+    assert np.array_equal(res[0], np.asarray([[2.]]))
+    assert np.array_equal(res[1], np.asarray([[5.]]))
+    assert np.array_equal(res[2], np.asarray([[9.]]))

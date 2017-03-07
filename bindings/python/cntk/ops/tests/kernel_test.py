@@ -300,6 +300,55 @@ def test_op_max_unpooling(input_size, pooling_window, strides, autopad, result, 
                 device_id=device_id, precision=precision)
     assert np.allclose(p.eval(forward_input), q.eval(forward_input))
 
+POOLING_CEIL_DATA = [
+    ([1, 1, 1, 8, 8],                   # input_size
+     (2, 2),                            # pooling_window
+     (2, 2),                            # strides
+     [[[[10.,  12.,  14.,  16.],
+        [26.,  28.,  30.,  32.],
+        [42.,  44.,  46.,  48.],
+        [58.,  60.,  62.,  64.]]]]),    # result
+    ([1, 1, 1, 8, 8],
+     (3, 3),
+     (2, 2),
+     [[[[19., 21., 23., 24.],
+        [35., 37., 39., 40.],
+        [51., 53., 55., 56.],
+        [59., 61., 63., 64.]]]]),
+]
+
+
+@pytest.mark.parametrize("input_size, pooling_window, strides, result", POOLING_CEIL_DATA)
+def test_op_pooling_ceil(input_size, pooling_window, strides, result, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    # fill input operand with a sequence 1,2,3,... til total size and then
+    # resize to input_size
+    total_size = np.prod(input_size)
+    x = np.arange(1, total_size + 1, 1, dtype=dt)
+    input_operand = x.reshape(input_size)
+
+    a = I(shape=input_operand.shape[2:], dtype=sanitize_dtype_cntk(precision), needs_gradient=True, name='a')
+
+    result_array = np.asarray(result, dtype=dt)
+    max_elements = result_array.reshape(result_array.size).tolist()
+
+    # place 1.0s where maximum elements are
+    backward = np.zeros_like(input_operand)
+    for element in max_elements:
+        backward += np.asarray(input_operand == element)
+
+    from cntk import pooling
+    input_op = pooling(a, MAX_POOLING, pooling_window, strides, ceil_out_dim=True)
+
+    forward_input = {a: input_operand}
+
+    expected_forward = AA([result])
+    expected_backward = {a: backward}
+
+    unittest_helper(input_op, forward_input, expected_forward, expected_backward, device_id=device_id,
+                    precision=precision)
+
 # ROI pooling test setup
 # --- forward ---
 # input convFeatureMap 3x3 map, values [[1,2,3][4,5,6][7,8,9]]
@@ -391,8 +440,8 @@ def test_convolution_transpose(input_size, conv_size, result, device_id, precisi
     y = np.arange(total_size, dtype=dt)
     conv_map = constant(value=y.reshape(conv_size), device=dev)
 
-    from cntk import convolution_transpose
-    input_op = convolution_transpose(conv_map, a, auto_padding=[False])
+    from cntk import convolution
+    input_op = convolution(conv_map, a, auto_padding=[False], transpose=True)
 
     forward_input = {a: input_operand}
     expected_forward = AA([result])
@@ -431,8 +480,8 @@ def test_convolution_transpose_with_output(input_size, conv_size, result, device
     y = np.arange(total_size, dtype=dt)
     conv_map = constant(value=y.reshape(conv_size), device=dev)
 
-    from cntk import convolution_transpose
-    input_op = convolution_transpose(conv_map, a, auto_padding=[True], strides=2, output_shape=(1,5,6))
+    from cntk import convolution
+    input_op = convolution(conv_map, a, auto_padding=[True], strides=2, transpose=True, output_shape=(1,5,6))
 
     forward_input = {a: input_operand}
     expected_forward = AA([result])

@@ -154,6 +154,7 @@
 %ignore_function CNTK::Times;
 %ignore_function CNTK::TransposeTimes;
 %ignore_function CNTK::CosineDistance;
+%ignore_function CNTK::CosineDistanceWithNegativeSamples;
 %ignore_function CNTK::BinaryCrossEntropy;
 %ignore_function CNTK::WeightedBinaryCrossEntropy;
 %ignore_function CNTK::SquaredError;
@@ -264,6 +265,7 @@
 %ignore_function CNTK::Internal::Scatter;
 %ignore_function CNTK::Internal::Slice;
 %ignore_function CNTK::Internal::ReduceElements;
+%ignore_function CNTK::Internal::CosineDistanceWithNegativeSamples;
 
 %ignore_function CNTK::Internal::EnableReversingTensorShapesInErrorMessages;
 %ignore_function CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -289,6 +291,8 @@
 %ignore_function CNTK::Internal::AreEquivalent;
 %ignore_function CNTK::Internal::AreEqual;
 %ignore_function CNTK::PrintBuiltInfo;
+
+%ignore_class CNTK::Internal::TensorBoardFileWriter;
 
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }
