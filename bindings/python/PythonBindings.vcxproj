@@ -49,6 +49,7 @@
     <Text Include="vsbuild.bat" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="build.bat" />
     <None Include="cntk\axis.py" />
     <None Include="cntk\cntk_py.i" />
     <None Include="cntk\conftest.py" />
@@ -60,6 +61,12 @@
     <None Include="cntk\internal\tests\__init__.py" />
     <None Include="cntk\internal\__init__.py" />
     <None Include="cntk\layers.py" />
+    <None Include="cntk\layers\blocks.py" />
+    <None Include="cntk\layers\higher_order_layers.py" />
+    <None Include="cntk\layers\layers.py" />
+    <None Include="cntk\layers\sequence.py" />
+    <None Include="cntk\layers\typing.py" />
+    <None Include="cntk\layers\__init__.py" />
     <None Include="cntk\learners\tests\__init__.py" />
     <None Include="cntk\learners\__init__.py" />
     <None Include="cntk\logging\graph.py" />

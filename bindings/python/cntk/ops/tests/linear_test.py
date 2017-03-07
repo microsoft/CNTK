@@ -314,12 +314,12 @@ def test_op_transpose_times(left_operand, right_operand, device_id, precision):
 def test_op_times_sparse_grad(device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
-    from cntk import times, times_transpose, parameter, reshape, one_hot
+    from cntk import times, times_transpose, parameter, reshape, Value
     dim = 5
     num_sequences = 2
     seq = [i for i in range(dim)]
     identity = np.identity(dim, dtype=dt_precision)
-    input_data = one_hot([seq]*num_sequences, dim, dtype=dt_precision)
+    input_data = Value.one_hot([seq]*num_sequences, dim, dtype=dt_precision)
     input_var  = I(shape=(dim), is_sparse=True, needs_gradient=False, dtype=dt_precision)
     e = parameter(shape = (dim, dim), init = identity, dtype=dt_precision)
     z = reshape(times_transpose(e, times(input_var, e)), dim)
@@ -330,10 +330,10 @@ def test_op_times_sparse_grad(device_id, precision):
 def test_op_times_reduce_sequence_axis(device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
-    from cntk import times, one_hot, TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES
+    from cntk import times, Value, TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES
     dim = 10
     seq = [[0,1,2], [3], [4,5,6,7,8,9]]
-    right_data = one_hot(seq, dim, dtype=dt_precision)
+    right_data = Value.one_hot(seq, dim, dtype=dt_precision)
     right_var = I(shape=(dim), is_sparse=True, dtype=dt_precision)
     left_data = [AA([1,1,1],dtype=dt_precision), AA([1],dtype=dt_precision), AA([1,1,1,1,1,1],dtype=dt_precision)]
     left_var = I(shape=(1), dtype=dt_precision)

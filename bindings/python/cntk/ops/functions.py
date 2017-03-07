@@ -371,7 +371,7 @@ class Function(cntk_py.Function):
             # In case of multiple matches, we fail.
             # BUGBUG: That is a problem if, e.g., someone used a layer (=BlockFunction) twice
             # and then looks it up by name, as that will fail although both instances are identical.
-            from ..graph import find_by_name
+            from cntk.logging.graph import find_by_name
             root = self.block_root if self.is_block else self
             item = typemap(find_by_name)(root, name)
             if item:
