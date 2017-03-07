@@ -22,10 +22,6 @@ def concat_elu(x):
     """ like concatenated ReLU (http://arxiv.org/abs/1603.05201), but then with ELU """
     return ct.elu(ct.splice(x, -x, axis=0))
 
-def concat_relu(x):
-    """ like concatenated ReLU (http://arxiv.org/abs/1603.05201) """
-    return ct.relu(ct.splice(x, -x, axis=0))
-
 def log_sum_exp(x):
     """ numerically stable log_sum_exp implementation that prevents overflow """
     axis = len(x.shape) - 1

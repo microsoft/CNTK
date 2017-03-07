@@ -3,6 +3,7 @@ import os
 import time
 import math
 import argparse
+from PIL import Image
 
 import numpy as np
 import cntk as ct
@@ -11,6 +12,7 @@ import cntk.io.transforms as xforms
 from pixelcnn import models as m
 from pixelcnn import nn as nn
 from pixelcnn import losses as l
+from pixelcnn import sample as sp
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -18,10 +20,12 @@ data_path  = os.path.join(abs_path, "..", "..", "DataSets", "CIFAR-10")
 model_path = os.path.join(abs_path, "Models")
 
 # model dimensions
-image_height = 32
-image_width  = 32
-num_channels = 3  # RGB
-num_classes  = 10
+image_height    = 32
+image_width     = 32
+num_channels    = 3  # RGB
+num_classes     = 10
+image_shape     = (num_channels, image_height, image_width)
+nr_logistic_mix = 10
 
 # Define the reader for both training and evaluation action.
 def create_reader(map_file, is_training):
@@ -64,7 +68,7 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
     mm_schedule      = ct.learner.momentum_as_time_constant_schedule(mm_time_constant)
 
     # Print progress
-    progress_writers = [ct.ProgressPrinter(tag='Training', freq=100, num_epochs=max_epochs)] # freq=10
+    progress_writers = [ct.ProgressPrinter(tag='Training', num_epochs=max_epochs)] # freq=100
 
     # trainer object
     learner = ct.learner.adam_sgd(z.parameters, lr=lr_schedule, momentum=mm_schedule, low_memory=False)
@@ -104,19 +108,20 @@ def train(reader_train, reader_test, model, loss, epoch_size = 50000, max_epochs
             training_loss += trainer.previous_minibatch_loss_average * trainer.previous_minibatch_sample_count
 
         # sample from the model
-        # new_x_gen = []
-        # for i in range(args.nr_gpu):
-        #     with tf.device('/gpu:%d' % i):
-        #         gen_par = model(xs[i], h_sample[i], ema=ema, dropout_p=0, **model_opt)
-        #         new_x_gen.append(nn.sample_from_discretized_mix_logistic(gen_par, args.nr_logistic_mix))
-        # def sample_from_model(sess):
-        #     x_gen = [np.zeros((args.batch_size,) + obs_shape, dtype=np.float32) for i in range(args.nr_gpu)]
-        #     for yi in range(obs_shape[0]):
-        #         for xi in range(obs_shape[1]):
-        #             new_x_gen_np = sess.run(new_x_gen, {xs[i]: x_gen[i] for i in range(args.nr_gpu)})
-        #             for i in range(args.nr_gpu):
-        #                 x_gen[i][:,yi,xi,:] = new_x_gen_np[i][:,yi,xi,:]
-        #     return np.concatenate(x_gen, axis=0)
+        t3 = time.perf_counter()
+        if loss == 'mixture':
+            x_gen = np.zeros(image_shape, dtype=np.float32)
+            for y in range(image_height):
+                for x in range(image_width):
+                    new_x_gen    = z.eval({input_var:[x_gen]})
+                    new_x_gen_np = np.asarray(sp.sample_from_discretized_mix_logistic(new_x_gen, nr_logistic_mix).eval())
+                    x_gen[:,y,x] = new_x_gen_np[:,y,x]
+            x_gen += -1 # [0, 2]
+            x_gen *= 127.5
+            image = Image.fromarray(np.ascontiguousarray(np.transpose(x_gen, (1, 2, 0))).astype('uint8'))
+            image.save("image_{}.png".format(epoch))
+        t4 = time.perf_counter()
+        print("Sample took {} seconds.".format(t4-t3))
 
         trainer.summarize_training_progress()
 

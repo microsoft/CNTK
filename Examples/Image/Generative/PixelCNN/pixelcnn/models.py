@@ -63,7 +63,7 @@ def build_pixelcnn_2_model(input,
 def build_pixelcnn_pp_model(x, h = None, dropout_p=0.5, nr_resnet=5, nr_filters=160, per_pixel_count=100, resnet_nonlinearity=nn.concat_elu, nonlinearity=ct.elu):
     """
     Based on PixelCNN++ from https://openreview.net/pdf?id=BJrFC6ceg, the implementation is 
-    a port from Porting https://github.com/openai/pixel-cnn/blob/master/pixel_cnn_pp 
+    a port from https://github.com/openai/pixel-cnn/blob/master/pixel_cnn_pp 
 
     We receive a Tensor x of shape (D1,H,W) (e.g. (3,32,32)) and produce
     a Tensor x_out of shape (D2,H,W) (e.g. (100,32,32)), where each fiber
