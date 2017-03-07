@@ -77,7 +77,7 @@ namespace CNTK
         ELU = 65,
         ForwardBackward = 66,
         CosDistanceWithNegativeSamples = 67,
-        PSROIPooling = 67,
+        PSROIPooling = 68,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.
