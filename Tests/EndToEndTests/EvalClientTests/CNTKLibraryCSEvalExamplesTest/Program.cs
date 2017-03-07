@@ -51,6 +51,10 @@ namespace Test
                     outputDataMap[outputVar].CopyVariableValueTo(outputVar, outputBuffer);
 
                     PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+
+                    outputDataMap[outputVar] = null;
+
+                    GC.Collect();
                 }
 
             }
