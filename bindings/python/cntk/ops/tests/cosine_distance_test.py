@@ -55,3 +55,14 @@ def test_cosine_distance_with_negative_samples():
   # The first value is exact match, second ony 1 element match and last one is 0 match
   np.allclose(result[0], np.tile([1, 0.5, 0.], (a.shape[0],1)))
 
+def test_rank0_output():
+  x = input_variable(shape=(768,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
+  y = input_variable(shape=(768,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
+  z = cosine_distance(x, y)
+  batch_num = 2
+  batch_size = 30
+  a = np.float32(np.random.rand(batch_num*batch_size,1500,768))
+  b = np.float32(np.random.rand(batch_num*batch_size,1500,768))
+  for i in range(batch_num):
+    bwd, fwd = z.forward({x:a[i*batch_size:(i+1)*batch_size], y:b[i*batch_size:(i+1)*batch_size]}, [z.output], set([z.output]))
+    grad = z.backward(bwd, {z.output:np.ones_like(fwd[z.output])}, set([x, y]))
