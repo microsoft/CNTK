@@ -90,12 +90,6 @@
     <None Include="cntk\initializer.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\layers.py">
-      <Filter>cntk</Filter>
-    </None>
-    <None Include="cntk\models.py">
-      <Filter>cntk</Filter>
-    </None>
     <None Include="cntk\pytest.ini">
       <Filter>cntk</Filter>
     </None>

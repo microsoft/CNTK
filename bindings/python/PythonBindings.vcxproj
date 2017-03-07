@@ -60,7 +60,6 @@
     <None Include="cntk\initializer.py" />
     <None Include="cntk\internal\tests\__init__.py" />
     <None Include="cntk\internal\__init__.py" />
-    <None Include="cntk\layers.py" />
     <None Include="cntk\layers\blocks.py" />
     <None Include="cntk\layers\higher_order_layers.py" />
     <None Include="cntk\layers\layers.py" />
@@ -77,7 +76,6 @@
     <None Include="cntk\losses\__init__.py" />
     <None Include="cntk\metrics\tests\__init__.py" />
     <None Include="cntk\metrics\__init__.py" />
-    <None Include="cntk\models.py" />
     <None Include="cntk\ops\tests\combine_test.py" />
     <None Include="cntk\ops\tests\cosine_distance_test.py" />
     <None Include="cntk\ops\tests\userfunction_complex_test.py" />
