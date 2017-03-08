@@ -16,6 +16,11 @@ from ..device import use_default_device, cpu
 from ..axis import Axis
 from cntk.internal import typemap
 
+# To __remove__
+from cntk.debugging import *
+from cntk.logging import *
+# End to remove
+
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
 
