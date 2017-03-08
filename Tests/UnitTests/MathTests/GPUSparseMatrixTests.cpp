@@ -679,6 +679,31 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseTensorShuffleScaleAndAdd, RandomSeedFixture)
     BOOST_CHECK(sparseMatrixB.IsValid());
 }
 
+
+BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixOneHot, RandomSeedFixture)
+{
+    GPUSparseMatrix<double> result(c_deviceIdZero, matrixFormatSparseCSC);
+    const size_t num_class = 6;
+
+    double data[4] = {1,2,3,4};
+    GPUMatrix<double> m0(2, 2, c_deviceIdZero);
+    m0.SetValue(2, 2, c_deviceIdZero, data, matrixFormatRowMajor);
+
+    double exp_data[24];
+    memset(&exp_data[0], 0, sizeof(double) * 24);
+    exp_data[1] = exp_data[9] = exp_data[14] = exp_data[22] = 1;
+    GPUMatrix<double> exp(12, 2, c_deviceIdZero);
+    exp.SetValue(12, 2, c_deviceIdZero, exp_data, matrixFormatColMajor);
+
+    GPUSparseMatrix<double> exp_sparse(c_deviceIdZero, matrixFormatSparseCSC);
+    exp_sparse.SetValue(exp);
+
+    result.AssignOneHot(m0, num_class);
+    
+    BOOST_CHECK(result.IsValid());
+    BOOST_CHECK(result.IsEqualTo(exp_sparse, 1e-6));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }
 } } }
