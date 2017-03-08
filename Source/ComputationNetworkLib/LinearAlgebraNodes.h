@@ -1255,18 +1255,15 @@ public:
             m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm0);
         else // right derivative
             m_temp->AssignElementProductOf(*m_invNorm1, *m_invNorm1);
-
-        m_temp->ElementMultiplyWith(ValueFor(fr));
-        m_rightTerm->SetValue(Input(inputIndex)->ValueFor(fr));
-        m_rightTerm->RowElementMultiplyWith(*m_temp);
+        auto tempView = TensorView<ElemType>(m_temp, this->GetTensorShape(SIZE_MAX));
+        tempView.AssignElementwiseProductOf(ValueTensorFor(1, fr), tempView);
+        tempView.AssignElementwiseProductOf(GradientTensorFor(1, fr), tempView);
+        auto gradientView = Input(inputIndex)->GradientTensorFor(SIZE_MAX, fr);
+        gradientView.AddElementwiseProductOf(tempView, Input(inputIndex)->ValueTensorFor(SIZE_MAX, fr), -1);
 
         m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm1);
-        m_leftTerm->SetValue(Input(1 - inputIndex)->ValueFor(fr));
-        m_leftTerm->RowElementMultiplyWith(*m_temp);
-
-        *m_leftTerm -= *m_rightTerm;
-        m_leftTerm->RowElementMultiplyWith(GradientFor(fr));
-        Input(inputIndex)->GradientFor(fr) += *m_leftTerm;
+        tempView.AssignElementwiseProductOf(GradientTensorFor(1, fr), tempView);
+        gradientView.AddElementwiseProductOf(tempView, Input(1 - inputIndex)->ValueTensorFor(SIZE_MAX, fr));
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
@@ -1284,7 +1281,6 @@ public:
         sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
         sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
         sliceOutputValue.ElementMultiplyWith(*m_invNorm1);
-        // TODO: This formulation above would allow to use the TensorView lib for this, with automatic broadcasting.
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1307,26 +1303,23 @@ public:
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
             node->m_invNorm0->SetValue(*m_invNorm0);
             node->m_invNorm1->SetValue(*m_invNorm1);
-            node->m_leftTerm->SetValue(*m_leftTerm);
-            node->m_rightTerm->SetValue(*m_rightTerm);
             node->m_temp->SetValue(*m_temp);
         }
     }
+
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_invNorm0, matrixPool);
-        RequestMatrixFromPool(m_invNorm1, matrixPool);
+        RequestMatrixFromPool(m_invNorm0, matrixPool, 1, true, true);
+        RequestMatrixFromPool(m_invNorm1, matrixPool, 1, true, true);
     }
 
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_leftTerm, matrixPool);
-        RequestMatrixFromPool(m_rightTerm, matrixPool);
-        RequestMatrixFromPool(m_temp, matrixPool);
+        RequestMatrixFromPool(m_temp, matrixPool, 1, true, true);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1335,8 +1328,6 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_invNorm0, matrixPool);
         ReleaseMatrixToPool(m_invNorm1, matrixPool);
-        ReleaseMatrixToPool(m_leftTerm, matrixPool);
-        ReleaseMatrixToPool(m_rightTerm, matrixPool);
         ReleaseMatrixToPool(m_temp, matrixPool);
     }
 
@@ -1345,8 +1336,6 @@ private:
     shared_ptr<Matrix<ElemType>> m_invNorm0;
     shared_ptr<Matrix<ElemType>> m_invNorm1;
     // the rest are temporaries, values don't need to be maintained
-    shared_ptr<Matrix<ElemType>> m_leftTerm;
-    shared_ptr<Matrix<ElemType>> m_rightTerm;
     shared_ptr<Matrix<ElemType>> m_temp;
 };
 

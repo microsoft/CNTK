@@ -104,7 +104,11 @@ namespace CNTK
         static bool HasNan(const NDArrayViewPtr& value, const char* name);
         static void Print(const NDArrayViewPtr& value, const char* msg);
 
-        static const size_t s_serializationVersion = 1;
+        // Version history:
+        // 1 -- initial version.
+        // 2 -- instead of storing smoothed gradients as a map<parameter_uid, smoothed_grad_value>,
+        // save them as a vector in the same order as the order of parameters this learner is responsible for.
+        static const size_t s_serializationVersion = 2;
     };
 
     // Vanilla gradient descent optimization algorithm.

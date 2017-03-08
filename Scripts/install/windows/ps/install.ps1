@@ -63,7 +63,7 @@ Param(
     [parameter(Mandatory=$false)] [switch] $NoConfirm)
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
-
+$ymlDir = Split-Path $MyDir
 $cntkRootDir = Split-Path $MyDir | Split-Path | Split-Path | Split-Path
 
 $roboCopyCmd    = "C:\Windows\System32\robocopy.exe"
