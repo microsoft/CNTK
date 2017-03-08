@@ -80,13 +80,13 @@ def bn_inception_model(input, labelDim, bnTimeConst):
     # 224 x 224 x 3
     conv1 = conv_bn_relu_layer(input, 64, (7,7), (2,2), True, bnTimeConst)
     # 112 x 112 x 64
-    pool1 = MaxPooling((3,3), strides=(2,2), pad=True)(conv1)
+    pool1 = MaxPooling(filter_shape=(3,3), strides=(2,2), pad=True)(conv1)
     # 56 x 56 x 64
     conv2a = conv_bn_relu_layer(pool1, 64, (1,1), (1,1), True, bnTimeConst)
     # 56 x 56 x 64
     conv2b = conv_bn_relu_layer(conv2a, 192, (3,3), (1,1), True, bnTimeConst)
     # 56 x 56 x 192
-    pool2 = MaxPooling((3,3), strides=(2,2), pad=True)(conv2b)
+    pool2 = MaxPooling(filter_shape=(3,3), strides=(2,2), pad=True)(conv2b)
     
     # Inception Blocks
     # 28 x 28 x 192
@@ -112,7 +112,7 @@ def bn_inception_model(input, labelDim, bnTimeConst):
     
     # Global Average
     # 7 x 7 x 1024
-    pool3 = AveragePooling((7,7))(inception5b)
+    pool3 = AveragePooling(filter_shape=(7,7))(inception5b)
     # 1 x 1 x 1024
     z = Dense(labelDim, init=he_normal())(pool3)
 
@@ -147,7 +147,7 @@ def bn_inception_cifar_model(input, labelDim, bnTimeConst):
     
     # Global Average
     # 8 x 8 x 512
-    pool1 = AveragePooling((8,8))(inception5a)
+    pool1 = AveragePooling(filter_shape=(8,8))(inception5a)
     # 1 x 1 x 512
     z = Dense(labelDim, init=he_normal())(pool1)
 
