@@ -14,7 +14,7 @@ Expand-Archive -Path BinaryDrop.zip
 $installCache = '.\BinaryDrop\cntk\Scripts\install\windows\InstallCache'
 Move-Item -Path InstallCache -Destination $installCache
 
-.\BinaryDrop\cntk\Scripts\install\windows\install.ps1 -NoConfirm
+.\BinaryDrop\cntk\Scripts\install\windows\install.bat -NoConfirm
 
 Set-Location BinaryDrop
 ..\test-install.bat cntk\scripts\cntkpy35.bat
