@@ -274,7 +274,21 @@ Test module "V2LibraryTests" has passed with:
     Test case "DeviceSelectionSuite/CpuAndBestDevicesInAllDevices" has passed with:
       4 assertions out of 4 passed
 
-+ /cygdrive/c/repos/CNTK/x64/release/V2LibraryTests.exe --report_level=detailed '--run_test=!DeviceSelectionSuite'
++ /cygdrive/c/repos/CNTK/x64/release/V2LibraryTests.exe --report_level=detailed --run_test=SerializationSuite/LearnerSerializationBackcompat
+Running 1 test case...
+
+Test module "V2LibraryTests" has passed with:
+  1 test case out of 1 passed
+  1 assertion out of 1 passed
+
+  Test suite "SerializationSuite" has passed with:
+    1 test case out of 1 passed
+    1 assertion out of 1 passed
+
+    Test case "SerializationSuite/LearnerSerializationBackcompat" has passed with:
+      1 assertion out of 1 passed
+
++ /cygdrive/c/repos/CNTK/x64/release/V2LibraryTests.exe --report_level=detailed '--run_test=!DeviceSelectionSuite' '--run_test=!SerializationSuite/LearnerSerializationBackcompat'
 Running 108 test cases...
 Minibatch 0: CrossEntropy loss = 3.3893967, Evaluation criterion = 0.82421875
 Minibatch 1: CrossEntropy loss = 3.1829572, Evaluation criterion = 0.7421875

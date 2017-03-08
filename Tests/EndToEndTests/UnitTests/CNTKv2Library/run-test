@@ -56,7 +56,14 @@ fi
 # device selection by freezing default device
 $TEST_BIN_DIR/$TEST_BINARY --report_level=detailed --run_test=DeviceSelectionSuite
 ExitCode=$?
-$TEST_BIN_DIR/$TEST_BINARY --report_level=detailed --run_test=!DeviceSelectionSuite
+
+# Next is LearnerSerializationBackcompat, which also needs to run in isolation,
+# since it depends on a particular state of the counter that's used to generate UIDs.
+$TEST_BIN_DIR/$TEST_BINARY --report_level=detailed --run_test=SerializationSuite/LearnerSerializationBackcompat
+ExitCode2=$?
+(( ExitCode2 > ExitCode )) && ExitCode=$ExitCode2
+
+$TEST_BIN_DIR/$TEST_BINARY --report_level=detailed --run_test=!DeviceSelectionSuite --run_test=!SerializationSuite/LearnerSerializationBackcompat
 ExitCode2=$?
 
 (( ExitCode2 > ExitCode )) && ExitCode=$ExitCode2
