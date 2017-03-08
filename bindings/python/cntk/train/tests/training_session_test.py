@@ -8,14 +8,15 @@ import os
 import math
 import re
 import numpy as np
-from .. import Function
-from ..ops import times, sequence, as_block, element_select
-from ..ops.tests.ops_test_utils import cntk_device
-from ..train.trainer import *
-from ..train.training_session import *
-from ..learners import *
-from .. import cross_entropy_with_softmax, classification_error, parameter, \
-    input_variable, times, plus, reduce_sum, Axis, cntk_py
+from cntk import Function
+from cntk import times, sequence, as_block, element_select
+from cntk.ops.tests.ops_test_utils import cntk_device
+from ..trainer import *
+from ..training_session import *
+from cntk.learners import *
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk import parameter, input_variable, times, plus, reduce_sum, Axis, cntk_py
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, FULL_DATA_SWEEP, INFINITELY_REPEAT
 import pytest
 

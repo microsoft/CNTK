@@ -73,6 +73,15 @@
     <Filter Include="cntk\layers">
       <UniqueIdentifier>{4358c7a8-d1e3-44a5-95e4-73b5f14df6ae}</UniqueIdentifier>
     </Filter>
+    <Filter Include="cntk\layers\tests">
+      <UniqueIdentifier>{f2a13ca6-fd43-45a5-9e51-d3c85f6c2a4e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\layers\models">
+      <UniqueIdentifier>{5c4f70d4-147b-4bba-8ad9-861ec07ba3c5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="cntk\debugging\tests">
+      <UniqueIdentifier>{57d82204-6a94-4563-a561-160d9ded9961}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <None Include="cntk\__init__.py">
@@ -152,9 +161,6 @@
     <None Include="cntk\ops\tests\comparison_test.py">
       <Filter>cntk\ops\tests</Filter>
     </None>
-    <None Include="cntk\tests\distributed_test.py">
-      <Filter>cntk\tests</Filter>
-    </None>
     <None Include="cntk\ops\tests\evaluation_test.py">
       <Filter>cntk\ops\tests</Filter>
     </None>
@@ -169,9 +175,6 @@
     </None>
     <None Include="cntk\ops\tests\kernel_test.py">
       <Filter>cntk\ops\tests</Filter>
-    </None>
-    <None Include="cntk\tests\layers_test.py">
-      <Filter>cntk\tests</Filter>
     </None>
     <None Include="cntk\tests\learner_test.py">
       <Filter>cntk\tests</Filter>
@@ -215,9 +218,6 @@
     <None Include="cntk\tests\test_utils.py">
       <Filter>cntk\tests</Filter>
     </None>
-    <None Include="cntk\tests\trainer_test.py">
-      <Filter>cntk\tests</Filter>
-    </None>
     <None Include="cntk\utils\tests\utils_test.py">
       <Filter>cntk\utils\tests</Filter>
     </None>
@@ -238,9 +238,6 @@
     </None>
     <None Include="cntk\train\training_session.py">
       <Filter>cntk\train</Filter>
-    </None>
-    <None Include="cntk\tests\training_session_test.py">
-      <Filter>cntk\tests</Filter>
     </None>
     <None Include="cntk\tests\user_learner.py">
       <Filter>cntk\tests</Filter>
@@ -319,6 +316,33 @@
     </None>
     <None Include="cntk\ops\tests\block_test.py">
       <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\layers\tests\__init__.py">
+      <Filter>cntk\layers\tests</Filter>
+    </None>
+    <None Include="cntk\train\tests\distributed_test.py">
+      <Filter>cntk\train\tests</Filter>
+    </None>
+    <None Include="cntk\train\tests\trainer_test.py">
+      <Filter>cntk\train\tests</Filter>
+    </None>
+    <None Include="cntk\train\tests\training_session_test.py">
+      <Filter>cntk\train\tests</Filter>
+    </None>
+    <None Include="cntk\layers\tests\layers_test.py">
+      <Filter>cntk\layers\tests</Filter>
+    </None>
+    <None Include="cntk\layers\models\__init__.py">
+      <Filter>cntk\layers\models</Filter>
+    </None>
+    <None Include="cntk\layers\models\attention.py">
+      <Filter>cntk\layers\models</Filter>
+    </None>
+    <None Include="cntk\debugging\tests\__init__.py">
+      <Filter>cntk\debugging\tests</Filter>
+    </None>
+    <None Include="cntk\logging\tests\__init__.py">
+      <Filter>cntk\logging\tests</Filter>
     </None>
   </ItemGroup>
 </Project>

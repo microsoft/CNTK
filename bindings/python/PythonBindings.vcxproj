@@ -55,6 +55,7 @@
     <None Include="cntk\conftest.py" />
     <None Include="cntk\core.py" />
     <None Include="cntk\debugging\debug.py" />
+    <None Include="cntk\debugging\tests\__init__.py" />
     <None Include="cntk\debugging\__init__.py" />
     <None Include="cntk\device.py" />
     <None Include="cntk\initializer.py" />
@@ -66,7 +67,11 @@
     <None Include="cntk\layers\blocks.py" />
     <None Include="cntk\layers\higher_order_layers.py" />
     <None Include="cntk\layers\layers.py" />
+    <None Include="cntk\layers\models\attention.py" />
+    <None Include="cntk\layers\models\__init__.py" />
     <None Include="cntk\layers\sequence.py" />
+    <None Include="cntk\layers\tests\layers_test.py" />
+    <None Include="cntk\layers\tests\__init__.py" />
     <None Include="cntk\layers\typing.py" />
     <None Include="cntk\layers\__init__.py" />
     <None Include="cntk\learners\tests\__init__.py" />
@@ -74,6 +79,7 @@
     <None Include="cntk\logging\graph.py" />
     <None Include="cntk\logging\progress_print.py" />
     <None Include="cntk\logging\tests\graph_test.py" />
+    <None Include="cntk\logging\tests\__init__.py" />
     <None Include="cntk\logging\__init__.py" />
     <None Include="cntk\losses\tests\__init__.py" />
     <None Include="cntk\losses\__init__.py" />
@@ -87,9 +93,11 @@
     <None Include="cntk\pytest.ini" />
     <None Include="cntk\sample_installer.py" />
     <None Include="cntk\tensor.py" />
-    <None Include="cntk\tests\training_session_test.py" />
     <None Include="cntk\tests\user_learner.py" />
     <None Include="cntk\train\distributed.py" />
+    <None Include="cntk\train\tests\distributed_test.py" />
+    <None Include="cntk\train\tests\trainer_test.py" />
+    <None Include="cntk\train\tests\training_session_test.py" />
     <None Include="cntk\train\tests\__init__.py" />
     <None Include="cntk\train\trainer.py" />
     <None Include="cntk\train\training_session.py" />
@@ -118,14 +126,11 @@
     <None Include="cntk\ops\tests\__init__.py" />
     <None Include="cntk\tests\attributes_test.py" />
     <None Include="cntk\tests\axis_test.py" />
-    <None Include="cntk\tests\distributed_test.py" />
     <None Include="cntk\tests\initializer_test.py" />
-    <None Include="cntk\tests\layers_test.py" />
     <None Include="cntk\tests\learner_test.py" />
     <None Include="cntk\tests\persist_test.py" />
     <None Include="cntk\tests\tensor_test.py" />
     <None Include="cntk\tests\test_utils.py" />
-    <None Include="cntk\tests\trainer_test.py" />
     <None Include="cntk\tests\__init__.py" />
     <None Include="cntk\utils\__init__.py" />
     <None Include="cntk\utils\tests\utils_test.py" />

@@ -948,7 +948,7 @@ class Function(cntk_py.Function):
         See also:
             :func:`find_by_name`
         '''
-        from .. import graph
+        from cntk.logging import graph
         return graph.find_all_with_name(self, name)
 
     # TODO have a better name for combine() in this case

@@ -4,11 +4,7 @@
 # for full license information.
 # ==============================================================================
 
-# CNTK Layers library
+# CNTK models collection
+# Layers and building blocks that are not generic but represent more specific model types go here.
 
-from .blocks import *
-from .higher_order_layers import *
-from .sequence import *
-from .layers import *
-from .models import *
-
+from .attention import *
