@@ -23,6 +23,11 @@ from cntk.logging import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
+# To __remove__
+def one_hot(batch, num_classes, dtype=None, device=None):
+    import cntk
+    return cntk.Value.one_hot(batch, num_classes, dtype, device)
+# End to remove
 
 def get_data_type(*args):
     """

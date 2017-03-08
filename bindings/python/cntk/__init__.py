@@ -25,8 +25,6 @@ from .sample_installer import install_samples
 # To __remove__
 from .io import *
 
-def one_hot(batch, num_classes, dtype=None, device=None):
-    return Value.one_hot(batch, num_classes, dtype, device)
 # End of to remove
 
 DATATYPE = np.float32
