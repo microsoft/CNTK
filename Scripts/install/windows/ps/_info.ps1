@@ -25,8 +25,9 @@ function DisplayStartMessage
 {
 "
 
-This script will setup the CNTK prerequisites and the CNTK Python environment onto the machine.
-More help is given by calling 'get-help .\install.ps1' in your powershell environment.
+This script will setup CNTK, the CNTK prerequisites and the CNTK Python environment onto the system.
+More help can be found at: 
+  https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script
 
 The script will analyse your machine and will determine which components are required. 
 The required components will be downloaded in [$localCache]
@@ -53,8 +54,8 @@ We recommend that you execute the script from Powershell Version 4 or later. You
 function DisplayWarningNoExecuteMessage
 {
 "
-The parameter '-Execute' hasn't be supplied to the script.
-The script will execute withouth making any actual changes to the machine.
+The parameter '-Execute:$false' has been supplied to the script.
+The script will execute without making any actual changes to the machine.
 "
 }
 

@@ -9,7 +9,7 @@ There are several assumptions about the input data:
 
 * The id of the blank token should be provided in the ForwardBackward node and as the tokenToIgnore in the EditDistanceError node.
 
-Features are consumed with the HTKMLFDeserializer and labels with the HTKFeatureDeserializer, as configured in the referenced example.
+Features are consumed with the HTKFeatureDeserializer and labels with the HTKMLFDeserializer, as configured in the referenced example.
 
 # Alternative Reader Configuration
 Labels can also be consumed with CNTKTextFormatDeserializer, as demonstrated in [this CTC training configuration](https://github.com/Microsoft/CNTK/blob/master/Tests/EndToEndTests/Speech/LSTM_CTC/lstm.bs). This is useful for CTC training in non-speech domain.
