@@ -117,7 +117,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         var_to_stream = input_map,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
         progress_frequency=epoch_size,
-        cv_config = CrossValidationConfig(source=test_source, mb_size=16)
+        test_config = TestConfig(source=test_source, mb_size=16)
     ).train()
     
     if profiling:
