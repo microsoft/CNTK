@@ -22,5 +22,9 @@ from .device import *
 from .layers import *
 from .sample_installer import install_samples
 
+# To __remove__
+from .io import *
+# End of to remove
+
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension

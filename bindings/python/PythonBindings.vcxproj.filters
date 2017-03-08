@@ -16,9 +16,6 @@
     <Filter Include="cntk\io">
       <UniqueIdentifier>{fb0a28e7-a82b-4049-80ac-234316ff76ea}</UniqueIdentifier>
     </Filter>
-    <Filter Include="cntk\utils\debughelpers">
-      <UniqueIdentifier>{8203febc-a583-407c-a9d7-b6147b7f14c9}</UniqueIdentifier>
-    </Filter>
     <Filter Include="cntk\train">
       <UniqueIdentifier>{fea88af5-d430-4e50-85b2-9ea439e1d032}</UniqueIdentifier>
     </Filter>
@@ -96,9 +93,6 @@
     <None Include="cntk\tensor.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\utils\swig_helper.py">
-      <Filter>cntk\utils</Filter>
-    </None>
     <None Include="cntk\ops\__init__.py">
       <Filter>cntk\ops</Filter>
     </None>
@@ -116,9 +110,6 @@
     </None>
     <None Include="setup.py" />
     <None Include="swig_install.sh" />
-    <None Include="cntk\utils\debughelpers\__init__.py">
-      <Filter>cntk\utils\debughelpers</Filter>
-    </None>
     <None Include="cntk\losses\__init__.py">
       <Filter>cntk\losses</Filter>
     </None>
@@ -218,9 +209,6 @@
     <None Include="cntk\device.py">
       <Filter>cntk</Filter>
     </None>
-    <None Include="cntk\utils\tests\swig_helper_tests.py">
-      <Filter>cntk\utils\tests</Filter>
-    </None>
     <None Include="cntk\tests\tensor_test.py">
       <Filter>cntk\tests</Filter>
     </None>
@@ -319,6 +307,18 @@
     </None>
     <None Include="cntk\layers\typing.py">
       <Filter>cntk\layers</Filter>
+    </None>
+    <None Include="cntk\internal\swig_helper.py">
+      <Filter>cntk\internal</Filter>
+    </None>
+    <None Include="cntk\internal\tests\swig_helper_tests.py">
+      <Filter>cntk\internal\tests</Filter>
+    </None>
+    <None Include="cntk\internal\sanitize.py">
+      <Filter>cntk\internal</Filter>
+    </None>
+    <None Include="cntk\ops\tests\block_test.py">
+      <Filter>cntk\ops\tests</Filter>
     </None>
   </ItemGroup>
 </Project>

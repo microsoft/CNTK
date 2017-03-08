@@ -17,6 +17,11 @@ from cntk.internal import typemap
 from ..axis import Axis
 from .. import cntk_py
 
+# To __remove__
+from cntk.losses import *
+from cntk.metrics import *
+# End to remove
+
 TIMES_REDUCE_ALL_STATIC_AXES               = cntk_py.TimesReduceAllStaticAxes
 TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES  = cntk_py.TimesReduceAllStaticAndSequenceAxes
 
