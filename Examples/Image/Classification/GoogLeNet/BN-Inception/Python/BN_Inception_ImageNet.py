@@ -93,7 +93,6 @@ def create_bn_inception():
 
 # Create trainer
 def create_trainer(network, epoch_size, num_epochs, minibatch_size):
-    # Set learning parameters
 
     # CNTK weights new gradient by (1-momentum) for unit gain, 
     # thus we divide Caffe's learning rate by (1-momentum)
@@ -102,6 +101,7 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size):
     learn_rate_adjust_interval = 2
     learn_rate_decrease_factor = 0.94
 
+    # Set learning parameters
     lr_per_mb = []
     learning_rate = initial_learning_rate
     for i in range(0, num_epochs, learn_rate_adjust_interval):
@@ -114,7 +114,7 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size):
     
     # Create learner
     learner = cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, 
-                                            unit_gain=False, l2_regularization_weight=l2_reg_weight)
+                                            l2_regularization_weight=l2_reg_weight)
 
     # Create trainer
     return cntk.Trainer(network['output'], (network['ce'], network['pe']), learner)

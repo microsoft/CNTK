@@ -95,15 +95,15 @@ def create_bn_inception():
 
 # Create trainer
 def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantization_bits, progress_printer):
-    # Set learning parameters
-
+    
     # CNTK weights new gradient by (1-momentum) for unit gain, 
     # thus we divide Caffe's learning rate by (1-momentum)
-    initial_learning_rate = 1.0 # equal to 0.1 in caffe
+    initial_learning_rate = 2.0 # equal to 0.2 in caffe
     initial_learning_rate *= minibatch_size / 128
-    learn_rate_adjust_interval = 1
-    learn_rate_decrease_factor = 0.96
+    learn_rate_adjust_interval = 2
+    learn_rate_decrease_factor = 0.94
 
+    # Set learning parameters
     lr_per_mb = []
     learning_rate = initial_learning_rate
     for i in range(0, num_epochs, learn_rate_adjust_interval):
@@ -115,8 +115,8 @@ def create_trainer(network, epoch_size, num_epochs, minibatch_size, num_quantiza
     l2_reg_weight     = 0.0001 # CNTK L2 regularization is per sample, thus same as Caffe
     
     # Create learner
-    local_learner = cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
-    # Since we reuse parameter settings (learning rate, momentum) from Caffe, we set unit_gain to False to ensure consistency 
+    local_learner = cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, 
+                                                l2_regularization_weight=l2_reg_weight)
     parameter_learner = data_parallel_distributed_learner(
         local_learner, 
         num_quantization_bits=num_quantization_bits,
@@ -185,7 +185,7 @@ if __name__=='__main__':
     parser.add_argument('-configdir', '--configdir', help='Config directory where this python script is located', required=False, default=config_path)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
-    parser.add_argument('-n', '--num_epochs', help='Total number of epochs to train', type=int, required=False, default='200')
+    parser.add_argument('-n', '--num_epochs', help='Total number of epochs to train', type=int, required=False, default='160')
     parser.add_argument('-e', '--epoch_size', help='Epoch size', type=int, required=False, default='50000')
     parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int, required=False, default='32')
     parser.add_argument('-s', '--scale_up', help='scale up minibatch size with #workers for better parallelism', type=bool, required=False, default='True')
