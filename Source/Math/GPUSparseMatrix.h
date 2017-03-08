@@ -385,6 +385,8 @@ public:
 
     GPUSparseMatrix<ElemType>& SetToZeroIfAbsLessThan(const ElemType threshold);
 
+    GPUSparseMatrix<ElemType>& AssignOneHot(const GPUMatrix<ElemType>& a, size_t num_class);
+
     ElemType SumOfElements() const;    // sum of all elements
     ElemType SumOfAbsElements() const; // sum of all abs(elements)
     ElemType FrobeniusNorm() const;

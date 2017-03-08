@@ -187,11 +187,31 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatr
 	us.RequireSize(nRows, nCols);
 	RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
 
-	for (long i = 0; i < nCols; i++)
-	{
-		for (long j = 0; j < a.GetNumRows(); j++)
-			us.SetValue((size_t)(j * num_class + a(j, i)), i, 1);
-	}
+    CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* data = NzValues();
+    ElemType* indices = a.Data();
+    //only support CSC now
+    if (GetFormat() == matrixFormatSparseCSC)
+    {
+#pragma omp parallel for
+        for (long i = 0; i < a.GetNumElements(); i++)
+        {
+            data[i] = 1;
+            size_t colIndex = i / a.GetNumRows();
+            majorIndices[i] = ((i % a.GetNumRows()) * (int)num_class + (int)indices[i]);
+            secondaryIndices[colIndex + 1]++;
+        }
+
+        for (long i = 1; i < nCols + 1; i++)
+        {
+            secondaryIndices[i] += secondaryIndices[i - 1];
+        }
+    }
+    else
+    {
+        LogicError("AssignOneHot: Matrix format is not supported.");
+    }
 
 	return *this;
 }
