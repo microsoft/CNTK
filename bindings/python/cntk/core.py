@@ -4,6 +4,7 @@
 # ==============================================================================
 
 import warnings
+import numbers
 import numpy as np
 from scipy import sparse
 
@@ -335,9 +336,23 @@ class Value(cntk_py.Value):
             [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
                    [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
 
+        >>> num_classes = 6
+        >>> sample_shape = (2, num_classes)
+        >>> sparse_indices = [[1,5,3,2],[4,1]]
+        >>> i0 = C.input_variable(shape=sample_shape, is_sparse=True)
+        >>> z = C.times(i0, np.eye(num_classes))
+        >>> value = C.one_hot(sparse_indices, sample_shape)
+        >>> z.eval({i0: value})
+        [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
+                [ 0.,  0.,  0.,  0.,  0.,  1.]],
+        <BLANKLINE>
+               [[ 0.,  0.,  0.,  1.,  0.,  0.],
+                [ 0.,  0.,  1.,  0.,  0.,  0.]]], dtype=float32), array([[[ 0.,  0.,  0.,  0.,  1.,  0.],
+                [ 0.,  1.,  0.,  0.,  0.,  0.]]], dtype=float32)]
+
         Args:
             batch (list of lists of integers): batch input data of indices
-            num_classes (int): number of classes
+            sample_shape (integer or tuple): number of classes or shape of each sample whose trailing axis is one_hot
             dtype (`np.float32`, `np.float64`, default None): data type
             device (:class:`~cntk.device.DeviceDescriptor`, default None): device
              this value should be put on
@@ -348,6 +363,11 @@ class Value(cntk_py.Value):
         '''
         if device is None:
             device = use_default_device()
+
+        if isinstance(num_classes, numbers.Integral):
+            sample_shape = (num_classes,)
+        else:
+            sample_shape = num_classes
 
         if isinstance(batch, np.ndarray):
             batch = batch.tolist()
@@ -363,10 +383,10 @@ class Value(cntk_py.Value):
 
         if dtype in [np.float32, None]:
             value = cntk_py.Value.create_one_hot_float(
-                num_classes, batch, device, False)
+                sample_shape, batch, device, False)
         elif dtype == np.float64:
             value = cntk_py.Value.create_one_hot_double(
-                num_classes, batch, device, False)
+                sample_shape, batch, device, False)
         return value
 
     @property

@@ -97,17 +97,22 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    /*static*/ ValuePtr Value::Create(size_t dimension, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/)
+    /*static*/ ValuePtr Value::Create(const NDShape& sampleShape, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/)
     {
         if (oneHotSequences.size() == 0)
             InvalidArgument("Value::Create:: The number of sequences must be > 0");
 
-        NDMaskPtr deviceValueMask = CreateMask(1, oneHotSequences, sequenceStartFlags, DeviceDescriptor::CPUDevice());
+        if (sampleShape.Rank() < 1)
+            InvalidArgument("Value::Create:: The sample rank must be > 0");
+
+        auto dimension = sampleShape[0];
+        auto numElementsPerSample = sampleShape.SubShape(1).TotalSize();
+        NDMaskPtr deviceValueMask = CreateMask(numElementsPerSample, oneHotSequences, sequenceStartFlags, DeviceDescriptor::CPUDevice());
         // If deviceValueMask is null, all the sequences have the same length.
-        size_t maxSequenceLength = (deviceValueMask == nullptr) ? oneHotSequences[0].size() : deviceValueMask->Shape()[0];
+        size_t maxSequenceLength = (deviceValueMask == nullptr) ? (oneHotSequences[0].size() / numElementsPerSample) : deviceValueMask->Shape()[0];
+        size_t maxSequenceNumCols = maxSequenceLength * numElementsPerSample;
 
         size_t numSequences = oneHotSequences.size();
-        NDShape sampleShape = { dimension };
         NDShape valueDataShape = sampleShape.AppendShape({ maxSequenceLength, numSequences });
         size_t numCSCCols = valueDataShape.SubShape(1).TotalSize() + 1;
         std::vector<SparseIndexType> colStarts(numCSCCols);
@@ -115,22 +120,23 @@ namespace CNTK
         std::vector<SparseIndexType> rowIndices;
         for (size_t i = 0; i < numSequences; ++i)
         {
-            size_t currentSequenceLength = oneHotSequences[i].size();
+            size_t currentSequenceNumCols = oneHotSequences[i].size();
             size_t j = 0;
-            for (; j < currentSequenceLength; ++j)
+            for (; j < currentSequenceNumCols; ++j)
             {
-                colStarts[(i * maxSequenceLength) + j] = (SparseIndexType)nonZeroValues.size();
+                colStarts[(i * maxSequenceNumCols) + j] = (SparseIndexType)nonZeroValues.size();
                 nonZeroValues.push_back(1);
                 if (oneHotSequences[i][j] >= dimension)
                     InvalidArgument("Value::Create: one-hot index value (%zu) exceeds vocabulary size (%zu).", oneHotSequences[i][j], dimension);
+
                 rowIndices.push_back((SparseIndexType)(oneHotSequences[i][j]));
             }
 
-            for (; j < maxSequenceLength; ++j)
-                colStarts[(i * maxSequenceLength) + j] = (SparseIndexType)(nonZeroValues.size());
+            for (; j < maxSequenceNumCols; ++j)
+                colStarts[(i * maxSequenceNumCols) + j] = (SparseIndexType)(nonZeroValues.size());
         }
 
-        colStarts[numSequences * maxSequenceLength] = (SparseIndexType)(nonZeroValues.size());
+        colStarts[numCSCCols - 1] = (SparseIndexType)(nonZeroValues.size());
         NDArrayViewPtr deviceValueData = MakeSharedObject<NDArrayView>(valueDataShape, colStarts.data(), rowIndices.data(), nonZeroValues.data(), nonZeroValues.size(), device, readOnly);
         return MakeSharedObject<Value>(deviceValueData, deviceValueMask);
     }
@@ -666,8 +672,8 @@ namespace CNTK
     // Explicit template instantiations
     template /*static*/ CNTK_API ValuePtr Value::Create<float>(const NDShape& sampleShape, const std::vector<std::vector<float>>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template /*static*/ CNTK_API ValuePtr Value::Create<double>(const NDShape& sampleShape, const std::vector<std::vector<double>>& sequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template /*static*/ CNTK_API ValuePtr Value::Create<float>(size_t dimension, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
-    template /*static*/ CNTK_API ValuePtr Value::Create<double>(size_t dimension, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template /*static*/ CNTK_API ValuePtr Value::Create<float>(const NDShape& sampleShape, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
+    template /*static*/ CNTK_API ValuePtr Value::Create<double>(const NDShape& sampleShape, const std::vector<std::vector<size_t>>& oneHotSequences, const std::vector<bool>& sequenceStartFlags, const DeviceDescriptor& device, bool readOnly/* = false*/);
     template /*static*/ CNTK_API ValuePtr Value::CreateBatch<float>(const NDShape& sampleShape, const std::vector<float>& batchData, const DeviceDescriptor& device, bool readOnly /*= false */);
     template /*static*/ CNTK_API ValuePtr Value::CreateBatch<double>(const NDShape& sampleShape, const std::vector<double>& batchData, const DeviceDescriptor& device, bool readOnly /*= false */);
     template /*static*/ CNTK_API ValuePtr Value::CreateSequence<float>(const NDShape& sampleShape, const std::vector<float>& sequenceData, bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly /*= false */);

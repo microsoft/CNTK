@@ -23,11 +23,13 @@ from cntk.logging import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
+
 # To __remove__
 def one_hot(batch, num_classes, dtype=None, device=None):
     import cntk
     return cntk.Value.one_hot(batch, num_classes, dtype, device)
 # End to remove
+
 
 def get_data_type(*args):
     """
@@ -108,6 +110,8 @@ def _is_dense(batch):
     return True
 
 
+
+
 def _ones_like(batch, precision):
     '''
     Returns a new batch, which has the same format as ``batch`` but all values
@@ -118,6 +122,9 @@ def _ones_like(batch, precision):
     '''
     from cntk.internal import sanitize_precision
     return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
+
+
+
 
 def get_train_loss(trainer):
     '''
@@ -380,6 +387,8 @@ def Signature(*args, **kwargs):
         f.__annotations__ = map_function_arguments(param_names, params_dict, *args, **kwargs)
         return f # and return the updated function
     return add_annotations
+
+
 
 
 def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_profiler_buffer_size):

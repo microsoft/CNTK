@@ -528,6 +528,14 @@ namespace CNTK
 
     std::pair<size_t, size_t> GetNumTimeStepsAndSequences(const NDShape& maskShape, size_t numDynamicAxes);
 
+    inline size_t VariableRowColSplitPoint(const Variable& var)
+    {
+        if (var.IsSparse())
+            return std::min<size_t>(var.Shape().Rank(), 1);
+        else
+            return var.Shape().Rank();
+    }
+
     // Helper class to manage a collection of learners.
     class Learners
     {

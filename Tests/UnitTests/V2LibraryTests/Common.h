@@ -385,12 +385,15 @@ inline ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengths, co
     }
     else
     {
-        if (sampleShape.Rank() != 1)
-            throw std::runtime_error("GenerateSequences can generate one hot sequences only for 1D sample shapes");
-
+        size_t numSequences = sequenceLengths.size();
         size_t vocabularySize = sampleShape[0];
-        std::vector<std::vector<size_t>> oneHotSequences = GenerateOneHotSequences(sequenceLengths, vocabularySize);
-        return Value::Create<ElementType>(vocabularySize, oneHotSequences, device, true);
+        size_t numColumnsPerSample = sampleShape.SubShape(1).TotalSize();
+        std::vector<size_t> columnLengths = sequenceLengths;
+        for (size_t i = 0; i < numSequences; ++i)
+            columnLengths[i] *= numColumnsPerSample;
+
+        std::vector<std::vector<size_t>> oneHotSequences = GenerateOneHotSequences(columnLengths, vocabularySize);
+        return Value::Create<ElementType>(sampleShape, oneHotSequences, {}, device, true);
     }
 }
 

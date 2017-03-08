@@ -607,7 +607,7 @@ namespace CNTK
         if ((numSequences == 1) || (maxNumTimeSteps == 1))
         {
             // The data need not be shuffled
-            std::shared_ptr<const Matrix<ElementType>> matrixData = value->Data()->GetMatrix<ElementType>(varShape.Rank());
+            std::shared_ptr<const Matrix<ElementType>> matrixData = value->Data()->GetMatrix<ElementType>(VariableRowColSplitPoint(var));
             auto layout = std::make_shared<MBLayout>();
             if (!mask)
             {
@@ -680,11 +680,12 @@ namespace CNTK
 
             // The data needs to be rearranged since CNTK requires sequences to be interleaved across timesteps
             // Now generate the gather indices
-            auto matrixData = std::make_shared<Matrix<ElementType>>(varShape.TotalSize(),
-                layout->GetNumCols(),
-                AsCNTKImplDeviceId(value->Device()),
-                value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
-                AsCNTKImplMatrixFormat(value->GetStorageFormat()));
+            auto numColsPerSample = varShape.SubShape(VariableRowColSplitPoint(var)).TotalSize();
+            auto matrixData = std::make_shared<Matrix<ElementType>>(varShape.TotalSize() / numColsPerSample,
+                                                                    layout->GetNumCols() * numColsPerSample,
+                                                                    AsCNTKImplDeviceId(value->Device()),
+                                                                    value->IsSparse() ? MatrixType::SPARSE : MatrixType::DENSE,
+                                                                    AsCNTKImplMatrixFormat(value->GetStorageFormat()));
 
             std::vector<size_t> sequencesShorterThanLongestSequence;
             for (size_t i = 0; i < numSequences; ++i)
@@ -693,17 +694,18 @@ namespace CNTK
 
             // Set the source location for all gaps to be the last step of the first sequence that is shorter than the longest sequence in the batch
             size_t sourceColIdxForInvalidColumns = sequencesShorterThanLongestSequence.empty() ? 0 : (((sequencesShorterThanLongestSequence[0] + 1) * maxNumTimeSteps) - 1);
-            std::vector<ElementType> gatherIndicesVector(layout->GetNumCols(), (ElementType)sourceColIdxForInvalidColumns);
+            std::vector<ElementType> gatherIndicesVector(matrixData->GetNumCols(), (ElementType)sourceColIdxForInvalidColumns);
             for (size_t i = 0; i < numSequences; ++i)
             {
                 size_t targetParallelStreamIdx = placement[i].first;
                 size_t targetStartIdxInParallelStream = placement[i].second;
                 for (size_t j = 0; j < sequenceLengths[i]; ++j)
-                    gatherIndicesVector[((targetStartIdxInParallelStream + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx] = (ElementType)((i * maxNumTimeSteps) + j);
+                    for (size_t k = 0; k < numColsPerSample; ++k)
+                        gatherIndicesVector[((((targetStartIdxInParallelStream + j) * layout->GetNumParallelSequences()) + targetParallelStreamIdx) * numColsPerSample) + k] = (ElementType)((((i * maxNumTimeSteps) + j) * numColsPerSample) + k);
             }
 
-            auto gatherIdxMatrix = std::make_shared<Matrix<ElementType>>(1, layout->GetNumCols(), gatherIndicesVector.data(), AsCNTKImplDeviceId(value->Device()));
-            matrixData->DoGatherColumnsOf(0, *gatherIdxMatrix, *(value->Data()->GetMatrix<ElementType>(varShape.Rank())), 1);
+            auto gatherIdxMatrix = std::make_shared<Matrix<ElementType>>(1, gatherIndicesVector.size(), gatherIndicesVector.data(), AsCNTKImplDeviceId(value->Device()));
+            matrixData->DoGatherColumnsOf(0, *gatherIdxMatrix, *(value->Data()->GetMatrix<ElementType>(VariableRowColSplitPoint(var))), 1);
             return{ matrixData, layout };
         }
     }

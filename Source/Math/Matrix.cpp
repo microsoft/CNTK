@@ -1184,10 +1184,10 @@ template <>
 } // (needed for completeness and to pass unit tests)
 
 template <class ElemType>
-void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val)
+void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
-    if (GetNumCols() != columnsMask.GetNumCols())
-        RuntimeError("MaskColumnsValue: Matrix and column mask must have equal number of columns.");
+    if (GetNumCols() != (columnsMask.GetNumCols() * numColsPerMaskEntry))
+        RuntimeError("MaskColumnsValue: Matrix number of columns must equal [column mask * numColsPerMaskEntry].");
 
     if (GetCurrentMatrixLocation() == CPU && (columnsMask.GetCurrentMatrixLocation() == CPU || columnsMask.GetCurrentMatrixLocation() == BOTH))
         ; // OK
@@ -1195,10 +1195,10 @@ void Matrix<ElemType>::MaskColumnsValue(const Matrix<char>& columnsMask, ElemTyp
         RuntimeError("MaskColumnsValue: Matrix and column mask must be on the same device.");
 
     DISPATCH_MATRIX_ON_FLAG(this, this,
-        { m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val); },
-        { m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val); },
-        { m_CPUSparseMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val); },
-        { m_GPUSparseMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val); });
+        { m_CPUMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val, numColsPerMaskEntry); },
+        { m_GPUMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val, numColsPerMaskEntry); },
+        { m_CPUSparseMatrix->MaskColumnsValue(*columnsMask.m_CPUMatrix, val, numColsPerMaskEntry); },
+        { m_GPUSparseMatrix->MaskColumnsValue(*columnsMask.m_GPUMatrix, val, numColsPerMaskEntry); });
 }
 
 template <class ElemType>

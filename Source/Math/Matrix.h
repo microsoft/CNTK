@@ -281,7 +281,7 @@ public:
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer = nullptr);
 
-    void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const ElemType val, size_t colInd);

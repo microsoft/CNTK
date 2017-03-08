@@ -739,32 +739,35 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val)
+void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
-    if (GetNumCols() != columnsMask.GetNumCols())
-        RuntimeError("Matrix and column mask must have equal number of columns");
+    if (GetNumCols() != (columnsMask.GetNumCols() * numColsPerMaskEntry))
+        RuntimeError("MaskColumnsValue: Matrix number of columns must equal 'column mask number of columns * numColsPerMaskEntry'.");
 
     auto& us = *this;
-    long n = (long) GetNumCols(), m = (long) GetNumRows();
+    long n = (long)columnsMask.GetNumCols(), m = (long) GetNumRows();
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
         if (columnsMask(0, j) == 1)
             continue;
 
-        // four-way unrolling
-        for (size_t i = 0; i < (m & ~3); i += 4)
+        for (long k = 0; k < numColsPerMaskEntry; ++k)
         {
-            us(i, j) = val;
-            us(i + 1, j) = val;
-            us(i + 2, j) = val;
-            us(i + 3, j) = val;
-        }
+            // four-way unrolling
+            for (size_t i = 0; i < (m & ~3); i += 4)
+            {
+                us(i,     (j * numColsPerMaskEntry) + k) = val;
+                us(i + 1, (j * numColsPerMaskEntry) + k) = val;
+                us(i + 2, (j * numColsPerMaskEntry) + k) = val;
+                us(i + 3, (j * numColsPerMaskEntry) + k) = val;
+            }
 
-        // handle remaining
-        for (size_t i = m & ~3; i < m; i++)
-        {
-            us(i, j) = val;
+            // handle remaining
+            for (size_t i = m & ~3; i < m; i++)
+            {
+                us(i, (j * numColsPerMaskEntry) + k) = val;
+            }
         }
     }
 }
