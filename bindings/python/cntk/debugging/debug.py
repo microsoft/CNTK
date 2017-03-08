@@ -12,6 +12,7 @@ from cntk import cntk_py
 from cntk import output_variable, Constant, Parameter, CloneMethod
 
 from cntk.ops.functions import Function, UserFunction
+from cntk.utils.swig_helper import map_if_possible
 
 DEBUG_USAGE = '''\
     Commands:
@@ -150,10 +151,18 @@ class DebugNode(UserFunction):
     _last_pass = 'f'
 
     def __init__(self, arg, debug_state, name='DebugNode'):
+        if hasattr(arg, 'is_composite') and arg.is_composite:
+            arg = arg.root_function
+
         name += '_after_%s' % arg.uid
         super(DebugNode, self).__init__([arg], as_numpy=True, name=name)
         self.after = arg
         self.debug_state = debug_state
+
+    def clone(self, cloned_inputs):
+        arg = cloned_inputs[0]
+        map_if_possible(arg)
+        return DebugNode(arg, self.debug_state)
 
     # TODO:
     # Breakopint handling
@@ -223,9 +232,12 @@ class DebugNode(UserFunction):
             status = "Forward after"
         else:
             status = "Backward before"
-        print("%s %s with uid '%s'" % (status, str(self.after), self.after.uid))
+
+        after = self.after.owner if self.after.is_output else self.after
+        print("%s %s with uid '%s'" % (status, str(after), after.uid))
 
     def forward(self, argument, device=None, outputs_to_retain=None):
+        import ipdb;ipdb.set_trace()
         self._print_status('f')
 
         commands = self.debug_state.commands
@@ -326,6 +338,28 @@ class DebugNode(UserFunction):
         return "DebugNode(after=%s)"%str(self.after)
 
 
+def _nodes_to_debug(model):
+    from cntk.graph import depth_first_search
+
+    def node_filter(x):
+        if hasattr(x, 'op_name') and x.op_name in ['NoOp']:
+            return False
+        else:
+            return True
+
+
+    nodes = set(depth_first_search(model, lambda x: True))
+
+    uf_nodes = [n for n in nodes if hasattr(n, 'op_name')
+            and n.op_name == 'UserFunction']
+
+    already_covered = [n.inputs[0].owner if n.inputs[0].is_output else
+            n.inputs[0] for n in uf_nodes]
+    to_remove = [n.uid for n in (already_covered + uf_nodes)]
+
+    return [n for n in nodes if n.uid not in to_remove]
+
+
 def debug_model(model):
     '''
     Returns a cloned model that has debug nodes inserted everywhere. When the
@@ -337,10 +371,27 @@ def debug_model(model):
     Returns:
       a clone of the model that has debugging enabled
     '''
-    from cntk.graph import depth_first_search
-    nodes = depth_first_search(model, lambda x: True)
-
+    nodes = _nodes_to_debug(model)
     dbg_state = _DebugState(nodes)
-    mod = {n: DebugNode(n, dbg_state) for n in nodes}
 
-    return model.clone(CloneMethod.share, mod)
+    orig_node_count = len(nodes)
+    mod_counter = 1
+
+    # We cannot add the DebugNodes in one clone because the replacements will
+    # hide parent nodes.
+    while True:
+        modifications = {n: DebugNode(n, dbg_state) for n in nodes}
+
+        model = model.clone(CloneMethod.share, modifications)
+        from cntk.graph import plot
+
+        nodes = _nodes_to_debug(model)
+        if len(nodes)==1:
+            # last node is the root node
+            model = DebugNode(model, dbg_state)
+            break
+
+        if mod_counter > orig_node_count:
+            raise ValueError('cannot debug this graph')
+
+    return model
