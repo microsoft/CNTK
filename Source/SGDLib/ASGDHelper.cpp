@@ -479,6 +479,7 @@ private:
 #else
         for (int i4 = 0; i4 < m_localBufferNum; i4++)
             m_cpuAsyncBuffer[i4] = new ElemType[m_totalModelSize];
+        m_deltaArray = new ElemType[m_totalModelSize];
 #endif
     }
 
