@@ -31,7 +31,7 @@ public class Main {
         int imageChannels = inputShape.getDimensions().get(2).intValue();
         int imageSize     = ((int) inputShape.GetTotalSize());
 
-        System.out.println("Evaluate single image");
+        System.out.print("EvaluateSingleImage ");
 
         // Image preprocessing to match input requirements of the model.
         BufferedImage bmp     = ImageIO.read(new File(dataPath + "00000.png"));
@@ -84,7 +84,7 @@ public class Main {
         FloatVectorVector outputBuffer = new FloatVectorVector();
         outputDataMap.getitem(outputVar).CopyVariableValueToFloat(outputVar, outputBuffer);
         for (int j =0; j < outputBuffer.get(0).size(); j++) {
-            System.out.println(outputBuffer.get(0).get(j));
+            System.out.print(outputBuffer.get(0).get(j)+" ");
         }
 
     }

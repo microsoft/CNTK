@@ -1,0 +1,13 @@
+dataDir: .
+
+tags: 
+  # Only for Windows CPU
+  - bvt-l (build_sku == 'cpu') and (os == 'windows') and (flavor == 'release')
+  - nightly-l (build_sku == 'cpu') and (os == 'windows') and (flavor == 'release')
+
+testCases:       
+  Test case EvaluateSingleImage:
+    patterns:
+      - EvaluateSingleImage {{float}} {{float}} {{float}} {{float}} {{float}} {{float}} {{float}} {{float}} {{float}} {{float}}
+
+

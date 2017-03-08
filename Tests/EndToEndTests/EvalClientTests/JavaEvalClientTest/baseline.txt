@@ -1,0 +1,55 @@
+CPU info:
+    CPU Model Name: Intel(R) Core(TM) i7-6820HQ CPU @ 2.70GHz
+    Hardware threads: 8
+    Total Memory: 16607308 kB
+-------------------------------------------------------------------
++ [[ -z C:\repos\test_data ]]
++ [[ ! -d C:\repos\test_data ]]
++ '[' Windows_NT == Windows_NT ']'
+++ cygpath -au 'C:\repos\test_data'
++ TestDataDir=/cygdrive/c/repos/test_data
++ ImageDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image
++ MnistDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST
++ DataDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST
++ ConfigDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted
++ OutputDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/DataSets/MNIST/../../GettingStarted/Output
++ ResnetModelDir=/cygdrive/c/repos/cntk/Tests/EndToEndTests/../../Examples/Image/Classification/ResNet
++ '[' release == release ']'
++ TEST_STRING=Release
++ '[' cpu == cpu ']'
++ TEST_STRING=Release_CpuOnly
++ SOURCE_DIR='C:\repos\cntk'
++ DLL_DIR='C:\repos\cntk\x64\Release_CpuOnly'
++ cd /cygdrive/c/repos/cntk/x64/release_CpuOnly
++ ../../bindings/java/Swig/run-java-test.cmd 'C:\repos\cntk' 'C:\repos\cntk\x64\Release_CpuOnly'
+
+C:\repos\cntk\x64\release_CpuOnly>REM @ECHO OFF 
+
+C:\repos\cntk\x64\release_CpuOnly>SET SOL_DIR=C:\repos\cntk 
+
+C:\repos\cntk\x64\release_CpuOnly>SET BUILD_PATH=C:\repos\cntk\x64\Release_CpuOnly 
+
+C:\repos\cntk\x64\release_CpuOnly>SET START_DIR=C:\repos\cntk\x64\release_CpuOnly 
+
+C:\repos\cntk\x64\release_CpuOnly>SET START_PATH=C:\cygwin64\usr\local\bin;C:\cygwin64\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\cmake\bin;C:\Program Files\Java\jdk1.8.0_121;C:\Program Files\Java\jdk1.8.0_121\bin; 
+
+C:\repos\cntk\x64\release_CpuOnly>SET PATH=C:\cygwin64\usr\local\bin;C:\cygwin64\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\cmake\bin;C:\Program Files\Java\jdk1.8.0_121;C:\Program Files\Java\jdk1.8.0_121\bin;;C:\repos\cntk\x64\Release_CpuOnly 
+
+C:\repos\cntk\x64\release_CpuOnly>cd "C:\repos\cntk\bindings\java\JavaEvalTest" 
+
+C:\repos\cntk\bindings\java\JavaEvalTest>"C:\Program Files\Java\jdk1.8.0_121\bin\javac" -cp "C:\repos\cntk\bindings\java\SwigProxyClasses\cntk.jar" src\Main.java 
+
+C:\repos\cntk\bindings\java\JavaEvalTest>REM ECHO 
+
+C:\repos\cntk\bindings\java\JavaEvalTest>"C:\Program Files\Java\jdk1.8.0_121\bin\java" -Djava.library.path=C:\repos\cntk\x64\Release_CpuOnly -classpath "C:\repos\cntk\bindings\java\JavaEvalTest\src;C:\repos\cntk\bindings\java\SwigProxyClasses\cntk.jar" Main 
+EvaluateSingleImage -1.887479 -4.768533 0.1516971 6.805476 -0.3840595 3.4106512 1.3302777 -0.87714916 -2.18046 -4.1666183 
+C:\repos\cntk\bindings\java\JavaEvalTest>REM @ECHO OFF 
+
+C:\repos\cntk\bindings\java\JavaEvalTest>SET PATH=C:\cygwin64\usr\local\bin;C:\cygwin64\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\bin;C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0\libnvvp;C:\Program Files\Microsoft MPI\Bin;C:\Program Files\Docker\Docker\Resources\bin;C:\ProgramData\Oracle\Java\javapath;C:\Program Files\Common Files\Microsoft Shared\Microsoft Online Services;C:\Program Files (x86)\Common Files\Microsoft Shared\Microsoft Online Services;C:\windows\system32;C:\windows;C:\windows\System32\Wbem;C:\windows\System32\WindowsPowerShell\v1.0;C:\Program Files\Git\cmd;C:\Program Files (x86)\Skype\Phone;C:\Program Files (x86)\PuTTY;C:\Program Files (x86)\Microsoft SDKs\Azure\CLI\wbin;C:\Users\marhamil\.dnx\bin;C:\Program Files\Microsoft DNX\Dnvm;C:\Program Files (x86)\Windows Kits\8.1\Windows Performance Toolkit;C:\Program Files\Microsoft SQL Server\130\Tools\Binn;C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common;C:\Program Files\cmake\bin;C:\Program Files\Java\jdk1.8.0_121;C:\Program Files\Java\jdk1.8.0_121\bin;  
+
+C:\repos\cntk\bindings\java\JavaEvalTest>cd C:\repos\cntk\x64\release_CpuOnly 
+
+C:\repos\cntk\x64\Release_CpuOnly>REM
++ grep -i 'Inner Exception' /tmp/cntk-test-20170308170146.644517/EvalClientTests_JavaEvalClientTest@release_cpu/output.txt
++ grep -i 'Inner Exception' /tmp/cntk-test-20170308170146.644517/EvalClientTests_JavaEvalClientTest@release_cpu/output.txt
++ exit 0
