@@ -741,6 +741,82 @@ private:
 template class EditDistanceErrorNode<float>;
 template class EditDistanceErrorNode<double>;
 
+// OneHotNode will create corresponding one hot tensor based on the input tensor. 
+template <class ElemType>
+class OneHotNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<1>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"OneHot";
+    }
+
+public:
+    OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, bool is_sparse, const wstring& name) : Base(deviceId, name)
+    {
+        m_num_class = num_class;
+        m_needsGradient = false;
+        m_sparse = is_sparse;
+    }
+    //do we really need this?
+    OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name), m_num_class(0)
+    {
+        m_needsGradient = false;
+        m_sparse = false;
+    }
+
+    OneHotNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : OneHotNode(configp->Get(L"deviceId"), configp->Get(L"numClass"))
+    {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    }
+
+    virtual void ForwardPropNonLooping() override
+    {
+        auto& input = InputRef(0);
+        FrameRange fr(input.GetMBLayout());
+        auto& output = Value();
+        output.AssignOneHot(InputRef(0).Value(), m_num_class, m_sparse);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
+        return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        const auto& inputSampleLayout = Input(0)->GetSampleLayout();
+        const auto& inputDims = inputSampleLayout.GetDims();
+
+        SmallVector<size_t> dims;
+        dims.push_back(m_num_class);
+        dims.append(inputDims.begin(), inputDims.end());
+        auto sampleLayout = TensorShape(dims);
+
+        m_pMBLayout = Input(0)->GetMBLayout();
+        // that's it
+        SetDims(sampleLayout, HasMBLayout());
+    }
+
+protected:
+    size_t m_num_class;
+    bool m_sparse;
+};
+
+template class OneHotNode<float>;
+template class OneHotNode<double>;
+
 #ifdef COMING_SOON
 
 // -----------------------------------------------------------------------
