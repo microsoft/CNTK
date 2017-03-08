@@ -225,6 +225,8 @@
 
 %ignore_class CNTK::Trainer;
 %ignore_function CNTK::CreateTrainer;
+%ignore_class CNTK::Evaluator;
+%ignore_function CNTK::CreateEvaluator;
 %ignore_struct CNTK::StreamInformation;
 %ignore_struct std::hash<::CNTK::StreamInformation>;
 
