@@ -277,6 +277,8 @@
 %ignore_function CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore_function CNTK::Internal::SetComputationNetworkTraceLevel;
 %ignore_function CNTK::Internal::GetComputationNetworkTraceLevel;
+%ignore_function CNTK::Internal::SetComputationNetworkTrackGapNans;
+%ignore_function CNTK::Internal::GetComputationNetworkTrackGapNans;
 %ignore_function CNTK::Internal::SetGPUMemoryAllocationTraceLevel;
 %ignore_function CNTK::Internal::ForceSynchronousCUDAKernelExecutions;
 %ignore_function CNTK::Internal::ForceDeterministicAlgorithms;

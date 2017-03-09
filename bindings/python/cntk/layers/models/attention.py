@@ -9,9 +9,9 @@ attention -- standard attention model
 '''
 
 from __future__ import division
-from ..ops.functions import Function
-from ..layers.blocks import _inject_name # helpers
-from ..layers import *
+from cntk.ops.functions import Function
+from ..blocks import _inject_name # helpers
+from .. import *
 
 
 # AttentionModel block

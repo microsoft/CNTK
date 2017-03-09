@@ -6,8 +6,7 @@
 import numpy as np
 
 from cntk.ops import *
-from cntk.ops import *
-from cntk.debug import save_as_legacy_model
+from cntk.debugging import save_as_legacy_model
 from cntk.ops.functions import load_model
 
 # TODO: a test for restore_model?

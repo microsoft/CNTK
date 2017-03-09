@@ -7,15 +7,16 @@
 import os
 import math
 import numpy as np
-from .. import Function
-from ..ops import times, sequence, as_block, element_select
-from ..ops.tests.ops_test_utils import cntk_device
-from ..utils import one_hot
+from cntk import Value
+from cntk import Function
+from cntk import times, sequence, as_block, element_select
+from cntk.ops.tests.ops_test_utils import cntk_device
 from ..trainer import *
-from ..learner import *
-from ..layers import *
-from .. import cross_entropy_with_softmax, classification_error, parameter, \
-        input_variable, times, plus, reduce_sum, Axis, cntk_py
+from cntk.learners import *
+from cntk.layers import *
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk import parameter, input_variable, times, plus, reduce_sum, Axis, cntk_py
 import pytest
 from scipy.sparse import csr_matrix as csr
 
@@ -124,7 +125,7 @@ def test_eval_sparse_dense(tmpdir, device_id):
     assert np.all([np.allclose(a, b) for a,b in zip(e_reader, e_csr)])
 
     # One-hot with the raw_input encoding in ctf_data
-    data = one_hot(one_hot_data, num_classes=input_vocab_dim, device=cntk_device(device_id))
+    data = Value.one_hot(one_hot_data, num_classes=input_vocab_dim, device=cntk_device(device_id))
     e_hot = z.eval({raw_input: data}, device=cntk_device(device_id))
     assert np.all([np.allclose(a, b) for a,b in zip(e_reader, e_hot)])
 
@@ -185,7 +186,7 @@ def test_eval_one_hot_seq(one_hot_batch, device_id):
         z = times(in1, np.eye(dim)*multiplier)
         # Convert expectation to dense
         expected = [np.eye(dim)[seq]*multiplier for seq in one_hot_batch]
-        batch = one_hot(one_hot_batch, num_classes=dim, device=cntk_device(device_id))
+        batch = Value.one_hot(one_hot_batch, num_classes=dim, device=cntk_device(device_id))
         result = z.eval({in1: batch}, device=cntk_device(device_id))
         assert np.all([np.allclose(a,b) for a,b in zip(result, expected)])
 
@@ -195,7 +196,7 @@ def test_eval_one_hot_seq(one_hot_batch, device_id):
     ])
 def test_eval_one_hot_bad(one_hot_batch, dim, device_id):
     with pytest.raises(ValueError):
-        batch = one_hot(one_hot_batch, num_classes=dim, device=cntk_device(device_id))
+        batch = Value.one_hot(one_hot_batch, num_classes=dim, device=cntk_device(device_id))
 
 def test_model_not_criterion_subset():
     input_dim = 2
@@ -311,7 +312,7 @@ def test_disallow_seq_starts_with_Value_objects():
 
     in1 = input_variable(shape=(dim,), is_sparse=True)
     z = times(in1, np.eye(dim))
-    batch = one_hot(one_hot_batch, num_classes=dim)
+    batch = Value.one_hot(one_hot_batch, num_classes=dim)
 
     with pytest.raises(ValueError):
         result = z.eval(({in1: batch}, len(batch)*[True]))

@@ -380,6 +380,17 @@ namespace CNTK
             return s_computationNetworkTraceLevel.load();
         }
 
+        std::atomic<bool> s_computationNetworkTrackGapNans(false);
+        void SetComputationNetworkTrackGapNans(bool enable)
+        {
+            s_computationNetworkTrackGapNans.store(enable);
+        }
+
+        bool GetComputationNetworkTrackGapNans()
+        {
+            return s_computationNetworkTrackGapNans.load();
+        }
+
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)
         {
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);

@@ -63,14 +63,12 @@ Param(
     [parameter(Mandatory=$false)] [switch] $NoConfirm)
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
-
-$cntkRootDir = split-path $MyDir | split-path | Split-Path
+$ymlDir = Split-Path $MyDir
+$cntkRootDir = Split-Path $MyDir | Split-Path | Split-Path | Split-Path
 
 $roboCopyCmd    = "C:\Windows\System32\robocopy.exe"
 $localCache     = "$MyDir\InstallCache"
 
-# Get the current script's directory and Dot-source the a file with common Powershell script function 
-# residing in the current script's directory
 . "$MyDir\_operations"
 . "$MyDir\_verify"
 . "$MyDir\_download"

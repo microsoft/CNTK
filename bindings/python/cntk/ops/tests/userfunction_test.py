@@ -12,8 +12,8 @@ import numpy as np
 import pytest
 
 from cntk import *
-from cntk.trainer import *
-from cntk.learner import *
+from cntk.train.trainer import *
+from cntk.learners import *
 from cntk.ops.functions import UserFunction
 from .ops_test_utils import AA
 

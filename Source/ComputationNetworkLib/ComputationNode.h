@@ -1655,91 +1655,13 @@ public:
     // This is where we
     //  - update the node dimension based on actual MB size
     //  - (re-)allocate the m_value matrix, which may be shared across nodes and thus have changed dimensions
-    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
-    {
-        Base::BeginForwardProp();
+    virtual void /*IComputationNode::*/ BeginForwardProp() override; // called before first iteration step of ForwardProp()
 
-        // update the actual m_value allocation
-        if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
-            UpdateFunctionValuesSize();
+    virtual void /*IComputationNode::*/ EndForwardProp() override;
 
-        // give nodes a chance to update their internal state that may also have to match MB size
-        UpdateFunctionMBSize();
+    virtual void /*IComputationNode::*/BeginBackprop() override;
 
-        // and make sure dimensions are what we expect
-        VerifyDataSize(Value());
-    }
-
-    // NaN checks
-    virtual void /*IComputationNode::*/ EndForwardProp() override
-    {
-        Base::EndForwardProp();
-#ifdef _DEBUG
-#ifdef TRACK_GAP_NANS
-        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-        if (Value().HasNan("EndForwardProp"))
-            LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
-#endif
-#if 0   // use this to track values of all nodes
-        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-        Value().Print(msra::strfun::utf8(NodeName()), 0, min(Value().GetNumRows()-1, 4), 0, min(Value().GetNumCols()-1, 4));
-#endif
-        InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
-#endif
-        // tracing
-        Trace();
-    }
-
-    virtual void /*IComputationNode::*/BeginBackprop() override
-    {
-        Base::BeginBackprop();
-
-        if (NeedsGradient())
-        {
-            // Verify that the shapes of the output/input Value matrices that the gradient backprop for this node needs
-            // are intact and have not been erroneously reshaped due to incorrect memory sharing
-            auto VerifyValueShape = [](const ComputationNode<ElemType>& node) {
-                size_t rows, cols;
-                node.DetermineDataSize(rows, cols);
-
-                auto& valueMatrix = node.Value();
-                if ((valueMatrix.GetNumRows() != rows) || (valueMatrix.GetNumCols() != cols))
-                {
-                    LogicError("%ls %ls operation found to have incorrect Value() matrix shape %lu x %lu during backprop; expected shape is %lu x %lu. "
-                               "This may be due to incorrect memory sharing.",
-                               node.NodeName().c_str(), node.OperationName().c_str(), valueMatrix.GetNumRows(), valueMatrix.GetNumCols(), rows, cols);
-                }
-            };
-
-            if (IsOutputNeededDuringBackprop())
-                VerifyValueShape(*this);
-
-            for (size_t i = 0; i < m_inputs.size(); i++)
-            {
-                if (InputUsedInComputingInputNodesGradients(i))
-                    VerifyValueShape(InputRef(i));
-            }
-        }
-    }
-
-#ifdef _DEBUG
-    virtual void /*IComputationNode::*/ EndBackprop() override
-    {
-        Base::EndBackprop();
-#ifdef TRACK_GAP_NANS
-        for (size_t i = 0; i < m_inputs.size(); i++)
-        {
-            ComputationNodePtr child = Input(i);
-            if (child->m_needsGradient)
-            {
-                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-                if (child->Gradient().HasNan("EndBackprop"))
-                    LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
-            }
-        }
-#endif
-    }
-#endif
+    virtual void /*IComputationNode::*/ EndBackprop() override;
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)

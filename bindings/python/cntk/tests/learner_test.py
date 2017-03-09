@@ -6,7 +6,7 @@
 
 from __future__ import division
 import numpy as np
-from ..learner import *
+from ..learners import *
 from .. import parameter, input_variable
 
 import pytest
@@ -131,7 +131,7 @@ def test_training_parameter_schedule():
 def test_sweep_based_schedule(tmpdir, device_id):
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
     from .. import cross_entropy_with_softmax, classification_error, plus, reduce_sum
-    from ..trainer import Trainer
+    from ..train.trainer import Trainer
 
     input_dim = 69
 

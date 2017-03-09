@@ -891,6 +891,22 @@ BOOST_AUTO_TEST_CASE(LearnerSerializationInGPU)
     }
 }
 
+BOOST_AUTO_TEST_CASE(LearnerSerializationBackcompat)
+{
+    auto device = DeviceDescriptor::CPUDevice();
+    auto net = BuildLSTMClassifierNet(InputVariable({ 3 }, DataType::Float), 2, device);
+    auto learner = MomentumSGDLearner(net->Parameters(), LearningRatePerSampleSchedule(0.005),
+        MomentumAsTimeConstantSchedule(900), /*unitGainMomentum = */true);
+
+    BOOST_ASSERT(learner->TotalNumberOfSamplesSeen() == 0);
+
+    // this checkpoint contains smoothed gradients serialized as a dict, not
+    // a vector (the current format).
+    auto checkpoint = Dictionary::Load(L"learner.checkpoint.backcompat.bin");
+    learner->RestoreFromCheckpoint(checkpoint);
+    BOOST_TEST(learner->TotalNumberOfSamplesSeen() > 0);
+}
+
 BOOST_AUTO_TEST_CASE(FunctionSerializationInGPU)
 {
     if (IsGPUAvailable())

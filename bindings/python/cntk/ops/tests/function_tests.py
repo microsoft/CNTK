@@ -11,7 +11,7 @@ Unit tests for the function class.
 import numpy as np
 import pytest
 from ..functions import *
-from ...trainer import *
+from ...train.trainer import *
 from ...initializer import glorot_uniform
 from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value, sequence, as_composite, combine, convolution, splice
 from ... import InferredDimension, gpu, cpu

@@ -7,12 +7,13 @@
 import math
 import numpy as np
 import pytest
-from .. import Function
+from cntk import Function
 from ..trainer import *
-from ..learner import *
+from cntk.learners import *
 from .. import distributed
-from .. import cross_entropy_with_softmax, classification_error, parameter, \
-        input_variable, times, plus, reduce_sum
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk import parameter, input_variable, times, plus, reduce_sum
 
 def create_data_parallel_distributed_learner(learner, quantized, distributed_after):
     return distributed.data_parallel_distributed_learner(

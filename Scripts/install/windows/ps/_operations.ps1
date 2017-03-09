@@ -26,7 +26,7 @@ $operations = @(
      },
     @{Name = "CNTK Python Environment"; ShortName = "CNTKPY"; Info = "Setup CNTK PythonEnvironment $PyVersion";
       Verification  = @( @{Function = "VerifyRunAlways"  } );
-      Action = @( @{Function = "InstallYml"; BasePath = $AnacondaBasePath; Env = "cntk-py$PyVersion"; ymlFile= "$MyDir\conda-windows-cntk-py$PyVersion-environment.yml"; PyVersion = $PyVersion } )
+      Action = @( @{Function = "InstallYml"; BasePath = $AnacondaBasePath; Env = "cntk-py$PyVersion"; ymlFile= "$ymlDir\conda-windows-cntk-py$PyVersion-environment.yml"; PyVersion = $PyVersion } )
      },
     @{Name = "CNTK WHL Install"; ShortName = "CNTKWHL"; Info = "Setup/Update CNTK Wheel $PyVersion";
       Verification  = @( @{Function = "VerifyRunAlways" } );

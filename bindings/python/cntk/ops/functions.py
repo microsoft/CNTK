@@ -1,9 +1,8 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
-from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
-        sanitize_dtype_cntk, value_to_seq, _as_tuple, variable_value_to_seq, Record, \
+from cntk.utils import value_to_seq, variable_value_to_seq, Record, \
         get_python_function_arguments, map_function_arguments
-from cntk.utils.swig_helper import map_if_possible
+from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple
 from cntk.ops.variables import Variable
 from enum import Enum, unique
 import numpy as np
@@ -371,7 +370,7 @@ class Function(cntk_py.Function):
             # In case of multiple matches, we fail.
             # BUGBUG: That is a problem if, e.g., someone used a layer (=BlockFunction) twice
             # and then looks it up by name, as that will fail although both instances are identical.
-            from ..graph import find_by_name
+            from cntk.logging.graph import find_by_name
             root = self.block_root if self.is_block else self
             item = typemap(find_by_name)(root, name)
             if item:
@@ -949,7 +948,7 @@ class Function(cntk_py.Function):
         See also:
             :func:`find_by_name`
         '''
-        from .. import graph
+        from cntk.logging import graph
         return graph.find_all_with_name(self, name)
 
     # TODO have a better name for combine() in this case
@@ -986,7 +985,7 @@ class Function(cntk_py.Function):
         See also:
             :func:`find_all_with_name`
         '''
-        from .. import graph
+        from cntk.logging import graph
         return graph.find_by_name(self, name)
 
     @typemap
