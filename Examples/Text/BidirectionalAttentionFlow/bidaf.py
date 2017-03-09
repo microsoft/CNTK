@@ -1,7 +1,7 @@
 import cntk as C
 import numpy as np
 from cntk import layers, blocks, models
-from helpers import PastValueWindow, seqlogZ
+from helpers import PastValueWindow, seqlogZ, HighwayNetwork
 import pickle
 
 with open('vocabs.pkl', 'rb') as vf:
@@ -108,15 +108,15 @@ def BidirectionalRecurrence(fwd, bwd):
     x = C.placeholder_variable()
     return C.splice (f(x), b(x))
 
-#todo add highway network
 input_layers = C.layers.Sequential([
-    # HighwayNetwork(2),
+    HighwayNetwork(dim=(embedded.shape[0]), highway_layers=2),
     C.Dropout(0.2),
     BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))
 ])
 
 q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qw,qc])))
 c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cw,cc])))
+
 q_processed = input_layers(q_emb)
 c_processed = input_layers(c_emb)
 
@@ -145,7 +145,8 @@ print(utilde)
 max_col = C.reduce_max(S)
 c_logZ = seqlogZ(max_col)
 c_attn = C.exp(max_col - C.sequence.broadcast_as(c_logZ, max_col))
-htilde = C.sequence.reduce_sum(c_processed * c_attn)
+
+htilde = C.sequence.reduce_sum(c_processed * c_attn, name='htilde')
 print(htilde)
 print(c_processed)
 
@@ -179,7 +180,26 @@ end_weights = C.parameter(shape=(C.InferredDimension,1), init=C.glorot_uniform()
 end_logits = C.times(end_input, end_weights)
 end_loss = seqloss(end_logits, ae)
 
-loss = begin_loss + end_loss
+loss = -(begin_loss + end_loss)
 
 print(loss)
 print([t.shape for t in loss.grad(mb_data, wrt=loss.parameters)])
+
+progress_writers = [C.ProgressPrinter(tag='Training')]
+
+minibatch_size = 256
+lr_schedule = C.learning_rate_schedule(0.5, C.UnitType.minibatch)
+momentum_time_constant = -minibatch_size/np.log(0.9)
+mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
+z = C.combine([begin_input, end_input])
+optimizer = C.adam_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=False, low_memory=True) # should use adadelta
+trainer = C.Trainer(z, (loss, None), optimizer, progress_writers)
+
+C.training_session(
+    trainer=trainer,
+    mb_source = mb_source,
+    mb_size = minibatch_size,
+    var_to_stream = input_map,
+    max_samples = 10000000,
+    progress_frequency=1
+).train()

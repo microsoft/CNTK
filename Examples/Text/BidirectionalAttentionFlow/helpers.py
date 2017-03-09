@@ -28,8 +28,23 @@ def PastValueWindow(window_size, axis, name=''):
 
     return past_value_window
 
-#def HighwayBlock()
-
+def HighwayBlock(dim, # ideally this should be inferred, but times does not allow inferred x inferred parameter for now
+                 transform_weight_initializer=C.normal(scale=1),
+                 transform_bias_initializer=0,
+                 update_weight_initializer=C.normal(scale=1),
+                 update_bias_initializer=0,
+                 name=''):
+    x  = C.placeholder_variable()
+    WT = C.Parameter(C.blocks._INFERRED + (dim,), init=transform_weight_initializer, name=name+'_WT')
+    bT = C.Parameter(dim,                         init=transform_bias_initializer,   name=name+'_bT')
+    WU = C.Parameter(C.blocks._INFERRED + (dim,), init=update_weight_initializer,    name=name+'_WU')
+    bU = C.Parameter(dim,                         init=update_bias_initializer,      name=name+'_bU')
+    transform_gate = C.sigmoid(C.times(x, WT, name=name+'_T') + bT)
+    update = C.relu(C.times(x, WU, name=name+'_U') + bU)
+    return x + transform_gate * (update - x)
+    
+def HighwayNetwork(dim, highway_layers, name=''):
+    return C.For(range(highway_layers), lambda i : HighwayBlock(dim, name=name+str(i)))
 
 def seqlogZ(seq):
     x = C.placeholder_variable(shape=seq.shape, dynamic_axes=seq.dynamic_axes)
