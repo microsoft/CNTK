@@ -796,7 +796,7 @@ public:
         auto& dims = GetSampleLayout().GetDims();
         vector<size_t> shape;
         shape.assign(dims.begin(), dims.end());
-        
+
         if (m_offset < 0)
         {
             CalculateAxisOffset();
@@ -814,6 +814,7 @@ public:
     virtual bool OutputUsedInComputingInputNodesGradients() const override {
         return false;
     }
+
     virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
         return false;
     }
@@ -823,7 +824,6 @@ public:
         Base::Validate(isFinalValidationPass);
 
         Base::m_isValueSparse = m_sparse;
-
         if (m_offset < 0)
         {
             CalculateAxisOffset();
@@ -843,13 +843,12 @@ public:
         }
 
         auto sampleLayout = TensorShape(dims);
-
         m_pMBLayout = Input(0)->GetMBLayout();
+
         SetDims(sampleLayout, HasMBLayout());
     }
 
 protected:
-
     void CalculateAxisOffset()
     {
         if (m_offset < 0)
@@ -869,6 +868,84 @@ protected:
 
 template class OneHotNode<float>;
 template class OneHotNode<double>;
+
+template <class ElemType>
+class GatherNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<2>
+{
+    typedef ComputationNodeNonLooping<ElemType> Base;
+    UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName()
+    {
+        return L"Gather";
+    }
+    
+public:
+    GatherNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
+    {
+    }
+    
+    virtual void ForwardPropNonLooping() override
+    {
+        auto& indices = InputRef(0);
+        auto& target = InputRef(1);
+        const auto& targetSampleLayout = Input(1)->GetSampleLayout();
+        const auto& targetDims = targetSampleLayout.GetDims();
+
+        auto& output = Value();
+        output.GatherFromTarget(indices.Value(), target.Value(), targetDims);
+    }
+
+    virtual void BackpropToNonLooping(size_t inputIndex) override
+    {
+        if (inputIndex == 1) //only right operand need calculate gradient
+        {
+            let&  indices = InputRef(0).Value();
+            auto& sourceGradient = InputRef(1).Gradient();
+            auto& outputGradient = Gradient();
+            const auto& sampleLayout = InputRef(1).GetSampleLayout();
+            const auto& dims = sampleLayout.GetDims();
+
+            sourceGradient.ScatterAccordingIndices(outputGradient, indices, dims);
+        }
+    }
+
+    virtual bool OutputUsedInComputingInputNodesGradients() const override {
+        return false;
+    }
+    virtual bool InputUsedInComputingInputNodesGradients(size_t /*childIndex*/) const override {
+        return false;
+    }
+
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        Base::Validate(isFinalValidationPass);
+
+        if (Input(1)->HasMBLayout())
+        {
+            LogicError("%ls operation's right operand doesn't expect to have dynamic axis", OperationName().c_str());
+        }
+
+        m_pMBLayout = Input(0)->GetMBLayout();
+
+        const auto& inputSampleLayout1 = Input(0)->GetSampleLayout();
+        const auto& inputDims1 = inputSampleLayout1.GetDims();
+
+        const auto& inputSampleLayout2 = Input(1)->GetSampleLayout();
+        const auto& inputDims2 = inputSampleLayout2.GetDims();
+        
+        SmallVector<size_t> dims;
+        dims.append(inputDims2.begin(), inputDims2.end() - 1);//pop the last dim of right operand
+        dims.append(inputDims1.begin(), inputDims1.end());
+        auto sampleLayout = TensorShape(dims);
+
+        SetDims(sampleLayout, HasMBLayout());
+    }
+
+protected:
+};
+
+template class GatherNode<float>;
+template class GatherNode<double>;
 
 #ifdef COMING_SOON
 

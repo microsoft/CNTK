@@ -2133,10 +2133,14 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     axis = sanitize_axis(axis)
     return one_hot_op(x, num_classes, sparse_output, axis, name)
 
+@typemap
+def gather(indices, reference):
+	from cntk.cntk_py import gather_op
+	return gather_op(indices, reference)
+
 ##########################################################################
 # reduction ops
 ##########################################################################
-
 
 @typemap
 def reduce_sum(x, axis=None, name=''):

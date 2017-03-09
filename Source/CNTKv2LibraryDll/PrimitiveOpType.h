@@ -83,6 +83,7 @@ namespace CNTK
         ToSequenceLike = 71,
         UnpackSequence = 72,
         Assign = 73,
+        GatherOp = 74,
         // New op types should only be appended to the end of this list 
         UnknownOP
         // and UnknownOP should always be last.

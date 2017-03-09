@@ -3327,6 +3327,37 @@ Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vect
         m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
         m_GPUSparseMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis)
         );
+    
+    return *this;
+}
+
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& indices, const Matrix<ElemType>& target, const SmallVector<size_t>& targetShape)
+{
+    if (indices.IsEmpty() || target.IsEmpty())
+        LogicError("GatherFromTarget: Input matrix is empty.");
+
+    DISPATCH_MATRIX_ON_FLAG(&indices,
+                            this,
+                            m_CPUMatrix->GatherFromTarget(*indices.m_CPUMatrix, *target.m_CPUMatrix, targetShape),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
+
+    return *this;
+}
+template <class ElemType>
+Matrix<ElemType>& Matrix<ElemType>::ScatterAccordingIndices(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, const SmallVector<size_t>& shape)
+{
+    if (indices.IsEmpty() || values.IsEmpty())
+        LogicError("ScatterAccordingIndices: input matrix is empty.");
+    
+    DISPATCH_MATRIX_ON_FLAG(&values,
+                            this,
+                            m_CPUMatrix->ScatterAccordingIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, shape),
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED,
+                            NOT_IMPLEMENTED);
 
     return *this;
 }
