@@ -3,25 +3,29 @@
 # for full license information.
 # ==============================================================================
 
-__version__ = '2.0'
+__version__ = '2.0.beta12.0+'
 
 import os
 import numpy as np
 
+from .core import *
 from . import ops
 from . import cntk_py
-
-from .trainer import *
-from .learner import *
+from .train import *
+from .learners import *
+from .losses import *
+from .metrics import *
 from .initializer import *
 from .utils import *
 from .ops import *
-from .io import *
-from .debug import save_as_legacy_model
 from .device import *
 from .layers import *
-from .models import *
-from .distributed import *
+from .sample_installer import install_samples
+
+# To __remove__
+from .io import *
+
+# End of to remove
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension

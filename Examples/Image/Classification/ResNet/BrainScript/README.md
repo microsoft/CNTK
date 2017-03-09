@@ -1,5 +1,9 @@
 # CNTK Examples: Image/Classification/ResNet
 
+> Note: if, on Linux, you experience segmentation faults when trying to run these examples,
+> please increase your stack size limit. This can be done by running `ulimit -s 65536` in your shell,
+> and then running CNTK from the same session. You can also check you current limits using `ulimit -a`.
+
 ## BrainScript
 
 ### ResNet20_CIFAR10.cntk

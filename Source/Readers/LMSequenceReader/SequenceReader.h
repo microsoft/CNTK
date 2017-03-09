@@ -16,6 +16,8 @@
 #include <map>
 #include <vector>
 #include <random>
+#include <boost/random/uniform_int_distribution.hpp>
+#include <boost/random/piecewise_constant_distribution.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -46,11 +48,13 @@ template <typename Count>
 class noiseSampler
 {
     std::vector<double> m_prob, m_log_prob;
-    std::uniform_int_distribution<Count> unif_int;
+    boost::random::uniform_int_distribution<Count> unif_int;
+
     bool uniform_sampling;
     double uniform_prob;
     double uniform_log_prob;
-    std::piecewise_constant_distribution<double> d;
+
+    boost::random::piecewise_constant_distribution<double> d;
     std::mt19937 rng;
 
 public:
@@ -66,8 +70,10 @@ public:
         std::vector<double> vn(counts.size() + 1);
         for (int i = 0; i < vn.size(); i++)
             vn[i] = i;
-        d = std::piecewise_constant_distribution<double>(vn.begin(), vn.end(), counts.begin());
-        unif_int = std::uniform_int_distribution<Count>(0, (long) counts.size() - 1);
+
+        d = boost::random::piecewise_constant_distribution<double>(vn.begin(), vn.end(), counts.begin());
+        unif_int = boost::random::uniform_int_distribution<Count>(0, (long)counts.size() - 1);
+
         m_prob = d.densities();
         m_log_prob.resize(m_prob.size());
         for (int i = 0; i < k; i++)

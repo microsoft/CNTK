@@ -28,7 +28,7 @@ ZipMissing_Test = [
             height=8
             channels=3
             cropType=Center
-            cropRatio=1.0
+            sideRatio=1.0
             jitterType=UniRatio
             interpolations=Linear
         ]

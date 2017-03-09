@@ -3,6 +3,7 @@ isPythonTest: True
 dataDir: .
 
 tags:
+    # Python only in Release builds.
     - bvt-l (build_sku != 'cpu') and (flavor == 'release')
     - nightly-l (build_sku != 'cpu') and (flavor == 'release')
 

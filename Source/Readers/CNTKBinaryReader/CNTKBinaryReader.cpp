@@ -35,9 +35,9 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
             log += " | keeping data in memory";
         }
 
-        if (configHelper.GetRandomize())
+        size_t window = configHelper.GetRandomizationWindow();
+        if (window > 0)
         {
-            size_t window = configHelper.GetRandomizationWindow();
             // Verbosity is a general config parameter, not specific to the binary format reader.
             log += " | randomizing with window: " + (int)window;
             int verbosity = config(L"verbosity", 0);
@@ -46,10 +46,9 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
                 window,  /* randomizationRangeInSamples */
                 m_deserializer, /* deserializer */
                 true, /* shouldPrefetch */
-                BlockRandomizer::DecimationMode::chunk, /* decimationMode */
-                false, /* useLegacyRandomization */
-                false /* multithreadedGetNextSequences */
-                );
+                false, /* multithreadedGetNextSequences */
+                 0, /*maxNumberOfInvalidSequences */
+                configHelper.UseSampleBasedRandomizationWindow() /*sampleBasedRandomizationWindow */);
         }
         else
         {
@@ -58,7 +57,7 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
         }
 
         m_packer = std::make_shared<SequencePacker>( m_sequenceEnumerator,
-                                                     ReaderBase::GetStreamDescriptions());
+                                                    ReaderBase::GetStreamDescriptions());
     }
     catch (const std::runtime_error& e)
     {

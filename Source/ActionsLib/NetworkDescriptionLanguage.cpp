@@ -160,15 +160,19 @@ bool CheckFunction(std::string& p_nodeType, bool* allowUndeterminedVariable)
 #endif
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode), L"CBCEWithSM")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClassificationErrorNode), L"ErrorPrediction")) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(EditDistanceErrorNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(EqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(GreaterNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(ForwardBackwardNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(LabelsToGraphNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LessEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(LessNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(NotEqualNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ClipNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(ConvolutionNode), L"Convolve")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CropNode))) ret = true;
+    else if (EqualInsensitive(nodeType, OperationNameOf(PassNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(PoolingNode))) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceNode), L"CosDist")) ret = true;
     else if (EqualInsensitive(nodeType, OperationNameOf(CosDistanceWithNegativeSamplesNode), L"CosWithNegSamples")) ret = true;

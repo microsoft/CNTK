@@ -13,7 +13,7 @@ from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "_PyTests", "common"))
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "common"))
 from nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, print_training_progress
 
 # Creates the reader
@@ -64,7 +64,7 @@ def train_sequence_classifier(debug_output=False):
 
     lr_per_sample = learning_rate_schedule(0.0005, UnitType.sample)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(classifier_output, ce, pe,
+    trainer = Trainer(classifier_output, (ce, pe),
                       sgd(classifier_output.parameters, lr=lr_per_sample))
 
     # Get minibatches of sequences to train with and perform model training

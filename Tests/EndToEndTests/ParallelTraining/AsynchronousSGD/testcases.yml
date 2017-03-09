@@ -1,10 +1,8 @@
 dataDir: .
 
 tags:
-     # running on every BVT job in 'P' (Parallel) leg in Debug-GPU on Linux configurations:
      # TODO: Enable windows test when Jenkins ready
-     - bvt-p  (build_sku == 'gpu') and (flavor=='debug') and (os == 'linux') and (device == 'gpu')
-     # running unconditionally on every Nightly job in 'P' leg
+     - bvt-p (build_sku == 'gpu') and (os == 'linux') and (device == 'gpu') and (flavor == 'debug')
      - nightly-p (build_sku == 'gpu') and (os == 'linux') and (device == 'gpu')
 
 testCases:

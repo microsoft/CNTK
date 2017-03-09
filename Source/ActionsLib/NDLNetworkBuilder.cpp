@@ -415,13 +415,14 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 {
                     auto parm = node->GetParentScript()->ParseVariable(reqParams[1]->GetValue(), false);
                     auto pool = PoolKindFrom(wstring(parm->GetValue()));
-                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
+                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, false, imageLayout, name);
                 }
                 else
                 {
                     bool transpose = node->GetOptionalParameter("transpose", "false");
+                    auto outputShape = paramResolver("outputShape", 0); 
                     nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
-                                                  autoPad, lowerPad, upperPad, transpose, imageLayout, maxTempMemSizeInSamples, name);
+                                                  autoPad, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, name);
                 }
 
             }
@@ -510,11 +511,11 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
     }
     else if (cnNodeType == OperationNameOf(BatchNormalizationNode))
     {
-        if (parameter.size() != 5)
+        if (parameter.size() < 5)
             RuntimeError("%ls should have 5 fixed parameters[inputValueNodeName, scale, bias, runMean, runVariance].", cnNodeType.c_str());
 
         // setup the parameter position of children so we can hook them up later
-        nodeParamCount = 5;
+        nodeParamCount = 6;
         nodeParamStart = 0;
 
         if (pass == ndlPassInitial)
@@ -538,7 +539,22 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 InvalidArgument("Unsupported batch normalization engine, choose either \"cntk\"(default) or \"cudnn\".");
             ImageLayoutKind imageLayoutKind = ImageLayoutKindFrom(node->GetOptionalParameter("imageLayout", "CHW"));
 
-            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+            nodePtr = builder.BatchNormalization(nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, spatial, normTimeConst, blendTimeConst, epsilon, useCntkEngine, imageLayoutKind, name);
+
+            if (parameter.size() == 5) 
+            {
+                // Patch up NDL network config by creating and injecting an additional input parameter for
+                // BatchNormalizationNode
+                ComputationNodePtr runSampleCount = builder.CreateLearnableParameter(name + L".run_sample_count", TensorShape(1));
+                runSampleCount->SetLearningRateMultiplier(0);
+                m_net->InitLearnableParameters(runSampleCount, L"fixedValue", 0);
+
+                NDLNode<ElemType>* runCountNode = new NDLNode<ElemType>("runCount", ConfigValue("0"), node->GetParentScript(), ndlTypeConstant);
+
+                runCountNode->SetEvalValue(runSampleCount.get());
+
+                node->InsertParam(runCountNode);
+            }
         }
     }
     else if (cnNodeType == OperationNameOf(CropNode))
@@ -629,6 +645,7 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
             vector<ComputationNodeBasePtr> inputNodes;
             for (let& in : inputs)
                 inputNodes.push_back(ComputationNode<ElemType>::FromVoidPtr(in));
+
             nodePtr->AttachInputs(inputNodes);
 #else       // TODO: delete this
             switch (inputs.size())

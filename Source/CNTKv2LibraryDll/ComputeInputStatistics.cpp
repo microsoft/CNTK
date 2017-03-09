@@ -35,10 +35,11 @@ namespace CNTK
         {
             auto currentStreamInfo = currentStreamKV.first;
             if (minibatchSourceStreams.find(currentStreamInfo) == minibatchSourceStreams.end())
-                InvalidArgument("ComputeMeanAndVariance: Stream for which mean and variance is to be computed is not supported by the specified minibatchSource");
+                InvalidArgument("Stream '%S' for which mean and variance are to be computed, is not supported by the specified minibatchSource.", currentStreamKV.first.AsString().c_str());
 
             if (currentStreamInfo.m_elementType != DataType::Float)
-                LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
+                LogicError("ComputeInputPerDimMeansAndInvStdDevs: Stream '%S' has unsupported DataType; only DataType::Float is currently supported by the CNTK built-in composite MinibatchSource.",
+                            currentStreamInfo.AsString().c_str());
 
             auto inputVariableShape = currentStreamInfo.m_sampleLayout;
             auto inputTensorShape = AsTensorShape(inputVariableShape);
@@ -74,6 +75,7 @@ namespace CNTK
         for (auto & preComputeNode : preComputeNodes)
             dynamic_pointer_cast<IPreComputeNode>(preComputeNode)->MarkComputed(false /*begin accumulating*/);
 
+        std::unordered_map<MBLayoutPtr, Variable> layoutsPopulated;
         const size_t maxMinibatchDataSize = (1 << 27); // 128 MB
         const size_t minibatchSize = maxMinibatchDataSize / totalSizePerSample;
         for (;;)
@@ -83,7 +85,7 @@ namespace CNTK
                 break;
 
             for (auto& currentStreamKV : computedMeanAndInvStdDevs)
-                CompositeFunction::PopulateComputationNodeValue<float>({ streamToDummyInputVariableMap[currentStreamKV.first], minibatchData[currentStreamKV.first].m_data }, streamToInputNodeMap[currentStreamKV.first]);
+                CompositeFunction::PopulateComputationNodeValue<float>({ streamToDummyInputVariableMap[currentStreamKV.first], minibatchData[currentStreamKV.first].data }, streamToInputNodeMap[currentStreamKV.first], layoutsPopulated);
 
             ComputationNetwork::BumpEvalTimeStamp(allInputNodes);
 

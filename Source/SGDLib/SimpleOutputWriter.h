@@ -65,12 +65,10 @@ public:
         while (DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr))
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
+            m_net->ForwardProp(outputNodes);
 
             for (int i = 0; i < outputNodes.size(); i++)
-            {
-                m_net->ForwardProp(outputNodes[i]);
                 outputMatrices[outputNodes[i]->NodeName()] = (void*) (&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
-            }
 
             if (doWriterUnitTest)
             {
@@ -109,19 +107,17 @@ public:
 
         std::map<std::wstring, void*, nocase_compare> outputMatrices;
 
+        m_net->ForwardProp(outputNodes);
         for (int i = 0; i < outputNodes.size(); i++)
-        {
-            m_net->ForwardProp(outputNodes[i]);
             outputMatrices[outputNodes[i]->NodeName()] = (void*)(&dynamic_pointer_cast<ComputationNode<ElemType>>(outputNodes[i])->Value());
-        }
 
         // TODO: What should the data size be?
         dataWriter.SaveData(0, outputMatrices, 1, 1, 0);
     }
 
-    void WriteMinibatch(FILE* f, ComputationNodePtr node, 
+    void WriteMinibatch(FILE* f, ComputationNodePtr node,
         const WriteFormattingOptions & formattingOptions, char formatChar, std::string valueFormatString, std::vector<std::string>& labelMapping,
-        size_t numMBsRun, bool gradient)
+        size_t numMBsRun, bool gradient, std::function<std::string(size_t)>& idToKeyMapping)
     {
         const auto sequenceSeparator = formattingOptions.Processed(node->NodeName(), formattingOptions.sequenceSeparator, numMBsRun);
         const auto sequencePrologue =  formattingOptions.Processed(node->NodeName(), formattingOptions.sequencePrologue,  numMBsRun);
@@ -131,7 +127,7 @@ public:
 
         node->WriteMinibatchWithFormatting(f, FrameRange(), SIZE_MAX, SIZE_MAX, formattingOptions.transpose, formattingOptions.isCategoryLabel, formattingOptions.isSparse, labelMapping,
             sequenceSeparator, sequencePrologue, sequenceEpilogue, elementSeparator, sampleSeparator,
-            valueFormatString, gradient);
+            valueFormatString, gradient, false, idToKeyMapping);
     }
 
     void InsertNode(std::vector<ComputationNodeBasePtr>& allNodes, ComputationNodeBasePtr parent, ComputationNodeBasePtr newNode)
@@ -150,7 +146,7 @@ public:
     }
 
     // TODO: Remove code dup with above function by creating a fake Writer object and then calling the other function.
-    void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions& formattingOptions, size_t numOutputSamples = requestDataSize, bool nodeUnitTest = false)
+    void WriteOutput(IDataReader& dataReader, size_t mbSize, std::wstring outputPath, const std::vector<std::wstring>& outputNodeNames, const WriteFormattingOptions& formattingOptions, size_t numOutputSamples = requestDataSize, bool nodeUnitTest = false, bool writeSequenceKey = false)
     {
         // In case of unit test, make sure backprop works
         ScopedNetworkOperationMode modeGuard(m_net, nodeUnitTest ? NetworkOperationMode::training : NetworkOperationMode::inferring);
@@ -237,15 +233,16 @@ public:
         for (size_t numMBsRun = 0; DataReaderHelpers::GetMinibatchIntoNetwork<ElemType>(dataReader, m_net, nullptr, false, false, inputMatrices, actualMBSize, nullptr); numMBsRun++)
         {
             ComputationNetwork::BumpEvalTimeStamp(inputNodes);
+            m_net->ForwardProp(outputNodes);
 
             for (auto & onode : outputNodes)
             {
                 // compute the node value
                 // Note: Intermediate values are memoized, so in case of multiple output nodes, we only compute what has not been computed already.
-                m_net->ForwardProp(onode);
 
                 FILE* file = *outputStreams[onode];
-                WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false);
+                auto getKeyById = writeSequenceKey ? inputMatrices.m_getKeyById : std::function<std::string(size_t)>();
+                WriteMinibatch(file, dynamic_pointer_cast<ComputationNode<ElemType>>(onode), formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ false, getKeyById);
 
                 if (nodeUnitTest)
                     m_net->Backprop(onode);
@@ -262,7 +259,8 @@ public:
                     }
                     else
                     {
-                        WriteMinibatch(file, node, formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ true);
+                        auto idToKeyMapping = std::function<std::string(size_t)>();
+                        WriteMinibatch(file, node, formattingOptions, formatChar, valueFormatString, labelMapping, numMBsRun, /* gradient */ true, idToKeyMapping);
                     }
                 }
             }

@@ -28,9 +28,9 @@ HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& cfg,
     bool primary)
-    : m_verbosity(0),
-      m_corpus(corpus),
-      m_primary(primary)
+    : DataDeserializerBase(primary),
+      m_verbosity(0),
+      m_corpus(corpus)
 {
     // TODO: This should be read in one place, potentially given by SGD.
     m_frameMode = (ConfigValue)cfg("frameMode", "true");
@@ -62,10 +62,10 @@ HTKDataDeserializer::HTKDataDeserializer(
     m_dimension = config.GetFeatureDimension();
     m_dimension = m_dimension * (1 + context.first + context.second);
 
-    InitializeChunkDescriptions(config);
+    InitializeChunkDescriptions(config.GetSequencePaths());
     InitializeStreams(inputName);
     InitializeFeatureInformation();
-    InitializeAugmentationWindow(config);
+    InitializeAugmentationWindow(config.GetContextWindow());
 }
 
 HTKDataDeserializer::HTKDataDeserializer(
@@ -73,8 +73,8 @@ HTKDataDeserializer::HTKDataDeserializer(
     const ConfigParameters& feature,
     const wstring& featureName,
     bool primary)
-    : m_corpus(corpus),
-      m_primary(primary)
+    : DataDeserializerBase(primary),
+      m_corpus(corpus)
 {
     // The frame mode is currently specified once per configuration,
     // not in the configuration of a particular deserializer, but on a higher level in the configuration.
@@ -98,15 +98,15 @@ HTKDataDeserializer::HTKDataDeserializer(
         InvalidArgument("Cannot expand utterances of the primary stream %ls, please change your configuration.", featureName.c_str());
     }
 
-    InitializeChunkDescriptions(config);
+    InitializeChunkDescriptions(config.GetSequencePaths());
     InitializeStreams(featureName);
     InitializeFeatureInformation();
-    InitializeAugmentationWindow(config);
+    InitializeAugmentationWindow(config.GetContextWindow());
 }
 
-void HTKDataDeserializer::InitializeAugmentationWindow(ConfigHelper& config)
+void HTKDataDeserializer::InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow)
 {
-    m_augmentationWindow = config.GetContextWindow();
+    m_augmentationWindow = augmentationWindow;
 
     // If not given explicitly, we need to identify the required augmentation range from the expected dimension
     // and the number of dimensions in the file.
@@ -117,10 +117,9 @@ void HTKDataDeserializer::InitializeAugmentationWindow(ConfigHelper& config)
 }
 
 // Initializes chunks based on the configuration and utterance descriptions.
-void HTKDataDeserializer::InitializeChunkDescriptions(ConfigHelper& config)
+void HTKDataDeserializer::InitializeChunkDescriptions(const vector<wstring>& paths)
 {
     // Read utterance descriptions.
-    vector<wstring> paths = config.GetSequencePaths();
     vector<UtteranceDescription> utterances;
     utterances.reserve(paths.size());
     size_t allUtterances = 0, allFrames = 0;
@@ -275,7 +274,7 @@ void HTKDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<Seque
                 f.m_chunkId = chunkId;
                 f.m_key.m_sequence = sequence;
                 f.m_key.m_sample = k;
-                f.m_id = offsetInChunk++;
+                f.m_indexInChunk = offsetInChunk++;
                 f.m_numberOfSamples = 1;
                 result.push_back(f);
             }
@@ -287,7 +286,7 @@ void HTKDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<Seque
             f.m_chunkId = chunkId;
             f.m_key.m_sequence = sequence;
             f.m_key.m_sample = 0;
-            f.m_id = offsetInChunk++;
+            f.m_indexInChunk = offsetInChunk++;
             if (SEQUENCELEN_MAX < utterance->GetNumberOfFrames())
             {
                 RuntimeError("Maximum number of samples per sequence exceeded");
@@ -539,6 +538,8 @@ void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector
         LogicError("Currently, HTK Deserializer supports only double and float types.");
     }
 
+    result->m_key.m_sequence = utterance->GetId();
+
     r.push_back(result);
 }
 
@@ -570,11 +571,11 @@ bool HTKDataDeserializer::GetSequenceDescription(const SequenceDescription& prim
         {
             utterance->SetExpansionLength(maxLength);
         }
-        d.m_id = utteranceIndexInsideChunk;
+        d.m_indexInChunk = utteranceIndexInsideChunk;
     }
     else
     {
-        d.m_id = m_frameMode ? chunk.GetStartFrameIndexInsideChunk(utteranceIndexInsideChunk) + primary.m_key.m_sample : utteranceIndexInsideChunk;
+        d.m_indexInChunk = m_frameMode ? chunk.GetStartFrameIndexInsideChunk(utteranceIndexInsideChunk) + primary.m_key.m_sample : utteranceIndexInsideChunk;
     }
     d.m_numberOfSamples = m_frameMode ? 1 : (uint32_t)utterance->GetNumberOfFrames();
     return true;

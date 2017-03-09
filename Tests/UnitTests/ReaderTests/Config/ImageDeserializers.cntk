@@ -21,9 +21,9 @@ reader = [
                         transforms = (
                             [
                                 type = "Crop"
-                                cropType = "center"
-                                cropRatio = 1.0
-                                jitterType = "uniRatio"
+                                cropType = "Center"
+                                sideRatio = 1.0
+                                jitterType = "UniRatio"
                             ]:[
                                 type = "Scale"
                                 width = 4
@@ -84,6 +84,57 @@ reader = [
                 features = { transforms = () }
                 labels = { labelDim = 4 }               
             }
+        })
+    }
+}
+
+SimpleZip = {
+    # Parameter values for the reader
+    reader = {
+        randomize = true
+        deserializers = ({
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$MapFile$"
+
+            input = {
+                features = {
+                    transforms (
+                        { type = "Crop" ; cropType = "center"; sideRatio=1.0 ; jitterType="UniRatio" } :
+                        { type = "Scale" ; width = 4 ; height = 8 ; channels = 3 ; interpolations = "linear" } :
+                        { type = "Transpose" }
+                    )
+                }
+                lables = { labelDim = 4 }
+            }
+        })
+    }
+}
+
+TwoStreamsSameName= {
+    reader = {
+        deserializers = ({
+            type = "ImageDeserializer" ;  module = "ImageReader"
+            file = "$MapFile$"
+
+            input = { 
+                feature = {
+                    transforms (
+                        { type = "Transpose" }
+                    )
+                } 
+                labels1 = { labelDim = 4 } 
+            }
+        }:{
+            type = "ImageDeserializer" ; module = "ImageReader"
+            file = "$MapFile$"
+
+            input = { 
+                feature = {
+                    transforms (
+                        { type = "Transpose" }
+                    )
+                } 
+                labels2 = { labelDim = 4 } }
         })
     }
 }
