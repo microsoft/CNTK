@@ -3740,7 +3740,8 @@ namespace CNTK
     }
 
     CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = L"");
-
+    
+    CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name = L"");
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
     ///

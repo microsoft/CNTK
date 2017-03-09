@@ -80,6 +80,7 @@ namespace CNTK
         OneHot = 68,
         Pow = 69,
         // New op types should only be appended to the end of this list 
+        GatherOp = 70,
         UnknownOP
         // and UnknownOP should always be last.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)
