@@ -106,7 +106,7 @@ template<class ElemType>
 
     std::shared_ptr<Matrix<ElemType>> unpackedData;
     if ((maxNumTimeSteps == 1) || (numSequences == 1) || (batchMajor && (layout->GetNumParallelSequences() == layout->GetNumSequences())))
-	{
+    {
         unpackedData = std::make_shared<Matrix<ElemType>>(packedData.AsReference());
 
         if (maskGaps && layout && layout->HasGaps())
