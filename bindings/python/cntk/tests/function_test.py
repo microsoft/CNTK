@@ -37,7 +37,7 @@ def test_1d_NDArrayView_copy():
 
     w = parameter(init=np.asarray([1]))
     w.set_value(result_slice)
-    
+
     assert np.array_equal(w.value, np.asarray(result_slice))
 
 def test_sequences_packed_in_single_ndarray():
@@ -52,5 +52,3 @@ def test_sequences_packed_in_single_ndarray():
 
     result = op.eval({input_with_sequence_axis : (data, [True, True])})
     assert np.array_equal(result, [[[1., 2.]], [[2., 3.]]])
-
-    

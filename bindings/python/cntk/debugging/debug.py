@@ -48,40 +48,29 @@ Then, when ``z`` is evaluated or trained (i.e. when either
 :meth:`~cntk.ops.functions.Function.backward` is called, you will see the
 following command-line interface::
 
-    Forward after Parameter node with uid='Parameter28' shape=[](2,)
+    ======================================== forward  ========================================
+    Parameter node with uid='Parameter28' shape=[](2,)
     [CNTK forward] >>> help
     %s
 
     [CNTK backward] >>> n
 
-    ======================================== forward  ========================================
-    Forward after Parameter node with uid='Parameter28' shape=[](2,)
-    [CNTK forward] >>> n
-    Forward after Times node with uid='Times29' shape=[*,*](2,)
+    Times node with uid='Times29' shape=[*,*](2,)
     [CNTK forward] >>> n
     ======================================== backward ========================================
-    Backward before Times node with uid='Times29' shape=[*,*](2,)
+    Times node with uid='Times29' shape=[*,*](2,)
     [CNTK backward] >>> p
     State: None
     Root gradients:
     [[[-0.79412955  0.79412955]]
-
      [[-0.79412955  0.79412955]]
-
      [[ 0.20587046 -0.20587045]]
-
      [[ 0.20587046 -0.20587045]]
-
      [[ 0.20587046 -0.20587045]]
-
      [[ 0.20587046 -0.20587045]]
-
      [[-0.79412955  0.79412955]]
-
      [[ 0.20587046 -0.20587045]]
-
      [[ 0.20587039 -0.20587039]]
-
      [[-0.79412961  0.79412961]]]
 
 At every stop the following information is given:
@@ -111,9 +100,10 @@ class _DebugState(object):
 
     def __init__(self, all_nodes):
         self.commands = []
-        self.last_pass = 'f'
+        self.last_pass = '<start>'
         self.all_nodes = all_nodes
         self.name_to_node = defaultdict(lambda: [])
+        import ipdb;ipdb.set_trace()
         for n in self.all_nodes:
             self.name_to_node[n.name].append(n)
 
@@ -142,36 +132,55 @@ def set_computation_network_trace_level(level):
     cntk_py.set_computation_network_trace_level(level)
 
 
-class DebugNode(UserFunction):
+class _DebugNode(UserFunction):
     '''
-    A user function that exposes a command line interface. With that one can
+    A user function node that exposes a command line interface. With that one can
     step through the graph and investigate data, shapes, etc.
+
+    In order to use it, call :func:`debug_model` on the model.
+
+    Args:
+       arg (graph node): the node in the graph after which this Debug Node is to
+        be inserted
+      debug_state (:class:`_DebugState`): state that is shared among all debug
+       nodes
+      in_stream (object behaving like sys.stdin): `readline()` will be called on it
+       to obtain user input
+      out_stream (object behaving like sys.stdout): `write()` and `flush()` will
+       be called on it to output debug info to the user
+      exit_func (callable): callable that takes an exit code and is called,
+       when the user exits the debugging process
+      name (str): name of the node
     '''
     _commands = []
-    _last_pass = 'f'
+
+    PROMPT_FORWARD = '[CNTK forward] >>> '
+    PROMPT_BACKWARD = '[CNTK backward] >>> '
 
     def __init__(self, arg, debug_state,
-                 in_func=sys.stdin, out_func=sys.stdout,
-                 name='DebugNode'):
+                 in_stream=sys.stdin, out_stream=sys.stdout,
+                 exit_func=sys.exit,
+                 name='_DebugNode'):
         if hasattr(arg, 'is_composite') and arg.is_composite:
             arg = arg.root_function
 
         name += '_after_%s' % arg.uid
-        super(DebugNode, self).__init__([arg], as_numpy=True, name=name)
+        super(_DebugNode, self).__init__([arg], as_numpy=True, name=name)
         self.after = arg
         self.debug_state = debug_state
 
-        self._in, self._out = in_func, out_func
+        self._in, self._out = in_stream, out_stream
+        self._exit = exit_func
 
     def clone(self, cloned_inputs):
         arg = cloned_inputs[0]
         map_if_possible(arg)
-        return DebugNode(arg, self.debug_state)
+        return _DebugNode(arg, self.debug_state)
 
     # TODO:
     # Breakopint handling
     # u h - until here
-    def __wait_for_input(self, prompt):
+    def _wait_for_input(self, prompt):
         understood = False
         while not understood:
             self._out.write(prompt)
@@ -220,42 +229,34 @@ class DebugNode(UserFunction):
                     understood = False
 
             elif new_input == 'q':
-                sys.exit(0)
+                self._exit(0)
 
             if not understood:
-                self._out.write(DEBUG_USAGE)
+                self._out.write(DEBUG_USAGE + '\n')
                 self._out.flush()
 
         return understood
 
     def _print_status(self, current_pass):
-        if current_pass != DebugNode._last_pass:
+        if current_pass != self.debug_state.last_pass:
             if current_pass == 'f':
                 self._out.write('\n')
-                self._out.write('=' * 40 + ' forward  ' + '=' * 40 + '\n')
+                self._out.write('=' * 35 + ' forward  ' + '=' * 35 + '\n')
             else:
-                self._out.write('=' * 40 + ' backward ' + '=' * 40 + '\n')
+                self._out.write('=' * 35 + ' backward ' + '=' * 35 + '\n')
             self._out.flush()
 
-        if current_pass == 'f':
-            status = "Forward after"
-        else:
-            status = "Backward before"
-
         after = self.after.owner if self.after.is_output else self.after
-        self._out.write("%s %s with uid '%s'\n" % (status, str(after), after.uid))
+        self._out.write("\n%s with uid '%s'\n" % (str(after), after.uid))
         self._out.flush()
 
     def forward(self, argument, device=None, outputs_to_retain=None):
         self._print_status('f')
 
-        commands = self.debug_state.commands
-
         done = False
         while not done:
-            if not commands:
-                self.debug_state.commands = self.__wait_for_input(
-                    '[CNTK forward] >>> ')
+            if not self.debug_state.commands:
+                self.debug_state.commands = self._wait_for_input(_DebugNode.PROMPT_FORWARD)
 
             commands = self.debug_state.commands
 
@@ -269,7 +270,11 @@ class DebugNode(UserFunction):
                     done = True
                 elif next_command == "nf":
                     commands.pop()
-                    done = True
+                    if self.debug_state.last_pass == 'b':
+                        self.debug_state.commands = self._wait_for_input(_DebugNode.PROMPT_FORWARD)
+                        done = False
+                    else:
+                        done = True
                 elif next_command == "nb":
                     done = True
 
@@ -292,7 +297,7 @@ class DebugNode(UserFunction):
                 else:
                     done = True
 
-        DebugNode._last_pass = 'f'
+        self.debug_state.last_pass = 'f'
 
         return None, argument
 
@@ -302,10 +307,10 @@ class DebugNode(UserFunction):
         done = False
         while not done:
             if not self.debug_state.commands:
-                self.debug_state.commands = self.__wait_for_input(
-                    '[CNTK backward] >>> ')
+                self.debug_state.commands = self._wait_for_input(_DebugNode.PROMPT_BACKWARD)
 
             commands = self.debug_state.commands
+
             next_command = commands[-1]
             if next_command == 'c':
                 done = True
@@ -318,7 +323,11 @@ class DebugNode(UserFunction):
                     done = True
                 elif next_command == "nb":
                     commands.pop()
-                    done = True
+                    if self.debug_state.last_pass == 'f':
+                        self.debug_state.commands = self._wait_for_input(_DebugNode.PROMPT_FORWARD)
+                        done = False
+                    else:
+                        done = True
 
             elif next_command == 'p':
                 self._out.write('State: %s\n' % str(state))
@@ -348,7 +357,7 @@ class DebugNode(UserFunction):
                                 self.inputs[0].dynamic_axes)]
 
     def __str__(self):
-        return "DebugNode(after=%s)"%str(self.after)
+        return "_DebugNode(after=%s)"%str(self.after)
 
 
 def _nodes_to_debug(model):
@@ -373,13 +382,20 @@ def _nodes_to_debug(model):
     return [n for n in nodes if n.uid not in to_remove]
 
 
-def debug_model(model):
+def debug_model(model, in_stream=sys.stdin, out_stream=sys.stdout,
+                exit_func=sys.exit):
     '''
     Returns a cloned model that has debug nodes inserted everywhere. When the
     graph is evaluated or trained, those nodes will allow to inspect the graph.
 
     Args:
       model (root node): root node until which the nodes are to be debugged
+      in_stream (object behaving like sys.stdin, default stdin): `readline()`
+       will be called on it to obtain user input
+      out_stream (object behaving like sys.stdout, default stdout): `write()`
+       and `flush()` will be called on it to output debug info to the user
+      exit_func (callable, default sys.exit): callable that takes an exit code and is called,
+       when the user exits the debugging process
 
     Returns:
       a clone of the model that has debugging enabled
@@ -393,7 +409,10 @@ def debug_model(model):
     # We cannot add the DebugNodes in one clone because the replacements will
     # hide parent nodes.
     while True:
-        modifications = {n: user_function(DebugNode(n, dbg_state)) for n in nodes}
+        modifications = {n: user_function(_DebugNode(n, dbg_state,
+                                                     in_stream, out_stream,
+                                                     exit_func))
+                         for n in nodes}
 
         model = model.clone(CloneMethod.share, modifications)
         from cntk.graph import plot
@@ -401,7 +420,8 @@ def debug_model(model):
         nodes = _nodes_to_debug(model)
         if len(nodes)==1:
             # last node is the root node
-            model = user_function(DebugNode(model, dbg_state))
+            model = user_function(_DebugNode(model, dbg_state,
+                in_stream, out_stream))
             break
 
         if mod_counter > orig_node_count:

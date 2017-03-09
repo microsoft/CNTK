@@ -1186,7 +1186,7 @@ class UserFunction(Function):
             for rg in root_gradients.values():
                 break
             root_gradients = rg
-        
+
         possible_wrt = [input for input in self.inputs if input.needs_gradient]
         if len(possible_wrt) > 1:
             self.backward(state, root_gradients, variables)
