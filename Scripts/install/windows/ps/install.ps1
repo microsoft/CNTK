@@ -64,7 +64,7 @@ Param(
     [parameter(Mandatory=$false)] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
     [parameter(Mandatory=$false)] [switch] $Execute = $true,
     [parameter(Mandatory=$false)] [switch] $NoConfirm,
-    [parameter(Mandatory=$false)] [string] $WheelBaseUrl = $null)
+    [parameter(Mandatory=$false)] [string] $WheelBaseUrl = "https://cntk.ai/PythonWheel")
 
 Set-StrictMode -Version latest
 
@@ -88,6 +88,7 @@ function VerifyInstallationContent(
 {
     $structureCorrect = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
     $structureCorrect = (join-path $path prerequisites\VS2015\vc_redist.x64.exe | test-path -PathType Leaf) -and $structureCorrect
+    $structureCorrect = (join-path $path version.txt | test-path -PathType Leaf) -and $structureCorrect
     
     Write-Verbose "[VerifyInstallationContent]: [$path] result [$structureCorrect]"
 
@@ -99,27 +100,22 @@ function VerifyInstallationContent(
 function WhlFileInfoFromVersionFile(
     [Parameter(Mandatory=$true)][string] $path,
     [Parameter(Mandatory=$true)][string] $pyVersion,
-    [string] $wheelBaseUrl = $null)
+    [string] $wheelBaseUrl)
 {
-    $versionFile = Join-Path $path "version.txt"
+    $versionFile = Join-Path $path version.txt
 
-    if (-not (Test-Path $versionFile)) {
-        throw "`nFatal Error: Unable to read from version file [$versionFile].`nFor help see: https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script"
-    }
     try {
         $reader = [System.IO.File]::OpenText($versionFile)
         $cntkVersion = $reader.ReadLine()       # cntk-*-*-xxxx*-*
-        $cntkTarget = $reader.ReadLine()        # this will be Debug or Release
+        $cntkConfig = $reader.ReadLine()        # Debug, Release, ...
         $cntkTarget = $reader.ReadLine()        # CPU-Only, GPU, ...
 
-        if ((-not $cntkVersion) -or (-not $cntkTarget)) {
+        if ((-not $cntkVersion) -or (-not $cntkConfig) -or (-not $cntkTarget) -or (-not ($cntkVersion -match "^cntk"))) {
             throw "`nFatal Error: Malformed version information in [$versionFile]."
         }
         $cntkVersion = $cntkVersion -replace "-", "."
-        $cntkVersion = $cntkVersion -replace "cntk\.", "cntk-"
-        if (-not $wheelBaseUrl) {
-            $wheelBaseUrl = "https://cntk.ai/PythonWheel"
-        }
+        $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk-"
+
         return @{ Name = "{0}-cp{1}-cp{2}m-win_amd64.whl" -f $cntkVersion, $pyVersion, $pyVersion; CntkUrl = "{0}/{1}" -f $wheelBaseUrl, $cntkTarget }
     }
     finally {
@@ -131,7 +127,7 @@ function WhlFileInfoFromVersionFile(
 function Get-WheelUrl(
     [Parameter(Mandatory=$true)][string] $path,
     [Parameter(Mandatory=$true)][string] $pyVersion,
-    [string] $WheelBaseUrl = $null)
+    [string] $WheelBaseUrl)
 {
     $whlFileInfo = WhlFileInfoFromVersionFile -path $path -pyVersion $pyVersion
 
@@ -153,7 +149,7 @@ Function main
 {
     try {
         if (-not (DisplayStart -NoConfirm $NoConfirm)) {
-            Write-Host 
+            Write-Host  
             Write-Host " ... Quitting ... "
             Write-Host
             return

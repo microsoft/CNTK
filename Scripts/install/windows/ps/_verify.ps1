@@ -238,14 +238,14 @@ function LoadWinProduct
         # 
         # $Script:WinProduct = Get-WmiObject Win32_Product
         # The above line was the previous solution, but iterating through the registry is much faster
-        # get-wmiobject does more house-holding, like checking for concistency etc ...
+        # get-wmiobject does more house-holding, like checking for consistency etc ...
         # 
-        $allInstalled = @(Get-childitem "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue) + `
-                        @(Get-childitem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue) + `
-                        @(get-childitem "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\" -ErrorAction SilentlyContinue)
+        $allInstalled = @(Get-ChildItem "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue) + 
+                        @(Get-ChildItem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue) + 
+                        @(get-ChildItem "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\" -ErrorAction SilentlyContinue)
 
         $result = @()
-        foreach($item in $allInstalled) {
+        foreach ($item in $allInstalled) {
             $displayName = $item.GetValue("DisplayName")
             if ($displayName) {
                 $entry = New-Object PSObject

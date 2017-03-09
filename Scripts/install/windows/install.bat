@@ -4,9 +4,10 @@
 @REM Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 @REM
 
+setlocal
 set allArgs=%*
 set psInstall="%~p0\ps\install.ps1"
-@set PSModulePath=%PSModulePath%;%~dp0\ps\Modules
+set PSModulePath=%PSModulePath%;%~dp0\ps\Modules
 :loop
 if /I "%~1"=="-h" goto :helpMsg
 if /I "%~1"=="/h" goto :helpMsg
@@ -32,3 +33,5 @@ goto :EOF
 @echo An overview of the available command line options can be found at:
 @echo     https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script-Options
 @echo.
+
+endlocal
