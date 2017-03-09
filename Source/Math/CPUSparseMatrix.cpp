@@ -178,14 +178,14 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 template <class ElemType>
 CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, size_t num_class)
 {
-	if (a.IsEmpty())
-		LogicError("AssignOneHot: Matrix a is empty.");
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
 
-	auto& us = *this;
-	auto nCols = a.GetNumCols();
-	auto nRows = num_class * a.GetNumRows();
-	us.RequireSize(nRows, nCols);
-	RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
+    auto& us = *this;
+    auto nCols = a.GetNumCols();
+    auto nRows = num_class * a.GetNumRows();
+    us.RequireSize(nRows, nCols);
+    RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
 
     CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
     CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
@@ -213,7 +213,7 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatr
         LogicError("AssignOneHot: Matrix format is not supported.");
     }
 
-	return *this;
+    return *this;
 }
 
 #pragma endregion Constructors and Destructor

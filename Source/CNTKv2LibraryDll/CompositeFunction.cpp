@@ -674,13 +674,13 @@ namespace CNTK
             case PrimitiveOpType::SumAll:
                 computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
-			case PrimitiveOpType::OneHotOp:
-			{
-				auto numClass = functionConfig[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
-				auto is_sparse = functionConfig[PrimitiveFunction::AttributeNameOneHotOutputSparse].Value<bool>();
-				computationNodePtr = New<OneHotNode<ElementType>>(network->GetDeviceId(), numClass, is_sparse, internalNodeName);
-				break;
-			}
+            case PrimitiveOpType::OneHotOp:
+            {
+                auto numClass = functionConfig[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
+                auto is_sparse = functionConfig[PrimitiveFunction::AttributeNameOneHotOutputSparse].Value<bool>();
+                computationNodePtr = New<OneHotNode<ElementType>>(network->GetDeviceId(), numClass, is_sparse, internalNodeName);
+                break;
+            }
             case PrimitiveOpType::Plus:
                 computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;

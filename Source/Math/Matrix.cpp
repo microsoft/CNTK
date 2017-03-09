@@ -3305,36 +3305,36 @@ ElemType Matrix<ElemType>::SumOfElements() const
 template <class ElemType>
 Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, size_t num_class, bool is_sparse)
 {
-	if (a.IsEmpty())
-		LogicError("AssignOneHot: Matrix a is empty.");
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
 
-	if (a.GetMatrixType() == SPARSE)
-		NOT_IMPLEMENTED;
+    if (a.GetMatrixType() == SPARSE)
+        NOT_IMPLEMENTED;
 
-	//todo: sparse matrix type
-	if (is_sparse && GetMatrixType() != SPARSE)
-	{
-		SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
-	}
+    //todo: sparse matrix type
+    if (is_sparse && GetMatrixType() != SPARSE)
+    {
+        SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
+    }
 
-	DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
-		this,
-		m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
-		m_GPUMatrix->AssignOneHot(*a.m_GPUMatrix, num_class),
-		m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
-		{
-			// TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
-			CPUMatrix<ElemType> tempA(a.GetNumRows(), a.GetNumCols());
-			ElemType* arr = a.m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
-			tempA.SetValue(a.m_GPUMatrix->GetNumRows(), a.m_GPUMatrix->GetNumCols(), arr);
+    DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
+        this,
+        m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
+        m_GPUMatrix->AssignOneHot(*a.m_GPUMatrix, num_class),
+        m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
+        {
+            // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
+            CPUMatrix<ElemType> tempA(a.GetNumRows(), a.GetNumCols());
+            ElemType* arr = a.m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
+            tempA.SetValue(a.m_GPUMatrix->GetNumRows(), a.m_GPUMatrix->GetNumCols(), arr);
 
-			CPUSparseMatrix<ElemType> tempThis(GetFormat(), GetNumRows(), GetNumCols(), GetNumElements());
-			tempThis.AssignOneHot(tempA, num_class);
-			m_GPUSparseMatrix->SetValue(tempThis);
-		}
-		);
+            CPUSparseMatrix<ElemType> tempThis(GetFormat(), GetNumRows(), GetNumCols(), GetNumElements());
+            tempThis.AssignOneHot(tempA, num_class);
+            m_GPUSparseMatrix->SetValue(tempThis);
+        }
+        );
 
-	return *this;
+    return *this;
 }
 
 template <class ElemType>

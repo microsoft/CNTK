@@ -149,21 +149,21 @@ BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixDoGatherColumnsOf, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixOneHot, RandomSeedFixture)
 {
-	const size_t num_class = 6;
-	DenseMatrix m0(2, 2);
-	m0(0, 0) = 1;
-	m0(0, 1) = 2;
-	m0(1, 0) = 3;
-	m0(1, 1) = 4;
-	
-	SparseMatrix sm(MatrixFormat::matrixFormatSparseCSC);
-	sm.AssignOneHot(m0, num_class);
+    const size_t num_class = 6;
+    DenseMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
+    
+    SparseMatrix sm(MatrixFormat::matrixFormatSparseCSC);
+    sm.AssignOneHot(m0, num_class);
 
-	BOOST_CHECK(sm.NzCount() == 4);
-	BOOST_CHECK(sm(1, 0) == 1);
-	BOOST_CHECK(sm(9, 0) == 1);
-	BOOST_CHECK(sm(2, 1) == 1);
-	BOOST_CHECK(sm(10, 1) == 1);
+    BOOST_CHECK(sm.NzCount() == 4);
+    BOOST_CHECK(sm(1, 0) == 1);
+    BOOST_CHECK(sm(9, 0) == 1);
+    BOOST_CHECK(sm(2, 1) == 1);
+    BOOST_CHECK(sm(10, 1) == 1);
 }
 
 BOOST_AUTO_TEST_SUITE_END()

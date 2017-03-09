@@ -2949,22 +2949,22 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOfElements(const CPUMatrix<El
 template <class ElemType>
 CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, size_t num_class)
 {
-	if (a.IsEmpty())
-		LogicError("AssignOneHot: Matrix a is empty.");
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
 
-	auto& us = *this;
-	auto nCols = a.GetNumCols();
-	auto nRows = num_class * a.GetNumRows();
-	us.RequireSize(nRows, nCols);
-	ElemType* bufPtr = Data();
-	ElemType* aBufPtr = a.Data();
+    auto& us = *this;
+    auto nCols = a.GetNumCols();
+    auto nRows = num_class * a.GetNumRows();
+    us.RequireSize(nRows, nCols);
+    ElemType* bufPtr = Data();
+    ElemType* aBufPtr = a.Data();
 #pragma omp parallel for
-	for (long i = 0; i < a.GetNumElements(); i++)
-	{
-		bufPtr[i * num_class + (size_t)aBufPtr[i]] = 1;
-	}
+    for (long i = 0; i < a.GetNumElements(); i++)
+    {
+        bufPtr[i * num_class + (size_t)aBufPtr[i]] = 1;
+    }
 
-	return *this;
+    return *this;
 }
 
 template <class ElemType>

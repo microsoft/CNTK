@@ -930,25 +930,25 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdam, RandomSeedFixture)
 
 BOOST_FIXTURE_TEST_CASE(CPUMatrixOneHot, RandomSeedFixture)
 {
-	const size_t num_class = 6;
-	
-	DMatrix m0(2, 2);
-	m0(0, 0) = 1;
-	m0(0, 1) = 2;
-	m0(1, 0) = 3;
-	m0(1, 1) = 4;
+    const size_t num_class = 6;
+    
+    DMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
 
-	DMatrix expect(12, 2);
-	expect(1, 0) = 1;
-	expect(9, 0) = 1;
-	expect(2, 1) = 1;
-	expect(10, 1) = 1;
+    DMatrix expect(12, 2);
+    expect(1, 0) = 1;
+    expect(9, 0) = 1;
+    expect(2, 1) = 1;
+    expect(10, 1) = 1;
 
-	DMatrix m1;
-	m1.AssignOneHot(m0, num_class);
-	BOOST_CHECK(m1.GetNumRows() == 12);
-	BOOST_CHECK(m1.GetNumCols() == 2);
-	BOOST_CHECK(m1.IsEqualTo(expect, 1e-6));
+    DMatrix m1;
+    m1.AssignOneHot(m0, num_class);
+    BOOST_CHECK(m1.GetNumRows() == 12);
+    BOOST_CHECK(m1.GetNumCols() == 2);
+    BOOST_CHECK(m1.IsEqualTo(expect, 1e-6));
 }
 
 BOOST_AUTO_TEST_SUITE_END()

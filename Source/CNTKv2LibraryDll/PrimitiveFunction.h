@@ -97,7 +97,7 @@ namespace CNTK
         {PrimitiveOpType::StopGradient, L"StopGradient"},
         {PrimitiveOpType::ELU, L"ELU"},
         {PrimitiveOpType::CosDistanceWithNegativeSamples, L"CosDistanceWithNegativeSamples"},
-		{PrimitiveOpType::OneHotOp, L"OneHotOp" },
+        {PrimitiveOpType::OneHotOp, L"OneHotOp" },
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
@@ -250,8 +250,8 @@ namespace CNTK
         static const std::wstring AttributeNameTokensToIgnore;
         static const std::wstring AttributeNameDelayConstraint;
         static const std::wstring AttributeNameBlankTokenId;
-		static const std::wstring AttributeNameNumClass;
-		static const std::wstring AttributeNameOneHotOutputSparse;
+        static const std::wstring AttributeNameNumClass;
+        static const std::wstring AttributeNameOneHotOutputSparse;
 
     protected:
         PrimitiveFunction(PrimitiveOpType op, const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& functionName, const std::wstring& uid)
