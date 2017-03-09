@@ -3,6 +3,8 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+[CmdletBinding()]
+Param([string]$WheelBaseUrl)
 
 $image = 'cntk:installtest'
 
@@ -20,7 +22,7 @@ docker build -t $image .
 if ($LASTEXITCODE -ne 0) {
   throw "Fail"
 }
-docker run --rm $image powershell c:/local/test-install.ps1
+docker run --rm $image powershell c:/local/test-install.ps1 @PSBoundParameters
 if ($LASTEXITCODE -ne 0) {
   throw "Fail"
 }
