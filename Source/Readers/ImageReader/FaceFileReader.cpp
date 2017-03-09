@@ -60,7 +60,7 @@ void FaceFileByteReader::CacheFaceFileInfo(vector<FaceFileInfo> &container, cons
     fin.close();
 }
 
-void FaceFileByteReader::Register(const MultiMap& sequences)
+void FaceFileByteReader::Register(const std::map<std::string, size_t>& sequences)
 {
     Timer timer;
     timer.Start();

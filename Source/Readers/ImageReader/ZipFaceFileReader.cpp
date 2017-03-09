@@ -149,49 +149,57 @@ void ZipFaceFileReader::CropAndScaleFaceImage(const cv::Mat &input_image, int in
     }
 }
 
-void ZipFaceFileReader::Register(const MultiMap& sequences)
+void ZipFaceFileReader::Register(const std::map<std::string, size_t>& sequences)
 {
+<<<<<<< HEAD
     m_zipFile = OpenZip();
 
+=======
+    auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
+>>>>>>> parent of c8b7651... fix reader `Register`
     zip_stat_t stat;
     zip_stat_init(&stat);
 
     size_t numberOfEntries = 0;
+<<<<<<< HEAD
     size_t numEntries = zip_get_num_entries(m_zipFile, 0);
     for (size_t i = 0; i < numEntries; ++i)
     {
         int err = zip_stat_index(m_zipFile, i, 0, &stat);
+=======
+    size_t numEntries = zip_get_num_entries(zipFile.get(), 0);
+    for (size_t i = 0; i < numEntries; ++i) {
+        int err = zip_stat_index(zipFile.get(), i, 0, &stat);
+>>>>>>> parent of c8b7651... fix reader `Register`
         if (ZIP_ER_OK != err)
-            RuntimeError("Failed to get file info for index %d, zip library error: %s", (int) i, GetZipError(err).c_str());
+            RuntimeError("Failed to get file info for index %d, zip library error: %s", (int)i, GetZipError(err).c_str());
 
-        auto sequenceInfo = sequences.find(std::string(stat.name));
-        if (sequenceInfo == sequences.end())
+        auto sequenceId = sequences.find(std::string(stat.name));
+        if (sequenceId == sequences.end())
         {
             continue;
         }
-
-        for (auto sid : sequenceInfo->second)
-            m_seqIdToIndex[sid] = std::make_pair(stat.index, stat.size);
-        numberOfEntries++;
-    }
-
-    if (numberOfEntries == sequences.size())
-        return;
-
-    // Not all sequences have been found. Let's print them out and throw.
-    for (const auto& s : sequences)
-    {
-        for (const auto& id : s.second)
+        else
         {
-            if (m_seqIdToIndex.find(id) == m_seqIdToIndex.end())
-            {
-                fprintf(stderr, "Sequence %s is not found in container %s.\n", s.first.c_str(), m_zipPath.c_str());
-                break;
-            }
+            m_seqIdToIndex[sequenceId->second] = std::make_pair(stat.index, stat.size);
+            numberOfEntries++;
         }
     }
 
-    RuntimeError("Cannot retrieve image data for some sequences. For more detail, please see the log file.");
+    if (numberOfEntries != sequences.size())
+    {
+        // Not all sequences have been found. Let's print them out and throw.
+        for (const auto& s : sequences)
+        {
+            auto index = m_seqIdToIndex.find(s.second);
+            if (index == m_seqIdToIndex.end())
+            {
+                fprintf(stderr, "Sequence %s is not found in container %s.\n", s.first.c_str(), m_zipPath.c_str());
+            }
+        }
+
+        RuntimeError("Cannot retrieve image data for some sequences. For more detail, please see the log file.");
+    }
 }
 
 cv::Mat ZipFaceFileReader::Read(size_t seqId, const std::string& path, bool grayscale)
