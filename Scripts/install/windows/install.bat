@@ -5,8 +5,8 @@
 @REM
 
 set allArgs=%*
-set psInstall="%~p0ps\install.ps1"
-
+set psInstall="%~p0\ps\install.ps1"
+@set PSModulePath=%PSModulePath%;%~dp0\ps\Modules
 :loop
 if /I "%~1"=="-h" goto :helpMsg
 if /I "%~1"=="/h" goto :helpMsg

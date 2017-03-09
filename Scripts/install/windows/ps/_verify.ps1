@@ -70,11 +70,11 @@ function VerifyScanPrograms(
     
     # no actual work is being performed, just the script local datastructure with the list
     # of installed programs is being initialized
-    LoadWin32Product
+    LoadWinProduct
     return $noInstallRequired
 }
 
-function VerifyWin32ProductExists(
+function VerifyWinProductExists(
     [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
@@ -82,7 +82,7 @@ function VerifyWin32ProductExists(
     $match = $table["Match"]
     $noInstallRequired = $true
 
-    $allProducts = LoadWin32Product
+    $allProducts = LoadWinProduct
     $productList = @($allProducts | Where-Object { $_.Name -match $match } )
     
     if ($productList.Count -eq 0) {
@@ -93,7 +93,7 @@ function VerifyWin32ProductExists(
     return $noInstallRequired
 }
 
-function VerifyWin32ProductVersion(
+function VerifyWinProductVersion(
     [Parameter(Mandatory = $true)][hashtable] $table)
 {
     FunctionIntro $table
@@ -102,7 +102,7 @@ function VerifyWin32ProductVersion(
     $version = $table["Version"]
     $noInstallRequired = $true
 
-    $allProducts = LoadWin32Product
+    $allProducts = LoadWinProduct
     $productList = @($allProducts | Where-Object { $_.Name -match $match } )
 
     if ($productList.Count -eq 0) {
@@ -119,26 +119,6 @@ function VerifyWin32ProductVersion(
 
     Write-Verbose "[$func]: Product [$match] Version {$version] returned [$noInstallRequired]"
     return $noInstallRequired
-}
-
-function VerifyInstallationContent(
-    [Parameter(Mandatory = $true)][hashtable] $table)
-{
-    FunctionIntro $table
-
-    $func = $table["Function"]
-    $path = $table["Path"]
-
-    $noInstallRequired = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
-    $noInstallRequired = (join-path $path prerequisites\VS2015\vc_redist.x64.exe | test-path -PathType Leaf) -and $noInstallRequired
-    $noInstallRequired = (join-path $path prerequisites\MSMpiSetup.exe | test-path -PathType Leaf) -and $noInstallRequired
-
-    if ($noInstallRequired) {
-        Write-Verbose "[$func]: [$path] returned [$noInstallRequired]"
-        return $noInstallRequired
-    }
-    
-    throw "`nFatal Error: Files from the CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package, not from a CNTK source clone."
 }
 
 function VerifyDirectory(
@@ -252,11 +232,33 @@ function Test-ItemProperty (
     return $false
 }
 
-function LoadWin32Product
+function LoadWinProduct
 {
-    if ($Script:Win32Product -eq $Null) {
-        $Script:Win32Product = Get-WmiObject Win32_Product 
-    }
+    if (-not $Script:WinProduct) {
+        # 
+        # $Script:WinProduct = Get-WmiObject Win32_Product
+        # The above line was the previous solution, but iterating through the registry is much faster
+        # get-wmiobject does more house-holding, like checking for concistency etc ...
+        # 
+        $allInstalled = @(Get-childitem "HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue) + `
+                        @(Get-childitem "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" -ErrorAction SilentlyContinue) + `
+                        @(get-childitem "HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall\" -ErrorAction SilentlyContinue)
 
-    return $Script:Win32Product
+        $result = @()
+        foreach($item in $allInstalled) {
+            $displayName = $item.GetValue("DisplayName")
+            if ($displayName) {
+                $entry = New-Object PSObject
+                $entry | Add-Member -MemberType NoteProperty -Name "Name" -Value $displayName
+                $entry | Add-Member -MemberType NoteProperty -Name "Version" -Value $($item.GetValue("DisplayVersion"))
+                
+                $result += $entry
+            }
+
+        } 
+        $result = $result | Sort-Object Name,Version -Unique
+
+        $Script:WinProduct = $result
+    }
+    return $Script:WinProduct
 }
