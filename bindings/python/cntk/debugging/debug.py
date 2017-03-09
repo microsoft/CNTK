@@ -48,7 +48,7 @@ Then, when ``z`` is evaluated or trained (i.e. when either
 :meth:`~cntk.ops.functions.Function.backward` is called, you will see the
 following command-line interface::
 
-    ======================================== forward  ========================================
+    =================================== forward  ===================================
     Parameter node with uid='Parameter28' shape=[](2,)
     [CNTK forward] >>> help
     %s
@@ -57,7 +57,7 @@ following command-line interface::
 
     Times node with uid='Times29' shape=[*,*](2,)
     [CNTK forward] >>> n
-    ======================================== backward ========================================
+    =================================== backward ===================================
     Times node with uid='Times29' shape=[*,*](2,)
     [CNTK backward] >>> p
     State: None
@@ -103,7 +103,6 @@ class _DebugState(object):
         self.last_pass = '<start>'
         self.all_nodes = all_nodes
         self.name_to_node = defaultdict(lambda: [])
-        import ipdb;ipdb.set_trace()
         for n in self.all_nodes:
             self.name_to_node[n.name].append(n)
 
@@ -160,11 +159,11 @@ class _DebugNode(UserFunction):
     def __init__(self, arg, debug_state,
                  in_stream=sys.stdin, out_stream=sys.stdout,
                  exit_func=sys.exit,
-                 name='_DebugNode'):
+                 name='Debug'):
         if hasattr(arg, 'is_composite') and arg.is_composite:
             arg = arg.root_function
 
-        name += '_after_%s' % arg.uid
+        name += '_%s' % arg.uid
         super(_DebugNode, self).__init__([arg], as_numpy=True, name=name)
         self.after = arg
         self.debug_state = debug_state
@@ -222,7 +221,7 @@ class _DebugNode(UserFunction):
                             understood = [code]
                         else:
                             self._out.write('Your model does not contain a node with '
-                                  'name "%s"\n' % what)
+                                            'name "%s"\n' % what)
                             self._out.flush()
 
                 except SyntaxError:
@@ -256,7 +255,8 @@ class _DebugNode(UserFunction):
         done = False
         while not done:
             if not self.debug_state.commands:
-                self.debug_state.commands = self._wait_for_input(_DebugNode.PROMPT_FORWARD)
+                self.debug_state.commands = self._wait_for_input(
+                    _DebugNode.PROMPT_FORWARD)
 
             commands = self.debug_state.commands
 
@@ -271,7 +271,8 @@ class _DebugNode(UserFunction):
                 elif next_command == "nf":
                     commands.pop()
                     if self.debug_state.last_pass == 'b':
-                        self.debug_state.commands = self._wait_for_input(_DebugNode.PROMPT_FORWARD)
+                        self.debug_state.commands = self._wait_for_input(
+                            _DebugNode.PROMPT_FORWARD)
                         done = False
                     else:
                         done = True
@@ -307,7 +308,8 @@ class _DebugNode(UserFunction):
         done = False
         while not done:
             if not self.debug_state.commands:
-                self.debug_state.commands = self._wait_for_input(_DebugNode.PROMPT_BACKWARD)
+                self.debug_state.commands = self._wait_for_input(
+                    _DebugNode.PROMPT_BACKWARD)
 
             commands = self.debug_state.commands
 
@@ -324,7 +326,8 @@ class _DebugNode(UserFunction):
                 elif next_command == "nb":
                     commands.pop()
                     if self.debug_state.last_pass == 'f':
-                        self.debug_state.commands = self._wait_for_input(_DebugNode.PROMPT_FORWARD)
+                        self.debug_state.commands = self._wait_for_input(
+                            _DebugNode.PROMPT_FORWARD)
                         done = False
                     else:
                         done = True
@@ -357,7 +360,7 @@ class _DebugNode(UserFunction):
                                 self.inputs[0].dynamic_axes)]
 
     def __str__(self):
-        return "_DebugNode(after=%s)"%str(self.after)
+        return "_DebugNode(after=%s)" % str(self.after)
 
 
 def _nodes_to_debug(model):
@@ -369,14 +372,13 @@ def _nodes_to_debug(model):
         else:
             return True
 
-
     nodes = set(depth_first_search(model, lambda x: True))
 
     uf_nodes = [n for n in nodes if hasattr(n, 'op_name')
-            and n.op_name == 'UserFunction']
+                and n.op_name == 'UserFunction']
 
     already_covered = [n.inputs[0].owner if n.inputs[0].is_output else
-            n.inputs[0] for n in uf_nodes]
+                       n.inputs[0] for n in uf_nodes]
     to_remove = [n.uid for n in (already_covered + uf_nodes)]
 
     return [n for n in nodes if n.uid not in to_remove]
@@ -418,13 +420,15 @@ def debug_model(model, in_stream=sys.stdin, out_stream=sys.stdout,
         from cntk.graph import plot
 
         nodes = _nodes_to_debug(model)
-        if len(nodes)==1:
-            # last node is the root node
+        if len(nodes) == 1:
+            # last node is the model node, which we want to debug as well
             model = user_function(_DebugNode(model, dbg_state,
-                in_stream, out_stream))
+                                             in_stream, out_stream))
             break
 
         if mod_counter > orig_node_count:
             raise ValueError('cannot debug this graph')
+
+        mod_counter += 1
 
     return model
