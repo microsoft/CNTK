@@ -651,6 +651,9 @@ namespace CNTK
             case PrimitiveOpType::SumAll:
                 computationNodePtr = New<SumElementsNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
+            case PrimitiveOpType::GatherOp:
+                computationNodePtr = New<GatherNode<ElementType>>(network->GetDeviceId(), internalNodeName);
+                break;
             case PrimitiveOpType::Plus:
                 computationNodePtr = New<PlusNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;

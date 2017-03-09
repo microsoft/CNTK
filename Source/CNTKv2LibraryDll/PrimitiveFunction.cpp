@@ -503,6 +503,17 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
                             outputShape = { 1 };
                             break;
+                        case PrimitiveOpType::GatherOp:
+                        {
+                            assert(m_inputs.size() == 2);
+                            auto inputShape1 = m_inputs[0].Shape();
+                            auto inputShape2 = m_inputs[1].Shape();
+                            auto inputDim2 = inputShape2.Dimensions();
+                            inputDim2.pop_back();
+                            outputShape = NDShape(inputDim2);
+                            outputShape = outputShape.AppendShape(inputShape1);
+                            break;
+                        }
                         case PrimitiveOpType::Times:
                         {
                             assert(m_inputs.size() == 2);

@@ -3522,7 +3522,9 @@ namespace CNTK
         static const auto defaultInitialState = Constant::Scalar(0.0f);
         return FutureValue(operand, defaultInitialState, offset, name);
     }
-
+    
+    CNTK_API FunctionPtr GatherOp(const Variable& indices, const Variable& reference, const std::wstring& name = L"");
+    
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
     ///

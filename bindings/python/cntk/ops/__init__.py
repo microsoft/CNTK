@@ -2059,10 +2059,13 @@ def splice(*inputs, **kw_axis_name):
 
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
+@typemap
+def gather(indices, reference):
+	from cntk.cntk_py import gather_op
+	return gather_op(indices, reference)
 ##########################################################################
 # reduction ops
 ##########################################################################
-
 
 @typemap
 def reduce_sum(x, axis=None, name=''):

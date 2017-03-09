@@ -97,6 +97,7 @@ namespace CNTK
         {PrimitiveOpType::StopGradient, L"StopGradient"},
         {PrimitiveOpType::ELU, L"ELU"},
         {PrimitiveOpType::CosDistanceWithNegativeSamples, L"CosDistanceWithNegativeSamples"},
+        {PrimitiveOpType::GatherOp, L"GatherOp"},
     };
 
     inline const std::wstring& PrimitiveOpTypeName(PrimitiveOpType opType)
