@@ -22,14 +22,14 @@ highway_layers = 2
 char_count_threshold = 50
 max_context_len = 870
 
-C.set_default_device(C.cpu())
+#C.set_default_device(C.cpu())
 
 def charcnn(x):
-    return C.models.Sequential([
+    conv_out = C.models.Sequential([
         C.layers.Embedding(char_emb_dim),
         C.layers.Dropout(0.2),
-        C.layers.Convolution1D((5,), convs, activation=C.relu, init=C.glorot_uniform(), pad=[True], strides=1, bias=True, init_bias=True),
-        C.GlobalMaxPooling()])(x)
+        C.layers.Convolution1D((5,), convs, activation=C.relu, init=C.glorot_uniform(), pad=[True], strides=1, bias=True, init_bias=True)])(x)
+    return C.reduce_max(conv_out, axis=1) # workaround cudnn failure in GlobalMaxPooling
 
 # todo switch to this once splice can backprop sparse gradients
 def embed_via_splice(known, vocab):
@@ -98,8 +98,8 @@ embedding = embed(known, vocab)
 input_chars = C.placeholder_variable(shape=(c_dim,))
 input_words = C.placeholder_variable(shape=(w_dim,))
 
-# we need to reshape because GlobalMaxPooling is retaining a trailing singleton dimension
-# todo GlobalPooling should have a keepdims default to False
+# we need to reshape because GlobalMaxPooling/reduce_max is retaining a trailing singleton dimension
+# todo GlobalPooling/reduce_max should have a keepdims default to False
 embedded = C.splice(embedding(input_words), C.reshape(charcnn(C.reshape(input_chars, (C.InferredDimension, word_size))), convs))
 
 def BidirectionalRecurrence(fwd, bwd):
