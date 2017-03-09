@@ -151,26 +151,15 @@ void ZipFaceFileReader::CropAndScaleFaceImage(const cv::Mat &input_image, int in
 
 void ZipFaceFileReader::Register(const std::map<std::string, size_t>& sequences)
 {
-<<<<<<< HEAD
     m_zipFile = OpenZip();
-
-=======
-    auto zipFile = m_zips.pop_or_create([this]() { return OpenZip(); });
->>>>>>> parent of c8b7651... fix reader `Register`
     zip_stat_t stat;
     zip_stat_init(&stat);
 
     size_t numberOfEntries = 0;
-<<<<<<< HEAD
     size_t numEntries = zip_get_num_entries(m_zipFile, 0);
     for (size_t i = 0; i < numEntries; ++i)
     {
         int err = zip_stat_index(m_zipFile, i, 0, &stat);
-=======
-    size_t numEntries = zip_get_num_entries(zipFile.get(), 0);
-    for (size_t i = 0; i < numEntries; ++i) {
-        int err = zip_stat_index(zipFile.get(), i, 0, &stat);
->>>>>>> parent of c8b7651... fix reader `Register`
         if (ZIP_ER_OK != err)
             RuntimeError("Failed to get file info for index %d, zip library error: %s", (int)i, GetZipError(err).c_str());
 
