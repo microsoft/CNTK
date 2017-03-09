@@ -7,7 +7,7 @@ import sys
 import numpy as np
 from collections import defaultdict
 
-from cntk import cntk_py
+from cntk import cntk_py, user_function
 
 from cntk import output_variable, Constant, Parameter, CloneMethod
 
@@ -150,7 +150,9 @@ class DebugNode(UserFunction):
     _commands = []
     _last_pass = 'f'
 
-    def __init__(self, arg, debug_state, name='DebugNode'):
+    def __init__(self, arg, debug_state,
+                 in_func=sys.stdin, out_func=sys.stdout,
+                 name='DebugNode'):
         if hasattr(arg, 'is_composite') and arg.is_composite:
             arg = arg.root_function
 
@@ -158,6 +160,8 @@ class DebugNode(UserFunction):
         super(DebugNode, self).__init__([arg], as_numpy=True, name=name)
         self.after = arg
         self.debug_state = debug_state
+
+        self._in, self._out = in_func, out_func
 
     def clone(self, cloned_inputs):
         arg = cloned_inputs[0]
@@ -170,7 +174,9 @@ class DebugNode(UserFunction):
     def __wait_for_input(self, prompt):
         understood = False
         while not understood:
-            new_input = input(prompt).strip()
+            self._out.write(prompt)
+            self._out.flush()
+            new_input = self._in.readline().strip()
             if not new_input:
                 continue
 
@@ -206,8 +212,9 @@ class DebugNode(UserFunction):
                                 return n.name == what
                             understood = [code]
                         else:
-                            print('Your model does not contain a node with '
-                                  'name "%s"' % what)
+                            self._out.write('Your model does not contain a node with '
+                                  'name "%s"\n' % what)
+                            self._out.flush()
 
                 except SyntaxError:
                     understood = False
@@ -216,17 +223,19 @@ class DebugNode(UserFunction):
                 sys.exit(0)
 
             if not understood:
-                print(DEBUG_USAGE)
+                self._out.write(DEBUG_USAGE)
+                self._out.flush()
 
         return understood
 
     def _print_status(self, current_pass):
         if current_pass != DebugNode._last_pass:
             if current_pass == 'f':
-                print()
-                print('=' * 40 + ' forward  ' + '=' * 40)
+                self._out.write('\n')
+                self._out.write('=' * 40 + ' forward  ' + '=' * 40 + '\n')
             else:
-                print('=' * 40 + ' backward ' + '=' * 40)
+                self._out.write('=' * 40 + ' backward ' + '=' * 40 + '\n')
+            self._out.flush()
 
         if current_pass == 'f':
             status = "Forward after"
@@ -234,10 +243,10 @@ class DebugNode(UserFunction):
             status = "Backward before"
 
         after = self.after.owner if self.after.is_output else self.after
-        print("%s %s with uid '%s'" % (status, str(after), after.uid))
+        self._out.write("%s %s with uid '%s'\n" % (status, str(after), after.uid))
+        self._out.flush()
 
     def forward(self, argument, device=None, outputs_to_retain=None):
-        import ipdb;ipdb.set_trace()
         self._print_status('f')
 
         commands = self.debug_state.commands
@@ -265,8 +274,10 @@ class DebugNode(UserFunction):
                     done = True
 
             elif next_command == 'p':
-                print('Input: ')
-                print(argument)
+                self._out.write('Input: \n')
+                self._out.write(str(argument))
+                self._out.write('\n')
+                self._out.flush()
                 commands.pop()
 
             elif next_command == 'd':
@@ -310,9 +321,11 @@ class DebugNode(UserFunction):
                     done = True
 
             elif next_command == 'p':
-                print('State: %s' % str(state))
-                print('Root gradients: ')
-                print(root_gradients)
+                self._out.write('State: %s\n' % str(state))
+                self._out.write('Root gradients:\n')
+                self._out.write(str(root_gradients))
+                self._out.write('\n')
+                self._out.flush()
                 commands.pop()
 
             elif next_command == 'd':
@@ -380,7 +393,7 @@ def debug_model(model):
     # We cannot add the DebugNodes in one clone because the replacements will
     # hide parent nodes.
     while True:
-        modifications = {n: DebugNode(n, dbg_state) for n in nodes}
+        modifications = {n: user_function(DebugNode(n, dbg_state)) for n in nodes}
 
         model = model.clone(CloneMethod.share, modifications)
         from cntk.graph import plot
@@ -388,7 +401,7 @@ def debug_model(model):
         nodes = _nodes_to_debug(model)
         if len(nodes)==1:
             # last node is the root node
-            model = DebugNode(model, dbg_state)
+            model = user_function(DebugNode(model, dbg_state))
             break
 
         if mod_counter > orig_node_count:
