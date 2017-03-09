@@ -79,6 +79,7 @@ namespace CNTK
         CosDistanceWithNegativeSamples = 67,
         // New op types should only be appended to the end of this list 
 		OneHotOp = 68,
+        GatherOp = 69,
         UnknownOP
         // and UnknownOP should always be last.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)

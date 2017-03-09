@@ -2402,6 +2402,10 @@ def one_hot_op(x, num_class, is_output_sparse=False, name=''):
     x = sanitize_input(x)
     return one_hot_op(x, num_class, is_output_sparse, name)
 
+@typemap
+def gather(indices, reference):
+	from cntk.cntk_py import gather_op
+	return gather_op(indices, reference)
 ##########################################################################
 # reduction ops
 ##########################################################################

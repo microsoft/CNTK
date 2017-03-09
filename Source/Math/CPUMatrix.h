@@ -268,6 +268,9 @@ public:
 
 	CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, size_t num_class);
 
+    CPUMatrix<ElemType>& GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, const SmallVector<size_t>& targetShape);
+    CPUMatrix<ElemType>& ScatterAccordingIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, const SmallVector<size_t>& shape);
+
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
     static void VectorSum(const CPUMatrix<ElemType>& a, CPUMatrix<ElemType>& c, const bool isColWise);
