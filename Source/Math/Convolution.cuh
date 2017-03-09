@@ -407,25 +407,25 @@ __global__ void kPSRoiPoolingForward(const int totalIterations,
         roiData += n * 4;
 
         // roi data is relative to original image size
-        int roiStartW = (int)(round_(roiData[0] * width));
-        int roiStartH = (int)(round_(roiData[1] * height));
-        int roiWidth = (int)(max(round_(roiData[2] * width), (ElemType)1));
-        int roiHeight = (int)(max(round_(roiData[3] * height), (ElemType)1));
+        ElemType roiStartW = (ElemType)(roiData[0] * width);
+        ElemType roiStartH = (ElemType)(roiData[1] * height);
+        ElemType roiWidth = (ElemType)(roiData[2] * width);
+        ElemType roiHeight = (ElemType)(roiData[3] * height);
 
         ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
         ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
 
         // compute window for this output location.
-        int hstart = (int)(h * winH);
-        int wstart = (int)(w * winW);
-        int hend = (int)(ceilf((h + 1) * winH));
-        int wend = (int)(ceilf((w + 1) * winW));
+        int hstart = (int)(h * winH + roiStartH);
+        int wstart = (int)(w * winW + roiStartW);
+        int hend = (int)(ceilf((h + 1) * winH + roiStartH));
+        int wend = (int)(ceilf((w + 1) * winW + roiStartW));
 
         // Add ROI offsets and clip to input boundaries
-        hstart = min(max(hstart + roiStartH, 0), height);
-        hend = min(max(hend + roiStartH, 0), height);
-        wstart = min(max(wstart + roiStartW, 0), width);
-        wend = min(max(wend + roiStartW, 0), width);
+        hstart = min(max(hstart, 0), height);
+        hend = min(max(hend, 0), height);
+        wstart = min(max(wstart, 0), width);
+        wend = min(max(wend, 0), width);
 
         bool isEmpty = (hend <= hstart) || (wend <= wstart);
         auto groupC = (c * groupSize + h) * groupSize + w;
@@ -465,25 +465,25 @@ __global__ void kPSRoiPoolingBackward(const int totalIterations,
         roiData += n * 4;
 
         // roi data is relative to original image size
-        int roiStartW = (int)(round_(roiData[0] * width));
-        int roiStartH = (int)(round_(roiData[1] * height));
-        int roiWidth = (int)(max(round_(roiData[2] * width), (ElemType)1));
-        int roiHeight = (int)(max(round_(roiData[3] * height), (ElemType)1));
+        ElemType roiStartW = (ElemType)(roiData[0] * width);
+        ElemType roiStartH = (ElemType)(roiData[1] * height);
+        ElemType roiWidth  = (ElemType)(roiData[2] * width);
+        ElemType roiHeight = (ElemType)(roiData[3] * height);
 
         ElemType winH = (ElemType)roiHeight / (ElemType)pooledHeight;
         ElemType winW = (ElemType)roiWidth / (ElemType)pooledWidth;
 
         // compute window for this output location.
-        int hstart = (int)(h * winH);
-        int wstart = (int)(w * winW);
-        int hend = (int)(ceilf((h + 1) * winH));
-        int wend = (int)(ceilf((w + 1) * winW));
+        int hstart = (int)(h * winH + roiStartH);
+        int wstart = (int)(w * winW + roiStartW);
+        int hend = (int)(ceilf((h + 1) * winH + roiStartH));
+        int wend = (int)(ceilf((w + 1) * winW + roiStartW));
 
         // Add ROI offsets and clip to input boundaries
-        hstart = min(max(hstart + roiStartH, 0), height);
-        hend = min(max(hend + roiStartH, 0), height);
-        wstart = min(max(wstart + roiStartW, 0), width);
-        wend = min(max(wend + roiStartW, 0), width);
+        hstart = min(max(hstart, 0), height);
+        hend = min(max(hend, 0), height);
+        wstart = min(max(wstart, 0), width);
+        wend = min(max(wend, 0), width);
 
         bool isEmpty = (hend <= hstart) || (wend <= wstart);
         int groupC = workspace[index];

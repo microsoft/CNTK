@@ -862,10 +862,10 @@ public:
 
         auto inputShape = GetInputSampleLayout(0);
         Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
-        Matrix<ElemType> ROIs = Input(1)->ValueFor(fr);
 
-        // our output slice for this minibatch.
-        Matrix<ElemType> outputSlice = ValueFor(fr);
+        auto inputGrad = Input(0)->GradientFor(fr);
+        auto pooledGrad = GradientFor(fr);
+        auto roiData = Input(1)->ValueFor(fr);
 
         // input slice is [W x H x C x N]; cols are images.
         // ROIs is [4 x roisPerImage x N]; cols are ROIs for different images.
@@ -878,8 +878,9 @@ public:
         size_t outW = groupSize;
         size_t outH = groupSize;
 
-        inputSlice.PSROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), groupSize, outChannels, inChannels,
-                                        inputW, inputH, outW, outH, ROIs, outputSlice, *m_tempMatrix);
+        inputGrad.SetValue(0);
+        pooledGrad.PSROIPoolingBackward(roisPerImage, inputSlice.GetNumCols(), groupSize, outChannels, inChannels,
+                                        inputW, inputH, outW, outH, roiData, inputGrad, *m_tempMatrix);
     }
 
     void Save(File& fstream) const override
