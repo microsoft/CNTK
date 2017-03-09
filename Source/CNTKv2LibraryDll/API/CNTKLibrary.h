@@ -3321,8 +3321,8 @@ namespace CNTK
     // special values for Times inferInputRankToMap
     enum : int
     {
-        TimesReduceAllStaticAxes            = -1, // the default, reduce all static axes in the right operand that matches left
-        TimesReduceAllStaticAndSequenceAxes = -2, // reduce all static axes and sequence axis in the output of Times. Currently only support cases like (m x k x *s x *b) * (k x *s x *b) -> (m x *b)
+        TimesNoInferredInputRank                        = -1, // the default, do not infer left operand input rank from right operand
+        TimesReduceSequenceAxisWithoutInferredInputRank = -2, // reduce sequence axis. Currently only support cases like (m x k) x (k) -> (m) for sequences
     };
 
     CNTK_API FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, int inferInputRankToMap, const std::wstring& name = L"");
@@ -3334,7 +3334,7 @@ namespace CNTK
     ///
     inline FunctionPtr Times(const Variable& leftOperand, const Variable& rightOperand, size_t outputRank, const std::wstring& name = L"")
     {
-        return Times(leftOperand, rightOperand, outputRank, TimesReduceAllStaticAxes, name);
+        return Times(leftOperand, rightOperand, outputRank, TimesNoInferredInputRank, name);
     }
 
     ///

@@ -384,6 +384,13 @@ public:
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
+
+        // this potentially computes over time, so we must mask gaps to 0
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
         if (inputIndex == 0) // derivative with respect to the weight matrix
         {
             auto& grad = InputRef(0).GradientAsMatrix();

@@ -353,7 +353,7 @@ void TestTimesReduceSequenceAxis(
 
     FunctionPtr funcs[(int)FuncType::TotalTypes]=
     {
-        Times(inputVar[0], inputVar[1], 1, TimesReduceAllStaticAndSequenceAxes),
+        Times(inputVar[0], inputVar[1], 1, TimesReduceSequenceAxisWithoutInferredInputRank),
         Sequence::ReduceSum(Times(inputVar[0], inputVar[1]))
     };
 
@@ -464,6 +464,8 @@ BOOST_AUTO_TEST_CASE(ReduceableTransposeTimesInCPU)
 
 BOOST_AUTO_TEST_CASE(TimesReduceSequenceAxis)
 {
+    Internal::SetComputationNetworkTrackGapNans(true);
+
     if (IsGPUAvailable())
     {
         TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::GPUDevice(0));
