@@ -1,49 +1,24 @@
+#
 # Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-# WARNING. This will run in Microsoft Internal Environment ONLY
-# Generating CNTK Binary drops in Jenkins environment
-
-# Command line parameters
-# Verbose command line parameter (-verbose) is automatically added
-# because of CmdletBinding
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
 [CmdletBinding()]
-param
-(
-    # Supposed to be taken from Jenkins BUILD_CONFIGURATION
-    [string]$buildConfig,
+param(
+    [parameter(Mandatory=$true)][string]$targetConfig,           # the config created (CPU, GPU, ...)
+    [parameter(Mandatory=$true)][string]$targetConfigSuffix,     # the config suffix (CPU-Only, GPU, GPU-1bit-SGD ...)
+    [parameter(Mandatory=$true)][string]$releaseTag,             # the tag of the release (2-0-beta11-0)
+    [parameter(Mandatory=$true)][string]$commit,
+    [parameter(Mandatory=$true)][string]$outputFileName,         # the generated zip file name
+    [parameter(Mandatory=$true)][string]$sharePath)
 
-    # Supposed to be taken from Jenkins TARGET_CONFIGURATION
-    [string]$targetConfig,
-
-    # File share path. Supposed to have sub-folders corresponding to $targetConfig
-    [string]$sharePath,
-
-    # Output file path.
-    [string]$outputPath = "BinaryDrops.zip"
-)
-
-# Set to Stop on Error
 $ErrorActionPreference = 'Stop'
 
-# Manual parameters check rather than using [Parameter(Mandatory=$True)]
-# to avoid the risk of interactive prompts inside a Jenkins job
-$usage = " parameter is missing. Usage example: make_binary_drop_windows.ps1 -buildConfig Release -targetConfig gpu -sharePath \\server\share"
-If (-not $buildConfig) {Throw "buildConfig" + $usage}
-If (-not $targetConfig) {Throw "targetConfig" + $usage}
-If (-not $sharePath) {Throw "sharePath" + $usage}
+$workSpace = $PWD.Path
 
 Write-Verbose "Making binary drops..."
 
-# If not a Release build quit
-If ($buildConfig -ne "Release")
-{
-    Write-Verbose "Not a release build. No binary drops generation"
-    Exit
-}
-
 # Set Paths
-$basePath = "BinaryDrops\ToZip"
+$basePath = "ToZip"
 $baseDropPath = Join-Path $basePath -ChildPath cntk
 $baseIncludePath = Join-Path $baseDropPath -ChildPath Include
 $buildPath = "x64\Release"
@@ -60,11 +35,21 @@ $includeFiles[1] = Join-Path $includePath20 -ChildPath CNTKLibrary.h
 $includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
-# Copy Wheels
-Copy-Item $buildPath\Python\*.whl
+#binaryDrop locations
+$artifactPath = JoinPath $workSpace BinaryDrop
+$whlArtifactFolder = Join-Path $artifactPath $targetConfigSuffix
+New-Item -Path $artifactPath -ItemType directory
+New-Item -Path $whlArtifactFolder -ItemType directory
+
+# Copy wheels to destination
+Copy-Item $buildPath\Python\*.whl $whlArtifactFolder
 
 # Make binary drop folder
 New-Item -Path $baseDropPath -ItemType directory
+
+#create version.txt file
+$fileContent = "CNTK-{0}`nRelease`n{1}`n{2}" -f $releaseTag, $targetConfigSuffix, $commit
+Set-Content $fileContent -Encoding Ascii $baseDropPath\version.txt
 
 # Copy build binaries
 Write-Verbose "Copying build binaries ..."
@@ -73,6 +58,8 @@ Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 # Clean unwanted items
 Remove-Item $baseDropPath\cntk\*test*.exe*
 Remove-Item $baseDropPath\cntk\*.pdb
+Remove-Item $baseDropPath\Python 
+
 # Keep EvalDll.lib
 Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
@@ -126,19 +113,19 @@ Write-Verbose "Making ZIP and cleaning up..."
 # Switched to use 7zip because of the backslash separator issue in .NET compressor
 # (fixed in 4.6.1, which is not a standard component of build machines
 # see https://msdn.microsoft.com/en-us/library/mt712573(v=vs.110).aspx?f=255&MSPPError=-2147217396 )
-$workSpace = $PWD.Path
-$source = Join-Path $PWD.Path -ChildPath $basePath
-$destination = Join-Path $PWD.Path -ChildPath $outputPath
+$source = Join-Path $workSpace -ChildPath $basePath
+$destination = Join-Path $artifactPath -ChildPath $outputFile
 Set-Location -Path $source
 7za a -bd $destination .
 If ($LastExitCode -ne 0)
 {
     throw "7za returned exit code $LastExitCode"
 }
+
 Set-Location -Path $workSpace
 
 # Log the file hash
-Get-FileHash -Algorithm SHA256 -Path $destination, *.whl
+Get-FileHash -Algorithm SHA256 -Path $destination, $whlArtifactFolder\*.whl
 
 # Remove ZIP sources
 Remove-Item -Recurse $basePath -Force -ErrorAction SilentlyContinue 
