@@ -51,31 +51,6 @@ public:
 
 namespace Test {
 
-// identical to 'sort -o filename filename'
-void SortLinesInFile(string filename, size_t expectedNumLines = 1)
-{
-    vector<string> content;
-    content.reserve(expectedNumLines);
-    ifstream ifstream(filename);
-    
-    string line;
-    while (getline(ifstream, line))
-    {
-        content.push_back(line);
-    }
-
-    ifstream.close();
-
-    sort(content.begin(), content.end());
-
-    ofstream ofstream(filename);
-
-    copy(content.begin(), content.end(), ostream_iterator<string>(ofstream, "\n"));
-
-    ofstream.close();
-}
-
-
 struct CNTKTextFormatReaderFixture : ReaderFixture
 {
     CNTKTextFormatReaderFixture()
