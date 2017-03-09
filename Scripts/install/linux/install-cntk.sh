@@ -11,10 +11,14 @@ SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
 PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath:,wheel-base-url: -n "$SCRIPT_NAME" -- "$@")
 
-[ $? != 0 ] && {
-  echo Terminating...
+function die {
+  set +x
+  echo -e $1
+  echo Go to https://github.com/Microsoft/CNTK/wiki/Setup-Linux-Binary-Script for help.
   exit 1
 }
+
+[ $? != 0 ] && die "Terminating..."
 
 eval set -- "$PARSED_ARGS"
 PY_VERSION=35
@@ -29,8 +33,7 @@ while true; do
           PY_VERSION="$2"
           ;;
         *)
-          echo Invalid value for --py-version option, please specify 27, 34, or 35.
-          exit 1
+          die "Invalid value for --py-version option, please specify 27, 34, or 35."
           ;;
       esac
       shift 2
@@ -50,10 +53,7 @@ while true; do
   esac
 done
 
-[ $# = 0 ] || {
-  echo Extra parameters detected: $*
-  exit 1
-}
+[ $# = 0 ] || die "Extra parameters detected: $*"
 
 # Log steps, stop on error
 # TODO cut down on logging
@@ -75,37 +75,26 @@ test -f "$CNTK_VERSION_PATH" &&
 test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" &&
 test -d "$CNTK_TUTORIALS_PATH" &&
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
-test -f "$CNTK_PY_ENV_FILE" || {
-  echo Cannot find expected drop content. Please double-check that this is a
-  echo CNTK binary drop for Linux. Go to https://github.com/Microsoft/CNTK/wiki
-  echo for help.
-  exit 1
-}
+test -f "$CNTK_PY_ENV_FILE" ||
+  die "Cannot find expected drop content. Please double-check that this is a CNTK binary drop for Linux."
 
 # Check for tested OS (note: only a warning, we can live with lsb-release not being available)
 [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*(14\.04|16\.04) ]] || {
   printf "WARNING: this script was only tested on Ubuntu 14.04 and 16.04, installation may fail.\n"
 }
 
-readarray -t versionInfo < "$CNTK_VERSION_PATH" || {
-  echo Unable to read version file '$CNTK_VERSION_PATH'.
-  echo Go to https://github.com/Microsoft/CNTK/wiki for help.
-  exit 1
-}
+readarray -t versionInfo < "$CNTK_VERSION_PATH" ||
+  die "Unable to read version file '$CNTK_VERSION_PATH'."
 
-[[ ${versionInfo[0]} =~ ^CNTK-([1-9][0-9a-z-]*)$ ]] || {
-  echo Malformed version information in version file, ${versionInfo[0]}.
-  echo Go to https://github.com/Microsoft/CNTK/wiki for help.
-  exit 1
-}
+[[ ${versionInfo[0]} =~ ^CNTK-([1-9][0-9a-z-]*)$ ]] ||
+  die "Malformed version information in version file, ${versionInfo[0]}."
+
 DASHED_VERSION="${BASH_REMATCH[1]}"
 DOTTED_VERSION="${DASHED_VERSION//-/.}"
 
-[[ ${versionInfo[2]} =~ ^(GPU|CPU-Only|GPU-1bit-SGD)$ ]] || {
-  echo Malformed target configuration file, ${versionInfo[2]}.
-  echo Go to https://github.com/Microsoft/CNTK/wiki for help.
-  exit 1
-}
+[[ ${versionInfo[2]} =~ ^(GPU|CPU-Only|GPU-1bit-SGD)$ ]] ||
+  die "Malformed target configuration file, ${versionInfo[2]}."
+
 TARGET_CONFIGURATION="${BASH_REMATCH[1]}"
 
 ###################
@@ -148,13 +137,9 @@ CNTK_WHEEL_PATH="cntk/python/$CNTK_WHEEL_NAME"
 if ! test -f "$CNTK_WHEEL_PATH"; then
   CNTK_WHEEL_PATH="$WHEEL_BASE_URL/$TARGET_CONFIGURATION/$CNTK_WHEEL_NAME"
 
-  wget -q --spider "$CNTK_WHEEL_PATH" || {
-    echo Python wheel not available locally and cannot reach
-    echo $CNTK_WHEEL_PATH for Python wheel installation online.
-    echo Please double-check Internet connectivity.
-    echo Go to https://github.com/Microsoft/CNTK/wiki for help.
-    exit 1
-  }
+  wget -q --spider "$CNTK_WHEEL_PATH" ||
+    die "Python wheel not available locally and cannot reach $CNTK_WHEEL_PATH for Python\nwheel installation online. Please double-check Internet connectivity."
+
 fi
 
 #########################################
@@ -207,15 +192,12 @@ PY_DEACTIVATE="$ANACONDA_PREFIX/bin/deactivate"
 CNTK_PY_ENV_NAME="cntk-py$PY_VERSION"
 CNTK_PY_ENV_PREFIX="$ANACONDA_PREFIX/envs/$CNTK_PY_ENV_NAME"
 if [ -d "$CNTK_PY_ENV_PREFIX" ]; then
-  "$CONDA" env update --file "$CNTK_PY_ENV_FILE" --name "$CNTK_PY_ENV_NAME" || {
-    echo Updating Anaconda environment failed.
-    exit 1
-  }
+  "$CONDA" env update --file "$CNTK_PY_ENV_FILE" --name "$CNTK_PY_ENV_NAME" ||
+    die "Updating Anaconda environment failed."
 else
   "$CONDA" env create --file "$CNTK_PY_ENV_FILE" --prefix "$CNTK_PY_ENV_PREFIX" || {
-    echo Creating Anaconda environment failed.
     rm -rf "$CNTK_PY_ENV_PREFIX"
-    exit 1
+    die "Creating Anaconda environment failed."
   }
 fi
 
