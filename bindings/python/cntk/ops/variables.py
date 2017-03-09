@@ -106,10 +106,8 @@ class VariableMixin(object):
         return super(VariableMixin, self).uid()
 
 
-
 class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
-    '''Variable(shape=None, dtype=None, needs_gradient=False, is_sparse=False, dynamic_axes=[Axis.default_batch_axis(), Axis.default_dynamic_axis()], name='')
-
+    '''
     Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
 
     Args:
@@ -124,16 +122,15 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
        name(`str`): an optional name for this parameter.
     '''
     def __init__(self, shape=None, dtype=None, needs_gradient=False, is_sparse=False,
-                 dynamic_axes=[cntk_py.Axis.default_batch_axis(), cntk_py.Axis.default_dynamic_axis()], name=''):
+                 dynamic_axes=[cntk_py.Axis.default_dynamic_axis(), cntk_py.Axis.default_batch_axis()], name=''):
         shape = sanitize_shape(shape)
 
         if dtype is None:
             dtype = np.float32
         dtype = sanitize_dtype_cntk(dtype)
 
-        dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
-
-        super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
+        super(Variable, self).__init__(shape, is_sparse, dtype, needs_gradient, name,
+                         dynamic_axes)
 
     @typemap
     def as_parameter(self):

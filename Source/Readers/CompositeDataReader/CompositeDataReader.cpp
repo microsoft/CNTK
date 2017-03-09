@@ -177,24 +177,20 @@ CompositeDataReader::CompositeDataReader(const ConfigParameters& config) :
             m_sequenceEnumerator,
             m_streams,
             numAlternatingBuffers,
-            localTimeline,
-            m_corpus);
+            localTimeline);
         break;
     case PackingMode::sequence:
         m_packer = std::make_shared<SequencePacker>(
             m_sequenceEnumerator,
             m_streams,
             numAlternatingBuffers,
-            localTimeline,
-            m_corpus);
+            localTimeline);
         break;
     case PackingMode::truncated:
     {
         m_packer = std::make_shared<TruncatedBPTTPacker>(
             m_sequenceEnumerator,
-            m_streams,
-            numAlternatingBuffers,
-            m_corpus);
+            m_streams);
         break;
     }
     default:

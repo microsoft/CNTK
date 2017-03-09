@@ -7,7 +7,6 @@
 
 #include <vector>
 #include <memory>
-#include <functional>
 #include "Sequences.h"
 #include "TensorShape.h"
 
@@ -105,11 +104,7 @@ struct Minibatch
     // Minibatch data
     std::vector<StreamMinibatchPtr> m_data;
 
-    // A function that maps a sequence id from minibatch layout
-    // to the string representation of the sequence key.
-    std::function<std::string(const size_t)> m_getKeyById;
-
-    Minibatch(bool endOfSweep = false, bool endOfEpoch = false)
+    Minibatch(bool endOfSweep = false, bool endOfEpoch = false) 
         : m_endOfSweep(endOfSweep), m_endOfEpoch(endOfEpoch)
     {
     }

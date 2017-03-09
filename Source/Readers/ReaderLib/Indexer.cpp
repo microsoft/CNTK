@@ -56,7 +56,7 @@ void Indexer::RefillBuffer()
     }
 }
 
-void Indexer::BuildFromLines()
+void Indexer::BuildFromLines(CorpusDescriptorPtr corpus)
 {
     assert(m_pos == m_bufferStart);
     m_hasSequenceIds = false;
@@ -72,8 +72,7 @@ void Indexer::BuildFromLines()
             sd.m_fileOffsetBytes = offset;
             offset = GetFileOffset() + 1;
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            sd.m_key.m_sequence = lines;
-            m_index.AddSequence(sd);
+            AddSequenceIfIncluded(corpus, lines, sd);
             ++m_pos;
             ++lines;
         }
@@ -91,8 +90,7 @@ void Indexer::BuildFromLines()
         sd.m_numberOfSamples = 1;
         sd.m_fileOffsetBytes = offset;
         sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-        sd.m_key.m_sequence = lines;
-        m_index.AddSequence(sd);
+        AddSequenceIfIncluded(corpus, lines, sd);
     }
 }
 
@@ -102,14 +100,6 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     {
         return;
     }
-
-    // Create a lambda to read symbolic or numeric sequence ids,
-    // depending on what the corpus expects.
-    std::function<bool(size_t&)> tryGetSequenceId;
-    if (corpus->IsNumericSequenceKeys())
-        tryGetSequenceId = [this](size_t& id) { return TryGetNumericSequenceId(id); };
-    else
-        tryGetSequenceId = [this, corpus](size_t& id) { return TryGetSymbolicSequenceId(id, corpus->KeyToId); };
 
     m_index.Reserve(filesize(m_file));
 
@@ -131,20 +121,15 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     // check the first byte and decide what to do next
     if (!m_hasSequenceIds || m_bufferStart[0] == m_streamPrefix)
     {
-        // Skip sequence id parsing, treat lines as individual sequences
-        // In this case the sequences do not have ids, they are assigned a line number.
-        // If corpus expects to have sequence ids as symbolic names we throw.
-        if (!corpus->IsNumericSequenceKeys())
-            RuntimeError("Corpus expects non-numeric sequence keys but the CTF input file does not have them.");
-
-        BuildFromLines();
+        // skip sequence id parsing, treat lines as individual sequences
+        BuildFromLines(corpus);
         return;
     }
 
     size_t id = 0;
     int64_t offset = GetFileOffset();
     // read the very first sequence id
-    if (!tryGetSequenceId(id))
+    if (!TryGetSequenceId(id))
     {
         RuntimeError("Expected a sequence id at the offset %" PRIi64 ", none was found.", offset);
     }
@@ -152,30 +137,39 @@ void Indexer::Build(CorpusDescriptorPtr corpus)
     SequenceDescriptor sd = {};
     sd.m_fileOffsetBytes = offset;
 
-    size_t previousId = id;
+    size_t currentKey = id;
     while (!m_done)
     {
         SkipLine(); // ignore whatever is left on this line.
         offset = GetFileOffset(); // a new line starts at this offset;
         sd.m_numberOfSamples++;
 
-        if (!m_done && tryGetSequenceId(id) && id != previousId)
+        if (!m_done && TryGetSequenceId(id) && id != currentKey)
         {
             // found a new sequence, which starts at the [offset] bytes into the file
             sd.m_byteSize = offset - sd.m_fileOffsetBytes;
-            sd.m_key.m_sequence = previousId;
-            m_index.AddSequence(sd);
+            AddSequenceIfIncluded(corpus, currentKey, sd);
 
             sd = {};
             sd.m_fileOffsetBytes = offset;
-            previousId = id;
+            currentKey = id;
         }
     }
 
     // calculate the byte size for the last sequence
     sd.m_byteSize = m_fileOffsetEnd - sd.m_fileOffsetBytes;
-    sd.m_key.m_sequence = previousId;
-    m_index.AddSequence(sd);
+    AddSequenceIfIncluded(corpus, currentKey, sd);
+}
+
+void Indexer::AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceId, SequenceDescriptor& sd)
+{
+    auto key = std::to_string(sequenceId);
+    if (corpus->IsIncluded(key))
+    {
+        sd.m_key.m_sequence = corpus->KeyToId(key);
+        sd.m_key.m_sample = 0;
+        m_index.AddSequence(sd);
+    }
 }
 
 void Indexer::SkipLine()
@@ -196,61 +190,32 @@ void Indexer::SkipLine()
     }
 }
 
-bool Indexer::TryGetNumericSequenceId(size_t& id)
+bool Indexer::TryGetSequenceId(size_t& id)
 {
     bool found = false;
     id = 0;
     while (!m_done)
     {
-        char c = *m_pos;
-        if (!isdigit(c))
+        while (m_pos != m_bufferEnd)
         {
-            // Stop as soon as there's a non-digit character
-            return found;
+            char c = *m_pos;
+
+            if (!isdigit(c))
+            {
+                // Stop as soon as there's a non-digit character
+                return found;
+            }
+
+            found |= true;
+            id = id * 10 + (c - '0');
+            ++m_pos;
         }
-
-        id = id * 10 + (c - '0');
-        found = true;
-        ++m_pos;
-
-        if (m_pos == m_bufferEnd)
-            RefillBuffer();
+        RefillBuffer();
     }
 
     // reached EOF without hitting the pipe character,
     // ignore it for not, parser will have to deal with it.
     return false;
 }
-
-
-bool Indexer::TryGetSymbolicSequenceId(size_t& id, std::function<size_t(const std::string&)> keyToId)
-{
-    bool found = false;
-    id = 0;
-    std::string key;
-    key.reserve(256);
-    while (!m_done)
-    {
-        char c = *m_pos;
-        if (isspace(c))
-        {
-            if (found)
-                id = keyToId(key);
-            return found;
-        }
-
-        key += c;
-        found = true;
-        ++m_pos;
-
-        if(m_pos == m_bufferEnd)
-            RefillBuffer();
-    }
-
-    // reached EOF without hitting the pipe character,
-    // ignore it for not, parser will have to deal with it.
-    return false;
-}
-
 
 }}}

@@ -791,7 +791,8 @@ public:
     void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
     bool IsOutputNeededDuringBackprop() const 
     { 
-        return !Globals::ShouldEnableShareNodeValueMatrices() || m_outputNeededDuringBackprop; 
+        return (!Globals::ShouldEnableShareNodeValueMatrices() && !Globals::ShouldEnableHyperCompressMemory())
+            || m_outputNeededDuringBackprop; 
     }
 
     // -----------------------------------------------------------------------
@@ -1679,6 +1680,20 @@ public:
 #endif
         // tracing
         Trace();
+
+        // Any memory not needed could resize to zero immediately when HyperCompressMemory active. Since the memory won't really release,
+        // all these memory blocks are gathered into a memory pool. When the next request coming, the best fitting block will be chosen.
+        if (Globals::ShouldEnableHyperCompressMemory()) 
+        {
+            for (auto& input : GetInputs())
+            {
+                if (!input->IsOutputNeededDuringBackprop() && input->IsValueSharable())
+                {
+                    auto inputNodePtr = DownCast(input);
+                    inputNodePtr->Value().Resize(0, 0);
+                }
+            }
+        }
     }
 
     virtual void /*IComputationNode::*/BeginBackprop() override
@@ -1713,9 +1728,9 @@ public:
         }
     }
 
-#ifdef _DEBUG
     virtual void /*IComputationNode::*/ EndBackprop() override
     {
+#ifdef _DEBUG
         Base::EndBackprop();
 #ifdef TRACK_GAP_NANS
         for (size_t i = 0; i < m_inputs.size(); i++)
@@ -1729,8 +1744,18 @@ public:
             }
         }
 #endif
-    }
 #endif
+        // We could release the gradient of value sharable nodes and all no-longer used memory generated in forward.
+        if (IsValueSharable() && Globals::ShouldEnableHyperCompressMemory())
+        {
+            if (GradientPtr()) 
+                Gradient().Resize(0, 0);
+
+            // canceling the graph dependency
+            if (IsOutputNeededDuringBackprop()) 
+                Value().Resize(0, 0);
+        }
+    }
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
@@ -1791,12 +1816,10 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
-    // for memory pool utilization optimizaiton, the requested pointer is not immediately useable until the entire network has gone through all requests 
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
-        size_t matrixSize = m_sampleLayout.GetNumElements();
         if (IsValueSharable())
-            RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
+            RequestMatrixFromPool(m_value, matrixPool);
         else
             CreateMatrixIfNull(m_value);
     }
@@ -1821,8 +1844,7 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        size_t matrixSize = m_sampleLayout.GetNumElements();
-        RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout());
+        RequestMatrixFromPool(m_gradient, matrixPool);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1867,20 +1889,18 @@ protected:
             matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
     }
 
-    // matrixSize is per sample size, if unknown or hard to estimate, set matrixSize = 0
-    // if the matrix's size will scale with minibatch size, set mbScale = true 
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false)
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
     {
         if (matrixPtr == nullptr)
         {
-            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale);
+            matrixPtr = matrixPool.Request<ElemType>(m_deviceId);
         }
     }
 
     void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
     {
         assert(matrixPtr != nullptr);
-        matrixPool.RequestRelease<ElemType>(&matrixPtr);
+        matrixPool.Release<ElemType>(matrixPtr);
     }
 
 public:
@@ -1895,8 +1915,7 @@ public:
                                       const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
                                       const std::string& sampleSeparator, std::string valueFormatString,
-                                      bool outputGradient = false, bool onlyShowAbsSumForDense = false,
-                                      std::function<std::string(size_t)> getKeyById = std::function<std::string(size_t)>()) const;
+                                      bool outputGradient = false, bool onlyShowAbsSumForDense = false) const;
 
     // simple helper to log the content of a minibatch
     void DebugLogMinibatch(bool outputGradient = false) const

@@ -12,8 +12,7 @@ from cntk.device import set_default_device, gpu
 from cntk import load_model, Trainer, UnitType
 from cntk.layers import Placeholder, Constant
 from cntk.graph import find_by_name, get_node_outputs
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
-import cntk.io.transforms as xforms
+from cntk.io import MinibatchSource, ImageDeserializer
 from cntk.layers import Dense
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_schedule
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, combine, softmax
@@ -59,11 +58,11 @@ _num_classes = 102
 
 # Creates a minibatch source for training or testing
 def create_mb_source(map_file, image_width, image_height, num_channels, num_classes, randomize=True):
-    transforms = [xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')] 
-    return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
-            features =StreamDef(field='image', transforms=transforms),
-            labels   =StreamDef(field='label', shape=num_classes))),
-            randomize=randomize)
+    transforms = [ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
+    image_source = ImageDeserializer(map_file)
+    image_source.map_features(features_stream_name, transforms)
+    image_source.map_labels(label_stream_name, num_classes)
+    return MinibatchSource(image_source, randomize=randomize)
 
 
 # Creates the network model for transfer learning

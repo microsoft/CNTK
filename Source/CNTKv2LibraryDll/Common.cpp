@@ -87,6 +87,16 @@ namespace CNTK
             Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ false);
         }
 
+        void EnableHyperMemoryCompress()
+        {
+            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ true);
+        }
+
+        void DisableHyperMemoryCompress()
+        {
+            Microsoft::MSR::CNTK::Globals::SetHyperCompressMemory(/* enable = */ false);
+        }
+
         void EnableGradientAccumulationOptimization()
         {
             Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ true);

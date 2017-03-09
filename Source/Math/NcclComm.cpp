@@ -26,8 +26,10 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
         return;
 
     size_t numRanks = mpi->NumNodesInUse();
+    MPI_Comm mpiComm = mpi->Communicator();
     std::vector<int> allDevs(numRanks);
-    mpi->Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT);
+    MPI_Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT, mpiComm)
+        || MpiFail("NcclComm: MPI_Allgather");
 
     for (size_t r = 0; r<numRanks; r++)
     {
@@ -51,7 +53,8 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     if (res != ncclSuccess)
         RuntimeError("NcclComm failed to obtain ncclUniqueId: %s", ncclGetErrorString(res));
 
-    mpi->Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0);
+    MPI_Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0, mpiComm)
+        || MpiFail("NcclComm: MPI_Bcase");
 
     PrepareDevice(deviceId);
     res = ncclCommInitRank(&m_ncclComm, numRanks, ncclId, mpi->CurrentNodeRank());

@@ -36,15 +36,15 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 // -----------------------------------------------------------------------
 
 template <>
-vector<MemRequestInfo<float>>& MatrixPool::GetMemRequestInfoVec<float>()
+vector<shared_ptr<Matrix<float>>>& MatrixPool::GetReleasedMatrices<float>()
 {
-    return m_memRequestInfoFloatVec;
+    return m_releasedFloatMatrices;
 }
 
 template <>
-vector<MemRequestInfo<double>>& MatrixPool::GetMemRequestInfoVec<double>()
+vector<shared_ptr<Matrix<double>>>& MatrixPool::GetReleasedMatrices<double>()
 {
-    return m_memRequestInfoDoubleVec;
+    return m_releasedDoubleMatrices;
 }
 
 // -----------------------------------------------------------------------
@@ -463,7 +463,7 @@ bool ComputationNetwork::IsTypicalCriterionNode(ComputationNodeBasePtr nodePtr)
         nodePtr->OperationName() == OperationNameOf(CrossEntropyNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassBasedCrossEntropyWithSoftmaxNode) ||
         nodePtr->OperationName() == OperationNameOf(ClassificationErrorNode) ||
-        nodePtr->OperationName() == OperationNameOf(ForwardBackwardNode) ||
+        nodePtr->OperationName() == OperationNameOf(EditDistanceErrorNode) ||
 #ifdef COMING_SOON
         nodePtr->OperationName() == OperationNameOf(CRFNode) ||
 #endif

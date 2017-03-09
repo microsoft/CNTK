@@ -47,7 +47,7 @@ def linear_layer(input_var, output_dim):
 def dense_layer(input, output_dim, nonlinearity):
     r = linear_layer(input, output_dim)
     r = nonlinearity(r)
-    if isinstance(r, UserFunction):
+    if isinstance(nonlinearity, UserFunction):
         r = user_function(r)
     return r
 

@@ -538,8 +538,6 @@ void HTKDataDeserializer::GetSequenceById(ChunkIdType chunkId, size_t id, vector
         LogicError("Currently, HTK Deserializer supports only double and float types.");
     }
 
-    result->m_key.m_sequence = utterance->GetId();
-
     r.push_back(result);
 }
 

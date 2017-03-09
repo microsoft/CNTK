@@ -451,12 +451,12 @@ typename TextParser<ElemType>::SequenceBuffer TextParser<ElemType>::LoadSequence
             sequenceDsc.m_key.m_sequence, GetFileInfo().c_str(), numRowsRead, expectedRowCount);
     }
 
-    FillSequenceMetadata(sequence, sequenceDsc.m_key);
+    FillSequenceMetadata(sequence);
     return sequence;
 }
 
 template<class ElemType>
-void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, const KeyType& sequenceKey)
+void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData)
 {
     for (size_t j = 0; j < m_streamInfos.size(); ++j)
     {
@@ -473,8 +473,6 @@ void TextParser<ElemType>::FillSequenceMetadata(SequenceBuffer& sequenceData, co
             sparseData->m_indices = sparseData->m_indicesBuffer.data();
             assert(data->m_numberOfSamples == sparseData->m_nnzCounts.size());
         }
-
-        data->m_key = sequenceKey;
     }
 }
 

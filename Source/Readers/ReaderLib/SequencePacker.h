@@ -18,9 +18,8 @@ public:
         SequenceEnumeratorPtr sequenceEnumerator,
         const std::vector<StreamDescriptionPtr>& streams,
         size_t numberOfBuffers = 2,
-        bool useLocalTimeline = false,
-        CorpusDescriptorPtr corpus = nullptr) :
-        PackerBase(corpus, sequenceEnumerator, streams, numberOfBuffers),
+        bool useLocalTimeline = false) :
+        PackerBase(sequenceEnumerator, streams, numberOfBuffers),
         m_useLocalTimeline(useLocalTimeline),
         m_globalMinibatchSizeInSamples(0),
         m_localMinibatchSizeInSamples(0)
