@@ -239,10 +239,13 @@ bindings/csharp/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
 # Java bindings
 bindings/java/Swig/cntk_java_wrap.h
 bindings/java/Swig/cntk_java_wrap.cxx
-bindings/java/CNTKLibraryManagedDll/SwigProxyClasses/*.cs
+bindings/java/SwigProxyClasses/**/*.java
+bindings/java/**/*.class
+bindings/java/SwigProxyClasses/cntk.jar
 bindings/java/Swig/com/
 bindings/java/Swig/*.so
-bindings/java/ScalaEvalExample/.idea
+bindings/java/JavaEvalTest/.idea
+bindings/java/JavaEvalTest/*.iml
 bindings/java/**/target
 bindings/java/**/*.jar
 

@@ -1,0 +1,1 @@
+This directory is used by SWIG to put generated JAVA proxy classes. The generated files are not saved in the repository, but the directory is needed.
