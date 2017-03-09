@@ -318,38 +318,11 @@ def test_op_times_sparse_grad(device_id, precision):
     dim = 5
     num_sequences = 2
     seq = [i for i in range(dim)]
-    identity = np.identity(dim, dtype=dt_precision)
-    input_data = one_hot([seq]*num_sequences, dim, dtype=dt_precision)
-    input_var  = I(shape=(dim), is_sparse=True, needs_gradient=False, dtype=dt_precision)
-    e = parameter(shape = (dim, dim), init = identity, dtype=dt_precision)
+    identity = np.identity(dim, dtype=np.float32)
+    input_data = one_hot([seq]*num_sequences, dim)
+    input_var  = I(shape=(dim), is_sparse=True, needs_gradient=False)
+    e = parameter(shape = (dim, dim), init = identity)
     z = reshape(times_transpose(e, times(input_var, e)), dim)
     e_grad = z.grad({input_var : input_data}, [e])
     
     assert np.allclose(e_grad, np.ones((dim,dim))*4)
-
-def test_op_times_reduce_sequence_axis(device_id, precision):
-    dt_precision = PRECISION_TO_TYPE[precision]
-
-    from cntk import times, one_hot, TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES
-    from cntk import sequence
-    dim = 10
-    seq = [[0,1,2], [3], [4,5,6,7,8,9]]
-    right_data = one_hot(seq, dim, dtype=dt_precision)
-    right_var = I(shape=(dim), is_sparse=True, dtype=dt_precision)
-    left_data = [AA([1,1,1],dtype=dt_precision), AA([1],dtype=dt_precision), AA([1,1,1,1,1,1],dtype=dt_precision)]
-    left_var = I(shape=(1), dtype=dt_precision)
-
-    func = times(left_var, right_var, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES)
-    func2 = sequence.reduce_sum(times(left_var, right_var))
-
-    assert func.dynamic_axes == func2.dynamic_axes
-
-    _, forward_output = func.forward({left_var:left_data, right_var:right_data})
-    
-    actual_forward = forward_output[func.output]
-
-    expected_forward = AA([[[[1,1,1,0,0,0,0,0,0,0]]],
-                           [[[0,0,0,1,0,0,0,0,0,0]]],
-                           [[[0,0,0,0,1,1,1,1,1,1]]]])
-    
-    assert np.allclose(actual_forward, expected_forward)

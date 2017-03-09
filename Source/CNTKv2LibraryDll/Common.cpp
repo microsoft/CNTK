@@ -282,7 +282,7 @@ namespace CNTK
             if (view1.GetDataType() == DataType::Double)
                 return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
 
-            LogicError("AreEqual(NDArrayView): Unknown DataType.");
+            LogicError("Unknown DataType");
         }
 
         std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
@@ -366,7 +366,7 @@ namespace CNTK
             if (value1.GetDataType() == DataType::Double)
                 return AreEqual<double>(value1, value2, relativeTolerance, absoluteTolerance);
 
-            LogicError("AreEqual(Value): Unknown DataType.");
+            LogicError("Unknown DataType");
         }
 
         std::atomic<int> s_computationNetworkTraceLevel(0);
@@ -437,11 +437,7 @@ namespace CNTK
 
         // As a testing backdoor we allow changing the default device even after being "used/frozen"
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
-        {
-            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used "
-                         "as the default device in a CNTK API call; Current default = %S, New default = %S.",
-                         DefaultDevice().AsString().c_str(), newDefaultDevice.AsString().c_str());
-        }
+            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
 
         std::call_once(s_initDefaultDeviceFlag, []
         {

@@ -74,8 +74,6 @@ PackerBase::PackerBase(CorpusDescriptorPtr corpus,
 
     m_checkSampleShape.resize(m_outputStreamDescriptions.size(), false);
 
-    CheckNameUniqueness(m_inputStreamDescriptions);
-
     // Sanity checks:
     for (size_t i = 0; i < m_outputStreamDescriptions.size(); ++i)
     {
@@ -111,18 +109,6 @@ PackerBase::PackerBase(CorpusDescriptorPtr corpus,
             RuntimeError("Dense to sparse re-packing requested for stream '%ls' is not supported.",
                 stream->m_name.c_str());
         }
-    }
-}
-
-void PackerBase::CheckNameUniqueness(const vector<StreamDescriptionPtr>& streams)
-{
-    set<wstring> names;
-    for (const auto& s : streams)
-    {
-        if (names.find(s->m_name) != names.end())
-            RuntimeError("Two streams with the same name '%ls' have been found. Please rename the duplicate.", s->m_name.c_str());
-        else
-            names.insert(s->m_name);
     }
 }
 

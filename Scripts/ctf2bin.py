@@ -43,9 +43,8 @@ class Converter(object):
 
     def appendSample(self, sample):
         if( len(sample) != self.sampleDim ):
-            raise ValueError(
-                "Invalid sample dimension for input {0}".format(self.name))
-
+            print( "Invalid sample dimension for input {0}" ).format( self.name )
+            sys.exit()
         if( len(self.vals) == 0 ):
             self.vals.append( list() )
 
@@ -66,7 +65,7 @@ class DenseConverter(Converter):
         Converter.__init__(self, name, sampleDim)
     
     def headerBytes(self):
-        output = bytearray()
+        output = ""
         # First is the matrix type. Dense is type 0
         output += struct.pack( "i", 0 )
         # Next is the elem type, currently float only
@@ -78,11 +77,11 @@ class DenseConverter(Converter):
 
     
     def toBytes(self):
-        output = bytearray()
+        output = ""
         for sequence in self.vals:
             if( len(sequence) != 1 ):
-                raise ValueError("Dense sequences currently not supported.")
-
+                print( "Converter does not support dense sequences." )
+                sys.exit()
             for sample in sequence[0]:
                 output += struct.pack( "f", float(sample) )
 
@@ -95,18 +94,17 @@ class SparseConverter(Converter):
         Converter.__init__(self, name, sampleDim)
 
     def appendSample(self, sample):
-        for pair in sample:
-            index = int(pair.split(":")[0])
-            if (index >= self.sampleDim):
-                raise ValueError("Invalid sample dimension for input {0}. Max {1}, given {2}"
-                        .format(self.name, self.sampleDim, index))
+        for samp in sample:
+            if( int(samp.split(":")[0]) >= self.sampleDim ):
+                print( "Invalid sample dimension for input {0}. Max {1}, given {2}" ).format( self.name, self.sampleDim, sample.split( ":" )[0] )
+                sys.exit()
         if( len(self.vals) == 0 ):
             self.vals.append( list() )
 
         self.vals[-1].append( sample )
 
     def headerBytes(self):
-        output = bytearray()
+        output = ""
         # First is the matrix type. Sparse is type 1
         output += struct.pack( "i", 1 )
         # Next is the storage type, currently sparse csc only
@@ -122,7 +120,7 @@ class SparseConverter(Converter):
         return output
 
     def toBytes(self):
-        output = bytearray()
+        output = ""
         values = list()
         rowInd = list()
         colInd = [0]
@@ -141,9 +139,9 @@ class SparseConverter(Converter):
             colInd.append( nnz )
 
         output += struct.pack( "i", nnz )
-        output += b''.join( [ struct.pack( "f", float(val) ) for val in values ] )
-        output += b''.join( [ struct.pack( "i", int(ind) ) for ind in rowInd ] )
-        output += b''.join( [ struct.pack( "i", int(ind) ) for ind in colInd ] )
+        output += "".join( [ struct.pack( "f", float(val) ) for val in values ] )
+        output += "".join( [ struct.pack( "i", int(ind) ) for ind in rowInd ] )
+        output += "".join( [ struct.pack( "i", int(ind) ) for ind in colInd ] )
 
         return output
 
@@ -176,7 +174,7 @@ def GetConverter( inputtype, name, sampleDim ):
     elif( inputtype.lower() == 'sparse' ):
         converter = SparseConverter( name, sampleDim )
     else:
-        print('Invalid input format {0}'.format( inputtype ))
+        print( 'Invalid input format {0}' ).format( inputtype )
         sys.exit()
 
     return converter 
@@ -242,6 +240,7 @@ if __name__ == '__main__':
             id += 1
 
     OutputHeader( binaryHeaderFile, converters )
+
     numChunks = 0
     with open( args.input, "r" ) as inputFile:
         curSequence = list()
@@ -281,7 +280,7 @@ if __name__ == '__main__':
         binaryHeaderFile.close()
         binaryDataFile.close()
 
-        destination = open( args.output, 'ab+' )
+        destination = open( args.output, 'awb+' )
         shutil.copyfileobj( open( dataPath, "rb" ), destination )
         
         destination.flush()

@@ -33,6 +33,12 @@ If (-not $buildConfig) {Throw "buildConfig" + $usage}
 If (-not $targetConfig) {Throw "targetConfig" + $usage}
 If (-not $sharePath) {Throw "sharePath" + $usage}
 
+# Set Verbose mode
+If ($verbose)
+{
+     $VerbosePreference = "continue"
+}
+
 Write-Verbose "Making binary drops..."
 
 # If not a Release build quit
@@ -78,7 +84,10 @@ Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
-Remove-Item $baseDropPath\cntk\CommandEval.exe -Force -ErrorAction SilentlyContinue
+If (Test-Path $baseDropPath\cntk\CommandEval.exe)
+{
+    Remove-Item $baseDropPath\cntk\CommandEval.exe
+}
 Remove-Item $baseDropPath\cntk\Microsoft.VisualStudio.QualityTools.UnitTestFramework.*
 
 # Make Include folder
@@ -103,8 +112,14 @@ Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
 Write-Verbose "Copying Scripts ..."
 Copy-Item Scripts -Recurse -Destination $baseDropPath\Scripts
 # Remove some files if they exist
-Remove-Item $baseDropPath\Scripts\pytest.ini -Force -ErrorAction SilentlyContinue
-Remove-Item -Recurse $baseDropPath\Scripts\install\linux -Force -ErrorAction SilentlyContinue
+If (Test-Path $baseDropPath\Scripts\pytest.ini)
+{
+    Remove-Item $baseDropPath\Scripts\pytest.ini
+}
+If (Test-Path $baseDropPath\Scripts\install\linux)
+{
+    Remove-Item -Recurse $baseDropPath\Scripts\install\linux
+}
 
 # Copy all items from the share
 # For whatever reason Copy-Item in the line below does not work
@@ -123,24 +138,19 @@ If ($LastExitCode -gt 7)
 Write-Verbose "Making ZIP and cleaning up..."
 
 # Make ZIP file
-# Switched to use 7zip because of the backslash separator issue in .NET compressor
-# (fixed in 4.6.1, which is not a standard component of build machines
-# see https://msdn.microsoft.com/en-us/library/mt712573(v=vs.110).aspx?f=255&MSPPError=-2147217396 )
-$workSpace = $PWD.Path
 $source = Join-Path $PWD.Path -ChildPath $basePath
 $destination = Join-Path $PWD.Path -ChildPath $outputPath
-Set-Location -Path $source
-7za a -bd $destination .
-If ($LastExitCode -ne 0)
-{
-    throw "7za returned exit code $LastExitCode"
-}
-Set-Location -Path $workSpace
+Add-Type -assembly "system.io.compression.filesystem"
+[io.compression.zipfile]::CreateFromDirectory($source, $destination)
 
 # Log the file hash
 Get-FileHash -Algorithm SHA256 -Path $destination, *.whl
 
 # Remove ZIP sources
-Remove-Item -Recurse $basePath -Force -ErrorAction SilentlyContinue 
+If (Test-Path $basePath)
+{
+    Remove-Item $basePath -Recurse
+}
 
+# Return zero exit code code from here (N.B.: can be non-zero from robocopy above)
 exit 0

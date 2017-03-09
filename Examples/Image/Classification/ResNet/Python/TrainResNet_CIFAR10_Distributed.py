@@ -18,7 +18,6 @@ from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_
 from _cntk_py import set_computation_network_trace_level
 from cntk.device import set_default_device, gpu
 from cntk.distributed import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
-from cntk.training_session import *
 
 from resnet_models import *
 
@@ -67,7 +66,7 @@ def create_resnet_network(network_name):
 
 
 # Create trainer
-def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer):
+def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up):
     if network['name'] == 'resnet20': 
         lr_per_mb = [1.0]*80+[0.1]*40+[0.01]
     elif network['name'] == 'resnet110': 
@@ -94,11 +93,11 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
         learner = block_momentum_distributed_learner(local_learner, block_size=block_size)
     else:
         learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
-
-    return Trainer(network['output'], (network['ce'], network['pe']), learner, progress_printer)
+    
+    return Trainer(network['output'], (network['ce'], network['pe']), learner)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, profiling=False):
+def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling=False):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -106,17 +105,23 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         network['label']: train_source.streams.labels
     }
 
+    training_session = cntk.training_session(
+        training_minibatch_source = train_source, 
+        trainer = trainer,
+        mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
+        progress_printer = progress_printer,
+        model_inputs_to_mb_source_mapping = input_map, 
+        checkpoint_frequency = epoch_size,
+        checkpoint_filename="ResNet_CIFAR10_DataAug", 
+        progress_frequency=epoch_size,
+        cv_source=test_source,
+        cv_mb_size_schedule=cntk.minibatch_size_schedule(16),
+        restore=False)
+	
     if profiling:
         start_profiler(sync_gpu=True)
         
-    training_session(
-        trainer=trainer, mb_source = train_source, 
-        mb_size = minibatch_size,
-        var_to_stream = input_map,
-        checkpoint_config = CheckpointConfig(frequency=epoch_size, filename="ResNet_CIFAR10_DataAug", restore=False),
-        progress_frequency=epoch_size,
-        cv_config = CrossValidationConfig(source=test_source, mb_size=16)
-    ).train()
+    training_session.train()
     
     if profiling:
         stop_profiler()
@@ -141,10 +146,10 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
         num_epochs=max_epochs)
 
     network = create_resnet_network(network_name)
-    trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer)
+    trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, profiling)
+    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling)
 
 
 if __name__=='__main__':

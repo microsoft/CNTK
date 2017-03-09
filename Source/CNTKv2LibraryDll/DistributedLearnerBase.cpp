@@ -13,10 +13,10 @@ namespace CNTK
         : DistributedLearner(communicator, learner, distributeAfterSamples)
     {
         if (!m_learner)
-            InvalidArgument("Learner cannot be null.");
+            InvalidArgument("Learner is not allowed to be null.");
 
         if (!m_communicator)
-            InvalidArgument("Communicator of a DistributedLearner cannot be null.");
+            InvalidArgument("Communicator is not allowed to be null.");
     }
 
     // Get checkpoint state associated with distributed trainer

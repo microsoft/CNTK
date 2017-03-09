@@ -52,7 +52,7 @@ def create_reader(map_file, mean_file, is_training):
 # where a_{x,y}^i is the activity of a neuron comoputed by applying kernel i at position (x,y)
 # N is the total number of kernals, n is half normalization width.
 def LocalResponseNormalization(k, n, alpha, beta, name=''):
-    x = cntk.layers.Placeholder(name='lrn_arg')
+    x = cntk.blocks.Placeholder(name='lrn_arg')
     x2 = cntk.ops.square(x)
     # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
     x2s = cntk.ops.reshape(x2, (1, cntk.InferredDimension), 0, 1)
@@ -63,7 +63,7 @@ def LocalResponseNormalization(k, n, alpha, beta, name=''):
     b = cntk.ops.reshape(y, cntk.InferredDimension, 0, 2)
     den = cntk.ops.exp(beta * cntk.ops.log(k + b))
     apply_x = cntk.ops.element_divide(x, den)
-    return apply_x
+    return cntk.blocks.Block(apply_x, 'LocalResponseNormalization', name, make_block=True)
 
 # Train and evaluate the network.
 def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_epochs = 80):
@@ -77,14 +77,14 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
 
     with cntk.layers.default_options (activation=cntk.ops.relu, pad=True):
-        z = cntk.layers.Sequential([
-            cntk.layers.For(range(2), lambda : [
+        z = cntk.models.Sequential([
+            cntk.models.For(range(2), lambda : [
                 cntk.layers.Convolution2D((3,3), 64),
                 cntk.layers.Convolution2D((3,3), 64),
                 LocalResponseNormalization (1.0, 4, 0.001, 0.75),
                 cntk.layers.MaxPooling((3,3), (2,2))
             ]),
-            cntk.layers.For(range(2), lambda i: [
+            cntk.models.For(range(2), lambda i: [
                 cntk.layers.Dense([256,128][i]),
                 cntk.layers.Dropout(0.5)
             ]),
@@ -109,8 +109,7 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                                         unit_gain = True,
                                         l2_regularization_weight = l2_reg_weight)
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
-    trainer = cntk.Trainer(z, (ce, pe), learner, progress_printer)
+    trainer =  cntk.Trainer(z, (ce, pe), learner)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -119,6 +118,7 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     }
 
     cntk.utils.log_number_of_parameters(z) ; print()
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # perform model training
     for epoch in range(max_epochs):       # loop over epochs
@@ -127,8 +127,9 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size-sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
-        trainer.summarize_training_progress()
+        progress_printer.epoch_summary(with_metric=True)
         z.save(os.path.join(model_path, "ConvNet_CIFAR10_DataAug_{}.dnn".format(epoch)))
 
     ### Evaluation action

@@ -13,8 +13,12 @@ import pytest
 def test_overload_exception():
     c = constant(value=list(range(0, 10)))
 
-    with pytest.raises(ValueError):
+    with pytest.raises(TypeError):
+        c[:]
+
+    with pytest.raises(TypeError):
         c[0:3:2]
+
 
 def test_eval_scalar():
     c = constant(value=2)

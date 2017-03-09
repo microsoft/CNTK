@@ -43,13 +43,13 @@ def convnet_cifar10(debug_output=False):
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_removemean)
 
     with cntk.layers.default_options(activation=cntk.ops.relu, pad=True): 
-        z = cntk.layers.Sequential([
-            cntk.layers.For(range(2), lambda : [
+        z = cntk.models.Sequential([
+            cntk.models.For(range(2), lambda : [
                 cntk.layers.Convolution2D((3,3), 64), 
                 cntk.layers.Convolution2D((3,3), 64), 
                 cntk.layers.MaxPooling((3,3), (2,2))
             ]), 
-            cntk.layers.For(range(2), lambda i: [
+            cntk.models.For(range(2), lambda i: [
                 cntk.layers.Dense([256,128][i]), 
                 cntk.layers.Dropout(0.5)
             ]), 
@@ -64,7 +64,6 @@ def convnet_cifar10(debug_output=False):
     # training config
     epoch_size = 50000                  # for now we manually specify epoch size
     minibatch_size = 64
-    max_epochs = 30
 
     # Set learning parameters
     lr_per_sample          = [0.0015625]*10 + [0.00046875]*10 + [0.00015625]
@@ -76,8 +75,7 @@ def convnet_cifar10(debug_output=False):
     # Instantiate the trainer object to drive the model training
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule,
                                         l2_regularization_weight = l2_reg_weight)
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
-    trainer = cntk.Trainer(z, (ce, pe), learner, progress_printer)
+    trainer = cntk.Trainer(z, (ce, pe), learner)
 
     # define mapping from reader streams to network inputs
     input_map = {
@@ -86,6 +84,8 @@ def convnet_cifar10(debug_output=False):
     }
 
     cntk.utils.log_number_of_parameters(z) ; print()
+    max_epochs = 30
+    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs
@@ -94,8 +94,9 @@ def convnet_cifar10(debug_output=False):
             data = reader_train.next_minibatch(min(minibatch_size, epoch_size - sample_count), input_map=input_map) # fetch minibatch.
             trainer.train_minibatch(data)                                   # update model with it
             sample_count += trainer.previous_minibatch_sample_count         # count samples processed so far
+            progress_printer.update_with_trainer(trainer, with_metric=True) # log progress
 
-        trainer.summarize_training_progress()
+        progress_printer.epoch_summary(with_metric=True)
         z.save(os.path.join(model_path, "ConvNet_CIFAR10_{}.dnn".format(epoch)))
     
     # Load test data

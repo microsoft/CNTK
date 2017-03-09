@@ -54,21 +54,20 @@ def ffnet():
 
     lr_per_minibatch=learning_rate_schedule(0.5, UnitType.minibatch)
     # Instantiate the trainer object to drive the model training
-    learner = sgd(netout.parameters, lr=lr_per_minibatch)
-    progress_printer = ProgressPrinter(128)
-    trainer = Trainer(netout, (ce, pe), learner, progress_printer)
+    trainer = Trainer(netout, (ce, pe), sgd(netout.parameters, lr=lr_per_minibatch))
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25
 
+    pp = ProgressPrinter(128)
     for i in range(1024):
         features, labels = generate_random_data(
             minibatch_size, input_dim, num_output_classes)
         # Specify the mapping of input variables in the model to actual
         # minibatch data to be trained with
         trainer.train_minibatch({input: features, label: labels})
-
-    trainer.summarize_training_progress()
+        pp.update_with_trainer(trainer)
+    pp.epoch_summary()
     test_features, test_labels = generate_random_data(
         minibatch_size, input_dim, num_output_classes)
     avg_error = trainer.test_minibatch(

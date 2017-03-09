@@ -263,16 +263,17 @@ struct TensorOps
     }
 };
 
-// ----------------------------------------------------------------------------
-// Function to update an aggregate value for the specifed reduction operation
-// ----------------------------------------------------------------------------
+//----------------------------------------------------------------------------
+// For reductions we need the neutral elements of the corresponding binary ops
+//----------------------------------------------------------------------------
 
-template <typename ElemType> __device__ ElemType AggregateNeutralValue(ElementWiseOperator op)
+// NeutralValue seems to be dead code
+template <typename ElemType> __device__ ElemType NeutralValue(ElementWiseOperator op)
 {
     return 0; // error, only the explicit instantiations below should be used.
 };
 
-template<> __device__ float AggregateNeutralValue<float>(ElementWiseOperator op)
+template<> __device__ float NeutralValue<float>(ElementWiseOperator op)
 {
     switch (op)
     {
@@ -287,7 +288,7 @@ template<> __device__ float AggregateNeutralValue<float>(ElementWiseOperator op)
     }
 };
 
-template<> __device__ double AggregateNeutralValue<double>(ElementWiseOperator op)
+template<> __device__ double NeutralValue<double>(ElementWiseOperator op)
 {
     switch (op)
     {
@@ -303,7 +304,11 @@ template<> __device__ double AggregateNeutralValue<double>(ElementWiseOperator o
 };
 
 
-template<typename ReductionType, class ElemType> __device__ void Aggregate(ReductionType& aggregate, ElemType val, ElementWiseOperator reductionOp)
+// ----------------------------------------------------------------------------
+// Function to update an aggregate value for the specifed reduction operation
+// ----------------------------------------------------------------------------
+
+template<typename ReductionType, class ElemType> __device__ void UpdateAggregate(ReductionType& aggregate, ElemType val, ElementWiseOperator reductionOp)
 {
     switch (reductionOp)
     {
@@ -327,6 +332,7 @@ template<typename ReductionType, class ElemType> __device__ void Aggregate(Reduc
     }
 };
 
+
 // -----------------------------------------------------------------------
 // function to compute the value for a given output location (including reduction)
 // -----------------------------------------------------------------------
@@ -349,12 +355,11 @@ struct TensorOpReduce
         {
             // bump the pointers
             #pragma unroll
-            for (C_size_t i = 0; i < N - 1; i++) // N-1 because output is not used here
-            {
+            for (C_size_t i = 0; i < N - 1; i++) { // N-1 because output is not used here
                 pointers[i] += reducingStrides(i, (C_size_t) m);
             }
             ElemType val = TensorOpReduce<ElemType, N, M, m - 1>::Compute(pointers, op, reductionOp, reducingOpDims, reducingStrides);
-            Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
+            UpdateAggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
         return (ElemType) aggregate;
     }
@@ -452,8 +457,7 @@ struct TensorOpParallelReduce
         // map id (location on grid) to index[k]
         C_size_t stride = 1; // compute the stride. This seems expensive, but since we we only currently support M <= 2, this is just compile-time selection between 1 and reducingOpDims[0].
         #pragma unroll
-        for (int i = 0; i < m; i++)
-        {
+        for (int i = 0; i < m; i++) {
             stride *= reducingOpDims[(C_size_t) i];
         }
 
@@ -463,20 +467,16 @@ struct TensorOpParallelReduce
         // id = id % stride;             // remaining dimensions inside this. For m=0 this value is ignored and hence not even computed.
         id = id - stride*index;             // remaining dimensions inside this. For m=0 this value is ignored and hence not even computed.
 #else
-        if (m == 0)
-        {
-            index = id;
-            id = 0;
-        }
-        else
-        {
-            reducingOpDimDivmod[m].divmod(id, index, id);
+        if (m == 0) {
+          index = id;
+          id = 0;
+        } else {
+          reducingOpDimDivmod[m].divmod(id, index, id);
         }
 #endif
         // apply this index to the pointers
         #pragma unroll
-        for (C_size_t i = 0; i < N - 1; i++)
-        {
+        for (C_size_t i = 0; i < N - 1; i++) {
             pointers[i] += index * reducingStrides(i, (C_size_t) m); // now this dimension is taken care of
         }
         return TensorOpParallelReduce<ElemType, N, M, m - 1>::Compute(id, pointers, op, reducingOpDims, reducingStrides, reducingOpDimDivmod);
@@ -549,8 +549,7 @@ struct TensorOpElement<ElemType, N, M, K, parallelReduce, /*k=*/0>
         C_size_t index = id; // this dimension
         // apply this index to the pointers
         #pragma unroll
-        for (C_size_t i = 0; i < N; i++)
-        {
+        for (C_size_t i = 0; i < N; i++) {
             pointers[i] += index * regularStrides(i, 0); // now this dimension is taken care of
         }
         // process the previous index
@@ -615,23 +614,23 @@ struct TensorOpElement<ElemType, N, M, K, /*parallelReduce=*/true, /*k=*/-1>
         CUDA_LONG reductionEnd = min(reductionBegin + reductionChunkSize, reductionDim);
 
         // compute the operation for this input coordinate
-        ReduceElemType aggregate = AggregateNeutralValue<ReduceElemType>(reductionOp);
+        ReduceElemType aggregate = NeutralValue<ReduceElemType>(reductionOp);
 
         for (CUDA_LONG redId = reductionBegin + tid; redId < reductionEnd; redId += tids)
         {
             auto val = TensorOpParallelReduce<ElemType, N, M, M - 1>::Compute(redId, pointers, op, reducingOpDims, reducingStrides, reducingOpDimDivmod);
-            Aggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
+            UpdateAggregate<ReduceElemType, ElemType>(aggregate, val, reductionOp);
         }
 
         // reduce    --cf https://docs.nvidia.com/cuda/samples/6_Advanced/reduction/doc/reduction.pdf
-        __shared__ ReduceElemType volatile accumulators[GridDim::maxThreadsPerBlock /*tids == blockDim.x, as specified at launch*/];
+        __shared__ ReduceElemType volatile accumulators[GridDim::maxThreadsPerBlock /*tids*/];
         accumulators[tid] = aggregate;
         __syncthreads();
         static_assert(GridDim::maxThreadsPerBlock <= 1024, "GridDim::maxThreadsPerBlock too large, need to add manually unrolled steps");
         for (CUDA_LONG i = 512; i; i >>= 1)
         {
             if (tid < i && tid + i < tids)
-                Aggregate<volatile ReduceElemType, volatile ReduceElemType>(accumulators[tid], accumulators[tid + i], reductionOp);
+                UpdateAggregate<volatile ReduceElemType, volatile ReduceElemType>(accumulators[tid], accumulators[tid + i], reductionOp);
 
             if (0 + i < tids)
                 __syncthreads(); // sync if condition true for at least one thread
@@ -826,9 +825,10 @@ __global__ void _launchTensorOpWithReduction(ElemType beta, FixedArray<ElemType*
     CUDA_LONG reductionBlock = blockIdx.z;                         // reduction-block index  --larger reductions are split into blocks
     pointers[pointers.size() - 1] += numElements * reductionBlock; // the output tensor is dense (no gaps); and there is one copy for each reduction block (those get further reduced into one later)
 #endif
-    if (id < numElements)                               // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
+    if (id < numElements) {                             // note: we have __syncthread() calls but only entire blocks in sync, so this is OK
         TensorOpElement<ElemType, N, M, K, true, K - 1>::Compute(id, beta, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, reducingOpDims, reducingStrides, reductionBegin, reductionChunkSize,
                                                                  regularOpStrideDivmod, reducingOpDimDivmod);
+    }
 }
 
 // helper function to provide a reduction buffer
@@ -883,10 +883,9 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
     // output divisors
     SmallVector<fast_divmod> reducingOpDimDivmodVector;
     C_size_t stride = 1;
-    for (C_size_t k = 0; k < reducingOpDimVector.size(); ++k)
-    {
-        reducingOpDimDivmodVector.push_back(fast_divmod(stride));
-        stride *= (C_size_t)reducingOpDimVector[k];
+    for (C_size_t k = 0; k < reducingOpDimVector.size(); ++k) {
+      reducingOpDimDivmodVector.push_back(fast_divmod(stride));
+      stride *= (C_size_t) reducingOpDimVector[k];
     }
 
     FixedArray<C_unsigned_int,    K> regularOpStrides(regularOpStrideVector);
@@ -1052,6 +1051,7 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
                 beta, pointerVector2, alpha, ElementWiseOperator::opCopy, reductionOp,
                 regularOpDims, regularStrideVectors2,
                 reducingOpDimVector2, reducingStrideVectors2);
+
             // (note: ^^this will have a nested syncGuard, which is fine)
 
 #else
@@ -1089,10 +1089,10 @@ static void LaunchTensorOpWithReduction(ElemType beta, array<ElemType*, N> point
             // We need more than one chunk, we will use atomicAdd().
             // First reset/pre-multiply input; then do the remaining chunks using atomicAdd().
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(beta, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, 0, reductionChunkSize,
-                                                                   regularOpStrideDivmod, reducingOpDimDivmod);
+            regularOpStrideDivmod, reducingOpDimDivmod);
             // We will leave it like this for a while, but eventually need to revisit using temporary memory.
             _launchTensorOpWithReduction<ElemType, N, M, K><<<dim3(numBlocksX, numBlocksY, numBlocksZ - 1), numThreadsX, numThreadsX * sizeof(ReduceElemType), t_stream>>>(/*beta=*/1, pointers, alpha, op, reductionOp, regularOpStrides, regularStrides, NN, reducingOpDims, reducingStrides, reductionChunkSize, reductionChunkSize,
-                                                                   regularOpStrideDivmod, reducingOpDimDivmod);
+            regularOpStrideDivmod, reducingOpDimDivmod);
         }
 #endif
     }

@@ -26,8 +26,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
     std::shared_ptr<ComputationNetwork> net,
     std::set<std::shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
     std::shared_ptr<DistGradHeader> gradHeader,
-    std::shared_ptr<MPIWrapper> mpi,
-    size_t packThresholdSizeInBytes)
+    std::shared_ptr<MPIWrapper> mpi)
 {
     // Accumulator stores mean value and number of samples. Aggregation performs simple summation of values,
     // so we transfer sum instead of mean, and calculate mean after aggregation is finished.
@@ -59,8 +58,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
             mpi,
             false /*useAsyncAggregation*/,
             net->GetDeviceId(),
-            0 /*syncStatsTrace*/,
-            packThresholdSizeInBytes);
+            0 /*syncStatsTrace*/);
 
     // Prepare header.
     const size_t c_evalNodes = 1;
@@ -129,11 +127,10 @@ void AggregateAccumulatorValuesAndUpdateEpochEvaluation(
     std::vector<EpochCriterion>& epochEvalErrors,
     const std::vector<ComputationNodeBasePtr>& evaluationNodes,
     CriterionAccumulator<ElemType> localEpochEvalErrors,
-    std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult,
-    size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES)
+    std::function<bool(ComputationNodeBasePtr)> containsAccumulatedResult)
 {
     // Each node contains accumulated values for part of the data set, we have to aggregate accumulated values.
-    AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(net, evalNodesWhichAccumulateResult, gradHeader, mpi, packThresholdSizeInBytes);
+    AggregateAccumulatorValuesAndUpdateEvaluation<ElemType>(net, evalNodesWhichAccumulateResult, gradHeader, mpi);
 
     // After values of accumulators have been aggregated accross nodes, we have to update evaluation results for
     // evaluation nodes that accumulate results.

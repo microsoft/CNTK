@@ -132,28 +132,28 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         }
     }
 }
-/*static*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr)
-{
-    if (node->IsOutOfDateWrtInputs())
-    {
-        node->BeginForwardProp();
-        node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
-        node->EndForwardProp();
-
-        node->BumpEvalTimeStamp();
-
-        // Extreme Tracing, part 1/4
-        if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
-            DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
-    }
-}
-
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
 {
     for (auto& node : m_nestedNodes)
-        ForwardProp(node, fr);
-}
+    {
+#if 0
+        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
+            dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
+#endif
+        if (node->IsOutOfDateWrtInputs())
+        {
+            node->BeginForwardProp();
+            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+            node->EndForwardProp();
 
+            node->BumpEvalTimeStamp();
+
+            // Extreme Tracing, part 1/4
+            if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
+                DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
+        }
+    }
+}
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
 {
     childrenInThisLoop, childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
@@ -1015,18 +1015,26 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
 
     bool performingBackPropagation = (trainRootNode != nullptr);
 
+    // Construct the composite forward prop eval order by enumerating the
+    // nodes corresponding to each of our roots in global eval oder
+    forwardPropRoots = SortByGlobalEvalOrder(forwardPropRoots);
+
     // Create a composite Eval order with the specified nodes as roots
     // For each node determine parents and whether the output of the
     // node is needed during back propagation
     std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
     std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
+    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder;
     std::unordered_set<ComputationNodeBasePtr> uniqueForwardPropEvalNodes;
     for (auto& rootNode : forwardPropRoots)
     {
         for (const auto& node : GetEvalOrder(rootNode))
         {
             if (uniqueForwardPropEvalNodes.find(node) == uniqueForwardPropEvalNodes.end())
+            {
                 uniqueForwardPropEvalNodes.insert(node);
+                compositeForwardPropEvalOrder.push_back(node);
+            }
 
             for (int i = 0; i < node->GetNumInputs(); i++)
             {
@@ -1064,29 +1072,33 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
-    m_matrixPool.ResetStepCounter();
+    m_matrixPool.ResetStepCounter(); 
+    set<ComputationNodeBasePtr> completedEvaluate;
+    for (auto& nodeIter : compositeForwardPropEvalOrder)
+    {
+        nodeIter->SetOutputNeededDuringBackprop(outputValueNeededDuringBackProp[nodeIter]);
 
-    TravserseInSortedGlobalEvalOrder(forwardPropRoots, [&outputValueNeededDuringBackProp, &parentsMap, this](const ComputationNodeBasePtr& node) {
-        if (node->Is<SEQTraversalFlowControlNode>())
+        if (nodeIter->IsPartOfLoop())
         {
-            auto seqTraversalFlowControlNode = node->As<SEQTraversalFlowControlNode>();
-            for (auto& loopNode : seqTraversalFlowControlNode->m_nestedNodes)
-                loopNode->SetOutputNeededDuringBackprop(outputValueNeededDuringBackProp[loopNode]);
+            // TODO: use FormNestedNetwork() here to avoid completedEvaluate[] check
+            shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, nodeIter);
+            assert(recInfo != nullptr);
+            if (completedEvaluate.insert(recInfo).second)
+            {
+                recInfo->RequestMatricesBeforeForwardProp(m_matrixPool);
 
-            seqTraversalFlowControlNode->RequestMatricesBeforeForwardProp(m_matrixPool);
-
-            for (auto& loopNode : seqTraversalFlowControlNode->m_nestedNodes)
-                ReleaseMatricesAfterEvalForChildren(loopNode, parentsMap);
+                for (auto& nodeLoopIter : recInfo->m_nestedNodes)
+                    ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentsMap);
+            }
         }
         else
         {
-            node->SetOutputNeededDuringBackprop(outputValueNeededDuringBackProp[node]);
-            node->RequestMatricesBeforeForwardProp(m_matrixPool);
+            nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
             // we only release matrices for the children since the root node's information will be used
             // and should not be shared with others
-            ReleaseMatricesAfterEvalForChildren(node, parentsMap);
+            ReleaseMatricesAfterEvalForChildren(nodeIter, parentsMap);
         }
-    });
+    }
 
     if (trainRootNode != nullptr)
     {

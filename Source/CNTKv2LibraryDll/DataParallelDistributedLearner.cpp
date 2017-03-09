@@ -118,7 +118,7 @@ namespace CNTK
         : DistributedLearnerBase(communicator, learner, distributedAfterSamples)
     {
         if (useAsyncBufferedParameterUpdate)
-            LogicError("Asynchronous parameter update is not yet supported for the DataParallelDistributedLearner.");
+            LogicError("Asynchronous parameter update is not yet supported.");
     }
 
     bool DataParallelDistributedLearner::Update(std::unordered_map<Parameter, NDArrayViewPtr>& gradientValues, MinibatchInfo& info)

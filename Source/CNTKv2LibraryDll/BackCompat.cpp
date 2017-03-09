@@ -22,7 +22,6 @@
 #include "RNNNodes.h"
 #include "PreComputeNodes.h"
 #include "DeprecatedNodes.h"
-#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -115,7 +114,7 @@ namespace CNTK
                     }
 
                     // TODO: Allow creating inputs without a dynamic axis
-                    LogicError("LoadLegacyModel: Found InputNode '%S' with no dynamic axes which is currently unsupported.", node->NodeName().c_str());
+                    LogicError("Found InputNode with no dynamic axes which is currently unsupported");
                 }
 
                 if (node->Is<LearnableParameter<ElementType>>())
@@ -124,7 +123,7 @@ namespace CNTK
                     return CreateParameterOrConstantFromNodeValue<ElementType>(node, isConstant);
                 }
 
-                LogicError("LoadLegacyModel: Unsupported legacy CNTK node named '%S'.", node->NodeName().c_str());
+                LogicError("CNTK::LoadLegacyModel: Unsupported legacy CNTK node named '%S'", node->NodeName().c_str());
                 return Variable();// make compiler happy.
             }
 
@@ -332,8 +331,7 @@ namespace CNTK
                         NDShape actualConvolutionMapShape = kernelShape.AppendShape({ convolutionMapVar.Shape()[0] });
 
                         if (actualConvolutionMapShape.TotalSize() != convolutionMapVar.Shape().TotalSize())
-                            LogicError("The convolution map tensor's shape '%S' size does not match the size (%d) of the legacy 2D convolution map shape '%S'.",
-                                        actualConvolutionMapShape.AsString().c_str(), (int)convolutionMapVar.Shape().TotalSize(), convolutionMapVar.Shape().AsString().c_str());
+                            LogicError("The convolutionMap tensor shape's (%S) size does not match the size (%d) of the legacy 2D convolution map!", AsStringForErrorReporting(actualConvolutionMapShape).c_str(), (int)convolutionMapVar.Shape().TotalSize());
 
                         auto oldConvolutionMapValue = convolutionMapVar.IsConstant() ? Constant(convolutionMapVar).Value() : Parameter(convolutionMapVar).Value();
                         auto oldConvolutionMapMatrix = oldConvolutionMapValue->GetMatrix<ElementType>();
@@ -351,7 +349,6 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(convolutionNode->LowerPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(convolutionNode->UpperPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameTranspose] = convolutionNode->Transpose();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameOutputShape] = AsNDShape(convolutionNode->OutputShape());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = convolutionNode->MaxTempMemSizeInSamples();
 
                     opType = PrimitiveOpType::Convolution;
@@ -384,7 +381,6 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(poolingNode->AutoPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameCeilOutDim] = poolingNode->CeilOutDim();
 
                     opType = PrimitiveOpType::Pooling;
                 }
@@ -460,23 +456,11 @@ namespace CNTK
 
                     opType = PrimitiveOpType::EditDistanceError;
                 }
-                else if (node->OperationName() == OperationNameOf(ForwardBackwardNode))
-                {
-                    auto edNode = node->As<ForwardBackwardNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameDelayConstraint] = edNode->DelayConstraint();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBlankTokenId] = edNode->BlankTokenId();
-
-                    opType = PrimitiveOpType::ForwardBackward;
-                }
-                else if (node->OperationName() == OperationNameOf(CosDistanceWithNegativeSamplesNode))
-                {
-                    opType = PrimitiveOpType::CosDistanceWithNegativeSamples;
-                }
                 else if ((node->OperationName() == OperationNameOf(MeanNode)) || (node->OperationName() == OperationNameOf(InvStdDevNode)))
                 {
                     auto precomputeNode = node->As<MeanInvStdDevNodeBase<ElementType>>();
                     if (!precomputeNode->HasComputed())
-                        InvalidArgument("Cannot load a CNTK legacy V1 model containing a Mean/InvStdDev node '%S' which is not precomputed.", node->NodeName().c_str());
+                        InvalidArgument("Loading a CNTK legacy V1 model containing a Mean/InvStdDev precompute node, whose computation is unfinished, is not supported!");
 
                     return CreateParameterOrConstantFromNodeValue<ElementType>(node, /* isConstant =*/ true);
                 }
@@ -491,9 +475,7 @@ namespace CNTK
                     return PerDimMeanVarianceNormalize(inputVars[0], meanValue, invStdDevValue, name);
                 }
                 else
-                    InvalidArgument("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model.\n"
-                                    "This is likely a deprecated operation; loading Brainscript/NDL models that contain deprecated operations, is not supported in Python/C++ API.\n"
-                                    "Please refer to CNTK documentation and edit/modify your Brainscript model/script to replace the deprecated operation with a supported operation.\n" , node->OperationName().c_str());
+                    LogicError("Unsupported ComputationNode with OperationName='%S' found when loading legacy CNTK model", node->OperationName().c_str());
 
                 if (node->Is<RngUser>())
                 {
@@ -535,12 +517,7 @@ namespace CNTK
                 NOT_IMPLEMENTED;
             }
 
-            return ConvertFromLegacyModel(net);
-        }
-
-        FunctionPtr ConvertFromLegacyModel(const ComputationNetworkPtr& net)
-        {
-            // Traverse the model and construct the Function graph
+            // Now traverse the model and construct the Function graph
             std::unordered_map<ComputationNodeBasePtr, Variable> nodeToVariableMap;
             std::unordered_map<Variable, Variable> placeholderReplacements;
             std::vector<Variable> rootVariables;
@@ -562,7 +539,7 @@ namespace CNTK
                     rootVariables.push_back(var.IsOutput() ? (Variable)var.Owner() : var);
                 }
                 else
-                    LogicError("ConvertFromLegacyModel(): computation node '%S' has invalid element type.", rootNode->NodeName().c_str());
+                    LogicError("LoadLegacyModel(): invalid computation node element type.");
             }
 
             auto rootComposite = Combine(rootVariables);
@@ -574,7 +551,7 @@ namespace CNTK
         {
             CompositeFunction* compositeFunction = dynamic_cast<CompositeFunction*>(rootFunction.get());
             if (compositeFunction == nullptr)
-                InvalidArgument("Primitive (i.e. non-composite) Function '%S' instance cannot be saved.", rootFunction->AsString().c_str());
+                InvalidArgument("Primitive (aka non-composite) Function instances cannot be saved");
 
             ComputationNetworkPtr computationNetwork;
             DataType dataType = rootFunction->Outputs()[0].GetDataType();
@@ -597,7 +574,7 @@ namespace CNTK
                 computationNetwork = compositeFunction->GetComputationNetwork<double>(device, {}, {}, {}, false);
                 break;
             default:
-                LogicError("SaveAsLegacyModel: Function '%S' has unknown DataType %s.", rootFunction->AsString().c_str(), DataTypeName(dataType));
+                LogicError("Unknown DataType %s", DataTypeName(dataType));
             }
 
             computationNetwork->Save(modelFile);
@@ -632,12 +609,18 @@ namespace CNTK
                     size_t elementSize;
                     fstream >> elementSize;
                     if (elementSize == sizeof(float))
+                    {
                         return LegacyModelDataType::Float;
+                    }
                     else if (elementSize == sizeof(double))
+                    {
                         return LegacyModelDataType::Double;
+                    }
                     else
+                    {
                         RuntimeError("DetectLegacyModelDataType(): invalid element size %zu.", elementSize);
                     }
+                }
                 fgetc(fstream); // consume 'B' character to avoid an infinite cycle.
             }
         }

@@ -188,5 +188,5 @@ def test_sweep_based_schedule(tmpdir, device_id):
 
     # fetch minibatch (multiple sweeps)
     data = mbs.next_minibatch(30, input_map=input_map)
-    trainer.train_minibatch(data, outputs=[z.output])
+    trainer.train_minibatch(data, [z.output])
     assert learner.learning_rate() == 0.0

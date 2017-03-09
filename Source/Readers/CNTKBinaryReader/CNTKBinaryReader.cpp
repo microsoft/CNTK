@@ -35,9 +35,9 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
             log += " | keeping data in memory";
         }
 
-        size_t window = configHelper.GetRandomizationWindow();
-        if (window > 0)
+        if (configHelper.GetRandomize())
         {
+            size_t window = configHelper.GetRandomizationWindow();
             // Verbosity is a general config parameter, not specific to the binary format reader.
             log += " | randomizing with window: " + (int)window;
             int verbosity = config(L"verbosity", 0);
@@ -46,9 +46,8 @@ CNTKBinaryReader::CNTKBinaryReader(const ConfigParameters& config)
                 window,  /* randomizationRangeInSamples */
                 m_deserializer, /* deserializer */
                 true, /* shouldPrefetch */
-                false, /* multithreadedGetNextSequences */
-                 0, /*maxNumberOfInvalidSequences */
-                configHelper.UseSampleBasedRandomizationWindow() /*sampleBasedRandomizationWindow */);
+                false /* multithreadedGetNextSequences */
+                );
         }
         else
         {

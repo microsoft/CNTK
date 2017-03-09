@@ -75,9 +75,6 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 
     size_t dimension = config.GetLabelDimension();
 
-    m_withPhoneBoundaries = streamConfig(L"phoneBoundaries", false);
-    if (m_frameMode && m_withPhoneBoundaries)
-        LogicError("frameMode and phoneBoundaries are not supposed to be used together.");
     wstring labelMappingFile = streamConfig(L"labelMappingFile", L"");
     InitializeChunkDescriptions(corpus, config, labelMappingFile, dimension);
     InitializeStream(inputName, dimension);
@@ -104,8 +101,6 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 
     std::wstring precision = labelConfig(L"precision", L"float");;
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
-
-    m_withPhoneBoundaries = labelConfig(L"phoneBoundaries", "false");
 
     wstring labelMappingFile = labelConfig(L"labelMappingFile", L"");
     InitializeChunkDescriptions(corpus, config, labelMappingFile, dimension);
@@ -152,11 +147,8 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
         description.m_sequenceStart = m_classIds.size();
         uint32_t numberOfFrames = 0;
 
-        vector<size_t> sequencePhoneBoundaries(m_withPhoneBoundaries ? utterance.size() : 0); // Phone boundaries of given sequence
         foreach_index(i, utterance)
         {
-            if (m_withPhoneBoundaries)
-                sequencePhoneBoundaries[i] = utterance[i].firstframe;
             const auto& timespan = utterance[i];
             if ((i == 0 && timespan.firstframe != 0) ||
                 (i > 0 && utterance[i - 1].firstframe + utterance[i - 1].numframes != timespan.firstframe))
@@ -188,9 +180,6 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
             }
         }
 
-        if (m_withPhoneBoundaries)
-            m_phoneBoundaries.push_back(sequencePhoneBoundaries);
-
         description.m_numberOfSamples = numberOfFrames;
         m_utteranceIndex.push_back(totalFrames);
         totalFrames += numberOfFrames;
@@ -212,31 +201,28 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
             m_totalNumberOfFrames,
             numClasses);
 
-    if (m_frameMode)
+    // Initializing array of labels.
+    m_categories.reserve(dimension);
+    m_categoryIndices.reserve(dimension);
+    for (size_t i = 0; i < dimension; ++i)
     {
-        // Initializing array of labels.
-        m_categories.reserve(dimension);
-        m_categoryIndices.reserve(dimension);
-        for (size_t i = 0; i < dimension; ++i)
+        auto category = make_shared<CategorySequenceData>();
+        m_categoryIndices.push_back(static_cast<IndexType>(i));
+        category->m_indices = &(m_categoryIndices[i]);
+        category->m_nnzCounts.resize(1);
+        category->m_nnzCounts[0] = 1;
+        category->m_totalNnzCount = 1;
+        category->m_numberOfSamples = 1;
+        if (m_elementType == ElementType::tfloat)
         {
-            auto category = make_shared<CategorySequenceData>();
-            m_categoryIndices.push_back(static_cast<IndexType>(i));
-            category->m_indices = &(m_categoryIndices[i]);
-            category->m_nnzCounts.resize(1);
-            category->m_nnzCounts[0] = 1;
-            category->m_totalNnzCount = 1;
-            category->m_numberOfSamples = 1;
-            if (m_elementType == ElementType::tfloat)
-            {
-                category->m_data = &s_oneFloat;
-            }
-            else
-            {
-                assert(m_elementType == ElementType::tdouble);
-                category->m_data = &s_oneDouble;
-            }
-            m_categories.push_back(category);
+            category->m_data = &s_oneFloat;
         }
+        else
+        {
+            assert(m_elementType == ElementType::tdouble);
+            category->m_data = &s_oneDouble;
+        }
+        m_categories.push_back(category);
     }
 }
 
@@ -301,13 +287,6 @@ struct MLFSequenceData : SparseSequenceData
         m_indices = m_indicesPtr.get();
     }
 
-    MLFSequenceData(size_t numberOfSamples, const vector<size_t>& phoneBoundaries) :
-        MLFSequenceData(numberOfSamples)
-    {
-        for (auto boundary : phoneBoundaries)
-            m_values[boundary] = PHONE_BOUNDARY;
-    }
-
     const void* GetDataBuffer() override
     {
         return m_values.data();
@@ -330,18 +309,12 @@ void MLFDataDeserializer::GetSequenceById(size_t sequenceId, vector<SequenceData
         SparseSequenceDataPtr s;
         if (m_elementType == ElementType::tfloat)
         {
-            if (m_withPhoneBoundaries)
-                s = make_shared<MLFSequenceData<float>>(numberOfSamples, m_phoneBoundaries.at(sequenceId));
-            else
-                s = make_shared<MLFSequenceData<float>>(numberOfSamples);
+            s = make_shared<MLFSequenceData<float>>(numberOfSamples);
         }
         else
         {
             assert(m_elementType == ElementType::tdouble);
-            if (m_withPhoneBoundaries)
-                s = make_shared<MLFSequenceData<double>>(numberOfSamples, m_phoneBoundaries.at(sequenceId));
-            else
-                s = make_shared<MLFSequenceData<double>>(numberOfSamples);
+            s = make_shared<MLFSequenceData<double>>(numberOfSamples);
         }
 
         for (size_t i = 0; i < numberOfSamples; i++)

@@ -7,7 +7,6 @@
 from __future__ import print_function
 import os, sys
 import numpy as np
-import shutil
 from cntk import DeviceDescriptor
 
 TOLERANCE_ABSOLUTE = 1E-1  # TODO: Once set_fixed_random_seed(1) is honored, this must be tightened a lot.
@@ -19,7 +18,7 @@ from cntk.ops import splice
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "LanguageUnderstanding", "ATIS", "Python"))
 sys.path.append("../LanguageUnderstanding/ATIS/Python")
-from LanguageUnderstanding import data_dir, create_reader, create_model_function, train, evaluate, emb_dim, hidden_dim, num_labels
+from LanguageUnderstanding import data_dir, create_reader, create_model, train, emb_dim, hidden_dim, label_dim
 
 def run_model_test(what, model, expected_train):
     print("--- {} ---".format(what))
@@ -33,11 +32,12 @@ def create_test_model():
     # this selects additional nodes and alternative paths
     with default_options(enable_self_stabilization=True, use_peepholes=True):
         return Sequential([
+            Stabilizer(),
             Embedding(emb_dim),
             BatchNormalization(),
             Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
             BatchNormalization(map_rank=1),
-            Dense(num_labels)
+            Dense(label_dim)
         ])
 
 def with_lookahead():
@@ -91,7 +91,7 @@ def test_language_understanding(device_id):
         #        BiRecurrence(LSTM(hidden_dim)),
         #        BatchNormalization(),
         #        select_last,  # fails here with an axis problem
-        #        Dense(num_labels)
+        #        Dense(label_dim)
         #    ]), [0.084, 0.407364])
 
 
@@ -102,7 +102,7 @@ def test_language_understanding(device_id):
                 BatchNormalization(),
                 BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
                 BatchNormalization(),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.0579573500457558, 0.3214986774820327])
 
         # replace lookahead by bidirectional model
@@ -114,7 +114,7 @@ def test_language_understanding(device_id):
                 BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim), test_dual=True),
                 #BNBiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim), test_dual=False),
                 BatchNormalization(normalization_time_constant=-1),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.0579573500457558, 0.3214986774820327])
             # values with normalization_time_constant=-1 and double precision:
             # [0.0583178503091983, 0.3199431143304898]
@@ -157,7 +157,7 @@ def test_language_understanding(device_id):
                 BatchNormalization(normalization_time_constant=-1),
                 Recurrence(LSTM(hidden_dim), go_backwards=False),
                 BatchNormalization(normalization_time_constant=-1),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.05662627214996811, 0.2968516879905391])
             """
              Minibatch[   1-   1]: loss = 5.745576 * 67, metric = 100.0% * 67
@@ -199,7 +199,7 @@ def test_language_understanding(device_id):
                 BatchNormalization(),
                 Recurrence(LSTM(hidden_dim), go_backwards=False),
                 BatchNormalization(),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.05662627214996811, 0.2968516879905391])
 
         # plus lookahead
@@ -210,7 +210,7 @@ def test_language_understanding(device_id):
                 BatchNormalization(),
                 Recurrence(LSTM(hidden_dim), go_backwards=False),
                 BatchNormalization(),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.057901888466764646, 0.3044637752807047])
 
         # replace lookahead by bidirectional model
@@ -220,57 +220,43 @@ def test_language_understanding(device_id):
                 BatchNormalization(),
                 BiRecurrence(LSTM(hidden_dim), LSTM(hidden_dim)),
                 BatchNormalization(),
-                Dense(num_labels)
+                Dense(label_dim)
             ]), [0.0579573500457558, 0.3214986774820327])
 
         # test of a config like in the example but with additions to test many code paths
         with default_options(enable_self_stabilization=True, use_peepholes=True):
                 run_model_test('alternate paths', Sequential([
+                Stabilizer(),
                 Embedding(emb_dim),
                 BatchNormalization(),
                 Recurrence(LSTM(hidden_dim, cell_shape=hidden_dim+50), go_backwards=True),
                 BatchNormalization(map_rank=1),
-                    Dense(num_labels)
+                    Dense(label_dim)
                 ]), [0.08574360112032389, 0.41847621578367716])
 
     # test of the example itself
     # this emulates the main code in the PY file
-    if device_id >= 0: # sparse Adam currently does not run on CPU
-        reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
-        model = create_model_function()
-        #loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
-        #expected_avg = [0.15570838301766451, 0.7846451368305728]
-        #assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
-
-        # test
-        reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
-        evaluate(reader, model)
+    reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
+    model = create_model()
+    loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
+    expected_avg = [0.15570838301766451, 0.7846451368305728]
+    assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
 
     # test of a config like in the example but with additions to test many code paths
     if device_id >= 0: # BatchNormalization currently does not run on CPU
-        # Create a path to TensorBoard log directory and make sure it does not exist.
-        abs_path = os.path.dirname(os.path.abspath(__file__))
-        tb_logdir = os.path.join(abs_path, 'language_understanding_test_log')
-        if os.path.exists(tb_logdir):
-            shutil.rmtree(tb_logdir)
-
         reader = create_reader(data_dir + "/atis.train.ctf", is_training=True)
         model = create_test_model()
-        # TODO: update example to support tensorboard, or decide to not show it in all examples (in upcoming update of examples)
-        loss_avg, evaluation_avg = train(reader, model, max_epochs=1) #, tensorboard_logdir=tb_logdir)
+        loss_avg, evaluation_avg = train(reader, model, max_epochs=1)
         log_number_of_parameters(model, trace_level=1) ; print()
         expected_avg = [0.084, 0.407364]
         assert np.allclose([evaluation_avg, loss_avg], expected_avg, atol=TOLERANCE_ABSOLUTE)
-
-        # Ensure that the TensorBoard log directory was created and contains exactly one file with the expected name.
-        #tb_files = 0
-        #for tb_file in os.listdir(tb_logdir):
-        #    assert tb_file.startswith("events.out.tfevents")
-        #    tb_files += 1
-        #assert tb_files == 1
-
         # example also saves and loads; we skip it here, so that we get a test case of no save/load
         # (we save/load in all cases above)
+
+    # test
+    #reader = create_reader(data_dir + "/atis.test.ctf", is_training=False)
+    #evaluate(reader, model)
+    # BUGBUG: fails eval with "RuntimeError: __v2libuid__BatchNormalization456__v2libname__BatchNormalization11: inference mode is used, but nothing has been trained."
 
 if __name__=='__main__':
     test_language_understanding(0)

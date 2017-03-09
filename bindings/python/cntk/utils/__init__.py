@@ -19,13 +19,11 @@ from .progress_print import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
-
 def is_string(s):
     '''
     Tests whether ``s`` is a string in a way that works on Python 2 and 3.
     '''
     return isinstance(s, ("".__class__, u"".__class__))
-
 
 def sanitize_precision(precision):
     '''
@@ -89,14 +87,12 @@ def one_hot(batch, num_classes, dtype=None, device=None):
 
     if data_type != int:
         raise ValueError('supplied data to one_hot() must be of type integer'
-                         ' and not "%s" since it is index data.' % data_type)
+                ' and not "%s" since it is index data.'%data_type)
 
     if dtype in [np.float32, None]:
-        value = cntk_py.Value.create_one_hot_float(
-            num_classes, batch, device, False)
+        value = cntk_py.Value.create_one_hot_float(num_classes, batch, device, False)
     elif dtype == np.float64:
-        value = cntk_py.Value.create_one_hot_double(
-            num_classes, batch, device, False)
+        value = cntk_py.Value.create_one_hot_double(num_classes, batch, device, False)
     return value
 
 
@@ -143,7 +139,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     if isinstance(arg, list) and not arg:
         raise ValueError('input is empty')
 
-    if not isinstance(arg, np.ndarray) or arg.dtype != fallback_dtype:
+    if not isinstance(arg, np.ndarray) or arg.dtype!=fallback_dtype:
         arg = np.asarray(arg, dtype=fallback_dtype)
         if arg.shape == ():
             arg.shape = (1,)
@@ -174,7 +170,7 @@ def get_data_type(*args):
         args = [args]
 
     for arg in args:
-        if isinstance(arg, Variable) and arg.is_placeholder == True:
+        if isinstance(arg, Variable) and arg.is_placeholder==True:
             continue
         if isinstance(arg,
                       (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
@@ -232,7 +228,6 @@ def _is_dense(batch):
 
     return True
 
-
 @typemap
 def sanitize_batch(var, batch, seq_starts=None, device=None):
     '''
@@ -261,12 +256,12 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
     if isinstance(batch, cntk_py.Value):
         if seq_starts is not None:
             raise ValueError('for directly passed Value objects sequence '
-                             'starts cannot be used yet.')
+                    'starts cannot be used yet.')
         return batch
 
-    if seq_starts and len(var.dynamic_axes) <= 1:
+    if seq_starts and len(var.dynamic_axes)<=1:
         raise ValueError('you specified sequence begin markers, but your '
-                         'input_variable does not contain a sequence axis.')
+                'input_variable does not contain a sequence axis.')
 
     if device is None:
         device = use_default_device()
@@ -319,15 +314,12 @@ def sanitize_function(arg):
 
     if isinstance(arg, cntk_py.Variable):
         arg = combine([arg])
-        if len(arg.outputs) != 1: # BUGBUG: This seems to happen with BlockFunctions?
-            raise TypeError("casting Variable to Function unexpectedly returned a tuple")
 
     if not isinstance(arg, cntk_py.Function):
         raise TypeError("Object of type %s cannot be cast to Variable" %
-                        str(type(arg)))
+                str(type(arg)))
 
     return arg
-
 
 def sanitize_var_map(op_arguments, arguments, precision=None,
                      device=None, extract_values_from_minibatch_data=True):
@@ -408,6 +400,10 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
 
         arguments = { op_arguments[0]: arguments }
 
+    elif len(arguments) < len(op_arguments):
+        raise ValueError('your graph has %i inputs, but you specified data '
+                         'for %i' % (len(op_arguments), len(arguments)))
+
     if isinstance(arguments, dict):
         arg_names = [var.name for var in op_arguments]
         name_counter = collections.Counter(arg_names)
@@ -419,8 +415,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
             var_name_map = dict([(op_arguments[0].name, op_arguments[0])])
             arguments = dict([(op_arguments[0], arguments)])
         else:
-            raise ValueError(
-                'non-dict argument (%s) is not supported for nodes with more than one input' % type(arguments).__name__)
+            raise ValueError('non-dict argument (%s) is not supported for nodes with more than one input' % type(arguments).__name__)
 
     if precision is not None:
         precision = sanitize_precision(precision)
@@ -443,8 +438,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
         if isinstance(batch, tuple):
             if seq_starts is not None:
                 raise ValueError('you cannot provide sequence start '
-                                 'information globally and for individual batches '
-                                 'at the same time')
+                        'information globally and for individual batches '
+                        'at the same time')
 
             batch, seq_starts = batch
 
@@ -453,16 +448,15 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
                     raise ValueError(
                         'if you specify sequence begin markers, it needs to be a list')
 
-                sample_size = batch.shape[0] if hasattr(
-                    batch, 'shape') else len(batch)
+                sample_size = batch.shape[0] if hasattr(batch, 'shape') else len(batch)
 
                 if len(seq_starts) != sample_size:
                     raise ValueError('you have %i sequences, but only %i '
-                                     'sequence begin markers' % (sample_size, len(seq_starts)))
+                            'sequence begin markers' % (sample_size, len(seq_starts)))
 
         if seq_starts is not None and isinstance(batch, cntk_py.Value):
             raise ValueError('for directly passed Value objects sequence '
-                             'starts cannot be used yet.')
+                    'starts cannot be used yet.')
 
         if isinstance(batch, MinibatchData) and extract_values_from_minibatch_data:
             batch = batch.data
@@ -484,7 +478,6 @@ def _ones_like(batch, precision):
         batch (list of NumPy arrays): a list of sequences, which are NumPy arrays
     '''
     return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
-
 
 def sanitize_dtype_numpy(dtype):
     is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
@@ -535,7 +528,7 @@ def sanitize_axis(axis):
         return Axis.all_static_axes()
     elif isinstance(axis, numbers.Integral):
         return Axis(-axis - 1)
-    elif axis.is_static_axis and (axis.static_axis_index() != Axis.new_leading_axis().static_axis_index()):
+    elif axis.is_static_axis:
         return Axis(-1 - axis.static_axis_index())
     else:
         return axis
@@ -546,7 +539,7 @@ def sanitize_dynamic_axes(axes):
         axes = [axes]
     for ax in axes:
         if not isinstance(ax, cntk_py.Axis):
-            raise TypeError('type Axis expected, got %s instead' % type(ax))
+            raise TypeError('type Axis expected, got %s instead'%type(ax))
     axes = tuple(reversed(axes))
     return axes
 
@@ -577,8 +570,7 @@ def get_train_eval_criterion(trainer):
     return copy.copy(trainer.previous_minibatch_evaluation_average)
 
 
-# Obsolete: All usages should be replaced with the variable_value_to_seq
-# procedure below
+# Obsolete: All usages should be replaced with the variable_value_to_seq procedure below
 def value_to_seq(value):
     '''
     Convert a Value to a sequence of NumPy arrays that have their masked
@@ -662,7 +654,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
 
     if backward_pass:
         state, forward_output = op.forward(arguments, op.outputs, op.outputs,
-                                           device=device)
+            device=device)
 
         if expected_backward is None:
             expected_backward = arguments
@@ -674,145 +666,30 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         return forward_output, backward_output
 
     else:
-        state, forward_output = op.forward(
-            arguments, op.outputs, None, device=device)
+        state, forward_output = op.forward(arguments, op.outputs, None, device=device)
         return forward_output, None
 
-class Record(dict):
-    '''
-    Easy construction of a record (=immutable singleton class) from keyword arguments.
-    e.g. r = Record(x = 13, y = 42) ; x = r.x
-
-    Args:
-        kwargs: keyword arguments to turn into the record members
-
-    Returns:
-        A singleton class instance that has all passed kw args as immutable class members.
-    '''
-    def __init__(self, **args_dict):
-        super(Record, self).__init__(args_dict)
+# helper to convert a dictionary into a Python class, so that the dict looks like an immutable record
+# TODO: move to utils?
+class _ClassFromDict(dict):
+    def __init__(self, args_dict):
+        super(_ClassFromDict, self).__init__(args_dict)
+        # TODO: try to delete __setattr__ to make it immutable
         self.__dict__.update(args_dict)
+        #for key in args_dict:   # self.__dict__.update(args_dict)
+        #    self[key] = args_dict[key]
     def __getattr__(self, key):
         if key not in self:
             raise AttributeError("record has no attribute '{}'".format(key))
         return self[key]
-
     def __setattr__(self, key, value):
         raise AttributeError('record is immutable')
-    def updated_with(self, **kwargs):
-        '''
-        Create a new Record from an existing one with members modified or added.
-        e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
-    
-        Args:
-            kwargs: keyword arguments to turn into the record members
-    
-        Returns:
-            A singleton class instance that has all passed kw args as immutable class members.
-        '''
-        d = dict(**self)   # make it mutable
-        d.update(kwargs)   # merge the new items
-        return Record(**d) # lock it up again
 
-def get_python_function_arguments(f):
-    '''
-    Helper to get the parameter names and annotations of a Python function.
-    '''
-    # Note that we only return non-optional arguments (we assume that any optional args are not specified).
-    # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
-    import sys
-    if sys.version_info.major >= 3:
-        from inspect import getfullargspec
-    else:
-        def getfullargspec(f):
-            from inspect import getargspec
-            annotations = getattr(f, '__annotations__', {})
-            #f.__annotations__ = None  # needed when faking it under Python 3 for debugging purposes
-            a = getargspec(f)
-            #f.__annotations__ = annotations
-            return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations=annotations)
-    param_specs = getfullargspec(f)
-    annotations = param_specs.annotations
-    arg_names = param_specs.args
-    defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
-    if defaults:
-        arg_names = arg_names[:-len(defaults)] # we allow Function(functions with default arguments), but those args will always have default values since CNTK Functions do not support this
-    return (arg_names, annotations)
 
-def map_function_arguments(params, params_dict, *args, **kwargs):
-    '''
-    Helper to determine the argument map for use with various call operations.
-    Returns a dictionary from parameters to whatever arguments are passed.
-    Accepted are both positional and keyword arguments.
-    This mimics Python's argument interpretation, except that keyword arguments are not optional.
-    This does not require the arguments to be Variables or Functions. It is also called by train_minibatch() and @Signature.
-    '''
-    # start with positional arguments
-    arg_map = dict(zip(params, args))
-
-    # now look up keyword arguments
-    if len(kwargs) != 0:
-        for name, arg in kwargs.items():  # keyword args are matched by name
-            if name not in params_dict:
-                raise TypeError("got an unexpected keyword argument '%s'" % name)
-            param = params_dict[name]
-            if param in arg_map:
-                raise SyntaxError("got multiple values for argument '%s'" % name)
-            arg_map[param] = arg # add kw argument to dict
-    assert len(arg_map) == len(params)
-
-    return arg_map
-
-def Signature(*args, **kwargs):
-    '''
-    ``@Signature`` is a decorator to implement the function-argument annotations in Python-2.7,
-    as needed by the ``@Function`` decorator.
-    This is only needed when you have not yet migrated to Python 3.x.
-
-    Note: Although this is aimed at enabling ``@Function`` syntax with type annotations
-    in Python 2.7, ``@Signature`` is independent of CNTK and can be used for any argument annotation.
-
-    Args:
-        *args: types of arguments of the function that this decorator is applied to, in the same order.
-        **kwargs: types of arguments with optional names, e.g. `x=Tensor[42]`. Use this second form for
-           longer argument lists.
-
-    Example:
-     ``# Python 3:
-     @Function
-     def f(x: Tensor[42]):
-         return sigmoid(x)
-     # Python 2.7:
-     @Function
-     @Signature(Tensor[42])
-     def f(x):
-         return sigmoid(x)
-
-     # note that this:
-     @Function
-     @Signature(x:int)
-     def sqr(x):
-         return x*x
-     # is identical to:
-     def sqr(x):
-         return x*x
-     sqr.__annotations__ = {'x': int}``
-    '''
-    # this function returns another function which is the actual decorator applied to the def:
-    def add_annotations(f):
-        # prepare the signature
-        param_names, annotations = get_python_function_arguments(f)
-        if annotations:
-            raise ValueError('@Signature cannot be applied to functions that already have annotations')
-        annotations = {}
-        if len(args) + len(kwargs) != len(param_names):
-            raise TypeError("{} annotations provided for function to be decorated, but function has {} parameters".format(len(args) + len(kwargs), len(param_names)))
-        # implant anotations into f
-        params_dict = { name: name for name in param_names }
-        f.__annotations__ = map_function_arguments(param_names, params_dict, *args, **kwargs)
-        return f # and return the updated function
-    return add_annotations
-
+# easier construction of records
+# e.g. r = Record(x = 13, y = 42) ; x = r.x
+def Record(**kwargs):
+    return _ClassFromDict(kwargs)
 
 def _as_tuple(x):
     '''
@@ -829,7 +706,6 @@ def _as_tuple(x):
         x = (x,)
     return tuple(x)
 
-
 def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_profiler_buffer_size):
     '''
     Start profiler to prepare performance statistics gathering. Note that
@@ -844,13 +720,11 @@ def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_pr
     '''
     cntk_py.start_profiler(dir, sync_gpu, reserve_mem)
 
-
 def stop_profiler():
     '''
     Stop profiler from gathering performance statistics and flush them to file
     '''
     cntk_py.stop_profiler()
-
 
 def enable_profiler():
     '''
@@ -858,11 +732,8 @@ def enable_profiler():
     '''
     cntk_py.enable_profiler()
 
-
 def disable_profiler():
     '''
     Disable profiler from gathering data.
     '''
     cntk_py.disable_profiler()
-
-

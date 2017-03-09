@@ -278,7 +278,6 @@ void DropoutNode<ElemType>::Load(File& fstream, size_t modelVersion)
     RngUser::Load(fstream, modelVersion);
 }
 
-#if 0 // outdated version
 template<class ElemType>
 void BatchNormalizationNode<ElemType>::AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs)
 {
@@ -292,7 +291,6 @@ void BatchNormalizationNode<ElemType>::AttachInputs(const std::vector<Computatio
         m_pre19SampleCount = 0;
     }
 }
-#endif
 
 template class DropoutNode<float>;
 template class DropoutNode<double>;

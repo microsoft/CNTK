@@ -193,7 +193,7 @@ namespace CNTK
         for (auto& kv : *(other.m_dictionaryData))
         {
             if (Contains(kv.first))
-                InvalidArgument("Dictionary::Add: Already contains an entry with key %S being added from the 'other' dictionary", kv.first.c_str());
+                InvalidArgument("Dictionary::Add: This dictionary already contains an entry with key %S that is being attempted to add from the 'other' dictionary", kv.first.c_str());
 
             (*this)[kv.first] = kv.second;
         }
@@ -283,7 +283,7 @@ namespace CNTK
             const auto& pair = schedule[i];
             // Unit count for all, but last element must be non-zero.
             if (i < (schedule.size() - 1) && pair.first == 0)
-                RuntimeError("TrainingParameterSchedule::ConstructSchedule : unit count in the 'schedule' argument must not be 0.");
+                RuntimeError("TrainingParameterSchedule::ConstructSchedule : unit count in the 'schedule' argument cannot be 0.");
 
             unitCount += (pair.first != 0) ? pair.first : 1;
             m_schedule[unitSize * unitCount] = pair.second;
@@ -399,8 +399,9 @@ namespace CNTK
 #endif
         stream->exceptions(std::ios_base::badbit);
         if (stream->fail())
+        {
             RuntimeError("Cannot open file '%S' for %s.", filePath.c_str(), (readOnly ? "reading" : "writing"));
-
+        }
         return stream;
     }
 
@@ -420,8 +421,9 @@ namespace CNTK
         fd = open(ToString(filePath).c_str(), mode, 0644);
 #endif
         if (fd < 0)
+        {
             RuntimeError("Cannot open file '%S' for %s.", filePath.c_str(), (readOnly ? "reading" : "writing"));
-
+        }
         return fd;
     }
 
@@ -521,19 +523,18 @@ namespace CNTK
     /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value)
     {
         if (var.GetDataType() != value->GetDataType())
-            LogicError("The Variable '%S' DataType %s does not match the corresponding Value's DataType %s", var.AsString().c_str(), DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
+            LogicError("The Variable's DataType %s does not match the corresponding Value's DataType %s", DataTypeName(var.GetDataType()), DataTypeName(value->GetDataType()));
 
-        auto packedValue = dynamic_cast<PackedValue*>(value.get());
-        bool isPackedValue = (packedValue != nullptr) && packedValue->IsPacked();
+        bool isPackedValue = (dynamic_cast<PackedValue*>(value.get()) != nullptr);
 
         // TODO: Is supplying dense data for an Input variable tagged as sparse, a fatal error even for packed value objects?
         if (!isPackedValue)
         {
             if (IsSparseInput(var) && !value->IsSparse())
-                InvalidArgument("Dense input data supplied for sparse input Variable '%S'.", var.AsString().c_str());
+                InvalidArgument("Dense input data supplied for a sparse input Variable");
 
             if (IsSparseInput(var) && (value->GetStorageFormat() != StorageFormat::SparseCSC))
-                InvalidArgument("Sparse Input data for Variable '%S' must be in SparseCSC format.", var.AsString().c_str());
+                InvalidArgument("Sparse Input data must be in SparseCSC format");
         }
 
         auto varShape = var.Shape();
@@ -541,7 +542,7 @@ namespace CNTK
 
         auto numDynamicAxes = var.DynamicAxes().size();
         if (numDynamicAxes > 2)
-            LogicError("More than 2 dynamic axis for a variable '%S' is currently unsupported", var.AsString().c_str());
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
         // max(2, numDynamicAxes) is needed for some backcompat scenarios, where even when there are no sequence axes
         // the user can pass a value object with a dim of 1 for the sequence axis.
@@ -559,20 +560,17 @@ namespace CNTK
         }
 
         if (valueShape.Rank() < varShape.Rank())
-            InvalidArgument("Value's rank (%d) should be >= the Variable's rank (%d); Variable = '%S', Value shape = '%S'.", 
-                            (int)valueShape.Rank(), (int)varShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
+            InvalidArgument("Value's rank should be >= the Variable's rank");
 
         if (valueShape.Rank() > (varShape.Rank() + maxAddionalValueAxes))
-            InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
-                            (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
+            InvalidArgument("Value rank should be larger than the Variable%S rank at most by number of dynamic axes", ParanthesizedName(var.Name()).c_str());
 
         if (valueShape.SubShape(0, varShape.Rank()) != varShape)
         {
-            InvalidArgument("The %s dimensions of the Value shape '%S' do not match the Variable '%S' shape '%S'.",
+            InvalidArgument("The %s dimensions of the Value shape %S do not match the shape of the variable %S that it corresponds to!",
                 Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading",
-                valueShape.AsString().c_str(),
-                var.AsString().c_str(),
-                varShape.AsString().c_str());
+                AsStringForErrorReporting(valueShape).c_str(),
+                AsStringForErrorReporting(varShape).c_str());
         }
     }
 
@@ -582,11 +580,10 @@ namespace CNTK
         VerifyVariableValueCompatibility(var, value);
 
         if (AsDataType<ElementType>() != value->GetDataType())
-            LogicError("The specified ElementType %s does not match the Value object's DataType %s for Variable '%S'",
-                        typeid(ElementType).name(), DataTypeName(value->GetDataType()), var.AsString().c_str());
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(value->GetDataType()));
 
         auto packedValue = dynamic_cast<PackedValue*>(value.get());
-        if (packedValue && packedValue->IsPacked())
+        if (packedValue)
             return packedValue->PackedData<ElementType>();
 
         auto varShape = var.Shape();
@@ -594,9 +591,7 @@ namespace CNTK
         auto numDynamicAxes = var.DynamicAxes().size();
         auto mask = value->Mask();
         if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
-            InvalidArgument("Invalid Value object: sum of the rank (%d) of the mask and Variable rank (%d) does not equal "
-                            "the Value's rank (%d); Variable = '%S', Value shape = '%S'.",
-                            (int)mask->Shape().Rank(), (int)varShape.Rank(), (int)valueShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
+            InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
         
         if (numDynamicAxes == 0)
             return{ value->Data()->GetMatrix<ElementType>(), nullptr };
@@ -673,10 +668,10 @@ namespace CNTK
             }
 
             if (maxNumTimeSteps != layout->GetNumTimeSteps())
-                LogicError("The number (%d) of time steps in the packed MBLayout does not match the longest sequence's length (%d) in the Value object", (int)maxNumTimeSteps, (int)layout->GetNumTimeSteps());
+                LogicError("The number of time steps in the packed MBLayout does not match the longest sequence's length in the Value object");
 
             if (numSequences != layout->GetNumSequences())
-                LogicError("The number (%d) of sequences in the packed MBLayout does not match the sequence count (%d) in the Value object.", (int)numSequences, (int)layout->GetNumSequences());
+                LogicError("The number of sequences in the packed MBLayout does not match the sequence count in the Value object");
 
             // The data needs to be rearranged since CNTK requires sequences to be interleaved across timesteps
             // Now generate the gather indices
@@ -783,13 +778,13 @@ namespace CNTK
     ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const Variable& var, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
     {
         if (var.DynamicAxes().size() > 2)
-            LogicError("More than 2 dynamic axes for a variable '%S' is currently unsupported", var.AsString().c_str());
+            LogicError("More than 2 dynamic axis for a variable is currently unsupported");
 
         if (AsDataType<ElementType>() != var.GetDataType())
-            LogicError("The specified ElementType %s of Variable '%S' does not match the DataType %s", typeid(ElementType).name(), var.AsString().c_str(), DataTypeName(var.GetDataType()));
+            LogicError("The specified ElementType %s does not match the DataType %s", typeid(ElementType).name(), DataTypeName(var.GetDataType()));
 
         if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
-            LogicError("Unexpected matrix layout: The number (%d) of rows in the matrix does not match the sample size (%d) of the Variable '%S'", (int)matrix.GetNumRows(), (int)var.Shape().TotalSize(), var.AsString().c_str());
+            LogicError("Unexpected matrix layout: The number of rows in the matrix does not match the sample size of the Variable");
 
         return GetValueObjectFromCNTKImplMatrixAndMBLayout(var.Shape(), matrix, layout, readOnly);
     }
@@ -815,7 +810,7 @@ namespace CNTK
         m_isDistributed(false)
     {
         if (learners.empty())
-            InvalidArgument("These must be at least one learner.");
+            InvalidArgument("Please specify learners.");
 
         std::unordered_set<Parameter> learnerParameters;
         for (const auto& learner : m_learners)
@@ -828,7 +823,7 @@ namespace CNTK
             {
                 auto insertRetVal = learnerParameters.insert(parameter);
                 if (!insertRetVal.second)
-                    InvalidArgument("Parameter '%S' is covered by 2 different learners", parameter.AsString().c_str());
+                    InvalidArgument("Parameter named %S is covered by 2 different learners", parameter.Name().c_str());
             }
         }
 
@@ -841,7 +836,7 @@ namespace CNTK
         for (const auto& learner : m_learners)
         {
             if (dynamic_pointer_cast<DistributedLearner>(learner) == nullptr)
-                InvalidArgument("Cannot use a non-distributed learner for some parameters together with a distributed learner for other parameters, in a single Trainer.");
+                InvalidArgument("Distributed and local learners cannot be used side by side.");
         }
     }
 
@@ -852,7 +847,7 @@ namespace CNTK
         {
             auto value = allGradients.find(parameter);
             if (value == allGradients.end())
-                LogicError("Learner contains parameter '%S' that does not exists in the model.", parameter.AsString().c_str());
+                LogicError("Learner contains parameter that does not exists in the model");
 
             learnerGradients[parameter] = value->second;
         }
@@ -894,7 +889,7 @@ namespace CNTK
     void Learners::RestoreFromCheckpoint(const std::vector<DictionaryValue>& state)
     {
         if (m_learners.size() != state.size())
-            RuntimeError("RestoreFromCheckpoint: Number of learners (%zu) does not match learner count in the checkpoint (%zu).", m_learners.size(), state.size());
+            RuntimeError("Number of learners does not match the checkpoint state.");
 
         for (size_t i = 0; i < m_learners.size(); ++i)
         {
@@ -914,7 +909,9 @@ namespace CNTK
     void Accumulator::Update(const ValuePtr& delta, const DeviceDescriptor& device)
     {
         if (!delta)
-            InvalidArgument("Attempting to accumulate a null Value.");
+        {
+            InvalidArgument("Attempting to add a null value");
+        }
 
         bool copied = false;
         if (!Data() ||
@@ -930,12 +927,18 @@ namespace CNTK
         }
 
         if (delta->GetDataType() == DataType::Float)
+        {
             Data()->GetWritableTensorView<float>()->AddCopyOf(*delta->Data()->GetTensorView<float>());
+        }
         else
+        {
             Data()->GetWritableTensorView<double>()->AddCopyOf(*delta->Data()->GetTensorView<double>());
+        }
 
         if (copied && m_numUpdates != 0)
+        {
             RuntimeError("Accumulation values are created when accumulated num updates not zero");
+        }
 
         m_numUpdates++;
     }
@@ -963,9 +966,8 @@ namespace CNTK
         }
     }
 
-    std::wstring DynamicAxesAsString(const std::vector<Axis>& axes, bool rowMajor)
+    std::wstring DynamicAxesAsString(std::vector<Axis> da, bool rowMajor)
     {
-        auto da = axes;
         if (da.size() == 0)
             return L"[]";
         std::wstringstream wss;

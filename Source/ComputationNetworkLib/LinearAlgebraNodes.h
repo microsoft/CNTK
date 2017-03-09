@@ -6,7 +6,6 @@
 
 #include "Basics.h"
 #include "ComputationNode.h"
-#include "Constants.h"
 #include "Matrix.h"
 #include "TensorView.h"
 #include <unordered_set>
@@ -224,9 +223,9 @@ public:
     static void BackpropToImpl(classType& c, const size_t inputIndex, const FrameRange& fr, bool allowBroadcast)
     {
         size_t rank = c.DetermineElementwiseTensorRank();
-        auto gradient        =                        c.GradientTensorFor(rank, fr);
-        auto inputGradient   = c.Input(    inputIndex)->GradientTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
-        auto otherInputValue = c.Input(1 - inputIndex)->ValueTensorFor   (rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        auto gradient        =                     c.GradientTensorFor(rank, fr);
+        auto inputGradient   =     c.Input(inputIndex)->GradientTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
+        auto otherInputValue = c.Input(1 - inputIndex)->ValueTensorFor(rank, allowBroadcast ? fr.AllowBroadcast() : fr);
 
         // if reduction then mask the respective input(s) (zero out the gaps)
         if (c.Input(inputIndex)->ReducesInTimeWrt(c.shared_from_this()))
@@ -263,14 +262,7 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembers; using Base::OperationName;                                                                                                                           \
 
 public:
-    enum : int
-    {
-        ReduceAllStaticAxes            = -1, // the default, reduce all static axes of the right operand
-        ReduceAllStaticAndSequenceAxes = -2, // reduce all static axes and sequence axis. Currently only support cases like (m x k x s* x b*) x (k x s* x b*) -> (m x b*)
-    };
-
-public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = ReduceAllStaticAxes)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1)
         : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap), m_beingUnrolled(false)
     {
     }
@@ -303,7 +295,7 @@ public:
         if (modelVersion >= CNTK_MODEL_VERSION_12)
             fstream >> m_inferInputRankToMap;
         else
-            m_inferInputRankToMap = ReduceAllStaticAxes;
+            m_inferInputRankToMap = -1;
     }
 
 protected:
@@ -355,171 +347,14 @@ private:
         return input0_ok && input1_ok && outputScalar && notBothSparse && (m_transpose || !hasSparse);
     }
 
-    void RequestReduceSequenceAxisMatricesIfNeeded(MatrixPool& matrixPool)
-    {
-        if (!ReduceSequenceAxis()) return;
-
-        for (int i = 0; i < NumInputs; i++)
-        {
-            RequestMatrixFromPool(m_tempScatterIndices[i], matrixPool, InputRef(i).GetMBLayout()->GetNumCols(), true);
-            const auto& packedData = InputRef(i).Value();
-            if (packedData.GetMatrixType() == DENSE)
-                RequestMatrixFromPool(m_tempUnpackedValue[i], matrixPool, InputRef(i).GetSampleLayout().GetNumElements(), true);
-            else
-                m_tempUnpackedValue[i] = std::make_shared<Matrix<ElemType>>(packedData.GetNumRows(), packedData.GetNumCols(), packedData.GetDeviceId(), packedData.GetMatrixType(), packedData.GetFormat());
-        }
-    }
-
-    void ReleaseReduceSequenceAxisMatricesIfNeeded(MatrixPool& matrixPool)
-    {
-        if (!ReduceSequenceAxis()) return;
-
-        for (int i = 0; i < NumInputs; i++)
-        {
-            ReleaseMatrixToPool(m_tempScatterIndices[i], matrixPool);
-            if (InputRef(i).Value().GetMatrixType() == DENSE)
-                ReleaseMatrixToPool(m_tempUnpackedValue[i], matrixPool);
-            else
-                m_tempUnpackedValue[i].reset();
-        }
-    }
-
-    void ForwardProp_ReduceSequenceAxis()
-    {
-        // Input are stored as (m * k) x b*(batch axis) x s*(sequence axis) and k x b* x s*
-        // We unpack them to (m * k) x s* x b* and k x s* x b*
-        // Then perform b* matrix multiplies to get m x b* with both k and s* being resolved
-        auto inputMBLayout = InputRef(0).GetMBLayout();
-        auto numSequences = inputMBLayout->GetNumSequences(); // b*
-        auto maxNumTimeSteps = inputMBLayout->GetNumTimeSteps(); // s*
-        size_t m = InputRef(0).GetSampleLayout()[0];
-        size_t k = InputRef(1).GetSampleLayout()[0];
-
-        if (InputRef(1).Value().GetMatrixType() == SPARSE)
-            LogicError("Right operand cannot be sparse in times reduce sequence axis");
-
-        GetMBLayout()->InitAsFrameMode(numSequences);
-        UpdateFunctionValuesSize();
-
-        TensorView<ElemType> unpackedInput[NumInputs];
-        for (int i = 0; i < NumInputs; i++)
-        {
-            unpackedInput[i] = ComputationNode<ElemType>::Unpack(
-                InputRef(i).GetSampleLayout(),
-                InputRef(i).Value(),
-                inputMBLayout,
-                m_tempUnpackedValue[i],
-                m_tempScatterIndices[i],
-                /*batchMajor=*/ false,
-                /*maskGaps=*/ true);
-        }
-
-        // note the unpacked input is not the normal MBLayout (batchMajor) so do ColumnSlice directly
-        const Matrix<ElemType>& mat0 = unpackedInput[0].GetSOB();
-        const Matrix<ElemType>& mat1 = unpackedInput[1].GetSOB();
-
-        // unroll in the batch axis, we may use batched GEMM in future
-        for (int s = 0; s < numSequences; s++)
-        {
-            Matrix<ElemType> mat0Slice = mat0.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
-            mat0Slice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
-            Matrix<ElemType> mat1Slice = mat1.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
-            mat1Slice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
-
-            Matrix<ElemType> value = Value().ColumnSlice(s, 1);
-            Matrix<ElemType>::Multiply(mat0Slice, false, mat1Slice, false, value);
-        }
-    }
-
-    void BackpropTo_ReduceSequenceAxis(size_t inputIndex)
-    {
-        auto input0MBLayout = InputRef(0).GetMBLayout();
-        auto numSequences = input0MBLayout->GetNumSequences(); // b*
-        auto maxNumTimeSteps = input0MBLayout->GetNumTimeSteps(); // s*
-        size_t m = InputRef(0).GetSampleLayout()[0];
-        size_t k = InputRef(1).GetSampleLayout()[0];
-
-        TensorView<ElemType> unpackedInput[NumInputs];
-        bool unpacked[NumInputs];
-        for (int i = 0; i < NumInputs; i++)
-        {
-            unpackedInput[i] = ComputationNode<ElemType>::Unpack(
-                InputRef(i).GetSampleLayout(),
-                InputRef(i).Value(),
-                input0MBLayout, // the same for both operands
-                m_tempUnpackedValue[i],
-                m_tempScatterIndices[i],
-                /*batchMajor=*/ false,
-                /*maskGaps=*/ true);
-
-            unpacked[i] = ((input0MBLayout->GetNumTimeSteps() > 1) && (input0MBLayout->GetNumSequences() > 1));
-        }
-
-        const auto& unpackedInputValue = unpackedInput[1 - inputIndex].GetSOB();
-
-        ElemType beta = InputRef(inputIndex).ParentOverwritesGradient() ? (ElemType)0 : (ElemType)1;
-
-        // note the unpacked input is not the normal MBLayout (batchMajor), so do ColumnSlice directly
-        if (inputIndex == 0)
-        {
-            Matrix<ElemType> tempGradientUnpacked(m * k, maxNumTimeSteps * numSequences, InputRef(inputIndex).GetDeviceId());
-            Matrix<ElemType>& inputGradientUnpacked = unpacked[inputIndex] ? tempGradientUnpacked : InputRef(inputIndex).Gradient();
-
-            for (int s = 0; s < numSequences; s++)
-            {
-                Matrix<ElemType> inputGradientSlice = inputGradientUnpacked.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
-                inputGradientSlice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
-                Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
-                inputValueSlice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
-                Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? (ElemType)0 : (ElemType)1, inputGradientSlice);
-            }
-
-            if (unpacked[inputIndex])
-                InputRef(inputIndex).Gradient().DoGatherColumnsOf(beta, *m_tempScatterIndices[inputIndex], inputGradientUnpacked, (ElemType)1);
-        }
-        else
-        {
-            Matrix<ElemType> tempGradientUnpacked(k, maxNumTimeSteps * numSequences, InputRef(inputIndex).GetDeviceId());
-            Matrix<ElemType>& inputGradientUnpacked = unpacked[inputIndex] ? tempGradientUnpacked : InputRef(inputIndex).Gradient();
-
-            for (int s = 0; s < numSequences; s++)
-            {
-                Matrix<ElemType> inputGradientSlice = inputGradientUnpacked.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
-                inputGradientSlice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
-                Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
-                inputValueSlice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
-                Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? (ElemType)0 : (ElemType)1, inputGradientSlice);
-            }
-            
-            if (unpacked[inputIndex])
-                InputRef(inputIndex).Gradient().DoGatherColumnsOf(beta, *m_tempScatterIndices[inputIndex], inputGradientUnpacked, (ElemType)1);
-        }
-    }
-
 public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         // If argument A is minibatch data, then this must be performed frame-by-frame, sequence-by-sequence, one GEMM call each.
         // This will be inefficient. We hope this will be the baseline of a future, more efficient TensorView-based implementation.
-        auto inputMBLayout = InputRef(0).GetMBLayout();
-        if (!fr.IsOneColumnWrt(inputMBLayout))
+        if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
-            if (ReduceSequenceAxis())
-            {
-                // only works in PAR mode
-                if (!fr.IsAllFrames())
-                    RuntimeError("%ls %ls operation can perform sequence axis reduction only for all frames.", NodeName().c_str(), OperationName().c_str());
-
-                if (inputMBLayout->HasSequenceBeyondBegin() || inputMBLayout->HasSequenceBeyondEnd())
-                    RuntimeError("%ls %ls operation cannot perform sequence axis reduction for truncated sequence.", NodeName().c_str(), OperationName().c_str());
-
-                ForwardProp_ReduceSequenceAxis();
-                return;
-            }
-
-            // speed up using ElementTimes or InnerProduct to avoid unroll if possible
+            // speed up using ElementTimes to avoid unroll if possible
             bool hasSparse;
             if (IsReduceableDotProduct(fr, hasSparse))
             {
@@ -533,7 +368,6 @@ public:
                         Matrix<ElemType>::InnerProduct(input0, input1, value, true/*isColWise*/);
                     else
                         Matrix<ElemType>::InnerProduct(input1, input0, value, true/*isColWise*/);
-                    // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
                 }
                 else
                 {
@@ -543,11 +377,6 @@ public:
             }
 
             // recursively call ourselves for each individual time and sequence
-
-            // note this is not performant, warn user about the slow path being used
-            if (Base::HasEnvironmentPtr() && Base::Environment().traceLevel > 0)
-                std::call_once(m_unrollWarningOnceFlag, [this]{ fprintf(stderr, "WARNING: %ls %ls operation: being unrolled, execution may be slow\n", NodeName().c_str(), OperationName().c_str()); });
-
             auto timeRange     = fr.GetTimeRange();
             auto sequenceRange = fr.GetSequenceRange();
             m_beingUnrolled = true;
@@ -572,17 +401,7 @@ public:
         // special treatment if A is minibatch data; see Forward() for comment
         if (!fr.IsOneColumnWrt(InputRef(0).GetMBLayout()))
         {
-            if (ReduceSequenceAxis())
-            {
-                // only works in PAR mode
-                if (!fr.IsAllFrames())
-                    RuntimeError("%ls %ls operation can perform sequence axis reduction only for all frames.", NodeName().c_str(), OperationName().c_str());
-
-                BackpropTo_ReduceSequenceAxis(inputIndex);
-                return;
-            }
-            
-            // speed up using ElementTimes or InnerProduct to avoid unroll if possible
+            // speed up using ElementTimes to avoid unroll if possible
             bool hasSparse;
             if (IsReduceableDotProduct(fr, hasSparse))
             {
@@ -597,8 +416,6 @@ public:
                         (ElemType)1.0, inputValue, false, gradientDiagonal, true,
                         Input(inputIndex)->ParentOverwritesGradient() ? (ElemType)0.0 : (ElemType)1.0,
                         inputGradient);
-                    // TODO: better move this special-casing into TensorView::AssignElementwiseProductOf()
-                    // Note: We do not need to mask gaps here, since this code branch operates sample by sample (no reduction over samples).
                 }
                 else
                 {
@@ -706,32 +523,7 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-
-        if (ReduceSequenceAxis())
-        {
-            // generate MBLayout without sequence axis
-            if (!Input(0)->HasMBLayout() || !Input(1)->HasMBLayout() || *(Input(0)->GetMBLayout()) != *(Input(1)->GetMBLayout()))
-                InvalidArgument("%ls %ls operation can perform sequence axis reduction only on matching dynamic axes for both operands (which have the same layouts).", NodeName().c_str(), OperationName().c_str());
-
-            const auto& input0SampleLayout = InputRef(0).GetSampleLayout();
-            const auto& input1SampleLayout = InputRef(1).GetSampleLayout();
-
-            if ((input0SampleLayout.GetRank() > 1 && input0SampleLayout[1] != input1SampleLayout[0]) ||
-                (input1SampleLayout.GetRank() > 1 && input1SampleLayout[1] != 1) ||
-                (input0SampleLayout.GetRank() <= 1 && input1SampleLayout[0] != 1) ||
-                m_transpose)
-                InvalidArgument("%ls %ls operation can perform sequence axis reduction only in forms of (m x k) * (k x 1), without transpose.", NodeName().c_str(), OperationName().c_str());
-
-            if (m_pMBLayout == nullptr)
-            {
-                m_pMBLayout = make_shared<MBLayout>(); // this generates a new layout
-                m_pMBLayout->SetUniqueAxisName(ComputationNodeBase::DefaultNoSequenceAxisName);
-            }
-        }
-        else
-        {
-            InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
-        }
+        InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         bool transpose = m_transpose; // (assigning to a non-const variable avoids a compiler warning C4127: conditional expression is constant)
 
@@ -852,30 +644,6 @@ public:
         }
     }
 
-    void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
-    {
-        Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestReduceSequenceAxisMatricesIfNeeded(matrixPool);
-    }
-
-    void ReleaseMatricesAfterForwardProp(MatrixPool& matrixPool) override
-    {
-        Base::ReleaseMatricesAfterForwardProp(matrixPool);
-        ReleaseReduceSequenceAxisMatricesIfNeeded(matrixPool);
-    }
-
-    void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
-    {
-        Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestReduceSequenceAxisMatricesIfNeeded(matrixPool);
-    }
-
-    void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
-    {
-        Base::ReleaseMatricesAfterBackprop(matrixPool);
-        ReleaseReduceSequenceAxisMatricesIfNeeded(matrixPool);
-    }
-
     size_t OutputRank() const { return m_outputRank; }
     int InferInputRankToMap() const { return m_inferInputRankToMap; }
 
@@ -886,13 +654,6 @@ private:
     size_t m_outputRank;
     int m_inferInputRankToMap;  // -1 (not specified) or says how to expand shape of W, to keep this many mapping dims
     bool m_beingUnrolled;
-    std::once_flag m_unrollWarningOnceFlag;
-
-    bool ReduceSequenceAxis() const { return m_inferInputRankToMap == ReduceAllStaticAndSequenceAxes; }
-
-    static const int NumInputs = 2;
-    shared_ptr<Matrix<ElemType>> m_tempScatterIndices[NumInputs];
-    shared_ptr<Matrix<ElemType>> m_tempUnpackedValue[NumInputs];
 };
 
 // -----------------------------------------------------------------------
@@ -919,7 +680,7 @@ class TimesNode : public TimesNodeBase<ElemType, false>
     static const std::wstring TypeName() { return L"Times"; }
 
 public:
-    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = Base::ReduceAllStaticAxes)
+    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = -1)
         : Base(deviceId, name, outputRank, inferInputRankToMap)
     {
     }
@@ -952,7 +713,7 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name, outputRank, Base::ReduceAllStaticAxes)
+        : Base(deviceId, name, outputRank, /*inferInputRankToMap=*/-1)
     {
         if (outputRank != 1)
             LogicError("TransposeTimes does not yet support outputRank other than 1");
@@ -989,7 +750,7 @@ private:
     size_t m_bitShiftB; 
 
 public:
-    QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = Base::ReduceAllStaticAxes)
+    QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = -1)
         : Base(deviceId, name, outputRank, inferInputRankToMap), m_bitShiftA(bitShiftA), m_bitShiftB(bitShiftB)
     {
         // TODO support multiplication on GPUs as well.
@@ -1610,10 +1371,6 @@ public:
             LogicError("The tensor dimension in the %ls %ls operation does not match.", NodeName().c_str(), OperationName().c_str());
         }
 
-        auto input3AsLearnableParameterNode = Input(3)->template As<LearnableParameter<ElemType>>();
-        if (isFinalValidationPass && (!input3AsLearnableParameterNode || input3AsLearnableParameterNode->GetLearningRateMultiplier() != 0) || (Input(3)->GetSampleLayout().GetNumElements() != 1))
-            LogicError("%ls %ls operation expects a constant scalar for Input(3) which corresponds to number of negative samples.", NodeName().c_str(), OperationName().c_str());
-
         // input(2) is shift, input(3) is the #neg
         size_t negNumber = (size_t) Input(3)->Get00Element();
 
@@ -1691,8 +1448,7 @@ void AggregateAccumulatorValuesAndUpdateEvaluation(
     shared_ptr<ComputationNetwork> net,
     set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
     shared_ptr<DistGradHeader> gradHeader,
-    shared_ptr<MPIWrapper> mpi,
-    size_t packThresholdSizeInBytes = (size_t)DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
+    shared_ptr<MPIWrapper> mpi);
 
 // -----------------------------------------------------------------------
 // EpochAccumulatorNode calculates mean values of all samples used in forward pass.
@@ -1743,8 +1499,7 @@ protected:
         shared_ptr<ComputationNetwork> net,
         set<shared_ptr<ComputationNodeBase>> evalNodesWhichAccumulateResult,
         shared_ptr<DistGradHeader> gradHeader,
-        shared_ptr<MPIWrapper> mpi,
-        size_t packThresholdSize);
+        shared_ptr<MPIWrapper> mpi);
 
     void Reset();
 

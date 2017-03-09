@@ -1021,7 +1021,7 @@ public:
     {
         // for (size_t xx = 0; xx < 3; xx++)   // for testing the strange slow-down
         {
-            if (fr.GetIterationDimension() != m_shiftDimParam) // TODO: this was removed; GetIterationDimension() is always -1 now
+            if (fr.GetIterationDimension() != m_shiftDimParam)
                 LogicError("ShiftNode::ForwardProp(): FrameRange not iterating over user-specified dimension.");
 
 #ifdef _DEBUG

@@ -415,14 +415,13 @@ void NDLNodeEvaluatorImpl<ElemType>::Evaluate(NDLNode<ElemType>* node, const wst
                 {
                     auto parm = node->GetParentScript()->ParseVariable(reqParams[1]->GetValue(), false);
                     auto pool = PoolKindFrom(wstring(parm->GetValue()));
-                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, false, imageLayout, name);
+                    nodePtr = builder.Pooling(NULL, pool, kernelShape, stride, autoPad, lowerPad, upperPad, imageLayout, name);
                 }
                 else
                 {
                     bool transpose = node->GetOptionalParameter("transpose", "false");
-                    auto outputShape = paramResolver("outputShape", 0); 
                     nodePtr = builder.Convolution(NULL, NULL, kernelShape, mapCount, stride, sharing, 
-                                                  autoPad, lowerPad, upperPad, transpose, outputShape, imageLayout, maxTempMemSizeInSamples, name);
+                                                  autoPad, lowerPad, upperPad, transpose, imageLayout, maxTempMemSizeInSamples, name);
                 }
 
             }

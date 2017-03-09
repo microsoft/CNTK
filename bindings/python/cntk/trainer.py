@@ -17,45 +17,26 @@ using gradients of parameters w.r.t. a training objective.
 
 class Trainer(cntk_py.Trainer):
     '''
-    Class for training the model parameters of a models' specified loss function, using the
+    Trainer to train the specified ``model`` according to a specified loss function
+    as the training criterion, a specified metric function as the
+    criterion for evaluating the trained model's quality, and using the
     specified set of ``parameter_learners`` for updating the model's parameters
     using computed gradients.
-    An optional specified metric function, which can be non-differentiable,
-    can be used for tracking the trained model's quality.
 
     Args:
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
-       criterion (Python tuple of :class:`~cntk.ops.functions.Function`, or :class:`~cntk.ops.functions.Function` or ):
-        Function with one or two outputs,
-        representing loss and, if given, evaluation metric (in this order).
-        Alternatively, a tuple(loss Function, evaluation Function) is also accepted.
+       criteria (Python tuple of :class:`~cntk.ops.functions.Function`, or :class:`~cntk.ops.functions.Function` or ):
+        loss and metric function, given as a either Python tuple or tuple-valued CNTK Function
        parameter_learners (list): list of learners from :mod:`cntk.learner`
        progress_writers (list): optionally, list of progress writers from :mod:`cntk.utils` to automatically track
          training progress.
-
-        TODO: Would be great to allow to skip some parameters that should not be updated.
     '''
-
-    @staticmethod
-    def _get_loss_metric(criterion): # helper to interpret criterion parameter
-        if isinstance(criterion, cntk_py.Function): # input can be a tuple of Functions or a tuple-valued Function
-            criterion = criterion.outputs           # break up tuple-valued Function into tuple of Functions
-        # map Variable to Function
-        from cntk import combine
-        criterion = tuple([combine([output], output.name) if isinstance(output, cntk_py.Variable) else output for output in criterion])
-        if not isinstance(criterion, tuple): # input can be a single value or a tuple (loss, metric)
-            criterion = (criterion, None)    # if single then pad with None for the metric
-        if len(criterion) == 1:
-            criterion = criterion + (None,) # tuple of 1 value: pad with None
-        if len(criterion) != 2:
-            raise ValueError("criterion parameter must be a singleton or a tuple of 2 elements")
-        return criterion
-
-    def __init__(self, model, criterion, parameter_learners, progress_writers=None):
-        loss_function, eval_function = Trainer._get_loss_metric(criterion)
+    def __init__(self, model, criteria, parameter_learners, progress_writers=None):
+        if isinstance(criteria, cntk_py.Function):
+            criteria = criteria.outputs # turn CNTK Function into a tuple
+        loss_function, eval_function = criteria # destructure the tuple
         # TODO sanitizing should be removed once Swig's typemaps are in place
-        if model is not None:  # None means dummy model that is, e.g., the same as a criterion
-            model = sanitize_function(model)
+        model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
         if eval_function is not None:
             eval_function = sanitize_function(eval_function)
@@ -69,25 +50,6 @@ class Trainer(cntk_py.Trainer):
         trainer = cntk_py.trainer_impl(model, loss_function, eval_function, parameter_learners, progress_writers)
         # transplant into this class instance
         self.__dict__ = trainer.__dict__
-
-    # TODO: bring this back once the design has been settled
-    def _train_test_mb_map_args(self, *args, **kwargs):
-        '''helper function for mimicking Python calling convention in train/test_minibatch()'''
-        # one argument, which is an arg map or a (map, bool) tuple
-        if len(args) == 1 and isinstance(args[0], (dict, tuple)):
-            return args[0]
-        # map to function arguments
-        args = self.loss_function.argument_map(*args, **kwargs)
-        # in this use case, all must have the same inputs (subsets of loss) since they are all called as a single combined function
-        if self.model:
-            for arg in self.model.arguments:
-                if arg not in self.loss_function.arguments:
-                    raise ValueError("model function must share its arguments with the loss function")
-        if self.evaluation_function:
-            for arg in self.evaluation_function.arguments:
-                if arg not in self.loss_function.arguments:
-                    raise ValueError("evaluation function must have the same signature and inputs as the loss function")
-        return args
 
     def train_minibatch(self, arguments, outputs=None, device=None):
         '''
@@ -128,13 +90,8 @@ class Trainer(cntk_py.Trainer):
         if not device:
             device = use_default_device()
 
-        if arguments: # arguments must feed all inputs (model, loss, eval)
-            all_args = set(self.loss_function.arguments)
-            if self.model:
-                all_args |= set(self.model.arguments)
-            if self.evaluation_function:
-                all_args |= set(self.evaluation_function.arguments)
-            arguments = sanitize_var_map(tuple(all_args), arguments,
+        if arguments:
+            arguments = sanitize_var_map(self.model.arguments, arguments,
                 extract_values_from_minibatch_data = False)
 
         contains_minibatch_data = False
@@ -202,14 +159,7 @@ class Trainer(cntk_py.Trainer):
         '''
         if not device:
             device = use_default_device()
-
-        # pass all args of all parts (model, loss, eval)
-        all_args = set(self.loss_function.arguments)
-        if self.model:
-            all_args |= set(self.model.arguments)
-        if self.evaluation_function:
-            all_args |= set(self.evaluation_function.arguments)
-        arguments = sanitize_var_map(tuple(all_args), arguments)
+        arguments = sanitize_var_map(self.model.arguments, arguments)
 
         return super(Trainer, self).test_minibatch(arguments, device)
 
@@ -245,7 +195,7 @@ class Trainer(cntk_py.Trainer):
         The model that the trainer is training.
         '''
         return super(Trainer, self).model()
-        
+
     @property
     @typemap
     def loss_function(self):

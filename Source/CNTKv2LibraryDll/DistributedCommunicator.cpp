@@ -60,7 +60,6 @@ namespace CNTK
             return viewPtr->WritableDataBuffer<float>();
         if (viewPtr->GetDataType() == DataType::Double)
             return viewPtr->WritableDataBuffer<double>();
-        
         LogicError("Unknown DataType");
         return nullptr; // Make compiler happy.
     }
@@ -97,7 +96,7 @@ namespace CNTK
 
             // Make sure none of the values are sparse - we currently do not support aggregation of sparse matrices
             if (view->GetStorageFormat() != StorageFormat::Dense)
-                RuntimeError("MPICommunicator: Aggregation for sparse matrices is currently not supported.");
+                RuntimeError("Aggregation for sparse matrices is currently not supported!");
 
             // TODO: device.Type should be called Kind.
             if (device.Type() != DeviceKind::GPU)
@@ -110,7 +109,7 @@ namespace CNTK
                 if (lastGpuDevice.Type() == DeviceKind::CPU)
                     lastGpuDevice = device;
                 else if (device.Id() != lastGpuDevice.Id()) // For the time being, assume all devices have the same id.
-                    LogicError("MPICommunicator: Not all values are on the same GPU device id");
+                    LogicError("Not all values are on the same GPU device id");
 
                 auto requiredSize = GetBufferSize(view);
                 m_gpuDataTransferers[i] = std::make_shared<GPUDataTransferer>(device.Id(), true);
@@ -232,7 +231,7 @@ namespace CNTK
         // Check inputs, currently we support only CPU
         auto nonCpu = std::find_if(input.begin(), input.end(), [](const NDArrayViewPtr& v) { return v->Device() != DeviceDescriptor::CPUDevice(); });
         if (nonCpu != input.end())
-            LogicError("MPICommunicator: Currently only NDArrayViews located on CPU are supported for concatenation.");
+            LogicError("Currently only CPU located buffers are supported for concatenation.");
 
         output.resize(input.size());
         // Currently we only support concatenation of input of the same size.
@@ -260,7 +259,7 @@ namespace CNTK
             else if (input[i]->GetDataType() == DataType::Double)
                 m_mpi->AllGatherAsync(in->DataBuffer<double>(), in->Shape().TotalSize(), out->WritableDataBuffer<double>(), in->Shape().TotalSize(), &allReduceRequests[i]);
             else
-                LogicError("MPICommunicator: input DataType is not supported.");
+                LogicError("Type is not supported.");
         }
 
         // Wait till all requests are finished.
@@ -353,7 +352,7 @@ namespace CNTK
                     m_mpi->AllReduceAsync(static_cast<double*>(inputData), static_cast<double*>(outputData), numElements, &allReduceRequests[i]);
             }
             else
-                LogicError("MPICommunicator: Unknown DataType.");
+                LogicError("Unknown DataType");
         }
 
         // wait for async all reduce to complete. As soon as one of the requests is finished,
