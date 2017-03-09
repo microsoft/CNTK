@@ -6,9 +6,7 @@ Python API Reference
 
    Graph components <graph>
    IO <cntk.io>
-   Learner <cntk.learner>
-   Trainer <cntk.trainer>
-   Training session <cntk.training_session>
+   Trainer & learners <cntk.trainer>
    Operators <cntk.ops>
    Utils <cntk.utils>
    Module reference <modules>

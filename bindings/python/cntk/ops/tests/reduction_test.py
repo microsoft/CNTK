@@ -143,10 +143,10 @@ def test_op_reduce_log_sum(input_data, axis, device_id, precision):
         'arg': [[backward]]
     }
 
-    from .. import reduce_log_sum_exp
-    _test_unary_op(precision, device_id, reduce_log_sum_exp, input_data,
+    from .. import reduce_log_sum
+    _test_unary_op(precision, device_id, reduce_log_sum, input_data,
                    expected_forward, expected_backward, {'axis': axis})
-
+                   
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_prod(input_data, axis, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
@@ -181,7 +181,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
           name='a')
     # create batch
     value = [AA([data,data-0.5], dtype=dt),AA([data+0.25], dtype=dt)]
-    from .. import reduce_sum, reduce_max, reduce_min, reduce_mean, reduce_log_sum_exp, reduce_prod
+    from .. import reduce_sum, reduce_max, reduce_min, reduce_mean, reduce_log_sum, reduce_prod
     from cntk import Axis
     def max_bwd(x,f):
         y = np.zeros_like(x)
@@ -191,12 +191,12 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
             if xr[i] == f: yr[i] = 1
         return y
 
-    ops = [ (reduce_sum,         lambda x:AA(sum(np.sum(xi) for xi in x)),                           lambda x,f:[np.ones_like(xi) for xi in x]),
-            (reduce_max,         lambda x:AA(max(np.max(xi) for xi in x)),                           lambda x,f:[max_bwd(xi,f) for xi in x]),
-            (reduce_min,         lambda x:AA(min(np.min(xi) for xi in x)),                           lambda x,f:[max_bwd(xi,f) for xi in x]),
-            (reduce_mean,        lambda x:AA(sum(np.sum(xi) for xi in x)/sum(xi.size  for xi in x)), lambda x,f:[np.ones_like(xi)/sum(xj.size for xj in x) for xi in x]),
-            (reduce_log_sum_exp, lambda x:AA(np.log(sum(np.sum(np.exp(xi)) for xi in x))),           lambda x,f:[np.exp(xi-f)     for xi in x]),
-            (reduce_prod,        lambda x:AA(np.prod([np.prod(xi) for xi in x])),                    lambda x,f:[f/xi             for xi in x])
+    ops = [ (reduce_sum,     lambda x:AA(sum(np.sum(xi) for xi in x)),                           lambda x,f:[np.ones_like(xi) for xi in x]),
+            (reduce_max,     lambda x:AA(max(np.max(xi) for xi in x)),                           lambda x,f:[max_bwd(xi,f) for xi in x]),
+            (reduce_min,     lambda x:AA(min(np.min(xi) for xi in x)),                           lambda x,f:[max_bwd(xi,f) for xi in x]),
+            (reduce_mean,    lambda x:AA(sum(np.sum(xi) for xi in x)/sum(xi.size  for xi in x)), lambda x,f:[np.ones_like(xi)/sum(xj.size for xj in x) for xi in x]),
+            (reduce_log_sum, lambda x:AA(np.log(sum(np.sum(np.exp(xi)) for xi in x))),           lambda x,f:[np.exp(xi-f)     for xi in x]),
+            (reduce_prod,    lambda x:AA(np.prod([np.prod(xi) for xi in x])),                    lambda x,f:[f/xi             for xi in x])
             ]
     
     for op,fwd,bwd in ops:
@@ -227,31 +227,3 @@ def test_op_reduce_mean_all_constant(input_data, axis, device_id, precision):
     expected_forward = AA(np.mean(value))
     actual_forward  = input_op.eval()
     assert np.allclose(actual_forward, expected_forward)
-
-@pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
-def test_op_reduce_argmax(input_data, axis, device_id, precision):
-    dt = PRECISION_TO_TYPE[precision]
-
-    data = AA(input_data, dtype=dt)
-
-    # numpy argmax doesn't support keepdims
-    arg_shape = np.amax(data, axis=(axis), keepdims=True).shape
-    expected_forward = [[np.argmax(data, axis=(axis)).reshape(arg_shape)]]
-
-    from .. import argmax
-    _test_unary_op(precision, device_id, argmax, input_data,
-                   expected_forward, None, {'axis': axis})
-
-@pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
-def test_op_reduce_argmin(input_data, axis, device_id, precision):
-    dt = PRECISION_TO_TYPE[precision]
-
-    data = AA(input_data, dtype=dt)
-
-    # numpy argmin doesn't support keepdims
-    arg_shape = np.amin(data, axis=(axis), keepdims=True).shape
-    expected_forward = [[np.argmin(data, axis=(axis)).reshape(arg_shape)]]
-
-    from .. import argmin
-    _test_unary_op(precision, device_id, argmin, input_data,
-                   expected_forward, None, {'axis': axis})

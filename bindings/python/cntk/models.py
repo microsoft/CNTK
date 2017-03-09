@@ -14,6 +14,7 @@ import os
 import time
 
 from .utils.debughelpers import _name_node, _node_name, _node_description, _log_node
+#from cntk.layers import *
 from .utils import Record
 from cntk import combine
 from .blocks import identity, Block
@@ -42,15 +43,9 @@ def Sequential(layers):
     attrs = Record(layers=layers)
     return Block(apply_x, 'Sequential', members=attrs)
 
-# For(range(3), lambda i: Dense(3))
-# For(range(3), lambda: Dense(3))
-def For(rng, constructor):
-    '''
-    Layer factory function to create a composite that applies a sequence of layers constructed with a constructor lambda(layer).
-    E.g.
-     For(range(3), lambda i: Dense(2000))
-     For(range(3), lambda: Dense(2000))
-    '''
+# LayerStack(3, lambda i: Dense(3))
+# LayerStack(3, lambda: Dense(3))
+def LayerStack(N, constructor):
     from inspect import getargspec
     takes_arg = len(getargspec(constructor).args) > 0
     # helper to call the layer constructor
@@ -59,6 +54,6 @@ def For(rng, constructor):
             return constructor(i)  # takes an arg: pass it
         else:
             return constructor()   # takes no arg: call without, that's fine too
-    layers = [call(i) for i in rng]
+    layers = [call(i) for i in range(N)]
     apply_x = Sequential(layers)
-    return Block(apply_x, 'For', members=Record(layers=layers))
+    return Block(apply_x, 'LayerStack', members=Record(layers=layers))

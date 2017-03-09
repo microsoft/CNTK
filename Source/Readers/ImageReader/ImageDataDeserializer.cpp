@@ -30,16 +30,18 @@ public:
     {
     }
 
-    virtual void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
+    virtual void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
     {
-        assert(sequenceIndex == 0 && sequenceIndex == m_description.m_indexInChunk);
-        UNUSED(sequenceIndex);
+        assert(sequenceId == m_description.m_id);
+        const auto& imageSequence = m_description;
 
-        auto cvImage = m_deserializer.ReadImage(m_description.m_key.m_sequence, m_description.m_path, m_deserializer.m_grayscale);
+        auto image = std::make_shared<ImageSequenceData>();
+        image->m_image = std::move(m_deserializer.ReadImage(m_description.m_id, imageSequence.m_path, m_deserializer.m_grayscale));
+        auto& cvImage = image->m_image;
         if (!cvImage.data)
-            RuntimeError("Cannot open file '%s'", m_description.m_path.c_str());
+            RuntimeError("Cannot open file '%s'", imageSequence.m_path.c_str());
 
-        m_deserializer.PopulateSequenceData(cvImage, m_description.m_classId, m_description.m_copyId, result);
+        m_deserializer.PopulateSequenceData(cvImage, imageSequence.m_classId, sequenceId, result);
     }
 
 private:
@@ -60,7 +62,7 @@ private:
 
 // A new constructor to support new compositional configuration,
 // that allows composition of deserializers and transforms on inputs.
-ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary) : ImageDeserializerBase(corpus, config, primary)
+ImageDataDeserializer::ImageDataDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config) : ImageDeserializerBase(corpus, config)
 {
     CreateSequenceDescriptions(corpus, config(L"file"), m_labelGenerator->LabelDimension(), m_multiViewCrop);
 }
@@ -146,9 +148,7 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
     auto mapFileDirectory = ExtractDirectory(mapPath);
     m_defaultReader = make_unique<FileByteReader>(mapFileDirectory);
 
-    size_t numberOfCopies = isMultiCrop ? ImageDeserializerBase::NumMultiViewCopies : 1;
-    static_assert(ImageDeserializerBase::NumMultiViewCopies < std::numeric_limits<uint8_t>::max(), "Do not support more than 256 copies.");
-
+    size_t itemsPerLine = isMultiCrop ? ImageDeserializerBase::NumMultiViewCopies : 1;
     size_t curId = 0;
     std::string line;
     PathReaderMap knownReaders;
@@ -195,33 +195,23 @@ void ImageDataDeserializer::CreateSequenceDescriptions(CorpusDescriptorPtr corpu
                 imagePath.c_str(), cid, labelDimension, lineIndex, mapPath.c_str());
         }
 
-        if (CHUNKID_MAX < curId + numberOfCopies)
+        if (CHUNKID_MAX < curId + itemsPerLine)
         {
             RuntimeError("Maximum number of chunks exceeded.");
         }
 
-        // Fill in original sequence.
-        description.m_indexInChunk = 0;
-        description.m_path = imagePath;
-        description.m_classId = cid;
-        description.m_key.m_sequence = corpus->KeyToId(sequenceKey);
-        description.m_key.m_sample = 0;
-
-        if (!m_primary)
+        for (size_t start = curId; curId < start + itemsPerLine; curId++)
         {
-            m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
-        }
-
-        RegisterByteReader(description.m_key.m_sequence, description.m_path, knownReaders, readerSequences, mapFileDirectory);
-
-        // Fill in copies.
-        for (uint8_t index = 0; index < numberOfCopies; index++)
-        {
+            description.m_id = curId;
             description.m_chunkId = (ChunkIdType)curId;
-            description.m_copyId = index;
+            description.m_path = imagePath;
+            description.m_classId = cid;
+            description.m_key.m_sequence = corpus->KeyToId(sequenceKey);
+            description.m_key.m_sample = 0;
 
+            m_keyToSequence[description.m_key.m_sequence] = m_imageSequences.size();
             m_imageSequences.push_back(description);
-            curId++;
+            RegisterByteReader(description.m_id, description.m_path, knownReaders, readerSequences, mapFileDirectory);
         }
     }
 
@@ -357,14 +347,14 @@ void ImageDataDeserializer::RegisterByteReader(size_t seqId, const std::string& 
     {
         reader = std::make_shared<ZipByteReader>(containerPath);
         knownReaders[containerPath] = reader;
-        readerSequences[containerPath] = MultiMap();
+        readerSequences[containerPath] = std::map<std::string, size_t>();
     }
     else
     {
         reader = (*r).second;
     }
 
-    readerSequences[containerPath][itemPath].push_back(seqId);
+    readerSequences[containerPath][itemPath] = seqId;
     m_readers[seqId] = reader;
 #else
     UNUSED(seqId);

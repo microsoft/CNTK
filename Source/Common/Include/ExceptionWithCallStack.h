@@ -28,7 +28,7 @@ using namespace std;
 struct /*interface*/ IExceptionWithCallStackBase
 {
     virtual const char * CallStack() const = 0;
-    virtual ~IExceptionWithCallStackBase() noexcept = default;
+    virtual ~IExceptionWithCallStackBase() throw() {}
 };
 
 // Exception wrapper to include native call stack string
@@ -42,6 +42,9 @@ public:
 
     virtual const char * CallStack() const override { return m_callStack.c_str(); }
 
+    static void      PrintCallStack(size_t skipLevels = 0, bool makeFunctionNamesStandOut = false);
+    static std::string GetCallStack(size_t skipLevels = 0, bool makeFunctionNamesStandOut = false); // generate call stack as a string, which should then be passed to the constructor of this  --TODO: Why not generate it directly in the constructor?
+
 protected:
     std::string m_callStack;
 };
@@ -49,9 +52,7 @@ protected:
 // some older code uses this namespace
 namespace DebugUtil
 {
-    void PrintCallStack(size_t skipLevels = 0, bool makeFunctionNamesStandOut = false);
-
-    std::string GetCallStack(size_t skipLevels = 0, bool makeFunctionNamesStandOut = false);
+    static inline void PrintCallStack() { ExceptionWithCallStack<std::runtime_error>::PrintCallStack(0, false); }
 };
 
 }}}

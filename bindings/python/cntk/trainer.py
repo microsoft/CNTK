@@ -17,22 +17,19 @@ using gradients of parameters w.r.t. a training objective.
 
 class Trainer(cntk_py.Trainer):
     '''
-    Trainer to train the specified ``model`` according to a specified loss function
-    as the training criterion, a specified metric function as the
+    Trainer to train the specified ``model`` with the specified ``training_loss``
+    as the training criterion, the specified ``evaluation_function`` as the
     criterion for evaluating the trained model's quality, and using the
     specified set of ``parameter_learners`` for updating the model's parameters
     using computed gradients.
 
     Args:
        model (:class:`~cntk.ops.functions.Function`): root node of the function to train
-       criteria (Python tuple of :class:`~cntk.ops.functions.Function`, or :class:`~cntk.ops.functions.Function` or ):
-        loss and metric function, given as a either Python tuple or tuple-valued CNTK Function
+       loss_function (:class:`~cntk.ops.functions.Function`): loss function
+       eval_function (:class:`~cntk.ops.functions.Function`): evaluation function
        parameter_learners (list): list of learners from :mod:`cntk.learner`
     '''
-    def __init__(self, model, criteria, parameter_learners):
-        if isinstance(criteria, cntk_py.Function):
-            criteria = criteria.outputs # turn CNTK Function into a tuple
-        loss_function, eval_function = criteria # destructure the tuple
+    def __init__(self, model, loss_function, eval_function, parameter_learners):
         # TODO sanitizing should be removed once Swig's typemaps are in place
         model = sanitize_function(model)
         loss_function = sanitize_function(loss_function)
@@ -57,7 +54,7 @@ class Trainer(cntk_py.Trainer):
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
-             In both cases, every sample in the data will be interpreted
+             In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
              first element will be used as ``arguments``, and the second one will
@@ -109,7 +106,7 @@ class Trainer(cntk_py.Trainer):
             if contains_minibatch_data:
                 updated = super(Trainer, self).train_minibatch_overload_for_minibatchdata(
                     arguments, device)
-            else:
+            else:    
                 updated = super(Trainer, self).train_minibatch(arguments,
                     device)
 
@@ -129,7 +126,7 @@ class Trainer(cntk_py.Trainer):
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
                 For nodes with more than one input, only `dict` is allowed.
-             In both cases, every sample in the data will be interpreted
+             In both cases, every every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
              first element will be used as ``arguments``, and the second one will
@@ -231,30 +228,3 @@ class Trainer(cntk_py.Trainer):
         The number of samples seen globally between all workers from the beginning of training.
         '''
         return super(Trainer, self).total_number_of_samples_seen()
-
-    @property
-    def accumulated_loss_average(self):
-        '''
-        The average training loss per sample since the last reset_accumulation()
-        '''
-        return super(Trainer, self).accumulated_loss_average()
-        
-    @property
-    def accumulated_evaluation_average(self):
-        '''
-        The average evaluation criterion value per sample since the last reset_accumulation()
-        '''
-        return super(Trainer, self).accumulated_evaluation_average()
-
-    @property
-    def accumulated_sample_count(self):
-        '''
-        The number of samples since last reset_accumulation
-        '''
-        return super(Trainer, self).accumulated_sample_count()
-    
-    def reset_accumulation(self):
-        '''
-        Reset accumulated loss and evaluation criterion
-        '''
-        return super(Trainer, self).reset_accumulation()

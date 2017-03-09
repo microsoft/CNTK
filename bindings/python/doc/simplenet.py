@@ -3,7 +3,8 @@ import numpy as np
 import cntk as C
 from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.utils import ProgressPrinter
-from cntk.layers import Dense, Sequential
+from cntk.layers import Dense
+from cntk.models import Sequential
 
 def generate_random_data(sample_size, feature_dim, num_classes):
      # Create synthetic data using NumPy.
@@ -39,7 +40,7 @@ def ffnet():
 
     # Instantiate the trainer object to drive the model training
     lr_per_minibatch = learning_rate_schedule(0.125, UnitType.minibatch)
-    trainer = C.Trainer(z, (ce, pe), [sgd(z.parameters, lr=lr_per_minibatch)])
+    trainer = C.Trainer(z, ce, pe, [sgd(z.parameters, lr=lr_per_minibatch)])
 
     # Get minibatches of training data and perform model training
     minibatch_size = 25

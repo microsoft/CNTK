@@ -22,7 +22,7 @@ class CloneMethod(Enum):
 
     clone = 'clone'
     '''
-    New learnable parameters are created and initialized with the current values of the
+    New learnable parameters are created and initialied with the current values of the
     corresponding parameters of the Function being cloned
     '''
 
@@ -151,13 +151,6 @@ class Function(cntk_py.Function):
         Returns:
             :class:`~cntk.ops.functions.Function`: the cloned Function
         '''
-        # C++ clone() can only clone composites. If we are not a composite, make it one using combine()
-        if not self.is_composite:
-            from cntk import combine
-            #return combine([self]).clone(method, substitutions).root_function.arguments[0].owner
-            # BUGBUG: This ^^ does not give me the correct .arguments, so we leave the extra combine() in for now.
-            return combine([self]).clone(method, substitutions)
-
         method = getattr(cntk_py,
                 'ParameterCloningMethod_' + CloneMethod(method).name.capitalize())
         substitutions = substitutions or {}
@@ -173,7 +166,7 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).constants()
 
-    def eval(self, arguments=None, device=None, as_numpy=True):
+    def eval(self, arguments=None, device=None):
         '''
         Evaluate the node using the specified ``arguments`` as input.
 
@@ -188,7 +181,7 @@ class Function(cntk_py.Function):
                  mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
-             In both cases, every sample in the data will be interpreted
+             In both cases, every every sample in the data will be interpreted
              as a new sequence.
 
              Sequences can be marked as continuations of the same sequence in
@@ -212,25 +205,21 @@ class Function(cntk_py.Function):
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
-            as_numpy (bool): whether to return the result as a NumPy array. Default True.
-             Specifying this as False returns a CNTK Value which avoids a 
-             costly conversion but returns a somewhat opaque object.
 
         Returns:
            dict or NumPy Array: Dict with keys of ouput variable names and values of
            output variable. A single NumPy array if there is only one output value.
         '''
 
-        _, output_map = self.forward(arguments, self.outputs, device=device, as_numpy=as_numpy)
+        _, output_map = self.forward(arguments, self.outputs, device=device)
 
         if len(output_map) > 1:
             return output_map
         else:
             return list(output_map.values())[0]
 
-
     @typemap
-    def forward(self, arguments, outputs, keep_for_backward=None, device=None, as_numpy=True):
+    def forward(self, arguments, outputs, keep_for_backward=None, device=None):
         '''
         Computes the values of speficied variables in ``outputs``, using values
         provided in ``arguments`` that correspond to each input `Variable` of
@@ -256,7 +245,7 @@ class Function(cntk_py.Function):
                  mapped to this input.
              For nodes with more than one input, only dict is allowed.
 
-             In both cases, every sample in the data will be interpreted
+             In both cases, every every sample in the data will be interpreted
              as a new sequence.
 
              Sequences can be marked as continuations of the same sequence in
@@ -286,9 +275,6 @@ class Function(cntk_py.Function):
             device (:class:`~cntk.device.DeviceDescriptor`, default `None`): the device
              descriptor that contains the type and id of the device on which the
              computation is. If `None`, the default device is used.
-            as_numpy (bool): whether to return the result as a NumPy array. Default True.
-             Specifying this as False returns a CNTK Value which avoids a 
-             costly conversion but returns a somewhat opaque object.
 
         Returns:
              A tuple (BackPropState, map of outputs to NumPy arrays). The
@@ -304,9 +290,9 @@ class Function(cntk_py.Function):
 
         state = super(Function, self)._forward(in_var_map, output_map, device,
                                              keep_for_backward)
-        if as_numpy:
-            for k in output_map:
-                output_map[k] = variable_value_to_seq(output_map[k], k)
+
+        for k in output_map:
+            output_map[k] = variable_value_to_seq(output_map[k], k)
 
         return state, output_map
 
@@ -505,7 +491,7 @@ class Function(cntk_py.Function):
     def block_root(self):
         '''
         Returns the root of the Function graph underlying this block Function.
-        Throws an exception if this is not a block Function.
+        Throws an exception of this is not a block Function.
         '''
         return super(Function, self).block_root()
 
@@ -628,7 +614,7 @@ class Function(cntk_py.Function):
         return graph.find_by_name(self, name)
 
     @typemap
-    def save(self, filename):
+    def save_model(self, filename):
         '''
         Save this function graph into a model file using protobuf-based
         serialization.
@@ -638,14 +624,8 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).save_model(filename)
 
-    def save_model(self, filename): # legacy name
-        import warnings
-        warnings.warn('This will be removed in future versions. Please use '
-                'save(...) instead', DeprecationWarning)
-        return self.save(filename)
-
     @typemap
-    def restore(self, filename):
+    def restore_model(self, filename):
         '''
         Restore the models parameters (in-place) from a saved model file
 
@@ -657,45 +637,6 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).restore_model(filename)
 
-    def restore_model(self, filename): # legacy name
-        import warnings
-        warnings.warn('This will be removed in future versions. Please use '
-                'restore(...) instead', DeprecationWarning)
-        return self.restore(filename)
-
-    @staticmethod
-    @typemap
-    def load(filename, device=None):
-        '''
-        Load the model in ``filename``, that has been saved using
-        :func:`~cntk.ops.functions.Function.save`.
-
-        Args:
-            filename (str): filename to load the model from
-            device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
-             instance of DeviceDescriptor
-
-        Returns:
-            root node
-        '''
-        if not device:
-            device = DeviceDescriptor.use_default_device()
-        return cntk_py.Function.load_model(filename, device)
-
-@typemap
-def load_model(filename, device=None):
-    '''
-    Alias for :func:`~cntk.ops.functions.Function.load`.
-    '''
-    return Function.load(filename, device)
-
-@typemap
-def save_model(model, filename): # legacy name
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'model.save(...) instead', DeprecationWarning)
-    return model.save(filename)
-
 
 class UserFunction(Function):
     '''
@@ -706,7 +647,11 @@ class UserFunction(Function):
 
     '''
     def __init__(self, inputs, name=''):
-        super(UserFunction, self).__init__(inputs, name)
+        # FIXME we need to save a reference here so that the function does not
+        # disappear
+        self.var_inputs = inputs
+
+        super(Function, self).__init__(inputs, name)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
@@ -808,30 +753,25 @@ class UserFunction(Function):
         outputs.extend(self.infer_outputs())
 
     def infer_outputs(self):
-        '''
-        Returns a list of all output variables this user-defined function
-        outputs.
-
-        Output variables are created by
-        :meth:`~cntk.ops.functions.output_variable`.
-        '''
-        raise NotImplementedError('infer_outputs has to be overwritten')
-
-    def clone(self, cloned_inputs):
-        '''
-        Creates a clone of this user-defined function.
-
-        Args:
-            cloned_inputs: list of cloned inputs to the new user-defined
-             Function clone to be created.
-
-        Returns:
-            A cloned instance of this user-defined function.
-        '''
-        raise NotImplementedError('clone has to be overwritten')
+        raise NotImplementedError('infer_outputs has to be overridden')
 
     def op_name(self):
-        '''
-        Returns the operator name.
-        '''
         return 'UserFunction'
+
+@typemap
+def load_model(filename, device=None):
+    '''
+    Load the model in ``filename``, that has been saved using
+    :func:`~cntk.ops.functions.Function.save_model`.
+
+    Args:
+        filename (str): filename to load the model from
+        device (:class:`~cntk.device.DeviceDescriptor`, default is the default device):
+         instance of DeviceDescriptor
+
+    Returns:
+        root node
+    '''
+    if not device:
+        device = DeviceDescriptor.use_default_device()
+    return cntk_py.Function.load_model(filename, device)

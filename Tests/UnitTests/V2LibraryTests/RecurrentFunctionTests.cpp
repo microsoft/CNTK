@@ -2,15 +2,12 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
 #include <numeric>
 
 using namespace CNTK;
-
-namespace CNTK { namespace Test {
 
 static unsigned long seed = 1;
 
@@ -53,12 +50,16 @@ void TestRecurrentNetworkCreation(const DeviceDescriptor& device, bool testSaveA
 
     auto LSTMClassifier = Combine({ trainingLoss, prediction, classifierOutput }, L"LSTMClassifier");
 
-    BOOST_TEST(LSTMClassifier->Arguments().size() == 2, "Function does not have expected Argument count");
+    // Now test the structure
+    if (LSTMClassifier->Arguments().size() != 2)
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Argument count");
 
-    BOOST_TEST(LSTMClassifier->Outputs().size() == 3, "Function does not have expected Output count");
+    if (LSTMClassifier->Outputs().size() != 3)
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Output count");
 
     const size_t numParameterVariablesPerLSTMLayer = 20;
-    BOOST_TEST(LSTMClassifier->Parameters().size() == ((numLSTMLayers * numParameterVariablesPerLSTMLayer) + 3), "Function does not have expected Parameter count");
+    if (LSTMClassifier->Parameters().size() != ((numLSTMLayers * numParameterVariablesPerLSTMLayer) + 3))
+        throw std::runtime_error("TestFeedForwardNetworkCreation: Function does not have expected Parameter count");
 
     if (testSaveAndReLoad)
     {
@@ -127,7 +128,8 @@ void TestSimpleRecurrence(size_t inputDim,
                           bool useOneHotSparseInputs = false,
                           unsigned int seed = 1)
 {
-    BOOST_TEST((!useOneHotSparseInputs || useSparseInputs), "useOneHotSparseInputs option can only be true when useSparseInputs is true");
+    if (useOneHotSparseInputs && !useSparseInputs)
+        throw std::runtime_error("useOneHotSparseInputs option can only be true when useSparseInputs is true");
 
     Parameter timesParam(MakeSharedObject<NDArrayView>((ElementType)0.5, NDShape({ outputDim, inputDim }), device), L"timesParameters");
     Parameter plusParam(MakeSharedObject<NDArrayView>((ElementType)0.1, std::initializer_list<size_t>({ outputDim }), device), L"plusParameters");
@@ -315,8 +317,8 @@ void TestSimpleRecurrence(size_t inputDim,
             }
         }
 
-        FloatingPointVectorCompare(reducedOutputData, std::vector<ElementType>({ expectedReducedValue }), "Forward prop results do not match expected results");
-        FloatingPointVectorCompare(plusOutputData, expectedPlusOutputData, "Forward prop results do not match expected results");
+        FloatingPointVectorCompare(reducedOutputData, std::vector<ElementType>({ expectedReducedValue }), "TestTimesAndPlus: Forward prop results do not match expected results");
+        FloatingPointVectorCompare(plusOutputData, expectedPlusOutputData, "TestTimesAndPlus: Forward prop results do not match expected results");
 
         // Verify backward prop results
         ElementType expectedPlusParameterGradientValue = 0;
@@ -328,7 +330,7 @@ void TestSimpleRecurrence(size_t inputDim,
 
         for (size_t k = 0; k < plusParam.Shape().TotalSize(); ++k)
             if (plusParameterGradientData[k] != expectedPlusParameterGradientValue)
-                BOOST_ERROR("Backprop prop results do not match expected results for Plus params gradients");
+                throw std::runtime_error("TestSimpleRecurrence: Backprop prop results do not match expected results for Plus params gradients");
 
         std::vector<ElementType> expectedTimesParamsGradientValues(timesParam.Shape().TotalSize(), 0);
         for (size_t i = 0; i < numSequences; ++i)
@@ -350,7 +352,7 @@ void TestSimpleRecurrence(size_t inputDim,
             }
         }
 
-        FloatingPointVectorCompare(timesParameterGradientData, expectedTimesParamsGradientValues, "Backprop prop results do not match expected results for Times params gradients");
+        FloatingPointVectorCompare(timesParameterGradientData, expectedTimesParamsGradientValues, "TestSimpleRecurrence: Backprop prop results do not match expected results for Times params gradients");
 
         std::vector<ElementType> expectedInputGradientValues(inputShape.TotalSize(), 0);
         for (size_t i = 0; i < numSequences; ++i)
@@ -372,49 +374,32 @@ void TestSimpleRecurrence(size_t inputDim,
             }
         }
 
-        FloatingPointVectorCompare(inputGradientData, expectedInputGradientValues, "Backprop prop results do not match expected results for Times params gradients");
+        FloatingPointVectorCompare(inputGradientData, expectedInputGradientValues, "TestSimpleRecurrence: Backprop prop results do not match expected results for Times params gradients");
     }
 }
 
-BOOST_AUTO_TEST_SUITE(RecurrentFunctionSuite)
-
-BOOST_AUTO_TEST_CASE(SimpleRecurrenceInCPU)
+void RecurrentFunctionTests()
 {
+    fprintf(stderr, "\nRecurrentFunctionTests..\n");
+
     TestSimpleRecurrence<float>(2, 1, 4, 1, DeviceDescriptor::CPUDevice(), true, 3, false, false);
-}
-
-BOOST_AUTO_TEST_CASE(SimpleRecurrenceInGPU)
-{
     if (IsGPUAvailable())
+    {
         TestSimpleRecurrence<double>(11, 9, 16, 7, DeviceDescriptor::GPUDevice(0), true, 5, true, false);
-}
+    }
 
-BOOST_AUTO_TEST_CASE(SimpleLargeRecurrenceInCPU)
-{
-    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), true, 2, false, true, true);
     TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::CPUDevice(), false, 2, true, true);
-}
-
-BOOST_AUTO_TEST_CASE(SimpleLargeRecurrenceInGPU)
-{
     if (IsGPUAvailable())
     {
         TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::GPUDevice(0), false, 3, false, true);
         TestSimpleRecurrence<double>(1000, 9, 16, 3, DeviceDescriptor::GPUDevice(0), true, 3, true, true, true);
     }
-}
 
-BOOST_AUTO_TEST_CASE(RecurrentNetworkCreationInCPU)
-{
+    TestSimpleRecurrence<float>(5000, 200, 19, 6, DeviceDescriptor::CPUDevice(), true, 2, false, true, true);
+
+    if (IsGPUAvailable())
+    {
+        TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
+    }
     TestRecurrentNetworkCreation<double>(DeviceDescriptor::CPUDevice(), false);
 }
-
-BOOST_AUTO_TEST_CASE(RecurrentNetworkCreationInGPU)
-{
-    if (IsGPUAvailable())
-        TestRecurrentNetworkCreation<float>(DeviceDescriptor::GPUDevice(0), true);
-}
-
-BOOST_AUTO_TEST_SUITE_END()
-
-}}

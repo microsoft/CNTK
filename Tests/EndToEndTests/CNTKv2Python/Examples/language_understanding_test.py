@@ -11,7 +11,9 @@ from cntk import DeviceDescriptor
 
 TOLERANCE_ABSOLUTE = 1E-1  # TODO: Once set_fixed_random_seed(1) is honored, this must be tightened a lot.
 
+from cntk.blocks import *
 from cntk.layers import *
+from cntk.models import *
 from cntk.utils import *
 from cntk.ops import splice
 
@@ -43,14 +45,14 @@ def create_test_model():
 def with_lookahead():
     x = Placeholder()
     future_x = future_value(x)
-    apply_x = splice (x, future_x)
+    apply_x = splice ([x, future_x])
     return apply_x
 
 def BiRecurrence(fwd, bwd):
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
     x = Placeholder()
-    apply_x = splice (F(x), G(x))
+    apply_x = splice ([F(x), G(x)])
     return apply_x
 
 def BNBiRecurrence(fwd, bwd, test_dual=True): # special version that calls one shared BN instance at two places, for testing BN param tying
@@ -65,7 +67,7 @@ def BNBiRecurrence(fwd, bwd, test_dual=True): # special version that calls one s
     x1 = BN(x)
     x2 = BN(x) if test_dual else x1
     # In double precision with corpus aggregation, these lead to the same result.
-    apply_x = splice (F(x1), G(x2))
+    apply_x = splice ([F(x1), G(x2)])
     return apply_x
 
 # TODO: the name is wrong

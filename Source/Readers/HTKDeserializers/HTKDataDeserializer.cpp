@@ -28,9 +28,9 @@ HTKDataDeserializer::HTKDataDeserializer(
     CorpusDescriptorPtr corpus,
     const ConfigParameters& cfg,
     bool primary)
-    : DataDeserializerBase(primary),
-      m_verbosity(0),
-      m_corpus(corpus)
+    : m_verbosity(0),
+      m_corpus(corpus),
+      m_primary(primary)
 {
     // TODO: This should be read in one place, potentially given by SGD.
     m_frameMode = (ConfigValue)cfg("frameMode", "true");
@@ -73,8 +73,8 @@ HTKDataDeserializer::HTKDataDeserializer(
     const ConfigParameters& feature,
     const wstring& featureName,
     bool primary)
-    : DataDeserializerBase(primary),
-      m_corpus(corpus)
+    : m_corpus(corpus),
+      m_primary(primary)
 {
     // The frame mode is currently specified once per configuration,
     // not in the configuration of a particular deserializer, but on a higher level in the configuration.
@@ -274,7 +274,7 @@ void HTKDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<Seque
                 f.m_chunkId = chunkId;
                 f.m_key.m_sequence = sequence;
                 f.m_key.m_sample = k;
-                f.m_indexInChunk = offsetInChunk++;
+                f.m_id = offsetInChunk++;
                 f.m_numberOfSamples = 1;
                 result.push_back(f);
             }
@@ -286,7 +286,7 @@ void HTKDataDeserializer::GetSequencesForChunk(ChunkIdType chunkId, vector<Seque
             f.m_chunkId = chunkId;
             f.m_key.m_sequence = sequence;
             f.m_key.m_sample = 0;
-            f.m_indexInChunk = offsetInChunk++;
+            f.m_id = offsetInChunk++;
             if (SEQUENCELEN_MAX < utterance->GetNumberOfFrames())
             {
                 RuntimeError("Maximum number of samples per sequence exceeded");
@@ -569,11 +569,11 @@ bool HTKDataDeserializer::GetSequenceDescription(const SequenceDescription& prim
         {
             utterance->SetExpansionLength(maxLength);
         }
-        d.m_indexInChunk = utteranceIndexInsideChunk;
+        d.m_id = utteranceIndexInsideChunk;
     }
     else
     {
-        d.m_indexInChunk = m_frameMode ? chunk.GetStartFrameIndexInsideChunk(utteranceIndexInsideChunk) + primary.m_key.m_sample : utteranceIndexInsideChunk;
+        d.m_id = m_frameMode ? chunk.GetStartFrameIndexInsideChunk(utteranceIndexInsideChunk) + primary.m_key.m_sample : utteranceIndexInsideChunk;
     }
     d.m_numberOfSamples = m_frameMode ? 1 : (uint32_t)utterance->GetNumberOfFrames();
     return true;

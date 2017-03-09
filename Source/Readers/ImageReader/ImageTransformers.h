@@ -24,9 +24,6 @@ struct ImageSequenceData : DenseSequenceData
 {
     cv::Mat m_image;
 
-    uint8_t  m_copyIndex;            // Index of the copy. Used in i.e. Multicrop,
-                                     // when deserializer provides several copies of the same sequence.
-
     const void* GetDataBuffer() override
     {
         if (!m_image.isContinuous())
@@ -73,7 +70,7 @@ protected:
     }
 
     // The only function that should be redefined by the inherited classes.
-    virtual void Apply(uint8_t copyId, cv::Mat &from) = 0;
+    virtual void Apply(size_t id, cv::Mat &from) = 0;
 
     conc_stack<std::unique_ptr<std::mt19937>> m_rngs;
 };
@@ -86,7 +83,7 @@ public:
     explicit CropTransformer(const ConfigParameters& config);
 
 private:
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
 private:
     enum class RatioJitterType
@@ -141,7 +138,7 @@ private:
         Crop = 1,
         Pad  = 2
     };
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
     size_t m_imgWidth;
     size_t m_imgHeight;
@@ -160,7 +157,7 @@ public:
     explicit MeanTransformer(const ConfigParameters& config);
 
 private:
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
 
     cv::Mat m_meanImg;
 };
@@ -211,7 +208,7 @@ public:
 private:
     void StartEpoch(const EpochConfiguration &config) override;
 
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 
@@ -233,7 +230,7 @@ public:
 private:
     void StartEpoch(const EpochConfiguration &config) override;
 
-    void Apply(uint8_t copyId, cv::Mat &mat) override;
+    void Apply(size_t id, cv::Mat &mat) override;
     template <typename ElemType>
     void Apply(cv::Mat &mat);
 

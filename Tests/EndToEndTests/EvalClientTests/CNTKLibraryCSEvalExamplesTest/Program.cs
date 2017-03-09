@@ -12,53 +12,21 @@ namespace CNTKLibraryCSEvalExamples
 {
     class Program
     {
-        private static bool isGPUDeviceAvailable;
-        private static bool isInitialized = false;
-
         static void Main(string[] args)
         {
-#if CPUONLY
-            Console.WriteLine("======== Evaluate model on CPU using CPUOnly build ========");
-#else
-            Console.WriteLine("======== Evaluate model on CPU using GPU build ========");
-#endif
+            Console.WriteLine("======== Evaluate model using C# ========");
 
             CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.CPUDevice);
             CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
+            //TODO: Add examples with OneHot.
+            //EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
+            //EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
 
-            if (IsGPUAvailable())
-            {
-                Console.WriteLine(" ====== Evaluate model on GPU =====");
-                CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
-                CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
-            }
+            // TODO: using GPU.
+            //EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
+            //EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
 
             Console.WriteLine("======== Evaluation completes. ========");
-        }
-
-        static bool IsGPUAvailable()
-        {
-            if (!isInitialized)
-            {
-#if CPUONLY
-                isGPUDeviceAvailable = false;
-#else
-                string testDeviceSetting = Environment.GetEnvironmentVariable("TEST_DEVICE");
-
-                // Check the environment variable TEST_DEVICE to decide whether to run on a CPU-only device.
-                if (!string.IsNullOrEmpty(testDeviceSetting) && string.Equals(testDeviceSetting.ToLower(), "cpu"))
-                {
-                    isGPUDeviceAvailable = false;
-                }
-                else
-                {
-                    isGPUDeviceAvailable = true;
-                }
-#endif
-                isInitialized = true;
-            }
-
-            return isGPUDeviceAvailable;
         }
     }
 }

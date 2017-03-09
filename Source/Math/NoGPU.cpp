@@ -262,11 +262,6 @@ void GPUSparseMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>&, GPUMatrix<ElemTy
 }
 
 template<class ElemType>
-void GPUSparseMatrix<ElemType>::Adam(GPUMatrix<ElemType>& c, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample, ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
-{
-}
-
-template<class ElemType>
 ElemType GPUSparseMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>&, ElemType, ElemType, ElemType, ElemType, ElemType, const bool)
 {
     return 1;
@@ -1083,13 +1078,6 @@ void GPUMatrix<ElemType>::FSAdagrad(GPUMatrix<ElemType>& gradients, GPUMatrix<El
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::Adam(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
-{
-
-}
-
-template <class ElemType>
 ElemType GPUMatrix<ElemType>::RmsProp(GPUMatrix<ElemType>& gradients, ElemType RMS_GAMMA, ElemType RMS_WGT_INC, ElemType RMS_WGT_MAX, ElemType RMS_WGT_DEC, ElemType RMS_WGT_MIN, const bool needAveMultiplier)
 {
     return 0;
@@ -1580,7 +1568,7 @@ DeviceBoundNumber<ElemType> GPUMatrix<ElemType>::Sum_AsDeviceBoundNum() const
 }
 
 template <class ElemType>
-ElemType GPUMatrix<ElemType>::AbsoluteMax() const
+ElemType GPUMatrix<ElemType>::Max() const
 {
     return ElemType(0);
 }
@@ -2076,13 +2064,6 @@ void GPUMatrix<ElemType>::TensorOp(ElemType beta, const GPUMatrix<ElemType>& a, 
                                    const array<size_t, 4>& offsets,
                                    const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 4>& regularStrides,
                                    const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 4>& reducingStrides)
-{
-}
-template <class ElemType>
-void GPUMatrix<ElemType>::TensorArgOp(const GPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
-                                      const array<size_t, 2>& offsets,
-                                      const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
-                                      const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
 {
 }
 
