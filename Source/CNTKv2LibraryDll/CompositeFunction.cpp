@@ -387,7 +387,12 @@ namespace CNTK
                 computationNodePtr->Value() = valueMatrix->AsReference();
             else // Constant: if initialized data lives on wrong device, make a copy to the right one (copy is OK since it's constant)
             {
-                Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
+                // TODO: the following two lines are a workaround for a bug in the Math library
+                // (AssignValuesOf throws when source and destination matrices reside on different GPU devices).
+                // Once this bug is fixed, change to 
+                // Matrix<ElementType> clonedMatrix(valueMatrix->GetNumRows(), valueMatrix->GetNumCols(), network->GetDeviceId(), valueMatrix->GetMatrixType(), valueMatrix->GetFormat());
+                Matrix<ElementType> clonedMatrix(network->GetDeviceId());
+                clonedMatrix.SwitchToMatrixType(valueMatrix->GetMatrixType(), valueMatrix->GetFormat(), false);
                 clonedMatrix.AssignValuesOf(*valueMatrix);
                 computationNodePtr->Value() = std::move(clonedMatrix);
             }

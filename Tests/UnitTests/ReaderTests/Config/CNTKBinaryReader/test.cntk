@@ -1,50 +1,91 @@
 # deviceId = -1 for CPU, >= 0 for GPU devices
 deviceId = -1
 
-SparseSeq = [
-    precision = "float"
-    reader = [
-        readerType = "CNTKBinaryReader"
-        file = "sparseseqoutput.bin"
-
-        input = [
-            features1 = [ alias="a" ]
-            features2 = [ alias="b" ]
-            labels1 = [ alias="c" ]
-            labels2 = [ alias="d" ]
-        ]
-        randomize = false
-    ]
-]
-
-Sparse = [
-    precision = "float"
-    reader = [
-        readerType = "CNTKBinaryReader"
-        file = "sparseoutput.bin"
-
-        input = [
-            features1 = [ alias="a" ]
-            features2 = [ alias="b" ]
-            labels1 = [ alias="c" ]
-            labels2 = [ alias="d" ]
-        ]
-        randomize = false
-    ]
-]
 
 Simple = [
     precision = "float"
     reader = [
         readerType = "CNTKBinaryReader"
-        file = "simple.bin"
+        file = "Simple_dense.bin"
+        randomize = false
+    ]
+]
 
+MNIST = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        file = "MNIST_dense.bin" # contains half a dozen chunks with ca. 400 KB in each
+        randomize = false
+        keepDataInMemory = true
+    ]
+]
+
+
+10x10_dense = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        # Training file contains ten sequence with ten samples each
+        file = "10x10_dense.bin"
+        randomize = false
+    ]
+]
+
+50x20_jagged_sequences_dense = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        # Training file contains 50 sequence with *up to* 20 samples each
+        file = "50x20_jagged_sequences_dense.bin"
+        randomize = false
+    ]
+]
+
+10x10_sparse = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        # Training file contains ten sequences with ten samples each
+        file = "10x10_sparse.bin"
+        randomize = false
+    ]
+]
+
+50x20_jagged_sequences_sparse = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        # Training file contains 50 sequence with *up to* 20 samples each
+        file = "50x20_jagged_sequences_sparse.bin"
+        randomize = false
+    ]
+]
+
+100x100x3_randomize_auto = [
+    precision = "double"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        # Training file contains 100 sequence with *up to* 100 samples 
+        # in each of 3 inputs.
+        file = "100x100x3_jagged_sequences_dense.bin"
+        randomize = true
+    ]
+]
+
+5_inputs_100x10_jagged_mixed = [
+    precision = "float"
+    reader = [
+        readerType = "CNTKBinaryReader"
+        # Training file contains 100 sequence with *up to* 100 samples 
+        # in each of 3 inputs.
+        file = "5_inputs_100x10_jagged_mixed.bin"
         input = [
             features1 = [ alias="a" ]
             features2 = [ alias="b" ]
             features3 = [ alias="c" ]
             features4 = [ alias="d" ]
+            features5 = [ alias="e" ]
         ]
-        randomize = false
     ]
 ]

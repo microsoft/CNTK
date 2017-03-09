@@ -6,6 +6,7 @@ USAGE="Usage: $0 [--py-version [27|34|35]] -- <drops-to-test>"
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
 PY_VERSION=35
+WHEEL_BASE_URL=https://cntk.ai/PythonWheel/
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -19,6 +20,10 @@ while [ $# -gt 0 ]; do
           exit 1
           ;;
       esac
+      shift # extra shift
+      ;;
+    --wheel-base-url)
+      WHEEL_BASE_URL="$2"
       shift # extra shift
       ;;
     --)
@@ -74,7 +79,7 @@ for drop in $*; do
 
   IMAGE=cntk:installtest
   for base in Ubuntu16 Ubuntu14; do
-    docker build --build-arg PY_VERSION=$PY_VERSION -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX .
+    docker build --build-arg PY_VERSION=$PY_VERSION --build-arg WHEEL_BASE_URL=$WHEEL_BASE_URL -t $IMAGE -f Dockerfile-$base-$DOCKERFILE_SUFFIX .
     $DOCKER_TO_RUN run --rm $IMAGE su - testuser -c "./run-test.sh $TEST_DEVICE"
     docker rmi $IMAGE
   done

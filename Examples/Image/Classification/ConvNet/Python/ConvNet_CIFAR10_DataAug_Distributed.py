@@ -160,10 +160,10 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64,
 
     if tensorboard_logdir is not None:
         progress_writers.append(cntk.utils.TensorBoardProgressWriter(
-            freq=num_mbs_per_log,
-            log_dir=tensorboard_logdir,
-            rank=cntk.distributed.Communicator.rank(),
-            model=network['output']))
+        freq=num_mbs_per_log,
+        log_dir=tensorboard_logdir,
+        rank=cntk.distributed.Communicator.rank(),
+        model=network['output']))
 
     trainer = create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up, progress_writers)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
@@ -172,7 +172,6 @@ def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64,
 
 
 if __name__=='__main__':
-
     parser = argparse.ArgumentParser()
     data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 
@@ -194,10 +193,15 @@ if __name__=='__main__':
 
     if args['outputdir'] is not None:
         model_path = args['outputdir'] + "/models"
-    if args['datadir'] is not None:
-        data_path = args['datadir']
+    if args['logdir'] is not None:
+        log_dir = args['logdir']
     if args['device'] is not None:
         cntk.device.set_default_device(cntk.device.gpu(args['device']))
+
+    data_path = args['datadir']
+
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
 
     mean_data=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')

@@ -24,7 +24,7 @@ from .sample_installer import install_samples
 
 # To __remove__
 from .io import *
-
+from .learner import *
 # End of to remove
 
 DATATYPE = np.float32
