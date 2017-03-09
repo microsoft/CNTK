@@ -14,7 +14,6 @@ param(
 $ErrorActionPreference = 'Stop'
 
 $workSpace = $PWD.Path
-
 Write-Verbose "Making binary drops..."
 
 # Set Paths
@@ -22,7 +21,7 @@ $basePath = "ToZip"
 $baseDropPath = Join-Path $basePath -ChildPath cntk
 $baseIncludePath = Join-Path $baseDropPath -ChildPath Include
 $buildPath = "x64\Release"
-If ($targetConfig -eq "CPU")
+if ($targetConfig -eq "CPU")
 {
     $buildPath = "x64\Release_CpuOnly"
 }
@@ -35,11 +34,11 @@ $includeFiles[1] = Join-Path $includePath20 -ChildPath CNTKLibrary.h
 $includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
-#binaryDrop locations
-$artifactPath = JoinPath $workSpace BinaryDrop
+# binaryDrop locations
+$artifactPath = Join-Path $workSpace BinaryDrop
 $whlArtifactFolder = Join-Path $artifactPath $targetConfigSuffix
-New-Item -Path $artifactPath -ItemType directory
-New-Item -Path $whlArtifactFolder -ItemType directory
+New-Item -Path $artifactPath -ItemType directory -force
+New-Item -Path $whlArtifactFolder -ItemType directory -force
 
 # Copy wheels to destination
 Copy-Item $buildPath\Python\*.whl $whlArtifactFolder
@@ -47,9 +46,9 @@ Copy-Item $buildPath\Python\*.whl $whlArtifactFolder
 # Make binary drop folder
 New-Item -Path $baseDropPath -ItemType directory
 
-#create version.txt file
-$fileContent = "CNTK-{0}`nRelease`n{1}`n{2}" -f $releaseTag, $targetConfigSuffix, $commit
-Set-Content $fileContent -Encoding Ascii $baseDropPath\version.txt
+# create version.txt file
+$fileContent = "CNTK-{0}`r`nRelease`r`n{1}`r`n{2}`r`n" -f $releaseTag, $targetConfigSuffix, $commit
+$fileContent | Set-Content -Encoding Ascii $baseDropPath\version.txt
 
 # Copy build binaries
 Write-Verbose "Copying build binaries ..."
@@ -58,7 +57,7 @@ Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 # Clean unwanted items
 Remove-Item $baseDropPath\cntk\*test*.exe*
 Remove-Item $baseDropPath\cntk\*.pdb
-Remove-Item $baseDropPath\Python 
+Remove-Item $baseDropPath\cntk\python -Recurse
 
 # Keep EvalDll.lib
 Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
@@ -114,7 +113,7 @@ Write-Verbose "Making ZIP and cleaning up..."
 # (fixed in 4.6.1, which is not a standard component of build machines
 # see https://msdn.microsoft.com/en-us/library/mt712573(v=vs.110).aspx?f=255&MSPPError=-2147217396 )
 $source = Join-Path $workSpace -ChildPath $basePath
-$destination = Join-Path $artifactPath -ChildPath $outputFile
+$destination = Join-Path $artifactPath -ChildPath $outputFileName
 Set-Location -Path $source
 7za a -bd $destination .
 If ($LastExitCode -ne 0)

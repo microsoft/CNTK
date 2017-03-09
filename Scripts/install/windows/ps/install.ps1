@@ -121,7 +121,6 @@ function WhlFileInfoFromVersionFile(
     finally {
         $reader.close()
     }
-    
 }
 
 function Get-WheelUrl(
@@ -129,11 +128,10 @@ function Get-WheelUrl(
     [Parameter(Mandatory=$true)][string] $pyVersion,
     [string] $WheelBaseUrl)
 {
-    $whlFileInfo = WhlFileInfoFromVersionFile -path $path -pyVersion $pyVersion
+    # if a local wheel exists in the cntk\Python directory, we will pip install this wheel
+    # if the file doesn't exist we will pip install the wheel in the specified url
 
-    if ($wheelBaseUrl) {
-        return "{0}/{1}" -f $whlFileInfo.CntkUrl, $whlFileInfo.Name
-    }
+    $whlFileInfo = WhlFileInfoFromVersionFile -path $path -pyVersion $pyVersion -wheelBaseUrl $WheelBaseUrl
 
     $whlPath = Join-Path $path cntk\Python
     $whlFile = Join-Path $whlPath $whlFileInfo.Name
