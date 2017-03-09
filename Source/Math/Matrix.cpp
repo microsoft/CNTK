@@ -3322,16 +3322,7 @@ Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, size
         m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
         m_GPUMatrix->AssignOneHot(*a.m_GPUMatrix, num_class),
         m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
-        {
-            // TODO replace by more performant version directly on GPU that does not require the round-trip over CPU.
-            CPUMatrix<ElemType> tempA(a.GetNumRows(), a.GetNumCols());
-            ElemType* arr = a.m_GPUMatrix->CopyToArray(); // TODO: unnecessary allocation/copy; why not make this a vector that we move over as an rvalue ref?
-            tempA.SetValue(a.m_GPUMatrix->GetNumRows(), a.m_GPUMatrix->GetNumCols(), arr);
-
-            CPUSparseMatrix<ElemType> tempThis(GetFormat(), GetNumRows(), GetNumCols(), GetNumElements());
-            tempThis.AssignOneHot(tempA, num_class);
-            m_GPUSparseMatrix->SetValue(tempThis);
-        }
+        m_GPUSparseMatrix->AssignOneHot(*a.m_GPUMatrix, num_class)
         );
 
     return *this;
