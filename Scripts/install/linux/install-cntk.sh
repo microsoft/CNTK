@@ -9,16 +9,21 @@
 SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
-PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath: -n "$SCRIPT_NAME" -- "$@")
+PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath:,wheel-base-url: -n "$SCRIPT_NAME" -- "$@")
 
-[ $? != 0 ] && {
-  echo Terminating...
+function die {
+  set +x
+  echo -e $1
+  echo Go to https://github.com/Microsoft/CNTK/wiki/Setup-Linux-Binary-Script for help.
   exit 1
 }
+
+[ $? != 0 ] && die "Terminating..."
 
 eval set -- "$PARSED_ARGS"
 PY_VERSION=35
 ANACONDA_PREFIX="$HOME/anaconda3"
+WHEEL_BASE_URL=https://cntk.ai/PythonWheel/
 
 while true; do
   case "$1" in
@@ -28,14 +33,17 @@ while true; do
           PY_VERSION="$2"
           ;;
         *)
-          echo Invalid value for --py-version option, please specify 27, 34, or 35.
-          exit 1
+          die "Invalid value for --py-version option, please specify 27, 34, or 35."
           ;;
       esac
       shift 2
       ;;
     --anaconda-basepath)
       ANACONDA_PREFIX="$2"
+      shift 2
+      ;;
+    --wheel-base-url) # intended for testing, not documented
+      WHEEL_BASE_URL="$2"
       shift 2
       ;;
     --)
@@ -45,10 +53,7 @@ while true; do
   esac
 done
 
-[ $# = 0 ] || {
-  echo Extra parameters detected: $*
-  exit 1
-}
+[ $# = 0 ] || die "Extra parameters detected: $*"
 
 # Log steps, stop on error
 # TODO cut down on logging
@@ -57,9 +62,7 @@ set -x -e -o pipefail
 # Go to the drop root
 cd "$SCRIPT_DIR/../../.."
 
-PYWHEEL_QUALIFIER=cp$PY_VERSION-cp${PY_VERSION}m
-[ $PY_VERSION = 27 ] && PYWHEEL_QUALIFIER+=u
-
+CNTK_VERSION_PATH="version.txt"
 CNTK_BIN_PATH="$PWD/cntk/bin"
 CNTK_LIB_PATH="$PWD/cntk/lib"
 CNTK_DEP_LIB_PATH="$PWD/cntk/dependencies/lib"
@@ -67,22 +70,32 @@ CNTK_EXAMPLES_PATH="$PWD/Examples"
 CNTK_TUTORIALS_PATH="$PWD/Tutorials"
 CNTK_BINARY="$CNTK_BIN_PATH/cntk"
 CNTK_PY_ENV_FILE="$SCRIPT_DIR/conda-linux-cntk-py$PY_VERSION-environment.yml"
-CNTK_WHEEL_PATH="cntk/python/cntk-2.0.beta12.0-$PYWHEEL_QUALIFIER-linux_x86_64.whl"
 
+test -f "$CNTK_VERSION_PATH" &&
 test -d "$CNTK_BIN_PATH" && test -d "$CNTK_LIB_PATH" && test -d "$CNTK_DEP_LIB_PATH" &&
 test -d "$CNTK_TUTORIALS_PATH" &&
 test -d "$CNTK_EXAMPLES_PATH" && test -x "$CNTK_BINARY" &&
-test -f "$CNTK_PY_ENV_FILE" && test -f "$CNTK_WHEEL_PATH" || {
-  echo Cannot find expected drop content. Please double-check that this is a
-  echo CNTK binary drop for Linux. Go to https://github.com/Microsoft/CNTK/wiki
-  echo for help.
-  exit 1
-}
+test -f "$CNTK_PY_ENV_FILE" ||
+  die "Cannot find expected drop content. Please double-check that this is a CNTK binary drop for Linux."
 
 # Check for tested OS (note: only a warning, we can live with lsb-release not being available)
 [[ "$(lsb_release -i)" =~ :.*Ubuntu ]] && [[ "$(lsb_release -r)" =~ :.*(14\.04|16\.04) ]] || {
   printf "WARNING: this script was only tested on Ubuntu 14.04 and 16.04, installation may fail.\n"
 }
+
+readarray -t versionInfo < "$CNTK_VERSION_PATH" ||
+  die "Unable to read version file '$CNTK_VERSION_PATH'."
+
+[[ ${versionInfo[0]} =~ ^CNTK-([1-9][0-9a-z-]*)$ ]] ||
+  die "Malformed version information in version file, ${versionInfo[0]}."
+
+DASHED_VERSION="${BASH_REMATCH[1]}"
+DOTTED_VERSION="${DASHED_VERSION//-/.}"
+
+[[ ${versionInfo[2]} =~ ^(GPU|CPU-Only|GPU-1bit-SGD)$ ]] ||
+  die "Malformed target configuration file, ${versionInfo[2]}."
+
+TARGET_CONFIGURATION="${BASH_REMATCH[1]}"
 
 ###################
 # Package installs
@@ -110,6 +123,23 @@ if dpkg -s $PACKAGES 1>/dev/null 2>/dev/null; then
 else
   sudo apt-get update
   sudo apt-get install -y --no-install-recommends $PACKAGES
+fi
+
+#########################################
+# Check Python Wheel availability
+
+PYWHEEL_QUALIFIER=cp$PY_VERSION-cp${PY_VERSION}m
+[ $PY_VERSION = 27 ] && PYWHEEL_QUALIFIER+=u
+CNTK_WHEEL_NAME="cntk-$DOTTED_VERSION-$PYWHEEL_QUALIFIER-linux_x86_64.whl"
+CNTK_WHEEL_PATH="cntk/python/$CNTK_WHEEL_NAME"
+
+# Check online if there is no wheel locally
+if ! test -f "$CNTK_WHEEL_PATH"; then
+  CNTK_WHEEL_PATH="$WHEEL_BASE_URL/$TARGET_CONFIGURATION/$CNTK_WHEEL_NAME"
+
+  wget -q --spider "$CNTK_WHEEL_PATH" ||
+    die "Python wheel not available locally and cannot reach $CNTK_WHEEL_PATH for Python\nwheel installation online. Please double-check Internet connectivity."
+
 fi
 
 #########################################
@@ -162,15 +192,12 @@ PY_DEACTIVATE="$ANACONDA_PREFIX/bin/deactivate"
 CNTK_PY_ENV_NAME="cntk-py$PY_VERSION"
 CNTK_PY_ENV_PREFIX="$ANACONDA_PREFIX/envs/$CNTK_PY_ENV_NAME"
 if [ -d "$CNTK_PY_ENV_PREFIX" ]; then
-  "$CONDA" env update --file "$CNTK_PY_ENV_FILE" --name "$CNTK_PY_ENV_NAME" || {
-    echo Updating Anaconda environment failed.
-    exit 1
-  }
+  "$CONDA" env update --file "$CNTK_PY_ENV_FILE" --name "$CNTK_PY_ENV_NAME" ||
+    die "Updating Anaconda environment failed."
 else
   "$CONDA" env create --file "$CNTK_PY_ENV_FILE" --prefix "$CNTK_PY_ENV_PREFIX" || {
-    echo Creating Anaconda environment failed.
     rm -rf "$CNTK_PY_ENV_PREFIX"
-    exit 1
+    die "Creating Anaconda environment failed."
   }
 fi
 
