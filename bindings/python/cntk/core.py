@@ -245,7 +245,7 @@ class Value(cntk_py.Value):
         if not var.dynamic_axes:
             # No dynamic axes -> no batch
             data = Value._as_best_data_type(var, data)
-            ndav = NDArrayView.from_data(data, device)
+            ndav = NDArrayView.from_data(data, cpu_dev)
 
             return cntk_py.Value(ndav)
 
@@ -257,13 +257,8 @@ class Value(cntk_py.Value):
                         'of sequences, you need to pass them as a pure-Python list '
                         'of NumPy arrays')
 
-            if seq_starts:
-                data = list(np.atleast_1d(data))
-            else:
-                data = Value._as_best_data_type(var, data)
-                ndav = NDArrayView.from_data(data, device)
-
-                return cntk_py.Value(ndav)
+            # FIXME if not seq_starts: directly pass it to Value constructor
+            data = list(np.atleast_1d(data))
 
         if not isinstance(data, list):
             raise ValueError('batch has to be a list of NumPy arrays or '

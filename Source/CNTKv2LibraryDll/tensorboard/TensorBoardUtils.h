@@ -17,9 +17,12 @@ namespace CNTK
 {
     namespace Internal
     {
-        ///
-        /// Populates the given TensorBoard GraphDef with the graph of the given CNTK function.
-        ///
-        void CreateTensorBoardGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
+        namespace TensorBoardUtils
+        {
+            ///
+            /// Populates the given TensorFlow GraphDef with the graph of the given CNTK function.
+            ///
+            void CreateGraph(const FunctionPtr& src, tensorflow::GraphDef& dst);
+        }
     }
 }

@@ -14,7 +14,10 @@ Expand-Archive -Path BinaryDrop.zip
 $installCache = '.\BinaryDrop\cntk\Scripts\install\windows\InstallCache'
 Move-Item -Path InstallCache -Destination $installCache
 
-.\BinaryDrop\cntk\Scripts\install\windows\install.ps1 -NoConfirm
+# Mock host input for installation
+function Read-Host { if ($global:readHostMockCtr++) { 'y' } else { '1' } }
+
+.\BinaryDrop\cntk\Scripts\install\windows\install.ps1 -Execute
 
 Set-Location BinaryDrop
 ..\test-install.bat cntk\scripts\cntkpy35.bat

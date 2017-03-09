@@ -4,7 +4,7 @@ The criterion node for CTC training is *ForwardBackward*. This node is an abstra
 
 # Preparation of Training Data
 
-Features are consumed with the HTKMLFDeserializer and labels with the TextDeserializer. To convert a traditional set of MLF/SCP files to the format suitable for CTC training, use [this python script](https://github.com/vmazalov/Scripts/blob/master/ctc_label_conversion.py). Assuming that the python script is placed into the CNTK directory with speech test data, example run to convert features is
+Features are consumed with the HTKMLFDeserializer and labels with the TextDeserializer. To convert a traditional set of MLF/SCP files to the format suitable for CTC training, use [this python script](https://github.com/vmazalov/CNTKConfigs/blob/master/ctc_label_conversion.py). Assuming that the python script is placed into the CNTK directory with speech test data, example run to convert features is
 <pre><code> %CNTK_path%\Tests\EndToEndTests\Speech\Data>python ctc_label_conversion.py --inputScpFile glob_0000.scp --inputMlfFile glob_0000.mlf --inputPhoneListFile state.list --outputScpFile ctc_glob_0000.scp --outputLabelFile ctc_glob_0000.mlf </code></pre>
 
 There are several assumptions about the input data:

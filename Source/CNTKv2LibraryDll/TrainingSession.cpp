@@ -35,8 +35,7 @@ namespace CNTK
         bool restoreFromCheckpointIfExists,
         bool saveAllCheckpoints,
         size_t maxNumberOfSamples,
-        size_t progressFrequency,
-        const std::vector<ProgressWriterPtr>& progressWriters)
+        size_t progressFrequency)
     {
         return MakeSharedObject<TrainingSession>(trainingSource,
             trainer,
@@ -50,8 +49,7 @@ namespace CNTK
             restoreFromCheckpointIfExists,
             saveAllCheckpoints,
             maxNumberOfSamples,
-            progressFrequency,
-            progressWriters);
+            progressFrequency);
     }
 
     TrainingSession::TrainingSession(
@@ -67,8 +65,7 @@ namespace CNTK
         bool restoreFromCheckpointIfExists,
         bool saveAllCheckpoints,
         size_t maxNumberOfSamples,
-        size_t progressFrequencyInSamples,
-        const std::vector<ProgressWriterPtr>& progressWriters) :
+        size_t progressFrequencyInSamples) :
         m_trainingSource(trainingSource),
         m_trainer(trainer),
         m_modelInputToMinibatchSourceStream(modelInputToMinibatchSourceStream),
@@ -126,7 +123,7 @@ namespace CNTK
             m_actions.push_back({ checkpointFrequencyInSamples, 0, 0,
                 [this](size_t currentIndex, const DeviceDescriptor&)
                 {
-                    SaveCheckpoint(currentIndex);
+                    SaveCheckpoint(currentIndex); 
                     // enable profiler after the first checkpoint
                     // This has effect only if the profiler is globally enabled by StartProfiler()
                     Microsoft::MSR::CNTK::ProfilerEnable(true);
@@ -139,8 +136,6 @@ namespace CNTK
         if (progressFrequencyInSamples != 0)
             m_actions.push_back({ progressFrequencyInSamples, 0, 0,
                 [this](size_t currentIndex, const DeviceDescriptor&) { ReportProgress(currentIndex); } });
-
-        m_trainer->AddProgressWriters(progressWriters);
     }
 
     void TrainingSession::Train(const DeviceDescriptor& computeDevice)
@@ -163,12 +158,9 @@ namespace CNTK
             size_t samplesLeft = m_maxNumberOfSamples > m_trainer->TotalNumberOfSamplesSeen()
                 ? m_maxNumberOfSamples - m_trainer->TotalNumberOfSamplesSeen()
                 : 0;
-
-            // Note that in case of distributed training we don't want to stop if the local minibatch
-            // is empty - it is possible that the other workers are still processing their minibatches.
             GetTrainingMinibatch(minibatch, samplesLeft, computeDevice);
 
-            // Train on the minibatch.
+            // Train on the minibatch
             OnMinibatchStart();
             shouldTrain = m_trainer->TrainMinibatch(minibatch, computeDevice);
             OnMinibatchEnd();
@@ -220,21 +212,19 @@ namespace CNTK
         size_t sampleCount = 0;
         while(GetCrossValidationMinibatch(minibatch, m_crossValidationSchedule[sampleCount], computeDevice), !minibatch.empty())
         {
-            // TODO: it may be slow to rely on TestMinibatch to return error each time, since it may require transfer
-            // of error from the GPU each time.
             error = m_trainer->TestMinibatch(minibatch, computeDevice, sampleCount);
-            accumulatedError += error * sampleCount;
+            accumulatedError += error;
             totalNumberOfSamples += sampleCount;
             numberOfMinibatches++;
         }
         m_crossValidationSource->RestoreFromCheckpoint(checkpoint);
-        m_trainer->SummarizeTestProgress();
+
         OnCrossValidationEnd(currentIndex, accumulatedError / totalNumberOfSamples, totalNumberOfSamples, numberOfMinibatches);
     }
 
-    inline void TrainingSession::ReportProgress(size_t /*currentIndex*/)
+    inline void TrainingSession::ReportProgress(size_t currentIndex)
     {
-        m_trainer->SummarizeTrainingProgress();
+        this->OnProgress(currentIndex);
     }
 
     void TrainingSession::GetTrainingMinibatch(std::unordered_map<Variable, ValuePtr>& minibatch, size_t maxMbSize, const DeviceDescriptor& computeDevice)
@@ -266,7 +256,6 @@ namespace CNTK
         if (mbSize == 0)
             return;
 
-        // TODO: is copy really necessary here?
         auto minibatchData = source->GetNextMinibatch(0 /*numberOfSequences*/, mbSize, numberOfWorkers, workerRank, computeDevice);
         if (minibatchData.empty())
             return;

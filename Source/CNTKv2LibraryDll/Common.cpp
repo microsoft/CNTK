@@ -555,12 +555,6 @@ namespace CNTK
         return s_defaultDynamicAxis;
     }
 
-    /*static*/ const Axis& Axis::OperandSequenceAxis()
-    {
-        static const Axis s_operandSequenceAxis(L"__operandSequenceAxis");
-        return s_operandSequenceAxis;
-    }
-
     /*static*/ const Axis& Axis::DefaultBatchAxis()
     {
         static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);

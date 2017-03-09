@@ -66,8 +66,6 @@ $includeFiles[1] = Join-Path $includePath20 -ChildPath CNTKLibrary.h
 $includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
-# Copy Wheels
-Copy-Item $buildPath\Python\*.whl
 
 # Make binary drop folder
 New-Item -Path $baseDropPath -ItemType directory
@@ -103,6 +101,11 @@ Foreach ($includeFile in $includeFiles)
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
+# Include CPPEvalV2Client examples in 2.0 Beta drop
+# If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
+# {
+#     Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
+# }
 
 # Copy Examples
 Write-Verbose "Copying Tutorials ..."
@@ -126,7 +129,7 @@ If (Test-Path $baseDropPath\Scripts\install\linux)
 # Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
 # Copying with Robocopy. Maximum 2 retries, 30 sec waiting time in between
 Write-Verbose "Copying dependencies and other files from Remote Share ..."
-robocopy $sharePath $baseDropPath /s /e /r:2 /w:30 /np
+robocopy $sharePath $baseDropPath /s /e /r:2 /w:30
 # Check that Robocopy finished OK.
 # Any exit code greater than 7 indicates error
 # See http://ss64.com/nt/robocopy-exit.html
@@ -144,13 +147,10 @@ Add-Type -assembly "system.io.compression.filesystem"
 [io.compression.zipfile]::CreateFromDirectory($source, $destination)
 
 # Log the file hash
-Get-FileHash -Algorithm SHA256 -Path $destination, *.whl
+Get-FileHash -Algorithm SHA256 -Path $destination
 
 # Remove ZIP sources
 If (Test-Path $basePath)
 {
     Remove-Item $basePath -Recurse
 }
-
-# Return zero exit code code from here (N.B.: can be non-zero from robocopy above)
-exit 0

@@ -367,7 +367,7 @@ class Function(cntk_py.Function):
         return state, output_map
 
     @typemap
-    def backward(self, state, root_gradients, variables, as_numpy=True):
+    def backward(self, state, root_gradients, variables):
         '''
         Backpropagates supplied ``root_gradients`` for one or more of the output
         variables of the Function, to calculate gradients with respect to
@@ -394,9 +394,6 @@ class Function(cntk_py.Function):
             root_gradients (dict): the gradients that will be backpropagated
             variables (set): a list of input variables with respect to which
              the gradients have to be computed.
-            as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
-             Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
 
         Note:
              See :meth:`~cntk.ops.functions.Function.forward` for more examples
@@ -413,14 +410,13 @@ class Function(cntk_py.Function):
 
         self._backward(state, root_gradients, var_gradients)
 
-        if as_numpy:
-            for var, value in var_gradients.items():
-                var_gradients[var] = variable_value_to_seq(value, var)
+        for var, value in var_gradients.items():
+            var_gradients[var] = variable_value_to_seq(value, var)
 
         return var_gradients
 
     @typemap
-    def grad(self, at, wrt=None, device=None, as_numpy=True):
+    def grad(self, at, wrt=None, device=None):
         '''
         Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
         The Function must have a single output.
@@ -430,11 +426,11 @@ class Function(cntk_py.Function):
             >>> y = C.sqrt(x)
             >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1,1)
             >>> y.grad({x:a})
-            array([[[ 0.5  ]],
+            [array([[[ 0.5  ]],
             <BLANKLINE>
                    [[ 0.25 ]],
             <BLANKLINE>
-                   [[ 0.125]]], dtype=float32)
+                   [[ 0.125]]], dtype=float32)]
 
         Args:
             at (dict) : mapping of the Function's arguments to values
@@ -443,14 +439,11 @@ class Function(cntk_py.Function):
              respect to all arguments that need gradient will be computed. If a variable
              is repeated in this list, the gradient will be repeated
              in the output as a shallow copy.
-            as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
-             Specifying this as False returns a CNTK Value which avoids a
-             costly conversion but returns a somewhat opaque object.
 
         Returns:
-            dict or NumPy Array: Dict with keys of ``wrt`` variables and gradient values of
-            ``wrt`` variables. A single NumPy array if there is only one gradient value.
-             Each element has the same shape as ``wrt`` including dynamic axes (such as the batch axis).
+            list: list containing the gradients in the same order as
+            the variables in ``wrt``. Each element has the same shape as
+            ``wrt`` including dynamic axes (such as the minibatch axis).
         '''
 
         if len(self.outputs) != 1 :
@@ -461,18 +454,10 @@ class Function(cntk_py.Function):
 
         unique_wrt = set(wrt)
         output = [self.output]
-        
-        # Since we do not return the computed results and use them only to determine the shape
-        # of the root gradients, we run the forward pass with as_numpy=False regardless of the
-        # actual as_numpy setting passed to this function
-        state, results = self.forward(at, output, set(output), device, as_numpy=False)
-        ones = {self.output: np.ones(v.shape, self.output.dtype) for v in results.values()}
-        grad_dict = self.backward(state, ones, unique_wrt, as_numpy)
-
-        if len(grad_dict) > 1:
-            return grad_dict
-        else:
-            return list(grad_dict.values())[0]
+        state, results = self.forward(at, output, set(output), device)
+        ones = {self.output: np.ones_like(v) for v in results.values()}
+        grad_dict = self.backward(state, ones, unique_wrt)
+        return [grad_dict[v] for v in wrt]
 
     @property
     @typemap
@@ -893,16 +878,12 @@ class UserFunction(Function):
 
         map_if_possible(variables)
 
-        if len(root_gradients) == 1:
-            for rg in root_gradients.values():
-                break
-            root_gradients = rg
-        
-        possible_wrt = [input for input in self.inputs if input.needs_gradient]
-        if len(possible_wrt) > 1:
+        if len(variables)>1:
             self.backward(state, root_gradients, variables)
         else:
-            result = self.backward(state, root_gradients)
+            for rg in root_gradients.values():
+                break
+            result = self.backward(state, rg)
             for k in variables:
                 variables[k] = result
 

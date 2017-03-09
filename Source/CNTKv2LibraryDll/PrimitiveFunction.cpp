@@ -17,7 +17,6 @@
 #include "RNNNodes.h"
 #include "BlockFunction.h"
 #include "CompositeFunction.h"
-#include "SpecialPurposeNodes.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -144,15 +143,6 @@ namespace CNTK
             (op == PrimitiveOpType::NDCG))
         {
             outputDynamicAxes = std::vector<Axis>({});
-        }
-        else if ((op == PrimitiveOpType::ReduceElements) && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>().IsDynamicAxis() && (inputs[0].DynamicAxes() != Axis::UnknownDynamicAxes()))
-        {
-            auto reductionAxis = NormalizeAxis(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), inputs[0]);
-            for (auto inputDynamicAxis : inputs[0].DynamicAxes())
-            {
-                if (inputDynamicAxis != reductionAxis)
-                    outputDynamicAxes.push_back(inputDynamicAxis);
-            }
         }
         else if (op == PrimitiveOpType::Where)
         {
@@ -306,8 +296,6 @@ namespace CNTK
                         case PrimitiveOpType::Sin:
                         case PrimitiveOpType::Cos:
                         case PrimitiveOpType::Pass:
-                        case PrimitiveOpType::StopGradient:
-                        case PrimitiveOpType::ELU:
                             assert(m_inputs.size() == 1);
                             outputShape = UnaryElementwiseOpOutputShape(m_inputs[0].Shape());
                             break;
@@ -575,11 +563,9 @@ namespace CNTK
                         case PrimitiveOpType::ReduceElements:
                         {
                             assert(m_inputs.size() == 1);
-                            auto reductionAxis = NormalizeAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0]);
+                            auto reductionAxis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape());
                             if (reductionAxis == Axis::AllStaticAxes() || reductionAxis == Axis::AllAxes())
                                 outputShape = {};
-                            else if (reductionAxis.IsDynamicAxis())
-                                outputShape = m_inputs[0].Shape();
                             else
                             {
                                 std::vector<int> reductionAxes = { reductionAxis.StaticAxisIndex() };
@@ -766,7 +752,7 @@ namespace CNTK
         // The hard requirement that the serialization depends on is that
         // new op type values are only added to the end of the list.
         // This also applies to other enums (DataType, VariableKind, etc.)
-        if (op >= PrimitiveOpType::UnknownOP)
+        if (op > PrimitiveOpType::NoOp)
         {
             LogicError("Unexpected op '%ls':'%u' (%s).", 
                         opKey.c_str(), 
