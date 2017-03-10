@@ -3,10 +3,12 @@
 # for full license information.
 # ==============================================================================
 
-from .. import cntk_py, NDArrayView
-from cntk.internal import typemap
 from enum import Enum, unique
 import numpy as np
+
+from .. import cntk_py, NDArrayView
+from cntk.internal import typemap
+from ..internal.swig_helper import map_if_possible
 
 
 @unique
