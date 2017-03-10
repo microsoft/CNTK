@@ -1594,10 +1594,10 @@ public:
     {
     }
 
-private:
+protected:
 
     // determine the size that we should set our Matrix storage to
-    void DetermineDataSize(size_t& rows, size_t& cols) const
+    virtual void DetermineDataSize(size_t& rows, size_t& cols) const
     {
         if (HasMBLayout())
         {

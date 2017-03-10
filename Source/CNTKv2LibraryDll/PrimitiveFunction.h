@@ -537,6 +537,13 @@ namespace CNTK
                 RuntimeError("Times: The %s operand '%S' rank (%d) must be >= #axes (%d) being reduced over.",
                              Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right", rightOperand.AsString().c_str(), (int)rightOperandShape.Rank(), (int)numReductionAxes);
 
+            if (rightOperand.IsSparse() && (numReductionAxes > 1))
+                LogicError("Times: For a sparse %s operand '%S', cannot reduce multiple (%zu) axes; currently only the %s axis can be reduced for the sparse operand.",
+                            Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "left" : "right",
+                            rightOperand.AsString().c_str(), 
+                            numReductionAxes, 
+                            Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading");
+
             // outputRank dimensions cannot be inferred
             for (size_t k = 0; k < outputRank; k++)
             {

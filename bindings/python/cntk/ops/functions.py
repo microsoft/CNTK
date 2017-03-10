@@ -752,8 +752,11 @@ class Function(cntk_py.Function):
         # of the root gradients, we run the forward pass with as_numpy=False regardless of the
         # actual as_numpy setting passed to this function
         state, results = self.forward(at, output, set(output), device, as_numpy=False)
-        ones = {self.output: np.ones(v.shape, self.output.dtype) for v in results.values()}
-        grad_dict = self.backward(state, ones, unique_wrt, as_numpy)
+        
+        # Setup a root gradient value filled with ones identical in shape/layout as the output value
+        root_gradient = results[self.output].deep_clone()
+        root_gradient.data().set_value(1.0)
+        grad_dict = self.backward(state, {self.output: root_gradient}, unique_wrt, as_numpy)
 
         if len(grad_dict) > 1:
             return grad_dict

@@ -94,7 +94,7 @@ namespace CNTK
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
             InvalidArgument("Invalid sparse CSC format data specified for construction of NDArrayView with shape '%S'; "
                             "either one of the specified buffers is null or the count (%d) of non-zero values is invalid.",
-                viewShape.AsString().c_str(), (int)numNonZeroValues);
+                            viewShape.AsString().c_str(), (int)numNonZeroValues);
 
         auto sparseMatrix = GetWritableMatrix<ElementType>(1);
         sparseMatrix->SetMatrixFromCSCFormat(colStarts, rowIndices, nonZeroValues, numNonZeroValues, sparseMatrix->GetNumRows(), sparseMatrix->GetNumCols());
@@ -122,19 +122,22 @@ namespace CNTK
 
     NDArrayView::NDArrayView(CNTK::DataType dataType, CNTK::StorageFormat storageType, const NDShape& viewShape, const DeviceDescriptor& device)
         : NDArrayView(dataType, device, storageType, viewShape, false, AllocateTensorView(dataType, storageType, viewShape, device))
-    {
-    }
+    {}
 
     NDArrayView::~NDArrayView()
-    {
-    }
+    {}
 
     void NDArrayView::SetValue(float value)
     {
-        if (IsSparse())
-            LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a scalar is only allowed for objects with dense storage format.");
+        if (GetDataType() == DataType::Double)
+            SetValue((double)value);
+        else
+        {
+            if (IsSparse())
+                LogicError("NDArrayView::SetValue: Setting a NDArrayView contents to a scalar is only allowed for objects with dense storage format.");
 
-        GetWritableMatrix<float>()->SetValue(value);
+            GetWritableMatrix<float>()->SetValue(value);
+        }
     }
 
     void NDArrayView::SetValue(double value)
