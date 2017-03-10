@@ -464,8 +464,6 @@ BOOST_AUTO_TEST_CASE(ReduceableTransposeTimesInCPU)
 
 BOOST_AUTO_TEST_CASE(TimesReduceSequenceAxis)
 {
-    Internal::SetComputationNetworkTrackGapNans(true);
-
     if (IsGPUAvailable())
     {
         TestTimesReduceSequenceAxis<double>(153, 21, false, false, { 20, 7, 8 }, DeviceDescriptor::GPUDevice(0));

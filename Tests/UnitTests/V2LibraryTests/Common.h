@@ -43,6 +43,9 @@ struct V2LibraryTestFixture
         // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking
         // which will have a silent performance degradation otherwise
         Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
+
+        // Turn on gap nan tracking
+        Internal::SetComputationNetworkTrackGapNans(true);
     }
 };
 

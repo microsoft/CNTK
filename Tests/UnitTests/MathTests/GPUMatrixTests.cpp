@@ -7,6 +7,7 @@
 #include "stdafx.h"
 #include "../../../Source/Math/GPUMatrix.h"
 #include "../../../Source/Math/Matrix.h"
+#include "BestGpu.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -16,17 +17,12 @@ BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
 BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAccrossDevices, RandomSeedFixture)
 {
+    bool hasTwoGpus = false;
+#ifndef CPUONLY
+    auto gpus = GetAllGpusData();
+    hasTwoGpus = (gpus.size() > 1);
+#endif
     std::array<float, 6> array = { 1, 2, 3, 4, 5, 6 };
-
-    bool hasTwoGpus = true;
-    try
-    {
-        Matrix<float> m_gpu(2, 3, array.data(), c_deviceIdZero + 1, matrixFlagNormal);
-    }
-    catch (...)
-    {
-        hasTwoGpus = false;
-    }
 
     {
         Matrix<float> m_gpu(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
