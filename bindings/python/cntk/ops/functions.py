@@ -891,8 +891,44 @@ class Function(cntk_py.Function):
         return super(Function, self).uid()
 
     @typemap
+    def bind_forward_declarations(self, bindings):
+        '''
+        In-place bind the specified forward declarations in the Function graph to the
+        specified bindings in the map.
+
+        Args:
+            bindings (dict): map from forward declarations to binding variables
+
+        Returns:
+            :class:`Function`: itself
+        '''
+        bindings = bindings or {}
+        if not isinstance(bindings, dict):
+            raise TypeError("forward declaration bindings map must be a dictionary")
+        return super(Function, self).replace_placeholders(bindings)
+
+    @typemap
+    def bind_forward_declaration(self, binding):
+        '''
+        In-place bind the only forward declaration in the Function graph with the
+        specified binding.
+
+        Args:
+            binding (:class:`~cntk.ops.variables.Variable`): the variable
+             that the forward declaration will be bound to
+
+        Returns:
+            :class:`Function`: itself
+
+        :raises ExceptionType: when the function has multiple forward declarations.
+        '''
+        return super(Function, self).replace_placeholder(binding)
+
+    @typemap
     def replace_placeholders(self, substitutions):
         '''
+        DEPRECATED.
+
         In-place replace specified placeholders in the Function graph with the
         specified replacements in the map.
 
@@ -902,14 +938,16 @@ class Function(cntk_py.Function):
         Returns:
             :class:`Function`: itself
         '''
-        substitutions = substitutions or {}
-        if not isinstance(substitutions, dict):
-            raise TypeError("Variable substitution map must be a dictionary")
-        return super(Function, self).replace_placeholders(substitutions)
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'bind_forward_declarations() instead.', DeprecationWarning)
+        return self.bind_forward_declarations(substitutions)
 
     @typemap
     def replace_placeholder(self, substitution):
         '''
+        DEPRECATED.
+
         In-place replace the only placeholder in the function graph with the
         specified substitution.
 
@@ -922,7 +960,10 @@ class Function(cntk_py.Function):
 
         :raises ExceptionType: when the function has multiple placeholders.
         '''
-        return super(Function, self).replace_placeholder(substitution)
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'bind_forward_declaration() instead.', DeprecationWarning)
+        return self.bind_forward_declaration(substitution)
 
     @typemap
     def find_all_with_name(self, name):
@@ -1204,6 +1245,34 @@ class UserFunction(Function):
 
     def _infer_outputs(self, outputs):
         outputs.extend(self.infer_outputs())
+
+    @typemap
+    def output(shape, dtype, dynamic_axes, name=''):
+        '''
+        It creates an output variable that is used to define a user defined function.
+
+        Args:
+            shape (tuple or int): the shape of the input tensor
+            dtype (type): np.float32 or np.float64
+            dynamic_axes (list or tuple): a list of dynamic axis (e.g., batch axis, time axis)
+            name (str, optional): the name of the Function instance in the network
+
+        Returns:
+            :class:`~cntk.ops.variables.Variable` that is of output type
+        '''
+        from cntk.cntk_py import output_variable
+        from cntk.internal import sanitize_shape, sanitize_dtype_cntk
+
+        shape = sanitize_shape(shape)
+
+        dtype = sanitize_dtype_cntk(dtype)
+
+        for a in dynamic_axes:
+            if not a.is_dynamic_axis:
+                raise ValueError('axis in dynamic_axes attribute is not dynamic')
+        dynamic_axes = list(reversed(dynamic_axes))
+
+        return output_variable(shape, dtype, dynamic_axes, name)
 
     def infer_outputs(self):
         '''

@@ -3,8 +3,35 @@
 # for full license information.
 # ==============================================================================
 
+import numpy as np
 from ...utils import get_data_type
 from cntk.internal import typemap, sanitize_input
+from ...axis import Axis
+
+##########################################################################
+# variable ops
+##########################################################################
+
+@typemap
+def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+          sequence_axis=Axis.default_dynamic_axis(), name=''):
+    '''
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
+
+    Args:
+        shape (tuple or int): the shape of the input tensor
+        dtype (type, optional): np.float32 (default) or np.float64
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
+        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.variables.Variable`
+    '''
+    from ... import input
+    return input(shape, dtype, needs_gradient, is_sparse, [Axis.default_batch_axis(), sequence_axis], name)
 
 ##########################################################################
 # sequence ops
