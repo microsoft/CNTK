@@ -111,7 +111,7 @@ void HTKDataDeserializer::InitializeAugmentationWindow(const std::pair<size_t, s
 }
 
 // Initializes chunks based on the configuration and utterance descriptions.
-void HTKDataDeserializer::InitializeChunkDescriptions(const vector<wstring>& paths)
+void HTKDataDeserializer::InitializeChunkDescriptions(const vector<string>& paths)
 {
     // Read utterance descriptions.
     vector<UtteranceDescription> utterances;
@@ -120,7 +120,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(const vector<wstring>& pat
 
     for (const auto& u : paths)
     {
-        UtteranceDescription description(move(msra::asr::htkfeatreader::parsedpath(u)));
+        UtteranceDescription description(move(msra::asr::htkfeatreader::parsedpath(msra::strfun::utf16(u))));
         size_t numberOfFrames = description.GetNumberOfFrames();
 
         if (m_expandToPrimary && numberOfFrames != 1)

@@ -21,8 +21,7 @@ struct SequenceDescriptor : SequenceDescription
         m_byteSize(0)
     {
     }
-    // size_t m_numberOfSamples -- number of samples in the sequence (largest count among all inputs)
-    // in case of text data this value == number of rows this sequence spans over.
+
     int64_t m_fileOffsetBytes; // sequence offset in the input file (in bytes)
     size_t m_byteSize; // size in bytes
 };
@@ -41,6 +40,10 @@ struct ChunkDescriptor : ChunkDescription
     std::vector<SequenceDescriptor> m_sequences;
 
     size_t m_byteSize; // size in bytes
+
+    // Offset of first sample of each sequence in the chunk.
+    // Optionally filled in by the indexer if required.
+    std::vector<size_t> m_firstSamples;
 };
 
 typedef shared_ptr<ChunkDescriptor> ChunkDescriptorPtr;
@@ -55,8 +58,11 @@ struct Index
     std::map<size_t, std::pair<size_t, size_t>> m_keyToSequenceInChunk;     // sequence key -> sequence location in chunk
     const size_t m_maxChunkSize;                                            // maximum chunk size in bytes
     bool m_primary;                                                         // index for primary deserializer
+    bool m_trackFirstSamples;                                               // flag if to build index of first samples
+                                                                            // for sequences
 
-    Index(size_t chunkSize, bool primary) : m_maxChunkSize(chunkSize), m_primary(primary)
+    Index(size_t chunkSize, bool primary, bool trackFirstSamples = false)
+        : m_maxChunkSize(chunkSize), m_primary(primary), m_trackFirstSamples(trackFirstSamples)
     {}
 
     // Adds sequence (metadata) to the index. Additionally, it
@@ -79,6 +85,9 @@ struct Index
                 RuntimeError("Maximum number of chunks exceeded");
             }
         }
+
+        if (m_trackFirstSamples)
+            chunk->m_firstSamples.push_back(chunk->m_numberOfSamples);
 
         chunk->m_byteSize += sd.m_byteSize;
         chunk->m_numberOfSequences++;

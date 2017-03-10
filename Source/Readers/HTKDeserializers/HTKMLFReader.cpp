@@ -7,7 +7,7 @@
 #include "HTKMLFReader.h"
 #include "Config.h"
 #include "HTKDataDeserializer.h"
-#include "MLFDataDeserializer.h"
+#include "MLFDeserializer.h"
 #include "ConfigHelper.h"
 #include "Bundler.h"
 #include "StringUtil.h"
@@ -50,7 +50,7 @@ std::vector<IDataDeserializerPtr> CreateDeserializers(const ConfigParameters& re
 
     for (const auto& labelName : labelNames)
     {
-        auto deserializer = std::make_shared<MLFDataDeserializer>(corpus, readerConfig(labelName), labelName);
+        auto deserializer = std::make_shared<MLFDeserializer>(corpus, readerConfig(labelName), labelName);
 
         labelDeserializers.push_back(deserializer);
     }

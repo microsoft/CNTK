@@ -4,10 +4,20 @@
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="ConfigHelper.cpp" />
-    <ClCompile Include="MLFDataDeserializer.cpp" />
-    <ClCompile Include="HTKDataDeserializer.cpp" />
     <ClCompile Include="HTKMLFReader.cpp" />
     <ClCompile Include="Exports.cpp" />
+    <ClCompile Include="HTKDataDeserializer.cpp">
+      <Filter>HTK</Filter>
+    </ClCompile>
+    <ClCompile Include="MLFUtils.cpp">
+      <Filter>MLF</Filter>
+    </ClCompile>
+    <ClCompile Include="MLFIndexer.cpp">
+      <Filter>MLF</Filter>
+    </ClCompile>
+    <ClCompile Include="MLFDeserializer.cpp">
+      <Filter>MLF</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
@@ -25,17 +35,31 @@
       <Filter>Common\Include</Filter>
     </ClInclude>
     <ClInclude Include="ConfigHelper.h" />
-    <ClInclude Include="HTKDataDeserializer.h" />
-    <ClInclude Include="MLFDataDeserializer.h" />
     <ClInclude Include="HTKMLFReader.h" />
     <ClInclude Include="..\..\Common\Include\File.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="UtteranceDescription.h" />
     <ClInclude Include="..\..\Common\Include\ExceptionWithCallStack.h">
       <Filter>Common\Include</Filter>
     </ClInclude>
-    <ClInclude Include="HTKChunkDescription.h" />
+    <ClInclude Include="HTKChunkDescription.h">
+      <Filter>HTK</Filter>
+    </ClInclude>
+    <ClInclude Include="HTKDataDeserializer.h">
+      <Filter>HTK</Filter>
+    </ClInclude>
+    <ClInclude Include="MLFUtils.h">
+      <Filter>MLF</Filter>
+    </ClInclude>
+    <ClInclude Include="MLFIndexer.h">
+      <Filter>MLF</Filter>
+    </ClInclude>
+    <ClInclude Include="UtteranceDescription.h">
+      <Filter>HTK</Filter>
+    </ClInclude>
+    <ClInclude Include="MLFDeserializer.h">
+      <Filter>MLF</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Common">
@@ -43,6 +67,12 @@
     </Filter>
     <Filter Include="Common\Include">
       <UniqueIdentifier>{812d1247-04eb-4693-a0d2-5399a94e6235}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MLF">
+      <UniqueIdentifier>{90cbdba0-7433-40cf-a2ca-2d6e04a9cad8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="HTK">
+      <UniqueIdentifier>{c786b890-c7e4-4617-b5df-e2fdef2291ad}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
 </Project>

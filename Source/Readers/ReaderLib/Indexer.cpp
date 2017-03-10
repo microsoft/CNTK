@@ -222,7 +222,6 @@ bool Indexer::TryGetNumericSequenceId(size_t& id)
     return false;
 }
 
-
 bool Indexer::TryGetSymbolicSequenceId(size_t& id, std::function<size_t(const std::string&)> keyToId)
 {
     bool found = false;
