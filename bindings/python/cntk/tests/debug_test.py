@@ -13,6 +13,8 @@ from cntk import sgd, Trainer, learning_rate_schedule, parameter, \
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.debug import debug_model, _DebugNode
 
+from cntk.device import set_default_device
+
 
 def _generate_random_data_sample(sample_size, feature_dim, num_classes):
     # Create synthetic data using NumPy.
@@ -29,7 +31,7 @@ def _generate_random_data_sample(sample_size, feature_dim, num_classes):
 def _train(z, loss, eval_error,
            f_input, l_input,
            num_output_classes,
-           steps, device_id):
+           steps):
     np.random.seed(0)
 
     input_dim = 2
@@ -47,8 +49,7 @@ def _train(z, loss, eval_error,
         features, labels = _generate_random_data_sample(
             minibatch_size, input_dim, num_output_classes)
 
-        trainer.train_minibatch({f_input: features, l_input: labels},
-                                device=cntk_device(device_id))
+        trainer.train_minibatch({f_input: features, l_input: labels})
 
 class InStream(object):
     def __init__(self, to_be_read):
@@ -74,6 +75,8 @@ class OutStream(object):
         pass
 
 def test_debug_1(device_id):
+    set_default_device(cntk_device(device_id))
+
     input_dim = 2
     num_output_classes = 2
 
@@ -95,7 +98,7 @@ def test_debug_1(device_id):
     _train(z, loss, eval_error,
            loss.find_by_name('features'),
            loss.find_by_name('labels'),
-           num_output_classes, 1, device_id)
+           num_output_classes, 1)
 
     # outs.written contains something like
     # =================================== forward  ===================================
@@ -124,6 +127,8 @@ def test_debug_1(device_id):
 
 
 def test_debug_multi_output(device_id):
+    set_default_device(cntk_device(device_id))
+
     input_dim = 2
     num_output_classes = 2
 
@@ -147,7 +152,7 @@ def test_debug_multi_output(device_id):
     _train(z, loss, eval_error,
            loss.find_by_name('features'),
            loss.find_by_name('labels'),
-           num_output_classes, 1, device_id)
+           num_output_classes, 1)
 
     # outs.written contains something like
     # =================================== forward  ===================================
