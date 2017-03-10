@@ -15,6 +15,7 @@ from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitiz
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
+from ..cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
 from ..default_options import get_default_override, default_override_or
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
@@ -2389,7 +2390,7 @@ def argmin(x, axis=None, name=''):
 #######################################################################
 
 @typemap
-def random_sample(weights, num_samples, allow_duplicates, name=''):
+def random_sample(weights, num_samples, allow_duplicates, seed = None, name=''):
     '''
     Estimates inclusion frequencies for random sampling with or without
     replacement.
@@ -2410,6 +2411,7 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
         num_samples (int): number of expected samples
         allow_duplicates (bool): If sampling is done
             with replacement (`True`) or without (`False`).
+        seed (int): random seed.
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -2418,14 +2420,18 @@ def random_sample(weights, num_samples, allow_duplicates, name=''):
     from cntk.cntk_py import random_sample
     weights = sanitize_input(weights)
 
-    return random_sample(weights, num_samples, allow_duplicates, name)
+    if seed is None:
+        seed = SentinelValueForAutoSelectRandomSeed
+    
+    return random_sample(weights, num_samples, allow_duplicates, seed, name)
 
 
 @typemap
 def random_sample_inclusion_frequency(
     weights, 
     num_samples, 
-    allow_duplicates, 
+    allow_duplicates,
+    seed = None,
     name=''):
     '''
     For weighted sampling with the specifed sample size (`num_samples`)
@@ -2444,6 +2450,7 @@ def random_sample_inclusion_frequency(
         num_samples (int): number of expected samples
         allow_duplicates (bool): If sampling is done
          with replacement (`True`) or without (`False`).
+        seed (int): random seed.
 
     Example:
         >>> import numpy as np
@@ -2472,15 +2479,19 @@ def random_sample_inclusion_frequency(
     from cntk.cntk_py import random_sample_inclusion_frequency
     weights = sanitize_input(weights)
 
+    if seed is None:
+        seed = SentinelValueForAutoSelectRandomSeed
+
     return random_sample_inclusion_frequency(
         weights, 
         num_samples, 
         allow_duplicates, 
+        seed,
         name)
 
 
 @typemap
-def dropout(x, dropout_rate=0.0, name=''):
+def dropout(x, dropout_rate=0.0, seed = None, name=''):
     '''
     Each element of the input is independently set to 0 with probabily ``dropout_rate``
     or to 1 / (1 - ``dropout_rate``) times its original value (with probability 1-``dropout_rate``).
@@ -2506,6 +2517,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     Args:
         x: input tensor
         dropout_rate (float, [0,1)): probability that an element of ``x`` will be set to zero
+        seed (int): random seed.
         name (:class:`str`, optional): the name of the Function instance in the network
 
     Returns:
@@ -2517,7 +2529,10 @@ def dropout(x, dropout_rate=0.0, name=''):
     from cntk.cntk_py import dropout
     x = sanitize_input(x)
 
-    return dropout(x, dropout_rate, name)
+    if seed is None:
+        seed = SentinelValueForAutoSelectRandomSeed
+
+    return dropout(x, dropout_rate, seed, name)
 
 ##########################################################################
 # variables_and_parameters ops
