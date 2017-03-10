@@ -35,7 +35,7 @@ $includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
 # binaryDrop locations
-$artifactPath = Join-Path $workSpace BinaryDrop
+$artifactPath = Join-Path $workSpace BinaryDrops
 $whlArtifactFolder = Join-Path $artifactPath $targetConfigSuffix
 New-Item -Path $artifactPath -ItemType directory -force
 New-Item -Path $whlArtifactFolder -ItemType directory -force
