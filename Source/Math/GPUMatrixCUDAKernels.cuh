@@ -5117,19 +5117,25 @@ __global__ void _assignNumOfDiffCol(const ElemType* a, const ElemType* b, ElemTy
 }
 
 template <class ElemType>
-__global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val)
+__global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val, CUDA_LONG numColsPerMaskEntry)
 {
-    CUDA_LONG colIdx = blockIdx.x;
-    if (colIdx > numCols)
-        return;
+    CUDA_LONG maskColIdx = blockIdx.x;
+    CUDA_LONG matrixStartColIdx = maskColIdx * numColsPerMaskEntry;
 
-    if (columnsMask[IDX2C(0, colIdx, 1)] == 1)
-        return;
-
-    CUDA_LONG rowIdx = threadIdx.x;
-    for (; rowIdx < numRows; rowIdx += blockDim.x)
+    for (CUDA_LONG k = 0; k < numColsPerMaskEntry; ++k)
     {
-        a[IDX2C(rowIdx, colIdx, numRows)] = val;
+        CUDA_LONG colIdx = matrixStartColIdx + k;
+        if (colIdx > numCols)
+            return;
+
+        if (columnsMask[IDX2C(0, maskColIdx, 1)] == 1)
+            return;
+
+        CUDA_LONG rowIdx = threadIdx.x;
+        for (; rowIdx < numRows; rowIdx += blockDim.x)
+        {
+            a[IDX2C(rowIdx, colIdx, numRows)] = val;
+        }
     }
 }
 

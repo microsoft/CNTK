@@ -377,6 +377,25 @@ public:
     }
 
 private:
+    // determine the size that we should set our Matrix storage to
+    void DetermineDataSize(size_t& rows, size_t& cols) const override
+    {
+        if (!m_isSparse || !HasMBLayout())
+            Base::DetermineDataSize(rows, cols);
+        else
+        {
+            const auto& shape = GetSampleLayout();
+            size_t rank = shape.GetRank();
+            rows = rank > 0 ? shape[0] : 1;
+            cols = rank > 0 ? 1 : 1;
+            for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                cols *= shape[k];
+
+            cols *= GetMBLayout()->GetNumCols();
+        }
+    }
+
+private:
     bool m_isSparse = false;
     std::wstring m_dynamicAxisNodeName;
     ComputationNodeBase* m_dynamicAxisNode;

@@ -13,8 +13,9 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
 import cntk as C
+from cntk import Value
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk, one_hot
+from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
@@ -88,7 +89,7 @@ def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axi
     # test if they get wrongly permuted during test. To this end we multiply
     # the reshaping result with itself.
     dev = cntk_device(device_id)
-    from ...utils import sanitize_dtype_cntk
+    from cntk.internal import sanitize_dtype_cntk
     from .. import reshape, element_times
 
     num_tensor_elements = np.multiply.reduce(input_shape)
@@ -405,7 +406,7 @@ def test_op_gather_sparse(device_id):
 
     input_sparse_indices = [[1, 3, 5, 5], [2, 4], [0, 2]]
     vocab_size = 6
-    input_data = one_hot(input_sparse_indices, vocab_size)
+    input_data = Value.one_hot(input_sparse_indices, vocab_size)
 
     a = I(shape=(vocab_size,), is_sparse=True, name='a')
 
@@ -425,7 +426,7 @@ def test_op_scatter_sparse(device_id):
 
     input_sparse_indices = [[1, 3, 5, 5], [2, 4], [0, 2]]
     vocab_size = 6
-    input_data = one_hot(input_sparse_indices, vocab_size)
+    input_data = Value.one_hot(input_sparse_indices, vocab_size)
 
     a = I(shape=(vocab_size,), is_sparse=True, name='a')
 
@@ -504,4 +505,13 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(res[1], np.asarray([[10.]]))
     assert np.array_equal(res[2], np.asarray([[18.]]))
 
+    # Verify that calling sequence reduction on a placeholder with known
+    # shape but unknown dynamic axes does not result in a problem
+    p = C.placeholder_variable(shape=(1,))
+    r = sequence.reduce_sum(p)
+    r.replace_placeholder(a)
     
+    res = r.eval({a: a_data})
+    assert np.array_equal(res[0], np.asarray([[2.]]))
+    assert np.array_equal(res[1], np.asarray([[5.]]))
+    assert np.array_equal(res[2], np.asarray([[9.]]))

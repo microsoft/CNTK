@@ -6,12 +6,70 @@
 //
 #include "stdafx.h"
 #include "../../../Source/Math/GPUMatrix.h"
+#include "../../../Source/Math/Matrix.h"
+#include "BestGpu.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
+
+BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAccrossDevices, RandomSeedFixture)
+{
+    bool hasTwoGpus = false;
+#ifndef CPUONLY
+    auto gpus = GetAllGpusData();
+    hasTwoGpus = (gpus.size() > 1);
+#endif
+    std::array<float, 6> array = { 1, 2, 3, 4, 5, 6 };
+
+    {
+        Matrix<float> m_gpu(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(m_gpu, c_deviceIdZero);
+        if (hasTwoGpus)
+            Matrix<float> m_copy_gpu_1(m_gpu, c_deviceIdZero + 1);
+        Matrix<float> m_copy_cpu(m_gpu, -1);
+    }
+
+    {
+        Matrix<float> m_cpu(2, 3, array.data(), -1, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(m_cpu, c_deviceIdZero);
+        if (hasTwoGpus)
+            Matrix<float> m_copy_gpu_1(m_cpu, c_deviceIdZero + 1);
+        Matrix<float> m_copy_cpu(m_cpu, -1);
+    }
+
+    {
+        Matrix<float> m_gpu(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(c_deviceIdZero);
+        m_copy_gpu_0.AssignValuesOf(m_gpu);
+        if (hasTwoGpus)
+        {
+            Matrix<float> m_copy_gpu_1(c_deviceIdZero + 1);
+            m_copy_gpu_1.AssignValuesOf(m_gpu);
+        }
+        Matrix<float> m_copy_cpu(-1);
+        m_copy_cpu.AssignValuesOf(m_gpu);
+    }
+
+    if (hasTwoGpus)
+    {
+
+        Matrix<float> m_gpu_0(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_gpu_1(2, 3, c_deviceIdZero + 1, m_gpu_0.GetMatrixType(), m_gpu_0.GetFormat());
+        try
+        {
+            // TODO: fix this!
+            m_gpu_1.AssignValuesOf(m_gpu_0);
+            BOOST_TEST(false, "Expected AssignValuesOf to fail.");
+        }
+        catch (...)
+        {
+        }
+    }
+}
+
 
 BOOST_FIXTURE_TEST_CASE(GPUMatrixConstructorNoFlag, RandomSeedFixture)
 {

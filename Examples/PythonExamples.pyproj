@@ -1,0 +1,357 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{292ff4ee-d9dd-4ba7-85f7-6a22148d1e01}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>LanguageUnderstanding\ATIS\Python\LanguageUnderstanding.py</StartupFile>
+    <SearchPath>..\Tests\EndToEndTests\CNTKv2Python;..\bindings\python;..\bindings\python\doc\;..\bindings\python\doc\test\</SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId>{4aa09c20-bd30-41b0-b691-0beca389326c}</InterpreterId>
+    <InterpreterVersion>3.5</InterpreterVersion>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+    <IsWindowsApplication>False</IsWindowsApplication>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+    <PtvsTargetsFile>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets</PtvsTargetsFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\bindings\python\cntk\ops\tests\block_test.py">
+      <Link>Tests\cntk\ops\tests\block_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\userfunction_test.py">
+      <Link>Tests\cntk\ops\tests\userfunction_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\layers_test.py">
+      <Link>Tests\cntk\tests\layers_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\doc\conf.py">
+      <Link>Tests\doc\conf.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\doc\conftest.py">
+      <Link>Tests\doc\conftest.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\doc\simplenet.py">
+      <Link>Tests\doc\simplenet.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\doc\simplernn.py">
+      <Link>Tests\doc\simplernn.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\doc\test\simplenet_test.py">
+      <Link>Tests\doc\test\simplenet_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\doc\test\simplernn_test.py">
+      <Link>Tests\doc\test\simplernn_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\AlexNet_ImageNet_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\AlexNet_ImageNet_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\char_rnn_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\char_rnn_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\CNTK_103B_MNIST_FeedForwardNetwork_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_103B_MNIST_FeedForwardNetwork_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\CNTK_203_Reinforcement_Learning_Basics_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_203_Reinforcement_Learning_Basics_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\CNTK_205_Artistic_Style_Transfer_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_205_Artistic_Style_Transfer_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\ConvNetLRN_CIFAR10_DataAug_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\ConvNetLRN_CIFAR10_DataAug_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\ConvNet_CIFAR10_DataAug_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\ConvNet_CIFAR10_DataAug_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\ConvNet_CIFAR10_DataAug_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\ConvNet_CIFAR10_DataAug_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\deconv_MNIST_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\deconv_MNIST_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\feature_extraction_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\feature_extraction_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\htk_deserializer_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\htk_deserializer_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\prepare_test_data.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\prepare_test_data.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\TrainResNet_CIFAR10_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\TrainResNet_CIFAR10_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\TrainResNet_CIFAR10_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\TrainResNet_CIFAR10_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\transfer_learning_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\transfer_learning_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\VGG16_ImageNet_Distributed_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\VGG16_ImageNet_Distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\CNTKv2Python\Examples\word_rnn_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\word_rnn_test.py</Link>
+    </Compile>
+    <Compile Include="common\nn.py" />
+    <Compile Include="common\__init__.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNetLRN_CIFAR10_DataAug.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNet_CIFAR10.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNet_CIFAR10_DataAug_Distributed.py" />
+    <Compile Include="Image\Classification\ConvNet\Python\ConvNet_MNIST.py" />
+    <Compile Include="Image\Classification\MLP\Python\SimpleMNIST.py" />
+    <Compile Include="Image\Classification\ResNet\Python\CifarResNet.py" />
+    <Compile Include="Image\Classification\ResNet\Python\CifarResNet_Distributed.py" />
+    <Compile Include="Image\Classification\ResNet\Python\resnet_models.py" />
+    <Compile Include="Image\Classification\ResNet\Python\run_Distributed.py" />
+    <Compile Include="Image\Classification\ResNet\Python\TrainResNet_CIFAR10.py" />
+    <Compile Include="Image\Detection\FastRCNN\A1_GenerateInputROIs.py" />
+    <Compile Include="Image\Detection\FastRCNN\A2_RunCntk.py" />
+    <Compile Include="Image\Detection\FastRCNN\A3_ParseAndEvaluateOutput.py" />
+    <Compile Include="Image\Detection\FastRCNN\B1_VisualizeInputROIs.py" />
+    <Compile Include="Image\Detection\FastRCNN\B2_EvaluateInputROIs.py" />
+    <Compile Include="Image\Detection\FastRCNN\B3_VisualizeOutputROIs.py" />
+    <Compile Include="Image\Detection\FastRCNN\C1_DrawBboxesOnImages.py" />
+    <Compile Include="Image\Detection\FastRCNN\C2_AssignLabelsToBboxes.py" />
+    <Compile Include="Image\Detection\FastRCNN\cntk_helpers.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\imdb.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\nms.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\pascal_voc.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\test.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\timer.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\train_svms.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\utils2_win64\__init__.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\voc_eval.py" />
+    <Compile Include="Image\Detection\FastRCNN\fastRCNN\__init__.py" />
+    <Compile Include="Image\Detection\FastRCNN\imdb_data.py" />
+    <Compile Include="Image\Detection\FastRCNN\install_fastrcnn.py" />
+    <Compile Include="Image\Detection\FastRCNN\PARAMETERS.py" />
+    <Compile Include="Image\Detection\FastRCNN\selectivesearch\selectivesearch.py" />
+    <Compile Include="Image\Detection\FastRCNN\selectivesearch\__init__.py" />
+    <Compile Include="LanguageUnderstanding\ATIS\Python\LanguageUnderstanding.py" />
+    <Compile Include="SequenceClassification\SimpleExample\Python\SequenceClassification.py" />
+    <Compile Include="SequenceToSequence\CMUDict\Python\Sequence2Sequence.py" />
+    <Compile Include="Speech\Miscellaneous\EndToEnd.py" />
+    <Compile Include="..\bindings\python\cntk\ops\tests\combine_test.py">
+      <Link>Tests\cntk\ops\tests\combine_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\comparison_test.py">
+      <Link>Tests\cntk\ops\tests\comparison_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\evaluation_test.py">
+      <Link>Tests\cntk\ops\tests\evaluation_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\function_tests.py">
+      <Link>Tests\cntk\ops\tests\function_tests.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\kernel_test.py">
+      <Link>Tests\cntk\ops\tests\kernel_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\linear_test.py">
+      <Link>Tests\cntk\tests\linear_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\non_diff_test.py">
+      <Link>Tests\cntk\ops\tests\non_diff_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\non_linear_test.py">
+      <Link>Tests\cntk\ops\tests\non_linear_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\ops_test_utils.py">
+      <Link>Tests\cntk\ops\tests\ops_test_utils.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\random_sample_test.py">
+      <Link>Tests\cntk\ops\tests\random_sample_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\recurrent_test.py">
+      <Link>Tests\cntk\ops\tests\recurrent_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\reduction_test.py">
+      <Link>Tests\cntk\ops\tests\reduction_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\reshaping_test.py">
+      <Link>Tests\cntk\ops\tests\reshaping_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\variables_test.py">
+      <Link>Tests\cntk\ops\tests\variables_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\ops\tests\__init__.py">
+      <Link>Tests\cntk\ops\tests\__init__.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\attributes_test.py">
+      <Link>Tests\cntk\tests\attributes_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\axis_test.py">
+      <Link>Tests\cntk\tests\axis_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\distributed_test.py">
+      <Link>Tests\cntk\tests\distributed_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\graph_test.py">
+      <Link>Tests\cntk\tests\graph_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\initializer_test.py">
+      <Link>Tests\cntk\tests\initializer_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\learner_test.py">
+      <Link>Tests\cntk\tests\learner_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\persist_test.py">
+      <Link>Tests\cntk\tests\persist_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\tensor_test.py">
+      <Link>Tests\cntk\tests\tensor_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\test_utils.py">
+      <Link>Tests\cntk\tests\test_utils.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\trainer_test.py">
+      <Link>Tests\cntk\tests\trainer_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\tests\__init__.py">
+      <Link>Tests\cntk\tests\__init__.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\utils\tests\swig_helper_tests.py">
+      <Link>Tests\cntk\utils\tests\swig_helper_tests.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\utils\tests\utils_test.py">
+      <Link>Tests\cntk\utils\tests\utils_test.py</Link>
+    </Compile>
+    <Compile Include="..\bindings\python\cntk\utils\tests\__init__.py">
+      <Link>Tests\cntk\utils\tests\__init__.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_101_LogisticRegression_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_101_LogisticRegression_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_102_FeedForward_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_102_FeedForward_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_202_Language_Understanding_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_202_Language_Understanding_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\CNTK_204_Sequence_To_Sequence_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\CNTK_204_Sequence_To_Sequence_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\conftest.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\conftest.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\feed_forward_net_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\feed_forward_net_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\language_understanding_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\language_understanding_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\run_cifar_convnet_distributed.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\run_cifar_convnet_distributed.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\sequence_classification_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\sequence_classification_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\sequence_to_sequence_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\sequence_to_sequence_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\simple_mnist_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\simple_mnist_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\ucf11_conv3d_test.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\ucf11_conv3d_test.py</Link>
+    </Compile>
+    <Compile Include="..\Tests\EndToEndTests\cntkv2Python\Examples\__init__.py">
+      <Link>Tests\EndToEndTests\cntkv2Python\Examples\__init__.py</Link>
+    </Compile>
+    <Compile Include="Text\CharacterLM\char_rnn.py" />
+    <Compile Include="Text\WordLMWithSampledSoftmax\data_reader.py" />
+    <Compile Include="Text\WordLMWithSampledSoftmax\download_data.py" />
+    <Compile Include="Text\WordLMWithSampledSoftmax\word_rnn.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="common\" />
+    <Folder Include="Image\" />
+    <Folder Include="Image\Classification\" />
+    <Folder Include="Image\Classification\ConvNet\" />
+    <Folder Include="Image\Classification\ConvNet\Python\" />
+    <Folder Include="Image\Classification\MLP\" />
+    <Folder Include="Image\Classification\MLP\Python\" />
+    <Folder Include="Image\Classification\ResNet\" />
+    <Folder Include="Image\Classification\ResNet\Python\" />
+    <Folder Include="Image\Detection\" />
+    <Folder Include="Image\Detection\FastRCNN\" />
+    <Folder Include="Image\Detection\FastRCNN\fastRCNN\" />
+    <Folder Include="Image\Detection\FastRCNN\fastRCNN\utils2_win64\" />
+    <Folder Include="Image\Detection\FastRCNN\selectivesearch\" />
+    <Folder Include="LanguageUnderstanding\" />
+    <Folder Include="LanguageUnderstanding\ATIS\" />
+    <Folder Include="LanguageUnderstanding\ATIS\Python\" />
+    <Folder Include="python\" />
+    <Folder Include="python\cntk\" />
+    <Folder Include="python\cntk\ops\" />
+    <Folder Include="python\cntk\ops\tests\" />
+    <Folder Include="python\cntk\tests\" />
+    <Folder Include="python\cntk\utils\" />
+    <Folder Include="python\cntk\utils\tests\" />
+    <Folder Include="SequenceClassification\" />
+    <Folder Include="SequenceClassification\SimpleExample\" />
+    <Folder Include="SequenceClassification\SimpleExample\Python\" />
+    <Folder Include="SequenceToSequence\" />
+    <Folder Include="SequenceToSequence\CMUDict\" />
+    <Folder Include="SequenceToSequence\CMUDict\Python\" />
+    <Folder Include="Speech\" />
+    <Folder Include="Speech\Miscellaneous\" />
+    <Folder Include="..\bindings\python\cntk\" />
+    <Folder Include="..\bindings\python\cntk\utils\" />
+    <Folder Include="..\bindings\python\cntk\tests\" />
+    <Folder Include="..\bindings\python\cntk\ops\" />
+    <Folder Include="..\bindings\python\cntk\ops\tests\" />
+    <Folder Include="..\bindings\python\cntk\utils\tests\" />
+    <Folder Include="..\Tests\EndToEndTests\" />
+    <Folder Include="..\Tests\EndToEndTests\cntkv2Python\" />
+    <Folder Include="..\Tests\EndToEndTests\cntkv2Python\Examples\" />
+    <Folder Include="Tests\" />
+    <Folder Include="Tests\cntk\tests\" />
+    <Folder Include="Tests\cntk\ops\" />
+    <Folder Include="Tests\cntk\ops\tests\" />
+    <Folder Include="Tests\cntk\utils\" />
+    <Folder Include="Tests\cntk\utils\tests\" />
+    <Folder Include="Tests\doc\test\" />
+    <Folder Include="Tests\EndToEndTests\" />
+    <Folder Include="Tests\EndToEndTests\cntkv2Python\" />
+    <Folder Include="Tests\EndToEndTests\cntkv2Python\Examples\" />
+    <Folder Include="Tests\cntk\" />
+    <Folder Include="Tests\doc\" />
+    <Folder Include="EndToEndTests\" />
+    <Folder Include="EndToEndTests\cntkv2Python\" />
+    <Folder Include="Text\" />
+    <Folder Include="Text\CharacterLM\" />
+    <Folder Include="Text\CharacterLM\data\" />
+    <Folder Include="Text\WordLMWithSampledSoftmax\" />
+    <Folder Include="Text\WordLMWithSampledSoftmax\test\" />
+    <Folder Include="ToEndTests\" />
+    <Folder Include="ToEndTests\cntkv2Python\" />
+    <Folder Include="ToEndTests\cntkv2Python\Examples\" />
+  </ItemGroup>
+  <ItemGroup>
+    <InterpreterReference Include="{4aa09c20-bd30-41b0-b691-0beca389326c}\3.5" />
+    <InterpreterReference Include="{c2abc240-2da9-4409-8b09-0ee30a5b56e2}\3.4" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Text\CharacterLM\data\tinyshakespeare.txt" />
+    <Content Include="Text\CharacterLM\README.md" />
+    <Content Include="Text\WordLMWithSampledSoftmax\README.md" />
+    <Content Include="Text\WordLMWithSampledSoftmax\test\freq.txt" />
+    <Content Include="Text\WordLMWithSampledSoftmax\test\text.txt" />
+    <Content Include="Text\WordLMWithSampledSoftmax\test\token2id.txt" />
+  </ItemGroup>
+  <Import Project="$(PtvsTargetsFile)" Condition="Exists($(PtvsTargetsFile))" />
+  <Import Project="$(MSBuildToolsPath)\Microsoft.Common.targets" Condition="!Exists($(PtvsTargetsFile))" />
+</Project>

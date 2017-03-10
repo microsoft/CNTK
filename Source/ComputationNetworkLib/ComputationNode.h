@@ -48,9 +48,10 @@
 #define CNTK_MODEL_VERSION_16 16 // save/load rng state for Dropout and RandomSample nodes.
 #define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
 #define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
-#define CNTK_MODEL_VERSION_19 19 // batch norm: add an input parameter to store running mean sample count.
-#define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node 
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_20
+#define CNTK_MODEL_VERSION_19 19 // batch norm: flag whether running mean count is 0
+#define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node
+#define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_21
 
 
 // helper mode for debugging
@@ -1593,10 +1594,10 @@ public:
     {
     }
 
-private:
+protected:
 
     // determine the size that we should set our Matrix storage to
-    void DetermineDataSize(size_t& rows, size_t& cols) const
+    virtual void DetermineDataSize(size_t& rows, size_t& cols) const
     {
         if (HasMBLayout())
         {

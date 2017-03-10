@@ -34,8 +34,43 @@ if errorlevel 1 exit /b 1
 echo(
 popd
 
+pushd cntk\io\tests
+echo RUNNING cntk\io unit tests...
+pytest --deviceid gpu
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\layers\tests
+echo RUNNING cntk\layers unit tests...
+pytest --deviceid gpu
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\logging\tests
+echo RUNNING cntk\logging unit tests...
+pytest --deviceid gpu
+if errorlevel 1 exit /b 1
+echo(
+popd
+
 pushd cntk\ops\tests
 echo RUNNING cntk\ops unit tests...
+pytest --deviceid gpu
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\train\tests
+echo RUNNING cntk\train unit tests...
+pytest --deviceid gpu
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\utils\tests
+echo RUNNING cntk\utils unit tests...
 pytest --deviceid gpu
 if errorlevel 1 exit /b 1
 echo(

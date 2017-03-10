@@ -97,7 +97,7 @@ public:
                    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-        ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
@@ -144,7 +144,7 @@ public:
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
 
-    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const CPUMatrix<ElemType>& valMat, size_t colInd);
@@ -501,7 +501,7 @@ public:
 
         stream << us.m_numRows << us.m_numCols;
         for (size_t i = 0; i < us.GetNumElements(); ++i)
-            stream << us.Buffer()[i];
+            stream << us.Data()[i];
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }

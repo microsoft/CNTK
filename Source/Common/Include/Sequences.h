@@ -1192,20 +1192,16 @@ static inline void MaskMissingColumnsTo(Matrix<ElemType>& matrixToMask, const MB
 {
     if (pMBLayout && pMBLayout->HasGaps(fr))
     {
-#if 0 // in the future we can use the tensor lib to implement this
-        const auto & maskMatrix = pMBLayout->GetColumnsValidMask<ElemType>();
-        auto maskSlice          = DataWithMBLayoutFor(maskMatrix,   fr, pMBLayout);
-        auto matrixSliceToMask  = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
-        TensorView<ElemType>(matrixSliceToMask).DoMaskNegativeOf(0, TensorView<ElemType>(matrixSliceToMask), TensorView<ElemType>(maskSlice), 1); val;
-#else
         const auto& maskMatrix = pMBLayout->GetColumnsValidityMask(matrixToMask.GetDeviceId());
 
         maskMatrix.TransferToDeviceIfNotThere(matrixToMask.GetDeviceId(), /*ismoved=*/ false, /*emptyTransfer=*/ false, /*updatePreferredDevice=*/ false);
         auto maskSlice = DataWithMBLayoutFor(maskMatrix, fr, pMBLayout);
 
         auto matrixSliceToMask = DataWithMBLayoutFor(matrixToMask, fr, pMBLayout);
-        matrixSliceToMask.MaskColumnsValue(maskSlice, val);
-#endif
+        if ((matrixSliceToMask.GetNumCols() % maskSlice.GetNumCols()) != 0)
+            LogicError("MaskMissingColumnsTo: The number of columns of the matrix slice to be masked is not a multiple of the number of columns of the mask slice.");
+
+        matrixSliceToMask.MaskColumnsValue(maskSlice, val, matrixSliceToMask.GetNumCols() / maskSlice.GetNumCols());
     }
 }
 

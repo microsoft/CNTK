@@ -3,7 +3,8 @@
 # for full license information.
 # ==============================================================================
 
-from ...utils import sanitize_input, get_data_type, typemap
+from ...utils import get_data_type
+from cntk.internal import typemap, sanitize_input
 
 ##########################################################################
 # sequence ops
@@ -83,6 +84,7 @@ def is_last(seq, name=''):
     seq = sanitize_input(seq, get_data_type(seq))
     return is_last(seq, name)
 
+
 @typemap
 def slice(seq, begin_index, end_index, name=''):
     '''
@@ -105,6 +107,7 @@ def slice(seq, begin_index, end_index, name=''):
     from cntk.cntk_py import sequence_slice
     seq = sanitize_input(seq, get_data_type(seq))
     return sequence_slice(seq, begin_index, end_index, name)
+
 
 @typemap
 def first(seq, name=''):
@@ -203,6 +206,7 @@ def where(condition, name=''):
     from cntk.cntk_py import where
     condition = sanitize_input(condition, get_data_type(condition))
     return where(condition, name)
+
 
 @typemap
 def gather(seq, condition, new_sequence_axis_typeinfo=None, name=''):
@@ -352,6 +356,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
     broadcast_as_operand = sanitize_input(
         broadcast_as_operand, get_data_type(broadcast_as_operand))
     return broadcast_as(operand, broadcast_as_operand, name)
+
 
 @typemap
 def reduce_sum(seq, name=''):

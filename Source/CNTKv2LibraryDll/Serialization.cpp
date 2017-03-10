@@ -114,9 +114,8 @@ namespace CNTK
         {
             auto size = src.Shape().TotalSize();
             if (size > std::numeric_limits<int>::max())
-            {
-                InvalidArgument("NDArrayView is too big to fit in a protobuf.");
-            }
+                InvalidArgument("NDArrayView (shape = '%S') is too big to fit in a protobuf.", src.Shape().AsString().c_str());
+
             dst->Resize((int)size, T());
             const T* buffer = src.DataBuffer<T>();
             memcpy(dst->mutable_data(), buffer, (int)size * sizeof(T));

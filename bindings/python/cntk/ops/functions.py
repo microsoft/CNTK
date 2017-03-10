@@ -1,8 +1,8 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor
-from cntk.utils import typemap, sanitize_var_map, sanitize_batch, variable_value_to_seq
-
-from cntk.utils.swig_helper import map_if_possible
+from cntk.utils import value_to_seq, variable_value_to_seq, Record, \
+        get_python_function_arguments, map_function_arguments
+from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple
 from cntk.ops.variables import Variable
 from enum import Enum, unique
 import numpy as np
@@ -40,15 +40,226 @@ class Function(cntk_py.Function):
     will relay to its only output.
     '''
 
-    # define input shapes, in-place
-    # e.g.
-    # model.declare_args(42)
-    # pass a list of objects that define the dimensions etc. of the placeholders
-    # Currently you can pass either
+    # We override the constructors to implement an overload that constructs
+    # a CNTK Functions from a Python function (@Function).
+    def __new__(cls, *args, **kwargs):
+        if len(args) > 0 and hasattr(args[0], '__call__') and not isinstance(args[0], Function): # overload
+            return Function.to_Function(*args, **kwargs)
+        return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args
+
+    def __init__(self, *args, **kwargs):
+        if len(args) > 0 and hasattr(args[0], '__call__') and not isinstance(args[0], Function): # overload
+            return
+        super(Function, self).__init__(*args, **kwargs)
+
+    class NamedOutput:
+        def __init__(self, **kwargs):
+            for kw in kwargs: # TODO: only allow one arg
+                self.name = kw
+                self.arg = kwargs[kw]
+
+    _placeholders_under_construction = set()
+
+    @staticmethod
+    def to_Function(f, make_block=False, op_name=None, name=None):
+        '''
+        ``@Function`` constructs a Function from a Python lambda
+        where the Function's input signature is defined by the lambda.
+
+        Use this as a decorator, e.g.:
+          ``@Function
+          def f(x): return x * x``
+
+        The above form creates a CNTK Function whose arguments are placeholder variables.
+        Such a function can only be combined with others symbolic functions.
+
+        To train a Function or pass data to it, you need to declare the types
+        of the arguments. In this case, the @Function decorator creates a CNTK Function
+        whose arguments are input variables.
+
+        If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.:
+          ``@Function
+          def f(x:Tensor[13]):
+              return x * x``
+
+        If you are still working with Python 2.7, use CNTK's @Signature decorator instead:
+          ``@Function
+          @Signature(Tensor[13])
+          def f(x):
+              return x * x``
+
+        ``make_block=True`` is used to implement @BlockFunction(). If given the result will be wrapped
+         in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
+        '''
+        f_name = f.__name__ # (only used for debugging and error messages)
+
+        # helper to create a CNTK placeholder or input for a given name
+        # An input_variable is created if the parameter is annotated with a Tensor(...) type.
+        # In this case, CNTK will immediately trigger type inference.
+        # Unannotated parameters will yield placeholder_variables instead.
+        def make_arg_variable(name, annotations):
+            from .. import placeholder_variable, input_variable
+            from .variables import Variable
+            if isinstance(annotations.get(name, None), Variable.Type):
+                var_type = annotations[name]
+                return input_variable(name=name, **var_type)
+            else:
+                return placeholder_variable(name=name)
+
+        from ..default_options import default_options
+        # Parameter() creation inside code of a Function def is forbidden. Setting 'pure' blocks it in Parameter().
+        with default_options(pure=True):
+
+            # get the parameter list through inspection
+            arg_names, annotations = get_python_function_arguments(f)
+
+            # The Python function is converted to a CNTK Function by executing it once
+            # passing placeholders as inputs. This createss a piece of graph.
+            # During execution, the Placeholders of this function are hidden from signatures of any
+            # further Functions that may be defined inside this invocation.
+            # This is required when @Function definitions are nested, and expression from
+            # the outer @Function block is used in an inner block, which would introduce
+            # additional Placeholders that will show up as .arguments.
+            # This is prevented by (1) maintaining a "invisible placeholders" list,
+            # and always filtering .arguments against that list. This is done by the property .signature;
+            # i.e. in all of this, do not use .arguments; use .signature instead.
+            from .. import combine, alias, as_block
+            args = [make_arg_variable(arg_name, annotations) for arg_name in arg_names]
+
+            # helpers
+            def force_order_args(fun_args):
+                block_args = [make_arg_variable(fun_arg.name, annotations) for fun_arg in fun_args]  # placeholders inside the BlockFunction
+                combined_block_args = combine(block_args)                               # the content of the BlockFunction
+                arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
+                return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
+            def invoke(fun_args):
+                try:
+                    # hide Placeholders of this function from .signature() of any function defined inside
+                    for arg in args:
+                        Function._placeholders_under_construction.add(arg)
+                    out = f(*fun_args)
+                    if out is None:
+                        raise TypeError("CNTK Function '{}' must return a value".format(f_name))
+                finally:
+                    # unhide Placeholders of this function again
+                    for arg in args:
+                        Function._placeholders_under_construction.remove(arg)
+                # resolve tuples and NamedOutputs  --TODO: check for duplicates
+                def resolve_named(output):
+                    if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                        output = alias(output.arg, name=output.name)
+                    elif isinstance(output, cntk_py.Variable):
+                        output = combine([output]) # workaround: wrap in another combine() call
+                    return output
+                if isinstance(out, tuple): # multi-valued function, returned as a tuple
+                    out = [resolve_named(output) for output in out]
+                    # BUGBUG: combine() does not allow duplicates, so we wrap them in alias()
+                    out_seen = set()
+                    for i, out_i in enumerate(out):
+                        if out_i in out_seen:
+                            out[i] = alias(out_i)
+                        else:
+                            out_seen.add(out_i)
+                    out = combine(out)  # --> turn into a combine()
+                else:
+                    out = resolve_named(out)
+                return out
+            # ensure parameter ordering
+            # if called from BlockFunction() then wrap into a block
+            if make_block: # if we make a block then run off a separate set
+                block_args = [make_arg_variable(arg.name, annotations) for arg in args]  # placeholders inside the BlockFunction
+                out = invoke(block_args)
+                out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=op_name, block_instance_name=name)
+            # not a block
+            else:
+                fun_args = args
+                #if len(fun_args) > 1:
+                #    fun_args = force_order_args(fun_args)
+                # BUGBUG: Python interpreter crashes sometimes with this enabled, so for now fix it after the fact only if needed
+                # now invoke the Python function
+                out = invoke(fun_args)
+                # BUGBUG workaround: fix it after the fact with an inefficient solution only if we got it wrong
+                out_arg_names = [arg.name for arg in out.signature]
+                if set(out_arg_names) == set(arg_names) and out_arg_names != arg_names:  # order came out wrong
+                    fun_args = force_order_args(fun_args)
+                    out = invoke(fun_args)
+
+            # verify that we got the parameter order right
+            out_arg_names = [arg.name for arg in out.signature]
+            assert out_arg_names == arg_names
+
+            if len(out.signature) != len(args):
+                unfulfilled_args = set(out.signature) - set(args)
+                if unfulfilled_args:
+                    unfulfilled_arg_names = [arg.name for arg in unfulfilled_args]
+                    raise TypeError("CNTK Function '{}' has {} missing arguments ({}), which is currently not supported".format(f_name, len(unfulfilled_arg_names), ", ".join(unfulfilled_arg_names)))
+                else:
+                    unused_args = set(args) - set(out.signature)
+                    unused_arg_names = [arg.name for arg in unused_args]
+                    raise TypeError("CNTK Function '{}' has {} unused arguments ({}), which is currently not supported".format(f_name, len(unused_arg_names), ", ".join(unused_arg_names)))
+
+            return out
+
+    @property
+    def signature(self):
+        '''
+        Returns the signature of a Function.
+        This is the .arguments[] list without placeholders that belong to an outer, not yet completed @Function def.
+        '''
+        sig = [arg for arg in self.arguments if arg not in Function._placeholders_under_construction]
+        return tuple(sig)
+
+    def argument_map(self, *args, **kwargs):
+        '''
+        determine the {placeholder: variable} map for use with various call operations
+        Returns a dictionary from this function's placeholders to whatever arguments are passed.
+        Accepted are both positional and keyword arguments.
+        This mimics Python's argument interpretation, except that keyword arguments are not optional.
+        This does not require the arguments to be Variables or Functions. It is also called by train_minibatch().
+        '''
+        params = self.signature    # function parameters
+        if len(args) + len(kwargs) != len(params):
+            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(params), len(args) + len(kwargs)))
+        params_dict = { arg.name: arg for arg in params }
+        return map_function_arguments(params, params_dict, *args, **kwargs)
+
+    def update_signature(self, *arg_types, **kwarg_types):
+        '''
+        define input shapes, in-place
+        e.g.
+        model.update_signature(42)
+        pass a list of objects that define the dimensions etc. of the placeholders
+        Currently you can pass an int, a tuple, an Input, or a dict created with Type()
+        '''
+        arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
+        def to_input(arg_type, name):
+            from cntk import input_variable
+            from .variables import Variable
+            if isinstance(arg_type, (int, tuple)): # just passed a shape
+                return input_variable(shape=_as_tuple(arg_type), name=name)
+            elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
+                return input_variable(name=name, **arg_type)
+            else:
+                raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
+        # map the given types:
+        #  - create an Input with the given Type or shape
+        #  - keep the name property of the Function parameter
+        #  - skip argument types passed as None
+        #  - TODO: should verify existing shape/axis information
+        arg_map = { param: to_input(arg_type, name=param.name) for param, arg_type in arg_map.items() if arg_type is not None }
+        self.replace_placeholders(arg_map)
+
+
     def declare_args(self, *arg_types):
+        '''
+        Back-compat wrapper for update_signature() (beta12 and before).
+        '''
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'update_signature(...) instead', DeprecationWarning)
         placeholders = self.placeholders  # the unbound parameters to fill in
         if len(arg_types) != len(placeholders):
-            raise TypeError("CNTK Function.declare_inputs() expected {} arguments, got {}".format(len(placeholders), len(arg_types)))
+            raise TypeError("CNTK Function.declare_args() expected {} arguments, got {}".format(len(placeholders), len(arg_types)))
         def to_input(arg):
             if isinstance(arg, cntk_py.Variable):
                 return arg
@@ -59,45 +270,115 @@ class Function(cntk_py.Function):
         self.replace_placeholders(dict(zip(placeholders, args)))
 
 
-    # call a function, i.e. clone with all placeholders/inputs replaced
-    def __call__(self, *args):
-        if not isinstance(args, tuple):  # normalize single argument into tuple
-            args = (args,)
-        # flatten args to a list. Note it may be a a tuple or even a nested tree of tuples, e.g. LSTM (x, (h, c))
-        def flatten_tuple(args):
-            if not isinstance(args, tuple): # not a tuple: singleton; create a singleton tuple
-                return (args,)
-            from operator import add
-            from functools import reduce
-            return reduce(add, [(flatten_tuple(item)) for item in args])
-        args = list(flatten_tuple(args))  # normalize nested arg tuples into flat tuple  --TODO: is there a standard function to do this?
-        # TODO: This should not be necessary, or go into Function.replace_placeholders()
-        def _output_of(arg):  # helper to get the output of an arg; use arg itself if no output() method (that'd be a Variable)
-            try:
-                return arg.output
-            except AttributeError:
-                return arg  # Variables have no output()
-        args = [_output_of(arg) for arg in args]  # normalize args to their outputs  --BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
-        #from cntk.ops import combine
-        #args = [combine([arg]) for arg in args]  # BUGBUG: without: "TypeError: cannot convert value of dictionary to CNTK::Variable "
-        placeholders = self.placeholders  # the unbound parameters to fill in
-        if len(args) != len(placeholders):
-            raise TypeError("CNTK Function expected {} arguments, got {}".format(len(placeholders), len(args)))
-        return self.clone(CloneMethod.share, dict(zip(placeholders, args)))
+    def __call__(self, *args, **kwargs):
+        '''
+        Call a Function, either on symbolic or numeric inputs.
 
-    # forward function composition (other o self)
+           * If at least one input is a CNTK Function or Variable, then
+             result is a CNTK Function object, with inputs bound to the arguments.
+             This is a short-hand for `f.clone(share, argument_map(*args, **kwargs))`.
+           * Otherwise, all arguments must be numbers, numpy arrays, or a :class:`~cntk.io.MinibatchData` instance.
+             Then perform the actual computation and return the numeric result.
+             This is a short-hand for `f.eval(argument_map(*args, **kwargs))`,
+             except that there is no `device` parameter. If you need that, use `eval()` directly.
+
+        Args:
+            *args, **kwargs: The arguments to pass to the Function.
+
+        Returns:
+             In case of symbolic inputs, returns another CNTK Function object with inputs bound to the arguments.
+             Otherwise returns a tuple of numpy arrays for tuple-valued Functions, and a single numpy array otherwise.
+        '''
+
+        # parse argument list and map to the function's input
+        arg_map = self.argument_map(*args, **kwargs)
+
+        # if placeholders were excluded due to being under construction,
+        # we must include them in the argmap, otherwise they will be cloned
+        for arg in self.arguments:
+            if arg not in arg_map:
+                arg_map[arg] = arg
+
+        # determine whether this is eval() or clone()
+        is_symbolic = any(isinstance(arg, (cntk_py.Function, cntk_py.Variable)) for arg in arg_map.values())
+
+        # symbolic: return a cloned Function
+        # applying the function means to inline its piece of graph
+        if is_symbolic:
+            return self.clone(CloneMethod.share, arg_map)
+
+        # numeric: evaluate
+        outputs = self.outputs
+        _, output_map = self.forward(arg_map, outputs)
+        assert len(output_map) == len(outputs)
+        if len(output_map) > 1: # tuple-valued: return tuple
+            return tuple(output_map[output] for output in outputs)
+        else: # single value: return numpy array and that's it
+            return list(output_map.values())[0]
+
     def __rshift__(self, other):
-        return other(self)
+        '''
+        Forward function composition (G o F), same as Sequential([F, G]).
+        Unlike __call__(), __rshift__() accepts tuples:
 
-    # backward function composition (self o other)
+         * `G` can be a tuple of Functions. They are applied in parallel, yielding a tuple result.
+           If `F` is a single-valued Function, it will be fed to all items.
+         * if `F` is a tuple-valued Function piped and `G` is a single Function, the tuple
+           values will be used as the arguments to `G`.
+         * if both are tuples, they are applied 1:1
+
+        E.g. `Embedding(500) >> (Recurrence(500), Recurrence(500, go_backwards=True)) >> splice >> Dense`
+        '''
+        inputs = self.outputs
+        input_is_tuple = len(inputs) > 1
+        # if piping into a tuple of Functions, apply item-wise
+        if isinstance(other, tuple):
+            from cntk import combine
+            return combine([other[i](inputs[i if input_is_tuple else 0]) for i in range(len(other))])
+        # if applying a single function to a tuple-valued Function, pass the items as the args
+        elif input_is_tuple:
+            return other(*inputs)
+        # regular case: one input, one Function
+        else:
+            return other(self)
+
     def __lshift__(self, other):
+        '''
+        Backward function composition (self o other)
+        '''
         return self(other)
 
     def __getattr__(self, name):
+        '''
+        Access a member inside this object.
+        Members of ``Function`` can be accessed directly.
+        In addition, members of the Function's output, if only one, are accessed here.
+        Lastly, this also gives access to Functions and Variables inside this Function's
+        graph by their user-specified name, e.g. ``model.embed.E``, as long as those names are not also
+        member names of Function or Variable.
+        '''
+        # If name is not a member of Function or Variable, first look for
+        # a user-named item in the graph.
+        # (Known member names cannot be overridden by user-named items,
+        # to ensure that the API functions.)
+        if not hasattr(Variable, name) and not hasattr(Function, name) \
+           and not name.startswith('_') and name not in ['outputs', 'output', 'this']:
+            # lookup of a named object inside the graph
+            # When 'self' is a BlockFunction (e.g. a named layer), then we only search in there,
+            # while when 'self' is a regular node (e.g. a named output using Label),
+            # we search the composite, which may return multiple hits with the same name.
+            # In case of multiple matches, we fail.
+            # BUGBUG: That is a problem if, e.g., someone used a layer (=BlockFunction) twice
+            # and then looks it up by name, as that will fail although both instances are identical.
+            from cntk.logging.graph import find_by_name
+            root = self.block_root if self.is_block else self
+            item = typemap(find_by_name)(root, name)
+            if item:
+                return item
+
         # If something is not found in Function, look it up in its output
         # variable, if it has only one.
-        if not hasattr(Variable, name) or name.startswith('_') or \
-                name in ['outputs', 'output', 'this']:
+        if name.startswith('_') or name in ['outputs', 'output', 'this']:
             # These should not be looked up in self's output.
             # 'outputs' and 'output' are required to fetch the attribute for
             # in the Variable.
@@ -106,6 +387,7 @@ class Function(cntk_py.Function):
             raise AttributeError("neither Function nor its output variable"
                     " has '%s'"%name)
 
+        # access an API member of 'output', such as .shape()
         outputs = self.__getattribute__('outputs')
         if len(outputs) != 1:
             raise AttributeError("Function does not have '%s' and it cannot "
@@ -114,6 +396,12 @@ class Function(cntk_py.Function):
 
         return getattr(outputs[0], name)
 
+    @property
+    def type(self):
+        '''
+        Get type of a Function's output.
+        '''
+        return self.output.type
 
     @property
     @typemap
@@ -154,8 +442,6 @@ class Function(cntk_py.Function):
         # C++ clone() can only clone composites. If we are not a composite, make it one using combine()
         if not self.is_composite:
             from cntk import combine
-            #return combine([self]).clone(method, substitutions).root_function.arguments[0].owner
-            # BUGBUG: This ^^ does not give me the correct .arguments, so we leave the extra combine() in for now.
             return combine([self]).clone(method, substitutions)
 
         method = getattr(cntk_py,
@@ -466,8 +752,11 @@ class Function(cntk_py.Function):
         # of the root gradients, we run the forward pass with as_numpy=False regardless of the
         # actual as_numpy setting passed to this function
         state, results = self.forward(at, output, set(output), device, as_numpy=False)
-        ones = {self.output: np.ones(v.shape, self.output.dtype) for v in results.values()}
-        grad_dict = self.backward(state, ones, unique_wrt, as_numpy)
+        
+        # Setup a root gradient value filled with ones identical in shape/layout as the output value
+        root_gradient = results[self.output].deep_clone()
+        root_gradient.data().set_value(1.0)
+        grad_dict = self.backward(state, {self.output: root_gradient}, unique_wrt, as_numpy)
 
         if len(grad_dict) > 1:
             return grad_dict
@@ -662,7 +951,7 @@ class Function(cntk_py.Function):
         See also:
             :func:`find_by_name`
         '''
-        from .. import graph
+        from cntk.logging import graph
         return graph.find_all_with_name(self, name)
 
     # TODO have a better name for combine() in this case
@@ -699,7 +988,7 @@ class Function(cntk_py.Function):
         See also:
             :func:`find_all_with_name`
         '''
-        from .. import graph
+        from cntk.logging import graph
         return graph.find_by_name(self, name)
 
     @typemap
