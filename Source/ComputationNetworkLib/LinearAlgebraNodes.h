@@ -453,11 +453,6 @@ private:
                 /*maskGaps=*/ true);
 
             unpacked[i] = ((input0MBLayout->GetNumTimeSteps() > 1) && (input0MBLayout->GetNumSequences() > 1));
-
-            if (!unpacked[i] && HasEnvironmentPtr() && Environment().trackGapNans)
-            {
-                InputRef(i).MaskMissingValueColumnsToZero(FrameRange(InputRef(i).GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-            }
         }
 
         const auto& unpackedInputValue = unpackedInput[1 - inputIndex].GetSOB();
