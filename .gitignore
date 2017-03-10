@@ -241,7 +241,6 @@ bindings/java/Swig/cntk_java_wrap.h
 bindings/java/Swig/cntk_java_wrap.cxx
 bindings/java/SwigProxyClasses/**/*.java
 bindings/java/**/*.class
-bindings/java/SwigProxyClasses/cntk.jar
 bindings/java/Swig/com/
 bindings/java/Swig/*.so
 bindings/java/JavaEvalTest/.idea

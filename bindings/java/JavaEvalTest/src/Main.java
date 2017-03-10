@@ -16,7 +16,6 @@ public class Main {
 
         String dataPath = System.getenv("CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY") + "/Bindings/Java/";
         Function modelFunc = Function.LoadModel(dataPath + "z.model");
-
         Variable outputVar = modelFunc.getOutputs().get(0);
         Variable inputVar = modelFunc.getArguments().get(0);
 

@@ -1500,9 +1500,6 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Java", "Java", "{9BEE1585-FE23-40D0-B250-EDDADDEAEA6F}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CNTKLibraryJavaBinding", "bindings\java\Swig\CNTKLibraryJavaBinding.vcxproj", "{5D1972FA-F0A4-4035-8E63-8BAEF0230097}"
-	ProjectSection(ProjectDependencies) = postProject
-		{E5606ECE-48CA-4464-BB12-09D81D02B9EF} = {E5606ECE-48CA-4464-BB12-09D81D02B9EF}
-	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Extensibility", "Extensibility", "{3BF56127-6F0F-41CF-BFCE-31165A0A5E73}"
 EndProject
@@ -1981,6 +1978,16 @@ Global
 		{743FC7AA-3884-4C96-983A-A33FD6C56227}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
 		{743FC7AA-3884-4C96-983A-A33FD6C56227}.Release|x64.ActiveCfg = Release|x64
 		{743FC7AA-3884-4C96-983A-A33FD6C56227}.Release|x64.Build.0 = Release|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug|x64.ActiveCfg = Debug|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug|x64.Build.0 = Debug|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release|x64.ActiveCfg = Release|x64
+		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release|x64.Build.0 = Release|x64
 		{40A8CC31-8C08-4156-AE08-E8C0FADC3509}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
 		{40A8CC31-8C08-4156-AE08-E8C0FADC3509}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
 		{40A8CC31-8C08-4156-AE08-E8C0FADC3509}.Debug|x64.ActiveCfg = Debug|x64
@@ -1996,16 +2003,6 @@ Global
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_CpuOnly|x64.ActiveCfg = Release|Any CPU
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_NoOpt|x64.ActiveCfg = Release|Any CPU
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release|x64.ActiveCfg = Release|Any CPU
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug|x64.ActiveCfg = Debug|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Debug|x64.Build.0 = Debug|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release|x64.ActiveCfg = Release|x64
-		{5D1972FA-F0A4-4035-8E63-8BAEF0230097}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
