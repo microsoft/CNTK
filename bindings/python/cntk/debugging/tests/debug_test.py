@@ -5,8 +5,6 @@
 
 import numpy as np
 
-import pytest
-
 from cntk import sgd, Trainer, learning_rate_schedule, parameter, \
                  input_variable, times, cross_entropy_with_softmax, \
                  classification_error, UnitType, combine
@@ -42,14 +40,13 @@ def _train(z, loss, eval_error,
     trainer = Trainer(z, (loss, eval_error), [learner])
 
     minibatch_size = 10
-    num_samples = 250
-    num_minibatches_to_train = num_samples / minibatch_size
 
     for i in range(steps):
         features, labels = _generate_random_data_sample(
             minibatch_size, input_dim, num_output_classes)
 
         trainer.train_minibatch({f_input: features, l_input: labels})
+
 
 class InStream(object):
     def __init__(self, to_be_read):
@@ -59,6 +56,7 @@ class InStream(object):
         if not self.to_be_read:
             return 'c'
         return self.to_be_read.pop(0)
+
 
 class OutStream(object):
     def __init__(self):
@@ -73,6 +71,7 @@ class OutStream(object):
 
     def flush(self):
         pass
+
 
 def test_debug_1(device_id):
     set_default_device(cntk_device(device_id))
