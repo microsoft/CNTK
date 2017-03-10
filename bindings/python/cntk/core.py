@@ -199,7 +199,7 @@ class Value(cntk_py.Value):
                     s = s[0]
                 if sparse.issparse(s):
                     raise ValueError('if you provide sparse data, every '
-                                     'sequence has to be encoded as one '
+                                     'sequence must be encoded as one '
                                      'csr_matrix instance. Your sequence '
                                      'was: \'%s\'' % str(sample))
                 else:
@@ -275,6 +275,9 @@ class Value(cntk_py.Value):
                           'beforehand into one NumPy array to speed up '
                           ' training.' % var.uid)
 
+        if isinstance(data, cntk_py.NDArrayView):
+            return cntk_py.Value(data)
+
         if isinstance(data, np.ndarray):
             # The outermost axis has to be Python list. If the user passes a
             # full minibatch as one NumPy array, we have to convert it.
@@ -292,7 +295,7 @@ class Value(cntk_py.Value):
                 return cntk_py.Value(ndav)
 
         if not isinstance(data, list):
-            raise ValueError('batch has to be a list of NumPy arrays or '
+            raise ValueError('batch must be a list of NumPy arrays or '
                              'SciPy CSR matrices')
 
         # NDArrayViews are all created on CPU. The Value object later then will
