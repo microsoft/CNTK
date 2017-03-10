@@ -453,6 +453,11 @@ private:
                 /*maskGaps=*/ true);
 
             unpacked[i] = ((input0MBLayout->GetNumTimeSteps() > 1) && (input0MBLayout->GetNumSequences() > 1));
+
+            if (!unpacked[i] && HasEnvironmentPtr() && Environment().trackGapNans)
+            {
+                InputRef(i).MaskMissingValueColumnsToZero(FrameRange(InputRef(i).GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
+            }
         }
 
         const auto& unpackedInputValue = unpackedInput[1 - inputIndex].GetSOB();
@@ -472,7 +477,7 @@ private:
                 Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
                 inputValueSlice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
                 Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? (ElemType)0 : (ElemType)1, inputGradientSlice);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? 0 : beta, inputGradientSlice);
             }
 
             if (unpacked[inputIndex])
@@ -490,7 +495,7 @@ private:
                 Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
                 inputValueSlice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
                 Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? (ElemType)0 : (ElemType)1, inputGradientSlice);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? 0 : beta, inputGradientSlice);
             }
             
             if (unpacked[inputIndex])
