@@ -42,6 +42,8 @@ struct ComputationEnvironment
         return oldMode;
     }
 
+    bool trackGapNans = false;
+
     // traceLevel
     int traceLevel = 0;
 
