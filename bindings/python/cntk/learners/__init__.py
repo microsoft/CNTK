@@ -165,8 +165,9 @@ class UserLearner(cntk_py.Learner):
     This can be allocated and initialized during construction.
     '''
 
-    def __init__(self, parameters, learningRateSchedule):
-        super(UserLearner, self).__init__(parameters, learningRateSchedule)
+    def __init__(self, parameters, lr_schedule, as_numpy=True):
+        super(UserLearner, self).__init__(parameters, lr_schedule)
+        self.as_numpy = as_numpy
         self.__disown__()
 
     def _update(self, gradient_values, training_sample_count, sweep_end):
@@ -185,10 +186,15 @@ class UserLearner(cntk_py.Learner):
             `False` to indicate that learning has stopped for all of the
             parameters associated with this learner
         '''
-        var_nd_map = {var: NDArrayView.from_data(val) for var, val in
-                      gradient_values.items()}
+        map_if_possible(gradient_values)
 
-        return self.update(var_nd_map, training_sample_count, sweep_end)
+        if self.as_numpy:
+            var_nd_map = {var: np.asarray(gradient_values[var]) \
+                          for var, val in gradient_values.items()}
+        else:
+            var_nd_map = gradient_values
+
+        return self.update(gradient_values, training_sample_count, sweep_end)
 
     def update(self, gradient_values, training_sample_count, sweep_end):
         '''
