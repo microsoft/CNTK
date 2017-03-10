@@ -15,8 +15,6 @@ namespace Microsoft { namespace MSR { namespace ScriptableObjects { struct IConf
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-using namespace std;
-
 #ifndef CPUONLY
 enum class GpuValidity
 {
