@@ -263,7 +263,7 @@ class Value(cntk_py.Value):
             data = Value._as_best_data_type(var, data)
             # Since the core API's Value does not copy single NDArrayViews,
             # we cannot borrow the memory here.
-            ndav = NDArrayView.from_data(data, device=cpu(), borrow=False)
+            ndav = NDArrayView.from_data(data, device=device, borrow=False)
 
             return cntk_py.Value(ndav)
 
