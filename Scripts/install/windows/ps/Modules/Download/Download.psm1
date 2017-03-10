@@ -15,7 +15,6 @@ function DownloadFileWebRequest (
     } 
     catch {
       Write-Verbose "DownloadFileWebRequest failed: $_.Exception.Response.StatusCode.Value__"
-
       Remove-Item -path $OutFile -ErrorAction SilentlyContinue
       return $false
     }
