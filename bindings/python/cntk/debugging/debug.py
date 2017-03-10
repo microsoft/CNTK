@@ -11,7 +11,7 @@ from cntk import cntk_py, user_function
 from cntk import output_variable, CloneMethod
 
 from cntk.ops.functions import UserFunction
-from cntk.utils.swig_helper import map_if_possible
+from cntk.internal import map_if_possible
 
 DEBUG_USAGE = '''\
     Commands:

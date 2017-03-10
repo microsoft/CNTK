@@ -11,7 +11,7 @@ from cntk import sgd, Trainer, learning_rate_schedule, parameter, \
                  input_variable, times, cross_entropy_with_softmax, \
                  classification_error, UnitType, combine
 from cntk.ops.tests.ops_test_utils import cntk_device
-from cntk.debug import debug_model, _DebugNode
+from cntk.debugging.debug import debug_model, _DebugNode
 
 from cntk.device import set_default_device
 
