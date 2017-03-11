@@ -37,4 +37,4 @@ def set_computation_network_trace_level(level):
     Args:
         level (int): trace level
     '''
-    cntk_py.set_computational_network_trace_level(level)
+    cntk_py.set_computation_network_trace_level(level)
