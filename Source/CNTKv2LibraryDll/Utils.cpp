@@ -599,6 +599,7 @@ namespace CNTK
         auto varShape = var.Shape();
         auto valueShape = value->Shape();
         auto numDynamicAxes = var.DynamicAxes().size();
+        auto mask = value->Mask();
 
         if (numDynamicAxes == 0)
             return{ value->Data()->GetMatrix<ElementType>(), nullptr };
