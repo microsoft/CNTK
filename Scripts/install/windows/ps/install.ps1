@@ -41,6 +41,9 @@
  This is an optional parameter and can be used to specify the Python version used in the CNTK Python environment.
  Supported values for this parameter are 27, 34, or 35. The default values is 35 (for a CNTK Python 35 environment).
 
+  .PARAMETER WheelBaseUrl
+ This is an internal test-only parameter and should be ignored.
+
 .EXAMPLE
  .\install.ps1
  
@@ -60,7 +63,12 @@ Param(
     [parameter(Mandatory=$false)] [string] $AnacondaBasePath = "C:\local\Anaconda3-4.1.1-Windows-x86_64",
     [parameter(Mandatory=$false)] [ValidateSet("27", "34", "35")] [string] $PyVersion = "35",
     [parameter(Mandatory=$false)] [switch] $Execute = $true,
-    [parameter(Mandatory=$false)] [switch] $NoConfirm)
+    [parameter(Mandatory=$false)] [switch] $NoConfirm,
+    [parameter(Mandatory=$false)] [string] $WheelBaseUrl = "https://cntk.ai/PythonWheel")
+
+Set-StrictMode -Version latest
+
+Import-Module Download -ErrorAction Stop
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
 $ymlDir = Split-Path $MyDir
@@ -75,25 +83,92 @@ $localCache     = "$MyDir\InstallCache"
 . "$MyDir\_info"
 . "$MyDir\_action"
 
+function VerifyInstallationContent(
+    [Parameter(Mandatory=$true)][string] $path)
+{
+    $structureCorrect = (join-path $path cntk\cntk.exe | test-path -PathType Leaf) 
+    $structureCorrect = (join-path $path prerequisites\VS2015\vc_redist.x64.exe | test-path -PathType Leaf) -and $structureCorrect
+    $structureCorrect = (join-path $path version.txt | test-path -PathType Leaf) -and $structureCorrect
+    
+    Write-Verbose "[VerifyInstallationContent]: [$path] result [$structureCorrect]"
+
+    if (-not $structureCorrect) {
+        throw "`nFatal Error: Files from the CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package. For help see: https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script"
+    }
+}
+
+function WhlFileInfoFromVersionFile(
+    [Parameter(Mandatory=$true)][string] $path,
+    [Parameter(Mandatory=$true)][string] $pyVersion,
+    [string] $wheelBaseUrl)
+{
+    $versionFile = Join-Path $path version.txt
+
+    try {
+        $reader = [System.IO.File]::OpenText($versionFile)
+        $cntkVersion = $reader.ReadLine()       # cntk-*-*-xxxx*-*
+        $cntkConfig = $reader.ReadLine()        # Debug, Release, ...
+        $cntkTarget = $reader.ReadLine()        # CPU-Only, GPU, ...
+
+        if ((-not $cntkVersion) -or (-not $cntkConfig) -or (-not $cntkTarget) -or (-not ($cntkVersion -match "^cntk"))) {
+            throw "`nFatal Error: Malformed version information in [$versionFile]."
+        }
+        $cntkVersion = $cntkVersion -replace "-", "."
+        $cntkVersion = $cntkVersion -replace "^cntk\.", "cntk-"
+
+        return @{ Name = "{0}-cp{1}-cp{2}m-win_amd64.whl" -f $cntkVersion, $pyVersion, $pyVersion; CntkUrl = "{0}/{1}" -f $wheelBaseUrl, $cntkTarget }
+    }
+    finally {
+        $reader.close()
+    }
+}
+
+function Get-WheelUrl(
+    [Parameter(Mandatory=$true)][string] $path,
+    [Parameter(Mandatory=$true)][string] $pyVersion,
+    [string] $WheelBaseUrl)
+{
+    # if a local wheel exists in the cntk\Python directory, we will pip install this wheel
+    # if the file doesn't exist we will pip install the wheel in the specified url
+
+    $whlFileInfo = WhlFileInfoFromVersionFile -path $path -pyVersion $pyVersion -wheelBaseUrl $WheelBaseUrl
+
+    $whlPath = Join-Path $path cntk\Python
+    $whlFile = Join-Path $whlPath $whlFileInfo.Name
+
+    if (Test-Path $whlFile) {
+        return $whlFile
+    }
+
+    return "{0}/{1}" -f $whlFileInfo.CntkUrl, $whlFileInfo.Name
+}
+
 Function main
 {
     try {
         if (-not (DisplayStart -NoConfirm $NoConfirm)) {
-            Write-Host 
+            Write-Host  
             Write-Host " ... Quitting ... "
             Write-Host
             return
         }
 
+        #check we are running inside the unpacked distribution content
+        VerifyInstallationContent $cntkRootDir
+
+        $whlUrl = Get-WheelUrl -path $cntkRootDir -pyVersion $PyVersion -wheelBaseUrl $WheelBaseUrl
+
         if(-not (Test-Path -Path $localCache)) {
             new-item -Path $localcache -ItemType Container | Out-Null
         }
 
+        $operations = Set-OperationsInfo -whlUrl $whlUrl 
         $Script:operationList  = @()
+        $Script:WinProduct = $null
         if (VerifyOperations -NoConfirm $NoConfirm) {
 
             DownloadOperations
-
+            
             ActionOperations
 
             DisplayEnd
@@ -101,6 +176,7 @@ Function main
     }
     catch {
         Write-Host `nFatal error during script execution!`n($Error[0]).Exception`n
+        exit 1
     }
 }
 

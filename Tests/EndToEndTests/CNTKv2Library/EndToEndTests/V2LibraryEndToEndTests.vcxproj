@@ -58,7 +58,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Tests\EndToEndTests\CNTKv2Library\Common;$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll\</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Tests\EndToEndTests\CNTKv2Library\Common;$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll\</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>

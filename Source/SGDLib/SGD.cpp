@@ -2190,7 +2190,7 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
         if (traceLevel > 0)
             fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
         if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
-            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator());
+            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes));
         else
             m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes);
     }

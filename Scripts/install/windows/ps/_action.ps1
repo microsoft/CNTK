@@ -148,24 +148,13 @@ function InstallWheel(
     $BasePath     = $table["BasePath"]
     $EnvName      = $table["EnvName"]
     $message      = $table["message"]
-    $whlDirectory = $table["WheelDirectory"]
-    $pyVersion = $table["PyVersion"]
+    $whl = $table["whlUrl"]
 
     Write-Host $message
     if (-not $Execute) {
          Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
          return 
     }
-
-    $whlFile = Get-ChildItem $cntkRootDir\cntk\Python\cntk*cp$pyVersion-cp$pyVersion*.whl
-    if (-not $whlFile) {
-        throw "No WHL file found at $cntkRootDir\cntk\Python"
-    }
-    if ($whlFile.Count -gt 1) {
-        Throw "Multiple WHL files found in $cntkRootDir\cntk\Python. Please make sure it contains only the WHL file matching your CNTK download"
-    }
-    $whl = $whlFile.FullName
-
     $condaExe = Join-Path $BasePath 'Scripts\conda.exe'
     $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $EnvName)  -maxErrorLevel 0
 

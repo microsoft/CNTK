@@ -61,7 +61,7 @@
       <SDLCheck>true</SDLCheck>
       <UseFullPaths>true</UseFullPaths>
       <OpenMPSupport>true</OpenMPSupport>
-      <AdditionalIncludeDirectories>$(SolutionDir)Examples\Extensibility\CPP;$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll\;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Examples\Extensibility\CPP;$(SolutionDir)Source\CNTKv2LibraryDll\API;$(SolutionDir)Source\CNTKv2LibraryDll\;$(BOOST_INCLUDE_PATH)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
