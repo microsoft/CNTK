@@ -16,6 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
 
 #if 0
+// TODO investigate hangs
 BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAccrossDevices, RandomSeedFixture)
 {
     bool hasTwoGpus = false;
