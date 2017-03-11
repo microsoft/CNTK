@@ -1123,6 +1123,7 @@ namespace CNTK
             }
 
             m_computationNetwork->SetTraceLevel(Internal::GetComputationNetworkTraceLevel());
+            m_computationNetwork->SetTrackGapNans(Internal::GetComputationNetworkTrackGapNans());
             m_computationNetwork->CompileNetwork();
 
             // Verify that the shapes of the output Variables that we computed match the corresponding nodes in the ComputationNetwork
