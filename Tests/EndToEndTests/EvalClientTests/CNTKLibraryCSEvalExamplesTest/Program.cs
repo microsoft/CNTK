@@ -27,6 +27,8 @@ namespace CNTKLibraryCSEvalExamples
                 CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
+                // It is sufficient to test loading model from memory buffer only on CPU.
+                CNTKLibraryManagedExamples.LoadModelFromMemory(DeviceDescriptor.CPUDevice);
             }
 
             if (ShouldRunOnGpu())
