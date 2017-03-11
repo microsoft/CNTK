@@ -4,7 +4,7 @@
 # for full license information.
 # ==============================================================================
 [CmdletBinding()]
-Param([string]$WheelBaseUrl)
+Param([Parameter(Mandatory=$true)] [string]$PyVersion, [string]$WheelBaseUrl)
 
 $image = 'cntk:installtest'
 
