@@ -109,7 +109,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             auto inputVar = InputVariable({ inputShape }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc = Sequence::ReduceSum(inputVar);
 
-            NDShape maskShape = { 1, numSequences };
+            NDShape maskShape = { numSequences };
             NDShape outputShape = reduceSumFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape(maskShape);
 
@@ -227,7 +227,10 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 
             size_t outputSequenceAxisLength = maxSliceLength;
             size_t outputBatchAxisLength = numSequences;
-            NDShape outputShape = sliceFunc->Output().Shape().AppendShape({ outputSequenceAxisLength, outputBatchAxisLength });
+            NDShape outputShape = sliceFunc->Output().Shape();
+            if (endAndBeginOffsetDiff != 1)
+                outputShape = outputShape.AppendShape({ outputSequenceAxisLength });
+            outputShape = outputShape.AppendShape({ outputBatchAxisLength });
             std::vector<float> outputData(outputShape.TotalSize(), 0);
             NDMaskPtr mask;
             if (endAndBeginOffsetDiff < 0)
@@ -534,7 +537,7 @@ void TestTimesIndirectSparseInputGradientSparse(const DeviceDescriptor& device)
     inputMap.insert(std::make_pair(input, inputValue));
 
     std::vector<float> outputData(numSequences);
-    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, 1, numSequences }), outputData, false));
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, numSequences }), outputData, false));
     std::unordered_map<Variable, ValuePtr> outputMap;
     outputMap.insert(std::make_pair(timesFunction->Output(), outputValue));
 

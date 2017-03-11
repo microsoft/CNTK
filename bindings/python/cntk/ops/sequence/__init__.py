@@ -147,9 +147,9 @@ def first(seq, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 0.,  1.],
+        array([[[ 0.,  1.],
                  [ 2.,  3.],
-                 [ 4.,  5.]]]], dtype=float32)
+                 [ 4.,  5.]]], dtype=float32)
 
     Args:
         seq: the symbolic tensor denoting a sequence
@@ -173,9 +173,9 @@ def last(seq, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 18.,  19.],
+        array([[[ 18.,  19.],
                  [ 20.,  21.],
-                 [ 22.,  23.]]]], dtype=float32)
+                 [ 22.,  23.]]], dtype=float32)
 
     Args:
         seq: the symbolic tensor denoting a sequence
@@ -396,9 +396,9 @@ def reduce_sum(seq, name=''):
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y = C.sequence.reduce_sum(x)
         >>> y.eval({x:x0})
-        array([[[[ 36.,  40.],
+        array([[[ 36.,  40.],
                  [ 44.,  48.],
-                 [ 52.,  56.]]]], dtype=float32)
+                 [ 52.,  56.]]], dtype=float32)
 
     Args:
         seq: sequence input tensor

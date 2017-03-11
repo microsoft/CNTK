@@ -34,13 +34,12 @@ def test_times_2d_sparse_operand(device_id):
     grad = a_dense.grad({a : input_data}, [w, a], as_numpy=False, device=dev)
 
     res = a_dense.eval({a : input_data}, device=dev)
-    expected = [[w_init[input_sparse_indices[0]]], [w_init[input_sparse_indices[1]]], [w_init[input_sparse_indices[2]]]]
-    assert np.array_equal(res, expected)
+    assert np.array_equal(res, [[w_init[input_sparse_indices[0]]], [w_init[input_sparse_indices[1]]], [w_init[input_sparse_indices[2]]]])
 
     a_no_sequence = C.input_variable(shape=sample_shape, is_sparse=True, name='a', dynamic_axes=[C.Axis.default_batch_axis()])
     a_no_sequence_dense = times(a_no_sequence, w)
     res = a_no_sequence_dense.eval({a_no_sequence : input_data}, device=dev)
-    assert np.array_equal(res, expected)
+    assert np.array_equal(res, [w_init[input_sparse_indices[0]], w_init[input_sparse_indices[1]], w_init[input_sparse_indices[2]]])
 
 
 def test_times_2d_sparse_sequence_operand(device_id):
