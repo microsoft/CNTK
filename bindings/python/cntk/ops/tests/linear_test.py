@@ -331,7 +331,7 @@ def test_op_times_sparse_grad(device_id, precision):
 def test_op_times_reduce_sequence_axis(device_id, precision):
     dt_precision = PRECISION_TO_TYPE[precision]
 
-    from cntk import times, Value, TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES
+    from cntk import times, Value, TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK
     from cntk import sequence
     dim = 10
     seq = [[0,1,2], [3], [4,5,6,7,8,9]]
@@ -340,7 +340,7 @@ def test_op_times_reduce_sequence_axis(device_id, precision):
     left_data = [AA([1,1,1],dtype=dt_precision), AA([1],dtype=dt_precision), AA([1,1,1,1,1,1],dtype=dt_precision)]
     left_var = I(shape=(1), dtype=dt_precision)
 
-    func = times(left_var, right_var, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES)
+    func = times(left_var, right_var, infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK)
     func2 = sequence.reduce_sum(times(left_var, right_var))
 
     assert func.dynamic_axes == func2.dynamic_axes

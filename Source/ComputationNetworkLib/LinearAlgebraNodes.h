@@ -265,12 +265,12 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
 public:
     enum : int
     {
-        ReduceAllStaticAxes            = -1, // the default, reduce all static axes of the right operand
-        ReduceAllStaticAndSequenceAxes = -2, // reduce all static axes and sequence axis. Currently only support cases like (m x k x s* x b*) x (k x s* x b*) -> (m x b*)
+        NoInferredInputRank = -1,                        // the default, do not infer left operand input rank from right operand
+        ReduceSequenceAxisWithoutInferredInputRank = -2, // reduce sequence axis. Currently only support cases like (m x k) x (k) -> (m) for sequences
     };
 
 public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = ReduceAllStaticAxes)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = NoInferredInputRank)
         : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap), m_beingUnrolled(false)
     {
     }
@@ -303,7 +303,7 @@ public:
         if (modelVersion >= CNTK_MODEL_VERSION_12)
             fstream >> m_inferInputRankToMap;
         else
-            m_inferInputRankToMap = ReduceAllStaticAxes;
+            m_inferInputRankToMap = NoInferredInputRank;
     }
 
 protected:
@@ -472,7 +472,7 @@ private:
                 Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
                 inputValueSlice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
                 Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? (ElemType)0 : (ElemType)1, inputGradientSlice);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? 0 : beta, inputGradientSlice);
             }
 
             if (unpacked[inputIndex])
@@ -490,7 +490,7 @@ private:
                 Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
                 inputValueSlice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
                 Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? (ElemType)0 : (ElemType)1, inputGradientSlice);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? 0 : beta, inputGradientSlice);
             }
             
             if (unpacked[inputIndex])
@@ -888,7 +888,7 @@ private:
     bool m_beingUnrolled;
     std::once_flag m_unrollWarningOnceFlag;
 
-    bool ReduceSequenceAxis() const { return m_inferInputRankToMap == ReduceAllStaticAndSequenceAxes; }
+    bool ReduceSequenceAxis() const { return m_inferInputRankToMap == ReduceSequenceAxisWithoutInferredInputRank; }
 
     static const int NumInputs = 2;
     shared_ptr<Matrix<ElemType>> m_tempScatterIndices[NumInputs];
@@ -919,7 +919,7 @@ class TimesNode : public TimesNodeBase<ElemType, false>
     static const std::wstring TypeName() { return L"Times"; }
 
 public:
-    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = Base::ReduceAllStaticAxes)
+    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = Base::NoInferredInputRank)
         : Base(deviceId, name, outputRank, inferInputRankToMap)
     {
     }
@@ -952,7 +952,7 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name, outputRank, Base::ReduceAllStaticAxes)
+        : Base(deviceId, name, outputRank, Base::NoInferredInputRank)
     {
         if (outputRank != 1)
             LogicError("TransposeTimes does not yet support outputRank other than 1");
@@ -989,7 +989,7 @@ private:
     size_t m_bitShiftB; 
 
 public:
-    QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = Base::ReduceAllStaticAxes)
+    QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = Base::NoInferredInputRank)
         : Base(deviceId, name, outputRank, inferInputRankToMap), m_bitShiftA(bitShiftA), m_bitShiftB(bitShiftB)
     {
         // TODO support multiplication on GPUs as well.

@@ -215,12 +215,13 @@ BOOST_AUTO_TEST_SUITE(NDArrayViewSuite)
 
 BOOST_AUTO_TEST_CASE(CheckFloatNDArrayViewInCpu)
 {
-    TestNDArrayView<float>(2, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestNDArrayView<float>(2, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(CheckNDArrayViewInGpu)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestNDArrayView<float>(0, DeviceDescriptor::GPUDevice(0));
         TestNDArrayView<double>(4, DeviceDescriptor::GPUDevice(0));
@@ -229,7 +230,7 @@ BOOST_AUTO_TEST_CASE(CheckNDArrayViewInGpu)
 
 BOOST_AUTO_TEST_CASE(CheckCscArrayViewInGpu)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestSparseCSCArrayView<float>(1, DeviceDescriptor::GPUDevice(0));
         TestSparseCSCArrayView<double>(4, DeviceDescriptor::GPUDevice(0));
@@ -238,7 +239,8 @@ BOOST_AUTO_TEST_CASE(CheckCscArrayViewInGpu)
 
 BOOST_AUTO_TEST_CASE(CheckCscArrayViewInCpu)
 {
-    TestSparseCSCArrayView<float>(2, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestSparseCSCArrayView<float>(2, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

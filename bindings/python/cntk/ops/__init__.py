@@ -22,8 +22,8 @@ from cntk.losses import *
 from cntk.metrics import *
 # End to remove
 
-TIMES_REDUCE_ALL_STATIC_AXES               = cntk_py.TimesReduceAllStaticAxes
-TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES  = cntk_py.TimesReduceAllStaticAndSequenceAxes
+TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
+TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
 
 @typemap
 def combine(operands, name=''):
@@ -827,17 +827,17 @@ def log_add_exp(left, right, name=''):
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 
 @typemap
-def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AXES, name=''):
+def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_NO_INFERRED_INPUT_RANK, name=''):
     '''
     The output of this operation is the matrix product of the two input matrices.
     It supports broadcasting. Sparse is supported in the left operand, if it is a matrix.
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
     
     For better performance on times operation on sequence which is followed by sequence.reduce_sum, use
-    infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES, i.e. replace following:
+    infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK, i.e. replace following:
         sequence.reduce_sum(times(seq1, seq2))
     with:
-        times(seq1, seq2, infer_input_rank_to_map=TIMES_REDUCE_ALL_STATIC_AND_SEQUENCE_AXES)
+        times(seq1, seq2, infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK)
 
     Example:
         >>> C.times([[1,2],[3,4]], [[5],[6]]).eval()

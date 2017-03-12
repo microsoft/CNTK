@@ -68,12 +68,13 @@ BOOST_AUTO_TEST_SUITE(LoadLegacyModelSuite)
 
 BOOST_AUTO_TEST_CASE(LoadLegacyModelWithPrecomputeInCPU)
 {
-    TestLoadLegacyModelWithPrecompute(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestLoadLegacyModelWithPrecompute(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(LoadLegacyModelWithPrecomputeInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestLoadLegacyModelWithPrecompute(DeviceDescriptor::GPUDevice(0));
 }
 

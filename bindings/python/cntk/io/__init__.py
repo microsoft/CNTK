@@ -80,30 +80,30 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         return self.num_sequences
 
 class MinibatchSource(cntk_py.MinibatchSource):
-    '''MinibatchSource(deserializers=None, randomize=True, randomization_window=DEFAULT_RANDOMIZATION_WINDOW, epoch_size=INFINITELY_REPEAT, distributed_after=INFINITE_SAMPLES, multithreaded_deserializer=None)
+    '''MinibatchSource(deserializers=None, randomize=True, randomization_window=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, epoch_size=cntk.io.INFINITELY_REPEAT, distributed_after=cntk.io.INFINITE_SAMPLES, multithreaded_deserializer=None)
     A `MinibatchSource` can be indexed by the stream name, which will return a
     Parent class of all minibatch sources.  A `MinibatchSource` can be indexed by the stream name, which will return a
     :class:`MinibatchData` object that can be passed e.g. to the
     :func:`~cntk.trainer.Trainer.train_minibatch` function.
 
     Args:
-        deserializers (`list`, default to empty): list of deserializers
-        randomize (`bool`, default to `True`): randomize before every epoch
+        deserializers (`list`, defaults to empty): list of deserializers
+        randomize (`bool`, defaults to `True`): randomize before every epoch
         randomization_window (int): size of window that reader will shuffle, ignored if `randomize`
           is `False`
-        sample_based_randomization_window (`bool`, default to `False`): specifies how to interpret
+        sample_based_randomization_window (`bool`, defaults to `False`): specifies how to interpret
           `randomization_window`. If `True`, the size of the randomization window is interpreted as a certain
           number of samples, otherwise -- as a number of chunks. Similarly to `randomization_window`,
           this parameter is ignored, when `randomize` is `False`
-        epoch_size (`int`, default to `INFINITELY_REPEAT`): number of samples as a scheduling unit.
+        epoch_size (`int`, defaults to cntk.io.INFINITELY_REPEAT): number of samples as a scheduling unit.
           Parameters in the schedule change their values every `epoch_size`
           samples. If no `epoch_size` is provided, this parameter is substituted
           by the size of the full data sweep with infinte repeat, in which case the scheduling unit is
           the entire data sweep (as indicated by the MinibatchSource) and parameters
-          change their values on the sweep-by-sweep basis specified by the schedule.
-        distributed_after (int, default to `INFINITE_SAMPLES`): sample count after which minibatch source becomes distributed
-        multithreaded_deserializer (`bool`, default to `None`): using multi threaded deserializer
-        frame_mode (`bool`, default `False`): Specifies if data should be randomized and returned at the frame
+          change their values on the sweep-by-sweep basis specified by the schedule. **Important:** `click here <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`_ for a full description of this parameter. 
+        distributed_after (int, defaults to cntk.io.INFINITE_SAMPLES): sample count after which minibatch source becomes distributed
+        multithreaded_deserializer (`bool`, defaults to `None`): using multi threaded deserializer
+        frame_mode (`bool`, defaults to `False`): Specifies if data should be randomized and returned at the frame
          or sequence level. When  true , input sequence are split into frames.
         truncation_length (`int`): Specifies the truncation length in samples for BPTT (positive integer). If greater than zero
          `frame_mode` cannot be used at the same time.
@@ -181,7 +181,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         Args:
             minibatch_size_in_samples (int): number of samples to retrieve for
-              the next minibatch. Must be > 0.
+              the next minibatch. Must be > 0. **Important:** `click here <https://github.com/Microsoft/CNTK/wiki/BrainScript-minibatchSize-and-Python-minibatch_size_in_samples-in-CNTK>`_ for a full description of this parameter. 
             input_map (dict): mapping of :class:`~cntk.ops.variables.Variable`
               to :class:`~cntk.cntk_py.StreamInformation` which will be used to convert the
               returned data.
@@ -306,24 +306,24 @@ class _ReaderConfig(dict):
     Reader configuration.
 
     Args:
-        deserializers ('list', default is `None`): list of deserializers
+        deserializers ('list', defaults to `None`): list of deserializers
          (:class:`ImageDeserializer` for now).
-        randomize (`bool`, default to `True`): randomize images before every epoch
+        randomize (`bool`, defaults to `True`): randomize images before every epoch
         randomization_window (int): size of window that reader will shuffle, ignored if `randomize`
           is `False`
-        sample_based_randomization_window (bool, default False): specifies how to interpret
+        sample_based_randomization_window (bool, defaults to `False`): specifies how to interpret
           `randomization_range`. If `True`, the size of the randomization window is interpreted as a certain
           number of samples, otherwise -- as a number of chunks. Similarly to `randomization_window`,
           this parameter is ignored, when `randomize` is `False`
-        epoch_size (`int`, default to `INFINITELY_REPEAT`): number of samples as a scheduling unit.
+        epoch_size (`int`, defaults to `cntk.io.INFINITELY_REPEAT`): number of samples as a scheduling unit.
           Parameters in the schedule change their values every `epoch_size`
           samples. If no `epoch_size` is provided, this parameter is substituted
           by the size of the full data sweep with infinte repeat, in which case the scheduling unit is
           the entire data sweep (as indicated by the MinibatchSource) and parameters
-          change their values on the sweep-by-sweep basis specified by the schedule.
-        distributed_after (int, default to `INFINITE_SAMPLES`): sample count after which reader becomes distributed
-        multithreaded_deserializer (`bool`, default to `None`): using multi threaded deserializer
-        frame_mode (`bool`, default `False`): Specifies if data should be randomized and returned at the frame
+          change their values on the sweep-by-sweep basis specified by the schedule. **Important:** `click here <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`_ for a full description of this parameter. 
+        distributed_after (int, defaults to `cntk.io.INFINITE_SAMPLES`): sample count after which reader becomes distributed
+        multithreaded_deserializer (`bool`, defaults to `None`): using multi threaded deserializer
+        frame_mode (`bool`, defaults to `False`): Specifies if data should be randomized and returned at the frame
          or sequence level. When  true , input sequence are split into frames.
         truncation_length (`int`): Specifies the truncation length in samples for BPTT (positive integer). When using truncation,
          frame mode cannot be used at the same time.
@@ -461,7 +461,7 @@ def CTFDeserializer(filename, streams):
         filename (str): file name containing the text input
 
     See also:
-        `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
+        `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/BrainScript-CNTKTextFormat-Reader>`_
     '''
     for k,s in streams.items():
         if s.stream_alias is None:
@@ -479,9 +479,9 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
         dim (int): dimensions of this stream. A text format reader reads data
           as flat arrays. If you need different shapes you can
           :func:`~cntk.ops.reshape` it later.
-        is_sparse (bool, default `False`): whether the provided data is sparse
+        is_sparse (bool, defaults to `False`): whether the provided data is sparse
           (`False` by default)
-        stream_alias (str, default ''): name of the stream in the file
+        stream_alias (str, defaults to ''): name of the stream in the file
     '''
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):
         return super(StreamConfiguration, self).__init__(name, dim, is_sparse, stream_alias)
@@ -496,26 +496,26 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None, context=
        exact deserializer, and certain keys are meaningless for certain deserializers.
 
     Args:
-        field (str): this is the name of the stream:
+        field (`str`, defaults to `None`): this is the name of the stream
 
          * for CTFDeserializer the name is inside the CTF file
          * for ImageDeserializer the acceptable names are `image` or `label`
          * for HTKFeatureDeserializer and HTKMLFDeserializer only the default
            value of None is acceptable
 
-        shape (int, tuple): dimensions of this stream. HTKFeatureDeserializer,
+        shape (`int` or `tuple`, defaults to `None`): dimensions of this stream. HTKFeatureDeserializer,
          HTKMLFDeserializer, and CTFDeserializer read data
          as flat arrays. If you need different shapes you can
          :func:`~cntk.ops.reshape` it later.
-        is_sparse (bool): whether the provided data is sparse.
+        is_sparse (`bool`, defaults to `False`): whether the provided data is sparse.
          `False` by default, unless mlf is provided.
-        transforms (list): list of transforms to be applied by the Deserializer.
+        transforms (`list`, defaults to `None`): list of transforms to be applied by the Deserializer.
          Currently only ImageDeserializer supports transforms.
-        context (tuple): left and right context to consider when reading in HTK
+        context (`tuple`, defaults to `None`): left and right context to consider when reading in HTK
          data. Only supported by HTKFeatureDeserializer.
-        scp (str, list): scp files for HTK data
-        mlf (str, list): mlf files for HTK data
-        broadcast (bool): whether the features in this stream should be
+        scp (`str` or `list`, defaults to `None`): scp files for HTK data
+        mlf (`str` or `list`, defaults to `None`): mlf files for HTK data
+        broadcast (`bool`, defaults to `None`): whether the features in this stream should be
          broadcast to the whole sequence (useful in e.g. ivectors with HTK)
     '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
@@ -602,7 +602,7 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
 
     Returns:
         str:
-        String representation in `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/CNTKTextFormat-Reader>`_
+        String representation in `CNTKTextReader format <https://github.com/microsoft/cntk/wiki/BrainScript-CNTKTextFormat-Reader>`_
     '''
 
     max_seq_length = max(len(t) for t in alias_tensor_map.values())

@@ -64,7 +64,7 @@
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
-      <AdditionalIncludeDirectories>$(SolutionDir)Source\CNTKv2LibraryDll\API</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)Source\Common\Include;$(SolutionDir)Source\CNTKv2LibraryDll\API</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(OutDir);$(SolutionDir)$(Platform)\$(Configuration)</AdditionalLibraryDirectories>

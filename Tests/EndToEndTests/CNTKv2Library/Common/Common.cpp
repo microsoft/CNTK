@@ -32,32 +32,21 @@ int HandleDebugAssert(int /* reportType */,
 }
 #endif
 
-bool IsGPUAvailable()
+bool ShouldRunOnCpu()
 {
-    static bool isGPUDeviceAvailable;
-    static bool isInitialized = false;
+  const char* p = getenv("TEST_DEVICE");
 
-    if (!isInitialized)
-    {
-#ifndef CPUONLY
-        const char* p = getenv("TEST_DEVICE");
+  return (p == nullptr) || !strcmp(p, "cpu");
+}
 
-        // Check the environment variable TEST_DEVICE to decide whether to run on a CPU-only device.
-        if (p != nullptr && !strcmp(p, "cpu"))
-        {
-            isGPUDeviceAvailable = false;
-        }
-        else
-        {
-            isGPUDeviceAvailable = true;
-        }
+bool ShouldRunOnGpu()
+{
+#ifdef CPUONLY
+  return false;
 #else
-        isGPUDeviceAvailable = false;
+  const char* p = getenv("TEST_DEVICE");
+  return (p == nullptr) || !strcmp(p, "gpu");
 #endif
-        isInitialized = true;
-    }
-
-    return isGPUDeviceAvailable;
 }
 
 bool Is1bitSGDAvailable()
@@ -69,7 +58,7 @@ bool Is1bitSGDAvailable()
     {
         const char* p = getenv("TEST_1BIT_SGD");
 
-        // Check the environment variable TEST_1BIT_SGD to decide whether to run on a CPU-only device.
+        // Check the environment variable TEST_1BIT_SGD to decide whether to run 1-bit SGD tests.
         if (p != nullptr && 0 == strcmp(p, "0"))
         {
             is1bitSGDAvailable = false;
@@ -84,7 +73,7 @@ bool Is1bitSGDAvailable()
     return is1bitSGDAvailable;
 }
 
- MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputClasses, const Dictionary& readModeConfig, size_t epochSize, bool randomize = true)
+MinibatchSourcePtr CreateHTKMinibatchSource(size_t featureDim, size_t numOutputClasses, const Dictionary& readModeConfig, size_t epochSize, bool randomize = true)
 {
     auto featuresFilePath = L"glob_0000.scp";
     auto labelsFilePath = L"glob_0000.mlf";
