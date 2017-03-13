@@ -155,10 +155,24 @@ class NDArrayView(cntk_py.NDArrayView):
         '''
         Returns a sliced view of the instance.
 
+        Example:
+            >>> np_array = np.asarray([[[[10, 20, 30], [40, 50, 60]]]], \
+                                      dtype=np.float32)
+            >>> nd = NDArrayView.from_dense(np_array)
+            >>> nd.shape
+            (1, 1, 2, 3)
+            >>> sliced = nd.slice_view([0, 0, 0, 0], [2, 3])
+            >>> np_sliced = np.asarray(sliced)
+            >>> print(np_sliced.shape)
+            (2, 3)
+            >>> print(np_sliced)
+            [[ 10.  20.  30.]
+             [ 40.  50.  60.]]
+
         Args:
-          start_offset (tuple): shape of the same rank as this Value instance
-           that denotes the start of the slicing
-          extent (tuple): shape of the extent to slice
+          start_offset (tuple or list): shape of the same rank as this Value
+           instance that denotes the start of the slicing
+          extent (tuple or list): shape of the right-aligned extent to keep
           read_only (bool): whether the returned slice is read only or not
         '''
         return super(NDArrayView, self).slice_view(
@@ -364,21 +378,22 @@ class Value(cntk_py.Value):
             >>> value = C.one_hot(sparse_indices, num_classes)
             >>> z.eval({i0: value})
             [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
-                   [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
-
-        >>> num_classes = 6
-        >>> sample_shape = (2, num_classes)
-        >>> sparse_indices = [[1,5,3,2],[4,1]]
-        >>> i0 = C.input_variable(shape=sample_shape, is_sparse=True)
-        >>> z = C.times(i0, np.eye(num_classes))
-        >>> value = C.one_hot(sparse_indices, sample_shape)
-        >>> z.eval({i0: value})
-        [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
-                [ 0.,  0.,  0.,  0.,  0.,  1.]],
-        <BLANKLINE>
-               [[ 0.,  0.,  0.,  1.,  0.,  0.],
-                [ 0.,  0.,  1.,  0.,  0.,  0.]]], dtype=float32), array([[[ 0.,  0.,  0.,  0.,  1.,  0.],
-                [ 0.,  1.,  0.,  0.,  0.,  0.]]], dtype=float32)]
+                    [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), 
+             array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
+            <BLANKLINE>
+            >>> num_classes = 6
+            >>> sample_shape = (2, num_classes)
+            >>> sparse_indices = [[1,5,3,2],[4,1]]
+            >>> i0 = C.input_variable(shape=sample_shape, is_sparse=True)
+            >>> z = C.times(i0, np.eye(num_classes))
+            >>> value = C.one_hot(sparse_indices, sample_shape)
+            >>> z.eval({i0: value})
+            [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
+                     [ 0.,  0.,  0.,  0.,  0.,  1.]],
+                    [[ 0.,  0.,  0.,  1.,  0.,  0.],
+                     [ 0.,  0.,  1.,  0.,  0.,  0.]]], dtype=float32), 
+             array([[[ 0.,  0.,  0.,  0.,  1.,  0.],
+                     [ 0.,  1.,  0.,  0.,  0.,  0.]]], dtype=float32)]
 
         Args:
             batch (list of lists of integers): batch input data of indices
