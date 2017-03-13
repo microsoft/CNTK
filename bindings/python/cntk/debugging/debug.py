@@ -17,9 +17,9 @@ DEBUG_USAGE = '''\
     Commands:
         n - execute the next node
         n <number> - execute the next <number> nodes
-        n f - run until forward pass (like 'n' when already in forward pass)
-        n b - run until backward pass (like 'n' when already in backward pass)
 
+        u f - exeucte until forward pass (like 'n' when already in forward pass)
+        u b - exeucte until backward pass (like 'n' when already in backward pass)
         u name - execute until a node with that name is hit
         u <lambda> - execute until the lambda expression is True. Examples:
                      Until a Times node is hit:
@@ -29,7 +29,7 @@ DEBUG_USAGE = '''\
                      Until the variance of the input exceeds 1 (np = numpy):
                          lambda arg, node: np.var(arg) > 1
 
-        c - run until end
+        c - exeucte until end
         p - print input (forward) or root gradients (backward)
         d - drop into a pdb shell
         q - quit\
@@ -197,13 +197,6 @@ class _DebugNode(UserFunction):
                         understood = ['n'] * number
                     except ValueError:
                         pass
-
-                    if not understood:
-                        if "backward".startswith(remainder):
-                            understood = ['nb']
-                        elif "forward".startswith(remainder):
-                            understood = ['nf']
-
                 else:
                     understood = ['n']
 
@@ -218,9 +211,14 @@ class _DebugNode(UserFunction):
                             def code(arg, n):
                                 return n.name == what
                             understood = [code]
+                        elif not understood:
+                            if "backward".startswith(what):
+                                understood = ['ub']
+                            elif "forward".startswith(what):
+                                understood = ['uf']
                         else:
-                            self._out.write('Your model does not contain a node with '
-                                            'name "%s"\n' % what)
+                            self._out.write('Your model does not contain a '
+                                            'node with name "%s"\n' % what)
                             self._out.flush()
 
                 except SyntaxError:
@@ -267,7 +265,9 @@ class _DebugNode(UserFunction):
                 if len(next_command) == 1:
                     commands.pop()
                     done = True
-                elif next_command == "nf":
+
+            elif isinstance(next_command, str) and next_command.startswith('u'):
+                if next_command == "uf":
                     commands.pop()
                     if self.debug_state.last_pass == 'b':
                         self.debug_state.commands = self._wait_for_input(
@@ -275,11 +275,11 @@ class _DebugNode(UserFunction):
                         done = False
                     else:
                         done = True
-                elif next_command == "nb":
+                elif next_command == "ub":
                     done = True
 
             elif next_command == 'p':
-                self._out.write('Input: \n')
+                self._out.write('Input with shape %s: \n' % str(argument.shape))
                 self._out.write(str(argument))
                 self._out.write('\n')
                 self._out.flush()
@@ -320,9 +320,11 @@ class _DebugNode(UserFunction):
                 if len(next_command) == 1:
                     commands.pop()
                     done = True
-                elif next_command == "nf":
+
+            elif isinstance(next_command, str) and next_command.startswith('u'):
+                if next_command == "uf":
                     done = True
-                elif next_command == "nb":
+                elif next_command == "ub":
                     commands.pop()
                     if self.debug_state.last_pass == 'f':
                         self.debug_state.commands = self._wait_for_input(
@@ -332,8 +334,10 @@ class _DebugNode(UserFunction):
                         done = True
 
             elif next_command == 'p':
-                self._out.write('State: %s\n' % str(state))
-                self._out.write('Root gradients:\n')
+                if state is not None:
+                    self._out.write('State: %s\n' % str(state))
+                self._out.write('Root gradients with shape %s: \n' %
+                                str(root_gradients.shape))
                 self._out.write(str(root_gradients))
                 self._out.write('\n')
                 self._out.flush()
