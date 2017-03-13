@@ -15,7 +15,7 @@ notebook = os.path.join(abs_path, "..", "..", "..", "..", "Examples","Image","De
 # setting a large timeout in case we need to download the Fast-RCNN pretrained model
 notebook_timeoutSeconds = 1200
 
-# Skipping test for python 2.7,3.5 since Fast-RCNN implementation does not support 2.7 at the moment
+# For now the test only supported on linux with python 3.4
 @pytest.mark.skipif(sys.version_info != (3,4),
                     reason="requires python 3.4")
 @pytest.mark.skipif(sys.platform == 'win32',
@@ -26,12 +26,25 @@ def test_cntk_fastrcnn_eval_noErrors(nb):
 
     assert errors == []
 
-# Skipping test for python 2.7,3.5 since Fast-RCNN implementation does not support 2.7 at the moment
+# For now the test only supported on linux with python 3.4
 @pytest.mark.skipif(sys.version_info != (3,4),
                     reason="requires python 3.4")
 @pytest.mark.skipif(sys.platform == 'win32',
                     reason="does not currently run on windows")
 def test_cntk_fastrcnn_eval_evalCorrect(nb):
+    # Make sure that the number of detections is more than 0
+    detectionCells = [cell for cell in nb.cells
+                 if cell.cell_type == 'code' and
+                     len(cell.outputs) > 0 and
+                     'text' in cell.outputs[0] and
+                     re.search('Number of detections: (\d+)', cell.outputs[0]['text'])]
+    assert len(detectionCells) == 1
+    
+    number_of_detections = int(re.search('Number of detections: (\d+)', detectionCells[0].outputs[0]['text']).group(1))
+    assert(number_of_detections > 0)
+
+
+    #Make sure that the last cells was ran successfully
     testCells = [cell for cell in nb.cells
                  if cell.cell_type == 'code' and
                      len(cell.outputs) > 0 and
