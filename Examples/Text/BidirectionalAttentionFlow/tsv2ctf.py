@@ -31,18 +31,19 @@ def populate_dicts(files):
                     wdcnt[t.lower()] += 1
                     for c in t: chcnt[c] += 1
 
-    # add all words that are both in glove and the vocabulary first
-    with open('glove.6B.100d.txt', encoding='utf-8') as f:
-        for line in f:
-            word = line.split()[0].lower()
-            if wdcnt[word] >= word_count_threshold:
-                _ = vocab[word]
-    known =len(vocab)
-    # next add the special markers
+    # add the special markers first, so <unknown> is 0
     _ = vocab[unk]
     _ = vocab[eos]
     _ = chars[unk]
     _ = chars[pad]
+
+    # add all words that are both in glove and the vocabulary first
+    with open('glove.6B.100d.txt', encoding='utf-8') as f:
+        for line in f:
+            word = line.split()[0].lower()
+            if wdcnt[word] >= 1: # polymath adds word to dict regardless of word_count_threshold when it's in GloVe
+                _ = vocab[word]
+    known =len(vocab)
 
     #finally add all words that are not in yet
     _  = [vocab[word] for word in wdcnt if word not in vocab and wdcnt[word] >= word_count_threshold]
@@ -62,8 +63,8 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
         ctokens.append(eos)
         qtokens = query.split(' ')
         atokens = answer.split(' ')
-        cwids = [vocab[t] for t in ctokens]
-        qwids = [vocab[t] for t in qtokens]
+        cwids = [vocab[t.lower()] for t in ctokens]
+        qwids = [vocab[t.lower()] for t in qtokens]
         ccids = [[chars[c] for c in pad_spec.format(t)] for t in ctokens]
         qcids = [[chars[c] for c in pad_spec.format(t)] for t in qtokens]
         ba, ea = int(begin_answer), int(end_answer)
