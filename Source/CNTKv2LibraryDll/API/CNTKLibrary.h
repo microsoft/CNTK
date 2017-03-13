@@ -2997,6 +2997,11 @@ namespace CNTK
         CNTK_API static FunctionPtr LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
+        /// Load a Function from an istream. The legacy V1 model is not supported.
+        ///
+        CNTK_API static FunctionPtr LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
         /// Prints the entire graph underlying this Function to stderr
         ///
         CNTK_API void PrintGraph() const;
