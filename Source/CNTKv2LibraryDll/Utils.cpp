@@ -579,7 +579,9 @@ namespace CNTK
         {
             auto mask = value->Mask();
             if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
-                InvalidArgument("Invalid Value object; the sum of the rank of the mask and data does not equal the Variable's rank + number of dynamic axes");
+                InvalidArgument("Invalid Value object: sum of the rank (%d) of the mask and Variable rank (%d) does not equal "
+                    "the Value's rank (%d); Variable = '%S', Value shape = '%S'.",
+                    (int)mask->Shape().Rank(), (int)varShape.Rank(), (int)valueShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
         }
     }
 
