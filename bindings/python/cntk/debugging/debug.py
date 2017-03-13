@@ -105,6 +105,7 @@ class _DebugState(object):
         for n in self.all_nodes:
             self.name_to_node[n.name].append(n)
 
+
 def set_computation_network_track_gap_nans(enable):
     '''
     Fill in NaNs in gaps of sequences to track unmasked uninitialized data.
