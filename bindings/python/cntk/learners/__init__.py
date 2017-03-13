@@ -689,7 +689,7 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     DEPRECATED.
 
     adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), low_memory=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
-    Creates an Adam learner instance to learn the parameters. See [1] for more
+    Creates an Adam learner if low_memory is False or FSAdaGrad otherwise to learn the parameters. See [1] for more
     information.
 
     Args:
