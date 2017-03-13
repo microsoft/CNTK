@@ -5,7 +5,7 @@
 #
 # The header file must list all of the streams in the input file in the
 # following format:
-#   <desired stream name> TAB <stream alias> TAB <matrix type> TAB <sample dimension>
+#   <desired stream name>  <stream alias> <matrix type> <sample dimension>
 #
 # Where:
 #   <desired stream name> is the desired name for the input in CNTK.
@@ -16,274 +16,285 @@
 
 import sys
 import argparse
-import re
 import struct
-import tempfile
-import shutil
 import os
+from collections import OrderedDict
 
-# This will convert data in the ctf format into binary format
+MAGIC_NUMBER = 0x636e746b5f62696e;
+CBF_VERSION = 1;
+
+class ElementType:
+    FLOAT = 0
+    DOUBLE = 1
+
+class MatrixEncodingType:
+    DENSE = 0
+    SPARSE_CSC = 1
+    #COMPRESSED_DENSE = 2
+    #COMPRESSED_SPARSE_CSC = 3
+
+# This will convert data in the ctf format into the binary format
 class Converter(object):
-    def __init__(self, name, sampleDim):
+    def __init__(self, name, sample_dim, element_type):
         self.name = name
-        self.sampleDim = sampleDim
-        self.vals = list()
+        self.sample_dim = sample_dim
+        # contains length (in samples) for each sequence in the chunk
+        self.sequences = [] 
+        self.element_type = element_type
 
-    def getName(self):
-        return self.name
+    def write_header(self, output):
+        # First is the matrix type.
+        output.write(struct.pack('B', self.get_matrix_type()))
+        # Nest comes the stream name.
+        output.write(struct.pack('I', len(self.name)))
+        output.write(self.name.encode('ascii'))
+        # Next is the elem type
+        output.write(struct.pack('B', self.element_type))
+        # Finally, the sample dimension.
+        output.write(struct.pack('I', self.sample_dim))
 
-    def getSampleDim(self):
-        return self.sampleDim
+    def write_signed_ints(self, output, ints):
+        output.write(b''.join([struct.pack('i', x) for x in ints]))
 
-    def clear(self):
-        self.vals = list()
+    def write_floats(self, output, floats):
+        format = 'f' if self.is_float() else 'd'
+        output.write(b''.join([struct.pack(format, x) for x in floats]))
 
-    def addSequence(self):
-        self.vals.append(list())
+    def is_float(self):
+        return self.element_type == ElementType.FLOAT
 
-    def appendSample(self, sample):
-        if( len(sample) != self.sampleDim ):
-            print( "Invalid sample dimension for input {0}" ).format( self.name )
-            sys.exit()
-        if( len(self.vals) == 0 ):
-            self.vals.append( list() )
+    def get_matrix_type(self):
+        raise NotImplementedError()
 
-        self.vals[-1].append( sample )
+    def reset(self):
+        self.sequences = []
 
-    def toString(self):
-        output = ""
-        for seq in self.vals:
-            for samp in seq:
-                output += "\t" + " ".join(samp )
-            output += "\n"
-        return output
+    def start_sequence(self):
+        self.sequences.append([])
 
+    def add_sample(self, sample):
+        raise NotImplementedError()
 
 # Specilization for dense inputs
 class DenseConverter(Converter):
-    def __init__(self, name, sampleDim):
-        Converter.__init__(self, name, sampleDim)
-    
-    def headerBytes(self):
-        output = ""
-        # First is the matrix type. Dense is type 0
-        output += struct.pack( "i", 0 )
-        # Next is the elem type, currently float only
-        output += struct.pack( "i", 0 )
-        # Finally is whether or not this is a sequence
-        output += struct.pack( "i", self.sampleDim )
 
-        return output
+    def get_matrix_type(self):
+        return MatrixEncodingType.DENSE;
 
-    
-    def toBytes(self):
-        output = ""
-        for sequence in self.vals:
-            if( len(sequence) != 1 ):
-                print( "Converter does not support dense sequences." )
-                sys.exit()
-            for sample in sequence[0]:
-                output += struct.pack( "f", float(sample) )
+    def add_sample(self, sample):
+        if(len(sample) != self.sample_dim):
+            raise ValueError(
+                "Invalid sample dimension for input {0}".format(self.name))
 
-        return output
+        byte_size = len(sample) * (4 if self.is_float() else 8)
+
+        if(len(self.sequences) == 0):
+            self.sequences.append([])
+            byte_size += 4;
+
+        self.sequences[-1].append([float(x) for x in sample])
+
+        return byte_size
+
+    def write_data(self, output):
+        for sequence in self.sequences:
+            output.write(struct.pack('I', len(sequence)))
+            for sample in sequence:
+                self.write_floats(output, sample)
 
 
 # Specialization for sparse inputs
 class SparseConverter(Converter):
-    def __init__(self, name, sampleDim):
-        Converter.__init__(self, name, sampleDim)
 
-    def appendSample(self, sample):
-        for samp in sample:
-            if( int(samp.split(":")[0]) >= self.sampleDim ):
-                print( "Invalid sample dimension for input {0}. Max {1}, given {2}" ).format( self.name, self.sampleDim, sample.split( ":" )[0] )
-                sys.exit()
-        if( len(self.vals) == 0 ):
-            self.vals.append( list() )
+    def add_sample(self, sample):
+        pairs = map(lambda x: (int(x[0]),float(x[1])),
+            [pair.split(':', 1) for pair in sample])
 
-        self.vals[-1].append( sample )
+        for pair in pairs:
+            index = pair[0]
+            if (index >= self.sample_dim):
+                raise ValueError("Invalid sample dimension for input {0}. Max {1}, given {2}"
+                        .format(self.name, self.sample_dim, index))
 
-    def headerBytes(self):
-        output = ""
-        # First is the matrix type. Sparse is type 1
-        output += struct.pack( "i", 1 )
-        # Next is the storage type, currently sparse csc only
-        output += struct.pack( "i", 0 )
-        # Next is the elem type, currently float only
-        output += struct.pack( "i", 0 )
-        # Next is whether or not this is a sequence
-        # Note this is currently ignored
-        output += struct.pack( "i", 1 )
-        # Finally is the sample dimension
-        output += struct.pack( "i", self.sampleDim )
+        byte_size = len(pairs) * (8 if self.is_float() else 12) + 4
 
-        return output
+        if(len(self.sequences) == 0):
+            self.sequences.append([])
+            byte_size += 8;
 
-    def toBytes(self):
-        output = ""
-        values = list()
-        rowInd = list()
-        colInd = [0]
-        nnz = 0
-        for sequence in self.vals:
-            i = 0
+        self.sequences[-1].append(pairs)
+
+        return byte_size
+
+    def get_matrix_type(self):
+        return MatrixEncodingType.SPARSE_CSC;
+
+    def write_data(self, output):
+        format = 'f' if self.is_float() else 'd'
+        for sequence in self.sequences:
+            # write out each sequence in csc format
+            values = []
+            indices = []
+            sizes = []
             for sample in sequence:
-                # sort the indices least to greatest
-                sample.sort(key=lambda x: int(x.split(":")[0]))
-                for ele in sample:
-                    nnz += 1
-                    ind, val = ele.split(":")
-                    rowInd.append( int(ind) + i * self.sampleDim )
-                    values.append( val ) 
-                i += 1
-            colInd.append( nnz )
+                sizes.append(len(sample))
+                sample.sort(key=lambda x: x[0])
+                for (index, value) in sample:
+                    indices.append(index)
+                    values.append(value)
 
-        output += struct.pack( "i", nnz )
-        output += "".join( [ struct.pack( "f", float(val) ) for val in values ] )
-        output += "".join( [ struct.pack( "i", int(ind) ) for ind in rowInd ] )
-        output += "".join( [ struct.pack( "i", int(ind) ) for ind in colInd ] )
+            output.write(struct.pack('I', len(sequence))) #number of samples in this sequence
+            # nnz and indices have to be written out as signed ints, since
+            # this is the index type of the CNTK sparse matrix
+            output.write(struct.pack('i', len(values))) #total nnz count for this sequence
+            self.write_floats(output, values)
+            self.write_signed_ints(output, indices)
+            self.write_signed_ints(output, sizes)
 
-        return output
-
-
-# Parse an entire sequence given an aliasToId map, and the converters
-def ParseSequence( aliasToId, curSequence, converters ):
-    for des in converters:
-        des.addSequence()
-    for line in curSequence:
-        for input in line.split( "|" )[1:]:
-            vals = input.split()
+# Process the entire sequence
+def process_sequence(data, converters, chunk):
+    byte_size = 0;
+    for converter in converters.values():
+        converter.start_sequence()
+    for line in data:
+        for input_stream in line.split("|")[1:]:
+            split = input_stream.split(None, 1)
+            if (len(split) < 2):
+                continue
+            (alias, values) = split
             # We need to ignore comments
-            if( vals[0] != "#" ):
-                converters[aliasToId[vals[0]]].appendSample( vals[1:] )
-    return max( [ len(des.vals[ -1 ]) for des in converters ] )
+            if(len(alias) > 0 and alias[0] != '#'):
+                byte_size += converters[alias].add_sample(values.split())
+    sequence_length_samples = max([len(x.sequences[-1]) for x in converters.values()])
+    chunk.add_sequence(sequence_length_samples)
+    return byte_size
 
 # Output a binary chunk
-def OutputChunk( binfile, converters ):
-    startPos = binfile.tell()
-    for des in converters:
-        binfile.write( des.toBytes() )
-        des.clear()
-    return startPos
+def write_chunk(binfile, converters, chunk):
+    binfile.flush()
+    chunk.offset = binfile.tell()
+    # write out the number of samples for each sequence in the chunk
+    binfile.write(b''.join([struct.pack('I', x) for x in chunk.sequences]))
 
-# Get a converter from a type
-def GetConverter( inputtype, name, sampleDim ):
-    converter = None
-    if( inputtype.lower() == 'dense' ):
-        converter = DenseConverter( name, sampleDim )
-    elif( inputtype.lower() == 'sparse' ):
-        converter = SparseConverter( name, sampleDim )
-    else:
-        print( 'Invalid input format {0}' ).format( inputtype )
-        sys.exit()
+    for converter in converters.values():
+        converter.write_data(binfile)
+        converter.reset()
+    # TODO: add a hash of the chunk
 
-    return converter 
+def get_converter(input_type, name, sample_dim, element_type):
+    if(input_type.lower() == 'dense'):
+        return DenseConverter(name, sample_dim, element_type)
+    if(input_type.lower() == 'sparse'):
+        return SparseConverter(name, sample_dim, element_type)
 
-# Output the binary format header.
-def OutputHeader( headerFile, converters ):
-    # First the version number
-    headerFile.write( struct.pack( "q", 1 ) )
-    # Next is the number of chunks, but we don't know what this is, so write a
-    # placeholder
-    headerFile.write( struct.pack( "q", 0 ) )
-    # Finally the number of inputs
-    headerFile.write( struct.pack( "i", len(converters) ) )
-    for conv in converters:
-        # first comes the name. This is common so write it first
-        headerFile.write( struct.pack( "i", len( conv.getName() ) ) )
-        headerFile.write( conv.getName().encode('ascii') )
-        headerFile.write( conv.headerBytes() )
-        
-        
-# At the end we know how many chunks there are. Update the header as needed.
-def UpdateHeader( headerFile, numChunks ):
-    # seek after the first Int64
-    headerFile.seek( 8 )
-    # Write the number of chunks
-    headerFile.write( struct.pack( "q", numChunks ) )
+    raise ValueError('Invalid input format {0}'.format(input_type))
 
-# Output a single row of the offsets table
-def OutputOffset( headerFile, numBytes, numSeqs, numSamples ):
-    # Int64 start offset for chunk
-    headerFile.write( struct.pack( "q", numBytes ) )
-    # Int32 Num sequences in the chunk
-    headerFile.write( struct.pack( "i", numSeqs ) )
-    # Int32 Num samples in the chunk
-    headerFile.write( struct.pack( "i", numSamples ) )
+# parse the header to get the converters for this file
+# <name>    <alias>  <input format>  <sample size>
+def build_converters(header_file, element_type):
+    converters = OrderedDict();
+    with open(header_file, 'r') as inputs:
+        for line in inputs:
+            (name, alias, input_type, sample_dim) = line.strip().split()
+            converters[alias] = get_converter(input_type, name, int(sample_dim), element_type)
+    return converters
+
+class Chunk:
+    def __init__(self):
+        self.offset = 0
+        self.sequences = []
+
+    def num_sequences(self):
+        return len(self.sequences)
+
+    def num_samples(self):
+        return sum(self.sequences)
+
+    def add_sequence(self, num_samples):
+        return self.sequences.append(num_samples)
+
+class Header:
+    def __init__(self, converters):
+        self.converters = converters
+        self.chunks = []
+
+    def add_chunk(self, chunk):
+        assert(isinstance(chunk, Chunk))
+        self.chunks.append(chunk)
+
+    # Output the binary format header.
+    def write(self, output_file):
+        output_file.flush()
+        header_offset = output_file.tell()
+        # First, write the magic number (uint64, 8 bytes)
+        output_file.write(struct.pack('Q', MAGIC_NUMBER));
+         # Next is the number of chunks (uint32, 4 bytes)
+        output_file.write(struct.pack('I', len(self.chunks)))
+        # Finally the number of input streams (uint32, 4 bytes)
+        output_file.write(struct.pack('I', len(self.converters)))
+        for converter in self.converters.values():
+            converter.write_header(output_file)
+        # write the chunk table
+        for chunk in self.chunks:
+            # uint64: start offset for chunk
+            output_file.write(struct.pack('q', chunk.offset))
+            # uint32: number of sequences in the chunk
+            output_file.write(struct.pack('I', chunk.num_sequences()))
+            # uint32: number of samples in the chunk
+            output_file.write(struct.pack('I', chunk.num_samples()))
+
+        output_file.write(struct.pack('q', header_offset));
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Transforms a CNTK Text Format file into CNTK binary format given a header.")
-    parser.add_argument('--input', help="CNTK Text Format file to convert to binary.", default="", required=True)
-    parser.add_argument('--header',  help="Header file describing each stream in the input.", default="", required=True)
-    parser.add_argument('--seqsPerChunk', type=int, help='Number of sequences in each chunk.', default="", required=True)
-    parser.add_argument('--output', help='Name of the output file, stdout if not given', default="", required=True)
+    parser.add_argument('--input', help="CNTK Text Format file to convert to binary.", required=True)
+    parser.add_argument('--header',  help="Header file describing each stream in the input.", required=True)
+    parser.add_argument('--chunk_size', type=int, help='Chunk size in bytes.', required=True)
+    parser.add_argument('--output', help='Name of the output file, stdout if not given', required=True)
+    parser.add_argument('--precision', help='Floating point precision (double or float). Default is float',
+        choices=["float", "double"], default="float", required=False)
     args = parser.parse_args()
 
-    # Since we don't know how many chunks we're going to write until we're done,
-    # grow the header/offsets table and the data portion separately. then at the
-    # end concatenate the data portion onto the end of the header/offsets
-    # portion.
-    binaryHeaderFile = open( args.output, "wb+" )
-    binaryDataFile = tempfile.NamedTemporaryFile(mode="rb+", delete=False)
-    dataPath = binaryDataFile.name
+    output = open(args.output, "wb")
+    # The very first 8 bytes of the file is the CBF magic number.
+    output.write(struct.pack('Q', MAGIC_NUMBER));
+    # Next 4 bytes is the CBF version.
+    output.write(struct.pack('I', CBF_VERSION));
 
-    # parse the header to get the converters for this file
-    # <name>    <alias>  <input format>  <sample size>
-    converters = []
-    aliasToId = dict()
-    with open( args.header, "r" ) as headerfile:
-        id = 0
-        for line in headerfile:
-            split = re.split(r'\t+', line.strip())
-            converters.append( GetConverter( split[ 2 ], split[ 0 ], int(split[3]) ) )
-            aliasToId[ split[ 1 ] ] = id
-            id += 1
+    converters = build_converters(args.header, 
+        ElementType.FLOAT if args.precision == 'float' else ElementType.DOUBLE)
 
-    OutputHeader( binaryHeaderFile, converters )
+    header = Header(converters)
+    chunk = Chunk()
 
-    numChunks = 0
-    with open( args.input, "r" ) as inputFile:
-        curSequence = list()
-        numSeqs = 0
-        numSamps = 0
-        prevId = None
-        for line in inputFile:
-            split = line.rstrip().split('|')
+    with open(args.input, "r") as input_file:
+        sequence = []
+        seq_id = None
+        estimated_chunk_size = 0
+        for line in input_file:
+            (prefix, _) = line.rstrip().split('|',1)
             # if the sequence id is empty or not equal to the previous sequence id,
             # we are at a new sequence.
-            if( not split[0] or prevId != split[ 0 ] ):
-                if(len(curSequence) > 0):
-                    numSamps += ParseSequence( aliasToId, curSequence, converters )
-                    curSequence = list()
-                    numSeqs += 1
-                    if( numSeqs % int( args.seqsPerChunk ) == 0 ):
-                        numBytes = OutputChunk( binaryDataFile, converters )
-                        numChunks += 1
-                        OutputOffset( binaryHeaderFile, numBytes, numSeqs, numSamps )
-                        numSeqs = 0
-                        numSamps = 0
-                prevId = split[ 0 ]
+            if((not seq_id and not prefix) or (len(prefix) > 0 and seq_id != prefix)):
+                if(len(sequence) > 0):
+                    estimated_chunk_size += process_sequence(sequence, converters, chunk)
+                    sequence = []
+                    if(estimated_chunk_size >= int(args.chunk_size)):
+                        write_chunk(output, converters, chunk)
+                        header.add_chunk(chunk)
+                        chunk = Chunk()
+                seq_id = prefix
 
-            curSequence.append( line )
+            sequence.append(line)
         # we must parse the last line
-        if( len(curSequence) > 0 ):
-            numSamps += ParseSequence( aliasToId, curSequence, converters )
-            numSeqs += 1
-            numChunks += 1
+        if(len(sequence) > 0):
+            process_sequence(sequence, converters, chunk)
 
-        numBytes = OutputChunk( binaryDataFile, converters )
-        OutputOffset( binaryHeaderFile, numBytes, numSeqs, numSamps )
+        write_chunk(output, converters, chunk)
+        header.add_chunk(chunk)
 
-        UpdateHeader( binaryHeaderFile, numChunks )
-        binaryHeaderFile.flush()
-        binaryDataFile.flush()
-        binaryHeaderFile.close()
-        binaryDataFile.close()
+        header.write(output)
 
-        destination = open( args.output, 'awb+' )
-        shutil.copyfileobj( open( dataPath, "rb" ), destination )
-        
-        destination.flush()
-        destination.close()
-        os.unlink(dataPath)
-        assert not os.path.exists(dataPath)
+        output.flush()
+        output.close()

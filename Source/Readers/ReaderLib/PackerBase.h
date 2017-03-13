@@ -9,6 +9,7 @@
 #include "MemoryProvider.h"
 #include "SequenceEnumerator.h"
 #include "Packer.h"
+#include "CorpusDescriptor.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -20,8 +21,6 @@ protected:
     struct StreamBuffer
     {
         size_t m_size; // buffer size in bytes.
-        // Memory provider.
-        // TODO: Should possibly switch to matrices here.
         MemoryProviderPtr m_memoryProvider;
         std::shared_ptr<char> m_data; // contiguous array of data.
 
@@ -29,10 +28,12 @@ protected:
             m_size(0), m_memoryProvider(m_memoryProvider), m_data(nullptr)
         {
         }
+
         void Resize(size_t newSize);
     };
 
-    PackerBase(SequenceEnumeratorPtr sequenceEnumerator,
+    PackerBase(CorpusDescriptorPtr corpus,
+               SequenceEnumeratorPtr sequenceEnumerator,
                const std::vector<StreamDescriptionPtr>& streams,
                size_t numberOfBuffers);
 
@@ -56,6 +57,12 @@ protected:
     // (sampleOffset is equal to the sum of sample sizes of all preceding samples).
     void PackDenseSample(char* destination, SequenceDataPtr sequence, size_t sampleOffset, size_t sampleSize);
 
+    // Establishes a mapping between id inside the mb layout and the global key in the corpus.
+    // Assumes the sequences inside MBLayout have the same order as Sequences.
+    void EstablishIdToKey(Minibatch& minibatch, const Sequences& sequences);
+
+    static void CheckNameUniqueness(const std::vector<StreamDescriptionPtr>& streams);
+
     SequenceEnumeratorPtr m_sequenceEnumerator;
 
     // Input stream descriptions provided by the transformer.
@@ -76,14 +83,16 @@ protected:
     // Cyclic index of the current buffer. m_currentBufferIndex < m_numberOfBuffers;
     size_t m_currentBufferIndex;
 
-    // Minibatch size in samples.
-    size_t m_minibatchSize;
-
     // For which streams there should be a shape check for each sequence.
     std::vector<bool> m_checkSampleShape;
 
     // Memory providers. Each stream has its own memory provider.
     std::vector<MemoryProviderPtr> m_memoryProviders;
+
+    // Current config.
+    ReaderConfiguration m_config;
+
+    CorpusDescriptorPtr m_corpus;
 
 public:
     // Sets current epoch configuration.

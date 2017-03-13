@@ -21,7 +21,7 @@ class CNTKTextFormatReaderTestRunner;
 template <class ElemType>
 class TextParser : public DataDeserializerBase {
 public:
-    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool isPrimary);
+    TextParser(CorpusDescriptorPtr corpus, const TextConfigHelper& helper, bool pimary);
     ~TextParser();
 
     // Retrieves a chunk of data.
@@ -36,7 +36,7 @@ public:
     bool GetSequenceDescriptionByKey(const KeyType&, SequenceDescription&) override;
 
 private:
-    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool isPrimary);
+    TextParser(CorpusDescriptorPtr corpus, const std::wstring& filename, const vector<StreamDescriptor>& streams, bool primary = true);
 
     // Builds an index of the input data.
     void Initialize();
@@ -121,10 +121,7 @@ private:
     unsigned int m_numAllowedErrors;
     bool m_skipSequenceIds;
     unsigned int m_numRetries; // specifies the number of times an unsuccessful
-    // file operation should be repeated (default value is 5).
-
-    // Indicates if the deserializer is primary.
-    bool m_isPrimary;
+                               // file operation should be repeated (default value is 5).
 
     // Corpus descriptor.
     CorpusDescriptorPtr m_corpus;
@@ -183,7 +180,7 @@ private:
     void LoadChunk(TextChunkPtr& chunk, const ChunkDescriptor& descriptor);
 
     // Fills some metadata members to be conformant to the exposed SequenceData interface.
-    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, size_t sequenceId);
+    void FillSequenceMetadata(SequenceBuffer& sequenceBuffer, const KeyType& sequenceKey);
 
     void SetTraceLevel(unsigned int traceLevel);
 

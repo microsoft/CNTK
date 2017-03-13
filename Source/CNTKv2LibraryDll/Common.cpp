@@ -14,8 +14,14 @@
 #include <thread>
 #include "GPUMatrix.h"
 #include "Globals.h"
+#include "PerformanceProfiler.h"
+#include "MPIWrapper.h"
+#include "Basics.h"
+#include "ProgressTracing.h"
+#include "buildinfo.h"
 
 extern bool g_shareNodeValueMatrices;
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
@@ -49,6 +55,17 @@ namespace CNTK
             return s_alwaysAllowSettingDefaultDevice.load();
         }
 
+        std::atomic<bool> s_allowRenamingFunctions(false);
+        void AllowRenamingFunctions()
+        {
+            s_allowRenamingFunctions.store(true);
+        }
+
+        bool IsRenamingFunctionsAllowed()
+        {
+            return s_allowRenamingFunctions.load();
+        }
+
         std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
         void SetAutomaticUnpackingOfPackedValues(bool disable)
         {
@@ -62,12 +79,53 @@ namespace CNTK
 
         void EnableForwardValuesSharing()
         {
-            Microsoft::MSR::CNTK::Globals::EnableShareNodeValueMatrices();
+            Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ true);
         }
 
-        void EnableHyperMemoryCompress()
+        void DisableForwardValuesSharing()
         {
-            Microsoft::MSR::CNTK::Globals::EnableHyperCompressMemory();
+            Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ false);
+        }
+
+        void EnableGradientAccumulationOptimization()
+        {
+            Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ true);
+        }
+
+        void DisableGradientAccumulationOptimization()
+        {
+            Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ false);
+        }
+
+        void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
+        {
+            std::wstring logSuffix = L"";
+            auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
+            if (mpi)
+            {
+                logSuffix = std::to_wstring(mpi->CurrentNodeRank());
+            }
+
+            Microsoft::MSR::CNTK::ProfilerInit(
+                profilerDir,
+                profilerBufferSize,
+                logSuffix,
+                profilerSyncGpu);
+        }
+
+        void EnableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(true);
+        }
+
+        void DisableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(false);
+        }
+
+        void StopProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerClose();
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -107,11 +165,6 @@ namespace CNTK
             else
             {
                 uids.insert(f1->Uid());
-            }
-
-            if((f1->RootFunction() == nullptr) != (f2->RootFunction() == nullptr))
-            {
-                return false;
             }
 
             if (f1->Name() != f2->Name())
@@ -170,6 +223,33 @@ namespace CNTK
             return AreEquivalent(f1, f2, uids);
         }
 
+        template <typename ElementType>
+        bool AreEqual(const ElementType* data1, const ElementType* data2, size_t numElements, double relativeTolerance, double absoluteTolerance)
+        {
+            for (size_t i = 0; i < numElements; ++i)
+            {
+                auto firstValue = data1[i];
+                auto secondValue = data2[i];
+                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * firstValue));
+                if (std::abs(firstValue - secondValue) > allowedTolerance)
+                    return false;
+            }
+
+            return true;
+        }
+
+        template <typename ElementType>
+        std::pair<ElementType*, NDArrayViewPtr> GetCPUDataPtr(const NDArrayView& view) 
+        {
+            if (view.Device().Type() == DeviceKind::CPU)
+                return{ const_cast<ElementType*>(view.DataBuffer<ElementType>()), nullptr };
+            else
+            {
+                auto tempCPUDataView = view.DeepClone(DeviceDescriptor::CPUDevice());
+                return{ tempCPUDataView->WritableDataBuffer<ElementType>(), tempCPUDataView };
+            }
+        }
+
         template <typename ElementType> 
         bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
         {
@@ -185,56 +265,108 @@ namespace CNTK
             }
 
             CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
-            ElementType* data1 = nullptr;
-            ElementType* data2 = nullptr;
-            if (view1.Device().Type() == DeviceKind::CPU)
-            {
-                data1 = const_cast<ElementType*>(view1.DataBuffer<ElementType>());
-            }
-            else
-            {
-                temp1CpuDataView = MakeSharedObject<CNTK::NDArrayView>(AsDataType<ElementType>(), view1.Shape(), DeviceDescriptor::CPUDevice());
-                temp1CpuDataView->CopyFrom(view1);
-                data1 = temp1CpuDataView->WritableDataBuffer<ElementType>();
-            }
-
-            if (view2.Device().Type() == DeviceKind::CPU)
-            {
-                data2 = const_cast<ElementType*>(view2.DataBuffer<ElementType>());
-            }
-            else
-            {
-                temp2CpuDataView = MakeSharedObject<CNTK::NDArrayView>(AsDataType<ElementType>(), view2.Shape(), DeviceDescriptor::CPUDevice());
-                temp2CpuDataView->CopyFrom(view2);
-                data2 = temp2CpuDataView->WritableDataBuffer<ElementType>();
-            }
+            ElementType* data1;
+            ElementType* data2;
+            std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(view1);
+            std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(view2);
 
             size_t numElements = view1.Shape().TotalSize();
+            return AreEqual(data1, data2, numElements, relativeTolerance, absoluteTolerance);
+        }
 
+        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
+        {
+            if (view1.GetDataType() == DataType::Float)
+                return AreEqual<float>(view1, view2, relativeTolerance, absoluteTolerance);
+
+            if (view1.GetDataType() == DataType::Double)
+                return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
+
+            LogicError("AreEqual(NDArrayView): Unknown DataType.");
+        }
+
+        std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
+        {
+            if (mask.Device() == DeviceDescriptor::CPUDevice())
+                return{ mask.DataBuffer(), nullptr };
+            else
+            {
+                auto tempCPUMask = mask.DeepClone(DeviceDescriptor::CPUDevice());
+                return{ tempCPUMask->DataBuffer(), tempCPUMask };
+            }
+        }
+
+        bool AreEqual(const NDMask& mask1, const NDMask& mask2)
+        {
+            if (mask1.Shape() != mask2.Shape())
+                return false;
+
+            NDMaskPtr tempCPUMask1, tempCPUMask2;
+            const MaskKind* mask1Data = nullptr;
+            const MaskKind* mask2Data = nullptr;
+            std::tie(mask1Data, tempCPUMask1) = GetCPUDataPtr(mask1);
+            std::tie(mask2Data, tempCPUMask2) = GetCPUDataPtr(mask2);
+
+            size_t numElements = mask1.Shape().TotalSize();
             for (size_t i = 0; i < numElements; ++i)
             {
-                auto firstValue = data1[i];
-                auto secondValue = data2[i];
-                ElementType allowedTolerance = (std::max<ElementType>)((ElementType)absoluteTolerance, std::abs(((ElementType)relativeTolerance) * firstValue));
-                if (std::abs(firstValue - secondValue) > allowedTolerance)
+                if (mask1Data[i] != mask2Data[i])
                     return false;
             }
 
             return true;
         }
 
-        bool AreEqual(const NDArrayView& view1, const NDArrayView& view2, double relativeTolerance, double absoluteTolerance)
+        template <typename ElementType>
+        bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance, double absoluteTolerance)
         {
-            if (view1.GetDataType() == DataType::Float)
+            if (std::addressof(value1) == std::addressof(value2))
+                return true;
+
+            // If neither of the values have mask, we just compare the Data
+            if (!value1.Mask() && !value2.Mask())
+                return AreEqual(*value1.Data(), *value2.Data(), relativeTolerance, absoluteTolerance);
+
+            // Both or neither should have masks
+            if ((!value1.Mask() && value2.Mask()) || (!value2.Mask() && value1.Mask()) || !AreEqual(*value1.Mask(), *value2.Mask()))
+                return false;
+
+            if ((value1.GetDataType() != value2.GetDataType()) || (value1.Shape() != value2.Shape()))
+                return false;
+
+            NDMaskPtr tempCPUMask;
+            const MaskKind* maskData;
+            std::tie(maskData, tempCPUMask) = GetCPUDataPtr(*value1.Mask());
+
+            CNTK::NDArrayViewPtr temp1CpuDataView, temp2CpuDataView;
+            ElementType* data1;
+            ElementType* data2;
+            std::tie(data1, temp1CpuDataView) = GetCPUDataPtr<ElementType>(*value1.Data());
+            std::tie(data2, temp2CpuDataView) = GetCPUDataPtr<ElementType>(*value2.Data());
+
+            auto numMaskElements = value1.Mask()->Shape().TotalSize();
+            auto numElementsPerMaskUnit = value1.Shape().TotalSize() / numMaskElements;
+            for (size_t i = 0; i < numMaskElements; ++i)
             {
-                return AreEqual<float>(view1, view2, relativeTolerance, absoluteTolerance);
-            } 
-            if (view1.GetDataType() == DataType::Double)
-            {
-                return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
+                if (maskData[i] != MaskKind::Invalid)
+                {
+                    if (!AreEqual(data1 + (i * numElementsPerMaskUnit), data2 + (i * numElementsPerMaskUnit), numElementsPerMaskUnit, relativeTolerance, absoluteTolerance))
+                        return false;
+                }
             }
 
-            LogicError("Unknown DataType");
+            return true;
+        }
+
+        bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance, double absoluteTolerance)
+        {
+            if (value1.GetDataType() == DataType::Float)
+                return AreEqual<float>(value1, value2, relativeTolerance, absoluteTolerance);
+
+            if (value1.GetDataType() == DataType::Double)
+                return AreEqual<double>(value1, value2, relativeTolerance, absoluteTolerance);
+
+            LogicError("AreEqual(Value): Unknown DataType.");
         }
 
         std::atomic<int> s_computationNetworkTraceLevel(0);
@@ -248,19 +380,36 @@ namespace CNTK
             return s_computationNetworkTraceLevel.load();
         }
 
+        std::atomic<bool> s_computationNetworkTrackGapNans(false);
+        void SetComputationNetworkTrackGapNans(bool enable)
+        {
+            s_computationNetworkTrackGapNans.store(enable);
+        }
+
+        bool GetComputationNetworkTrackGapNans()
+        {
+            return s_computationNetworkTrackGapNans.load();
+        }
+
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)
         {
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
         }
 
-        void ForceSynchronousCUDAKernelExecutions()
-        {
-            Microsoft::MSR::CNTK::SyncGuard::EnableSync();
-        }
-
         void ForceDeterministicAlgorithms()
         {
             Microsoft::MSR::CNTK::Globals::ForceDeterministicAlgorithms();
+        }
+
+        bool ShouldForceDeterministicAlgorithms()
+        {
+            return Microsoft::MSR::CNTK::Globals::ShouldForceDeterministicAlgorithms();
+        }
+
+        static std::atomic<bool> s_threadsAreSet(false);
+        bool MaxNumCPUThreadsSet()
+        {
+            return s_threadsAreSet;
         }
     }
 
@@ -299,7 +448,11 @@ namespace CNTK
 
         // As a testing backdoor we allow changing the default device even after being "used/frozen"
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
-            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
+        {
+            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used "
+                         "as the default device in a CNTK API call; Current default = %S, New default = %S.",
+                         DefaultDevice().AsString().c_str(), newDefaultDevice.AsString().c_str());
+        }
 
         std::call_once(s_initDefaultDeviceFlag, []
         {
@@ -359,8 +512,36 @@ namespace CNTK
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForDynamicAxes = std::numeric_limits<int>::max();
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
-
+    /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
+    
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
+
+    bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_allKnownDynamicAxisNames.insert(axisName).second;
+    }
+
+    const std::wstring& Axis::UniqueDynamicAxesNames::NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_allKnownDynamicAxisNames.find(axisNamePrefix) == m_allKnownDynamicAxisNames.end())
+        {
+            m_allKnownDynamicAxisNames.insert(axisNamePrefix);
+            return axisNamePrefix;
+        }
+
+        for (size_t i = 1;; i++)
+        {
+            auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
+            if (m_allKnownDynamicAxisNames.find(newDynamicAxisName) == m_allKnownDynamicAxisNames.end())
+            {
+                m_allKnownDynamicAxisNames.insert(newDynamicAxisName);
+                return *m_allKnownDynamicAxisNames.find(newDynamicAxisName);
+            }
+        }
+    }
 
     static std::shared_ptr<std::vector<Axis>> s_defaultInputVariableDynamicAxes, s_unknownDynamicAxes;
     static std::once_flag s_initDefaultInputVariableDynamicAxesFlag, s_initUnknownDynamicAxesFlag;
@@ -389,6 +570,12 @@ namespace CNTK
         return s_defaultDynamicAxis;
     }
 
+    /*static*/ const Axis& Axis::OperandSequenceAxis()
+    {
+        static const Axis s_operandSequenceAxis(L"__operandSequenceAxis");
+        return s_operandSequenceAxis;
+    }
+
     /*static*/ const Axis& Axis::DefaultBatchAxis()
     {
         static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
@@ -401,21 +588,101 @@ namespace CNTK
         return s_allStaticAxes;
     }
 
+    /*static*/ const Axis& Axis::AllAxes()
+    {
+        static const Axis s_allAxes(SentinelStaticAxisIndexValueForAllAxes);
+        return s_allAxes;
+    }
 
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
     }
 
-    std::atomic<size_t> s_maxNumCPUThreads(std::thread::hardware_concurrency());
     void SetMaxNumCPUThreads(size_t numCPUThreads)
     {
-        s_maxNumCPUThreads.store(numCPUThreads);
+        Internal::s_threadsAreSet = true;
         Microsoft::MSR::CNTK::CPUMatrix<float>::SetNumThreads((int)numCPUThreads);
     }
 
     size_t GetMaxNumCPUThreads()
     {
-        return s_maxNumCPUThreads.load();
+        return Microsoft::MSR::CNTK::CPUMatrix<float>::GetMaxNumThreads();
     }
+
+    static std::atomic<bool> s_defaultUnitGainValue(true);
+
+    bool DefaultUnitGainValue() 
+    {
+        return s_defaultUnitGainValue;
+    }
+
+    void SetDefaultUnitGainValue(bool value) 
+    {
+        s_defaultUnitGainValue.store(value);
+    }
+
+    template <class E>
+    __declspec_noreturn void ThrowFormatted(const char* format, ...)
+    {
+        va_list args;
+        va_start(args, format);
+        Microsoft::MSR::CNTK::ThrowFormattedVA<E>(format, args);
+        va_end(args);
+    }
+
+
+    void PrintBuiltInfo()
+    {
+        LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+        LOGPRINTF(stderr, "Build info: \n\n");
+        LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
+        LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
+#ifdef _BUILDTYPE_
+        LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+#endif
+#ifdef _BUILDTARGET_
+        LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+#endif
+#ifdef _WITH_1BITSGD_
+        LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+#endif
+#ifdef _WITH_ASGD_
+        LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
+#endif
+#ifdef _MATHLIB_
+        LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
+#endif
+#ifdef _CUDA_PATH_
+        LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
+#endif
+#ifdef _CUB_PATH_
+        LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
+#endif
+#ifdef _CUDNN_PATH_
+        LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
+#endif
+#ifdef _GIT_EXIST
+        LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
+        LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
+#endif
+#ifdef _BUILDER_
+        LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+#endif
+#ifdef _BUILDPATH_
+        LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+#endif
+#ifdef _MPI_NAME_
+        LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
+#endif
+#ifdef _MPI_VERSION_
+        LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
+#endif
+        LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+    }
+
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::runtime_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::logic_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::invalid_argument>(const char* format, ...);
 }
+

@@ -46,7 +46,13 @@
 #define CNTK_MODEL_VERSION_14 14 // axis parameter in OptimizedRNNStackNode
 #define CNTK_MODEL_VERSION_15 15 // add new nodes: LambdaRankNode and NDCG1Eval
 #define CNTK_MODEL_VERSION_16 16 // save/load rng state for Dropout and RandomSample nodes.
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_16
+#define CNTK_MODEL_VERSION_17 17 // use 8 bytes for rng seeds on both platforms
+#define CNTK_MODEL_VERSION_18 18 // reserving 18 for dilated convolution, write out one more TensorShape 
+#define CNTK_MODEL_VERSION_19 19 // batch norm: flag whether running mean count is 0
+#define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node
+#define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_21
+
 
 // helper mode for debugging
 // If TRACK_GAP_NANS is defined then initialize layout gaps to NaN and do NaN checks. Also do detailed logging of node computations.
@@ -152,7 +158,7 @@ struct ComputationNetworkOwnedNodeState
     friend class ComputationNetwork;
 
     ComputationNetworkOwnedNodeState()
-        : m_needsGradient(false), m_valueSharable(true)
+        : m_needsGradient(false), m_valueSharable(true), m_parentOverwritesGradient(false)
     {
         PurgeStateForFormingRecurrentLoops();
         m_isPartOfLoop = false;
@@ -168,9 +174,13 @@ struct ComputationNetworkOwnedNodeState
         other.m_traceNodeValueSparse          = m_traceNodeValueSparse;
         other.m_traceNodeValueUpToDim         = m_traceNodeValueUpToDim;
         other.m_traceNodeValueUpToT           = m_traceNodeValueUpToT;
+        other.m_parentOverwritesGradient = m_parentOverwritesGradient;
     }
 
     bool IsPartOfLoop() const { return m_isPartOfLoop; }
+
+    void MarkParentOverwritesGradient() { m_parentOverwritesGradient = true; }
+    bool ParentOverwritesGradient() const { return m_parentOverwritesGradient; }
 
     virtual void MarkValueNonSharable() { m_valueSharable = false; }
     virtual void MarkValueSharable() { m_valueSharable = true; }
@@ -186,12 +196,17 @@ struct ComputationNetworkOwnedNodeState
     size_t m_traceNodeValueUpToT = 8;   // 8 time steps fit comfortably into a normal-sized console
     void EnableNodeTracing(bool asReal, bool asCategoryLabel, bool asSparse) { m_traceNodeValueReal = asReal; m_traceNodeValueAsCategoryLabel = asCategoryLabel; m_traceNodeValueSparse = asSparse; }
 
+    virtual bool ImplementsGradientOverwriteOptimization() const { return false; }
+
 protected:                // TODO: should be fully encapsulated here
     bool m_needsGradient; // true if this node or any children need a gradient to be computed (for own consumption or propagation to somewhere in the child tree)
 
     bool m_valueSharable; // a flag is needed for memory share.
                           // If it is false (e.g., LearnableParameters/InputValue and those nodes are solely induced by LearnableParameters),
                           // it will never be released to memory pool
+
+    bool m_parentOverwritesGradient; // flag indicating whether the parent of this node overwrites the gradient of this node instead of accumulating to it
+
 private:
     bool m_isPartOfLoop; // true if this loop is part of a recurrent loop
 
@@ -241,7 +256,7 @@ public:
     {
         m_evalTimeStamp = 0;
     }
-    int64_t GetEvalTimeStamp() const
+    uint64_t GetEvalTimeStamp() const
     {
         return m_evalTimeStamp;
     }
@@ -254,18 +269,17 @@ public:
 
     bool IsOlderThan(const TimeStamp& other) const
     {
-        // the difference is taken to take into account numeric overflow (which really should never happen for a 64-bit integer... but hey, it's free!)
-        return GetEvalTimeStamp() - other.GetEvalTimeStamp() < 0;
+        return GetEvalTimeStamp() < other.GetEvalTimeStamp();
     }
 
-    int64_t CreateUniqId() const
+    uint64_t CreateUniqId() const
     {
         return ++s_timeStampCounter;
     }
 
 private:
     static atomic_ullong s_timeStampCounter;
-    int64_t m_evalTimeStamp; // this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
+    uint64_t m_evalTimeStamp; // this is used to reduce unnecessary recomputation when a different node in the model is reevaluated
 };
 
 // =======================================================================
@@ -365,7 +379,7 @@ public:
             RpcStringFreeW((RPC_WSTR*) &szUuid);
         }
 #else
-        int64_t id = CreateUniqId();
+        uint64_t id = CreateUniqId();
         std::wstring base = L"AutoName";
         std::wstringstream sstm;
         sstm << base.c_str() << id;
@@ -779,8 +793,7 @@ public:
     void SetOutputNeededDuringBackprop(bool f) { m_outputNeededDuringBackprop = f; }
     bool IsOutputNeededDuringBackprop() const 
     { 
-        return (!Globals::ShouldEnableShareNodeValueMatrices() && !Globals::ShouldEnableHyperCompressMemory())
-            || m_outputNeededDuringBackprop; 
+        return !Globals::ShouldEnableShareNodeValueMatrices() || m_outputNeededDuringBackprop; 
     }
 
     // -----------------------------------------------------------------------
@@ -807,6 +820,9 @@ public:
     {
         return EnumerateNodes(std::vector<ComputationNodeBasePtr>{shared_from_this()});
     }
+
+    static const std::wstring DefaultDynamicAxisName;
+    static const std::wstring DefaultNoSequenceAxisName;
 
 private:
     // Recursive part of EnumerateNodes().
@@ -1403,14 +1419,39 @@ public:
     // for debugging, set the gaps to NaN instead (to track whether it bubbles up somewhere)
     void InvalidateMissingValueColumns(const FrameRange& fr) override final
     {
-        // fprintf(stderr, "invalidating %ls %ls m_value column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
-        MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
+        if (m_value->GetMatrixType() != SPARSE) // Sparse matrices can only be masked with 0s
+            MaskMissingColumnsTo(*m_value, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
     void InvalidateMissingGradientColumns(const FrameRange& fr) override final
     {
-        // fprintf(stderr, "invalidating %ls %ls m_gradient column range %d\n", NodeName().c_str(), OperationName().c_str(), (int)fr.timeIdxInSeq);
-        MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
+        if (m_gradient->GetMatrixType() != SPARSE) // Sparse matrices can only be masked with 0s
+            MaskMissingColumnsTo(*m_gradient, m_pMBLayout, fr, Matrix<ElemType>::MakeNan(__LINE__));
     }
+
+    static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
+                                       const Matrix<ElemType>& packedData,                                       
+                                       const MBLayoutPtr& layout,
+                                       const std::shared_ptr<Matrix<ElemType>>& unpackedDataStorage,
+                                       const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage,
+                                       bool batchMajor,
+                                       bool maskGaps);
+
+    static TensorView<ElemType> Unpack(const TensorShape& sampleShape,
+                                       const Matrix<ElemType>& packedData,
+                                       const MBLayoutPtr& layout,
+                                       bool batchMajor,
+                                       bool maskGaps)
+    {
+        auto nullSharedPtr = std::shared_ptr<Matrix<ElemType>>(nullptr);
+        return Unpack(sampleShape, packedData, layout, nullSharedPtr, nullSharedPtr, batchMajor, maskGaps);
+    }
+
+    static void BroadcastToPacked(const Matrix<ElemType>& dataToBroadcast,
+                                  const MBLayoutPtr& inputLayout,
+                                  ElemType beta,
+                                  Matrix<ElemType>& broadcastTo,
+                                  const FrameRange& targetFrameRange,
+                                  const std::shared_ptr<Matrix<ElemType>>& tempIndicesStorage);
 
     // -----------------------------------------------------------------------
     // accessors for value and gradient
@@ -1430,6 +1471,9 @@ public:
     MatrixBasePtr GradientPtr() const { return m_gradient; }
     std::shared_ptr<Matrix<ElemType>>& GradientPtrRef() { return m_gradient; }
     // TODO: This is only used for testing whether a gradient has been allocated. Maybe reduce to bool HasGradient()?
+
+    MatrixType GetPreferredGradientMatrixType() { return m_preferredGradientMatrixType; }
+    void SetPreferredGradientMatrixType(MatrixType requestType) { m_preferredGradientMatrixType = requestType; }
 
 private:
 
@@ -1550,10 +1594,10 @@ public:
     {
     }
 
-private:
+protected:
 
     // determine the size that we should set our Matrix storage to
-    void DetermineDataSize(size_t& rows, size_t& cols) const
+    virtual void DetermineDataSize(size_t& rows, size_t& cols) const
     {
         if (HasMBLayout())
         {
@@ -1587,8 +1631,8 @@ protected:
         DetermineDataSize(rows, cols);
         try
         {
-        m.VerifySize(rows, cols);
-    }
+            m.VerifySize(rows, cols);
+        }
         catch (const std::exception& e)
         {
             Rethrow(e);
@@ -1611,90 +1655,13 @@ public:
     // This is where we
     //  - update the node dimension based on actual MB size
     //  - (re-)allocate the m_value matrix, which may be shared across nodes and thus have changed dimensions
-    virtual void /*IComputationNode::*/ BeginForwardProp() override // called before first iteration step of ForwardProp()
-    {
-        Base::BeginForwardProp();
+    virtual void /*IComputationNode::*/ BeginForwardProp() override; // called before first iteration step of ForwardProp()
 
-        // update the actual m_value allocation
-        if (!IsLeaf() && !RequiresPreCompute()) // TODO: guard this through overrides instead
-            UpdateFunctionValuesSize();
+    virtual void /*IComputationNode::*/ EndForwardProp() override;
 
-        // give nodes a chance to update their internal state that may also have to match MB size
-        UpdateFunctionMBSize();
+    virtual void /*IComputationNode::*/BeginBackprop() override;
 
-        // and make sure dimensions are what we expect
-        VerifyDataSize(Value());
-    }
-
-    // NaN checks
-    virtual void /*IComputationNode::*/ EndForwardProp() override
-    {
-        Base::EndForwardProp();
-#ifdef _DEBUG
-#ifdef TRACK_GAP_NANS
-        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-        if (Value().HasNan("EndForwardProp"))
-            LogicError("%ls %ls operation unexpectedly produced NaN values.", NodeName().c_str(), OperationName().c_str());
-#endif
-#if 0   // use this to track values of all nodes
-        MaskMissingValueColumnsToZero(FrameRange(m_pMBLayout)); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-        Value().Print(msra::strfun::utf8(NodeName()), 0, min(Value().GetNumRows()-1, 4), 0, min(Value().GetNumCols()-1, 4));
-#endif
-        InvalidateMissingValueColumns(FrameRange(m_pMBLayout)); // blast NaNs into columns that are gaps in a packed layout
-#endif
-        // tracing
-        Trace();
-
-        // Any memory not needed could resize to zero immediately when HyperCompressMemory active. Since the memory won't really release,
-        // all these memory blocks are gathered into a memory pool. When the next request coming, the best fitting block will be chosen.
-        if (Globals::ShouldEnableHyperCompressMemory()) 
-        {
-            for (auto& input : GetInputs())
-            {
-                if (!input->IsOutputNeededDuringBackprop() && input->IsValueSharable())
-                {
-                    auto inputNodePtr = DownCast(input);
-                    inputNodePtr->Value().Resize(0, 0);
-                }
-            }
-        }
-    }
-
-#if 0   // (keep it around in case we need to add stuff in the future)
-        virtual void /*IComputationNode::*/BeginBackprop() override
-        {
-            Base::BeginBackprop();
-        }
-#endif
-
-    virtual void /*IComputationNode::*/ EndBackprop() override
-    {
-#ifdef _DEBUG
-        Base::EndBackprop();
-#ifdef TRACK_GAP_NANS
-        for (size_t i = 0; i < m_inputs.size(); i++)
-        {
-            ComputationNodePtr child = Input(i);
-            if (child->m_needsGradient)
-            {
-                child->MaskMissingGradientColumnsToZero(FrameRange(child->GetMBLayout())); // HasNaN() operates on a whole matrix, so first flatten all gaps to 0
-                if (child->Gradient().HasNan("EndBackprop"))
-                    LogicError("%ls %ls operation unexpectedly produced NaN gradients.", child->NodeName().c_str(), child->OperationName().c_str());
-            }
-        }
-#endif
-#endif
-        // We could release the gradient of value sharable nodes and all no-longer used memory generated in forward.
-        if (IsValueSharable() && Globals::ShouldEnableHyperCompressMemory())
-        {
-            if (GradientPtr()) 
-                Gradient().Resize(0, 0);
-
-            // canceling the graph dependency
-            if (IsOutputNeededDuringBackprop()) 
-                Value().Resize(0, 0);
-        }
-    }
+    virtual void /*IComputationNode::*/ EndBackprop() override;
 
     // this is the entry point from Network; while it will call virtual BackpropTo() into the actual node implementation
     // TODO: move to -Base (or -Network?)
@@ -1717,7 +1684,10 @@ public:
     void ResetGradient(ElemType val)
     {
         UpdateDataSize(Gradient());
-        Gradient().SetValue(val);
+
+        // No need to zero initialize the gradient if the node's parent is going to overwrite it anyways
+        if ((val != 0) || !ParentOverwritesGradient())
+            Gradient().SetValue(val);
 
         m_gradientInitialized = true;
     }
@@ -1752,10 +1722,12 @@ public:
     }
 
     // request matrices needed to do node function value evaluation
+    // for memory pool utilization optimizaiton, the requested pointer is not immediately useable until the entire network has gone through all requests 
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
+        size_t matrixSize = m_sampleLayout.GetNumElements();
         if (IsValueSharable())
-            RequestMatrixFromPool(m_value, matrixPool);
+            RequestMatrixFromPool(m_value, matrixPool, matrixSize, HasMBLayout());
         else
             CreateMatrixIfNull(m_value);
     }
@@ -1780,7 +1752,8 @@ public:
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
-        RequestMatrixFromPool(m_gradient, matrixPool);
+        size_t matrixSize = m_sampleLayout.GetNumElements();
+        RequestMatrixFromPool(m_gradient, matrixPool, matrixSize, HasMBLayout());
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1825,18 +1798,22 @@ protected:
             matrixPtr = make_shared<Matrix<ElemType>>(m_deviceId);
     }
 
-    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
+    // matrixSize is per sample size, if unknown or hard to estimate, set matrixSize = 0
+    // if the matrix's size will scale with minibatch size, set mbScale = true 
+    // if workspace flag is true, the memory request will be treated specially. We assume workspace memory will share their own pointers 
+    // this is currently a workaround for workspace memory for convolutions
+    void RequestMatrixFromPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool, size_t matrixSize=0, bool mbScale=false, bool isWorkSpace=false)
     {
         if (matrixPtr == nullptr)
         {
-            matrixPtr = matrixPool.Request<ElemType>(m_deviceId);
+            matrixPool.RequestAllocate<ElemType>(m_deviceId, &matrixPtr, matrixSize, mbScale, isWorkSpace);
         }
     }
 
     void ReleaseMatrixToPool(shared_ptr<Matrix<ElemType>>& matrixPtr, MatrixPool& matrixPool)
     {
         assert(matrixPtr != nullptr);
-        matrixPool.Release<ElemType>(matrixPtr);
+        matrixPool.RequestRelease<ElemType>(&matrixPtr);
     }
 
 public:
@@ -1851,7 +1828,8 @@ public:
                                       const std::vector<std::string>& labelMapping, const std::string& sequenceSeparator, 
                                       const std::string& sequencePrologue, const std::string& sequenceEpilogue, const std::string& elementSeparator,
                                       const std::string& sampleSeparator, std::string valueFormatString,
-                                      bool outputGradient = false) const;
+                                      bool outputGradient = false, bool onlyShowAbsSumForDense = false,
+                                      std::function<std::string(size_t)> getKeyById = std::function<std::string(size_t)>()) const;
 
     // simple helper to log the content of a minibatch
     void DebugLogMinibatch(bool outputGradient = false) const
@@ -2022,6 +2000,8 @@ protected:
     shared_ptr<Matrix<ElemType>> m_value, m_gradient;
 
     static std::map<size_t, std::map<size_t, shared_ptr<Matrix<ElemType>>>> s_constOnes;
+
+    MatrixType m_preferredGradientMatrixType = UNDETERMINED;
 };
 
 // convenience wrapper for ComputationNode::New()

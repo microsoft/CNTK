@@ -1062,7 +1062,7 @@ public:
     }
 
     // alternate constructor that optionally also reads word alignments (for MMI training); triggered by providing a 'wordmap'
-    // (We cannot use an optional arg in the constructor aboe because it interferes with teh template resolution.)
+    // (We cannot use an optional arg in the constructor above because it interferes with the template resolution.)
     template <typename WORDSYMBOLTABLE, typename UNITSYMBOLTABLE>
     htkmlfreader(const vector<wstring>& paths, const set<wstring>& restricttokeys, const wstring& stateListPath, const WORDSYMBOLTABLE* wordmap, const UNITSYMBOLTABLE* unitmap, const double htkTimeToFrame)
     {

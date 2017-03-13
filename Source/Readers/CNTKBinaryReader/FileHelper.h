@@ -34,6 +34,31 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 class CNTKBinaryFileHelper
 {
 public:
+    static const uint64_t MAGIC_NUMBER = 0x636e746b5f62696eU;
+
+    static void FindMagicOrDie(FILE* f, wstring name) {
+        // Read the magic number and make sure we're given a proper CBF file.
+        uint64_t number;
+        ReadOrDie(&number, sizeof(number), 1, f);
+        if (number != MAGIC_NUMBER)
+            RuntimeError("The input (%S) is not a valid CNTK binary format file.",
+                name.c_str());
+    }
+
+    static uint32_t GetVersionNumber(FILE* f) {
+        uint32_t versionNumber;
+        ReadOrDie(&versionNumber, sizeof(versionNumber), 1, f);
+        return versionNumber;
+    }
+
+    static int64_t GetHeaderOffset(FILE* f) {
+        // Seek to the end of file -8 bytes to find the offset of the header.
+        SeekOrDie(f, -int64_t(sizeof(int64_t)), SEEK_END);
+        int64_t headerOffset;
+        ReadOrDie(&headerOffset, sizeof(headerOffset), 1, f);
+        return headerOffset;
+    }
+
     static FILE* openOrDie(const string& pathname, const char* mode)
     {
         FILE* f = fopen(pathname.c_str(), mode);
@@ -42,7 +67,7 @@ public:
         return f;
     }
 
-    static FILE* openOrDie(const wstring& pathname, const wchar_t* mode)
+    static FILE* OpenOrDie(const wstring& pathname, const wchar_t* mode)
     {
         FILE* f = _wfopen(pathname.c_str(), mode);
         if (!f)
@@ -50,14 +75,14 @@ public:
         return f;
     }
 
-    static void closeOrDie(FILE* f)
+    static void CloseOrDie(FILE* f)
     {
         int rc = fclose(f);
         if (rc != 0)
             RuntimeError("Error closing: %s.", strerror(errno));
     }
 
-    static void seekOrDie(FILE* f, int64_t offset, int mode)
+    static void SeekOrDie(FILE* f, int64_t offset, int mode)
     {
         int rc;
 #ifdef __WINDOWS__
@@ -69,7 +94,7 @@ public:
             RuntimeError("Error seeking: %s.", strerror(errno));
     }
     
-    static int64_t tellOrDie(FILE* f)
+    static int64_t TellOrDie(FILE* f)
     {
         size_t rc;
 #ifdef __WINDOWS__
@@ -82,7 +107,7 @@ public:
         return rc;
     }
 
-    static void readOrDie(void* ptr, size_t size, size_t count, FILE* f)
+    static void ReadOrDie(void* ptr, size_t size, size_t count, FILE* f)
     {
         size_t rc;
         rc = fread(ptr, size, count, f);

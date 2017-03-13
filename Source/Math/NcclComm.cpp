@@ -26,10 +26,8 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
         return;
 
     size_t numRanks = mpi->NumNodesInUse();
-    MPI_Comm mpiComm = mpi->Communicator();
     std::vector<int> allDevs(numRanks);
-    MPI_Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT, mpiComm)
-        || MpiFail("NcclComm: MPI_Allgather");
+    mpi->Allgather(&deviceId, 1, MPI_INT, allDevs.data(), 1, MPI_INT);
 
     for (size_t r = 0; r<numRanks; r++)
     {
@@ -53,8 +51,7 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     if (res != ncclSuccess)
         RuntimeError("NcclComm failed to obtain ncclUniqueId: %s", ncclGetErrorString(res));
 
-    MPI_Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0, mpiComm)
-        || MpiFail("NcclComm: MPI_Bcase");
+    mpi->Bcast(&ncclId, NCCL_UNIQUE_ID_BYTES, MPI_CHAR, 0);
 
     PrepareDevice(deviceId);
     res = ncclCommInitRank(&m_ncclComm, numRanks, ncclId, mpi->CurrentNodeRank());
@@ -94,6 +91,23 @@ void NcclComm::AllReduceImpl(void* buffer, size_t count, DataType dtype)
 
     if (res != ncclSuccess)
         RuntimeError("NcclComm ncclAllReduce failed: %s", ncclGetErrorString(res));
+}
+
+void NcclComm::BroadcastImpl(void* buffer, size_t count, MPI_Datatype dtype, int root)
+{
+    ncclResult_t res;
+    if (dtype == MPI_CHAR)
+    {
+        res = ncclBcast(buffer, count, ncclChar, root, m_ncclComm, m_stream);
+    }
+    else
+    {
+        RuntimeError("NcclComm Broadcast supports Char type only");
+    }
+    if (res != ncclSuccess)
+    {
+        RuntimeError("NcclComm ncclBcast failed: %s", ncclGetErrorString(res));
+    }
 }
 
 void NcclComm::Sync()

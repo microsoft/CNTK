@@ -1,81 +1,94 @@
 #!/bin/bash
-
+#
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE file in the project root for full license information.
+#
+# WARNING. This will run in Microsoft Internal Environment ONLY, to generate CNTK binary drops.
 
-# WARNING. This will run in Microsoft Internal Environment ONLY
-# Generating CNTK Binary drops in Jenkins environment
+scriptName="$(basename "${BASH_SOURCE[0]}")"
+scriptDir="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
-# Stop on Error
-set -e
+parsedArgs=$(getopt -o '' --long target-configuration:,verbose,release-tag:,commit: -n "$scriptName" -- "$@")
 
-# Define variables to be set via command parameters
-buildConfig=
-targetConfig=
-verbose=false
+[ $? != 0 ] && {
+  echo Terminating...
+  exit 1
+}
 
-# Process Command line parameters
+eval set -- "$parsedArgs"
 
-usage="Usage: make_binary_drop_linux -b build_configuration -t target_configuration [-v] [-h]\nBuild and Target configurations should correspond to Jenkins environment\n-v Verbose output\n-h Displays this message\nExample: make_binary_drop_linux -b Release -t gpu -v"
+targetConfiguration=
+verbose= # TODO
+releaseTag=unknown
 
-if [[ $# == 0 ]]; then
-    echo "Command line parameters are missing" >&2
-    echo -e $usage >&2
-    exit 1
-fi
-
-while getopts ":b::t::v" opt; do
-    case $opt in
-    b)
-        # Supposed to be taken from Jenkins BUILD_CONFIGURATION
-        buildConfig=$OPTARG
-        ;;
-    t)
-        # Supposed to be taken from Jenkins TARGET_CONFIGURATION
-        targetConfig=$OPTARG
-        ;;
-    v)
-        # Enables verbose output
-        verbose=true
-        ;;
-    h)
-        # Display Usage message and exit
-        echo -e $usage
-        exit 0
-        ;;
-    \?)
-        echo "Invalid parameter: -$OPTARG" >&2
-        echo -e $usage >&2
-        exit 1
-        ;;
-    :)
-        echo "Parameter -$OPTARG requires an argument." >&2
-        echo -e $usage >&2
-        exit 1
-        ;;
-    esac
+while true; do
+  case "$1" in
+    --target-configuration)
+      targetConfiguration="${2,,}"
+      shift 2
+      ;;
+    --commit)
+      commit="${2,,}"
+      shift 2
+      ;;
+    --release-tag)
+      releaseTag="${2,,}"
+      shift 2
+      ;;
+    --verbose)
+      verbose=1
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+  esac
 done
 
-# Check mandatory parameters presence
-if [[ -z "$buildConfig" ]]; then
-    echo "Parameter -b is missing." >&2
-    echo -e $usage >&2
-    exit 1
-fi
+[ $# = 0 ] || {
+  echo Extra parameters detected: $*
+  exit 1
+}
 
-if [[ -z "$targetConfig" ]]; then
-    echo "Parameter -t is missing." >&2
-    echo -e $usage >&2
-    exit 1
-fi
+[[ -n $commit ]] || {
+  echo Must specify --commit option.
+  exit 1
+}
 
-# Make buildConfig and targetConfig lowercase
-buildConfig=$(echo ${buildConfig} | tr '[:upper:]' '[:lower:]')
-targetConfig=$(echo ${targetConfig} | tr '[:upper:]' '[:lower:]')
+case $targetConfiguration in
+    cpu)
+        publicTargetConfiguration=CPU-Only
+        ;;
+    gpu)
+        publicTargetConfiguration=GPU
+        ;;
+    1bitsgd)
+        publicTargetConfiguration=GPU-1bit-SGD
+        ;;
+    '')
+        echo Must specify --target-configuration option.
+        exit 1
+        ;;
+    *)
+        echo Unknown target configuration $targetConfiguration.
+        exit 1
+        ;;
+esac
 
-# Enable "verbose" mode if needed
+[[ $releaseTag = unknown ]] || [[ $releaseTag =~ ^[1-9][0-9a-z-]*$ ]] || {
+  echo '--release-tag $releaseTag' option does not match expected format.
+  exit 1
+}
+
+outputFile=CNTK-$releaseTag-Linux-64bit-$publicTargetConfiguration.tar.gz
+
+# Stop on Error
+set -e -o pipefail
+
+# Enable verbose mode if needed
 # stderr is NOT changed
-if [[ "$verbose" == true ]]; then
+if [[ -n $verbose ]]; then
     exec 3>&1
 else
     exec 3>/dev/null
@@ -88,9 +101,9 @@ fi
 function CopyFilesFromList ()
 {
     declare -a fileNames=(${!2})
-    for fileName in  "${fileNames[@]}"
+    for fileName in "${fileNames[@]}"
     do
-        cp "$1/$fileName" "$3"
+        cp -p "$1/$fileName" "$3"
     done
 }
 
@@ -98,11 +111,7 @@ function CopyFilesFromList ()
 
 echo "Making binary drops..." >&3
 
-# If not a Release build quit
-if [[ $buildConfig != "release" ]]; then
-    echo "Not a release build. No binary drops generation" >&3
-    exit 0
-fi
+cd "$scriptDir/.."
 
 # Dependency files
 
@@ -138,20 +147,20 @@ declare -a includeFiles=("Eval.h")
 declare -a includeFiles20=("CNTKLibrary.h" "CNTKLibraryInternals.h")
 
 # Set dependency sources paths
-mklVersion="2"
+mklVersion="3"
 mklPath="/usr/local/CNTKCustomMKL/$mklVersion/x64/parallel"
 opencvVersion="3.1.0"
 opencvPath="/usr/local/opencv-$opencvVersion/lib"
 libzipPath="/usr/local/lib"
 cudaPath="/usr/local/cuda/lib64"
-cudnnPath="/usr/local/cuda/lib64"
+cudnnPath="/usr/local/cudnn/cuda/lib64"
 openblasPath="/usr/local/openblas/lib"
 kaldiVersion="c024e8aa"
 kaldiPath="/usr/local/kaldi-$kaldiVersion/src/lib"
 openfstPath="/usr/local/kaldi-$kaldiVersion/tools/openfst/lib"
 
 # Set build paths
-buildPath="build/$targetConfig/release"
+buildPath="build/$targetConfiguration/release"
 basePath="BinaryDrops"
 baseDropPath="$basePath/cntk"
 baseBinariesPath="$baseDropPath/cntk"
@@ -159,16 +168,18 @@ baseDependenciesPath="$baseBinariesPath/dependencies/lib"
 baseIncludePath="$baseDropPath/Include"
 includePath="Source/Common/Include"
 includePath20="Source/CNTKv2LibraryDll/API"
-extrasPath="Tools/cntk-binary-drop/linux/$targetConfig"
-gzipFile="BinaryDrops.tar.gz"
+extrasPath="Tools/cntk-binary-drop/linux/$targetConfiguration"
 
 # Make BinaryDrops directory
 mkdir -p $baseBinariesPath
 
-# Copy build binaries
+echo "Copying Python wheels..." >&3
+mkdir $basePath/$publicTargetConfiguration
+cp -p $buildPath/python/*.whl $basePath/$publicTargetConfiguration
+
 echo "Copying build binaries..." >&3
-cp -r $buildPath/* $baseBinariesPath
-# Remove unnessesary file(s) if exist(s)
+cp -pr $buildPath/* $baseBinariesPath
+# Remove unnecessary file(s) if exist(s)
 #
 # General TODO: Implement White List of Binary Drop contents.
 # For the time being "cherry pick"  removal of unneeded files
@@ -182,37 +193,37 @@ rm -f $baseBinariesPath/bin/mathtests
 rm -f $baseBinariesPath/bin/multiversotests
 rm -f $baseBinariesPath/bin/networktests
 rm -f $baseBinariesPath/bin/readertests
-rm -f $baseBinariesPath/bin/v2librarydistributiontests
+rm -f $baseBinariesPath/bin/V2LibraryEndToEndTests 
 rm -f $baseBinariesPath/bin/v2librarytests
+rm -rf $baseBinariesPath/python
 
 # Make Include directory
 mkdir -p $baseIncludePath
 
 # Copy Include
 echo "Copying Include files..." >&3
-CopyFilesFromList $includePath includeFiles[@] $baseIncludePath 
+CopyFilesFromList $includePath includeFiles[@] $baseIncludePath
 echo "Copying Include files for Version 2..." >&3
-CopyFilesFromList $includePath20 includeFiles20[@] $baseIncludePath 
+CopyFilesFromList $includePath20 includeFiles20[@] $baseIncludePath
 
 # Copy Examples
 echo "Copying Examples..." >&3
-cp -r Examples $baseDropPath
-# Include CPPEvalV2Client examples in 2.0 Beta drop
-# rm -rf $baseDropPath/Examples/Evaluation/CPPEvalV2Client
+cp -pr Examples $baseDropPath
 
 # Copy Tutorials
 echo "Copying Tutorials..." >&3
-cp -r Tutorials $baseDropPath
+cp -pr Tutorials $baseDropPath
 
 # Copy Scripts (Scripts folder from the root of the Repo)
 echo "Copying Scripts..." >&3
-cp -r Scripts $baseDropPath
-# Remove test related file(s) if exist(s)
+cp -pr Scripts $baseDropPath
+# Remove some unneeded files
 rm -f $baseDropPath/Scripts/pytest.ini
+rm -rf $baseDropPath/Scripts/install/windows
 
 # Copy Extras
 echo "Copying Extras..." >&3
-cp -r $extrasPath/* $baseDropPath
+cp -pr $extrasPath/* $baseDropPath
 
 # Copy Dependencies
 echo "Copying Dependencies..." >&3
@@ -245,7 +256,7 @@ echo "Copying OpenFst (Kaldi)..." >&3
 CopyFilesFromList $openfstPath openfstFiles[@] $baseDependenciesPath
 
 # GPU Drops only
-if [[ $targetConfig != "cpu" ]]; then
+if [[ $targetConfiguration != "cpu" ]]; then
 
     # Copy CUDA
     echo "Copying CUDA..." >&3
@@ -257,14 +268,18 @@ if [[ $targetConfig != "cpu" ]]; then
 
 fi
 
+echo "Creating version.txt file" >&3
+printf 'CNTK-%s\nRelease\n%s\n%s\n' \
+  "$releaseTag" "$publicTargetConfiguration" "$commit" \
+  > $baseDropPath/version.txt
+
 echo "Making Archive and cleaning up..." >&3
 # Make GZipped TAR
 cd $basePath
-if [[ "$verbose" == true ]]; then
-    tar -cvzf $gzipFile cntk
-else
-    tar -czf $gzipFile cntk
-fi
+tar --owner=root ${verbose:+-v} -czf "$outputFile" cntk
+
+# Log some file hashes
+sha256sum "$outputFile" $publicTargetConfiguration/*.whl
 
 # Remove TAR sources
 rm -r cntk

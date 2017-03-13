@@ -13,55 +13,78 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
-// Offsets table used to find the chunks in the binary file. Added some helper methods around the core data.
-#pragma pack(push, 1)
-struct DiskOffsetsTable 
+// Chunk meta-info: byte offset in the inputfile, number of sequences and samples in the chunk.
+struct ChunkInfo 
 {
     int64_t offset;
-    int32_t numSequences;
-    int32_t numSamples;
+    uint32_t numSequences;
+    uint32_t numSamples;
 };
-#pragma pack(pop)
 
-    // Offsets table used to find the chunks in the binary file. Added some helper methods around the core data.
-class OffsetsTable {
+// Chunk table used to find the chunks in the binary file. Added some helper methods around the core data.
+class ChunkTable {
 public:
 
-    OffsetsTable(size_t numChunks, DiskOffsetsTable* offsetsTable) : m_numChunks(numChunks)
+    ChunkTable(uint32_t numChunks, ChunkInfo* offsetsTable) :
+        m_numChunks(numChunks),
+        m_diskOffsetsTable(offsetsTable),
+        m_startIndex(numChunks)
     {
-        m_diskOffsetsTable = make_unique<DiskOffsetsTable*>(offsetsTable);
-        Initialize();
+        uint64_t numSequences = 0;
+        for (decltype(m_numChunks) i = 0; i < m_numChunks; i++)
+        {
+            m_startIndex[i] = numSequences;
+            numSequences += m_diskOffsetsTable[i].numSequences;
+        }
     }
 
-    int64_t GetOffset(size_t index) { return (*m_diskOffsetsTable)[index].offset; }
-    int32_t GetNumSequences(size_t index) { return (*m_diskOffsetsTable)[index].numSequences; }
-    int32_t GetNumSamples(size_t index) { return (*m_diskOffsetsTable)[index].numSamples; }
-    int64_t GetStartIndex(size_t index) { return m_startIndex[index]; }
-    size_t GetChunkSize(size_t index) { return (*m_diskOffsetsTable)[index + 1].offset - (*m_diskOffsetsTable)[index].offset; }
+    int64_t GetOffset(uint32_t index) 
+    { 
+        return m_diskOffsetsTable[index].offset; 
+    }
 
-private:
-    void Initialize()
+    int64_t GetDataStartOffset(uint32_t index)
     {
-        m_startIndex.resize(m_numChunks);
-        m_startIndex[0] = 0;
-        for (int64_t c = 1; c < m_numChunks; c++)
-            m_startIndex[c] = m_startIndex[c-1] + (*m_diskOffsetsTable)[c].numSequences;
+        auto sequenceLengthPrefix = GetNumSequences(index) * sizeof(uint32_t);
+        return GetOffset(index) + sequenceLengthPrefix;
+    }
+
+    uint32_t GetNumSequences(uint32_t index) 
+    { 
+        return m_diskOffsetsTable[index].numSequences;
+    }
+
+    uint32_t GetNumSamples(uint32_t index) 
+    { 
+        return m_diskOffsetsTable[index].numSamples; 
+    }
+
+    int64_t GetStartIndex(uint32_t index) 
+    {
+        return m_startIndex.at(index); 
+    }
+
+    uint64_t GetChunkSize(uint32_t index) 
+    { 
+        auto dataStartOffset = GetDataStartOffset(index);
+        auto dataEndOffset = GetOffset(index + 1);
+        return dataEndOffset - dataStartOffset;
     }
 
 private:
-    int64_t m_numChunks;
-    unique_ptr<DiskOffsetsTable*> m_diskOffsetsTable;
-    vector<size_t> m_startIndex;
+    uint32_t m_numChunks;
+    unique_ptr<ChunkInfo[]> m_diskOffsetsTable;
+    vector<uint64_t> m_startIndex;
 };
 
-typedef unique_ptr<OffsetsTable> OffsetsTablePtr;
+typedef unique_ptr<ChunkTable> ChunkTablePtr;
 
 // TODO: more details when tracing warnings 
 class BinaryChunkDeserializer : public DataDeserializerBase {
 public:
     explicit BinaryChunkDeserializer(const BinaryConfigHelper& helper);
 
-    BinaryChunkDeserializer(CorpusDescriptorPtr corpus, const BinaryConfigHelper& helper);
+    BinaryChunkDeserializer(CorpusDescriptorPtr corpus, const BinaryConfigHelper& helper) = delete;
 
     ~BinaryChunkDeserializer();
 
@@ -74,16 +97,13 @@ public:
     // Get information about particular chunk.
     void GetSequencesForChunk(ChunkIdType chunkId, vector<SequenceDescription>& result) override;
 
-    // Parses buffer into a BinaryChunkPtr
-    void ParseChunk(ChunkIdType chunkId, unique_ptr<byte[]> const& buffer, std::vector<std::vector<SequenceDataPtr>>& data);
-
 private:
     // Builds an index of the input data.
-    void Initialize(const std::map<std::wstring, std::wstring>& rename);
+    void Initialize(const std::map<std::wstring, std::wstring>& rename, ElementType precision);
 
-    // Reads the offsets table from disk into memory
-    void ReadOffsetsTable(FILE* infile, size_t startOffset, size_t numChunks);
-    void ReadOffsetsTable(FILE* infile);
+    // Reads the chunk table from disk into memory
+    void ReadChunkTable(FILE* infile, uint32_t firstChunkIdx, uint32_t numChunks);
+    void ReadChunkTable(FILE* infile);
 
     // Reads a chunk from disk into buffer
     unique_ptr<byte[]> ReadChunk(ChunkIdType chunkId);
@@ -96,21 +116,22 @@ private:
     const wstring m_filename;
     FILE* m_file;
 
-    int64_t m_offsetStart;
-    int64_t m_dataStart;
-
+    int64_t m_headerOffset, m_chunkTableOffset;
 
     std::vector<BinaryDataDeserializerPtr> m_deserializers;
-    OffsetsTablePtr m_offsetsTable;
+    ChunkTablePtr m_chunkTable;
     void* m_chunkBuffer;
 
-    int64_t m_versionNumber = 1;
-    int64_t m_numChunks;
-    int32_t m_numInputs;
+    
+    uint32_t m_numChunks;
+    uint32_t m_numInputs;
     
     unsigned int m_traceLevel;
 
+    static const uint32_t s_currentVersion = 1;
+
     friend class CNTKBinaryReaderTestRunner;
+
 
     DISABLE_COPY_AND_MOVE(BinaryChunkDeserializer);
 };

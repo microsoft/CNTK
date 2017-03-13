@@ -42,10 +42,10 @@ private:
     DISABLE_COPY_AND_MOVE(HTKDataDeserializer);
 
     // Initialization functions.
-    void InitializeChunkDescriptions(ConfigHelper& config);
+    void InitializeChunkDescriptions(const vector<wstring>& paths);
     void InitializeStreams(const std::wstring& featureName);
     void InitializeFeatureInformation();
-    void InitializeAugmentationWindow(ConfigHelper& config);
+    void InitializeAugmentationWindow(const std::pair<size_t, size_t>& augmentationWindow);
 
     // Gets sequence by its chunk id and id inside the chunk.
     void GetSequenceById(ChunkIdType chunkId, size_t id, std::vector<SequenceDataPtr>&);
@@ -72,9 +72,6 @@ private:
 
     // Flag that indicates whether a single speech frames should be exposed as a sequence.
     bool m_frameMode;
-
-    // Indicates, whether the deserializers is the "primary" one, the one that drives chunking.
-    bool m_primary;
 
     // Used to correlate a sequence key with the sequence inside the chunk when deserializer is running not in primary mode.
     // Key -> <chunkid, offset inside chunk>

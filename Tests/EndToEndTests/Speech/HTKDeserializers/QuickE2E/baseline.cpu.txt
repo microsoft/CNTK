@@ -1,515 +1,35 @@
 CPU info:
     CPU Model Name: Intel(R) Xeon(R) CPU E5-2630 v2 @ 2.60GHz
     Hardware threads: 24
-    Total Memory: 264172964 kB
+    Total Memory: 268381192 kB
 -------------------------------------------------------------------
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E/cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu DeviceId=-1 timestamping=true
--------------------------------------------------------------------
-Build info: 
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\QuickE2E/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\QuickE2E OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu DeviceId=-1 timestamping=true
+CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on dphaim-26-new at 2016/12/15 08:32:43
 
-		Built time: Aug 16 2016 09:41:56
-		Last modified date: Fri Aug 12 07:32:43 2016
-		Build type: release
-		Build target: GPU
-		With 1bit-SGD: no
-		Math lib: mkl
-		CUDA_PATH: /usr/local/cuda-7.5
-		CUB_PATH: /usr/local/cub-1.4.1
-		CUDNN_PATH: /usr/local/cudnn-4.0
-		Build Branch: HEAD
-		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
-		Built by philly on f67b30a647de
-		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
--------------------------------------------------------------------
-Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-08/16/2016 10:00:52: -------------------------------------------------------------------
-08/16/2016 10:00:52: Build info: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\QuickE2E/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\QuickE2E  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu  DeviceId=-1  timestamping=true
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
 
-08/16/2016 10:00:52: 		Built time: Aug 16 2016 09:41:56
-08/16/2016 10:00:52: 		Last modified date: Fri Aug 12 07:32:43 2016
-08/16/2016 10:00:52: 		Build type: release
-08/16/2016 10:00:52: 		Build target: GPU
-08/16/2016 10:00:52: 		With 1bit-SGD: no
-08/16/2016 10:00:52: 		Math lib: mkl
-08/16/2016 10:00:52: 		CUDA_PATH: /usr/local/cuda-7.5
-08/16/2016 10:00:52: 		CUB_PATH: /usr/local/cub-1.4.1
-08/16/2016 10:00:52: 		CUDNN_PATH: /usr/local/cudnn-4.0
-08/16/2016 10:00:52: 		Build Branch: HEAD
-08/16/2016 10:00:52: 		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
-08/16/2016 10:00:52: 		Built by philly on f67b30a647de
-08/16/2016 10:00:52: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-08/16/2016 10:00:52: -------------------------------------------------------------------
-08/16/2016 10:00:53: -------------------------------------------------------------------
-08/16/2016 10:00:53: GPU info:
+12/15/2016 08:32:43: ##############################################################################
+12/15/2016 08:32:43: #                                                                            #
+12/15/2016 08:32:43: # speechTrain command (train action)                                         #
+12/15/2016 08:32:43: #                                                                            #
+12/15/2016 08:32:43: ##############################################################################
 
-08/16/2016 10:00:53: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-08/16/2016 10:00:53: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-08/16/2016 10:00:53: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-08/16/2016 10:00:53: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-08/16/2016 10:00:53: -------------------------------------------------------------------
-
-08/16/2016 10:00:53: Running on localhost at 2016/08/16 10:00:53
-08/16/2016 10:00:53: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E/cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E  OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu  DeviceId=-1  timestamping=true
-
-
-
-08/16/2016 10:00:53: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-08/16/2016 10:00:53: precision = "float"
-command = speechTrain
-deviceId = $DeviceId$
-parallelTrain = false
-makeMode = false
-speechTrain = [
-    action = "train"
-    modelPath = "$RunDir$/models/cntkSpeech.dnn"
-    deviceId = $DeviceId$
-    traceLevel = 1
-    SimpleNetworkBuilder = [
-        layerSizes = 363:512:512:132
-        trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ClassificationError"
-        layerTypes = "Sigmoid"
-        applyMeanVarNorm = true
-        initValueScale = 1.0
-        uniformInit = true
-        needPrior = true
-    ]
-    BrainScriptNetworkBuilder = (new ComputationNetwork ([    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        Fit (features, labels, model, loss, metric) = [
-z  = model (features)  
-ce   = loss   (labels, z, tag='criterion')  
-errs = metric (labels, z, tag='evaluation') 
-            scaledLogLikelihood = Pass (z - LogPrior (labels), tag='output')
-        ]
-        M = 363
-        H = 512
-        J = 132
-        model = Sequential (
-            FeatureMVNLayer{} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {J}
-        )
-features = Input {M} 
-        labels   = Input {J}
-        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ClassificationError)
-    ].fit))
-    BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        layerSizes=363:512:512:132  // [0..]
-        trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
-        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
-        applyMeanVarNorm=true
-        initValueScale=1.0
-        uniformInit=true
-        BFF(in, rows, cols) = [
-           B = Parameter(rows, 1, init = 'fixedValue', value = 0)
-           W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/)
-           z = W*in+B
-        ].z
-        GBFF(f, in, rows, cols) = f(BFF(in, rows, cols))
-        L = Length(layerSizes)-1    // number of model layers
-        features = Input(layerSizes[0], tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], tag='label')
-        featNorm = if applyMeanVarNorm
-                   then MeanVarNorm(features)
-                   else features
-        layers[layer:1..L-1] = if layer > 1
-                               then GBFF(layerTypes[layer], layers[layer-1], layerSizes[layer], layerSizes[layer-1])
-                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
-        outLayer = BFF(layers[L-1], layerSizes[L], layerSizes[L-1])
-        outZ = outLayer
-        CE = trainingCriterion(labels, outZ, tag='criterion')
-        Err = evalCriterion(labels, outZ, tag='evaluation')
-        logPrior = LogPrior(labels)
-        // TODO: how to add a tag to an infix operation?
-        ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
-    ]
-    SGD = [
-        epochSize = 20480
-        minibatchSize = 64:256:1024:
-        learningRatesPerMB = 1.0:0.5:0.1
-        numMBsToShowResult = 10
-        momentumPerMB = 0.9:0.656119
-        dropoutRate = 0.0
-        maxEpochs = 3
-        keepCheckPointFiles = true
-        AutoAdjust = [
-            reduceLearnRateIfImproveLessThan = 0
-            loadBestModel = true
-            increaseLearnRateIfImproveMoreThan = 1000000000
-            learnRateDecreaseFactor = 0.5
-            learnRateIncreaseFactor = 1.382
-            autoAdjustLR = "adjustAfterEpoch"
-        ]
-        clippingThresholdPerSample = 1#INF
-    ]
-    reader = [
-        readerType = "HTKMLFReader"
-        readMethod = "blockRandomize"
-        miniBatchMode = "partial"
-        randomize = "auto"
-        verbosity = 0
-        useMersenneTwisterRand=true
-        features = [
-            dim = 363
-            type = "real"
-            scpFile = "glob_0000.scp"
-        ]
-        labels = [
-            mlfFile = "$DataDir$/glob_0000.mlf"
-            labelMappingFile = "$DataDir$/state.list"
-            labelDim = 132
-            labelType = "category"
-        ]
-    ]
-]
-currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E
-OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-DeviceId=-1
-timestamping=true
-
-08/16/2016 10:00:53: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
-
-08/16/2016 10:00:53: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-08/16/2016 10:00:53: precision = "float"
-command = speechTrain
-deviceId = -1
-parallelTrain = false
-makeMode = false
-speechTrain = [
-    action = "train"
-    modelPath = "/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn"
-    deviceId = -1
-    traceLevel = 1
-    SimpleNetworkBuilder = [
-        layerSizes = 363:512:512:132
-        trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ClassificationError"
-        layerTypes = "Sigmoid"
-        applyMeanVarNorm = true
-        initValueScale = 1.0
-        uniformInit = true
-        needPrior = true
-    ]
-    BrainScriptNetworkBuilder = (new ComputationNetwork ([    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        Fit (features, labels, model, loss, metric) = [
-z  = model (features)  
-ce   = loss   (labels, z, tag='criterion')  
-errs = metric (labels, z, tag='evaluation') 
-            scaledLogLikelihood = Pass (z - LogPrior (labels), tag='output')
-        ]
-        M = 363
-        H = 512
-        J = 132
-        model = Sequential (
-            FeatureMVNLayer{} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {J}
-        )
-features = Input {M} 
-        labels   = Input {J}
-        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ClassificationError)
-    ].fit))
-    BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        layerSizes=363:512:512:132  // [0..]
-        trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
-        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
-        applyMeanVarNorm=true
-        initValueScale=1.0
-        uniformInit=true
-        BFF(in, rows, cols) = [
-           B = Parameter(rows, 1, init = 'fixedValue', value = 0)
-           W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/)
-           z = W*in+B
-        ].z
-        GBFF(f, in, rows, cols) = f(BFF(in, rows, cols))
-        L = Length(layerSizes)-1    // number of model layers
-        features = Input(layerSizes[0], tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], tag='label')
-        featNorm = if applyMeanVarNorm
-                   then MeanVarNorm(features)
-                   else features
-        layers[layer:1..L-1] = if layer > 1
-                               then GBFF(layerTypes[layer], layers[layer-1], layerSizes[layer], layerSizes[layer-1])
-                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
-        outLayer = BFF(layers[L-1], layerSizes[L], layerSizes[L-1])
-        outZ = outLayer
-        CE = trainingCriterion(labels, outZ, tag='criterion')
-        Err = evalCriterion(labels, outZ, tag='evaluation')
-        logPrior = LogPrior(labels)
-        // TODO: how to add a tag to an infix operation?
-        ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
-    ]
-    SGD = [
-        epochSize = 20480
-        minibatchSize = 64:256:1024:
-        learningRatesPerMB = 1.0:0.5:0.1
-        numMBsToShowResult = 10
-        momentumPerMB = 0.9:0.656119
-        dropoutRate = 0.0
-        maxEpochs = 3
-        keepCheckPointFiles = true
-        AutoAdjust = [
-            reduceLearnRateIfImproveLessThan = 0
-            loadBestModel = true
-            increaseLearnRateIfImproveMoreThan = 1000000000
-            learnRateDecreaseFactor = 0.5
-            learnRateIncreaseFactor = 1.382
-            autoAdjustLR = "adjustAfterEpoch"
-        ]
-        clippingThresholdPerSample = 1#INF
-    ]
-    reader = [
-        readerType = "HTKMLFReader"
-        readMethod = "blockRandomize"
-        miniBatchMode = "partial"
-        randomize = "auto"
-        verbosity = 0
-        useMersenneTwisterRand=true
-        features = [
-            dim = 363
-            type = "real"
-            scpFile = "glob_0000.scp"
-        ]
-        labels = [
-            mlfFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/glob_0000.mlf"
-            labelMappingFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list"
-            labelDim = 132
-            labelType = "category"
-        ]
-    ]
-]
-currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E
-OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-DeviceId=-1
-timestamping=true
-
-08/16/2016 10:00:53: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-
-08/16/2016 10:00:53: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-configparameters: cntk.cntk:command=speechTrain
-configparameters: cntk.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E
-configparameters: cntk.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-configparameters: cntk.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-configparameters: cntk.cntk:deviceId=-1
-configparameters: cntk.cntk:makeMode=false
-configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-configparameters: cntk.cntk:parallelTrain=false
-configparameters: cntk.cntk:precision=float
-configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-configparameters: cntk.cntk:speechTrain=[
-    action = "train"
-    modelPath = "/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn"
-    deviceId = -1
-    traceLevel = 1
-    SimpleNetworkBuilder = [
-        layerSizes = 363:512:512:132
-        trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ClassificationError"
-        layerTypes = "Sigmoid"
-        applyMeanVarNorm = true
-        initValueScale = 1.0
-        uniformInit = true
-        needPrior = true
-    ]
-    BrainScriptNetworkBuilder = (new ComputationNetwork ([    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        Fit (features, labels, model, loss, metric) = [
-z  = model (features)  
-ce   = loss   (labels, z, tag='criterion')  
-errs = metric (labels, z, tag='evaluation') 
-            scaledLogLikelihood = Pass (z - LogPrior (labels), tag='output')
-        ]
-        M = 363
-        H = 512
-        J = 132
-        model = Sequential (
-            FeatureMVNLayer{} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {J}
-        )
-features = Input {M} 
-        labels   = Input {J}
-        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ClassificationError)
-    ].fit))
-    BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        layerSizes=363:512:512:132  // [0..]
-        trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
-        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
-        applyMeanVarNorm=true
-        initValueScale=1.0
-        uniformInit=true
-        BFF(in, rows, cols) = [
-           B = Parameter(rows, 1, init = 'fixedValue', value = 0)
-           W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/)
-           z = W*in+B
-        ].z
-        GBFF(f, in, rows, cols) = f(BFF(in, rows, cols))
-        L = Length(layerSizes)-1    // number of model layers
-        features = Input(layerSizes[0], tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], tag='label')
-        featNorm = if applyMeanVarNorm
-                   then MeanVarNorm(features)
-                   else features
-        layers[layer:1..L-1] = if layer > 1
-                               then GBFF(layerTypes[layer], layers[layer-1], layerSizes[layer], layerSizes[layer-1])
-                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
-        outLayer = BFF(layers[L-1], layerSizes[L], layerSizes[L-1])
-        outZ = outLayer
-        CE = trainingCriterion(labels, outZ, tag='criterion')
-        Err = evalCriterion(labels, outZ, tag='evaluation')
-        logPrior = LogPrior(labels)
-        // TODO: how to add a tag to an infix operation?
-        ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
-    ]
-    SGD = [
-        epochSize = 20480
-        minibatchSize = 64:256:1024:
-        learningRatesPerMB = 1.0:0.5:0.1
-        numMBsToShowResult = 10
-        momentumPerMB = 0.9:0.656119
-        dropoutRate = 0.0
-        maxEpochs = 3
-        keepCheckPointFiles = true
-        AutoAdjust = [
-            reduceLearnRateIfImproveLessThan = 0
-            loadBestModel = true
-            increaseLearnRateIfImproveMoreThan = 1000000000
-            learnRateDecreaseFactor = 0.5
-            learnRateIncreaseFactor = 1.382
-            autoAdjustLR = "adjustAfterEpoch"
-        ]
-        clippingThresholdPerSample = 1#INF
-    ]
-    reader = [
-        readerType = "HTKMLFReader"
-        readMethod = "blockRandomize"
-        miniBatchMode = "partial"
-        randomize = "auto"
-        verbosity = 0
-        useMersenneTwisterRand=true
-        features = [
-            dim = 363
-            type = "real"
-            scpFile = "glob_0000.scp"
-        ]
-        labels = [
-            mlfFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/glob_0000.mlf"
-            labelMappingFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list"
-            labelDim = 132
-            labelType = "category"
-        ]
-    ]
-]
-
-configparameters: cntk.cntk:timestamping=true
-08/16/2016 10:00:53: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-08/16/2016 10:00:53: Commands: speechTrain
-08/16/2016 10:00:53: Precision = "float"
-08/16/2016 10:00:53: CNTKModelPath: /tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-08/16/2016 10:00:53: CNTKCommandTrainInfo: speechTrain : 3
-08/16/2016 10:00:53: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
-
-08/16/2016 10:00:53: ##############################################################################
-08/16/2016 10:00:53: #                                                                            #
-08/16/2016 10:00:53: # Action "train"                                                             #
-08/16/2016 10:00:53: #                                                                            #
-08/16/2016 10:00:53: ##############################################################################
-
-08/16/2016 10:00:53: CNTKCommandTrainBegin: speechTrain
+parallelTrain option is not enabled. ParallelTrain config will be ignored.
+12/15/2016 08:32:43: 
+Creating virgin network.
 SimpleNetworkBuilder Using CPU
 reading script file glob_0000.scp ... 948 entries
-total 132 state names in state list /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list
-htkmlfreader: reading MLF file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/glob_0000.mlf ... total 948 entries
+total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
+htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-useParallelTrain option is not enabled. ParallelTrain config will be ignored.
-08/16/2016 10:00:53: Creating virgin network.
-Node 'W0' (LearnableParameter operation): Initializing Parameter[512 x 363] <- 0.000000.
-Node 'W0' (LearnableParameter operation): Initializing Parameter[512 x 363] <- uniform(seed=1, range=0.050000*1.000000, onCPU=false).
-Node 'B0' (LearnableParameter operation): Initializing Parameter[512 x 1] <- 0.000000.
-Node 'B0' (LearnableParameter operation): Initializing Parameter[512 x 1] <- 0.000000.
-Node 'W1' (LearnableParameter operation): Initializing Parameter[512 x 512] <- 0.000000.
-Node 'W1' (LearnableParameter operation): Initializing Parameter[512 x 512] <- uniform(seed=2, range=0.050000*1.000000, onCPU=false).
-Node 'B1' (LearnableParameter operation): Initializing Parameter[512 x 1] <- 0.000000.
-Node 'B1' (LearnableParameter operation): Initializing Parameter[512 x 1] <- 0.000000.
-Node 'W2' (LearnableParameter operation): Initializing Parameter[132 x 512] <- 0.000000.
-Node 'W2' (LearnableParameter operation): Initializing Parameter[132 x 512] <- uniform(seed=3, range=0.050000*1.000000, onCPU=false).
-Node 'B2' (LearnableParameter operation): Initializing Parameter[132 x 1] <- 0.000000.
-Node 'B2' (LearnableParameter operation): Initializing Parameter[132 x 1] <- 0.000000.
+12/15/2016 08:32:44: 
+Model has 25 nodes. Using CPU.
 
-Post-processing network...
-
-7 roots:
-	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-	EvalClassificationError = ClassificationError()
-	InvStdOfFeatures = InvStdDev()
-	MeanOfFeatures = Mean()
-	PosteriorProb = Softmax()
-	Prior = Mean()
-	ScaledLogLikelihood = Minus()
-
-Validating network. 25 nodes to process in pass 1.
-
-Validating --> labels = InputValue() :  -> [132 x *]
-Validating --> W2 = LearnableParameter() :  -> [132 x 512]
-Validating --> W1 = LearnableParameter() :  -> [512 x 512]
-Validating --> W0 = LearnableParameter() :  -> [512 x 363]
-Validating --> features = InputValue() :  -> [363 x *]
-Validating --> MeanOfFeatures = Mean (features) : [363 x *] -> [363]
-Validating --> InvStdOfFeatures = InvStdDev (features) : [363 x *] -> [363]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [363 x *], [363], [363] -> [363 x *]
-Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [512 x 363], [363 x *] -> [512 x *]
-Validating --> B0 = LearnableParameter() :  -> [512 x 1]
-Validating --> W0*features+B0 = Plus (W0*features, B0) : [512 x *], [512 x 1] -> [512 x 1 x *]
-Validating --> H1 = Sigmoid (W0*features+B0) : [512 x 1 x *] -> [512 x 1 x *]
-Validating --> W1*H1 = Times (W1, H1) : [512 x 512], [512 x 1 x *] -> [512 x 1 x *]
-Validating --> B1 = LearnableParameter() :  -> [512 x 1]
-Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [512 x 1 x *], [512 x 1] -> [512 x 1 x *]
-Validating --> H2 = Sigmoid (W1*H1+B1) : [512 x 1 x *] -> [512 x 1 x *]
-Validating --> W2*H1 = Times (W2, H2) : [132 x 512], [512 x 1 x *] -> [132 x 1 x *]
-Validating --> B2 = LearnableParameter() :  -> [132 x 1]
-Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
-Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
-Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *], [132 x 1 x *] -> [1]
-Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *] -> [132 x 1 x *]
-Validating --> Prior = Mean (labels) : [132 x *] -> [132]
-Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
-Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
-
-Validating network. 17 nodes to process in pass 2.
-
-
-Validating network, final pass.
-
-
-
-12 out of 25 nodes do not share the minibatch layout with the input data.
-
-Post-processing network complete.
-
-08/16/2016 10:00:53: Created model with 25 nodes on CPU.
-
-08/16/2016 10:00:53: Training criterion node(s):
-08/16/2016 10:00:53: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
-
-08/16/2016 10:00:53: Evaluation criterion node(s):
-08/16/2016 10:00:53: 	EvalClassificationError = ClassificationError
+12/15/2016 08:32:44: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+12/15/2016 08:32:44: Evaluation criterion: EvalClassificationError = ClassificationError
 
 
 Allocating matrices for forward and/or backward propagation.
@@ -518,661 +38,163 @@ Memory Sharing: Out of 40 matrices, 19 are shared as 8, and 21 are not shared.
 
 	{ W0 : [512 x 363] (gradient)
 	  W0*features+B0 : [512 x 1 x *] }
-	{ H1 : [512 x 1 x *]
-	  W0*features : [512 x *] (gradient) }
 	{ W0*features+B0 : [512 x 1 x *] (gradient)
 	  W1*H1 : [512 x 1 x *] }
-	{ W1 : [512 x 512] (gradient)
-	  W1*H1+B1 : [512 x 1 x *] }
-	{ H2 : [512 x 1 x *]
-	  W1*H1 : [512 x 1 x *] (gradient) }
+	{ HLast : [132 x 1 x *]
+	  W2 : [132 x 512] (gradient) }
 	{ B0 : [512 x 1] (gradient)
 	  H1 : [512 x 1 x *] (gradient)
 	  W1*H1+B1 : [512 x 1 x *] (gradient)
 	  W2*H1 : [132 x 1 x *] }
-	{ HLast : [132 x 1 x *]
-	  W2 : [132 x 512] (gradient) }
 	{ B1 : [512 x 1] (gradient)
 	  H2 : [512 x 1 x *] (gradient)
 	  HLast : [132 x 1 x *] (gradient) }
+	{ W1 : [512 x 512] (gradient)
+	  W1*H1+B1 : [512 x 1 x *] }
+	{ H1 : [512 x 1 x *]
+	  W0*features : [512 x *] (gradient) }
+	{ H2 : [512 x 1 x *]
+	  W1*H1 : [512 x 1 x *] (gradient) }
 
 
-08/16/2016 10:00:53: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
+12/15/2016 08:32:44: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
 
-08/16/2016 10:00:53: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
-08/16/2016 10:00:53: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
-08/16/2016 10:00:53: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
-08/16/2016 10:00:53: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
-08/16/2016 10:00:53: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
-08/16/2016 10:00:53: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
+12/15/2016 08:32:44: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
+12/15/2016 08:32:44: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
+12/15/2016 08:32:44: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
+12/15/2016 08:32:44: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
+12/15/2016 08:32:44: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
+12/15/2016 08:32:44: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
 
 
-08/16/2016 10:00:53: Precomputing --> 3 PreCompute nodes found.
+12/15/2016 08:32:44: Precomputing --> 3 PreCompute nodes found.
 
-08/16/2016 10:00:53: 	MeanOfFeatures = Mean()
-08/16/2016 10:00:53: 	InvStdOfFeatures = InvStdDev()
-08/16/2016 10:00:53: 	Prior = Mean()
+12/15/2016 08:32:44: 	MeanOfFeatures = Mean()
+12/15/2016 08:32:44: 	InvStdOfFeatures = InvStdDev()
+12/15/2016 08:32:44: 	Prior = Mean()
 minibatchiterator: epoch 0: frames [0..252734] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-08/16/2016 10:00:54: Precomputing --> Completed.
+12/15/2016 08:32:48: Precomputing --> Completed.
 
 
-08/16/2016 10:00:54: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
+12/15/2016 08:32:48: Starting Epoch 1: learning rate per sample = 0.015625  effective momentum = 0.900000  momentum as time constant = 607.4 samples
 minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data subset 0 of 1, with 1 datapasses
 
-08/16/2016 10:00:54: Starting minibatch loop.
-08/16/2016 10:00:54:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.12%]: CrossEntropyWithSoftmax = 4.62304993 * 640; EvalClassificationError = 0.93437500 * 640; time = 0.0524s; samplesPerSecond = 12223.8
-08/16/2016 10:00:54:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.38132553 * 640; EvalClassificationError = 0.93125000 * 640; time = 0.0418s; samplesPerSecond = 15310.3
-08/16/2016 10:00:54:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98762436 * 640; EvalClassificationError = 0.88593750 * 640; time = 0.0418s; samplesPerSecond = 15301.5
-08/16/2016 10:00:54:  Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.74489594 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.0509s; samplesPerSecond = 12567.3
-08/16/2016 10:00:54:  Epoch[ 1 of 3]-Minibatch[  41-  50, 15.62%]: CrossEntropyWithSoftmax = 3.83505249 * 640; EvalClassificationError = 0.86406250 * 640; time = 0.1040s; samplesPerSecond = 6155.0
-08/16/2016 10:00:54:  Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71846924 * 640; EvalClassificationError = 0.87187500 * 640; time = 0.0419s; samplesPerSecond = 15282.9
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.43056335 * 640; EvalClassificationError = 0.82500000 * 640; time = 0.0418s; samplesPerSecond = 15300.4
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.55346985 * 640; EvalClassificationError = 0.82656250 * 640; time = 0.0427s; samplesPerSecond = 14994.3
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[  81-  90, 28.12%]: CrossEntropyWithSoftmax = 3.52102966 * 640; EvalClassificationError = 0.82343750 * 640; time = 0.0419s; samplesPerSecond = 15279.9
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.43554077 * 640; EvalClassificationError = 0.81250000 * 640; time = 0.0418s; samplesPerSecond = 15296.7
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.53125305 * 640; EvalClassificationError = 0.83281250 * 640; time = 0.0543s; samplesPerSecond = 11786.6
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.30802307 * 640; EvalClassificationError = 0.80000000 * 640; time = 0.0416s; samplesPerSecond = 15397.9
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.62%]: CrossEntropyWithSoftmax = 3.23431702 * 640; EvalClassificationError = 0.81562500 * 640; time = 0.0423s; samplesPerSecond = 15137.9
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.09808960 * 640; EvalClassificationError = 0.75312500 * 640; time = 0.0417s; samplesPerSecond = 15335.2
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.99690552 * 640; EvalClassificationError = 0.74843750 * 640; time = 0.0417s; samplesPerSecond = 15359.1
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.14211426 * 640; EvalClassificationError = 0.74062500 * 640; time = 0.0444s; samplesPerSecond = 14404.7
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.12%]: CrossEntropyWithSoftmax = 2.86223145 * 640; EvalClassificationError = 0.72343750 * 640; time = 0.0418s; samplesPerSecond = 15315.4
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.75961304 * 640; EvalClassificationError = 0.65937500 * 640; time = 0.0419s; samplesPerSecond = 15288.3
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.84541626 * 640; EvalClassificationError = 0.72031250 * 640; time = 0.0417s; samplesPerSecond = 15345.1
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.75031738 * 640; EvalClassificationError = 0.68281250 * 640; time = 0.0419s; samplesPerSecond = 15286.5
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.62%]: CrossEntropyWithSoftmax = 2.62937012 * 640; EvalClassificationError = 0.66562500 * 640; time = 0.0439s; samplesPerSecond = 14569.0
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.62927246 * 640; EvalClassificationError = 0.65312500 * 640; time = 0.0416s; samplesPerSecond = 15378.3
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.55364380 * 640; EvalClassificationError = 0.65000000 * 640; time = 0.0416s; samplesPerSecond = 15400.9
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.58642578 * 640; EvalClassificationError = 0.66250000 * 640; time = 0.0419s; samplesPerSecond = 15263.5
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.12%]: CrossEntropyWithSoftmax = 2.50843506 * 640; EvalClassificationError = 0.63750000 * 640; time = 0.0417s; samplesPerSecond = 15339.6
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.42227783 * 640; EvalClassificationError = 0.62343750 * 640; time = 0.0417s; samplesPerSecond = 15337.4
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.28812256 * 640; EvalClassificationError = 0.59375000 * 640; time = 0.0418s; samplesPerSecond = 15321.6
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.54392700 * 640; EvalClassificationError = 0.66718750 * 640; time = 0.0417s; samplesPerSecond = 15338.2
-08/16/2016 10:00:55:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.62%]: CrossEntropyWithSoftmax = 2.29038696 * 640; EvalClassificationError = 0.59843750 * 640; time = 0.0417s; samplesPerSecond = 15348.5
-08/16/2016 10:00:56:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.27576904 * 640; EvalClassificationError = 0.61406250 * 640; time = 0.0417s; samplesPerSecond = 15334.9
-08/16/2016 10:00:56:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.26696777 * 640; EvalClassificationError = 0.58906250 * 640; time = 0.0417s; samplesPerSecond = 15339.3
-08/16/2016 10:00:56:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.26576538 * 640; EvalClassificationError = 0.61093750 * 640; time = 0.0415s; samplesPerSecond = 15410.2
-08/16/2016 10:00:56: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.06311455 * 20480; EvalClassificationError = 0.73945313 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=1.44649s
-08/16/2016 10:00:56: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.1'
+12/15/2016 08:32:48: Starting minibatch loop.
+12/15/2016 08:32:48:  Epoch[ 1 of 3]-Minibatch[   1-  10, 3.13%]: CrossEntropyWithSoftmax = 4.59755211 * 640; EvalClassificationError = 0.93125000 * 640; time = 0.1012s; samplesPerSecond = 6322.7
+12/15/2016 08:32:48:  Epoch[ 1 of 3]-Minibatch[  11-  20, 6.25%]: CrossEntropyWithSoftmax = 4.34610329 * 640; EvalClassificationError = 0.92031250 * 640; time = 0.0628s; samplesPerSecond = 10191.2
+12/15/2016 08:32:48:  Epoch[ 1 of 3]-Minibatch[  21-  30, 9.38%]: CrossEntropyWithSoftmax = 3.98222656 * 640; EvalClassificationError = 0.89062500 * 640; time = 0.0560s; samplesPerSecond = 11427.1
+12/15/2016 08:32:48:  Epoch[ 1 of 3]-Minibatch[  31-  40, 12.50%]: CrossEntropyWithSoftmax = 3.74152527 * 640; EvalClassificationError = 0.84531250 * 640; time = 0.0691s; samplesPerSecond = 9257.0
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[  41-  50, 15.63%]: CrossEntropyWithSoftmax = 3.83818665 * 640; EvalClassificationError = 0.86718750 * 640; time = 0.0569s; samplesPerSecond = 11250.2
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[  51-  60, 18.75%]: CrossEntropyWithSoftmax = 3.71641235 * 640; EvalClassificationError = 0.87500000 * 640; time = 0.0548s; samplesPerSecond = 11687.6
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[  61-  70, 21.88%]: CrossEntropyWithSoftmax = 3.41802368 * 640; EvalClassificationError = 0.79687500 * 640; time = 0.0554s; samplesPerSecond = 11542.6
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[  71-  80, 25.00%]: CrossEntropyWithSoftmax = 3.53833008 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.0555s; samplesPerSecond = 11523.0
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[  81-  90, 28.13%]: CrossEntropyWithSoftmax = 3.50628052 * 640; EvalClassificationError = 0.81718750 * 640; time = 0.0567s; samplesPerSecond = 11296.8
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[  91- 100, 31.25%]: CrossEntropyWithSoftmax = 3.41477966 * 640; EvalClassificationError = 0.80781250 * 640; time = 0.0565s; samplesPerSecond = 11320.4
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 101- 110, 34.38%]: CrossEntropyWithSoftmax = 3.51030884 * 640; EvalClassificationError = 0.82812500 * 640; time = 0.0557s; samplesPerSecond = 11484.4
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 111- 120, 37.50%]: CrossEntropyWithSoftmax = 3.28365479 * 640; EvalClassificationError = 0.79375000 * 640; time = 0.0558s; samplesPerSecond = 11473.4
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 121- 130, 40.63%]: CrossEntropyWithSoftmax = 3.20931702 * 640; EvalClassificationError = 0.79531250 * 640; time = 0.0551s; samplesPerSecond = 11612.1
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 131- 140, 43.75%]: CrossEntropyWithSoftmax = 3.07460327 * 640; EvalClassificationError = 0.75468750 * 640; time = 0.0572s; samplesPerSecond = 11193.9
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 141- 150, 46.88%]: CrossEntropyWithSoftmax = 2.97528992 * 640; EvalClassificationError = 0.72031250 * 640; time = 0.0555s; samplesPerSecond = 11531.1
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 151- 160, 50.00%]: CrossEntropyWithSoftmax = 3.11968384 * 640; EvalClassificationError = 0.74531250 * 640; time = 0.0565s; samplesPerSecond = 11317.6
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 161- 170, 53.13%]: CrossEntropyWithSoftmax = 2.84171753 * 640; EvalClassificationError = 0.71093750 * 640; time = 0.0568s; samplesPerSecond = 11276.9
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 171- 180, 56.25%]: CrossEntropyWithSoftmax = 2.74031372 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.0558s; samplesPerSecond = 11469.3
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 181- 190, 59.38%]: CrossEntropyWithSoftmax = 2.83858032 * 640; EvalClassificationError = 0.72656250 * 640; time = 0.1582s; samplesPerSecond = 4046.5
+12/15/2016 08:32:49:  Epoch[ 1 of 3]-Minibatch[ 191- 200, 62.50%]: CrossEntropyWithSoftmax = 2.74630737 * 640; EvalClassificationError = 0.69218750 * 640; time = 0.0553s; samplesPerSecond = 11577.0
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 201- 210, 65.63%]: CrossEntropyWithSoftmax = 2.61033325 * 640; EvalClassificationError = 0.66250000 * 640; time = 0.0570s; samplesPerSecond = 11226.1
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 211- 220, 68.75%]: CrossEntropyWithSoftmax = 2.61330566 * 640; EvalClassificationError = 0.65000000 * 640; time = 0.0561s; samplesPerSecond = 11412.7
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 221- 230, 71.88%]: CrossEntropyWithSoftmax = 2.54591064 * 640; EvalClassificationError = 0.66406250 * 640; time = 0.0554s; samplesPerSecond = 11541.9
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 231- 240, 75.00%]: CrossEntropyWithSoftmax = 2.57565918 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.0550s; samplesPerSecond = 11628.3
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 241- 250, 78.13%]: CrossEntropyWithSoftmax = 2.49163818 * 640; EvalClassificationError = 0.63281250 * 640; time = 0.0560s; samplesPerSecond = 11427.8
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 251- 260, 81.25%]: CrossEntropyWithSoftmax = 2.39955444 * 640; EvalClassificationError = 0.62812500 * 640; time = 0.1622s; samplesPerSecond = 3946.8
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 261- 270, 84.38%]: CrossEntropyWithSoftmax = 2.27033691 * 640; EvalClassificationError = 0.59375000 * 640; time = 0.1464s; samplesPerSecond = 4371.6
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 271- 280, 87.50%]: CrossEntropyWithSoftmax = 2.52111816 * 640; EvalClassificationError = 0.66093750 * 640; time = 0.0607s; samplesPerSecond = 10550.6
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 281- 290, 90.63%]: CrossEntropyWithSoftmax = 2.27800293 * 640; EvalClassificationError = 0.59062500 * 640; time = 0.0565s; samplesPerSecond = 11332.4
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 291- 300, 93.75%]: CrossEntropyWithSoftmax = 2.26782837 * 640; EvalClassificationError = 0.61093750 * 640; time = 0.0563s; samplesPerSecond = 11363.2
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 301- 310, 96.88%]: CrossEntropyWithSoftmax = 2.24590454 * 640; EvalClassificationError = 0.58593750 * 640; time = 0.0568s; samplesPerSecond = 11268.8
+12/15/2016 08:32:50:  Epoch[ 1 of 3]-Minibatch[ 311- 320, 100.00%]: CrossEntropyWithSoftmax = 2.24415283 * 640; EvalClassificationError = 0.59843750 * 640; time = 0.0572s; samplesPerSecond = 11189.6
+12/15/2016 08:32:50: Finished Epoch[ 1 of 3]: [Training] CrossEntropyWithSoftmax = 3.04696693 * 20480; EvalClassificationError = 0.73583984 * 20480; totalSamplesSeen = 20480; learningRatePerSample = 0.015625; epochTime=2.1646s
+12/15/2016 08:32:50: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.1'
 
-08/16/2016 10:00:56: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
+12/15/2016 08:32:50: Starting Epoch 2: learning rate per sample = 0.001953  effective momentum = 0.656119  momentum as time constant = 607.5 samples
 minibatchiterator: epoch 1: frames [20480..40960] (first utterance at frame 20480), data subset 0 of 1, with 1 datapasses
 
-08/16/2016 10:00:56: Starting minibatch loop.
-08/16/2016 10:00:56:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.16726837 * 2560; EvalClassificationError = 0.57851562 * 2560; time = 0.1517s; samplesPerSecond = 16873.9
-08/16/2016 10:00:56:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.08752022 * 2560; EvalClassificationError = 0.56523437 * 2560; time = 0.1334s; samplesPerSecond = 19194.6
-08/16/2016 10:00:56:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.07134514 * 2560; EvalClassificationError = 0.55585938 * 2560; time = 0.1271s; samplesPerSecond = 20149.1
-08/16/2016 10:00:56:  Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.05824890 * 2560; EvalClassificationError = 0.56562500 * 2560; time = 0.1270s; samplesPerSecond = 20155.6
-08/16/2016 10:00:56:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.04811478 * 2560; EvalClassificationError = 0.55937500 * 2560; time = 0.1267s; samplesPerSecond = 20208.2
-08/16/2016 10:00:56:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 1.99263458 * 2560; EvalClassificationError = 0.54375000 * 2560; time = 0.1270s; samplesPerSecond = 20155.1
-08/16/2016 10:00:57:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 1.99005814 * 2560; EvalClassificationError = 0.53359375 * 2560; time = 0.1274s; samplesPerSecond = 20093.9
-08/16/2016 10:00:57:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 1.97189789 * 2560; EvalClassificationError = 0.53984375 * 2560; time = 0.1554s; samplesPerSecond = 16470.6
-08/16/2016 10:00:57: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 2.04838600 * 20480; EvalClassificationError = 0.55522461 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=1.08062s
-08/16/2016 10:00:57: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.2'
+12/15/2016 08:32:50: Starting minibatch loop.
+12/15/2016 08:32:51:  Epoch[ 2 of 3]-Minibatch[   1-  10, 12.50%]: CrossEntropyWithSoftmax = 2.14624214 * 2560; EvalClassificationError = 0.56953125 * 2560; time = 0.4226s; samplesPerSecond = 6057.9
+12/15/2016 08:32:51:  Epoch[ 2 of 3]-Minibatch[  11-  20, 25.00%]: CrossEntropyWithSoftmax = 2.06174126 * 2560; EvalClassificationError = 0.55742187 * 2560; time = 0.3982s; samplesPerSecond = 6428.9
+12/15/2016 08:32:51:  Epoch[ 2 of 3]-Minibatch[  21-  30, 37.50%]: CrossEntropyWithSoftmax = 2.04994278 * 2560; EvalClassificationError = 0.55351562 * 2560; time = 0.1422s; samplesPerSecond = 18006.1
+12/15/2016 08:32:52:  Epoch[ 2 of 3]-Minibatch[  31-  40, 50.00%]: CrossEntropyWithSoftmax = 2.03695602 * 2560; EvalClassificationError = 0.56132812 * 2560; time = 0.2471s; samplesPerSecond = 10362.1
+12/15/2016 08:32:52:  Epoch[ 2 of 3]-Minibatch[  41-  50, 62.50%]: CrossEntropyWithSoftmax = 2.03086166 * 2560; EvalClassificationError = 0.55664063 * 2560; time = 0.1416s; samplesPerSecond = 18076.0
+12/15/2016 08:32:52:  Epoch[ 2 of 3]-Minibatch[  51-  60, 75.00%]: CrossEntropyWithSoftmax = 1.97306137 * 2560; EvalClassificationError = 0.53671875 * 2560; time = 0.1427s; samplesPerSecond = 17934.2
+12/15/2016 08:32:52:  Epoch[ 2 of 3]-Minibatch[  61-  70, 87.50%]: CrossEntropyWithSoftmax = 1.96746063 * 2560; EvalClassificationError = 0.53164062 * 2560; time = 0.2684s; samplesPerSecond = 9537.8
+12/15/2016 08:32:52:  Epoch[ 2 of 3]-Minibatch[  71-  80, 100.00%]: CrossEntropyWithSoftmax = 1.95498352 * 2560; EvalClassificationError = 0.53750000 * 2560; time = 0.1449s; samplesPerSecond = 17670.8
+12/15/2016 08:32:52: Finished Epoch[ 2 of 3]: [Training] CrossEntropyWithSoftmax = 2.02765617 * 20480; EvalClassificationError = 0.55053711 * 20480; totalSamplesSeen = 40960; learningRatePerSample = 0.001953125; epochTime=1.90952s
+12/15/2016 08:32:52: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.2'
 
-08/16/2016 10:00:57: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
+12/15/2016 08:32:52: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 
-08/16/2016 10:00:57: Starting minibatch loop.
-08/16/2016 10:00:57:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.97114277 * 10240; EvalClassificationError = 0.53769531 * 10240; time = 0.5087s; samplesPerSecond = 20128.3
-08/16/2016 10:00:58:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.99390316 * 10240; EvalClassificationError = 0.55712891 * 10240; time = 0.4559s; samplesPerSecond = 22461.7
-08/16/2016 10:00:58: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.98252296 * 20480; EvalClassificationError = 0.54741211 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=0.970242s
-08/16/2016 10:00:58: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn'
-08/16/2016 10:00:58: CNTKCommandTrainEnd: speechTrain
+12/15/2016 08:32:52: Starting minibatch loop.
+12/15/2016 08:32:53:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.95358448 * 10240; EvalClassificationError = 0.53603516 * 10240; time = 0.6148s; samplesPerSecond = 16655.1
+12/15/2016 08:32:54:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.97540913 * 10240; EvalClassificationError = 0.55253906 * 10240; time = 0.8519s; samplesPerSecond = 12020.0
+12/15/2016 08:32:54: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.96449680 * 20480; EvalClassificationError = 0.54428711 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-005; epochTime=1.47221s
+12/15/2016 08:32:54: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn'
 
-08/16/2016 10:00:58: Action "train" complete.
+12/15/2016 08:32:54: Action "train" complete.
 
-08/16/2016 10:00:58: __COMPLETED__
+12/15/2016 08:32:54: __COMPLETED__
 === Deleting last epoch data
 ==== Re-running from checkpoint
-=== Running /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E/cntk.cntk currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu DeviceId=-1 timestamping=true makeMode=true
--------------------------------------------------------------------
-Build info: 
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\QuickE2E/cntk.cntk currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\QuickE2E OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu DeviceId=-1 timestamping=true makeMode=true
+CNTK 2.0.beta6.0+ (HEAD 5f1fab, Dec 15 2016 06:29:34) on dphaim-26-new at 2016/12/15 08:32:59
 
-		Built time: Aug 16 2016 09:41:56
-		Last modified date: Fri Aug 12 07:32:43 2016
-		Build type: release
-		Build target: GPU
-		With 1bit-SGD: no
-		Math lib: mkl
-		CUDA_PATH: /usr/local/cuda-7.5
-		CUB_PATH: /usr/local/cub-1.4.1
-		CUDNN_PATH: /usr/local/cudnn-4.0
-		Build Branch: HEAD
-		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
-		Built by philly on f67b30a647de
-		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
--------------------------------------------------------------------
-Changed current directory to /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-08/16/2016 10:00:58: -------------------------------------------------------------------
-08/16/2016 10:00:58: Build info: 
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\QuickE2E/cntk.cntk  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\QuickE2E  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu  DeviceId=-1  timestamping=true  makeMode=true
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
 
-08/16/2016 10:00:58: 		Built time: Aug 16 2016 09:41:56
-08/16/2016 10:00:58: 		Last modified date: Fri Aug 12 07:32:43 2016
-08/16/2016 10:00:58: 		Build type: release
-08/16/2016 10:00:58: 		Build target: GPU
-08/16/2016 10:00:58: 		With 1bit-SGD: no
-08/16/2016 10:00:58: 		Math lib: mkl
-08/16/2016 10:00:58: 		CUDA_PATH: /usr/local/cuda-7.5
-08/16/2016 10:00:58: 		CUB_PATH: /usr/local/cub-1.4.1
-08/16/2016 10:00:58: 		CUDNN_PATH: /usr/local/cudnn-4.0
-08/16/2016 10:00:58: 		Build Branch: HEAD
-08/16/2016 10:00:58: 		Build SHA1: 026b1e772b963461e189f8f00aa7ed6951298f84
-08/16/2016 10:00:58: 		Built by philly on f67b30a647de
-08/16/2016 10:00:58: 		Build Path: /home/philly/jenkins/workspace/CNTK-Build-Linux
-08/16/2016 10:00:58: -------------------------------------------------------------------
-08/16/2016 10:00:59: -------------------------------------------------------------------
-08/16/2016 10:00:59: GPU info:
+12/15/2016 08:32:59: ##############################################################################
+12/15/2016 08:32:59: #                                                                            #
+12/15/2016 08:32:59: # speechTrain command (train action)                                         #
+12/15/2016 08:32:59: #                                                                            #
+12/15/2016 08:32:59: ##############################################################################
 
-08/16/2016 10:00:59: 		Device[0]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-08/16/2016 10:00:59: 		Device[1]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-08/16/2016 10:00:59: 		Device[2]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-08/16/2016 10:00:59: 		Device[3]: cores = 2880; computeCapability = 3.5; type = "GeForce GTX 780 Ti"; memory = 3071 MB
-08/16/2016 10:00:59: -------------------------------------------------------------------
-
-08/16/2016 10:00:59: Running on localhost at 2016/08/16 10:00:59
-08/16/2016 10:00:59: Command line: 
-/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/build/gpu/release/bin/cntk  configFile=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E/cntk.cntk  currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu  DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data  ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E  OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu  DeviceId=-1  timestamping=true  makeMode=true
-
-
-
-08/16/2016 10:00:59: >>>>>>>>>>>>>>>>>>>> RAW CONFIG (VARIABLES NOT RESOLVED) >>>>>>>>>>>>>>>>>>>>
-08/16/2016 10:00:59: precision = "float"
-command = speechTrain
-deviceId = $DeviceId$
-parallelTrain = false
-makeMode = false
-speechTrain = [
-    action = "train"
-    modelPath = "$RunDir$/models/cntkSpeech.dnn"
-    deviceId = $DeviceId$
-    traceLevel = 1
-    SimpleNetworkBuilder = [
-        layerSizes = 363:512:512:132
-        trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ClassificationError"
-        layerTypes = "Sigmoid"
-        applyMeanVarNorm = true
-        initValueScale = 1.0
-        uniformInit = true
-        needPrior = true
-    ]
-    BrainScriptNetworkBuilder = (new ComputationNetwork ([    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        Fit (features, labels, model, loss, metric) = [
-z  = model (features)  
-ce   = loss   (labels, z, tag='criterion')  
-errs = metric (labels, z, tag='evaluation') 
-            scaledLogLikelihood = Pass (z - LogPrior (labels), tag='output')
-        ]
-        M = 363
-        H = 512
-        J = 132
-        model = Sequential (
-            FeatureMVNLayer{} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {J}
-        )
-features = Input {M} 
-        labels   = Input {J}
-        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ClassificationError)
-    ].fit))
-    BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        layerSizes=363:512:512:132  // [0..]
-        trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
-        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
-        applyMeanVarNorm=true
-        initValueScale=1.0
-        uniformInit=true
-        BFF(in, rows, cols) = [
-           B = Parameter(rows, 1, init = 'fixedValue', value = 0)
-           W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/)
-           z = W*in+B
-        ].z
-        GBFF(f, in, rows, cols) = f(BFF(in, rows, cols))
-        L = Length(layerSizes)-1    // number of model layers
-        features = Input(layerSizes[0], tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], tag='label')
-        featNorm = if applyMeanVarNorm
-                   then MeanVarNorm(features)
-                   else features
-        layers[layer:1..L-1] = if layer > 1
-                               then GBFF(layerTypes[layer], layers[layer-1], layerSizes[layer], layerSizes[layer-1])
-                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
-        outLayer = BFF(layers[L-1], layerSizes[L], layerSizes[L-1])
-        outZ = outLayer
-        CE = trainingCriterion(labels, outZ, tag='criterion')
-        Err = evalCriterion(labels, outZ, tag='evaluation')
-        logPrior = LogPrior(labels)
-        // TODO: how to add a tag to an infix operation?
-        ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
-    ]
-    SGD = [
-        epochSize = 20480
-        minibatchSize = 64:256:1024:
-        learningRatesPerMB = 1.0:0.5:0.1
-        numMBsToShowResult = 10
-        momentumPerMB = 0.9:0.656119
-        dropoutRate = 0.0
-        maxEpochs = 3
-        keepCheckPointFiles = true
-        AutoAdjust = [
-            reduceLearnRateIfImproveLessThan = 0
-            loadBestModel = true
-            increaseLearnRateIfImproveMoreThan = 1000000000
-            learnRateDecreaseFactor = 0.5
-            learnRateIncreaseFactor = 1.382
-            autoAdjustLR = "adjustAfterEpoch"
-        ]
-        clippingThresholdPerSample = 1#INF
-    ]
-    reader = [
-        readerType = "HTKMLFReader"
-        readMethod = "blockRandomize"
-        miniBatchMode = "partial"
-        randomize = "auto"
-        verbosity = 0
-        useMersenneTwisterRand=true
-        features = [
-            dim = 363
-            type = "real"
-            scpFile = "glob_0000.scp"
-        ]
-        labels = [
-            mlfFile = "$DataDir$/glob_0000.mlf"
-            labelMappingFile = "$DataDir$/state.list"
-            labelDim = 132
-            labelType = "category"
-        ]
-    ]
-]
-currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E
-OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-DeviceId=-1
-timestamping=true
-makeMode=true
-
-08/16/2016 10:00:59: <<<<<<<<<<<<<<<<<<<< RAW CONFIG (VARIABLES NOT RESOLVED)  <<<<<<<<<<<<<<<<<<<<
-
-08/16/2016 10:00:59: >>>>>>>>>>>>>>>>>>>> RAW CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-08/16/2016 10:00:59: precision = "float"
-command = speechTrain
-deviceId = -1
-parallelTrain = false
-makeMode = false
-speechTrain = [
-    action = "train"
-    modelPath = "/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn"
-    deviceId = -1
-    traceLevel = 1
-    SimpleNetworkBuilder = [
-        layerSizes = 363:512:512:132
-        trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ClassificationError"
-        layerTypes = "Sigmoid"
-        applyMeanVarNorm = true
-        initValueScale = 1.0
-        uniformInit = true
-        needPrior = true
-    ]
-    BrainScriptNetworkBuilder = (new ComputationNetwork ([    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        Fit (features, labels, model, loss, metric) = [
-z  = model (features)  
-ce   = loss   (labels, z, tag='criterion')  
-errs = metric (labels, z, tag='evaluation') 
-            scaledLogLikelihood = Pass (z - LogPrior (labels), tag='output')
-        ]
-        M = 363
-        H = 512
-        J = 132
-        model = Sequential (
-            FeatureMVNLayer{} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {J}
-        )
-features = Input {M} 
-        labels   = Input {J}
-        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ClassificationError)
-    ].fit))
-    BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        layerSizes=363:512:512:132  // [0..]
-        trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
-        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
-        applyMeanVarNorm=true
-        initValueScale=1.0
-        uniformInit=true
-        BFF(in, rows, cols) = [
-           B = Parameter(rows, 1, init = 'fixedValue', value = 0)
-           W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/)
-           z = W*in+B
-        ].z
-        GBFF(f, in, rows, cols) = f(BFF(in, rows, cols))
-        L = Length(layerSizes)-1    // number of model layers
-        features = Input(layerSizes[0], tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], tag='label')
-        featNorm = if applyMeanVarNorm
-                   then MeanVarNorm(features)
-                   else features
-        layers[layer:1..L-1] = if layer > 1
-                               then GBFF(layerTypes[layer], layers[layer-1], layerSizes[layer], layerSizes[layer-1])
-                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
-        outLayer = BFF(layers[L-1], layerSizes[L], layerSizes[L-1])
-        outZ = outLayer
-        CE = trainingCriterion(labels, outZ, tag='criterion')
-        Err = evalCriterion(labels, outZ, tag='evaluation')
-        logPrior = LogPrior(labels)
-        // TODO: how to add a tag to an infix operation?
-        ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
-    ]
-    SGD = [
-        epochSize = 20480
-        minibatchSize = 64:256:1024:
-        learningRatesPerMB = 1.0:0.5:0.1
-        numMBsToShowResult = 10
-        momentumPerMB = 0.9:0.656119
-        dropoutRate = 0.0
-        maxEpochs = 3
-        keepCheckPointFiles = true
-        AutoAdjust = [
-            reduceLearnRateIfImproveLessThan = 0
-            loadBestModel = true
-            increaseLearnRateIfImproveMoreThan = 1000000000
-            learnRateDecreaseFactor = 0.5
-            learnRateIncreaseFactor = 1.382
-            autoAdjustLR = "adjustAfterEpoch"
-        ]
-        clippingThresholdPerSample = 1#INF
-    ]
-    reader = [
-        readerType = "HTKMLFReader"
-        readMethod = "blockRandomize"
-        miniBatchMode = "partial"
-        randomize = "auto"
-        verbosity = 0
-        useMersenneTwisterRand=true
-        features = [
-            dim = 363
-            type = "real"
-            scpFile = "glob_0000.scp"
-        ]
-        labels = [
-            mlfFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/glob_0000.mlf"
-            labelMappingFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list"
-            labelDim = 132
-            labelType = "category"
-        ]
-    ]
-]
-currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E
-OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-DeviceId=-1
-timestamping=true
-makeMode=true
-
-08/16/2016 10:00:59: <<<<<<<<<<<<<<<<<<<< RAW CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-
-08/16/2016 10:00:59: >>>>>>>>>>>>>>>>>>>> PROCESSED CONFIG WITH ALL VARIABLES RESOLVED >>>>>>>>>>>>>>>>>>>>
-configparameters: cntk.cntk:command=speechTrain
-configparameters: cntk.cntk:ConfigDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/QuickE2E
-configparameters: cntk.cntk:currentDirectory=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-configparameters: cntk.cntk:DataDir=/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data
-configparameters: cntk.cntk:deviceId=-1
-configparameters: cntk.cntk:makeMode=true
-configparameters: cntk.cntk:OutputDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-configparameters: cntk.cntk:parallelTrain=false
-configparameters: cntk.cntk:precision=float
-configparameters: cntk.cntk:RunDir=/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu
-configparameters: cntk.cntk:speechTrain=[
-    action = "train"
-    modelPath = "/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn"
-    deviceId = -1
-    traceLevel = 1
-    SimpleNetworkBuilder = [
-        layerSizes = 363:512:512:132
-        trainingCriterion = "CrossEntropyWithSoftmax"
-        evalCriterion = "ClassificationError"
-        layerTypes = "Sigmoid"
-        applyMeanVarNorm = true
-        initValueScale = 1.0
-        uniformInit = true
-        needPrior = true
-    ]
-    BrainScriptNetworkBuilder = (new ComputationNetwork ([    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        Fit (features, labels, model, loss, metric) = [
-z  = model (features)  
-ce   = loss   (labels, z, tag='criterion')  
-errs = metric (labels, z, tag='evaluation') 
-            scaledLogLikelihood = Pass (z - LogPrior (labels), tag='output')
-        ]
-        M = 363
-        H = 512
-        J = 132
-        model = Sequential (
-            FeatureMVNLayer{} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {H, activation=Sigmoid} :
-            DenseLayer {J}
-        )
-features = Input {M} 
-        labels   = Input {J}
-        fit = Fit (features, labels, model, CrossEntropyWithSoftmax, ClassificationError)
-    ].fit))
-    BrainScriptNetworkBuilder_plain = [    // the same as above but with BS. Currently not used. Enable by removing the SimpleNetworkBuilder above.
-        // note: this does not produce identical results because of different initialization order of random-initialized LearnableParameters
-        layerSizes=363:512:512:132  // [0..]
-        trainingCriterion=CrossEntropyWithSoftmax
-        evalCriterion=ClassificationError
-        layerTypes[i:1..Length(layerSizes)-2]=Sigmoid
-        applyMeanVarNorm=true
-        initValueScale=1.0
-        uniformInit=true
-        BFF(in, rows, cols) = [
-           B = Parameter(rows, 1, init = 'fixedValue', value = 0)
-           W = Parameter(rows, cols, init = if uniformInit then 'uniform' else 'gaussian'/*, initValueScale from outer scope*/)
-           z = W*in+B
-        ].z
-        GBFF(f, in, rows, cols) = f(BFF(in, rows, cols))
-        L = Length(layerSizes)-1    // number of model layers
-        features = Input(layerSizes[0], tag='feature') ; labels = Input(layerSizes[Length(layerSizes)-1], tag='label')
-        featNorm = if applyMeanVarNorm
-                   then MeanVarNorm(features)
-                   else features
-        layers[layer:1..L-1] = if layer > 1
-                               then GBFF(layerTypes[layer], layers[layer-1], layerSizes[layer], layerSizes[layer-1])
-                               else GBFF(layerTypes[layer], featNorm, layerSizes[layer], layerSizes[layer-1])
-        outLayer = BFF(layers[L-1], layerSizes[L], layerSizes[L-1])
-        outZ = outLayer
-        CE = trainingCriterion(labels, outZ, tag='criterion')
-        Err = evalCriterion(labels, outZ, tag='evaluation')
-        logPrior = LogPrior(labels)
-        // TODO: how to add a tag to an infix operation?
-        ScaledLogLikelihood = Minus (outZ, logPrior, tag='output')
-    ]
-    SGD = [
-        epochSize = 20480
-        minibatchSize = 64:256:1024:
-        learningRatesPerMB = 1.0:0.5:0.1
-        numMBsToShowResult = 10
-        momentumPerMB = 0.9:0.656119
-        dropoutRate = 0.0
-        maxEpochs = 3
-        keepCheckPointFiles = true
-        AutoAdjust = [
-            reduceLearnRateIfImproveLessThan = 0
-            loadBestModel = true
-            increaseLearnRateIfImproveMoreThan = 1000000000
-            learnRateDecreaseFactor = 0.5
-            learnRateIncreaseFactor = 1.382
-            autoAdjustLR = "adjustAfterEpoch"
-        ]
-        clippingThresholdPerSample = 1#INF
-    ]
-    reader = [
-        readerType = "HTKMLFReader"
-        readMethod = "blockRandomize"
-        miniBatchMode = "partial"
-        randomize = "auto"
-        verbosity = 0
-        useMersenneTwisterRand=true
-        features = [
-            dim = 363
-            type = "real"
-            scpFile = "glob_0000.scp"
-        ]
-        labels = [
-            mlfFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/glob_0000.mlf"
-            labelMappingFile = "/home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list"
-            labelDim = 132
-            labelType = "category"
-        ]
-    ]
-]
-
-configparameters: cntk.cntk:timestamping=true
-08/16/2016 10:00:59: <<<<<<<<<<<<<<<<<<<< PROCESSED CONFIG WITH ALL VARIABLES RESOLVED <<<<<<<<<<<<<<<<<<<<
-08/16/2016 10:00:59: Commands: speechTrain
-08/16/2016 10:00:59: Precision = "float"
-08/16/2016 10:00:59: CNTKModelPath: /tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn
-08/16/2016 10:00:59: CNTKCommandTrainInfo: speechTrain : 3
-08/16/2016 10:00:59: CNTKCommandTrainInfo: CNTKNoMoreCommands_Total : 3
-
-08/16/2016 10:00:59: ##############################################################################
-08/16/2016 10:00:59: #                                                                            #
-08/16/2016 10:00:59: # Action "train"                                                             #
-08/16/2016 10:00:59: #                                                                            #
-08/16/2016 10:00:59: ##############################################################################
-
-08/16/2016 10:00:59: CNTKCommandTrainBegin: speechTrain
+parallelTrain option is not enabled. ParallelTrain config will be ignored.
+12/15/2016 08:32:59: 
+Starting from checkpoint. Loading network from 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.2'.
 SimpleNetworkBuilder Using CPU
 reading script file glob_0000.scp ... 948 entries
-total 132 state names in state list /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/state.list
-htkmlfreader: reading MLF file /home/philly/jenkins/workspace/CNTK-Test-Linux-W1/Tests/EndToEndTests/Speech/Data/glob_0000.mlf ... total 948 entries
+total 132 state names in state list C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/state.list
+htkmlfreader: reading MLF file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/glob_0000.mlf ... total 948 entries
 ...............................................................................................feature set 0: 252734 frames in 948 out of 948 utterances
 label set 0: 129 classes
 minibatchutterancesource: 948 utterances grouped into 3 chunks, av. chunk size: 316.0 utterances, 84244.7 frames
-useParallelTrain option is not enabled. ParallelTrain config will be ignored.
-08/16/2016 10:00:59: Starting from checkpoint. Loading network from '/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn.2'.
+12/15/2016 08:33:00: 
+Model has 25 nodes. Using CPU.
 
-Post-processing network...
+12/15/2016 08:33:00: Training criterion:   CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
+12/15/2016 08:33:00: Evaluation criterion: EvalClassificationError = ClassificationError
 
-7 roots:
-	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax()
-	EvalClassificationError = ClassificationError()
-	InvStdOfFeatures = InvStdDev()
-	MeanOfFeatures = Mean()
-	PosteriorProb = Softmax()
-	Prior = Mean()
-	ScaledLogLikelihood = Minus()
+12/15/2016 08:33:00: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
 
-Validating network. 25 nodes to process in pass 1.
+12/15/2016 08:33:00: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
+12/15/2016 08:33:00: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
+12/15/2016 08:33:00: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
+12/15/2016 08:33:00: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
+12/15/2016 08:33:00: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
+12/15/2016 08:33:00: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
 
-Validating --> labels = InputValue() :  -> [132 x *1]
-Validating --> W2 = LearnableParameter() :  -> [132 x 512]
-Validating --> W1 = LearnableParameter() :  -> [512 x 512]
-Validating --> W0 = LearnableParameter() :  -> [512 x 363]
-Validating --> features = InputValue() :  -> [363 x *1]
-Validating --> MeanOfFeatures = Mean (features) : [363 x *1] -> [363]
-Validating --> InvStdOfFeatures = InvStdDev (features) : [363 x *1] -> [363]
-Validating --> MVNormalizedFeatures = PerDimMeanVarNormalization (features, MeanOfFeatures, InvStdOfFeatures) : [363 x *1], [363], [363] -> [363 x *1]
-Validating --> W0*features = Times (W0, MVNormalizedFeatures) : [512 x 363], [363 x *1] -> [512 x *1]
-Validating --> B0 = LearnableParameter() :  -> [512 x 1]
-Validating --> W0*features+B0 = Plus (W0*features, B0) : [512 x *1], [512 x 1] -> [512 x 1 x *1]
-Validating --> H1 = Sigmoid (W0*features+B0) : [512 x 1 x *1] -> [512 x 1 x *1]
-Validating --> W1*H1 = Times (W1, H1) : [512 x 512], [512 x 1 x *1] -> [512 x 1 x *1]
-Validating --> B1 = LearnableParameter() :  -> [512 x 1]
-Validating --> W1*H1+B1 = Plus (W1*H1, B1) : [512 x 1 x *1], [512 x 1] -> [512 x 1 x *1]
-Validating --> H2 = Sigmoid (W1*H1+B1) : [512 x 1 x *1] -> [512 x 1 x *1]
-Validating --> W2*H1 = Times (W2, H2) : [132 x 512], [512 x 1 x *1] -> [132 x 1 x *1]
-Validating --> B2 = LearnableParameter() :  -> [132 x 1]
-Validating --> HLast = Plus (W2*H1, B2) : [132 x 1 x *1], [132 x 1] -> [132 x 1 x *1]
-Validating --> CrossEntropyWithSoftmax = CrossEntropyWithSoftmax (labels, HLast) : [132 x *1], [132 x 1 x *1] -> [1]
-Validating --> EvalClassificationError = ClassificationError (labels, HLast) : [132 x *1], [132 x 1 x *1] -> [1]
-Validating --> PosteriorProb = Softmax (HLast) : [132 x 1 x *1] -> [132 x 1 x *1]
-Validating --> Prior = Mean (labels) : [132 x *1] -> [132]
-Validating --> LogOfPrior = Log (Prior) : [132] -> [132]
-Validating --> ScaledLogLikelihood = Minus (HLast, LogOfPrior) : [132 x 1 x *1], [132] -> [132 x 1 x *1]
+12/15/2016 08:33:00: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
 
-Validating network. 17 nodes to process in pass 2.
-
-
-Validating network, final pass.
-
-
-
-12 out of 25 nodes do not share the minibatch layout with the input data.
-
-Post-processing network complete.
-
-08/16/2016 10:00:59: Loaded model with 25 nodes on CPU.
-
-08/16/2016 10:00:59: Training criterion node(s):
-08/16/2016 10:00:59: 	CrossEntropyWithSoftmax = CrossEntropyWithSoftmax
-
-08/16/2016 10:00:59: Evaluation criterion node(s):
-08/16/2016 10:00:59: 	EvalClassificationError = ClassificationError
-
-
-Allocating matrices for forward and/or backward propagation.
-
-Memory Sharing: Out of 40 matrices, 19 are shared as 8, and 21 are not shared.
-
-	{ B1 : [512 x 1] (gradient)
-	  H2 : [512 x 1 x *1] (gradient)
-	  HLast : [132 x 1 x *1] (gradient) }
-	{ B0 : [512 x 1] (gradient)
-	  H1 : [512 x 1 x *1] (gradient)
-	  W1*H1+B1 : [512 x 1 x *1] (gradient)
-	  W2*H1 : [132 x 1 x *1] }
-	{ HLast : [132 x 1 x *1]
-	  W2 : [132 x 512] (gradient) }
-	{ H1 : [512 x 1 x *1]
-	  W0*features : [512 x *1] (gradient) }
-	{ W0*features+B0 : [512 x 1 x *1] (gradient)
-	  W1*H1 : [512 x 1 x *1] }
-	{ W1 : [512 x 512] (gradient)
-	  W1*H1+B1 : [512 x 1 x *1] }
-	{ H2 : [512 x 1 x *1]
-	  W1*H1 : [512 x 1 x *1] (gradient) }
-	{ W0 : [512 x 363] (gradient)
-	  W0*features+B0 : [512 x 1 x *1] }
-
-
-08/16/2016 10:00:59: Training 516740 parameters in 6 out of 6 parameter tensors and 15 nodes with gradient:
-
-08/16/2016 10:00:59: 	Node 'B0' (LearnableParameter operation) : [512 x 1]
-08/16/2016 10:00:59: 	Node 'B1' (LearnableParameter operation) : [512 x 1]
-08/16/2016 10:00:59: 	Node 'B2' (LearnableParameter operation) : [132 x 1]
-08/16/2016 10:00:59: 	Node 'W0' (LearnableParameter operation) : [512 x 363]
-08/16/2016 10:00:59: 	Node 'W1' (LearnableParameter operation) : [512 x 512]
-08/16/2016 10:00:59: 	Node 'W2' (LearnableParameter operation) : [132 x 512]
-
-08/16/2016 10:00:59: No PreCompute nodes found, or all already computed. Skipping pre-computation step.
-
-08/16/2016 10:00:59: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
+12/15/2016 08:33:00: Starting Epoch 3: learning rate per sample = 0.000098  effective momentum = 0.656119  momentum as time constant = 2429.9 samples
 minibatchiterator: epoch 2: frames [40960..61440] (first utterance at frame 40960), data subset 0 of 1, with 1 datapasses
 requiredata: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
 
-08/16/2016 10:00:59: Starting minibatch loop.
-08/16/2016 10:01:00:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.97114277 * 10240; EvalClassificationError = 0.53769531 * 10240; time = 0.7304s; samplesPerSecond = 14019.3
-08/16/2016 10:01:00:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.99390316 * 10240; EvalClassificationError = 0.55712891 * 10240; time = 0.4657s; samplesPerSecond = 21989.9
-08/16/2016 10:01:00: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.98252296 * 20480; EvalClassificationError = 0.54741211 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-05; epochTime=1.28078s
-08/16/2016 10:01:00: SGD: Saving checkpoint model '/tmp/cntk-test-20160816095713.701165/Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn'
-08/16/2016 10:01:00: CNTKCommandTrainEnd: speechTrain
+12/15/2016 08:33:00: Starting minibatch loop.
+12/15/2016 08:33:01:  Epoch[ 3 of 3]-Minibatch[   1-  10, 50.00%]: CrossEntropyWithSoftmax = 1.95358448 * 10240; EvalClassificationError = 0.53603516 * 10240; time = 1.0752s; samplesPerSecond = 9524.2
+12/15/2016 08:33:02:  Epoch[ 3 of 3]-Minibatch[  11-  20, 100.00%]: CrossEntropyWithSoftmax = 1.97540913 * 10240; EvalClassificationError = 0.55253906 * 10240; time = 0.8297s; samplesPerSecond = 12341.4
+12/15/2016 08:33:02: Finished Epoch[ 3 of 3]: [Training] CrossEntropyWithSoftmax = 1.96449680 * 20480; EvalClassificationError = 0.54428711 * 20480; totalSamplesSeen = 61440; learningRatePerSample = 9.7656251e-005; epochTime=2.16207s
+12/15/2016 08:33:02: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20161215082728.104126\Speech_QuickE2E@release_cpu/models/cntkSpeech.dnn'
 
-08/16/2016 10:01:00: Action "train" complete.
+12/15/2016 08:33:02: Action "train" complete.
 
-08/16/2016 10:01:00: __COMPLETED__
+12/15/2016 08:33:02: __COMPLETED__

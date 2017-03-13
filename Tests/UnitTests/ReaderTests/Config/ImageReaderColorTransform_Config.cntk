@@ -27,12 +27,12 @@ ColorTransform_Test = [
             width=4
             height=4
             channels=3
-            cropType=center
-            cropRatio=1
+            cropType=Center
+            sideRatio=1
             jitterType=UniRatio
-            brightnessRadius=0:0.2
-            contrastRadius=0:0.2
-            saturationRadius=0:0.4
+            brightnessRadius=0.2
+            contrastRadius=0.2
+            saturationRadius=0.4
             interpolations=linear
         ]
         labels=[

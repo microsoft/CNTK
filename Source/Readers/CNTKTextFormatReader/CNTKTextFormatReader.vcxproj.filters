@@ -5,7 +5,6 @@
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="dllmain.cpp" />
     <ClCompile Include="TextConfigHelper.cpp" />
-    <ClCompile Include="Indexer.cpp" />
     <ClCompile Include="TextParser.cpp" />
     <ClCompile Include="CNTKTextFormatReader.cpp" />
   </ItemGroup>
@@ -23,7 +22,6 @@
     </ClInclude>
     <ClInclude Include="TextConfigHelper.h" />
     <ClInclude Include="Descriptors.h" />
-    <ClInclude Include="Indexer.h" />
     <ClInclude Include="TextReaderConstants.h" />
     <ClInclude Include="TextParser.h" />
     <ClInclude Include="CNTKTextFormatReader.h" />
