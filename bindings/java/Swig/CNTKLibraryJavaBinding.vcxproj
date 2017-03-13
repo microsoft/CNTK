@@ -105,8 +105,8 @@
     <CustomBuild Include="cntk_java.i">
       <FileType>Document</FileType>
       <Command>$(SolutionDir)bindings\java\Swig\generate-java-bindings.cmd $(SolutionDir)</Command>
-      <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h</Outputs>
-      <AdditionalInputs></AdditionalInputs>
+      <Outputs>cntk_java_wrap.cxx; cntk_java_warp.h; $(SolutionDir)bindings\java\SwigProxyClasses\cntk.jar</Outputs>
+      <AdditionalInputs>$(SolutionDir)Source\CNTKv2LibraryDll\API\CNTKLibrary.h;$(SolutionDir)bindings\common\CNTKValueExtend.i;$(SolutionDir)bindings\common\CNTK_ExceptionHandling.i;$(SolutionDir)bindings\common\managed_language_basei;std_unordered_map.i</AdditionalInputs>
     </CustomBuild>
   </ItemGroup>
   <ItemGroup>

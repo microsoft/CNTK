@@ -18,13 +18,6 @@ fi
 if [ "$OS" == "Windows_NT" ]; then
 
   # Copy pretrained models and data
-  TestDataDir=`cygpath -au $CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY`
-  ImageDir=$TEST_ROOT_DIR/../../Examples/Image
-  MnistDir=$ImageDir/DataSets/MNIST
-  DataDir=$MnistDir
-  ConfigDir=$MnistDir/../../GettingStarted
-  OutputDir=$ConfigDir/Output
-  ResnetModelDir=$ImageDir/Classification/ResNet
 
   if [ "$TEST_FLAVOR" == "release" ]; then
     TEST_STRING="Release"
@@ -46,7 +39,6 @@ if [ "$OS" == "Windows_NT" ]; then
   ../../bindings/java/Swig/run-java-test.cmd $SOURCE_DIR $DLL_DIR || exit $?
 
   # Check whether any exceptions encountered
-  grep -i "Inner Exception" $TEST_RUN_DIR/output.txt && exit $?
   exit 0
 
 else
