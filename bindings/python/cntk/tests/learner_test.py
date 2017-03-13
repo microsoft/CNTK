@@ -97,9 +97,9 @@ def test_learner_init():
     assert unit_gain_value
 
     lr_per_sample = learning_rate_schedule([(3,0.1), (2, 0.2), (1, 0.3)], UnitType.sample)
-    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
-    adam_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
-    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
+    fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    fsadagrad(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
     gamma, inc, dec, max, min = [0.1]*5
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)
