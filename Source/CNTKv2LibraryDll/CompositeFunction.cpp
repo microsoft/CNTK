@@ -696,15 +696,15 @@ namespace CNTK
             }
             case PrimitiveOpType::Convolution:
             {
-                NDShape outputMapCount, kernelShape;
-                std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape());
                 auto strides = functionConfig[PrimitiveFunction::AttributeNameStrides].Value<NDShape>();
                 auto lowerPad = functionConfig[PrimitiveFunction::AttributeNameLowerPad].Value<NDShape>();
                 auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                 auto sharing = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameSharing].Value<std::vector<DictionaryValue>>());
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                 auto transpose = functionConfig[PrimitiveFunction::AttributeNameTranspose].Value<bool>();
-                NDShape outputShape = NDShape::Unknown; 
+                NDShape outputMapCount, kernelShape;
+                std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(functionInputs[0].Shape(), functionInputs[1].Shape(), transpose);
+                NDShape outputShape = NDShape::Unknown;
                 if (functionConfig.Contains(PrimitiveFunction::AttributeNameOutputShape))
                     outputShape = functionConfig[PrimitiveFunction::AttributeNameOutputShape].Value<NDShape>();
                 auto maxTempMemSizeInSamples = functionConfig[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples].Value<size_t>();
