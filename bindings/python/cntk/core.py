@@ -181,6 +181,10 @@ class Value(cntk_py.Value):
             else:
                 ndav = batch
 
+        else:
+            raise ValueError('either shape and dtype or batch must be'
+                             'provided')
+
         if seq_starts:
             super(Value, self).__init__(ndav, seq_starts)
         else:
