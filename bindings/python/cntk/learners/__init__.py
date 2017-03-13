@@ -126,7 +126,10 @@ class Learner(cntk_py.Learner):
 
     def reset_learning_rate(self, learning_rate):
         '''
-        Resets the learning rate.
+        Resets the learning rate. The new schedule is adjusted to be relative 
+        to the current number of elapsed samples/sweeps: the 0 offset in 
+        the new schedule corresponds to the current value of elapsed samples/sweeps, 
+        and it takes effect from the current position in the training process onwards.
 
         Args:
             learning_rate (output of :func:`learning_rate_schedule`) 
