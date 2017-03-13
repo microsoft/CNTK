@@ -1,5 +1,5 @@
 from cntk import cntk_py
-from cntk.device import cpu
+from cntk.device import DeviceDescriptor, cpu
 from cntk.utils import variable_value_to_seq, Record, \
         get_python_function_arguments, map_function_arguments
 from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple
