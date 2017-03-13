@@ -143,6 +143,29 @@ class NDArrayView(cntk_py.NDArrayView):
 
         return ndav
 
+    @property
+    def shape(self):
+        '''
+        The shape of this instance.
+        '''
+        return super(NDArrayView, self).shape().dimensions()
+
+    @typemap
+    def slice_view(self, start_offset, extent, read_only=True):
+        '''
+        Returns a sliced view of the instance.
+
+        Args:
+          start_offset (tuple): shape of the same rank as this Value instance
+           that denotes the start of the slicing
+          extent (tuple): shape of the extent to slice
+          read_only (bool): whether the returned slice is read only or not
+        '''
+        return super(NDArrayView, self).slice_view(
+                list(reversed(start_offset)),
+                list(reversed(extent)), 
+                read_only)
+
 
 class Value(cntk_py.Value):
     '''
@@ -423,6 +446,14 @@ class Value(cntk_py.Value):
           minibatch.
         '''
         return np.asarray(super(Value, self).mask())
+
+    @property
+    @typemap
+    def data(self):
+        '''
+        Retrieves the underlying :class:`NDArrayView` instance.
+        '''
+        return super(Value, self).data()
 
     def __len__(self):
         '''
