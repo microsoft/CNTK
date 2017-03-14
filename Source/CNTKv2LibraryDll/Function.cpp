@@ -387,10 +387,15 @@ namespace CNTK
             modelStreamBuffer buf(modelBuffer, modelBufferLength);
             std::istream modelStream(&buf);
 
-            Dictionary model;
-            modelStream >> model;
-            return Function::Deserialize(model, computeDevice);
+            return LoadModel(modelStream, computeDevice);
         }
+    }
+
+    /*static*/ FunctionPtr Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice)
+    {
+        Dictionary model;
+        inputStream >> model;
+        return Function::Deserialize(model, computeDevice);
     }
 
     void Function::RestoreModel(const std::wstring& modelFilePath)

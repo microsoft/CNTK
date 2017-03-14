@@ -1902,22 +1902,24 @@ def slice(x, axis, begin_index, end_index, name=''):
     Slice the input along an axis.
 
     Example:
-        >>> # Slice using input variable
+        >>> # slice using input variable
         >>> # create 2x3 matrix
         >>> x1 = C.input_variable((2,3))
         >>> # slice index 1 (second) at first axis
         >>> C.slice(x1, 0, 1, 2).eval({x1: np.asarray([[[[1,2,-3],
         ...                                              [4, 5, 6]]]],dtype=np.float32)})
         array([[[[ 4.,  5.,  6.]]]], dtype=float32)
+        <BLANKLINE>
         >>> # slice index 0 (first) at second axis
         >>> C.slice(x1, 1, 0, 1).eval({x1: np.asarray([[[[1,2,-3],
         ...                                              [4, 5, 6]]]],dtype=np.float32)})
         array([[[[ 1.],
                  [ 4.]]]], dtype=float32)
 
-        >>> #slice using constant
+        <BLANKLINE>
+        >>> # slice using constant
         >>> data = np.asarray([[1, 2, -3],
-        ...                     [4, 5,  6]], dtype=np.float32)
+        ...                    [4, 5,  6]], dtype=np.float32)
         >>> x = C.constant(value=data)
         >>> C.slice(x, 0, 1, 2).eval()
         array([[ 4.,  5.,  6.]], dtype=float32)
@@ -1925,7 +1927,15 @@ def slice(x, axis, begin_index, end_index, name=''):
         array([[ 1.],
                [ 4.]], dtype=float32)
 
-    NumPy's way of slicing works, too:
+        <BLANKLINE>
+        >>> # slice using the index overload
+        >>> data = np.asarray([[1, 2, -3],
+        ...                    [4, 5,  6]], dtype=np.float32)
+        >>> x = C.constant(value=data)
+        >>> x[0].eval()
+        array([[ 1.,  2.,  -3.]], dtype=float32)
+        >>> x[0, [1,2]].eval()
+        array([[ 2.,  -3.]], dtype=float32)
 
     Example:
         #TODO: Make following lines work. Uncomment when done

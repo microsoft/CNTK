@@ -2997,6 +2997,11 @@ namespace CNTK
         CNTK_API static FunctionPtr LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
+        /// Load a Function from an istream. The legacy V1 model is not supported.
+        ///
+        CNTK_API static FunctionPtr LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
         /// Prints the entire graph underlying this Function to stderr
         ///
         CNTK_API void PrintGraph() const;
@@ -3814,6 +3819,9 @@ namespace CNTK
         CNTK_API static TrainingParameterSchedule<T> Deserialize(const Dictionary& dictionary);
 
     private:
+
+        friend class Learner;
+
         CNTK_API void ConstructSchedule(const std::vector<std::pair<size_t, T>>& schedule);
 
         CNTK_API TrainingParameterSchedule(const Dictionary& dictionary);
@@ -3983,11 +3991,11 @@ namespace CNTK
 
         ///
         /// Sets a new learning rate overriding the schedule parameter used to construct this learner.
+        /// The new schedule is adjusted to be relative to the current number of elapsed samples/sweeps:
+        /// the 0 offset in the new schedule corresponds to the current value of elapsed samples/sweeps, 
+        /// and it takes effect from the current position in the training process onwards.
         ///
-        virtual void ResetLearningRate(const LearningRateSchedule& learningRateSchedule)
-        {
-            m_learningRateSchedule = learningRateSchedule;
-        }
+        CNTK_API virtual void ResetLearningRate(const LearningRateSchedule& learningRateSchedule);
 
         ///
         /// Resets smoothed gradients.
@@ -4067,16 +4075,23 @@ namespace CNTK
     static MomentumSchedule DefaultVarianceMomentum = MomentumAsTimeConstantSchedule(2 * 3600 * 100);
 
     ///
+    /// Create an instance of FSAdaGrad learner as the original paper.
+    ///
+    CNTK_API LearnerPtr FSAdaGradLearner(const std::vector<Parameter>& parameters,
+                                         const LearningRateSchedule& learningRateSchedule,
+                                         const MomentumSchedule& momentumSchedule,
+                                         bool unitGain = DefaultUnitGainValue(),
+                                         const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
+                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+    ///
     /// Create an instance of Adam learner as the original paper.
-    /// Due to history reason, the legacy implementation of AdamLearner is FSAdaGrad. To keep compitability on the interface, we
-    /// will switch to the original Adam only when lowMemory = false, while keep the legacy logic when it leaves default, aka. true.
     ///
     CNTK_API LearnerPtr AdamLearner(const std::vector<Parameter>& parameters,
                                     const LearningRateSchedule& learningRateSchedule,
                                     const MomentumSchedule& momentumSchedule,
                                     bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
-                                    bool lowMemory = true,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
