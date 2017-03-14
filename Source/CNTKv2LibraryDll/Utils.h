@@ -328,13 +328,16 @@ namespace CNTK
         return (int)(axis.StaticAxisIndex() + 1);
     }
 
-    inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape)
+    inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape, bool transpose)
     {
         NDShape kernelShape = convolutionMapShape.SubShape(0, operandShape.Rank());
         auto outputMapCount = convolutionMapShape.SubShape(kernelShape.Rank());
-        NDShape paddedOutputMapCount(operandShape.Rank(), 1);
+        auto shapeRank = operandShape.Rank(); 
+        NDShape paddedOutputMapCount(shapeRank, 1);
         for (size_t i = 0; i < outputMapCount.Rank(); ++i)
-            paddedOutputMapCount[paddedOutputMapCount.Rank() - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
+            paddedOutputMapCount[shapeRank - 1 - i] = outputMapCount[outputMapCount.Rank() - 1 - i];
+        if (transpose && paddedOutputMapCount[shapeRank - 1] == NDShape::InferredDimension)  // conovlution transpose, the mapCount in depth is derived from operandShape 
+            paddedOutputMapCount[shapeRank - 1] = operandShape[shapeRank - 1];
 
         return{ paddedOutputMapCount, kernelShape };
     }

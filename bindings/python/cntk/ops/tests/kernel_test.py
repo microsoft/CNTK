@@ -440,8 +440,8 @@ def test_convolution_transpose(input_size, conv_size, result, device_id, precisi
     y = np.arange(total_size, dtype=dt)
     conv_map = constant(value=y.reshape(conv_size), device=dev)
 
-    from cntk import convolution
-    input_op = convolution(conv_map, a, auto_padding=[False], transpose=True)
+    from cntk import convolution_transpose
+    input_op = convolution_transpose(conv_map, a, auto_padding=[False])
 
     forward_input = {a: input_operand}
     expected_forward = AA([result])
@@ -480,8 +480,8 @@ def test_convolution_transpose_with_output(input_size, conv_size, result, device
     y = np.arange(total_size, dtype=dt)
     conv_map = constant(value=y.reshape(conv_size), device=dev)
 
-    from cntk import convolution
-    input_op = convolution(conv_map, a, auto_padding=[True], strides=2, transpose=True, output_shape=(1,5,6))
+    from cntk import convolution_transpose
+    input_op = convolution_transpose(conv_map, a, auto_padding=[True], strides=2, output_shape=(1,5,6))
 
     forward_input = {a: input_operand}
     expected_forward = AA([result])

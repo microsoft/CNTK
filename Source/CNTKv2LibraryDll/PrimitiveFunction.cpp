@@ -552,7 +552,7 @@ namespace CNTK
                                                 m_inputs[0].AsString().c_str(), (int)m_inputs[0].Shape().Rank(), (int)m_inputs[1].Shape().Rank(), m_inputs[1].AsString().c_str());
 
                             NDShape outputMapCount, kernelShape;
-                            std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(m_inputs[0].Shape(), m_inputs[1].Shape());
+                            std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(m_inputs[0].Shape(), m_inputs[1].Shape(), transpose);
                             auto originalKernelShape = kernelShape;
 
                             auto inputShape = m_inputs[1].Shape();
@@ -572,11 +572,14 @@ namespace CNTK
                                 outputShape = tmpShape; 
                             }
 
+                            auto kernelRank = kernelShape.Rank(); 
                             if (originalKernelShape != kernelShape)
                             {
-                                for (size_t i2 = 0; i2 < kernelShape.Rank(); ++i2)
+                                for (size_t i2 = 0; i2 < kernelRank; ++i2)
                                     m_inputs[0].m_dataFields->m_shape[i2] = kernelShape[i2];
                             }
+                            if (transpose && m_inputs[0].m_dataFields->m_shape[kernelRank] == NDShape::InferredDimension)
+                                m_inputs[0].m_dataFields->m_shape[kernelRank] = outputMapCount[outputMapCount.Rank()-1]; 
 
                             m_attributes[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
                             m_attributes[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);

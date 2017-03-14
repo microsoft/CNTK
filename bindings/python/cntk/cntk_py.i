@@ -154,6 +154,7 @@
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
 %ignore CNTK::Internal::GetComputationNetworkTrackGapNans;
 %ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
+%ignore CNTK::Internal::Convolution; 
 
 %ignore CNTK::Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
