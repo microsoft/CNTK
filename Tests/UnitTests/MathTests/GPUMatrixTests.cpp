@@ -642,7 +642,7 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixOneHot, RandomSeedFixture)
     
     BOOST_CHECK(result.GetNumCols() == 2);
     BOOST_CHECK(result.GetNumRows() == 12);
-    BOOST_CHECK(result.IsEqualTo(exp, 1e-6));
+    BOOST_CHECK(result.IsEqualTo(exp, 1e-3));
 }
 
 #if 0 // Temporarily disabling
