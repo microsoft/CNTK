@@ -5569,19 +5569,13 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
     if (index < num_elements)
     {
         targetBuffer[index] = 1;
-        size_t colIndex = index / num_columns;
         majorIndices[index] = ((index % num_rows) * (int)num_class + (int)indices[index]);
-        secondaryIndices[colIndex + 1] += 1;
     }
 
-    __syncthreads();
     //running sum
-    if (index == 0)
+    if (index  < num_columns)
     {
-        for (int i = 1; i < num_columns; i++)
-        {
-            secondaryIndices[i] += secondaryIndices[i - 1];
-        }
+        secondaryIndices[index + 1] = num_rows * (index + 1);
     }
 }
 
