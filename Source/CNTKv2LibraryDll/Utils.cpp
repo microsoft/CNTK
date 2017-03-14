@@ -716,7 +716,7 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
+    ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const Matrix<ElementType>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/)
     {
         auto CreateMask = [](const MBLayoutPtr& layout, const DeviceDescriptor& device) {
             std::vector<bool> sequenceBeginFlags;
@@ -779,9 +779,7 @@ namespace CNTK
 
         // Reshuffle to data to unpack and uninterleave the CNTK form packed data
         auto unpackedTensorView = ComputationNode<ElementType>::Unpack(AsTensorShape(sampleShape), matrix, layout, /*batchMajor=*/ false, /*maskGaps=*/ false);
-        auto dataShape = sampleShape;
-        if (layout != nullptr)
-            dataShape = dataShape.AppendShape({ layout->GetNumTimeSteps(), layout->GetNumSequences() });
+        auto dataShape = PackedValue::GetUnpackedShape(sampleShape, sampleDynamicAxes, layout);
         auto data = MakeSharedObject<NDArrayView>(AsDataType<ElementType>(), AsDeviceDescriptor(matrix.GetDeviceId()), AsStorageFormat(matrix.GetFormat()), dataShape, readOnly, new TensorView<ElementType>(unpackedTensorView, AsTensorViewShape(dataShape)));
         return MakeSharedObject<Value>(data, mask);
     }
@@ -798,8 +796,9 @@ namespace CNTK
         if ((layout != nullptr) && (matrix.GetNumRows() != var.Shape().TotalSize()))
             LogicError("Unexpected matrix layout: The number (%d) of rows in the matrix does not match the sample size (%d) of the Variable '%S'", (int)matrix.GetNumRows(), (int)var.Shape().TotalSize(), var.AsString().c_str());
 
-        return GetValueObjectFromCNTKImplMatrixAndMBLayout(var.Shape(), matrix, layout, readOnly);
+        return GetValueObjectFromCNTKImplMatrixAndMBLayout(var.Shape(), var.DynamicAxes(), matrix, layout, readOnly);
     }
+
     template void DictionaryValue::AllocateDataPtr<NDShape>(const NDShape& value);
     template void DictionaryValue::AllocateDataPtr<Axis>(const Axis& value);
     template void DictionaryValue::AllocateDataPtr<vector<DictionaryValue>>(const vector<DictionaryValue>& value);
@@ -912,8 +911,8 @@ namespace CNTK
     template std::pair<std::shared_ptr<const Matrix<float>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<float>(const Variable& var, const ValuePtr& value);
     template std::pair<std::shared_ptr<const Matrix<double>>, MBLayoutPtr> Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<double>(const Variable& var, const ValuePtr& value);
 
-    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const NDShape& sampleShape, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
-    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const NDShape& sampleShape, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
+    template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const NDShape& sampleShape, const std::vector<Axis>& sampleDynamicAxes, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
 
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(const Variable& var, const Matrix<float>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);
     template ValuePtr Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(const Variable& var, const Matrix<double>& matrix, const MBLayoutPtr& layout, bool readOnly /*= true*/);

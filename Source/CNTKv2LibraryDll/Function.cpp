@@ -154,6 +154,32 @@ namespace CNTK
         NOT_IMPLEMENTED;
     }
 
+    void Function::Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                             std::unordered_map<Variable, ValuePtr>& gradients,
+                             std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
+                             const DeviceDescriptor& computeDevice)
+    {
+        if (!this->IsComposite())
+            LogicError("Function '%S': Currently 'Gradients' method is only supported for composite Functions.", AsString().c_str());
+
+        auto gradientRoot = Output();
+        auto outputs = outputsToEvaluate;
+        if (outputsToEvaluate.find(gradientRoot) == outputsToEvaluate.end())
+            outputs.insert({ gradientRoot , nullptr });
+
+        // TODO: Exclude inputs not belonging to 'gradients' from the gradient computation
+        auto backPropState = this->Forward(arguments, outputs, computeDevice, { gradientRoot });
+
+        for (auto outputVarValuePair : outputsToEvaluate)
+            outputsToEvaluate[outputVarValuePair.first] = outputs[outputVarValuePair.first];
+
+        auto gradientRootOutputValue = outputs[gradientRoot];
+        auto rootGradientValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(gradientRoot.GetDataType(), gradientRootOutputValue->Shape(), computeDevice), gradientRootOutputValue->Mask());
+        rootGradientValue->Data()->SetValue(1.0f);
+
+        this->Backward(backPropState, { { gradientRoot, rootGradientValue } }, gradients);
+    }
+
     void Function::SetName(const std::wstring& name)
     {
         if (!Name().empty() && !Internal::IsRenamingFunctionsAllowed())

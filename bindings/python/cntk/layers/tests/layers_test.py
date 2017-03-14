@@ -80,7 +80,7 @@ def test_Function(device_id):
         return x * x
     assert g.shape == (3,2)
     r = g([[[2, 1], [5, 2], [1, 3]]])
-    e = [np.array([[[2, 1], [5, 2], [1, 3]]]) ** 2]
+    e = [np.array([[2, 1], [5, 2], [1, 3]]) ** 2]
     assert_list_of_arrays_equal(r, e, err_msg='@Function test failed')
 
 ####################################
@@ -154,7 +154,7 @@ def test_recurrence_fun(device_id):
     r.update_signature(1)
     data = [np.array([[2], [6], [4], [8], [6]])]   # simple sequence
     out = r(data)
-    exp = [[sum(data[0])]]
+    exp = [sum(data[0])]
     np.testing.assert_array_equal(out, exp, err_msg='Error in recurrence over plus')
 
     ####################################################
@@ -164,7 +164,7 @@ def test_recurrence_fun(device_id):
     r.update_signature(2)
     data = [np.array([[2,1], [6,3], [4,2], [8,1], [6,0]])]   # simple sequence
     out = r(data)
-    exp = [[np.max(data[0], axis=0)]]
+    exp = [np.max(data[0], axis=0)]
     np.testing.assert_array_equal(out, exp, err_msg='Error in recurrence over element_max')
 
 ####################################

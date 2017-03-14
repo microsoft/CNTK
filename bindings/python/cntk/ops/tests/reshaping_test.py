@@ -19,8 +19,9 @@ from cntk.axis import Axis
 from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 
+
 RESHAPE_TEST_CASES = [
-    # (input_shape, output_shape, expected_output_shape)
+    #(input_shape, output_shape, expected_output_shape)
     ((2, 3),    (3, 2), (3, 2)),
     ((2, 3),    (6, 1), (6, 1)),
     ((2, 3),    (6, 1), (6, 1)),
@@ -29,7 +30,6 @@ RESHAPE_TEST_CASES = [
     ((2, 3, 5), (C.InferredDimension, 6), (5, 6)),
     ((2, 3, 5), (5, C.InferredDimension), (5, 6)),
 ]
-
 
 @pytest.mark.parametrize("input_shape, output_shape, expected_output_shape",
                          RESHAPE_TEST_CASES)
@@ -69,9 +69,8 @@ def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)
 
-
 RESHAPE_SUBSHAPE_TEST_CASES = [
-    # (input_shape, replacement_shape, begin_axis, end_axis, expected_output_shape)
+    #(input_shape, replacement_shape, begin_axis, end_axis, expected_output_shape)
     ((2, 3),    (3, 2),                   0,                      Axis.new_leading_axis(),  (3, 2)),
     ((2, 3),    (1),                      0,                      0,                        (1, 2, 3)),
     ((2, 3),    (1, 1),                   Axis.new_leading_axis(),Axis.new_leading_axis(),  (2, 3, 1, 1)),
@@ -124,9 +123,9 @@ def test_op_reshape_subshape(input_shape, replacement_shape, begin_axis, end_axi
 def test_op_reshape_gradient_accumulation(device_id, precision):
     from .. import reshape
 
-    input_shape = (2, 3)
-    output_shape = (3, 2)
-    expected_output_shape = (3, 2)
+    input_shape = (2,3)
+    output_shape = (3,2)
+    expected_output_shape = (3,2)
 
     num_tensor_elements = np.multiply.reduce(input_shape)
     input_tensor = np.arange(
@@ -160,27 +159,26 @@ def test_op_reshape_gradient_accumulation(device_id, precision):
 def test_op_reshape_parameter():
     from .. import reshape, parameter
 
-    param_shape = (4, 2)
+    param_shape = (4,2)
     param_value = np.random.random(param_shape)
     param = parameter(init=param_value)
-    param_new_shape = (8, 1)
+    param_new_shape = (8,1)
     param_reshaped = reshape(param, param_new_shape)
 
     expected_forward = np.copy(param_value).reshape(param_new_shape)
     state, result = param_reshaped.forward({}, [param_reshaped.output],
                                            [param_reshaped.output])
     assert np.allclose(result[param_reshaped.output], expected_forward)
-
+    
     grad = param_reshaped.backward(state, np.ones(param_new_shape), [param])
     assert np.allclose(grad[param], np.ones(param_shape))
 
 
 SLICE_TEST_CASES_STATIC = [
-    # (input_data, slice_params(beg_index, end_index, axis), expected_result)
+    #(input_data, slice_params(beg_index, end_index, axis), expected_result)
     ([[1, 2], [-3, 4]], (1, 2, 0), [[-3, 4]]),
-    ([[1, 2], [-3, 4]], (1, 2, 1), [[2], [4]]),
+    ([[1,2],[-3,4]], (1,2,1), [[2],[4]]),
 ]
-
 
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
                          SLICE_TEST_CASES_STATIC)
@@ -227,7 +225,6 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
                    {'begin_index': slice_params[0],
                     'end_index': slice_params[1],
                     'axis': slice_params[2]})
-
 
 SLICE_OVERLOAD_TEST_CASES_STATIC = [
     # (input_data, slices, axis, expected_result)
@@ -286,10 +283,8 @@ def test_op_slice_overload(input_data, slices, expected_result,
     unittest_helper(input_op,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)
-
-
 SLICE_TEST_CASES_DYNAMIC = [
-    # (input_data, slice_params(beg_index, end_index), expected_result)
+    #(input_data, slice_params(beg_index, end_index), expected_result)
     # Note that input_data contains sequences
     ([[[1, 2, 3]], [[-4, 5, 6]], [[7, 8, 9]]],
         (0, 2),
@@ -299,7 +294,7 @@ SLICE_TEST_CASES_DYNAMIC = [
         [[[1, 2, 3], [11, 12, 13]], [[-4, 5, 6], [-14, 15, 16]]]),
     ([[[1, 2, 3], [11, 12, 13]], [[-4, 5, 6], [-14, 15, 16]], [[7, 8, 9], [17, 18, 19]]],
         (1, 2),
-        [[[-4, 5, 6], [-14, 15, 16]]]),
+        [[-4, 5, 6], [-14, 15, 16]]),
 ]
 
 
@@ -317,17 +312,18 @@ def test_op_slice_sequence(input_data, slice_params, expected_result,
           dynamic_axes=[Axis.default_batch_axis(), t],
           name='a')
 
-    result = C.sequence.slice(a,
-                              begin_index=slice_params[0],
-                              end_index=slice_params[1])
+    result = C.sequence.slice(a, 
+            begin_index=slice_params[0], 
+            end_index=slice_params[1])
 
     def grad_slice(x, beg_index, end_index):
         res = np.zeros_like(x)
         res[beg_index:end_index] = 1
         return res
 
-    expected_forward = AA([expected_result],
-                          dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = AA([expected_result], 
+            dtype=PRECISION_TO_TYPE[precision])
     expected_backward = {
         a: [grad_slice(np.asarray(input_data), *slice_params)]
     }
@@ -343,9 +339,8 @@ def test_op_slice_sequence(input_data, slice_params, expected_result,
 # FIXME once the overloads are in place, integrate test_op_slice_overload from
 # contrib\Python\cntk\ops\tests\reshaping_test.py (check Git history)
 
-
 SPLICE_TEST_CASES = [
-    # (input_data1, input_data2, axis, expected_result)
+    #(input_data1, input_data2, axis, expected_result)
     ([1], [2], 0, [1, 2]),
     ([1], [2], -1, [1, 2]),
     ([1], [2], Axis.new_leading_axis(), [[1], [2]]),
@@ -455,7 +450,7 @@ def test_op_gather_derived_dynamic_axes_equivalence(device_id, precision):
     input_data2.shape = (1, 1) + input_data2.shape
 
     res = z.eval({a: input_data1, b: input_data2})
-    expected_forward = [[[3.]]]
+    expected_forward = [[3.]]
     assert np.array_equal(res, expected_forward)
 
 
@@ -470,12 +465,12 @@ def test_op_gather_sparse(device_id):
 
     a_last = sequence.last(a)
     a_last_dense = times(a_last, np.eye(vocab_size))
-    res = a_last_dense.eval({a: input_data})
-    assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1]], [[0, 0, 0, 0, 1, 0]], [[0, 0, 1, 0, 0, 0]]])
+    res = a_last_dense.eval({a : input_data})
+    assert np.array_equal(res, [[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 0]])
 
     a_last_2 = sequence.slice(a, -2, 0)
     a_last_2_dense = times(a_last_2, np.eye(vocab_size))
-    res = a_last_2_dense.eval({a: input_data})
+    res = a_last_2_dense.eval({a : input_data})
     assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 1]], [[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 1, 0]], [[1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0]]])
 
 
@@ -490,7 +485,7 @@ def test_op_scatter_sparse(device_id):
 
     a_last_scatter = sequence.scatter(sequence.last(a), sequence.is_first(a))
     a_last_scatter_dense = times(a_last_scatter, np.eye(vocab_size))
-    res = a_last_scatter_dense.eval({a: input_data})
+    res = a_last_scatter_dense.eval({a : input_data})
     assert np.array_equal(res[0], np.asarray([[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
     assert np.array_equal(res[1], np.asarray([[0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0]]))
     assert np.array_equal(res[2], np.asarray([[0, 0, 1, 0, 0, 0], [0, 0, 0, 0, 0, 0]]))
@@ -516,7 +511,7 @@ def test_op_broadcast_as(device_id, precision):
           name='b')
 
     broadcast_a_as_b = sequence.broadcast_as(a, b)
-
+    
     res = broadcast_a_as_b.eval({a: a_data, b: b_data})
     assert np.array_equal(res[0], np.asarray([[1.]]))
     assert np.array_equal(res[1], np.asarray([[2.], [2.]]))
@@ -541,7 +536,7 @@ def test_op_broadcast_as_in_loop(device_id):
     out_delayed_plus_b = out_delayed + b
     out = sequence.broadcast_as(a, out_delayed_plus_b)
     out.replace_placeholder(out)
-
+    
     res = out.eval({a: a_data, b: b_data})
     assert np.array_equal(res[0], np.asarray([[1.]]))
     assert np.array_equal(res[1], np.asarray([[2.], [2.]]))
@@ -564,11 +559,11 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(actual_grad[0], np.asarray([[2.]]))
     assert np.array_equal(actual_grad[1], np.asarray([[2.], [2.]]))
     assert np.array_equal(actual_grad[2], np.asarray([[2.], [2.], [2.]]))
-
+    
     res = sequence_sum_a_plus_sequence_sum_a.eval({a: a_data})
-    assert np.array_equal(res[0], np.asarray([[4.]]))
-    assert np.array_equal(res[1], np.asarray([[10.]]))
-    assert np.array_equal(res[2], np.asarray([[18.]]))
+    assert np.array_equal(res[0], np.asarray([4.]))
+    assert np.array_equal(res[1], np.asarray([10.]))
+    assert np.array_equal(res[2], np.asarray([18.]))
 
     # Verify that calling sequence reduction on a placeholder with known
     # shape but unknown dynamic axes does not result in a problem
@@ -577,6 +572,6 @@ def test_op_sequence_reduce_sum(device_id, precision):
     r.replace_placeholder(a)
     
     res = r.eval({a: a_data})
-    assert np.array_equal(res[0], np.asarray([[2.]]))
-    assert np.array_equal(res[1], np.asarray([[5.]]))
-    assert np.array_equal(res[2], np.asarray([[9.]]))
+    assert np.array_equal(res[0], np.asarray([2.]))
+    assert np.array_equal(res[1], np.asarray([5.]))
+    assert np.array_equal(res[2], np.asarray([9.]))
