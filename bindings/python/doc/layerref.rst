@@ -1,6 +1,9 @@
 Layers Library Reference
 ========================
 
+Note: This documentation has not yet been completely updated w.r.t. the latest update of the Layers library.
+It should be correct but miss several new options and layer types.
+
 CNTK predefines a number of common "layers," which makes it very easy to
 write simple networks that consist of standard layers layered on top of
 each other. Layers are function objects that can be used like a regular
@@ -28,8 +31,7 @@ you can use the alternative :ref:`sequential` notation:
 
 ::
 
-    from layers import *
-    from models import *
+    from cntk.layers import *
     my_model = Sequential ([
         Dense(1024, activation=relu),
         Dense(9000, activation=softmax)
@@ -70,12 +72,15 @@ Specifying the same options to multiple layers
 Often, many layers share options. For example, typical image-recognition
 systems use the ``relu`` activation function throughout. You can use the
 Python ``with`` statement with the CNTK ``default_options()`` function
-to define scopes with locally changed defaults, using this syntax:
+to define scopes with locally changed defaults, using one of the following two forms:
 
 ::
 
     with default_options(OPT1=VAL1, OPT2=VAL2, ...):
         # scope with modified defaults
+
+    with default_options_for(FUNCTION, OPT1=VAL1, OPT2=VAL2, ...):
+        # scope with modified defaults for FUNCTION only
 
 The following options can be overridden with the ``with`` statement: 
 
@@ -86,11 +91,10 @@ The following options can be overridden with the ``with`` statement:
     - ``initial_state`` (default: ``None``): initial state to use in ``Recurrence()`` :ref:`recurrence` 
     - ``use_peepholes`` (default: ``False``): use peephole connections in ``LSTM()`` :ref:`lstm`
 
-Note that at present, it is not possible to set default options on a
-per-layer type. This would, for example, be valuable for the ``pad``
+The second for allows to set default options on a
+per-layer type. This is, for example, valuable for the ``pad``
 parameter which enables padding in convolution and pooling, but is not
-always set to the same for these two layer types. Per-layer type
-defaults are planned for the near future.
+always set to the same for these two layer types.
 
 Weight sharing
 ~~~~~~~~~~~~~~
@@ -119,12 +123,12 @@ compares the resulting hidden vectors:
 ::
 
     with default_options(activation=relu):
-        image_to_vec = Sequential (
-            Convolution((5,5), 32, pad=True), MaxPooling((3,3), strides=(2,2)),
-            Convolution((5,5), 64, pad=True), MaxPooling((3,3), strides=(2,2)),
+        image_to_vec = Sequential([
+            Convolution((5,5), 32, pad=True), MaxPooling((3,3), strides=2),
+            Convolution((5,5), 64, pad=True), MaxPooling((3,3), strides=2),
             Dense(64),
             Dense(10, activation=None)
-        )
+        ])
     z_doc   = image_to_vec (doc)
     z_query = image_to_vec (query)  # same model as for z_doc
     sim = cos_distance(zdoc, z_query)
@@ -152,8 +156,7 @@ it with a recurrent LSTM, and then classifies each word:
 
 ::
 
-    from layers import *
-    from models import *
+    from cntk.layers import *
     tagging_model = Sequential ([
         Embedding(150),         # embed into a 150-dimensional vector
         Recurrence(LSTM(300)),  # forward LSTM
@@ -170,9 +173,9 @@ pattern):
     with default_options(activation=relu):
         conv_net = Sequential ([
             # 3 layers of convolution and dimension reduction by pooling
-            Convolution((5,5), 32, pad=True), MaxPooling((3,3), strides=(2,2)),
-            Convolution((5,5), 32, pad=True), MaxPooling((3,3), strides=(2,2)),
-            Convolution((5,5), 64, pad=True), MaxPooling((3,3), strides=(2,2)),
+            Convolution((5,5), 32, pad=True), MaxPooling((3,3), strides=2),
+            Convolution((5,5), 32, pad=True), MaxPooling((3,3), strides=2),
+            Convolution((5,5), 64, pad=True), MaxPooling((3,3), strides=2),
             # 2 dense layers for classification
             Dense(64),
             Dense(10, activation=None)
@@ -206,9 +209,10 @@ optional activation function.
 
 ::
 
-    Dense(shape, init=init_default_or_glorot_uniform, activation=activation_default_or_None,
+    Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
           input_rank=None, map_rank=None,
-          bias=bias_default_or_True, init_bias=init_bias_default_or_0)
+          bias=default_override_or(True), init_bias=default_override_or(0),
+          name='')
 
 Parameters
 ~~~~~~~~~~
@@ -299,19 +303,23 @@ Creates a convolution layer with optional non-linearity.
 
 ::
 
-    Convolution(rf_shape, num_filters=None,
-                activation=activation_default_or_None,
-                init=init_default_or_glorot_uniform,
-                pad=pad_default_or_False,
+    Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
+                num_filters=None, # e.g. 64 or None (which means 1 channel and don't add a dimension)
+                sequential=False, # time convolution if True (filter_shape[0] corresponds to dynamic axis)
+                activation=default_override_or(identity),
+                init=default_override_or(glorot_uniform()),
+                pad=default_override_or(False),
                 strides=1,
-                bias=bias_default_or_True,
-                init_bias=init_bias_default_or_0,
-                use_correlation=True)
+                bias=default_override_or(True),
+                init_bias=default_override_or(0),
+                reduction_rank=1, # (0 means input has no depth dimension, e.g. audio signal or B&W image)
+                max_temp_mem_size_in_samples=0,
+                name='')
 
 Parameters
 ~~~~~~~~~~
 
--  ``rf_shape``: shape of receptive field of the filter, e.g. ``(5,5)``
+-  ``filter_shape``: shape of receptive field of the filter, e.g. ``(5,5)``
    for a 2D filter (not including the input feature-map depth)
 -  ``num_filters``: number of output channels (number of filters)
 -  ``activation``: optional non-linearity, e.g. ``activation=relu``
@@ -373,19 +381,19 @@ and shapes:
 
 ::
 
-    input shape     : (               num_input_channels, (spatial dims) )
-    receptive field : (                                   (rf_shape)     )
-    output shape    : ( num_filters,                      (spatial dims) )
-    kernel shape    : ( num_filters,  num_input_channels, (rf_shape)     )
+    input shape   : (               num_input_channels, (spatial dims) )
+    filter shape  : (                                   (filter_shape) )
+    output shape  : ( num_filters,                      (spatial dims) )
+    kernel shape  : ( num_filters,  num_input_channels, (filter_shape)     )
 
 which in our example are:
 
 ::
 
-    input shape     : (              3, 480, 640 )
-    receptive field : (                   5, 5   )
-    output shape    : ( num_filters,    480, 640 )
-    kernel shape    : ( num_filters, 3,   5, 5   )
+    input shape   : (              3, 480, 640 )
+    filter shape  : (                   5, 5   )
+    output shape  : ( num_filters,    480, 640 )
+    kernel shape  : ( num_filters, 3,   5, 5   )
 
 Padding
 ~~~~~~~
@@ -434,13 +442,19 @@ Factory functions to create a max- or average-pooling layer.
 
 ::
 
-    MaxPooling(rf_shape, strides=1, pad=False)
-    AveragePooling(rf_shape, strides=1, pad=False)
+    MaxPooling(filter_shape,      # shape of receptive field, e.g. (3,3)
+               strides=1,
+               pad=default_override_or(False),
+               name='')
+    AveragePooling(filter_shape,  # shape of receptive field, e.g. (3,3)
+                   strides=1,
+                   pad=default_override_or(False),
+                   name='')
 
 Parameters
 ~~~~~~~~~~
 
--  ``rf_shape``: receptive field (window) to pool over, e.g. ``(2,2)``
+-  ``filter_shape``: receptive field (window) to pool over, e.g. ``(2,2)``
    (not including the input feature-map depth)
 -  ``strides``: increment when sliding the pool over the input. E.g.
    ``(2,2)`` to reduce the dimensions by 2
@@ -489,8 +503,8 @@ Factory functions to create a global-max-pooling or global-average-pooling layer
 
 ::
 
-    GlobalMaxPooling()
-    GlobalAveragePooling()
+    GlobalMaxPooling(name='')
+    GlobalAveragePooling(name='')
 
 Return Value
 ~~~~~~~~~~~~
@@ -524,12 +538,12 @@ Factory functions to create a dropout layer.
 
 ::
 
-    Dropout(prob)
+    Dropout(dropout_rate=None, keep_prob=None, name='')
 
 Parameters
 ~~~~~~~~~~
 
--  ``prob``: a fraction between [0, 1) that specifies the probability by which
+-  ``dropout_rate``: a fraction between [0, 1) that specifies the probability by which
    the dropout operation will randomly set elements of the input to zero. 0 mean 
    select everything and close to 1 mean drop every element.
 
@@ -561,7 +575,7 @@ learned or a constant passed from outside.
 
 ::
 
-    Embedding(shape=None, init=None, weights=None)
+    Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name='')
 
 Parameters
 ~~~~~~~~~~
@@ -652,12 +666,15 @@ Factory function to create a single-layer or multi-layer recurrence.
 
 ::
 
-    Recurrence(over, go_backwards=False, initial_state=initial_state_default_or_None)
+    Recurrence(step_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name='')
+    RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name='')
+    Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name='')
+    UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name='')
 
 Parameters
 ~~~~~~~~~~
 
--  ``over``: the ``Function`` to recur over, for example ``LSTM()``
+-  ``step_function``: the ``Function`` to recur over, for example ``LSTM()``
 -  ``go_backwards`` (optional): if ``True``, the recurrence is run
    backwards
 -  ``initial_state`` (optional, default 0): initial value of the hidden
@@ -667,7 +684,7 @@ Parameters
 Return Value
 ~~~~~~~~~~~~
 
-A function that implements the desired layer that recurrently applies a
+``Recurrence()`` creates a function that implements the desired layer that recurrently applies a
 model, such as an LSTM, to an input sequence. This layer maps an input
 sequence to a sequence of hidden states of the same length.
 
@@ -679,23 +696,28 @@ a dynamic axis. This operation automatically handles batches of
 variable-length input sequences. The initial value(s) of the hidden
 state variable(s) are 0 unless specified by ``initial_state``.
 
+The ``step_function`` must be a CNTK Function that takes the previous state
+and a new input, and outputs a new state.
+State may consist of multiple variables (e.g. ``h`` and ``c`` in the case of the LSTM).
+
 Applying this layer to an input sequence will return the sequence of the
 hidden states of the ``Function`` to recur over (in case of an LSTM, the
 LSTM's memory cell's value is not returned). The returned sequence has
 the same length as the input. If only the last state is desired, as in
 sequence-classification or some sequence-to-sequence scenarios, use
-``select_last`` to extract the last item's hidden state only. (In a
-backward recurrence, you would use ``select_first``.)
+``Fold()`` instead of ``Recurrence()``.
+
+Any function with such a signature can be used.
+For example, ``Recurrence(plus, initial_value=0)`` is a layer that computes a cumulative sum over the input data,
+while ``Fold(element_max)`` is a layer that performs max-pooling over a sequence.
 
 To create a bidirectional model with ``Recurrence()``, use two layers,
 one with ``go_backwards=True``, and ``splice()`` the two outputs
 together.
 
-Currently, ``initial_state`` cannot have a dynamic batch axis. It can
-only be a constant or a learnable parameter tensor. As an initial state
-with dynamic batch axis would provide a very convenient way of
-describing sequence-to-sequence models, it is planned to be supported in
-the near future.
+``initial_state`` may have a dynamic batch axis. In that case,
+the preferred pattern is ``RecurrentFrom()``, which creates a function
+that takes the initial state as its first argument(s), followed by the inputs.
 
 Example
 ~~~~~~~
@@ -723,17 +745,26 @@ dimension compared to above), use this:
 
 .. _lstm:
 
-LSTM()
-------
+LSTM(), GRU(), RNNUnit()
+------------------------
 
-Factory function to create a stateless LSTM ``Function``, typically for
+Factory functions to create a stateless LSTM/GRU/RNN ``Function``, typically for
 use with ``Recurrence()``.
 
 ::
 
-    LSTM(shape, cell_shape=None, use_peepholes=use_peepholes_default_or_False,
-         init=init_default_or_glorot_uniform, init_bias=init_bias_default_or_0,
-         enable_self_stabilization=enable_self_stabilization_default_or_False)
+    LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peepholes=default_override_or(False),
+         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+         enable_self_stabilization=default_override_or(False),
+         name='')
+    GRU(shape, cell_shape=None, activation=default_override_or(tanh),
+        init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+        enable_self_stabilization=default_override_or(False),
+        name='')
+    RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
+            init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
+            enable_self_stabilization=default_override_or(False),
+            name='')
 
 Parameters
 ~~~~~~~~~~
@@ -753,13 +784,14 @@ Parameters
 Return Value
 ~~~~~~~~~~~~
 
-A ``Function`` that implements stateless Long-Short-Term-Memory,
-typically for use with ``Recurrence()``
+A ``Function`` that implements stateless Long-Short-Term-Memory, Gated Recurrent Unit, or
+plain recurrent unit,
+typically for use with the ``Recurrence()`` family of higher-order layers.
 
 Description
 ~~~~~~~~~~~
 
-This creates a ``Function`` object that implements the LSTM. It returns
+This creates a ``Function`` object that implements the LSTM, GRU, or a RNN block. It returns
 its current state, and takes the previous state as an additional input.
 The function is stateless; i.e., it is *not* a recurrent LSTM layer. Use
 ``Recurrence()`` to turn this into a recurrent layer that is applied
@@ -777,7 +809,7 @@ Factory function to create a layer that delays its input.
 
 ::
 
-    Delay(T=1, initial_state=None)
+    Delay(T=1, initial_state=default_override_or(0), name='')
 
 Parameters
 ~~~~~~~~~~
@@ -858,11 +890,13 @@ normalization, and self-stabilization.
 
 ::
 
-    BatchNormalization(map_rank=None, init_scale=1,
-                       normalization_time_constant=5000, blend_time_constant=0,
-                       epsilon=0.00001, use_cntk_engine=True):
-    LayerNormalization(initial_scale=1, initial_bias=0)
-    Stabilizer(steepness=4)
+    BatchNormalization(map_rank=default_override_or(None),  # if given then normalize only over this many dimensions. E.g. pass 1 to tie all (h,w) in a (C, H, W)-shaped input
+                       init_scale=1,
+                       normalization_time_constant=default_override_or(5000), blend_time_constant=0,
+                       epsilon=default_override_or(0.00001), use_cntk_engine=default_override_or(False),
+                       name='')
+    LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override_or(0.00001), name='')
+    Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True), name='')
 
 Parameters
 ~~~~~~~~~~
@@ -965,7 +999,7 @@ functions one after another ("forward function composition").
 
 ::
 
-    Sequential(layers)
+    Sequential(layers, name='')
 
 Parameters
 ~~~~~~~~~~
@@ -1055,7 +1089,7 @@ deep-neural network work on speech recognition:
     features = Input(40)
     p = my_model(features)
 
-.. _layerstack:
+.. _for:
 
 For()
 -----
@@ -1064,7 +1098,7 @@ Repeats a layer multiple times.
 
 ::
 
-    For(range(N), constructor)
+    For(rng, constructor, name='')
 
 Parameters
 ~~~~~~~~~~
