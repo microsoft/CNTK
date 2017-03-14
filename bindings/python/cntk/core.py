@@ -156,15 +156,13 @@ class NDArrayView(cntk_py.NDArrayView):
         Returns a sliced view of the instance.
 
         Example:
+            >>> # Creating an array of shape (1, 1, 2, 3)
             >>> np_array = np.asarray([[[[10, 20, 30], [40, 50, 60]]]], \
                                       dtype=np.float32)
             >>> nd = NDArrayView.from_dense(np_array)
-            >>> nd.shape
-            (1, 1, 2, 3)
             >>> sliced = nd.slice_view([0, 0, 0, 0], [2, 3])
             >>> np_sliced = np.asarray(sliced)
-            >>> print(np_sliced.shape)
-            (2, 3)
+            >>> # Result is an array of shape (2, 3)
             >>> print(np_sliced)
             [[ 10.  20.  30.]
              [ 40.  50.  60.]]
