@@ -231,6 +231,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
             data.
           * any other type: if node has a unique input, arguments is
             mapped to this input.
+
          For nodes with more than one input, only dict is allowed.
 
          In both cases, every sample in the data will be interpreted

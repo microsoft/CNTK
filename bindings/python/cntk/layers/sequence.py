@@ -218,10 +218,14 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
     '''
     Layer factory function to create a function that implements the unfold() anamorphism. It creates a function that, starting with a seed input,
     applies 'generator_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
-    it may have this form:
-       `result = f(... f(f([g(input), initial_state])) ... )`
-    or this form:
-       `result = f(g(input), ... f(g(input), f(g(input), initial_state)) ... )`
+    it may have this form::
+
+      result = f(... f(f([g(input), initial_state])) ... )
+
+    or this form::
+
+      result = f(g(input), ... f(g(input), f(g(input), initial_state)) ... )
+
     where `f` is `generator_function`.
     An example use of this is sequence-to-sequence decoding, where `g(input)` is the sequence encoder,
     `initial_state` is the sentence-start symbol, and `f` is the decoder. The first

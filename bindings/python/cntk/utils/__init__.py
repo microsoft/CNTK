@@ -204,9 +204,12 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         op (:class:`Function`): operation to evaluate
         arguments: maps variables to their input data. The
          interpretation depends on the input type:
+
           * `dict`: keys are input variable or names, and values are the input data.
+
           * any other type: if node has a unique input, ``arguments`` is mapped to this input.
-           For nodes with more than one input, only `dict` is allowed.
+            For nodes with more than one input, only `dict` is allowed.
+
          In both cases, every sample in the data will be interpreted
          as a new sequence. To mark samples as continuations of the
          previous sequence, specify ``arguments`` as `tuple`: the
@@ -351,8 +354,9 @@ def Signature(*args, **kwargs):
         **kwargs: types of arguments with optional names, e.g. `x=Tensor[42]`. Use this second form for
            longer argument lists.
 
-    Example:
-     ``# Python 3:
+    Example::
+
+     # Python 3:
      @Function
      def f(x: Tensor[42]):
          return sigmoid(x)

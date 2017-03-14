@@ -65,9 +65,10 @@ class Function(cntk_py.Function):
         ``@Function`` constructs a Function from a Python lambda
         where the Function's input signature is defined by the lambda.
 
-        Use this as a decorator, e.g.:
-          ``@Function
-          def f(x): return x * x``
+        Use this as a decorator, e.g.::
+
+          @Function
+          def f(x): return x * x
 
         The above form creates a CNTK Function whose arguments are placeholder variables.
         Such a function can only be combined with others symbolic functions.
@@ -76,19 +77,21 @@ class Function(cntk_py.Function):
         of the arguments. In this case, the @Function decorator creates a CNTK Function
         whose arguments are input variables.
 
-        If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.:
-          ``@Function
-          def f(x:Tensor[13]):
-              return x * x``
+        If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.::
 
-        If you are still working with Python 2.7, use CNTK's @Signature decorator instead:
-          ``@Function
+          @Function
+          def f(x:Tensor[13]):
+              return x * x
+
+        If you are working with Python 2.7, use CNTK's @Signature decorator instead::
+
+          @Function
           @Signature(Tensor[13])
           def f(x):
-              return x * x``
+              return x * x
 
         ``make_block=True`` is used to implement @BlockFunction(). If given the result will be wrapped
-         in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
+        in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
         '''
         f_name = f.__name__ # (only used for debugging and error messages)
 
@@ -471,6 +474,7 @@ class Function(cntk_py.Function):
                  input data.
                * any other type: if node has an unique input, arguments is
                  mapped to this input.
+
              For nodes with more than one input, only dict is allowed.
 
              In both cases, every sample in the data will be interpreted
@@ -587,6 +591,7 @@ class Function(cntk_py.Function):
                  elements of the sequence are grouped along axis 0.
                * any other type: if node has an unique input, arguments is
                  mapped to this input.
+
              For nodes with more than one input, only dict is allowed.
 
              In both cases, every sample in the data will be interpreted

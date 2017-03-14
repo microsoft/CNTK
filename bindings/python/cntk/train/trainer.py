@@ -96,11 +96,14 @@ class Trainer(cntk_py.Trainer):
 
         Args:
             arguments: maps variables to their input data. Empty map signifies
-            end of local training data.
+             end of local training data.
              The interpretation depends on the input type:
+
                * `dict`: keys are input variable or names, and values are the input data.
+
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-                For nodes with more than one input, only `dict` is allowed.
+                 For nodes with more than one input, only `dict` is allowed.
+
              In both cases, every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the
@@ -179,8 +182,10 @@ class Trainer(cntk_py.Trainer):
 
                * `dict`: keys are input variable or names, and values are the input data.
                  See :meth:`~cntk.ops.functions.Function.forward` for details on passing input data.
+
                * any other type: if node has an unique input, ``arguments`` is mapped to this input.
-                For nodes with more than one input, only `dict` is allowed.
+                 For nodes with more than one input, only `dict` is allowed.
+
              In both cases, every sample in the data will be interpreted
              as a new sequence. To mark samples as continuations of the
              previous sequence, specify ``arguments`` as `tuple`: the

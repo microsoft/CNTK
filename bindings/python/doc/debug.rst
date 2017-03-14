@@ -1,5 +1,5 @@
 Debugging models
 ================
 
-.. automodule:: cntk.debug
+.. automodule:: cntk.debugging
    :members:

@@ -157,7 +157,7 @@ class TrainingSession(cntk_py.TrainingSession):
         Perform training on a specified device.
 
         Args:
-            device (:class:~cntk.device.DeviceDescriptor): the device descriptor containing
+            device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor containing
                the type and id of the device where training takes place.
         '''
 

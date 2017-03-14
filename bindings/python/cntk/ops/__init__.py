@@ -30,7 +30,7 @@ def combine(operands, name=''):
     '''
      Create a new Function instance which just combines the outputs of the specified list of
      'operands' Functions such that the 'Outputs' of the new 'Function' are union of the
-     'Outputs' of each of the specified 'operands' Functions. E.g. When creating a classification
+     'Outputs' of each of the specified 'operands' Functions. E.g., when creating a classification
      model, typically the CrossEntropy loss Function and the ClassificationError Function comprise
      the two roots of the computation graph which can be combined to create a single Function
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
@@ -881,9 +881,12 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_NO_INFERRED_
     The operator '@' has been overloaded such that in Python 3.5 and later X @ W equals times(X, W).
     
     For better performance on times operation on sequence which is followed by sequence.reduce_sum, use
-    infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK, i.e. replace following:
+    infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK, i.e. replace following::
+
         sequence.reduce_sum(times(seq1, seq2))
-    with:
+
+    with::
+
         times(seq1, seq2, infer_input_rank_to_map=TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK)
 
     Example:
@@ -1962,7 +1965,6 @@ def slice(x, axis, begin_index, end_index, name=''):
         ...                                              [4, 5, 6]]]],dtype=np.float32)})
         array([[[[ 1.],
                  [ 4.]]]], dtype=float32)
-
         <BLANKLINE>
         >>> # slice using constant
         >>> data = np.asarray([[1, 2, -3],
@@ -1973,7 +1975,6 @@ def slice(x, axis, begin_index, end_index, name=''):
         >>> C.slice(x, 1, 0, 1).eval()
         array([[ 1.],
                [ 4.]], dtype=float32)
-
         <BLANKLINE>
         >>> # slice using the index overload
         >>> data = np.asarray([[1, 2, -3],
@@ -2485,7 +2486,7 @@ def dropout(x, dropout_rate=0.0, name=''):
     Args:
         x: input tensor
         dropout_rate (float, [0,1)): probability that an element of ``x`` will be set to zero
-        name (:class:str, optional): the name of the Function instance in the network
+        name (:class:`str`, optional): the name of the Function instance in the network
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -2545,7 +2546,7 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (type): np.float32 or np.float64
+        dtype (np.float32 or np.float64): data type
         dynamic_axes (list or tuple): a list of dynamic axis (e.g., batch axis, time axis)
         name (str, optional): the name of the Function instance in the network
 

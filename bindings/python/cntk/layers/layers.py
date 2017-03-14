@@ -28,7 +28,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     Dense(shape, activation=identity, init=glorot_uniform(),input_rank=None, map_rank=None, bias=True, init_bias=0, name='')
 
     Layer factory function to create an instance of a fully-connected linear layer of the form
-     `activation(input @ W + b)` with weights `W` and bias `b`, and `activation` and `b` being optional.
+    `activation(input @ W + b)` with weights `W` and bias `b`, and `activation` and `b` being optional.
     `shape` may describe a tensor as well.
 
     A ``Dense`` layer instance owns its parameter tensors `W` and `b`, and exposes them as attributes ``.W`` and ``.b``.
@@ -130,8 +130,9 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
 
     The lookup table in this layer is learnable,
     unless a user-specified one is supplied through the ``weights`` parameter.
-    For example, to use an existing embedding table from a file in numpy format, use this:
-     ``Embedding(weights=np.load('PATH.npy'))``
+    For example, to use an existing embedding table from a file in numpy format, use this::
+
+      Embedding(weights=np.load('PATH.npy'))
 
     To initialize a learnable lookup table with a given numpy array that is to be used as
     the initial value, pass that array to the ``init`` parameter (not ``weights``).
@@ -139,7 +140,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     An ``Embedding`` instance owns its weight parameter tensor `E`, and exposes it as an attribute ``.E``.
 
     Example:
-     # learnable embedding
+     >>> # learnable embedding
      >>> f = Embedding(5)
      >>> x = Input(3)
      >>> e = f(x)
@@ -148,7 +149,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
      >>> f.E.shape
          (3, 5)
 
-     # user-supplied embedding
+     >>> # user-supplied embedding
      >>> f = Embedding(weights=[[.5, .3, .1, .4, .2], [.7, .6, .3, .2, .9]])
      >>> f.E.value
          array([[ 0.5,  0.3,  0.1,  0.4,  0.2],
@@ -653,19 +654,19 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
          (3, 128, 3, 4)
 
     Args:
-     filter_shape ((`int` or `tuple` of `int`s)): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
-     num_filters (`int`): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
+     filter_shape (`int` or tuple of `int`\ s): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
+     num_filters (int): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, default `glorot_uniform()`): initial value of weights `W`
-     pad (`bool` or `tuple` of `bool`s, default `False`): if `False`, then the filter will be shifted over the "valid"
+     init (scalar or NumPy array or :mod:`cntk.initializer`, default :func:`glorot_uniform`): initial value of weights `W`
+     pad (`bool` or tuple of `bool`\ s, default `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
       Use a `tuple` to specify a per-axis value.
-     strides (`int` or `tuple` of `int`s, default `): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to specify a per-axis value.
-     sharing (`bool`, default True): weight sharing, must be True for now. 
+     strides (`int` or tuple of `int`\ s, default 1): stride of the convolution (increment when sliding the filter over the input). Use a `tuple` to specify a per-axis value.
+     sharing (`bool`, default `True`): weight sharing, must be True for now. 
      bias (`bool`, optional, default `True`): the layer will have no bias if `False` is passed here
      init_bias (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `b`
-     output_shape ((`int` or `tuple` of `int`s)): output shape. When strides > 2, the output shape is non-deterministic. User can specify the wanted output shape. Note the 
+     output_shape (`int` or tuple of `int`\ s): output shape. When strides > 2, the output shape is non-deterministic. User can specify the wanted output shape. Note the 
       specified shape must satisify the condition that if a convolution is perform from the output with the same setting, the result must have same shape as the input. 
      reduction_rank (`int`, default 1): must be 1 for now. 
       that is stored with tensor shape (H,W) instead of (1,H,W)
