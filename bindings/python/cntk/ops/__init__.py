@@ -2064,7 +2064,7 @@ def splice(*inputs, **kw_axis_name):
 @typemap
 def one_hot_op(x, num_class, is_output_sparse=False, name=''):
     '''
-	Create one hot tensor based on the input tensor
+    Create one hot tensor based on the input tensor
 
     Example:
         >>> data = np.asarray([[[1, 2],
@@ -2072,20 +2072,21 @@ def one_hot_op(x, num_class, is_output_sparse=False, name=''):
 
         >>> x = C.input_variable((2,))
         >>> C.ops.one_hot_op(x, 6, False).eval({x:data})
-        array([[[ 0.  1.  0.  0.  0.  0.]
-                [ 0.  0.  1.  0.  0.  0.]]
-                [[ 0.  0.  0.  0.  1.  0.]
-                 [ 0.  0.  0.  0.  0.  1.]]], dtype=float32)
+        array([[[[ 0.,  1.,  0.,  0.,  0.,  0.],
+                 [ 0.,  0.,  1.,  0.,  0.,  0.]],
+
+                [[ 0.,  0.,  0.,  0.,  1.,  0.],
+                 [ 0.,  0.,  0.,  0.,  0.,  1.]]]], dtype=float32)
 
     Args:
         x: input tensor, the value must be positive integer and less than num_class
         num_class: the number of class in one hot tensor
-		is_output_sparse: if set as True, we will create the one hot tensor as sparse.
+        is_output_sparse: if set as True, we will create the one hot tensor as sparse.
         name (str, optional, keyword only): the name of the Function instance in the network
 
     Returns:
         :class:`~cntk.ops.functions.Function`
-	'''
+    '''
     from cntk.cntk_py import one_hot_op
     x = sanitize_input(x)
     return one_hot_op(x, num_class, is_output_sparse, name)
