@@ -211,6 +211,7 @@
 
 %ignore_variable CNTK::DefaultVarianceMomentum;
 
+%ignore_function CNTK::FSAdaGradLearner;
 %ignore_function CNTK::AdamLearner;
 %ignore_function CNTK::AdaGradLearner;
 %ignore_function CNTK::RMSPropLearner;

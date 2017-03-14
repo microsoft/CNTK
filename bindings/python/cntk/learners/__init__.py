@@ -38,8 +38,9 @@ the following learning algorithms:
 +========================+
 | AdaGrad                |
 +------------------------+
+| FSAdaGrad              |
++------------------------+
 | Adam                   |
-| (a low memory variant) |
 +------------------------+
 | MomentumSGD            |
 +------------------------+
@@ -573,15 +574,64 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
     return cntk_py.ada_grad_learner(parameters, lr, need_ave_multiplier,
             additional_options)
 
-# TODO: unCamelCase and integrate upcoming CR
 @typemap
-def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
+def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         variance_momentum = momentum_as_time_constant_schedule(720000),
-        low_memory=True,
         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
         gradient_clipping_with_truncation=True):
-    '''adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), low_memory=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    '''fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    Creates an FSAdaGrad learner instance to learn the parameters.
+
+    Args:
+        parameters (list of parameters): list of network parameters to tune.
+         These can be obtained by the root operator's ``parameters``.
+        lr (output of :func:`learning_rate_schedule`): learning rate schedule.
+        momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
+         For additional information, please refer to the `wiki
+         <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+         to the value returned by :func:`default_unit_gain_value`.
+        variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
+         to ``momentum_as_time_constant_schedule(720000)``.
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
+         of the Gaussian noise added to parameters post update, defaults to 0.0
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
+         per sample, defaults to infinity
+        gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping 
+         with truncation
+
+    Returns:
+        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+
+    '''
+    _verify_learning_rate_type(lr)
+    _verify_momentum_type(momentum)
+    _verify_momentum_type(variance_momentum)
+    gaussian_noise_injection_std_dev = \
+        training_parameter_schedule(gaussian_noise_injection_std_dev, UnitType.minibatch)
+
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+
+    return cntk_py.fsada_grad_learner(parameters, lr, momentum, unit_gain,
+            variance_momentum, additional_options)
+
+@typemap
+def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
+         variance_momentum = momentum_as_time_constant_schedule(720000),
+         l1_regularization_weight=0.0, l2_regularization_weight=0.0,
+         gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
+         gradient_clipping_with_truncation=True):
+    '''adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
     Creates an Adam learner instance to learn the parameters. See [1] for more
     information.
 
@@ -629,7 +679,67 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
 
     return cntk_py.adam_learner(parameters, lr, momentum, unit_gain,
-            variance_momentum, low_memory, additional_options)
+            variance_momentum, additional_options)
+
+@typemap
+def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
+        variance_momentum = momentum_as_time_constant_schedule(720000),
+        low_memory=True,
+        l1_regularization_weight=0.0, l2_regularization_weight=0.0,
+        gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
+        gradient_clipping_with_truncation=True):
+    '''
+    DEPRECATED.
+
+    adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(), variance_momentum=momentum_as_time_constant_schedule(720000), low_memory=True, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    Creates an Adam learner if low_memory is False or FSAdaGrad otherwise to learn the parameters. See [1] for more
+    information.
+
+    Args:
+        parameters (list of parameters): list of network parameters to tune.
+         These can be obtained by the root operator's ``parameters``.
+        lr (output of :func:`learning_rate_schedule`): learning rate schedule.
+        momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
+         For additional information, please refer to the `wiki
+         <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
+         to the value returned by :func:`default_unit_gain_value`.
+        variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
+         to ``momentum_as_time_constant_schedule(720000)``.
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
+         of the Gaussian noise added to parameters post update, defaults to 0.0
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
+         per sample, defaults to infinity
+        gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping 
+         with truncation
+
+    Returns:
+        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+
+    See also:
+        [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
+        <http://arxiv.org/abs/1412.6980>`_. International Conference for
+        Learning Representations, 2015. 
+    '''
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use adam() or fsadagrad() instead.', DeprecationWarning)
+
+    if low_memory:
+        return fsadagrad(parameters, lr, momentum, unit_gain,
+                         variance_momentum,
+                         l1_regularization_weight, l2_regularization_weight,
+                         gaussian_noise_injection_std_dev, gradient_clipping_threshold_per_sample,
+                         gradient_clipping_with_truncation)
+    else:
+        return adam(parameters, lr, momentum, unit_gain,
+                    variance_momentum,
+                    l1_regularization_weight, l2_regularization_weight,
+                    gaussian_noise_injection_std_dev, gradient_clipping_threshold_per_sample,
+                    gradient_clipping_with_truncation)
 
 @typemap
 def rmsprop(parameters, lr,
