@@ -74,7 +74,7 @@ class MySgdFast(UserLearner):
             shape = result.shape
 
             static_tensor = result.data.slice_view([0]*len(shape),
-                                                   shape[2:])
+                                                   shape[1:])
             p.set_value(static_tensor)
 
         return True

@@ -9,7 +9,7 @@ import numpy as np
 import numbers
 from numbers import Number
 from . import sequence
-from .functions import CloneMethod, Function, load_model, UserFunction
+from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import get_data_type
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes
@@ -2506,8 +2506,8 @@ from cntk.device import use_default_device
 from cntk.axis import Axis
 
 @typemap
-def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
-          dynamic_axes=[Axis.default_batch_axis()], name=''):
+def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
@@ -2539,34 +2539,6 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
 @typemap
-def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
-                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''
-    DEPRECATED.
-
-    It creates an input in the network: a place where data,
-    such as features and labels, should be provided.
-
-    Args:
-        shape (tuple or int): the shape of the input tensor
-        dtype (type, optional): np.float32 (default) or np.float64
-        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
-        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
-        name (str, optional): the name of the Function instance in the network
-
-    Returns:
-        :class:`~cntk.ops.variables.Variable`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'input() or sequence.input() instead.', DeprecationWarning)
-    if (type(dynamic_axes) in (list, tuple)) and (len(dynamic_axes) == 2):
-        return sequence.input(shape, dtype, needs_gradient, is_sparse, dynamic_axes[1], name)
-    else:
-        return input(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
-
-@typemap
 def output_variable(shape, dtype, dynamic_axes, name=''):
     '''
     It creates an output variable that is used to define a user defined function.
@@ -2595,16 +2567,16 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
     return output_variable(shape, dtype, dynamic_axes, name)
 
 @typemap
-def forward_declaration(shape=None, dynamic_axes=None, name=''):
+def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     '''
-    It creates a forward declaration of an output variable to be used as a placeholder
-    for a later output variable in the recurrent network. The forward declaration should be later
-    replaced with the actual output variable it represents by calling bind_forward_declaration(s).
+    It creates a placeholder variable that has to be later bound to an actual variable.
+    A common use of this is to serve as a placeholder for a later output variable in a
+    recurrent network, which is replaced with the actual output variable by calling
+    replace_placeholder(s).
 
     Args:
         shape (tuple or int): the shape of the variable tensor
-        dynamic_axes (list): the list of dynamic axes that the variable uses
-        name (str, optional): the name of the forward declaration variable in the network
+        dynamic_axes (list): the list of dynamic axes that the actual variable uses
 
     Returns:
         :class:`~cntk.ops.variables.Variable`
@@ -2621,29 +2593,6 @@ def forward_declaration(shape=None, dynamic_axes=None, name=''):
 
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
-
-
-@typemap
-def placeholder_variable(shape=None, dynamic_axes=None, name=''):
-    '''
-    DEPRECATED.
-
-    It creates a variable place holder for recurrence networks, when the network's dynamic axes
-    are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
-
-    Args:
-        shape (tuple or int): the shape of the variable tensor
-        dynamic_axes (list): the list of dynamic axes that the actual variable uses
-        name (str, optional): the name of the placeholder variable in the network
-
-    Returns:
-        :class:`~cntk.ops.variables.Variable`
-    '''
-    import warnings
-    warnings.warn('This will be removed in future versions. Please use '
-            'forward_declaration() instead.', DeprecationWarning)
-    return forward_declaration(shape, dynamic_axes, name)
-
 
 @typemap
 def parameter(shape=None, init=None, dtype=None, device=None, name=''):

@@ -418,3 +418,10 @@ def sanitize_dynamic_axes(axes):
             raise TypeError('type Axis expected, got %s instead' % type(ax))
     axes = tuple(reversed(axes))
     return axes
+
+
+def sanitize_variable_value_dict(var_value_dict):
+    if len(var_value_dict) > 1:
+        return var_value_dict
+    else:
+        return list(var_value_dict.values())[0]

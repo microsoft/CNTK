@@ -623,7 +623,7 @@ namespace CNTK
                         {
                             assert(m_inputs.size() == 2);
                             if (m_inputs[0].Shape().TotalSize() != m_inputs[1].Shape().TotalSize())
-                                InvalidArgument("ForwardBackward: Operands '%S' and '%S' shapes must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
+                                InvalidArgument("ForwardBackward: The shapes of operands '%S' and '%S' must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
 
                             outputShape = {};
                             break;
