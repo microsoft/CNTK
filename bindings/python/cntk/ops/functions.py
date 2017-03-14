@@ -705,7 +705,7 @@ class Function(cntk_py.Function):
         return var_gradients
 
     @typemap
-    def grad(self, at, wrt=None, device=None, as_numpy=True):
+    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True):
         '''
         Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
         The Function must have a single output.
@@ -725,9 +725,7 @@ class Function(cntk_py.Function):
             at (dict) : mapping of the Function's arguments to values
             wrt (list optional): list of Variables with respect to which the
              gradient will be computed. If omitted, the gradients with
-             respect to all arguments that need gradient will be computed. If a variable
-             is repeated in this list, the gradient will be repeated
-             in the output as a shallow copy.
+             respect to all arguments that need gradient will be computed.
             as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
              costly conversion but returns a somewhat opaque object.
@@ -737,30 +735,39 @@ class Function(cntk_py.Function):
             ``wrt`` variables. A single NumPy array if there is only one gradient value.
              Each element has the same shape as ``wrt`` including dynamic axes (such as the batch axis).
         '''
+        if device is None:
+            device = DeviceDescriptor.use_default_device()
 
-        if len(self.outputs) != 1 :
-            raise InvalidArgumentException('function must return a single tensor')
+        in_var_map = sanitize_var_map(self.arguments, at, None, device)
+
+        if outputs is None:
+            outputs = []
 
         if wrt is None:
             wrt = [arg for arg in self.arguments if arg.needs_gradient]
 
-        unique_wrt = set(wrt)
-        output = [self.output]
-        
-        # Since we do not return the computed results and use them only to determine the shape
-        # of the root gradients, we run the forward pass with as_numpy=False regardless of the
-        # actual as_numpy setting passed to this function
-        state, results = self.forward(at, output, set(output), device, as_numpy=False)
-        
-        # Setup a root gradient value filled with ones identical in shape/layout as the output value
-        root_gradient = results[self.output].deep_clone()
-        root_gradient.data().set_value(1.0)
-        grad_dict = self.backward(state, {self.output: root_gradient}, unique_wrt, as_numpy)
+        output_map = {v: None for v in outputs}
+        wrt_map = {v: None for v in wrt}
 
-        if len(grad_dict) > 1:
-            return grad_dict
+        super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+
+        if as_numpy:
+            for k in output_map:
+                output_map[k] = variable_value_to_seq(output_map[k], k)
+            for k in wrt_map:
+                wrt_map[k] = variable_value_to_seq(wrt_map[k], k)
+
+        if len(wrt_map) > 1:
+            ret_grad = wrt_map
         else:
-            return list(grad_dict.values())[0]
+            ret_grad = list(wrt_map.values())[0]
+
+        if len(output_map) == 0:
+            return ret_grad
+        elif len(output_map) == 1:
+            return ret_grad, list(output_map.values())[0]
+        else:
+            return ret_grad, output_map
 
     @property
     @typemap
