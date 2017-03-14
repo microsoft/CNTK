@@ -1043,8 +1043,10 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
         additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
 
-        if (seed != SentinelValueForAutoSelectRandomSeed) 
-            additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed();
+        
+        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
 
         return UnaryOp(PrimitiveOpType::RandomSample, operand, std::move(additionalProperties), name);
     }
@@ -1055,8 +1057,10 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameNumSamples] = numSamples;
         additionalProperties[PrimitiveFunction::AttributeNameAllowDuplicates] = allowDuplicates;
 
-        if (seed != SentinelValueForAutoSelectRandomSeed)
-            additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed();
+
+        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
 
         return UnaryOp(PrimitiveOpType::RandomSampleInclusionFrequency, operand, std::move(additionalProperties), name);
     }
@@ -1066,8 +1070,10 @@ namespace CNTK
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameDropoutRate] = dropoutRate;
 
-        if (seed != SentinelValueForAutoSelectRandomSeed)
-            additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        if (seed == SentinelValueForAutoSelectRandomSeed)
+            seed = Internal::GenerateRandomSeed();
+        
+        additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
 
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
     }

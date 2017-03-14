@@ -242,6 +242,8 @@ namespace CNTK
 
         CNTK_API size_t NewUniqueId();
 
+        CNTK_API size_t GenerateRandomSeed();
+
         // Internal hooks for testing and higher-level bindings
         // These should not be directly called by C++ API users
         CNTK_API void EnableReversingTensorShapesInErrorMessages();

@@ -28,10 +28,24 @@ namespace CNTK
 {
     namespace Internal
     {
-        static std::atomic<unsigned long long> s_nextUniqueId(0);
+        static std::atomic_ullong s_nextUniqueId = ATOMIC_VAR_INIT(0);
         size_t NewUniqueId()
         {
             return s_nextUniqueId++;
+        }
+
+        static std::atomic_ullong s_currentRandomSeed = ATOMIC_VAR_INIT(0);
+
+        size_t GenerateRandomSeed()
+        {
+            DistributedCommunicatorPtr communicator = MPICommunicator();
+            auto numWorkers = communicator->Workers().size();
+            auto rank = communicator->CurrentWorker().m_globalRank;
+
+            if (numWorkers < 1)
+                numWorkers = 1;
+
+            return (numWorkers * ++s_currentRandomSeed) + rank;
         }
 
         std::atomic<bool> s_reverseTensorShapesInErrorMessages(false);
