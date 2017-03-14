@@ -111,18 +111,8 @@ void ReaderShim<ElemType>::SetCurrentSamplePosition(size_t currentSamplePosition
 
     // Set current position.
     m_reader->SetCurrentSamplePosition(currentSamplePosition);
+    m_endOfEpoch = false;
     m_currentSamplePosition = m_reader->GetCurrentSamplePosition();
-
-    // Start prefetch.
-    auto localCurrentDataTransferIndex = m_currentDataTransferIndex;
-    // Starting the prefetch task. There is always a single async read in flight.
-    // When the network requests a new minibatch, we wait for the current async to finish, swap the buffers
-    // and kick off the new prefetch.
-    m_prefetchTask = std::async(m_launchType,
-        [this, localCurrentDataTransferIndex]()
-    {
-        return PrefetchMinibatch(localCurrentDataTransferIndex);
-    });
 }
 
 template <class ElemType>
@@ -285,6 +275,8 @@ bool ReaderShim<ElemType>::GetMinibatch(StreamMinibatchInputs& matrices)
     // Remember current data transfer, async memcpy for it already started on the prefetch thread.
     auto currentDataTransferIndex = m_currentDataTransferIndex;
 
+    matrices.m_getKeyById = m_getKeyById;
+
     // Let's update the current data transferer.
     m_currentDataTransferIndex = (m_currentDataTransferIndex + 1) % 2;
 
@@ -367,6 +359,8 @@ typename ReaderShim<ElemType>::PrefetchResult ReaderShim<ElemType>::PrefetchMini
     // We need to make sure that the compute for the current transfer is finished before we start prefetch.
     if (m_dataTransferers[currentDataTransferIndex])
         m_dataTransferers[currentDataTransferIndex]->WaitForSyncPointOnAssignStreamAsync();
+
+    m_getKeyById = minibatch.m_getKeyById;
 
     for (auto& mx : m_prefetchBuffers)
     {

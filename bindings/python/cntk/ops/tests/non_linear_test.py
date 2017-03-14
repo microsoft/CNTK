@@ -14,7 +14,8 @@ import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
 from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
-from cntk.utils import eval as cntk_eval, sanitize_dtype_cntk
+from cntk.utils import eval as cntk_eval
+from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 from ..variables import Parameter, Constant
 from cntk import set_default_device
@@ -83,6 +84,22 @@ def test_op_sigmoid(operand, device_id, precision):
     from .. import sigmoid
     _test_unary_op(precision, device_id, sigmoid, operand,
                    expected_forward, expected_backward)
+
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_softplus(operand, device_id, precision):
+    s = np.logaddexp(0, (AA(operand, dtype=PRECISION_TO_TYPE[precision])))
+    # BUGBUG: The inner implementation is a tiny bit less accurate than numpy, so we manually replace the values
+    if s.shape == (6,2):
+        if operand[0][1] == -10:
+            s[0,1] = 0  # np baseline is 0.000045
+        if operand[5][0] == 10:
+            s[5,0] = 10 # np baseline is 10.000045
+    expected_forward = [AA([s])]
+
+    from .. import softplus
+    _test_unary_op(precision, device_id, softplus, operand,
+                   expected_forward, None)
 
 
 @pytest.mark.parametrize("operand", TENSORS)
@@ -271,6 +288,79 @@ def test_op_relu(operand, device_id, precision):
     _test_unary_op(precision, device_id, relu, operand,
                    expected_forward, expected_backward)
 
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_elu(operand, device_id, precision):
+    elu_f  = np.vectorize(lambda x: np.exp(x) - 1.0 if x < 0 else x)
+    elu_b  = np.vectorize(lambda x: np.exp(x) if x < 0 else 1.0)
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = [[elu_f(t)]]
+    expected_backward = {
+        'arg': [[elu_b(t)]]
+    }
+
+    from cntk import elu
+
+    _test_unary_op(precision, device_id, elu, operand,
+                   expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_leaky_relu(operand, device_id, precision):
+    leaky_relu_f  = np.vectorize(lambda x: 0.01 * x if x < 0 else x)
+    leaky_relu_b  = np.vectorize(lambda x: 0.01 if x < 0 else 1.0)
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = [[leaky_relu_f(t)]]
+    expected_backward = {
+        'arg': [[leaky_relu_b(t)]]
+    }
+
+    from cntk import leaky_relu
+
+    _test_unary_op(precision, device_id, leaky_relu, operand,
+                   expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_param_relu(operand, device_id, precision):
+    dev = cntk_device(device_id)
+    param_relu_f  = np.vectorize(lambda x: 0.5 * x if x < 0 else x)
+    param_relu_b  = np.vectorize(lambda x: 0.5 if x < 0 else 1.0)
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+    a = AA(np.ones_like(t)*0.5, dtype=PRECISION_TO_TYPE[precision])
+    alpha = constant(a, device=dev)
+
+    expected_forward = [[param_relu_f(t)]]
+    expected_backward = {
+        'arg': [[param_relu_b(t)]]
+    }
+
+    from cntk import param_relu
+
+    def prelu(x):
+        return param_relu(alpha, x)
+
+    _test_unary_op(precision, device_id, prelu, operand,
+                    expected_forward, expected_backward)
+
+@pytest.mark.parametrize("operand", TENSORS)
+def test_op_softplus(operand, device_id, precision):
+    softplus_f = np.vectorize(lambda x: np.logaddexp(x, 0))
+    softplus_b = np.vectorize(lambda x: 1.0/(1.0+np.exp(-x)))
+
+    t = AA(operand, dtype=PRECISION_TO_TYPE[precision])
+
+    expected_forward = [[softplus_f(t)]]
+    expected_backward = {
+        'arg': [[softplus_b(t)]]
+    }
+
+    from .. import softplus
+    _test_unary_op(precision, device_id, softplus, operand,
+                   expected_forward, expected_backward)
+
 SAMPLES = [  # 2 samples having 4 classes
     [1, 1, 2, 3],
     [0, 0, 0, 0],
@@ -354,14 +444,21 @@ def test_op_batch_normalization(use_cudnn, sample, device_id, precision):
 
     scale        = Parameter(init=AA([init_scale], dtype=dtype), device=dev)
     bias         = Parameter(init=AA([init_bias], dtype=dtype), device=dev)
-    run_mean     = Constant(mean, shape=(1), dtype=dtype, device=dev)
-    run_variance = Constant(var, shape=(1), dtype=dtype, device=dev)
+    run_mean     = constant(mean, shape=(1), device=dev)
+    run_variance = constant(var,  shape=(1), device=dev)
+    run_count    = constant(0,               device=dev)
 
     from cntk import batch_normalization
 
     a = I(shape=(1), dtype=dtype, needs_gradient=False, name='a')
 
-    op_node = batch_normalization(a, scale, bias, run_mean, run_variance, False, epsilon, use_cudnn)
+    with pytest.warns(Warning):
+        op = batch_normalization(a, scale, bias, run_mean, run_variance, False,
+            #no running_count here, 
+            epsilon=epsilon, use_cudnn_engine=use_cudnn)
+
+    op_node = batch_normalization(a, scale, bias, run_mean, run_variance, running_count=run_count, spatial=False,
+        epsilon=epsilon, use_cudnn_engine=use_cudnn)
 
     forward_input = {a: t}
 

@@ -2,15 +2,17 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "Common.h"
 #include <string>
 #include <random>
 #include <initializer_list>
 
-
 using namespace CNTK;
 using namespace std;
+
+namespace CNTK { namespace Test {
 
 static const size_t maxMinibatchSize = 1000;
 
@@ -18,7 +20,7 @@ static const size_t maxNumAxes = 3;
 static const size_t maxDimSize = 5;
 
 template <typename ElementType>
-void TestUpdate(LearnerPtr& learner, NDShape& shape, size_t numMinibatches, const DeviceDescriptor& device)
+void TestUpdate(LearnerPtr& learner, const NDShape& shape, size_t numMinibatches, const DeviceDescriptor& device)
 {
     auto seed = (unsigned long) rng();
     unordered_map<Parameter, NDArrayViewPtr> gradientValues;
@@ -82,7 +84,7 @@ void TestAdaGradLearner(size_t numParameters, size_t numMinibatches, const Devic
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdaGradLearner(parameters, LearningRatePerMinibatchSchedule( {0.5, 0.4, 0.3, 0.2, 0.1}, 2 ), true);
+    auto learner = AdaGradLearner(parameters, LearningRatePerMinibatchSchedule( { 0.5, 0.4, 0.3, 0.2, 0.1 }, 2), true);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -91,7 +93,16 @@ void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, bool unit
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum);
+    auto learner = FSAdaGradLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum);
+    TestUpdate<ElementType>(learner, shape, numMinibatches, device);
+}
+
+template <typename ElementType>
+void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainMomentum, const DeviceDescriptor& device)
+{
+    NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
+    auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99));
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -270,8 +281,7 @@ void TestSweepBasedSchedule()
     auto learner2 = SGDLearner(classifierOutput->Parameters(), schedule);
     auto trainer = CreateTrainer(classifierOutput, trainingLoss, prediction, { learner2 });
 
-    
-    for (auto i = 0; i <= 4000; i+= minibatchSize)
+    for (auto i = 0; i <= 4000; i += minibatchSize)
     {
         auto sweepIndex1 = i / sweepSize;
         auto minibatchData = minibatchSource->GetNextMinibatch(minibatchSize, device);
@@ -298,43 +308,135 @@ void TestSweepBasedSchedule()
     }
 }
 
-
-void LearnerTests()
+struct LearnerSuiteFixture
 {
-    fprintf(stderr, "\nLearnerTests..\n");
-
-    TestDefaultUnitGainGetterAndSetter();
-
-    TestTrainingParametersSchedule();
-    TestSweepBasedSchedule();
-
-    vector<DeviceDescriptor> devices{DeviceDescriptor::CPUDevice()};
-
-    if (IsGPUAvailable())
+    LearnerSuiteFixture()
+        : unitGain{ true, false }
     {
-        devices.push_back(DeviceDescriptor::GPUDevice(0));
+        srand(1);
+        if (ShouldRunOnCpu())
+            devices.push_back(DeviceDescriptor::CPUDevice());
+        if (ShouldRunOnGpu())
+            devices.push_back(DeviceDescriptor::GPUDevice(0));
+
+        numParameters = 1 + rand() % 5;
+        numMinibatches = 1 + rand() % 5;
     }
+    bool unitGain[2];
+    vector<DeviceDescriptor> devices;
+    int numParameters;
+    int numMinibatches;
+};
 
-    srand(1);
+BOOST_FIXTURE_TEST_SUITE(LearnerSuite, LearnerSuiteFixture)
 
+BOOST_AUTO_TEST_CASE(DefaultUnitGainGetterAndSetter)
+{
+    TestDefaultUnitGainGetterAndSetter();
+}
+
+BOOST_AUTO_TEST_CASE(SweepBasedSchedule)
+{
+    TestSweepBasedSchedule();
+}
+
+BOOST_AUTO_TEST_CASE(TrainingParametersSchedule)
+{
+    TestTrainingParametersSchedule();
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateSGDLearner)
+{
     for (auto& device : devices)
     {
-        auto numParameters = 1 + rand() % 5;
-        auto numMinibatches = 1 + rand() % 5;
         TestSGDLearner<double>(numParameters, numMinibatches, device);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateAdaGradLearner)
+{
+    for (auto& device : devices)
+    {
         TestAdaGradLearner<double>(numParameters, numMinibatches, device);
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateRMSPropLearner)
+{
+    for (auto& device : devices)
+    {
         TestRMSPropLearner<float>(numParameters, numMinibatches, device);
     }
+}
 
+BOOST_AUTO_TEST_CASE(CreateAndUpdateMomentumLearner)
+{
     for (auto& device : devices)
     {
-        for (auto unitGain : { true, false })
+        for (auto gain : unitGain)
         {
-            auto numParameters = 1 + rand() % 5;
-            auto numMinibatches = 1 + rand() % 5;
-            TestMomentumSGDLearner<float>(numParameters, numMinibatches, unitGain, device);
-            TestNesterovLearner<float>(numParameters, numMinibatches, unitGain, device);
-            TestFSAdaGradLearner<double>(numParameters, numMinibatches, unitGain, device);
+            TestMomentumSGDLearner<float>(numParameters, numMinibatches, gain, device);
         }
     }
 }
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateNesterovLearner)
+{
+    for (auto& device : devices)
+    {
+        for (auto& gain : unitGain)
+        {
+            TestNesterovLearner<float>(numParameters, numMinibatches, gain, device);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateFSAdaGradLearner)
+{
+    for (auto& device : devices)
+    {
+        for (auto& gain : unitGain)
+        {
+            TestFSAdaGradLearner<double>(numParameters, numMinibatches, gain, device);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamLearner)
+{
+    for (auto& device : devices)
+    {
+        for (auto& gain : unitGain)
+        {
+            TestAdamLearner<float>(numParameters, numMinibatches, gain, device);
+            TestAdamLearner<double>(numParameters, numMinibatches, gain, device);
+        }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(TestResettingLearningRate)
+{
+    NDShape shape = { 1 };
+    auto numSamples = 1; numParameters = 1, numMinibatches = 1;
+    DeviceDescriptor device = DeviceDescriptor::CPUDevice();
+    auto parameters = CreateParameters<float>(shape, numParameters, device);
+    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule({ 0.1, 1, 2, 3, 4, 5 }, numSamples));
+    BOOST_TEST(learner->LearningRate() == 0.1);
+    for (int i = 1; i < 4; i++)
+    {
+        TestUpdate<float>(learner, shape, numMinibatches, device);
+        BOOST_TEST(learner->LearningRate() == float(i));
+    }
+
+    learner->ResetLearningRate(LearningRatePerSampleSchedule({ 9, 10, 20, 30, 40, 50 }, numSamples));
+    BOOST_TEST(learner->LearningRate() == 9.0);
+    for (int i = 1; i < 4; i++)
+    {
+        TestUpdate<float>(learner, shape, numMinibatches, device);
+        BOOST_TEST(learner->LearningRate() == float(i*10));
+    }
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

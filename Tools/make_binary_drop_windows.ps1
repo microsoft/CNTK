@@ -1,59 +1,29 @@
+#
 # Copyright (c) Microsoft. All rights reserved.
-# Licensed under the MIT license. See LICENSE file in the project root for full license information.
-
-# WARNING. This will run in Microsoft Internal Environment ONLY
-# Generating CNTK Binary drops in Jenkins environment
-
-# Command line parameters
-# Verbose command line parameter (-verbose) is automatically added
-# because of CmdletBinding
+# Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
+#
 [CmdletBinding()]
-param
-(
-	# Supposed to be taken from Jenkins BUILD_CONFIGURATION
-	[string]$buildConfig,
-	
-	# Supposed to be taken from Jenkins TARGET_CONFIGURATION
-	[string]$targetConfig,
-	
-	# File share path. Supposed to have sub-folders corresponding to $targetConfig
-	[string]$sharePath
-)
+param(
+    [parameter(Mandatory=$true)][string]$targetConfig,           # the config created (CPU, GPU, ...)
+    [parameter(Mandatory=$true)][string]$targetConfigSuffix,     # the config suffix (CPU-Only, GPU, GPU-1bit-SGD ...)
+    [parameter(Mandatory=$true)][string]$releaseTag,             # the tag of the release (2-0-beta11-0)
+    [parameter(Mandatory=$true)][string]$commit,
+    [parameter(Mandatory=$true)][string]$outputFileName,         # the generated zip file name
+    [parameter(Mandatory=$true)][string]$sharePath)
 
-# Set to Stop on Error
 $ErrorActionPreference = 'Stop'
 
-# Manual parameters check rather than using [Parameter(Mandatory=$True)]
-# to avoid the risk of interactive prompts inside a Jenkins job
-$usage = " parameter is missing. Usage example: make_binary_drop_windows.ps1 -buildConfig Release -targetConfig gpu -sharePath \\server\share"
-If (-not $buildConfig) {Throw "buildConfig" + $usage}
-If (-not $targetConfig) {Throw "targetConfig" + $usage}
-If (-not $sharePath) {Throw "sharePath" + $usage}
-
-# Set Verbose mode
-If ($verbose)
-{
-	 $VerbosePreference = "continue"
-}
-
+$workSpace = $PWD.Path
 Write-Verbose "Making binary drops..."
 
-# If not a Release build quit
-If ($buildConfig -ne "Release")
-{
-	Write-Verbose "Not a release build. No binary drops generation"
-	Exit
-}
-
 # Set Paths
-$basePath = "BinaryDrops\ToZip"
+$basePath = "ToZip"
 $baseDropPath = Join-Path $basePath -ChildPath cntk
 $baseIncludePath = Join-Path $baseDropPath -ChildPath Include
-$zipFile = "BinaryDrops\BinaryDrops.zip"
 $buildPath = "x64\Release"
-If ($targetConfig -eq "CPU")
+if ($targetConfig -eq "CPU")
 {
-	$buildPath = "x64\Release_CpuOnly"
+    $buildPath = "x64\Release_CpuOnly"
 }
 # Include Files
 $includePath = "Source\Common\Include"
@@ -64,38 +34,38 @@ $includeFiles[1] = Join-Path $includePath20 -ChildPath CNTKLibrary.h
 $includeFiles[2] = Join-Path $includePath20 -ChildPath CNTKLibraryInternals.h
 $sharePath = Join-Path $sharePath -ChildPath $targetConfig
 
+# binaryDrop locations
+$artifactPath = Join-Path $workSpace BinaryDrops
+$whlArtifactFolder = Join-Path $artifactPath $targetConfigSuffix
+New-Item -Path $artifactPath -ItemType directory -force
+New-Item -Path $whlArtifactFolder -ItemType directory -force
+
+# Copy wheels to destination
+Copy-Item $buildPath\Python\*.whl $whlArtifactFolder
 
 # Make binary drop folder
 New-Item -Path $baseDropPath -ItemType directory
+
+# create version.txt file
+$fileContent = "CNTK-{0}`r`nRelease`r`n{1}`r`n{2}`r`n" -f $releaseTag, $targetConfigSuffix, $commit
+$fileContent | Set-Content -Encoding Ascii $baseDropPath\version.txt
 
 # Copy build binaries
 Write-Verbose "Copying build binaries ..."
 Copy-Item $buildPath -Recurse -Destination $baseDropPath\cntk
 
 # Clean unwanted items
-Remove-Item $baseDropPath\cntk\*test*.exe
+Remove-Item $baseDropPath\cntk\*test*.exe*
 Remove-Item $baseDropPath\cntk\*.pdb
+Remove-Item $baseDropPath\cntk\python -Recurse
+
 # Keep EvalDll.lib
 Remove-Item $baseDropPath\cntk\*.lib  -Exclude EvalDll.lib, CNTKLibrary-2.0.lib
 Remove-Item $baseDropPath\cntk\*.exp
 Remove-Item $baseDropPath\cntk\*.metagen
 # Remove specific items
-If (Test-Path $baseDropPath\cntk\CPPEvalClientTest.exe)
-{
-	Remove-Item $baseDropPath\cntk\CPPEvalClientTest.exe
-}
-If (Test-Path $baseDropPath\cntk\CSEvalClientTest.exe)
-{
-	Remove-Item $baseDropPath\cntk\CSEvalClientTest.exe
-}
-If (Test-Path $baseDropPath\cntk\CSEvalClientTest.exe.config)
-{
-	Remove-Item $baseDropPath\cntk\CSEvalClientTest.exe.config
-}
-If (Test-Path $baseDropPath\cntk\CommandEval.exe)
-{
-	Remove-Item $baseDropPath\cntk\CommandEval.exe
-}
+Remove-Item $baseDropPath\cntk\CommandEval.exe -Force -ErrorAction SilentlyContinue
+Remove-Item $baseDropPath\cntk\Microsoft.VisualStudio.QualityTools.UnitTestFramework.*
 
 # Make Include folder
 New-Item -Path $baseIncludePath -ItemType directory
@@ -104,17 +74,12 @@ New-Item -Path $baseIncludePath -ItemType directory
 Write-Verbose "Copying Include files ..."
 Foreach ($includeFile in $includeFiles)
 {
-	Copy-Item $includeFile -Destination $baseIncludePath
+    Copy-Item $includeFile -Destination $baseIncludePath
 }
 
 # Copy Examples
 Write-Verbose "Copying Examples ..."
 Copy-Item Examples -Recurse -Destination $baseDropPath\Examples
-# Include CPPEvalV2Client examples in 2.0 Beta drop
-# If (Test-Path $baseDropPath\Examples\Evaluation\CPPEvalV2Client)
-# {
-# 	Remove-Item $baseDropPath\Examples\Evaluation\CPPEvalV2Client -Recurse
-# }
 
 # Copy Examples
 Write-Verbose "Copying Tutorials ..."
@@ -123,36 +88,45 @@ Copy-Item Tutorials -Recurse -Destination $baseDropPath\Tutorials
 # Copy Scripts
 Write-Verbose "Copying Scripts ..."
 Copy-Item Scripts -Recurse -Destination $baseDropPath\Scripts
-# Remove test related file(s) if exist(s)
-If (Test-Path $baseDropPath\Scripts\pytest.ini)
-{
-	Remove-Item $baseDropPath\Scripts\pytest.ini
-}
+# Remove some files if they exist
+Remove-Item $baseDropPath\Scripts\pytest.ini -Force -ErrorAction SilentlyContinue
+Remove-Item -Recurse $baseDropPath\Scripts\install\linux -Force -ErrorAction SilentlyContinue
 
 # Copy all items from the share
 # For whatever reason Copy-Item in the line below does not work
 # Copy-Item $sharePath"\*"  -Recurse -Destination $baseDropPath
 # Copying with Robocopy. Maximum 2 retries, 30 sec waiting time in between
 Write-Verbose "Copying dependencies and other files from Remote Share ..."
-robocopy $sharePath $baseDropPath /s /e /r:2 /w:30
+robocopy $sharePath $baseDropPath /s /e /r:2 /w:30 /np
 # Check that Robocopy finished OK.
 # Any exit code greater than 7 indicates error
 # See http://ss64.com/nt/robocopy-exit.html
 If ($LastExitCode -gt 7)
 {
-	Throw "Copying from Remote Share failed. Robocopy exit code is " + $LastExitCode
+    Throw "Copying from Remote Share failed. Robocopy exit code is " + $LastExitCode
 }
 
 Write-Verbose "Making ZIP and cleaning up..."
 
 # Make ZIP file
-$source = Join-Path $PWD.Path -ChildPath $basePath
-$destination = Join-Path $PWD.Path -ChildPath $zipFile
-Add-Type -assembly "system.io.compression.filesystem"
-[io.compression.zipfile]::CreateFromDirectory($source, $destination)
+# Switched to use 7zip because of the backslash separator issue in .NET compressor
+# (fixed in 4.6.1, which is not a standard component of build machines
+# see https://msdn.microsoft.com/en-us/library/mt712573(v=vs.110).aspx?f=255&MSPPError=-2147217396 )
+$source = Join-Path $workSpace -ChildPath $basePath
+$destination = Join-Path $artifactPath -ChildPath $outputFileName
+Set-Location -Path $source
+7za a -bd $destination .
+If ($LastExitCode -ne 0)
+{
+    throw "7za returned exit code $LastExitCode"
+}
+
+Set-Location -Path $workSpace
+
+# Log the file hash
+Get-FileHash -Algorithm SHA256 -Path $destination, $whlArtifactFolder\*.whl
 
 # Remove ZIP sources
-If (Test-Path $basePath)
-{
-	Remove-Item $basePath -Recurse
-}
+Remove-Item -Recurse $basePath -Force -ErrorAction SilentlyContinue 
+
+exit 0

@@ -10,14 +10,18 @@
 #include "MinibatchSource.h"
 #include "HeapMemoryProvider.h"
 #include "ReaderShim.h"
+#include "ReaderConstants.h"
 #include <tuple>
 #include "Value.h"
 #include "MPIWrapper.h"
+#include "PerformanceProfiler.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
+    const size_t MinibatchSource::DefaultRandomizationWindowInChunks = g_4GB / g_32MB;
+
     const std::unordered_map<StreamInformation, MinibatchData>& MinibatchSource::GetNextMinibatch(size_t minibatchSizeInSamples, const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/)
     {
         return GetNextMinibatch(0, minibatchSizeInSamples, device);
@@ -39,10 +43,10 @@ namespace CNTK
         }
 
         if (matchingStreamInfos.empty())
-            RuntimeError("No stream found matching given name");
+            RuntimeError("No stream found matching given name '%S'.", streamName.c_str());
 
         if (matchingStreamInfos.size() > 1)
-            RuntimeError("Multiple streams found matching given name");
+            RuntimeError("Multiple streams (%d) found matching given name '%S'.", (int)matchingStreamInfos.size(), streamName.c_str());
 
         return *(*(matchingStreamInfos.begin()));
     }
@@ -59,10 +63,10 @@ namespace CNTK
         }
 
         if (matchingStreamInfos.empty())
-            RuntimeError("No stream found matching given Variable's attributes");
+            RuntimeError("No stream found matching given Variable '%S'.", variableToMatch.AsString().c_str());
 
         if (matchingStreamInfos.size() > 1)
-            RuntimeError("Multiple streams found matching given Variable's attributes");
+            RuntimeError("Multiple streams (%d) found matching given Variable '%S'.", (int)matchingStreamInfos.size(), variableToMatch.AsString().c_str());
 
         return *(*(matchingStreamInfos.begin()));
     }
@@ -81,7 +85,8 @@ namespace CNTK
           m_randomizedWindow(MinibatchSource::DefaultRandomizationWindow),
           m_truncationLength(0),
           m_numWorkers(1),
-          m_workerRank(0)
+          m_workerRank(0),
+          m_restorePosition(0)
     {
         // The CNTK reader implementation requires for each deserializer both the module and deserializer type be specified
         // This is redundant and the V2 API users will just specify type from which the module is automatically inferred
@@ -122,7 +127,7 @@ namespace CNTK
             }
 
             if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
-                InvalidArgument("Unknown deserializer type (%S)", deserializerTypeName.c_str());
+                InvalidArgument("Unknown deserializer type '%S' specified for CNTK built-in composite MinibatchSource construction.", deserializerTypeName.c_str());
 
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
@@ -172,13 +177,10 @@ namespace CNTK
 
             const wchar_t* workerRankConfigurationKey = L"workerRank";
             if (configuration.Contains(workerRankConfigurationKey))
-            {
                 m_workerRank = configuration[workerRankConfigurationKey].Value<size_t>();
-            }
+
             if (m_workerRank > m_numWorkers - 1)
-            {
-                LogicError("Invalid worker rank %lu (numWorkers %lu)", m_workerRank, m_numWorkers);
-            }
+                LogicError("CompositeMinibatchSource: Invalid worker rank %lu (numWorkers %lu)", m_workerRank, m_numWorkers);
         }
     }
 
@@ -189,15 +191,17 @@ namespace CNTK
                                                size_t workerRank,
                                                const DeviceDescriptor& device /*= DeviceDescriptor::UseDefaultDevice()*/) /*override*/
     {
+        auto profGetMinibatch = Microsoft::MSR::CNTK::ScopeProfile(Microsoft::MSR::CNTK::profilerEvtMainGetMinibatch);
+
         m_minibatchData.clear();
 
         if (!m_epochEndReached)
         {
             if (minibatchSizeInSequences != 0)
-                LogicError("Specifying minibatch size in #sequences is currently unsupported");
+                LogicError("GetNextMinibatch: Specifying minibatch size in #sequences is currently unsupported");
 
             if (minibatchSizeInSamples == 0)
-                InvalidArgument("GetNextMinibatch: Requested minibatch sizes must be > 0");
+                InvalidArgument("GetNextMinibatch: Requested minibatch size must be > 0.");
 
             if (m_prevMinibatchSize == 0)
             {
@@ -246,16 +250,17 @@ namespace CNTK
                             *(*iter)->m_sampleLayout);
                     }
                     else
-                        LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
+                        LogicError("GetNextMinibatch: Input of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
                 }
 
                 m_shim->StartEpoch(epochConfig, inputs);
+
                 m_prevMinibatchSize = minibatchSizeInSamples;
                 m_workerRank = workerRank;
                 m_numWorkers = numberOfWorkers;
             }
 
-            if (minibatchSizeInSamples != m_prevMinibatchSize || m_workerRank != workerRank || m_numWorkers != numberOfWorkers)
+            if (minibatchSizeInSamples != m_prevMinibatchSize || m_workerRank != workerRank || m_numWorkers != numberOfWorkers || m_restorePosition != 0)
             {
                 std::map<std::wstring, int> inputDescriptions;
                 for (const auto& s : m_streamInfos)
@@ -267,6 +272,12 @@ namespace CNTK
                 newConfig.m_minibatchSizeInSamples = minibatchSizeInSamples;
                 newConfig.m_truncationSize = m_truncationLength;
                 newConfig.m_allowMinibatchesToCrossSweepBoundaries = true;
+
+                if (m_restorePosition != 0)
+                {
+                    m_shim->SetCurrentSamplePosition(m_restorePosition);
+                    m_restorePosition = 0;
+                }
 
                 m_shim->SetConfiguration(newConfig, inputDescriptions);
 
@@ -291,7 +302,7 @@ namespace CNTK
                 ValuePtr minibatchValuePtr;
                 if (!hasData)
                 {
-                    m_minibatchData[currentStreamInfo] = {nullptr, 0, 0 };
+                    m_minibatchData[currentStreamInfo] = { nullptr, 0, 0 };
                     continue;
                 }
 
@@ -299,7 +310,7 @@ namespace CNTK
                 {
                     auto matrix = dynamic_pointer_cast<Matrix<float>>(input.matrix);
                     if (!matrix)
-                        LogicError("Invalid matrix type.");
+                        LogicError("GetNextMinibatch: Invalid matrix type.");
 
                     minibatchValuePtr = MakeSharedObject<PackedValue>(s.m_sampleLayout, matrix, input.pMBLayout, /*readOnly =*/ false);
 
@@ -309,7 +320,7 @@ namespace CNTK
                     m_minibatchData[currentStreamInfo] = { minibatchValuePtr, numSequences, numSamples, hasReachedSweepEnd };
                 }
                 else
-                    LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
+                    LogicError("GetNextMinibatch: Input of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
             }
         }
 
@@ -327,5 +338,125 @@ namespace CNTK
     {
         auto checkpointedMinibatchSourcePosition = checkpoint[PositionAttributeName].Value<size_t>();
         m_shim->SetCurrentSamplePosition(checkpointedMinibatchSourcePosition);
+
+        // Need to reinitialize, we also have to remember the current position because StartEpoch
+        // effectively resets it.
+        // TODO: Remove call to StartEpoch - this API is legacy.
+        m_restorePosition = checkpointedMinibatchSourcePosition;
+        m_epochEndReached = false;
+        m_prevMinibatchSize = 0;
+    }
+
+    /* static */ ImageTransform ReaderCrop(const wchar_t* cropType,
+            int cropSize, float sideRatio, float areaRatio,
+            float aspectRatio, const wchar_t* jitterType)
+    {
+        ImageTransform crop;
+        crop.Add(L"type", L"Crop",
+            L"cropType", cropType,
+            L"cropSize", cropSize,
+            L"sideRatio", sideRatio,
+            L"areaRatio", areaRatio,
+            L"aspectRatio", aspectRatio,
+            L"jitterType", jitterType);
+        return crop;
+    }
+
+    /* static */ ImageTransform ReaderScale(int width,
+            int height, int channels, const wchar_t* interpolations,
+            const wchar_t* scaleMode, int padValue)
+    {
+        ImageTransform scale;
+        scale.Add(L"type", L"Scale",
+            L"width", width,
+            L"height", height,
+            L"channels", channels,
+            L"interpolations", interpolations,
+            L"scaleMode", scaleMode,
+            L"padValue", padValue);
+        return scale;
+    }
+
+    /* static */ ImageTransform ReaderMean(const wchar_t* meanFile)
+    {
+        ImageTransform mean;
+        mean.Add(L"type", L"Mean", L"meanFile", meanFile);
+        return mean;
+    }
+
+    /* static */ ImageTransform ReaderColor(float brightnessRadius,
+            float contrastRadius, float saturationRadius)
+    {
+        ImageTransform color;
+        color.Add(L"type", L"Color",
+            L"brightnessRadius", brightnessRadius,
+            L"contrastRadius", contrastRadius,
+            L"saturationRadius", saturationRadius);
+        return color;
+    }
+
+    Deserializer ImageDeserializer(const std::wstring& fileName, const std::wstring& labelStreamName, size_t numLabels, const std::wstring& imageStreamName, const std::vector<ImageTransform>& transforms)
+    {
+        Deserializer img;
+        std::vector<DictionaryValue> actualTransforms;
+        std::transform(transforms.begin(), transforms.end(), std::back_inserter(actualTransforms), [](ImageTransform t) { return static_cast<DictionaryValue>(t); });
+        Dictionary labeldim;
+        labeldim[L"labelDim"] = numLabels;
+        Dictionary xforms;
+        xforms[L"transforms"] = actualTransforms;
+        Dictionary input;
+        input.Add(imageStreamName.c_str(), xforms, labelStreamName.c_str(), labeldim);
+        img.Add(L"type", L"ImageDeserializer", L"file", fileName, L"input", input);
+        return img;
+    }
+
+    Deserializer CTFDeserializer(const std::wstring& fileName, const std::vector<StreamConfiguration>& streams)
+    {
+        Deserializer ctf;
+        Dictionary input;
+        for (const auto& s : streams)
+        {
+            const auto& key = s.m_streamName;
+            Dictionary stream;
+            stream.Add(L"alias", s.m_streamAlias, L"dim", s.m_dim, L"format", s.m_isSparse ? L"sparse" : L"dense");
+            input[key] = stream;
+        }
+        ctf.Add(L"type", L"CNTKTextFormatDeserializer", L"file", fileName, L"input", input);
+        return ctf;
+    }
+
+    Deserializer HTKFeatureDeserializer(const std::vector<HTKFeatureConfiguration>& streams)
+    {
+        Deserializer htk;
+        Dictionary input;
+        for (const auto& s : streams)
+        {
+            const auto& key = s.m_streamName;
+            Dictionary stream;
+            std::vector<DictionaryValue> ctxWindow = { DictionaryValue(s.m_left), DictionaryValue(s.m_right) };
+            stream.Add(L"scpFile", s.m_scp, L"dim", s.m_dim, L"contextWindow", ctxWindow, L"expandToUtterance", s.m_broadcast);
+            input[key] = stream;
+        }
+        htk.Add(L"type", L"HTKFeatureDeserializer", L"input", input);
+        return htk;
+    }
+
+    Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles)
+    {
+        Deserializer htk;
+        Dictionary stream;
+        Dictionary labels;
+        labels.Add(L"labelMappingFile", labelMappingFile, L"dim", dimension);
+        std::vector<DictionaryValue> actualFiles;
+        std::transform(mlfFiles.begin(), mlfFiles.end(), std::back_inserter(actualFiles), [](const std::wstring& s) {return static_cast<DictionaryValue>(s); });
+        if (actualFiles.size() > 1)
+            labels[L"mlfFileList"] = actualFiles;
+        else if (actualFiles.size() == 1)
+            labels[L"mlfFile"] = actualFiles[0];
+        else
+            LogicError("HTKMLFDeserializer: No mlf files were specified");
+        stream[streamName] = labels;
+        htk.Add(L"type", L"HTKMLFDeserializer", L"input", stream);
+        return htk;
     }
 }

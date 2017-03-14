@@ -151,6 +151,8 @@ public:
     }
     };
 
+    std::function<std::string(size_t)> m_getKeyById;
+
 private:
     typedef map<std::wstring, Input> MapType;
     MapType inputs;

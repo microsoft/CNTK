@@ -41,8 +41,6 @@ typedef unsigned char byte;
 #define GPUSPARSE_INDEX_TYPE int // cuSparse only supports int array indexes
 #define CPUSPARSE_INDEX_TYPE int // to be consistent with cuSparse but limited the possible size of the matrix.
 
-#define MEM_MAX_LIMIT_TIMES 2 // The maximum times allowed a cached memory block allocated to a request
-
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 MATH_API void SetMathLibTraceLevel(int traceLevel);
@@ -87,12 +85,12 @@ enum ElementWiseOperator
     // unary (or binary with constant parameter)
     opCopy,
     opNegate, opNot, opAbs, opFloor, opReciprocal,
-    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin,
+    opSigmoid, opTanh, opSqr, opSqrt, opExp, opLog, opLinearRectifier, opCosine, opSin, opExponentialLinearUnit,
     // unary ops for use by Matrix class only (there is no TensorView implementation)
-    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine,
+    opSigmoidDerivative, opLinearRectifierDerivative, opNegativeSine, opExponentialLinearUnitDerivative,
     // binary
     opCopyIf, opCopyIfNot, opSum, opDifference, opElementwiseProduct, opElementwiseQuotient, opLogSum,
-    opMax, opMin,
+    opMax, opMin, opArgmax, opArgmin,
     opLess, opEqual, opGreater, opGreaterEqual, opNotEqual, opLessEqual, // Note: must obey this order: (sgn(a-b) == -1, 0, +1), (sgn(a-b) != -1, 0, +1)
     opAnd, opOr, opXor, opMaskNegative,
     opElementwiseProductWithSigmoidDerivativeFromOutput, opElementwiseProductWithTanhDerivativeFromOutput,
@@ -100,6 +98,7 @@ enum ElementWiseOperator
     opElementwiseProductWithCosDerivative, opElementwiseProductWithSinDerivative,
     opElementwiseProductWithAbsDerivative, opElementwiseProductWithSqrtDerivative,
     opElementwiseProductWithReciprocalDerivative, opSqrOfDifference,
+    opElementwiseProductWithExponentialLinearUnitDerivativeFromOutput,
     // binary ops for indexing
     // opIndex,
     // ternary
@@ -108,6 +107,7 @@ enum ElementWiseOperator
     opElementwiseProductWithLogSumDerivative,
     opCopyIfEqual,
     opElementwiseProductWithExpOfDiff, /* a * exp(b - c) */
+    opElementwiseProductWithQuotient, /* a * (b / c) */
     // Note: not all that's implemented in CNTK ComputationNodes has an opcode yet.
 };
 
@@ -115,53 +115,55 @@ enum ElementWiseOperator
 #define ForAllNullaryOps(Macro) \
     Macro(ConstOne);
 
-#define ForAllUnaryOps(Macro) \
-    Macro(Copy);              \
-    Macro(Negate);            \
-    Macro(Not);               \
-    Macro(Abs);               \
-    Macro(Floor);             \
-    Macro(Reciprocal);        \
-    Macro(Sigmoid);           \
-    Macro(Tanh);              \
-    Macro(Sqr);               \
-    Macro(Sqrt);              \
-    Macro(Exp);               \
-    Macro(Log);               \
-    Macro(LinearRectifier);   \
-    Macro(Cosine);            \
-    Macro(Sin);
+#define ForAllUnaryOps(Macro)     \
+    Macro(Copy);                  \
+    Macro(Negate);                \
+    Macro(Not);                   \
+    Macro(Abs);                   \
+    Macro(Floor);                 \
+    Macro(Reciprocal);            \
+    Macro(Sigmoid);               \
+    Macro(Tanh);                  \
+    Macro(Sqr);                   \
+    Macro(Sqrt);                  \
+    Macro(Exp);                   \
+    Macro(Log);                   \
+    Macro(LinearRectifier);       \
+    Macro(Cosine);                \
+    Macro(Sin);                   \
+    Macro(ExponentialLinearUnit);
 
-#define ForAllBinaryOps(Macro)                                        \
-    Macro(CopyIf);                                                    \
-    Macro(CopyIfNot);                                                 \
-    Macro(Sum);                                                       \
-    Macro(Difference);                                                \
-    Macro(ElementwiseProduct);                                        \
-    Macro(ElementwiseQuotient);                                       \
-    Macro(LogSum);                                                    \
-    Macro(Max);                                                       \
-    Macro(Min);                                                       \
-    Macro(Equal);                                                     \
-    Macro(NotEqual);                                                  \
-    Macro(Greater);                                                   \
-    Macro(Less);                                                      \
-    Macro(GreaterEqual);                                              \
-    Macro(LessEqual);                                                 \
-    Macro(And);                                                       \
-    Macro(Or);                                                        \
-    Macro(Xor);                                                       \
-    Macro(MaskNegative);                                              \
-    Macro(ElementwiseProductWithSigmoidDerivativeFromOutput);         \
-    Macro(ElementwiseProductWithTanhDerivativeFromOutput);            \
-    Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput); \
-    Macro(ElementwiseProductWithLogDerivativeFromOutput);             \
-    Macro(ElementwiseProductWithCosDerivative);                       \
-    Macro(ElementwiseProductWithSinDerivative);                       \
-    Macro(ElementwiseProductWithAbsDerivative);                       \
-    Macro(ElementwiseProductWithReciprocalDerivative);                \
-    Macro(ElementwiseProductWithSqrtDerivative);                      \
-    Macro(SqrOfDifference);                                           \
+#define ForAllBinaryOps(Macro)                                               \
+    Macro(CopyIf);                                                           \
+    Macro(CopyIfNot);                                                        \
+    Macro(Sum);                                                              \
+    Macro(Difference);                                                       \
+    Macro(ElementwiseProduct);                                               \
+    Macro(ElementwiseQuotient);                                              \
+    Macro(LogSum);                                                           \
+    Macro(Max);                                                              \
+    Macro(Min);                                                              \
+    Macro(Equal);                                                            \
+    Macro(NotEqual);                                                         \
+    Macro(Greater);                                                          \
+    Macro(Less);                                                             \
+    Macro(GreaterEqual);                                                     \
+    Macro(LessEqual);                                                        \
+    Macro(And);                                                              \
+    Macro(Or);                                                               \
+    Macro(Xor);                                                              \
+    Macro(MaskNegative);                                                     \
+    Macro(ElementwiseProductWithSigmoidDerivativeFromOutput);                \
+    Macro(ElementwiseProductWithTanhDerivativeFromOutput);                   \
+    Macro(ElementwiseProductWithLinearRectifierDerivativeFromOutput);        \
+    Macro(ElementwiseProductWithLogDerivativeFromOutput);                    \
+    Macro(ElementwiseProductWithCosDerivative);                              \
+    Macro(ElementwiseProductWithSinDerivative);                              \
+    Macro(ElementwiseProductWithAbsDerivative);                              \
+    Macro(ElementwiseProductWithReciprocalDerivative);                       \
+    Macro(ElementwiseProductWithSqrtDerivative);                             \
+    Macro(SqrOfDifference);                                                  \
+    Macro(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput);
     //Macro(Index);
 
 #define ForAllTernaryOps(Macro)                         \
@@ -169,7 +171,8 @@ enum ElementWiseOperator
     Macro(CopyIfEqual);                                 \
     Macro(Clip);                                        \
     Macro(ElementwiseProductWithLogSumDerivative);      \
-    Macro(ElementwiseProductWithExpOfDiff);
+    Macro(ElementwiseProductWithExpOfDiff);             \
+    Macro(ElementwiseProductWithQuotient);
 
 // -----------------------------------------------------------------------
 // various enums to describe
@@ -211,158 +214,6 @@ enum MatrixFlags
     matrixFlagDontOwnBuffer = 1 << bitPosDontOwnBuffer,       // the matrix memory pointers are externally managed, don't allocate/free or attempt to copy to another location
     matrixFlagSetValueOnDevice = 1 << bitPosSetValueOnDevice, // SetValue() call has a buffer that is already on the device
 };
-
-
-// -----------------------------------------------------------------------
-// BufferManagement -- to control the allocation and release of memory
-// 
-// 1. The goal of buffer management
-// The best way to save memory is releasing memory right after no longer used in the rest of the mini-batch, which makes 
-// the extra cost on memory operation and slows down the speed. An option to solve that is building the static link between 
-// all nodes in pre-computing process and making memory re-use in the runtime, known as shared node value matrices in CNTK. 
-// The other option is using a buffer pool to take over the allocation and release request. Whereas the physical operation on 
-// memory, logical operation will make nearly no cost on allocation or release. Since the second option, achieved as 
-// BufferManagement below, could control all the memory operation, including some trivial ones, like the workspace in convolutions, 
-// and more flexible, allocating based on size and being easy to implement new algorithm, it is usually more powerful than the
-// first method.
-// 2. How it works?
-// First, it should be called in Resize function. In Resize function, using Request and LogicalReleaseFunction to replace the original 
-// request and release functions. Since BufferManagement is singleton for deviceId, just call the GetManagementInstance. And in Resize, 
-// there is a flag named growthOnly, which will request only the size increases to save the allocation cost. In the case, since the 
-// buffer pool, nearly no cost on allocation, the growth only will be disable in BufferManagement mode.
-// -----------------------------------------------------------------------
-class BufferManagement
-{
-private:
-    BufferManagement() = default;
-
-    // Disable all the copy & move functions to keep the instance safely
-    DISABLE_COPY_AND_MOVE(BufferManagement);
-
-public:
-    static BufferManagement& GetManagerInstance(DEVICEID_TYPE deviceId)
-    {
-        static std::mutex instancLock;
-        auto instance = m_instances.find(deviceId);
-        if (instance == m_instances.end()) 
-        {
-            std::lock_guard<std::mutex> lock(instancLock);
-            if (instance == m_instances.end())
-            {
-                instance = m_instances.insert(std::make_pair(deviceId, std::unique_ptr<BufferManagement>(
-                    new BufferManagement()))).first;
-                instance->second->m_deviceId = deviceId;
-                instance->second->m_totalManageSize = 0;
-                instance->second->m_totalAllocSize = 0;
-            }
-        }
-        return *(instance->second);
-    }
-
-    // for requesting, find in buffer container first, if failed, allocate a new one
-    // if allocating from buffer, the size will be modified to the real buffer size
-    template<class ElemType>
-    ElemType* RequestBuffer(size_t& size)
-    {
-        ElemType* bufferPtr = nullptr;
-        auto& bufferContainer = BufferContainer<ElemType>();
-
-        // simply allocating based on size, more efficient and complex algorithm could be implemented here
-        auto bufferHint = bufferContainer.lower_bound(size);
-        if (bufferHint != bufferContainer.end() && bufferHint->first < size * MEM_MAX_LIMIT_TIMES) 
-        {
-            bufferPtr = bufferHint->second;
-            size = bufferHint->first;
-            m_totalManageSize -= size;
-            bufferContainer.erase(bufferHint);
-            return bufferPtr;
-        }
-
-        if (m_deviceId >= 0) {
-#ifndef CPUONLY
-            auto deviceSize = TracingGPUMemoryAllocator::GetFreeAndTotalMemoryInMBs(m_deviceId);
-            float freeMemoryRatio = (float)deviceSize.first / deviceSize.second;
-            if (freeMemoryRatio < 0.05f || (deviceSize.first << 20) / sizeof(ElemType) < size) 
-            {
-                PhysicalReleaseAllBuffer<ElemType>();
-            }
-            bufferPtr = TracingGPUMemoryAllocator::Allocate<ElemType>(m_deviceId, size);
-            m_totalAllocSize += size;
-#endif
-        }
-        else 
-        {
-            // first, try no-throw allocation.
-            // if failed, empty the buffer and re-try a throwing allocation
-            // if failed again, let system throw the bad_alloc exception
-            bufferPtr = new (std::nothrow) ElemType[size];
-            if (!bufferPtr) 
-            {
-                PhysicalReleaseAllBuffer<ElemType>();
-                bufferPtr = new ElemType[size];
-            }
-            m_totalAllocSize += size;
-        }
-
-        return bufferPtr;
-    }
-
-    // insert the header of buffer into the buffer container
-    template<class ElemType>
-    void LogicalReleaseBuffer(ElemType* buffer, size_t size)
-    {
-        auto& bufferContainer = BufferContainer<ElemType>();
-        bufferContainer.insert(std::make_pair(size, buffer));
-        m_totalManageSize += size;
-    }
-
-    // physical release the buffer
-    template<class ElemType>
-    void PhysicalReleaseBuffer(ElemType* buffer)
-    {
-        if (m_deviceId >= 0) 
-        {
-#ifndef CPUONLY
-            TracingGPUMemoryAllocator::Free<ElemType>(m_deviceId, buffer, false);
-#endif
-        }
-        else {
-            delete[] buffer;
-        }
-    }
-
-    // empty all the cached buffer
-    template<class ElemType>
-    void PhysicalReleaseAllBuffer()
-    {
-        auto& bufferContainer = BufferContainer<ElemType>();
-
-        for (auto& iter : bufferContainer) 
-        {
-            PhysicalReleaseBuffer<ElemType>(iter.second);
-        }
-
-        bufferContainer.clear();
-        m_totalManageSize = 0;
-    }
-
-private:
-    static std::unordered_map<DEVICEID_TYPE, std::unique_ptr<BufferManagement>> m_instances;
-
-    template <class ElemType>
-    std::multimap<size_t, ElemType*>& BufferContainer();
-    DEVICEID_TYPE m_deviceId;
-    size_t m_totalManageSize;
-    size_t m_totalAllocSize;
-
-    // map to store all the temp buffer handle
-    std::multimap<size_t, float*> m_bufferFloatContainer;
-    std::multimap<size_t, double*> m_bufferDoubleContainer;
-    std::multimap<size_t, char*> m_bufferCharContainer;
-    std::multimap<size_t, short*> m_bufferShortContainer;
-    std::multimap<size_t, int*> m_bufferIntContainer;
-};
-
 
 // -----------------------------------------------------------------------
 // BaseMatrixStorage -- base class for all matrix types (CPU, GPU) x (dense, sparse)

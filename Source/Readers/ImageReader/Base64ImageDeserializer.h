@@ -16,7 +16,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class Base64ImageDeserializer : public ImageDeserializerBase
     {
     public:
-        Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool isPrimary);
+        Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
         // Get a chunk by id.
         ChunkPtr GetChunk(ChunkIdType chunkId) override;

@@ -32,6 +32,7 @@ Readme text
 *.ipynb text
 *.pl text
 *.ps1 text
+*.psm1 text
 *.ps text
 *.i text
 
@@ -88,6 +89,7 @@ Makefile text
 *.log text
 
 Dockerfile* text
+.dockerignore text
 
 # Speech data
 mean.363 text
@@ -139,5 +141,6 @@ Examples/SequenceToSequence/CMUDict/Data/cmudict-0.7b* text
 *.zip binary
 *.dnn binary
 Examples/Image/Detection/FastRCNN/fastRCNN/*/*.pyd binary
+Examples/Image/Detection/FastRCNN/fastRCNN/*/*.so binary
 Tests/UnitTests/V2LibraryTests/data/*.bin binary
 Tests/UnitTests/ReaderTests/Data/CNTKBinaryReader/*.bin binary

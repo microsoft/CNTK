@@ -8,6 +8,7 @@ import numpy as np
 import os
 import sys
 import signal
+import shutil
 import subprocess
 import re
 import pytest
@@ -16,72 +17,56 @@ from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(abs_path)
 example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python")
+sys.path.append(example_dir)
 script_under_test = os.path.join(example_dir, "ConvNet_CIFAR10_DataAug_Distributed.py")
 
-sys.path.append(example_dir)
+from distributed_common import mpiexec_test
+from prepare_test_data import prepare_CIFAR10_data
 
-TOLERANCE_ABSOLUTE = 2E-1
-TIMEOUT_SECONDS = 300
-
-def data_set_directory():
-    try:
-        base_path = os.path.join(os.environ['CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'],
-                                *"Image/CIFAR/v0/cifar-10-batches-py".split("/"))
-        # N.B. CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY has {train,test}_map.txt
-        #      and CIFAR-10_mean.xml in the base_path.
-    except KeyError:
-        base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                *"../../../../Examples/Image/DataSets/CIFAR-10".split("/"))
-
-    base_path = os.path.normpath(base_path)
-    os.chdir(os.path.join(base_path, '..'))
-    return base_path
-
-def mpiexec_test(device_id, script, params, expected_test_error, match_exactly=True, per_minibatch_tolerance=TOLERANCE_ABSOLUTE, error_tolerance=TOLERANCE_ABSOLUTE):
-    if cntk_device(device_id).type() != DeviceKind_GPU:
-       pytest.skip('test only runs on GPU')
-
-    cmd = ["mpiexec", "-n", "2", "python", script] + params
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE)
-    if sys.version_info[0] < 3:
-        out = p.communicate()[0]
-    else:
-        try:
-            out = p.communicate(timeout=TIMEOUT_SECONDS)[0]  # in case we have a hang
-        except subprocess.TimeoutExpired:
-            os.kill(p.pid, signal.CTRL_C_EVENT)
-            raise RuntimeError('Timeout in mpiexec, possibly hang')
-    str_out = out.decode(sys.getdefaultencoding())
-    results = re.findall("Final Results: Minibatch\[.+?\]: errs = (.+?)%", str_out)
-
-    assert len(results) == 2
-
-    if match_exactly:
-        assert results[0] == results[1]
-    else:
-        assert np.allclose(float(results[0]), float(results[1]), atol=per_minibatch_tolerance)
-
-    assert np.allclose(float(results[0])/100, expected_test_error, atol=error_tolerance)
+mpiexec_params = [ "-n", "2"]
 
 def test_cifar_convnet_distributed(device_id):
-    params = [ "-e", "2",
-               "-d", data_set_directory(),
+    # Create a path to TensorBoard log directory and make sure it does not exist.
+    abs_path = os.path.dirname(os.path.abspath(__file__))
+    tb_logdir = os.path.join(abs_path, 'ConvNet_CIFAR10_DataAug_Distributed_test_log')
+    if os.path.exists(tb_logdir):
+        shutil.rmtree(tb_logdir)
+
+    params = [ "-n", "2",
+               "-m", "64",
+               "-e", "3200",
+               "-datadir", prepare_CIFAR10_data(),
+               "-tensorboard_logdir", tb_logdir,
                "-q", "32",
-               "-device", "0" ]
-    mpiexec_test(device_id, script_under_test, params, 0.617)
+               "-r",
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.75, False, per_minibatch_tolerance=1e-2) # False since different workers may have different #cores
+
+    # Ensure that the TensorBoard log directory was created and contains exactly one file with the expected name.
+    tb_files = 0
+    for tb_file in os.listdir(tb_logdir):
+        assert tb_file.startswith("events.out.tfevents")
+        tb_files += 1
+    assert tb_files == 1
 
 def test_cifar_convnet_distributed_1bitsgd(device_id):
-    params = [ "-e", "2",
-               "-d", data_set_directory(),
+    params = [ "-n", "2",
+               "-m", "64",
+               "-e", "3200",
+               "-datadir", prepare_CIFAR10_data(),
                "-q", "1",
-               "-device", "0" ]
-    mpiexec_test(device_id, script_under_test, params, 0.617)
-
+               "-r",
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.75, False, per_minibatch_tolerance=1e-2)
 
 def test_cifar_convnet_distributed_block_momentum(device_id):
-    params = [ "-e", "2",
-               "-d", data_set_directory(),
-               "-b", "3200",
-               "-device", "0" ]
-    mpiexec_test(device_id, script_under_test, params, 0.6457, False, 10)
+    params = [ "-n", "2",
+               "-m", "64",
+               "-e", "3200",
+               "-datadir", prepare_CIFAR10_data(),
+               "-b", "1600",
+               "-r",
+               "-device", str(device_id) ]
+    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.78, False, 10)

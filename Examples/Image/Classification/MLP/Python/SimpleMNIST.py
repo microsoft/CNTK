@@ -4,18 +4,20 @@
 # for full license information.
 # ==============================================================================
 
+import argparse
 import numpy as np
 import sys
 import os
-from cntk import Trainer
+from cntk import Trainer, minibatch_size_schedule 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.device import cpu, set_default_device
 from cntk.learner import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
+from cntk.training_session import *
+from cntk.utils import ProgressPrinter, TensorBoardProgressWriter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "common"))
-from nn import fully_connected_classifier_net, print_training_progress
+from nn import fully_connected_classifier_net
 
 def check_path(path):
     if not os.path.exists(path):
@@ -33,7 +35,7 @@ def create_reader(path, is_training, input_dim, label_dim):
 
 # Creates and trains a feedforward classification model for MNIST images
 
-def simple_mnist(debug_output=False):
+def simple_mnist(tensorboard_logdir=None):
     input_dim = 784
     num_output_classes = 10
     num_hidden_layers = 1
@@ -63,25 +65,34 @@ def simple_mnist(debug_output=False):
         label  : reader_train.streams.labels
     }
 
-    lr_per_minibatch=learning_rate_schedule(0.2, UnitType.minibatch)
-    # Instantiate the trainer object to drive the model training
-    trainer = Trainer(z, ce, pe, sgd(z.parameters, lr=lr_per_minibatch))
-
-    # Get minibatches of images to train with and perform model training
+    # Training config
     minibatch_size = 64
     num_samples_per_sweep = 60000
     num_sweeps_to_train_with = 10
-    num_minibatches_to_train = (num_samples_per_sweep * num_sweeps_to_train_with) / minibatch_size
-    training_progress_output_freq = 500
 
-    if debug_output:
-        training_progress_output_freq = training_progress_output_freq/4
+    # Instantiate progress writers.
+    #training_progress_output_freq = 100
+    progress_writers = [ProgressPrinter(
+        #freq=training_progress_output_freq,
+        tag='Training',
+        num_epochs=num_sweeps_to_train_with)]
 
-    for i in range(0, int(num_minibatches_to_train)):
-        mb = reader_train.next_minibatch(minibatch_size, input_map=input_map)
-        trainer.train_minibatch(mb)
-        print_training_progress(trainer, i, training_progress_output_freq)
+    if tensorboard_logdir is not None:
+        progress_writers.append(TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z))
 
+    # Instantiate the trainer object to drive the model training
+    lr_per_minibatch = learning_rate_schedule(0.2, UnitType.minibatch)
+    trainer = Trainer(z, (ce, pe), sgd(z.parameters, lr=lr_per_minibatch), progress_writers)
+
+    training_session(
+        trainer=trainer,
+        mb_source = reader_train,
+        mb_size = minibatch_size,
+        var_to_stream = input_map,
+        max_samples = num_samples_per_sweep * num_sweeps_to_train_with,
+        progress_frequency=num_samples_per_sweep
+    ).train()
+    
     # Load test data
     path = os.path.normpath(os.path.join(data_dir, "Test-28x28_cntk_text.txt"))
     check_path(path)
@@ -112,5 +123,10 @@ if __name__=='__main__':
     # use the best available one, e.g.
     # set_default_device(cpu())
 
-    error = simple_mnist()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir',
+                        help='Directory where TensorBoard logs should be created', required=False, default=None)
+    args = vars(parser.parse_args())
+
+    error = simple_mnist(args['tensorboard_logdir'])
     print("Error: %f" % error)

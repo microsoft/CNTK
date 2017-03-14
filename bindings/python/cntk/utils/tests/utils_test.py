@@ -13,6 +13,8 @@ from cntk.device import default
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
 from cntk.utils import *
+from cntk.internal import *
+from cntk import Value
 
 AA = np.asarray
 
@@ -91,7 +93,7 @@ def test_sanitize_batch_sparse():
        [True, False],
        [[2, 1, 1], [1, 0, 0]]),
 
-    (one_hot([[3, 4, 5, 1], [60, 61]], num_classes=62),
+    (Value.one_hot([[3, 4, 5, 1], [60, 61]], num_classes=62),
         [True, False],
         ValueError),
 ])
@@ -107,9 +109,9 @@ def test_mask(batch, seq_starts, expected):
 
 def test_one_hot():
     with pytest.raises(ValueError):
-        s = one_hot([[1.0, 2.0], [3.]], 4)
+        s = Value.one_hot([[1.0, 2.0], [3.]], 4)
     with pytest.raises(ValueError):
-        s = one_hot([1, 2], 4)
+        s = Value.one_hot([1, 2], 4)
 
 def test_sanitize_batch_contiguity():
     a1 = AA([[1,2],[3,4]])

@@ -7,6 +7,11 @@
 
 using namespace Microsoft::MSR::CNTK;
 
+// -----------------------------------------------------------------------
+// EpochAccumulatorNode calculates mean values of all samples used in forward pass.
+// -----------------------------------------------------------------------
+
+// TODO: can this be static?
 template <class ElemType>
 void Microsoft::MSR::CNTK::UpdateRunningAverage(ComputationNode<ElemType>& newInput,
                                                 TensorView<ElemType>& runningAverage, size_t& runningCount)

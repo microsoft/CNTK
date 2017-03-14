@@ -91,6 +91,9 @@
     <ClInclude Include="ReaderUtil.h">
       <Filter>Utils</Filter>
     </ClInclude>
+    <ClInclude Include="ReaderConstants.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="NoRandomizer.cpp">
@@ -130,6 +133,9 @@
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="Indexer.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="ReaderUtil.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>

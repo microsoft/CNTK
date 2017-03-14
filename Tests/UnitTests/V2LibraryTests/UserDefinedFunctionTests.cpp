@@ -2,12 +2,13 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
+#include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <functional>
 #include "Common.h"
+#include "UserMatrixMultiplicationOp.h"
 
 using namespace CNTK;
-
 // TODO: Need to further cleanup/simplify definition of user defined functions
 class UserDefinedTimesOrPlusFunction final : public Function
 {
@@ -41,7 +42,7 @@ public:
                     return i;
             }
 
-            throw std::runtime_error("GetInputIndex: Specified variable is not an input of this Function");
+            BOOST_ERROR("GetInputIndex: Specified variable is not an input of this Function");
             return 0;
         };
 
@@ -110,18 +111,15 @@ public:
     size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
 private:
-    std::vector<Variable> InferOutputs() override
+    void InferOutputs(std::vector<Variable>& outputs) override
     {
         auto leftOperand = Inputs()[0];
         auto rightOperand = Inputs()[1];
         auto tempFunc = m_isTimes ? Times(leftOperand, rightOperand) : Plus(leftOperand, rightOperand);
         auto tempFuncOutputs = tempFunc->Outputs();
 
-        std::vector<Variable> outputs;
         for (auto tempFuncOutput : tempFuncOutputs)
             outputs.push_back(OutputVariable(tempFuncOutput.Shape(), tempFuncOutput.GetDataType(), tempFuncOutput.DynamicAxes()));
-
-        return outputs;
     }
 
     UserDefinedTimesOrPlusFunction(const Variable& leftOperand, const Variable& rightOperand, bool isTimes, const std::wstring& name)
@@ -133,7 +131,7 @@ private:
             if (operand.DynamicAxes().empty())
             {
                 if (Combine({ operand })->Parameters().empty())
-                    throw std::runtime_error("Cannot determine device to place Parameter on!");
+                    BOOST_ERROR("Cannot determine device to place Parameter on!");
 
                 var = Parameter(operand.Shape(), operand.GetDataType(), 0, Combine({ operand })->Parameters()[0].Value()->Device());
             }
@@ -154,6 +152,8 @@ private:
     FunctionPtr m_timesOrPlusFunc;
     std::unordered_map<Variable, Variable> m_timesOrPlusFuncArgumentMap;
 };
+
+namespace CNTK { namespace Test {
 
 template <typename ElementType>
 void TestTimesAndPlus(size_t inputDim,
@@ -277,7 +277,7 @@ void TestTimesAndPlus(size_t inputDim,
 
         for (size_t i = 0; i < outputDim; ++i)
             if (plusParameterGradientData[i] != numSamples)
-                throw std::runtime_error("TestTimesAndPlus: Backprop prop results do not match expected results for Plus params gradients");
+                BOOST_ERROR("Backprop prop results do not match expected results for Plus params gradients");
 
         std::vector<ElementType> expectedTimesParamsGradientValues(timesParam.Shape().TotalSize());
         for (size_t i = 0; i < inputDim; ++i)
@@ -361,19 +361,43 @@ void TestDuplicateVariablesInInputs(size_t dim, const DeviceDescriptor& device)
 
     for (size_t i = 0; i < dim; ++i)
         if (inputGradientData[i] != 2)
-            throw std::runtime_error("TestTimesAndPlus: Backprop prop results do not match expected results for Plus params gradients");
+            BOOST_ERROR("TestTimesAndPlus: Backprop prop results do not match expected results for Plus params gradients");
 }
 
-void UserDefinedFunctionTests()
-{
-    fprintf(stderr, "\nUserDefinedFunctionTests..\n");
+BOOST_AUTO_TEST_SUITE(UserDefinedFunctionSuite)
 
-    TestDuplicateVariablesInInputs(11, DeviceDescriptor::CPUDevice());
-    TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true);
-    if (IsGPUAvailable())
+BOOST_AUTO_TEST_CASE(DuplicateVariablesInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestDuplicateVariablesInInputs(11, DeviceDescriptor::CPUDevice());
+}
+
+BOOST_AUTO_TEST_CASE(DuplicateVariablesInGPU)
+{
+    if (ShouldRunOnGpu())
+        TestDuplicateVariablesInInputs(117, DeviceDescriptor::GPUDevice(0));
+}
+
+BOOST_AUTO_TEST_CASE(TimesAndPlusInCPU)
+{
+    if (ShouldRunOnCpu())
+        TestTimesAndPlus<double>(4, 2, 5, DeviceDescriptor::CPUDevice(), 3, true, true);
+}
+
+BOOST_AUTO_TEST_CASE(TimesAndPlusInGPU)
+{
+    if (ShouldRunOnGpu())
     {
         TestTimesAndPlus<float>(145, 32, 2, DeviceDescriptor::GPUDevice(0), 10, true, false);
         TestTimesAndPlus<double>(145, 15, 200, DeviceDescriptor::GPUDevice(0), 21, false, false);
-        TestDuplicateVariablesInInputs(117, DeviceDescriptor::GPUDevice(0));
     }
 }
+
+BOOST_AUTO_TEST_CASE(UserTimesFunctionExample)
+{
+    UserTimesFunctionExample();
+}
+
+BOOST_AUTO_TEST_SUITE_END()
+
+}}

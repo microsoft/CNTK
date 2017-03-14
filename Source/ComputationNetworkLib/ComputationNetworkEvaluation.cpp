@@ -132,28 +132,28 @@ ComputationNetwork::PARTraversalFlowControlNode::PARTraversalFlowControlNode(con
         }
     }
 }
-/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
+/*static*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr)
 {
-    for (auto& node : m_nestedNodes)
+    if (node->IsOutOfDateWrtInputs())
     {
-#if 0
-        if (dynamic_pointer_cast<LearnableParameter<float>>(node))
-            dynamic_pointer_cast<ComputationNode<float>>(node)->DebugLogMinibatch();
-#endif
-        if (node->IsOutOfDateWrtInputs())
-        {
-            node->BeginForwardProp();
-            node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
-            node->EndForwardProp();
+        node->BeginForwardProp();
+        node->ForwardProp(fr.WithLayout(node->GetMBLayout()));
+        node->EndForwardProp();
 
-            node->BumpEvalTimeStamp();
-        }
+        node->BumpEvalTimeStamp();
 
         // Extreme Tracing, part 1/4
         if (node->HasEnvironmentPtr() && node->Environment().ShouldDumpNode())
             DumpNode<float>(node, /*dumpGradient=*/false) || DumpNode<double>(node, false);
     }
 }
+
+/*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::ForwardProp(const FrameRange& fr) /*override*/
+{
+    for (auto& node : m_nestedNodes)
+        ForwardProp(node, fr);
+}
+
 /*virtual*/ void ComputationNetwork::PARTraversalFlowControlNode::Backprop(const FrameRange& fr, bool childrenInThisLoop, bool childrenInOuterLoop) /*override*/
 {
     childrenInThisLoop, childrenInOuterLoop; // TODO: think through what these mean when coming from PAR mode
@@ -943,31 +943,41 @@ void ComputationNetwork::PrintMemorySharingStructure(const vector<ComputationNod
     size_t numUnshared = 0;
     for (const auto& item : memSharingStructure)
     {
-        if (item.second.size() < 2) // only print actually shared matrices
+        if (item.second.size() < 2) // unshared matrices
             numUnshared++;
-        else
+        else                        // shared matrices
             numShared++;
     }
 
-    fprintf(stderr, "\nMemory Sharing: Out of %d matrices, %d are shared as %d, and %d are not shared.\n\n", (int)numMatrices, (int)(numMatrices - numUnshared), (int)numShared, (int)numUnshared);
+    fprintf(stderr, "\nMemory Sharing: Out of %d matrices, %d are shared as %d, and %d are not shared.\n", (int)numMatrices, (int)(numMatrices - numUnshared), (int)numShared, (int)numUnshared);
+
+    fprintf(stderr, "\nHere are the ones that share memory:\n"); 
     for (const auto& item : memSharingStructure)
     {
-        if (item.second.size() < 2) // only print actually shared matrices
-            continue;
-        // Format:
-        // { node1
-        //   node2 }
-        // { node3
-        //   node4
-        //   node5 }
-        // where unshared nodes are not printed.
-        const char* delim = "\t{ ";
-        for (const auto& memShareInfo : item.second)
+        if (item.second.size() >= 2)
         {
-            fprintf(stderr, "%s%ls", delim, memShareInfo.c_str());
-            delim = "\n\t  ";
+            // Format:
+            // { node1
+            //   node2 }
+            // { node3
+            //   node4
+            //   node5 }
+            const char* delim = "\t{ ";
+            for (const auto& memShareInfo : item.second)
+            {
+                fprintf(stderr, "%s%ls", delim, memShareInfo.c_str());
+                delim = "\n\t  ";
+            }
+            fprintf(stderr, " }\n");
         }
-        fprintf(stderr, " }\n");
+    }
+    fprintf(stderr, "\nHere are the ones that don't share memory:\n");
+    for (const auto& item : memSharingStructure)
+    {
+        if (item.second.size() < 2)
+        {
+            fprintf(stderr, "\t{%ls}\n", item.second.begin()->c_str()); 
+        }
     }
     fprintf(stderr, "\n");
 }
@@ -1003,28 +1013,20 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
     // Due to special topology, if a node is solely induced by parameters, its function value should not be shared
     MarkValueNonSharableNodes();
 
-    bool performingBackPropagation = (trainRootNode != nullptr) || (Globals::ShouldEnableHyperCompressMemory());
-
-    // Construct the composite forward prop eval order by enumerating the
-    // nodes corresponding to each of our roots in global eval oder
-    forwardPropRoots = SortByGlobalEvalOrder(forwardPropRoots);
+    bool performingBackPropagation = (trainRootNode != nullptr);
 
     // Create a composite Eval order with the specified nodes as roots
     // For each node determine parents and whether the output of the
     // node is needed during back propagation
     std::unordered_map<ComputationNodeBasePtr, bool> outputValueNeededDuringBackProp;
     std::unordered_map<ComputationNodeBasePtr, std::unordered_set<ComputationNodeBasePtr>> parentsMap;
-    std::vector<ComputationNodeBasePtr> compositeForwardPropEvalOrder;
     std::unordered_set<ComputationNodeBasePtr> uniqueForwardPropEvalNodes;
     for (auto& rootNode : forwardPropRoots)
     {
         for (const auto& node : GetEvalOrder(rootNode))
         {
             if (uniqueForwardPropEvalNodes.find(node) == uniqueForwardPropEvalNodes.end())
-            {
                 uniqueForwardPropEvalNodes.insert(node);
-                compositeForwardPropEvalOrder.push_back(node);
-            }
 
             for (int i = 0; i < node->GetNumInputs(); i++)
             {
@@ -1062,32 +1064,29 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
-    set<ComputationNodeBasePtr> completedEvaluate;
-    for (auto& nodeIter : compositeForwardPropEvalOrder)
-    {
-        nodeIter->SetOutputNeededDuringBackprop(outputValueNeededDuringBackProp[nodeIter]);
+    m_matrixPool.ResetStepCounter();
 
-        if (nodeIter->IsPartOfLoop())
+    TravserseInSortedGlobalEvalOrder(forwardPropRoots, [&outputValueNeededDuringBackProp, &parentsMap, this](const ComputationNodeBasePtr& node) {
+        if (node->Is<SEQTraversalFlowControlNode>())
         {
-            // TODO: use FormNestedNetwork() here to avoid completedEvaluate[] check
-            shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, nodeIter);
-            assert(recInfo != nullptr);
-            if (completedEvaluate.insert(recInfo).second)
-            {
-                recInfo->RequestMatricesBeforeForwardProp(m_matrixPool);
+            auto seqTraversalFlowControlNode = node->As<SEQTraversalFlowControlNode>();
+            for (auto& loopNode : seqTraversalFlowControlNode->m_nestedNodes)
+                loopNode->SetOutputNeededDuringBackprop(outputValueNeededDuringBackProp[loopNode]);
 
-                for (auto& nodeLoopIter : recInfo->m_nestedNodes)
-                    ReleaseMatricesAfterEvalForChildren(nodeLoopIter, parentsMap);
-            }
+            seqTraversalFlowControlNode->RequestMatricesBeforeForwardProp(m_matrixPool);
+
+            for (auto& loopNode : seqTraversalFlowControlNode->m_nestedNodes)
+                ReleaseMatricesAfterEvalForChildren(loopNode, parentsMap);
         }
         else
         {
-            nodeIter->RequestMatricesBeforeForwardProp(m_matrixPool);
+            node->SetOutputNeededDuringBackprop(outputValueNeededDuringBackProp[node]);
+            node->RequestMatricesBeforeForwardProp(m_matrixPool);
             // we only release matrices for the children since the root node's information will be used
             // and should not be shared with others
-            ReleaseMatricesAfterEvalForChildren(nodeIter, parentsMap);
+            ReleaseMatricesAfterEvalForChildren(node, parentsMap);
         }
-    }
+    });
 
     if (trainRootNode != nullptr)
     {
@@ -1127,7 +1126,15 @@ void ComputationNetwork::AllocateAllMatrices(const std::vector<ComputationNodeBa
         }
     }
 
+    m_matrixPool.OptimizedMemoryAllocation(); 
     m_areMatricesAllocated = true;
+
+    // TO DO: At the time of AllocateAllMatrices we don't know the minibatch size. In theory one may allocate memory again once we start to receive
+    // data from the reader (and the minibatch size is known). For some problems, minibatch size can change constantly, and there needs to be a 
+    // tradeoff in deciding how frequent to run optimized memory allocation. For now, we do it only once at the very beginning for speed concerns. 
+
+    // TO DO: when some matrices are sparse, the memory size request may be wrong. One may need to call OptimizedMemoryAllocation later again 
+    // if the requests of sparse allocation and release are re-processed correctly. Future work. 
 
     // print the memory sharing structure
     if (TraceLevel() > 0)

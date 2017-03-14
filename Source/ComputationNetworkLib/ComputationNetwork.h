@@ -52,7 +52,7 @@ public:
         m_randomSeedOffset(0),
         m_isCompiled(false),
         m_areMatricesAllocated(false),
-        m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, L"*")),
+        m_pMBLayoutOfNetwork(make_shared<MBLayout>(1, 0, ComputationNodeBase::DefaultDynamicAxisName)),
         m_environment(make_shared<ComputationEnvironment>())
     {
         //m_pMBLayoutOfNetwork->SetAxisName(L"T");
@@ -88,15 +88,15 @@ public:
     // -----------------------------------------------------------------------
     // (de-)serialization
     // -----------------------------------------------------------------------
-
     template <class ElemType>
-    void ReadPersistableParameters(File& fstream, bool create);
+    void ReadPersistableParameters(size_t modelVersion, File& fstream, bool create);
     // reload node content only, e.g. used by SGD::Train() when going back to an older model that had better training objective
     template <class ElemType>
     void RereadPersistableParameters(const std::wstring& fileName)
     {
         File fstream(fileName, FileOptions::fileOptionsBinary | FileOptions::fileOptionsRead);
-        ReadPersistableParameters<ElemType>(fstream, false);
+        auto modelVersion = GetModelVersion(fstream);
+        ReadPersistableParameters<ElemType>(modelVersion, fstream, false);
     }
     // design BUGBUG: binary files do not know whether they are float or double.
     // TODO: modify file format to know this; then eliminate the <ElemType> dependency (and in some future, allow nodes to be different)
@@ -123,6 +123,8 @@ public:
 private:
 
     void SaveToFileImpl(const std::wstring& fileName, const FileOptions fileFormat) const;
+    
+    static size_t GetModelVersion(File& fstream);
 
 public:
 
@@ -137,11 +139,41 @@ public:
     void Backprop(const ComputationNodeBasePtr rootNode);
 
     template <class NODESET> // version that takes multiple nodes
+    void TravserseInSortedGlobalEvalOrder(const NODESET& nodes, const std::function<void(const ComputationNodeBasePtr&)>& action)
+    {
+        // Create a composite evaluation order for all the nodes
+        std::vector<ComputationNodeBasePtr> combinedEvalOrder;
+        for (auto node : nodes)
+        {
+            auto currentNodeEvalOrder = GetEvalOrder(node);
+            combinedEvalOrder.insert(combinedEvalOrder.end(), currentNodeEvalOrder.begin(), currentNodeEvalOrder.end());
+        }
+
+        combinedEvalOrder = SortByGlobalEvalOrder(combinedEvalOrder);
+        set<ComputationNodeBasePtr> completedSEQNodes;
+        for (auto& node : combinedEvalOrder)
+        {
+            if (node->IsPartOfLoop())
+            {
+                shared_ptr<SEQTraversalFlowControlNode> recInfo = FindInRecurrentLoops(m_allSEQNodes, node);
+                assert(recInfo != nullptr);
+                if (completedSEQNodes.insert(recInfo).second)
+                    node = recInfo;
+                else
+                    node = nullptr;
+            }
+
+            if (node)
+                action(node);
+        }
+    }
+
+    template <class NODESET> // version that takes multiple nodes
     void ForwardProp(const NODESET& nodes)
     {
-        auto nodesSortedByGlobalEvalOrder = SortByGlobalEvalOrder(nodes);
-        for (auto& node : nodesSortedByGlobalEvalOrder)
-            ForwardProp(node);
+        TravserseInSortedGlobalEvalOrder(nodes, [](const ComputationNodeBasePtr& node) {
+            PARTraversalFlowControlNode::ForwardProp(node, FrameRange(nullptr));
+        });
     }
 
     static void BumpEvalTimeStamp(const std::vector<ComputationNodeBasePtr>& nodes);
@@ -880,6 +912,12 @@ public:
     // diagnostics
     // -----------------------------------------------------------------------
 
+    void SetTrackGapNans(bool enable)
+    {
+        m_environment->trackGapNans = enable;
+    }
+    bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
+
     void SetTraceLevel(int traceLevel)
     {
         m_environment->traceLevel = traceLevel;
@@ -1093,9 +1131,10 @@ protected:
         {
             return L"PARTraversalFlowControlNode";
         }
-        virtual void BeginForwardProp() override
-        {
-        }
+
+        static void ForwardProp(const ComputationNodeBasePtr& node, const FrameRange& fr);
+
+        virtual void BeginForwardProp() override {}
         virtual void ForwardProp(const FrameRange&) override;
         virtual void EndForwardProp() override
         {

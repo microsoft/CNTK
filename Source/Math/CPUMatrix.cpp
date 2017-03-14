@@ -653,6 +653,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoGatherColumnsOf(ElemType beta, const
         Resize(a.GetNumRows(), idx.GetNumCols());
 
     auto& us = *this;
+    // race-condition consideration: Since this loops over independent output columns, this has no race condition. Cf. DoScatterColumnsOf().
 #pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jOut, us)
     {
@@ -685,7 +686,9 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::DoScatterColumnsOf(ElemType beta, cons
     // Scatter may add more than one source column to the same target, so we must pre-scale with beta, and then just keep adding.
     Scale(beta, us); // if beta is 0, then this will be a memset()
 
-#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
+    // race-condition consideration: If idx[] references the same target column multiple times, this can have a race condition,
+    // and hence cannot use parallelism.
+//#pragma omp parallel for // TODO: Depending in circumstance, it may be more efficient to parallelize over rows.
     foreach_column(jIn, a)
     {
         auto jOutF = idx(0, jIn);           // this is the column we copy/add into
@@ -736,32 +739,35 @@ void CPUMatrix<ElemType>::SetValue(const ElemType v)
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val)
+void CPUMatrix<ElemType>::MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
-    if (GetNumCols() != columnsMask.GetNumCols())
-        RuntimeError("Matrix and column mask must have equal number of columns");
+    if (GetNumCols() != (columnsMask.GetNumCols() * numColsPerMaskEntry))
+        RuntimeError("MaskColumnsValue: Matrix number of columns must equal 'column mask number of columns * numColsPerMaskEntry'.");
 
     auto& us = *this;
-    long n = (long) GetNumCols(), m = (long) GetNumRows();
+    long n = (long)columnsMask.GetNumCols(), m = (long) GetNumRows();
 #pragma omp parallel for
     for (long j = 0; j < n; j++)
     {
         if (columnsMask(0, j) == 1)
             continue;
 
-        // four-way unrolling
-        for (size_t i = 0; i < (m & ~3); i += 4)
+        for (long k = 0; k < numColsPerMaskEntry; ++k)
         {
-            us(i, j) = val;
-            us(i + 1, j) = val;
-            us(i + 2, j) = val;
-            us(i + 3, j) = val;
-        }
+            // four-way unrolling
+            for (size_t i = 0; i < (m & ~3); i += 4)
+            {
+                us(i,     (j * numColsPerMaskEntry) + k) = val;
+                us(i + 1, (j * numColsPerMaskEntry) + k) = val;
+                us(i + 2, (j * numColsPerMaskEntry) + k) = val;
+                us(i + 3, (j * numColsPerMaskEntry) + k) = val;
+            }
 
-        // handle remaining
-        for (size_t i = m & ~3; i < m; i++)
-        {
-            us(i, j) = val;
+            // handle remaining
+            for (size_t i = m & ~3; i < m; i++)
+            {
+                us(i, (j * numColsPerMaskEntry) + k) = val;
+            }
         }
     }
 }
@@ -821,7 +827,8 @@ void CPUMatrix<ElemType>::SetColumn(const CPUMatrix<ElemType>& valMat, size_t j)
 {
     if (IsEmpty())
         LogicError("SetColumn: Matrix is empty.");
-    assert(valMat.GetNumRows() == GetNumRows() && valMat.GetNumCols() == 1);
+    if (valMat.GetNumRows() != GetNumRows() || valMat.GetNumCols() != 1)
+        LogicError("The valMat matrix has incorrect number of rows or columns.");
 
     auto& us = *this;
     long m = (long) GetNumRows();
@@ -1099,7 +1106,8 @@ void CPUMatrix<ElemType>::SetUniformRandomMask(const ElemType maskRate, const El
         LogicError("SetUniformRandomValue: Matrix is empty.");
 
     CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&rngHandle);
-    assert(cpuRNGHandle != nullptr);
+    if (cpuRNGHandle == nullptr)
+        LogicError("rngHandle must be a CPURNGHandle.");
 
     auto& us = *this;
     boost::random::uniform_real_distribution<ElemType> r(0, 1);
@@ -1139,7 +1147,8 @@ ElemType CPUMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& gradients, const bool
         SetValue(0.0);
     }
 
-    assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols());
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols())
+        LogicError("The matrix gradients must have the same rows and columns as this matrix.");
 
     ElemType *a = Data(), *d_v = gradients.Data();
     size_t n = GetNumElements();
@@ -1211,7 +1220,8 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
         SetValue(0.0);
     }
 
-    assert((GetNumRows() == gradients.GetNumRows()) && (GetNumCols() == numColsNeeded));
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
 
     size_t n = gradients.GetNumElements();
     ElemType* grad = gradients.Data();
@@ -1243,6 +1253,42 @@ void CPUMatrix<ElemType>::FSAdagrad(CPUMatrix<ElemType>& gradients,
 
         g *= learnRatePerSample;
         val[i] -= g;
+    }
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
+    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum)
+{
+    size_t numColsNeeded = 2 * gradients.GetNumCols();
+    auto unitGainFactor = ElemType(unitGainMomentum ? (1.0 - momentum) : 1.0);
+
+    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    {
+        RequireSize(gradients.GetNumRows(), numColsNeeded);
+        SetValue(0.0);
+    }
+
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
+
+    size_t n = gradients.GetNumElements();
+    ElemType* grad = gradients.Data();
+    ElemType* smoothAda = Data();
+    ElemType* smoothMom = Data() + n;
+    ElemType* val = functionValues.Data();
+#pragma omp parallel for
+    // TODO: Unroll 4-times for better performance leveraging vectorization
+    for (long i = 0; i < n; i++)
+    {
+        ElemType g = grad[i];
+        ElemType adaSqr = adaWeight * smoothAda[i] + (1.0f - adaWeight) * g * g;
+        smoothAda[i] = adaSqr;
+        ElemType ada = sqrt(adaSqr);
+        ElemType w = adaMul * (ElemType)( 1.0 / (ada + 1e-8));
+        g = momentum * smoothMom[i] + unitGainFactor * g;
+        smoothMom[i] = g;
+        val[i] -= g * w * learnRatePerSample;
     }
 }
 
@@ -1281,7 +1327,8 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
     ElemType* signs = Data() + n;     // sign of previous gradient
     ElemType* steps = Data() + 2 * n; // current step size
 
-    assert(GetNumRows() == gradients.GetNumRows() && GetNumCols() == gradients.GetNumCols() * 3);
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != gradients.GetNumCols() * 3)
+        LogicError("The matrix gradients does not have expected dimensions.");
 
     ElemType ONE_MINUS_GAMMA = ElemType(1.0) - RMS_GAMMA;
     // int upd[] = {
@@ -1345,7 +1392,6 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 template <class ElemType>
 void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
-    assert(numRows * numCols == GetNumElements());
     if (numRows * numCols != GetNumElements())
         InvalidArgument("Reshape: Total number of elements does not match.");
 
@@ -1447,6 +1493,7 @@ void CPUMatrix<ElemType>::CopySection(size_t /*numRows*/, size_t /*numCols*/, El
 template <class ElemType>
 inline size_t CPUMatrix<ElemType>::LocateColumn(const size_t col) const
 {
+    // For performance reason avoid extra validation in release.
     assert(col == 0 || col < GetNumCols());
     return col * m_numRows; // matrix in column-wise storage
 }
@@ -1454,7 +1501,9 @@ inline size_t CPUMatrix<ElemType>::LocateColumn(const size_t col) const
 template <class ElemType>
 inline size_t CPUMatrix<ElemType>::LocateElement(const size_t row, const size_t col) const
 {
+    // For performance reason avoid extra validation in release.
     assert(row < m_numRows);
+
     return LocateColumn(col) + row; // matrix in column-wise storage
 }
 
@@ -1797,7 +1846,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOf(const CPUMatrix
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementProductOf: The input matrix dimensions do not match.");
 
@@ -1833,7 +1881,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddElementProductOf(const CPUMatrix<El
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AddElementProductOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AddElementProductOf : The input matrix dimensions do not match.");
 
@@ -1872,7 +1919,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementDivisionOf(const CPUMatri
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementDivisionOf: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementDivisionOf : The input matrix dimensions do not match.");
 
@@ -1903,7 +1949,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementMultiplyWith(const CPUMat
     if (a.IsEmpty() || IsEmpty())
         LogicError("ColumnElementMultiplyWith: Matrix is empty.");
 
-    assert(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
     if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
         InvalidArgument("ColumnElementMultiplyWith: The input matrix should be a col vector and match [this]'s rows.");
 
@@ -1937,7 +1982,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::RowElementMultiplyWith(const CPUMatrix
     if (a.IsEmpty() || IsEmpty())
         LogicError("RowElementMultiplyWith: Matrix is empty.");
 
-    assert(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols());
     if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
         InvalidArgument("RowElementMultiplyWith: The input matrix should be a row vector and match [this]'s columns.");
 
@@ -1972,7 +2016,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::RowElementDivideBy(const CPUMatrix<Ele
     if (a.IsEmpty() || IsEmpty())
         LogicError("RowElementDivideBy: Matrix is empty.");
 
-    assert(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols());
     if (!(a.GetNumRows() == 1 && a.GetNumCols() == GetNumCols()))
         InvalidArgument("RowElementDivideBy: The input matrix should be a row vector and match [this]'s columns.");
 
@@ -2011,7 +2054,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ColumnElementDivideBy(const CPUMatrix<
     if (a.IsEmpty() || IsEmpty())
         LogicError("ColumnElementDivideBy: Matrix is empty.");
 
-    assert(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1);
     if (!(a.GetNumRows() == GetNumRows() && a.GetNumCols() == 1))
         InvalidArgument("ColumnElementDivideBy: The input matrix should be a col vector and match [this]'s rows.");
 
@@ -3110,7 +3152,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignKhatriRaoProductOf(const CPUMatr
         LogicError("AssignKhatriRaoProductOf: Matrix is empty.");
 
     long cols = (long) a.GetNumCols();
-    assert(cols == b.GetNumCols());
     if (cols != b.GetNumCols())
         InvalidArgument("a.GetNumCols() != b.GetNumCols()");
 
@@ -3149,7 +3190,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AddColumnReshapeProductOf(const CPUMat
         LogicError("AddColumnReshapeProductOf: Matrix is empty.");
 
     long cols = (long) a.GetNumCols();
-    assert(cols == b.GetNumCols());
     if (cols != b.GetNumCols())
         InvalidArgument("AddColumnReshapeProductOf: a.GetNumCols() != b.GetNumCols()");
 
@@ -3383,7 +3423,8 @@ void CPUMatrix<ElemType>::VectorMax(CPUMatrix<ElemType>& maxIndexes, CPUMatrix<E
     auto& us = *this;
     const int m = (int) GetNumRows();
     const int n = (int) GetNumCols();
-    assert(topK <= m);
+    if (topK > m)
+        InvalidArgument("VectorMax: TopK must be less or equal than the number of rows");
 
     assert(m > 0 && n > 0); // converting from size_t to int may cause overflow
 
@@ -3687,7 +3728,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignPackedConvolutionInput(const CPU
                                                                        const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample,
                                                                        const bool zeroPadding)
 {
-    assert(verticalSubsample <= kernelHeight && horizontalSubsample <= kernelWidth);
+    if (verticalSubsample > kernelHeight || horizontalSubsample > kernelWidth)
+        LogicError("Arguments verticalSubsample (or horitzontalSubsample) must be less or equal than kernelHeight (or kernelWidth).");
 
     const size_t packedInputRows = kernelWidth * kernelHeight * inputChannels;
     const size_t packedInputColsPerSample = outputWidth * outputHeight; // output size per channel
@@ -3761,7 +3803,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::UnpackConvolutionInput(CPUMatrix<ElemT
                                                                  const size_t kernelWidth, const size_t kernelHeight, const size_t horizontalSubsample, const size_t verticalSubsample,
                                                                  const bool zeroPadding) const
 {
-    assert(verticalSubsample <= kernelHeight && horizontalSubsample <= kernelWidth);
+    if (verticalSubsample > kernelHeight || horizontalSubsample > kernelWidth)
+        LogicError("Arguments verticalSubsample (or horizonSubsample) must be less than or equal to kernelHeight (or kernelWidth).");
 
     const size_t packedInputColsPerSample = outputWidth * outputHeight; // output size per channel
     const size_t inputDim = inputWidth * inputHeight * inputChannels;
@@ -4144,12 +4187,14 @@ template <class ElemType>
 void CPUMatrix<ElemType>::UnrollConvolutionOutput(size_t unrollCols, size_t mapInCount, size_t mapOutCount, const CPUMatrix<int>& mpRowCol,
                                                   const CPUMatrix<int>& mpRowRun, const CPUMatrix<int>& runs, CPUMatrix<ElemType>& output) const
 {
-    assert((mpRowCol.GetNumRows() % mapOutCount) == 0);
+    if (mpRowCol.GetNumRows() % mapOutCount != 0)
+        InvalidArgument("The number of rows in mpRowCol must be multiple of mapOutCount.");
     size_t mapOutSize = mpRowCol.GetNumRows() / mapOutCount;
     size_t batchSize = GetNumCols();
 
     size_t kernelSize = runs(1, 0);
-    assert((kernelSize % mapInCount) == 0);
+    if (kernelSize % mapInCount != 0)
+        InvalidArgument("kernelSize must be multiple of mapInCount.");
     size_t kernelMapSize = kernelSize / mapInCount;
 
 #pragma omp parallel for
@@ -4563,7 +4608,8 @@ void CPUMatrix<ElemType>::BatchNormalizationForward(const CPUMatrix<ElemType>& s
                                                     CPUMatrix<ElemType>& runMean, CPUMatrix<ElemType>& runVariance, CPUMatrix<ElemType>& out, double epsilon,
                                                     CPUMatrix<ElemType>& saveMean, CPUMatrix<ElemType>& saveInvStdDev) const
 {
-    assert((GetNumRows() % scale.GetNumRows()) == 0);
+    if (GetNumRows() % scale.GetNumRows() != 0)
+        LogicError("The number of rows of this matrx must be multiple of the number of rows of the scale matrix.");
 
     if (!inferenceOnly || expAvgFactor != 0 || blendFactor != 1)
         RuntimeError("Batch normalization training on CPU is not yet implemented.");
@@ -4663,7 +4709,6 @@ void CPUMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const CPUMatrix
     }
 
     assert(m > 0 && k > 0 && l > 0 && n > 0); // converting from size_t to int may cause overflow
-    assert(k == l);
     if (k != l)
         InvalidArgument("CPUMatrix<ElemType>::MultiplyAndWeightedAdd : The inner dimensions of a and b must match.");
 
@@ -4700,7 +4745,8 @@ template <class ElemType>
 void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b,
                                                     ElemType beta, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumElements() == 1); // a is a scalar
+    if (a.GetNumElements() != 1)
+        InvalidArgument("the argument a must be a scalar"); // a is a scalar
 
     ElemType f = alpha * a.Get00Element();
     if (beta == 0) // don't even read the memory if beta is 0
@@ -4855,9 +4901,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<El
                             c(dim, sample) -= a(dim, instance_id) * tmp(sample_id, instance_id);
                 }
     }
-    else
+    else if (inputIndex == 3)
     {
-        assert(inputIndex == 3);
         // Assume only one block in k direction.
         // We don't need to explicitly block in the j direction.
         for (int instance_id = 0; instance_id < batch_size; instance_id++)
@@ -4867,6 +4912,8 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignNCEDerivative(const CPUMatrix<El
                 c(0, sample) -= tmp(sample_id, instance_id);
             }
     }
+    else 
+        InvalidArgument("The argument inputIndex must be 1 or 2 or 3.");
     return *this;
 }
 
@@ -4952,7 +4999,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
         const int incy = 1;
 
         assert(m > 0 && n > 0 && len > 0); // converting from size_t to int may cause overflow
-        assert((int) c.GetNumRows() == m && (int) c.GetNumCols() == n);
         if ((int) c.GetNumRows() != m || (int) c.GetNumCols() != n)
             InvalidArgument("Dimension of matrix c does not match dimension of matrix a.");
 
@@ -4991,7 +5037,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     else if (a.GetNumCols() == 1) // col vector, add it to all columns
     {
         int m = (int) c.GetNumRows();
-        assert(m == (int) a.GetNumRows());
         if (m != (int) a.GetNumRows())
             InvalidArgument("To add column vector, rows should match.");
 
@@ -5019,7 +5064,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
     {
         int m = (int) c.GetNumRows();
         int n = (int) c.GetNumCols();
-        assert(n == (int) a.GetNumCols());
         if (n != (int) a.GetNumCols())
             InvalidArgument("To add row vector, cols should match.");
 
@@ -5053,9 +5097,6 @@ void CPUMatrix<ElemType>::ScaleAndAdd(ElemType alpha, const CPUMatrix<ElemType>&
 template <class ElemType>
 void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
-           a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols());
-
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumRows() == c.GetNumRows() &&
           a.GetNumCols() == b.GetNumCols() && a.GetNumCols() == c.GetNumCols()))
     {
@@ -5094,11 +5135,9 @@ void CPUMatrix<ElemType>::AddScaledDifference(const ElemType alpha, const CPUMat
 template <class ElemType>
 void CPUMatrix<ElemType>::AssignScaledDifference(const ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
     {
-        InvalidArgument("AssignScaledDifference:  a, b must have same dimension.");
+        InvalidArgument("AssignScaledDifference: a, b must have same dimension.");
     }
 
     if (a.IsEmpty())
@@ -5174,8 +5213,7 @@ void CPUMatrix<ElemType>::AssignElementToElement(const CPUMatrix<ElemType>& a, c
 template <class ElemType>
 void CPUMatrix<ElemType>::AddScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(alpha.GetNumElements() == 1);
-    if (!(alpha.GetNumElements() == 1))
+    if (alpha.GetNumElements() != 1)
         InvalidArgument("AddScaledDifference:  alpha must be a 1X1 matrix.");
 
     AddScaledDifference(alpha(0, 0), a, b, c);
@@ -5190,8 +5228,7 @@ void CPUMatrix<ElemType>::AddScaledDifference(const CPUMatrix<ElemType>& alpha, 
 template <class ElemType>
 void CPUMatrix<ElemType>::AssignScaledDifference(const CPUMatrix<ElemType>& alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& b, CPUMatrix<ElemType>& c)
 {
-    assert(alpha.GetNumElements() == 1);
-    if (!(alpha.GetNumElements() == 1))
+    if (alpha.GetNumElements() != 1)
         InvalidArgument("AddScaledDifference:  alpha must be a 1X1 matrix.");
 
     AssignScaledDifference(alpha(0, 0), a, b, c);
@@ -5294,7 +5331,6 @@ void CPUMatrix<ElemType>::InnerProduct(const CPUMatrix<ElemType>& a, const CPUMa
     const int l = (int) b.GetNumCols();
 
     assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5365,7 +5401,6 @@ ElemType CPUMatrix<ElemType>::InnerProductOfMatrices(const CPUMatrix<ElemType>& 
     const int l = (int) b.GetNumCols();
 
     assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProductOfMatrices: Matrices a and b should have same dimension.");
 
@@ -5541,7 +5576,6 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
     if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
 
@@ -5585,7 +5619,6 @@ void CPUMatrix<ElemType>::InnerProductWithShiftNeg(const CPUMatrix<ElemType>& a,
     const int l = (int) b.GetNumCols();
 
     assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == k && n == l);                 // converting from size_t to int may cause overflow
     if (m != k || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5726,7 +5759,6 @@ void CPUMatrix<ElemType>::ConductRowElementMultiplyWithShift(const CPUMatrix<Ele
     const int l = (int) b.GetNumCols();
 
     assert(m > 0 && n > 0 && k > 0 && l > 0); // converting from size_t to int may cause overflow
-    assert(m == 1 && n == l);                 // converting from size_t to int may cause overflow
     if (m != 1 || n != l)
         InvalidArgument("InnerProduct: Matrices a and b should have same dimension.");
 
@@ -5765,8 +5797,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignElementProductOfWithShift(const 
     if (a.IsEmpty() || b.IsEmpty())
         LogicError("AssignElementProductOfWithShiftNeg: Matrix is empty.");
 
-    assert(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols());
-    if (!(a.GetNumRows() == b.GetNumRows() && a.GetNumCols() == b.GetNumCols()))
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
         InvalidArgument("AssignElementProductOfWithShiftNeg: The input matrix dimensions do not match.");
 
     if (a.GetNumRows() != 1)
@@ -5834,6 +5865,352 @@ void CPUMatrix<ElemType>::RCRFBackwardCompute(const CPUMatrix<ElemType>& alpha, 
         }
     }
 };
+
+// Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
+// prob (input): the posterior output from the network
+// alpha (output): alpha for forward-backward calculation. 
+// phoneSeq (input): phone ID sequence for each utterance in this minibatch, each col is one utterance 
+// phoneBound (input): phone boundary (frame index) of each phone for each utterance in this minibatch, each col is one utterance 
+// uttToChanInd (input):  map from utterance ID to minibatch channel ID. We need this because each channel may contain more than one utterance.
+// uttFrameNum (input): the frame number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// uttBeginFrame(input): the positon of the first frame of each utterance in the minibatch channel. We need this because each channel may contain more than one utterance.
+// uttPhoneNum (input): the phone number of each utterance. The size of this vector =  the number of all utterances in this minibatch
+// numChannels (input): channel number in this minibatch
+// uttNum (input): number of utterances
+// t (input): time stamp to process
+// maxPhoneNum (input): the max number of phones between utterances
+// totalPhoneNum (input): the total number of phones of all utterances
+// blankTokenId (input): id of the CTC blank token
+// delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
+//      Alpha and Beta scores outside of the delay boundary are set to zero.
+//      Setting this parameter smaller will result in shorted delay between label output during decoding.
+//      delayConstraint=-1 means no constraint
+template<class ElemType>
+void _assignAlphaScore(
+    const ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    size_t numChannels,
+    const size_t uttNum,
+    const size_t  t,
+    const size_t maxPhoneNum, // Maximum length of utterance in this MB
+    const size_t totalPhoneNum, // Total number of phones
+    const size_t blankTokenId,
+    const int delayConstraint)
+{
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+
+        // Number of phones and frames in this utterance
+        size_t frameNum = uttFrameNum[uttId];
+        if (t >= frameNum) continue;
+
+        size_t phoneNum = uttPhoneNum[uttId];
+
+#pragma omp parallel for
+        for (int phoneSeqId = 1;phoneSeqId < phoneNum - 1;phoneSeqId++) {
+            // Index of the label in the sequence
+
+            // Current and previous phone indices in phoneSeq matrix
+            size_t labelid = uttId*maxPhoneNum + phoneSeqId;
+
+            // Actual current phone label
+            size_t phoneId = (size_t)(phoneSeq[labelid]);
+
+            // Index of the current frame in minibatch
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+
+            // Index of probability of observing phoneId at frame timeId
+            size_t probId = timeId*totalPhoneNum + phoneId;
+
+            size_t alphaId = maxPhoneNum* timeId + phoneSeqId; // alpha_t(s)
+
+            if (t == 0)
+            {
+                // Initialize recursion
+                if (phoneSeqId == 1 || phoneSeqId == 2)
+                {
+                    alphaScore[alphaId] = prob[probId];
+                }
+            }
+            else
+            {
+                if (phoneSeqId >= 1)
+                {
+                    size_t timeId_1 = timeId - numChannels; // Index corresponding to (t-1)
+                    size_t alphaId_0 = maxPhoneNum* timeId_1 + phoneSeqId; // alpha_{t-1}(s)
+                    size_t alphaId_1 = alphaId_0 - 1; // alpha_{t-1}(s-1)
+                    size_t alphaId_2 = alphaId_0 - 2; // alpha_{t-1}(s-2)
+                    ElemType x = LZERO;
+
+                    ElemType ascore;
+                    if (phoneSeqId > 2)
+                    {
+                        size_t labelid_2 = labelid - 2;
+                        // if current label is not blank and not equal prev non-blank label
+                        if ((size_t)(phoneSeq[labelid]) != blankTokenId && phoneId != (size_t)(phoneSeq[labelid_2]))
+                        {
+                            x = LogAdd(x, alphaScore[alphaId_2]);
+                        }
+                    }
+
+                    if (phoneSeqId > 1)
+                    {
+                        x = LogAdd(x, alphaScore[alphaId_1]);
+                    }
+
+                    x = LogAdd(x, alphaScore[alphaId_0]);
+
+                    if (phoneId != SIZE_MAX)
+                        ascore = prob[probId]; // Probability of observing given label at given time
+                    else
+                        ascore = 0;
+                    alphaScore[alphaId] = (ElemType)x + ascore;
+                    if (delayConstraint != -1)
+                    {
+                        size_t labelid_r = labelid + 2;
+                        size_t phoneBoundId_r = (size_t)(phoneBound[labelid_r]);
+                        if (phoneId == blankTokenId)
+                        {
+                            // only constraint right side
+                            if (t > phoneBoundId_r + delayConstraint - 1)
+                                alphaScore[alphaId] = LZERO;
+                        }
+                        else if (phoneId != blankTokenId)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint)
+                                alphaScore[alphaId] = LZERO;
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+}
+
+// Calculate beta in forward-backward calculation, equation (10), (11) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+void _assignBetaScore(
+    const ElemType *prob,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    ElemType *phoneBound,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttFrameNum,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    const size_t numChannels,
+    const size_t uttNum,
+    const long  t,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum,
+    const size_t blankTokenId,
+    const int delayConstraint)
+{
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+
+        // Number of phones and frames in this utterance
+        size_t frameNum = uttFrameNum[uttId];
+        if (t >= frameNum) continue;
+
+        size_t phoneNum = uttPhoneNum[uttId];
+
+#pragma omp parallel for
+        for (int phoneSeqId = 1;phoneSeqId < phoneNum - 1;phoneSeqId++) {
+
+            size_t labelid = uttId*maxPhoneNum + phoneSeqId;
+            size_t labelid_2 = labelid + 2;
+            size_t phoneId = (LONG64)(phoneSeq[labelid]);
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+            size_t probId = timeId*totalPhoneNum + phoneId;
+            size_t betaid = maxPhoneNum* timeId + phoneSeqId;
+            size_t timeId_1 = timeId + numChannels;
+            size_t betaid_0 = maxPhoneNum* timeId_1 + phoneSeqId;
+            size_t betaid_1 = betaid_0 + 1;
+            size_t betaid_2 = betaid_0 + 2;
+
+            if (t == frameNum - 1)
+            {
+                if (phoneSeqId == phoneNum - 3 || phoneSeqId == phoneNum - 2)
+                {
+                    betaScore[betaid] = prob[probId];
+                }
+            }
+            else
+            {
+                if (phoneSeqId >= 1)
+                {
+                    ElemType x = LZERO;
+                    ElemType ascore;
+                    if (phoneSeqId < phoneNum - 3)
+                    {
+                        if (phoneSeq[labelid] != blankTokenId && phoneId != phoneSeq[labelid_2])
+                        {
+                            x = LogAdd(x, betaScore[betaid_2]);
+                        }
+                    }
+
+                    if (phoneSeqId < phoneNum - 2)
+                    {
+                        x = LogAdd(x, betaScore[betaid_1]);
+                    }
+
+                    x = LogAdd(x, betaScore[betaid_0]);
+
+                    if (phoneId != SIZE_MAX)
+                        ascore = prob[probId];
+                    else
+                        ascore = 0;
+                    betaScore[betaid] = (ElemType)x + ascore;
+                    if (delayConstraint != -1)
+                    {
+                        size_t phoneBoundId_r = (size_t)(phoneBound[labelid_2]);
+                        if (phoneId == blankTokenId)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint - 1)
+                                betaScore[betaid] = LZERO;
+                        }
+                        else if (phoneId != blankTokenId)
+                        {
+                            if (t > phoneBoundId_r + delayConstraint)
+                                betaScore[betaid] = LZERO;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Calculate CTC score. equation (8) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf 
+template<class ElemType>
+void _assignTotalScore(ElemType *betaScore,
+    std::vector<ElemType>& totalScore,
+    const size_t uttNum,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttBeginFrame,
+    const size_t numChannels,
+    const size_t maxPhoneNum)
+{
+#pragma omp parallel for
+    for (int uttId = 0; uttId < uttNum; uttId++) {
+        if (uttId < uttNum)
+        {
+            LONG64 alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+
+            betaScore[alphaId_0] = LogAdd(betaScore[alphaId_0 + 1], betaScore[alphaId_0 + 2]);
+            totalScore[uttId] = betaScore[alphaId_0];
+        }
+    }
+}
+
+// Calculate derivative, equation (15) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
+// See _assignAlphaScore for the explanation of parameters
+template<class ElemType>
+void _assignCTCScore(
+    ElemType *CTCscore,
+    ElemType *prob,
+    ElemType *alphaScore,
+    ElemType *betaScore,
+    ElemType *phoneSeq,
+    const size_t uttNum,
+    const std::vector<size_t>& uttToChanInd,
+    const std::vector<size_t>& uttBeginFrame,
+    const std::vector<size_t>& uttPhoneNum,
+    const std::vector<size_t>& uttFrameNum,
+    const size_t numChannels,
+    const size_t maxPhoneNum,
+    const size_t totalPhoneNum)
+{
+    for (size_t uttId = 0;uttId < uttNum;uttId++) {
+#pragma omp parallel for
+        for (int t = 0; t < uttFrameNum[uttId]; t++) {
+            size_t phoneNum = uttPhoneNum[uttId];
+            size_t alphaId_0 = (uttBeginFrame[uttId] * numChannels + uttToChanInd[uttId]) * maxPhoneNum;
+            size_t timeId = (t + uttBeginFrame[uttId])*numChannels + uttToChanInd[uttId];
+            ElemType P_lx = betaScore[alphaId_0];
+
+            for (int s = 1; s < phoneNum - 1; s++)
+            {
+                long phoneId = phoneSeq[uttId*maxPhoneNum + s];
+                size_t alphaId = maxPhoneNum* timeId + s;
+                size_t probId = timeId*totalPhoneNum + phoneId;
+
+                if (phoneId != SIZE_MAX)
+                {
+                    ElemType logoccu = alphaScore[alphaId] + betaScore[alphaId] - prob[probId] - (ElemType)P_lx;
+                    CTCscore[probId] = LogAdd(CTCscore[probId], logoccu);
+                }
+            }
+
+            for (int s = 0; s < totalPhoneNum; s++)
+            {
+                size_t probId = timeId*totalPhoneNum + s;
+                ElemType logoccu = CTCscore[probId];
+                if (logoccu < LZERO)
+                    CTCscore[probId] = 0.0f;
+                else
+                    CTCscore[probId] = exp(logoccu);
+            }
+        }
+    }
+}
+
+template<class ElemType>
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignCTCScore(
+    const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta,
+    const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const std::vector<size_t>& uttToChanInd, const std::vector<size_t> & uttBeginFrame, const std::vector<size_t> & uttFrameNum,
+    const std::vector<size_t> & uttPhoneNum, const size_t numParallelSequences, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise)
+{
+    // Column wise representation of sequences in input matrices (each column is one sequence/utterance)
+    if (isColWise)
+    {
+        // Total number of phones
+        size_t totalPhoneNum = prob.GetNumRows();
+        size_t uttNum = uttFrameNum.size();
+
+        // Max number of phones in utterances in this minibatch
+        size_t maxPhoneNum = phoneSeq.GetNumRows();
+
+        for (size_t t = 0; t < maxFrameNum; t++)
+        {
+            _assignAlphaScore(prob.Data(), alpha.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
+                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+        for (LONG64 t = maxFrameNum - 1; t >= 0; t--)
+        {
+            _assignBetaScore(prob.Data(), beta.Data(), phoneSeq.Data(), phoneBoundary.Data(), uttToChanInd,
+                uttFrameNum, uttBeginFrame, uttPhoneNum, numParallelSequences, uttNum, t, maxPhoneNum, totalPhoneNum, blankTokenId, delayConstraint);
+        }
+
+        std::vector<ElemType> scores(uttNum);
+        _assignTotalScore(beta.Data(), scores, uttNum, uttToChanInd, uttBeginFrame, numParallelSequences, maxPhoneNum);
+
+        _assignCTCScore(Data(), prob.Data(), alpha.Data(), beta.Data(), phoneSeq.Data(), uttNum, uttToChanInd,
+            uttBeginFrame, uttPhoneNum, uttFrameNum, numParallelSequences, maxPhoneNum, totalPhoneNum);
+
+        for (size_t utt = 0; utt < uttNum; utt++)
+        {
+            totalScore += scores[utt];
+        }
+
+        return *this;
+
+    }
+    else {
+        LogicError("Only ColWise minibatch layout is supported.");
+    }
+
+    return *this;
+}
 
 /// the kernel function for RCRF backward computation
 template <class ElemType>
@@ -6146,6 +6523,91 @@ struct TensorOpReduction<ElemType, OPFN, ReductionOp, N, -1>
     }
 };
 
+// perform loop over reduction index m, while keeping track of the number of elements and their corresponding indices.
+// This function is declared inside a wrapper struct to allow partial specialization (m = -1).
+template <class ElemType, size_t N, int m>
+struct TensorArgOpReduction
+{
+    static inline std::pair<ElemType, size_t> ReduceAll(array<ElemType*, N> pointers, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides,
+        ElementWiseOperator reductionOp)
+    {
+        size_t counter = 0;
+        size_t index = 0;
+        ElemType val = (ElemType)0;
+
+        switch (reducingOpDims.size())
+        {
+        case 3:
+            val = TensorArgOpReduction<ElemType, N, 2>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        case 2:
+            val = TensorArgOpReduction<ElemType, N, 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        case 1:
+            val = TensorArgOpReduction<ElemType, N, 0>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        case 0:
+            val = TensorArgOpReduction<ElemType, N, -1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+            break;
+        default:
+            LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)reducingOpDims.size());
+        }
+
+        return make_pair(val, index);
+    }
+
+    // reduction case (non-reduction case is specialized)
+    static inline ElemType Loop(array<ElemType*, N> pointers, const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides,
+                                ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+    {
+        array<ptrdiff_t, N - 1> strides;   // N-1 because last one is the result pointer, which is unused in reduction
+        for (size_t i = 0; i < N - 1; i++) // N = a small constant, this will be unrolled
+            strides[i] = reducingStrides[i][(size_t)m];
+
+        ElemType aggregate = TensorArgOpReduction<ElemType, N, m - 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+        for (size_t dim = reducingOpDims[(size_t)m] - 1; dim-- > 0;)
+        {
+            // advance the pointers
+            for (size_t i = 0; i < N - 1; i++)
+                pointers[i] += strides[i]; // note: last pointer (result) is unused and untouched here
+
+            ElemType val = TensorArgOpReduction<ElemType, N, m - 1>::Loop(pointers, reducingOpDims, reducingStrides, reductionOp, counter, index);
+
+            bool update = false;
+            switch (reductionOp)
+            {
+            case ElementWiseOperator::opArgmin:
+                update = (aggregate > val);
+                break;
+            case ElementWiseOperator::opArgmax:
+                update = (aggregate < val);
+                break;
+            }
+
+            if (update)
+            {
+                aggregate = val;
+                index = counter - 1;
+            }
+        }
+
+        return aggregate;
+    }
+};
+
+// perform loop over reduction index m
+// This is the specialized version for m = -1, which terminates the recursion.
+template <class ElemType, size_t N>
+struct TensorArgOpReduction<ElemType, N, -1>
+{
+    static inline ElemType Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&, ElementWiseOperator reductionOp, size_t& counter, size_t& index)
+    {
+        counter++;
+        return *pointers[0]; // finally we are doing some work!!!
+    }
+};
+
 // -----------------------------------------------------------------------
 // perform loop over regular index k for N-nary operations (N counting the output)
 // -----------------------------------------------------------------------
@@ -6252,6 +6714,47 @@ struct TensorOpIteration<ElemType, OPFN, ReductionOp, N, vectorizable, m, -1>
     }
 };
 
+// perform loop over regular index k and reducing index m for N operands (counting the output), the difference
+// between TensorOpIteration and TensorArgOpIteration, is that the latter store the index of the result, instead of 
+// the result. The reason that they aren't combined is because of performance.
+template <class ElemType, size_t N, int k>
+struct TensorArgOpIteration
+{
+    static inline void Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, N>& regularStrides,
+        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
+    {
+        // non-scalar case: still nested result loops left
+        array<ptrdiff_t, N> strides;
+        for (size_t i = 0; i < N; i++) // N = a small constant, this will be unrolled
+            strides[i] = regularStrides[i][(size_t)k];
+        for (size_t dim = regularOpDims[(size_t)k]; dim-- > 0;)
+        {
+            // need to descend into one loop deeper
+            TensorArgOpIteration<ElemType, N, k - 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+            // advance the pointers
+            for (size_t i = 0; i < N; i++)
+                pointers[i] += strides[i];
+        }
+    }
+};
+
+template <class ElemType, size_t N>
+struct TensorArgOpIteration<ElemType, N, -1>
+{
+    static inline void Loop(array<ElemType*, N> pointers,
+        const SmallVector<size_t>&, const array<SmallVector<ptrdiff_t>, N>&,
+        const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, N>& reducingStrides, ElementWiseOperator reductionOp)
+    {
+        // we are at element level for the result: perform the op (there may still be reduction)
+        auto val = TensorArgOpReduction<ElemType, N, 2>::ReduceAll(pointers, reducingOpDims, reducingStrides, reductionOp);
+
+        auto* pout = pointers.back();
+        *pout = (ElemType)val.second;
+        return;
+    }
+};
+
 // -----------------------------------------------------------------------
 // map runtime parameters N to template parameters
 // -----------------------------------------------------------------------
@@ -6341,6 +6844,7 @@ static void TensorOpWithFn(ElemType beta, array<ElemType*, N> pointers, ElemType
         CaseTensorOpWithFnAndReduction(LogSum);
         CaseTensorOpWithFnAndReduction(Min);
         CaseTensorOpWithFnAndReduction(Max);
+        CaseTensorOpWithFnAndReduction(ElementwiseProduct);
     default:
         LogicError("Specified ElementWiseOperator op %d not suported as reduction operation.", (int)reductionOp);
     }
@@ -6361,7 +6865,8 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
     if (reductionOp != ElementWiseOperator::opSum    &&
         reductionOp != ElementWiseOperator::opLogSum &&
         reductionOp != ElementWiseOperator::opMin    &&
-        reductionOp != ElementWiseOperator::opMax)
+        reductionOp != ElementWiseOperator::opMax    &&
+        reductionOp != ElementWiseOperator::opElementwiseProduct)
         InvalidArgument("TensorOp: Unary reduction operations other than opMax, opMin, opSum, and opLogSum are not implemented.");
 
 // TODO: Change the lambda to take a pointer and a number of elements, so that we can pass it 1 or 4 elements, in order for it to SSE-vectorize.
@@ -6435,6 +6940,147 @@ void CPUMatrix<ElemType>::TensorOp(ElemType beta, const CPUMatrix<ElemType>& a, 
         ForAllTernaryOps(CaseTernaryTensorOp);
     default:
         LogicError("TensorOp: Unknown ternary op code %d.", (int) op);
+    }
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::Argmin() const
+{
+    int minArg = -1;
+    ElemType minValue = std::numeric_limits<ElemType>::max();
+
+#pragma omp parallel 
+    {
+        int localMinArg = -1;
+        ElemType localMinValue = std::numeric_limits<ElemType>::max();
+
+        #pragma omp for
+        for (int index = 0; index < (int)GetNumElements(); ++index)
+        {
+            if (localMinValue > Data()[index])
+            {
+                localMinArg = index;
+                localMinValue = Data()[index];
+            }
+            // If we have more then one min value, select the one with lower index.
+            else if ((localMinValue == Data()[index]) && (localMinArg > index))
+            {
+                localMinArg = index;
+            }
+        }
+
+        #pragma omp critical
+        {
+            if (minValue > localMinValue)
+            {
+                minArg = localMinArg;
+                minValue = localMinValue;
+            }
+            // If we have more then one min value, select the one with lower index.
+            else if ((minValue == localMinValue) && (minArg > localMinArg))
+            {
+                minArg = localMinArg;
+            }
+        }
+    }
+    return minArg;
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::Argmax() const
+{
+    int maxArg = -1;
+    ElemType maxValue = std::numeric_limits<ElemType>::min();
+
+#pragma omp parallel 
+    {
+        int localMaxArg = -1;
+        ElemType localMaxValue = std::numeric_limits<ElemType>::min();
+
+#pragma omp for
+        for (int index = 0; index < (int)GetNumElements(); ++index)
+        {
+            if (localMaxValue < Data()[index])
+            {
+                localMaxArg = index;
+                localMaxValue = Data()[index];
+            }
+            // If we have more then one max value, select the one with lower index.
+            else if ((localMaxValue == Data()[index]) && (localMaxArg > index))
+            {
+                localMaxArg = index;
+            }
+        }
+
+#pragma omp critical
+        {
+            if (maxValue < localMaxValue)
+            {
+                maxArg = localMaxArg;
+                maxValue = localMaxValue;
+            }
+            // If we have more then one max value, select the one with lower index.
+            else if ((maxValue == localMaxValue) && (maxArg > localMaxArg))
+            {
+                maxArg = localMaxArg;
+            }
+        }
+    }
+    return maxArg;
+}
+
+template <class ElemType>
+int CPUMatrix<ElemType>::ArgOp(ElementWiseOperator reductionOp) const
+{
+    switch (reductionOp)
+    {
+        case ElementWiseOperator::opArgmin:
+            return Argmin();
+            break;
+        case ElementWiseOperator::opArgmax:
+            return Argmax();
+            break;
+    }
+
+    InvalidArgument("ArgOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
+    return -1;
+}
+
+template <class ElemType>
+void CPUMatrix<ElemType>::TensorArgOp(const CPUMatrix<ElemType>& a, ElementWiseOperator reductionOp,
+                                      const array<size_t, 2>& offsets,
+                                      const SmallVector<size_t>& regularOpDims, const array<SmallVector<ptrdiff_t>, 2>& regularStrides,
+                                      const SmallVector<size_t>& reducingOpDims, const array<SmallVector<ptrdiff_t>, 2>& reducingStrides)
+{
+    if (reductionOp != ElementWiseOperator::opArgmin &&
+        reductionOp != ElementWiseOperator::opArgmax)
+        InvalidArgument("TensorOp: Arg reduction operations other than opArgmax, and opArgmin are not implemented.");
+
+    if (GetNumElements() == 1)
+    {
+        Data()[0] = (ElemType) a.ArgOp(reductionOp);
+    }
+    else
+    {
+        const size_t N = 2;
+        array<ElemType*, N> pointers = { a.Data(), Data() };
+        for (size_t i = 0; i < N; i++)
+            pointers[i] += offsets[i];
+
+        switch (regularOpDims.size())
+        {
+            case 2:
+                TensorArgOpIteration<ElemType, N, 1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            case 1:
+                TensorArgOpIteration<ElemType, N, 0>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            case 0:
+                TensorArgOpIteration<ElemType, N, -1>::Loop(pointers, regularOpDims, regularStrides, reducingOpDims, reducingStrides, reductionOp);
+                break;
+            default:
+                LogicError("TensorOp: %d non-flattened input dimensions are not supported.", (int)regularOpDims.size());
+        }
     }
 }
 

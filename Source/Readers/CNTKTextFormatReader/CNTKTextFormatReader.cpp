@@ -39,9 +39,13 @@ CNTKTextFormatReader::CNTKTextFormatReader(const ConfigParameters& config)
         size_t window = configHelper.GetRandomizationWindow();
         if (window > 0)
         {
-            // Verbosity is a general config parameter, not specific to the text format reader.
-            int verbosity = config(L"verbosity", 0);
-            m_sequenceEnumerator = make_shared<BlockRandomizer>(verbosity, window, m_deserializer, true);
+            // TODO: drop "verbosity", use config.traceLevel() instead. 
+            int verbosity = config(L"verbosity", 0); 
+            m_sequenceEnumerator = make_shared<BlockRandomizer>(verbosity, window, m_deserializer,
+                                                                /*shouldPrefetch =*/ true,
+                                                                /*multithreadedGetNextSequences =*/ false,
+                                                                /*maxNumberOfInvalidSequences =*/ 0,
+                                                                /*sampleBasedRandomizationWindow =*/ configHelper.UseSampleBasedRandomizationWindow());
         }
         else
         {

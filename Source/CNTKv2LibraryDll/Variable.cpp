@@ -78,22 +78,29 @@ namespace CNTK
             return nullptr;
     }
 
-    Variable Variable::CompositePreservingCopy() const
+    Variable Variable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
     {
         // We have to preserve the whole subgraph.
         Variable result;
-        result.m_outputComposite = (FunctionPtr)(*this);
+        result.m_outputComposite = composite;
         result.m_dataFields = m_dataFields;
         return result;
+    }
+
+    Variable Variable::NonCompositePreservingCopy() const
+    {
+        Variable copy = *this;
+        copy.m_outputComposite = nullptr;
+        return copy;
     }
 
     void Variable::SetOwner(Function* ownerFunction)
     {
         if (Kind() != VariableKind::Output)
-            LogicError("Variable::SetOwner: Owner can only be set for Output Variables!");
+            LogicError("Variable '%S' SetOwner: Owner can only be set for Output Variables", AsString().c_str());
 
         if (m_dataFields->m_ownerFunction != nullptr)
-            LogicError("Variable::SetOwner: An Output Variable whose owner has previously been set, cannot be reset!");
+            LogicError("Variable '%S' SetOwner: An Output Variable whose owner has previously been set, cannot be reset.", AsString().c_str());
 
         m_dataFields->m_ownerFunction = ownerFunction;
     }
@@ -110,7 +117,7 @@ namespace CNTK
     NDArrayViewPtr Variable::Value() const
     {
         if (!IsConstant() && !IsParameter())
-            LogicError("Only Variables of kind Parameter and Constant have a Value!");
+            LogicError("Variable '%S' Value(): Only Variables of kind Parameter and Constant have a Value.", AsString().c_str());
 
         if (m_dataFields->m_initValueFlag)
         {
@@ -132,7 +139,7 @@ namespace CNTK
                     break;
                 }
                 default:
-                    LogicError("Unsupported DataType %s", DataTypeName(GetDataType()));
+                    LogicError("Variable '%S' Value(): Unsupported DataType %s", AsString().c_str(), DataTypeName(GetDataType()));
                     break;
                 }
 
@@ -148,11 +155,11 @@ namespace CNTK
     void Variable::SetValue(const NDArrayViewPtr& value)
     {
         if (!IsParameter())
-            LogicError("Variable::SetValue can be only invoked on a Parameter variable!");
+            LogicError("Variable '%S' SetValue(): Can only be invoked on a Parameter variable.", AsString().c_str());
         else if (GetDataType() != value->GetDataType()) 
-            LogicError("Variable::SetValue: 'source' and 'destination' have different data types!");
+            LogicError("Variable '%S' SetValue(): 'source' and 'destination' have different data types.", AsString().c_str());
         else if (Shape() != value->Shape() && (AsTensorShape(Shape()) != AsTensorShape(value->Shape())))
-            LogicError("Variable::SetValue: 'source' and 'destination' have different shapes!");
+            LogicError("Variable '%S' SetValue(): 'source' shape '%S' differs 'destination' shape '%S'.", AsString().c_str(), value->Shape().AsString().c_str(), Shape().AsString().c_str());
 
         bool alreadySet = false;
         if (m_dataFields->m_initValueFlag)
@@ -176,6 +183,11 @@ namespace CNTK
         }
     }
 
+    std::wstring Variable::AsString() const
+    {
+        return m_dataFields->AsString();
+    }
+
     static const std::wstring InitializerTypeAttributeName = L"initializerType";
     static const std::wstring OutputRankAttributeName = L"outputRank";
     static const std::wstring FilterRankAttributeName = L"filterRank";
@@ -185,10 +197,50 @@ namespace CNTK
     static const std::wstring KernelWidthAttributeName = L"kernelWidth";
     static const std::wstring KernelHeightAttributeName = L"kernelHeight";
 
+    std::wstring VariableFields::AsString() const
+    {
+        std::wstringstream wss;
+        wss << VariableKindName(m_varKind) << "('";
+        if (m_name != L"")
+            wss << m_name;
+        else
+            wss << m_uid;
+        bool reverse = Internal::IsReversingTensorShapesInErrorMessagesEnabled();
+        if (reverse)
+            wss << "', " << DynamicAxesAsString(m_dynamicAxes, reverse) << ", " << m_shape.AsString() << ")";
+        else
+            wss << "', " << m_shape.AsString() << ", " << DynamicAxesAsString(m_dynamicAxes, reverse) << ")";
+        return wss.str();
+    }
+
+    std::shared_ptr<VariableFields> VariableFields::Clone() const
+    {
+        if (m_ownerFunction != nullptr)
+            InvalidArgument("Output variable '%S' cannot be cloned.", AsString().c_str());
+
+        // Note: We do not clone m_blockFunctionVariableMapping
+
+        auto clone = MakeSharedObject<VariableFields>(m_shape,
+            m_varKind,
+            m_dataType,
+            m_ownerFunction,
+            (m_value) ? m_value->DeepClone() : nullptr,
+            m_needsGradient,
+            m_dynamicAxes,
+            m_isSparse,
+            m_name,
+            Internal::GenerateUid(m_varKind));
+
+        if (m_valueInitializer)
+            clone->SetValueInitialization(*m_valueInitializer, *m_valueInitializationDevice);
+
+        return clone;
+    }
+
     void VariableFields::SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device)
     {
         if (m_value != nullptr)
-            LogicError("Value initialization config cannot be set if a value already exists");
+            LogicError("Variable '%S': Value initialization config cannot be set if a value already exists", AsString().c_str());
 
         assert(!m_valueInitializer);
         assert(!m_valueInitializationDevice);
@@ -354,7 +406,7 @@ namespace CNTK
                     filterRank = DefaultParamInitFilterRank;
 
                 if ((filterRank + outputRank) > shape.Rank())
-                    InvalidArgument("Sum of filter rank (%d) and output rank (%d) of the parameter initializer cannot exceed the Parameter's rank(%d)", filterRank, outputRank, (int)shape.Rank());
+                    InvalidArgument("Sum of filter rank (%d) and output rank (%d) of the parameter initializer cannot exceed the Parameter shape '%S' rank (%d)", filterRank, outputRank, shape.AsString().c_str(), (int)shape.Rank());
             }
 
             Microsoft::MSR::CNTK::LearnableParameter<ElementType>::InitRandom(*valueMatrix, AsTensorShape(shape), initializerType, randomSeed, (ElementType)scale,
@@ -370,9 +422,8 @@ namespace CNTK
     /*virtual*/ Dictionary Variable::Serialize() const
     {
         if (IsOutput())
-        {
-            LogicError("Output variables cannot be saved");
-        }
+            LogicError("Variable '%S': Output variables cannot be saved.", AsString().c_str());
+
         Dictionary dict;
 
         dict[versionKey] = CurrentVersion();
@@ -396,9 +447,7 @@ namespace CNTK
         {
             NDArrayView* value = Value().get();
             if (value == nullptr)
-            {
-                LogicError("Uninitialized Parameter variable cannot be saved");
-            }
+                LogicError("Uninitialized Parameter variable '%S' cannot be saved.", AsString().c_str());
 
             // TODO: add a dictionary value constructor with an rvalue parameter.
             dict[valueKey] = DictionaryValue(*value);
@@ -421,7 +470,7 @@ namespace CNTK
             kind != VariableKind::Parameter &&
             kind != VariableKind::Placeholder)
         {
-            LogicError("Unexpected variable '%ls':'%u' (%s).",
+            LogicError("Unexpected variable kind '%ls':'%u' (%s).",
                        kindKey.c_str(),
                        static_cast<std::underlying_type<VariableKind>::type>(kind),
                        GetVersionsString<Variable>(s_serializationVersion, version).c_str());
@@ -432,7 +481,7 @@ namespace CNTK
             dataType != DataType::Float &&
             dataType != DataType::Double)
         {
-            LogicError("Unexpected variable '%ls':'%u' (%s).", 
+            LogicError("Unexpected variable datatype '%ls':'%u' (%s).", 
                        dataTypeKey.c_str(), 
                        static_cast<std::underlying_type<DataType>::type>(dataType),
                        GetVersionsString<Variable>(s_serializationVersion, version).c_str());

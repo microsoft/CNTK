@@ -89,7 +89,7 @@ public:
     void SetValue(const CPUSparseMatrix<ElemType>& /*val*/);
     //void SetValue(const GPUSparseMatrix<ElemType>& /*val*/);
 
-    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     CPUSparseMatrix<ElemType>& DoGatherColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);
     CPUSparseMatrix<ElemType>& DoScatterColumnsOf(ElemType beta, const CPUMatrix<ElemType>& idx, const CPUSparseMatrix<ElemType>& a, ElemType alpha);

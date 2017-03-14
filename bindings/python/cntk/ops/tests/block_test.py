@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
 import cntk as C
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 
 AS_BLOCK_TEST_CASES = [
@@ -32,7 +32,7 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
     # We test using reshape as the operation that is encapsulated in a block
 
     dev = cntk_device(device_id)
-    from ...utils import sanitize_dtype_cntk
+    from cntk.internal import sanitize_dtype_cntk
     from .. import reshape, element_times, as_block
 
     num_tensor_elements = np.multiply.reduce(input_shape)
@@ -110,3 +110,19 @@ def test_block_with_duplicate_inputs():
     plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, input), (right_operand_placeholder, input)], 'plus')
 
     plus_block_clone = plus_block.clone('share')
+
+
+def test_as_block_with_function_in_arguments_map():
+    from .. import placeholder_variable, as_block, input_variable
+    input = input_variable((1,), name='input')
+    input_plus_2 = input + 2
+    
+    left_operand_placeholder = placeholder_variable(name='left_placeholder')
+    right_operand_placeholder = placeholder_variable()
+    plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, input_plus_2), (right_operand_placeholder, input)], 'plus')
+
+    # evaluate
+    res = plus_block.eval({plus_block.arguments[0]: [[1.0]]})
+
+    expected_forward = [[[4.]]]
+    assert np.array_equal(res, expected_forward)

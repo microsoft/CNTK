@@ -16,15 +16,20 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     class ImageDeserializerBase : public DataDeserializerBase
     {
     public:
+        // Number of mutlicrop versions to produce.
+        // Currently the default value of 10 is used as in AlexNet paper,
+        // Possibly we should make this configurable.
+        const static uint8_t NumMultiViewCopies = 10;
+
         // A new constructor to support new compositional configuration,
         // that allows composition of deserializers and transforms on inputs.
-        ImageDeserializerBase(CorpusDescriptorPtr corpus, const ConfigParameters& config);
+        ImageDeserializerBase(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary);
 
         // Currently for backward compat with the old reader.
         ImageDeserializerBase();
 
     protected:
-        void PopulateSequenceData(cv::Mat image, size_t classId, size_t sequenceId, std::vector<SequenceDataPtr>& result);
+        void PopulateSequenceData(cv::Mat image, size_t classId, size_t sequenceId, const KeyType& sequenceKey, std::vector<SequenceDataPtr>& result);
 
         // A helper class for generation of type specific labels (currently float/double only).
         LabelGeneratorPtr m_labelGenerator;
@@ -43,11 +48,6 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         // Flag indicating whether to generate images for multi crop.
         bool m_multiViewCrop;
-
-        // Number of mutlicrop versions to produce.
-        // Currently the default value of 10 is used as in AlexNet paper,
-        // Possibly we should make this configurable.
-        const static size_t NumMultiViewCopies = 10;
 
         // Corpus descriptor.
         CorpusDescriptorPtr m_corpus;

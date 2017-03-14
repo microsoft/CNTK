@@ -51,30 +51,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return m_deserializer.m_corpus->IdToKey(s.m_key.m_sequence);
         }
 
-        void GetSequence(size_t sequenceId, std::vector<SequenceDataPtr>& result) override
+        void GetSequence(size_t sequenceIndex, std::vector<SequenceDataPtr>& result) override
         {
-            size_t innerSequenceId = m_deserializer.m_multiViewCrop ? sequenceId / ImageDeserializerBase::NumMultiViewCopies : sequenceId;
-            const auto& sequence = m_descriptor.m_sequences[innerSequenceId];
-            size_t offset = sequence.m_fileOffsetBytes - m_chunkOffset;
+            const size_t innerSequenceIndex = m_deserializer.m_multiViewCrop ? sequenceIndex / ImageDeserializerBase::NumMultiViewCopies : sequenceIndex;
+            const size_t copyId = m_deserializer.m_multiViewCrop ? sequenceIndex % ImageDeserializerBase::NumMultiViewCopies : 0;
 
-            // Let's parse the string
-            char* next_token = nullptr;
-            char* token = strtok_s(&m_buffer[0] + offset, "\t", &next_token);
+            const auto& sequence = m_descriptor.m_sequences[innerSequenceIndex];
+            const size_t offset = sequence.m_fileOffsetBytes - m_chunkOffset;
+
+            // m_buffer always end on 0, so no overrun can happen.
+            const char* currentSequence = &m_buffer[0] + offset;
+
             bool hasSequenceKey = m_deserializer.m_indexer->HasSequenceIds();
             if (hasSequenceKey) // Skip sequence key.
             {
-                token = strtok_s(nullptr, "\t", &next_token);
-                assert(!std::string(token).empty());
-            }
+                currentSequence = strchr(currentSequence, '\t');
 
-            // Let's get the label.
-            if (!token)
-                RuntimeError("Empty label value for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
+                // Let's check the sequence id.
+                if (!currentSequence)
+                    RuntimeError("Empty label value for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
+
+                currentSequence++;
+            }
 
             char* eptr = nullptr;
             errno = 0;
-            size_t classId = strtoull(token, &eptr, 10);
-            if (token == eptr || errno == ERANGE)
+            size_t classId = strtoull(currentSequence, &eptr, 10);
+            if (currentSequence == eptr || errno == ERANGE)
                 RuntimeError("Cannot parse label value for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
 
             size_t labelDimension = m_deserializer.m_labelGenerator->LabelDimension();
@@ -83,23 +86,26 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     "Image with id '%s' has invalid class id '%" PRIu64 "'. It is exceeding the label dimension of '%" PRIu64,
                     KeyOf(sequence).c_str(), classId, labelDimension);
 
+            // Let's find the end of the label, we still expect to find the data afterwards.
+            currentSequence = strstr(currentSequence, "\t");
+            if (!currentSequence)
+                RuntimeError("No data found for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
+
+            currentSequence++;
+
             // Let's get the image.
-            token = strtok_s(nullptr, "\n", &next_token);
-            if (!token)
+            const char* imageStart = currentSequence;
+            currentSequence = strstr(currentSequence, "\n");
+            if (!currentSequence)
                 RuntimeError("Empty image for sequence '%s'", KeyOf(sequence).c_str());
 
-            // Find line end or end of buffer.
-            char* endToken = strchr(token, 0);
-            if (!endToken)
-                RuntimeError("Cannot find the end of the image for sequence '%s' in the input file '%ls'", KeyOf(sequence).c_str(), m_deserializer.m_fileName.c_str());
-
             // Remove non base64 characters at the end of the string (tabs/spaces)
-            while (endToken > token &&  !IsBase64Char(*(endToken - 1)))
-                endToken--;
+            while (currentSequence > imageStart &&  !IsBase64Char(*(currentSequence - 1)))
+                currentSequence--;
 
             std::vector<char> decodedImage;
             cv::Mat image;
-            if (!DecodeBase64(token, endToken, decodedImage))
+            if (!DecodeBase64(imageStart, currentSequence, decodedImage))
             {
                 fprintf(stderr, "WARNING: Cannot decode sequence with id %" PRIu64 " in the input file '%ls'\n", sequence.m_key.m_sequence, m_deserializer.m_fileName.c_str());
             }
@@ -108,7 +114,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 image = cv::imdecode(decodedImage, m_deserializer.m_grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
             }
 
-            m_deserializer.PopulateSequenceData(image, classId, sequenceId, result);
+            m_deserializer.PopulateSequenceData(image, classId, copyId, sequence.m_key, result);
         }
     };
 
@@ -132,18 +138,18 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         return true;
     }
 
-    Base64ImageDeserializer::Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool isPrimary) : ImageDeserializerBase(corpus, config)
+    Base64ImageDeserializer::Base64ImageDeserializer(CorpusDescriptorPtr corpus, const ConfigParameters& config, bool primary) : ImageDeserializerBase(corpus, config, primary)
     {
         auto mapFile = config(L"file");
         bool hasSequenceKeys = HasSequenceKeys(mapFile);
         m_fileName.assign(mapFile.begin(), mapFile.end());
 
-        attempt(5, [this, hasSequenceKeys, corpus, isPrimary]()
+        attempt(5, [this, hasSequenceKeys, corpus]()
         {
             if (!m_dataFile || ferror(m_dataFile.get()) != 0)
                 m_dataFile.reset(fopenOrDie(m_fileName, L"rbS"), [](FILE* f) { if (f) fclose(f); });
 
-            m_indexer = make_unique<Indexer>(m_dataFile.get(), isPrimary, !hasSequenceKeys);
+            m_indexer = make_unique<Indexer>(m_dataFile.get(), m_primary, !hasSequenceKeys);
             m_indexer->Build(corpus);
         });
     }
@@ -170,13 +176,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     {
         const auto& index = m_indexer->GetIndex();
         const auto& chunk = index.m_chunks[chunkId];
-        size_t sequencesPerInitialSequence = m_multiViewCrop ? 10 : 1;
-        result.reserve(sequencesPerInitialSequence * chunk.m_sequences.size());
+        size_t sequenceCopies = m_multiViewCrop ? NumMultiViewCopies : 1;
+        result.reserve(sequenceCopies * chunk.m_sequences.size());
         size_t currentId = 0;
         for (auto const& s : chunk.m_sequences)
         {
-            assert(currentId / sequencesPerInitialSequence == s.m_id);
-            for (size_t i = 0; i < sequencesPerInitialSequence; ++i)
+            assert(currentId / sequenceCopies == s.m_indexInChunk);
+            for (size_t i = 0; i < sequenceCopies; ++i)
             {
                 result.push_back(
                 {
@@ -185,6 +191,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                     s.m_chunkId,
                     s.m_key
                 });
+
                 currentId++;
             }
         }
