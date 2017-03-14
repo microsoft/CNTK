@@ -574,6 +574,15 @@ namespace CNTK
                 var.AsString().c_str(),
                 varShape.AsString().c_str());
         }
+
+        if (!isPackedValue)
+        {
+            auto mask = value->Mask();
+            if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
+                InvalidArgument("Invalid Value object: sum of the rank (%d) of the mask and Variable rank (%d) does not equal "
+                    "the Value's rank (%d); Variable = '%S', Value shape = '%S'.",
+                    (int)mask->Shape().Rank(), (int)varShape.Rank(), (int)valueShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
+        }
     }
 
     template <typename ElementType>
@@ -593,11 +602,7 @@ namespace CNTK
         auto valueShape = value->Shape();
         auto numDynamicAxes = var.DynamicAxes().size();
         auto mask = value->Mask();
-        if ((mask != nullptr) && ((varShape.Rank() + mask->Shape().Rank()) != valueShape.Rank()))
-            InvalidArgument("Invalid Value object: sum of the rank (%d) of the mask and Variable rank (%d) does not equal "
-                            "the Value's rank (%d); Variable = '%S', Value shape = '%S'.",
-                            (int)mask->Shape().Rank(), (int)varShape.Rank(), (int)valueShape.Rank(), var.AsString().c_str(), valueShape.AsString().c_str());
-        
+
         if (numDynamicAxes == 0)
             return{ value->Data()->GetMatrix<ElementType>(), nullptr };
 
