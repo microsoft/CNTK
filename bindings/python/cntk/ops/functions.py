@@ -1,11 +1,10 @@
 from cntk import cntk_py
-from cntk.device import DeviceDescriptor
-from cntk.utils import value_to_seq, variable_value_to_seq, Record, \
+from cntk.device import DeviceDescriptor, cpu
+from cntk.utils import variable_value_to_seq, Record, \
         get_python_function_arguments, map_function_arguments
 from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple
 from cntk.ops.variables import Variable
 from enum import Enum, unique
-import numpy as np
 
 
 @unique
@@ -1084,14 +1083,18 @@ class UserFunction(Function):
 
         # Since the state will frequently not be used, we cache the None-state
         # to speed up.
-        self._none_state =  cntk_py.UserBackPropState(self,
-                DeviceDescriptor.cpu_device(), None)
+        self._none_state =  cntk_py.UserBackPropState(self, cpu(), None)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
         # http://www.swig.org/Doc3.0/Python.html#Python_nn35
         self.__disown__()
 
+    def _get_none_state(self, device=cpu()):
+        if self._none_state.device() != device:
+            self._none_state =  cntk_py.UserBackPropState(self, device, None)
+
+        return self._none_state
 
     def _forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         '''
@@ -1128,7 +1131,7 @@ class UserFunction(Function):
             state = self.forward(args, outputs, device, outputs_to_retain)
 
         if state is None:
-            state = self._none_state
+            state = self._get_none_state(device)
         elif not isinstance(state, cntk_py.BackPropState):
             state = cntk_py.UserBackPropState(self, device, state)
 
@@ -1174,11 +1177,8 @@ class UserFunction(Function):
 
         else:
             if not isinstance(state, cntk_py.BackPropState):
-                if state is None:
-                    state = self._none_state
-                else:
-                    raise ValueError('if as_numpy=False, state must be of '
-                            'type BackPropState')
+                raise ValueError('if as_numpy=False, state must be of '
+                        'type BackPropState')
 
         map_if_possible(variables)
 
@@ -1186,7 +1186,7 @@ class UserFunction(Function):
             for rg in root_gradients.values():
                 break
             root_gradients = rg
-        
+
         possible_wrt = [input for input in self.inputs if input.needs_gradient]
         if len(possible_wrt) > 1:
             self.backward(state, root_gradients, variables)

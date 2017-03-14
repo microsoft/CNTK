@@ -5,7 +5,6 @@
 
 __version__ = '2.0.beta12.0+'
 
-import os
 import numpy as np
 
 from .core import *
