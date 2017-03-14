@@ -110,7 +110,7 @@ void MultiThreadsEvaluationWithClone(const DeviceDescriptor& device, const int t
     std::vector<std::thread> threadList(threadCount);
     for (int th = 0; th < threadCount; ++th)
     {
-        threadList[th] = std::thread(RunEvaluationClassifier, classifierFunc->Clone(), device);
+        threadList[th] = std::thread(RunEvaluationClassifier, classifierFunc->Clone(ParameterCloningMethod::Share), device);
     }
 
     for (int th = 0; th < threadCount; ++th)
@@ -137,7 +137,6 @@ void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const i
     // The model file will be trained and copied to the current runtime directory first.
     auto modelFuncPtr = CNTK::Function::LoadModel(L"01_OneHidden", device);
 
-
     OutputFunctionInfo(modelFuncPtr);
     fprintf(stderr, "MultiThreadsEvaluationWithLoadModel on device=%d\n", device.Id());
 
@@ -145,7 +144,7 @@ void MultiThreadsEvaluationWithLoadModel(const DeviceDescriptor& device, const i
     std::vector<std::thread> threadList(threadCount);
     for (int th = 0; th < threadCount; ++th)
     {
-        threadList[th] = std::thread(RunEvaluationOneHidden, modelFuncPtr->Clone(), device);
+        threadList[th] = std::thread(RunEvaluationOneHidden, modelFuncPtr->Clone(ParameterCloningMethod::Share), device);
     }
 
     for (int th = 0; th < threadCount; ++th)
@@ -415,7 +414,7 @@ void RunEvaluationOneHidden(FunctionPtr evalFunc, const DeviceDescriptor& device
     }
 
     // Evaluate the network in several runs 
-    size_t iterationCount = 4;   
+    size_t iterationCount = 4;
     size_t numSamples = 3;
     for (size_t t = 0; t < iterationCount; ++t)
     {

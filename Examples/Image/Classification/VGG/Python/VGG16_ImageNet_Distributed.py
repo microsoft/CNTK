@@ -11,12 +11,13 @@ import argparse
 import numpy as np
 import cntk
 import _cntk_py
+import cntk.io.transforms as xforms
 
 from cntk.utils import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
-from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential, For
+from cntk.layers import Placeholder, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential, For
 from cntk.initializer import normal
 from cntk.training_session import *
 
@@ -42,15 +43,15 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
     transforms = []
     if is_training:
         transforms += [
-            ImageDeserializer.crop(crop_type='randomside', side_ratio='0.4375:0.875', jitter_type='uniratio') # train uses jitter
+            xforms.crop(crop_type='randomside', side_ratio=0.4375:0.875, jitter_type='uniratio') # train uses jitter
         ]
     else: 
         transforms += [
-            ImageDeserializer.crop(crop_type='center', side_ratio=0.5833333) # test has no jitter
+            xforms.crop(crop_type='center', side_ratio=0.5833333) # test has no jitter
         ]
 
     transforms += [
-        ImageDeserializer.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
+        xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
     ]
 
     # deserializer
@@ -215,6 +216,9 @@ if __name__=='__main__':
         log_dir = args['logdir']
     if args['device'] is not None:
         cntk.device.set_default_device(cntk.device.gpu(args['device']))
+
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
 
     train_data=os.path.join(data_path, 'train_map.txt')
     test_data=os.path.join(data_path, 'val_map.txt')

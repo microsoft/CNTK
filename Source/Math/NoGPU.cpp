@@ -106,7 +106,7 @@ GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
 }
 
@@ -1010,7 +1010,7 @@ void GPUMatrix<ElemType>::SetColumn(const GPUMatrix<ElemType>& valMat, size_t co
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+void GPUMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
 }
 

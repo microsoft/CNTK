@@ -277,6 +277,8 @@
 %ignore_function CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore_function CNTK::Internal::SetComputationNetworkTraceLevel;
 %ignore_function CNTK::Internal::GetComputationNetworkTraceLevel;
+%ignore_function CNTK::Internal::SetComputationNetworkTrackGapNans;
+%ignore_function CNTK::Internal::GetComputationNetworkTrackGapNans;
 %ignore_function CNTK::Internal::SetGPUMemoryAllocationTraceLevel;
 %ignore_function CNTK::Internal::ForceSynchronousCUDAKernelExecutions;
 %ignore_function CNTK::Internal::ForceDeterministicAlgorithms;
@@ -291,6 +293,8 @@
 %ignore_function CNTK::Internal::AreEquivalent;
 %ignore_function CNTK::Internal::AreEqual;
 %ignore_function CNTK::PrintBuiltInfo;
+
+%ignore_class CNTK::Internal::TensorBoardFileWriter;
 
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }
@@ -524,6 +528,12 @@
 %rename (_IsPrimitive) CNTK::Function::IsPrimitive;
 %rename (_IsBlock) CNTK::Function::IsBlock;
 
+// Customize type mapping for modelBuffer, used by LoadModel
+%apply char* INPUT { char* modelBuffer }
+%typemap(ctype) (char* modelBuffer) "char*"
+%typemap(imtype) (char* modelBuffer) "byte[]"
+%typemap(cstype) (char* modelBuffer) "byte[]"
+
 %typemap(cscode) CNTK::Function %{
 
     // This is a reference to prevent premature garbage collection 
@@ -533,6 +543,11 @@
     private System.Collections.Generic.List<Variable> argumentList;
     private System.Collections.Generic.List<Variable> outputList;
     private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
+
+    public static Function LoadModel(byte[] modelBuffer, DeviceDescriptor computeDevice)
+    {
+        return LoadModel(modelBuffer, (uint)modelBuffer.Length, computeDevice);
+    }
 
     public string Name
     {
@@ -910,6 +925,7 @@
 %rename (_IsSparse) CNTK::Value::IsSparse;
 %rename (_IsReadOnly) CNTK::Value::IsReadOnly;
 %rename (_MaskedCount) CNTK::Value::MaskedCount;
+
 
 %typemap(cscode) CNTK::Value %{
 

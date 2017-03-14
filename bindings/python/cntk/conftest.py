@@ -62,7 +62,7 @@ import numpy
 # precision and don't write in scientific notation
 numpy.set_printoptions(precision=6, suppress=True)
 import cntk
-
+cntk.debugging.set_computation_network_track_gap_nans(True)
 
 @pytest.fixture(autouse=True)
 def add_namespace(doctest_namespace):

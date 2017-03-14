@@ -17,11 +17,17 @@ class DeviceKind(Enum):
     CPU = cntk_py.DeviceKind_CPU
     GPU = cntk_py.DeviceKind_GPU
 
+    def __eq__(self, other):
+        if isinstance(other, int):
+            return self.value == other
+        else:
+            return self == other
+
 
 class DeviceDescriptor(cntk_py.DeviceDescriptor):
     '''
-    Describes a device by an unique id and its type. If the device corresponds to a GPU its type is 1,
-    otherwise, it is 0
+    Describes a device by an unique id and its type. If the device corresponds
+    to a GPU its type is 1, otherwise, it is 0
     '''
 
     def id(self):

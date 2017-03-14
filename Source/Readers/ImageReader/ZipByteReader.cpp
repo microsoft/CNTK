@@ -30,7 +30,7 @@ ZipByteReader::ZipByteReader(const std::string& zipPath)
 ZipByteReader::ZipPtr ZipByteReader::OpenZip()
 {
     int err = ZIP_ER_OK;
-    auto zip = zip_open(m_zipPath.c_str(), 0, &err);
+    auto zip = zip_open(m_zipPath.c_str(), ZIP_RDONLY, &err);
     if (ZIP_ER_OK != err)
         RuntimeError("Failed to open %s, zip library error: %s", m_zipPath.c_str(), GetZipError(err).c_str());
 

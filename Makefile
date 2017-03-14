@@ -952,6 +952,7 @@ $(MULTIVERSO_LIB):
 	@mkdir -p $(BINDIR)
 	@mkdir -p $(SOURCEDIR)/Multiverso/build/$(BUILDTYPE)
 	@cmake -DCMAKE_VERBOSE_MAKEFILE=TRUE \
+		-DCMAKE_CXX_COMPILER=$(CXX) \
 		-DOpenMP_CXX_FLAGS="" \
 		-DOpenMP_C_FLAGS="" \
 		-DBoost_NO_BOOST_CMAKE=TRUE \
@@ -1187,6 +1188,7 @@ UNITTEST_MATH_SRC = \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/MatrixLearnerTests.cpp \
 	$(SOURCEDIR)/../Tests/UnitTests/MathTests/stdafx.cpp \
 
+UNITTEST_MATH_SRC += $(CNTK_COMMON_SRC)
 UNITTEST_MATH_OBJ := $(patsubst %.cpp, $(OBJDIR)/%.o, $(UNITTEST_MATH_SRC))
 
 UNITTEST_MATH := $(BINDIR)/mathtests
@@ -1262,8 +1264,7 @@ unittests: $(UNITTEST_EVAL) $(UNITTEST_READER) $(UNITTEST_NETWORK) $(UNITTEST_MA
 
 endif
 
-# For now only build Release.
-ifeq ("$(PYTHON_SUPPORT) $(BUILDTYPE)","true release")
+ifeq ("$(PYTHON_SUPPORT)","true")
 
 # Libraries needed for the run-time (i.e., excluding test binaries)
 # TODO MPI doesn't appear explicitly here, hidden by mpic++ usage (but currently, it should be user installed)

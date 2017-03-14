@@ -2,8 +2,8 @@ dataDir: ../../../../../Examples/Image/DataSets/CIFAR-10
 
 tags:
     # CPU training for BatchNormalization not supported.
-    - bvt-e (build_sku == 'gpu') and (device == 'gpu') and (flavor == 'release')
-    - nightly-e (build_sku == 'gpu') and (device == 'gpu')
+    - bvt-e (build_sku == '1bitsgd') and (device == 'gpu') and (flavor == 'release')
+    - nightly-e (build_sku == '1bitsgd') and (device == 'gpu')
 
 testCases:
   CNTK Run must be completed:

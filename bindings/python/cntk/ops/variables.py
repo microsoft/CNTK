@@ -2,8 +2,9 @@ import numpy as np
 from cntk import cntk_py, NDArrayView
 from cntk.device import DeviceDescriptor
 from ..tensor import TensorOpsMixin
-from ..utils import typemap, sanitize_precision, sanitize_value, \
-        sanitize_shape, sanitize_dtype_cntk, Record
+from ..utils import Record
+from cntk.internal import typemap, sanitize_precision, sanitize_value, \
+        sanitize_shape, sanitize_dtype_cntk
 
 class VariableMixin(object):
     '''
