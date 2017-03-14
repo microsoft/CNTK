@@ -516,6 +516,10 @@ namespace CNTK
     }
 
     bool IsFirstOutputOfMultiOutputUDF(const Variable& var);
+    inline  bool IsConstantScalar(const Variable& var)
+    {
+        return var.IsConstant() && (var.Shape().TotalSize() == 1);
+    }
 
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName);
 
