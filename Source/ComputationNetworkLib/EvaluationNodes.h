@@ -776,13 +776,11 @@ public:
     OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, bool is_sparse, const wstring& name) : Base(deviceId, name)
     {
         m_num_class = num_class;
-        m_needsGradient = false;
         m_sparse = is_sparse;
     }
     //do we really need this?
     OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name), m_num_class(0)
     {
-        m_needsGradient = false;
         m_sparse = false;
     }
 
