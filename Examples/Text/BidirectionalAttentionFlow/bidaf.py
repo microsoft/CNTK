@@ -146,53 +146,55 @@ max_col = C.reduce_max(S)
 c_logZ = seqlogZ(max_col)
 c_attn = C.exp(max_col - C.sequence.broadcast_as(c_logZ, max_col))
 
-htilde = C.sequence.reduce_sum(c_processed * c_attn, name='htilde')
+htilde = C.sequence.reduce_sum(c_processed * c_attn)
 print(htilde)
 print(c_processed)
 
 Htilde = C.sequence.broadcast_as(htilde, c_processed)
-modeling_layer_input = C.splice(c_processed, utilde, c_processed * utilde,  c_processed * Htilde)
-print(modeling_layer_input)
+att_context = C.splice(c_processed, utilde, c_processed * utilde,  c_processed * Htilde)
+print(att_context)
 
+#modeling layer
 #todo replace with optimized_rnnstack for training purposes once it supports dropout
-begin_model = C.layers.Sequential([
+modeling_layer = C.layers.Sequential([
     C.Dropout(0.2),
     BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim)),
     C.Dropout(0.2),
     BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))
 ])
 
-end_model = begin_model.clone(C.CloneMethod.clone)
-
-second_layer = begin_model(modeling_layer_input)
-fourth_layer = end_model(second_layer)
+mod_context = modeling_layer(att_context)
+print(mod_context)
 
 def seqloss(logits, y):
     return C.sequence.last(C.sequence.gather(logits, y)) - seqlogZ(logits)
 
-begin_input = C.splice(modeling_layer_input, second_layer)
-begin_weights = C.parameter(shape=(C.InferredDimension,1), init=C.glorot_uniform())
-begin_logits = C.times(begin_input, begin_weights)
-begin_loss = seqloss(begin_logits, ab)
+#output layer
+start_logits = C.layers.Dense(1)(C.splice(mod_context, att_context))
 
-end_input = C.splice(modeling_layer_input, fourth_layer)
-end_weights = C.parameter(shape=(C.InferredDimension,1), init=C.glorot_uniform())
-end_logits = C.times(end_input, end_weights)
+# dropout?
+start_loss = seqloss(start_logits, ab) # need sequence.argmax for eval to determine start position
+
+att_mod_ctx = C.sequence.reduce_sum(C.sequence.gather(mod_context, C.greater(ab, 0))) # TODO: seems we need to handle ab == 0 in CTF (change to 1-based)
+att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
+end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
+m2 = BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))(end_input)
+end_logits = C.layers.Dense(1)(m2)
 end_loss = seqloss(end_logits, ae)
 
-loss = -(begin_loss + end_loss)
+loss = -(start_loss + end_loss)
 
 print(loss)
 print([t.shape for t in loss.grad(mb_data, wrt=loss.parameters)])
 
 progress_writers = [C.ProgressPrinter(tag='Training')]
 
-minibatch_size = 256
-lr_schedule = C.learning_rate_schedule(0.5, C.UnitType.minibatch)
+minibatch_size = 1280
+lr_schedule = C.learning_rate_schedule(0.0001, C.UnitType.sample)
 momentum_time_constant = -minibatch_size/np.log(0.9)
 mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
-z = C.combine([begin_input, end_input])
-optimizer = C.adam_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=False, low_memory=True) # should use adadelta
+z = C.combine([start_logits, end_logits])
+optimizer = C.adam_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=False, low_memory=False) # should use adadelta
 trainer = C.Trainer(z, (loss, None), optimizer, progress_writers)
 
 C.training_session(

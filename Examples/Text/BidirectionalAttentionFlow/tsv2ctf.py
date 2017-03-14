@@ -67,7 +67,7 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
         qwids = [vocab[t.lower()] for t in qtokens]
         ccids = [[chars[c] for c in pad_spec.format(t)] for t in ctokens]
         qcids = [[chars[c] for c in pad_spec.format(t)] for t in qtokens]
-        ba, ea = int(begin_answer), int(end_answer)
+        ba, ea = int(begin_answer), int(end_answer) - 1 # the end from tsv is exclusive
         baidx = [0 if i != ba else 1 for i,t in enumerate(ctokens)]
         eaidx = [0 if i != ea else 1 for i,t in enumerate(ctokens)]
         if sum(eaidx) == 0:
