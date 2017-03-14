@@ -146,8 +146,8 @@ debugging mode and can start inspection.
 User learners
 -------------
 Implementing a custom learner in pure Python is accomplished by
- - creating a class that inherits from :class:`cntk.learner.UserLearner`
- - implementing its :meth:`~cntk.learner.UserLearner.update` method
+ - creating a class that inherits from :class:`cntk.learners.UserLearner`
+ - implementing its :meth:`~cntk.learners.UserLearner.update` method
 
 Here is an example, how normal stochastic gradient descent would be
 reimplemented in a naive way::

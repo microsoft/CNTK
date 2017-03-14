@@ -302,7 +302,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         ``trainer``.
 
         Args:
-            trainer (:class:`cntk.trainer.Trainer`): trainer from which information is gathered
+            trainer (:class:`cntk.train.trainer.Trainer`): trainer from which information is gathered
             with_metric (`bool`): whether to update the metric accumulators
         '''
         if self.total_updates == 0:
@@ -421,7 +421,7 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
         log_dir (`string`, default '.'): directory where to create a TensorBoard event file.
         rank (`int` or `None`, default `None`): rank of a worker when using distributed training, or `None` if
          training locally. If not `None`, event files will be created only by rank 0.
-        model (:class:`cntk.ops.Function` or `None`, default `None`): model graph to plot.
+        model (:class:`cntk.ops.functions.Function` or `None`, default `None`): model graph to plot.
     '''
 
     def __init__(self, freq=None, log_dir='.', rank=None, model=None):
