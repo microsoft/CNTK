@@ -19,6 +19,7 @@
 #include "Basics.h"
 #include "ProgressTracing.h"
 #include "buildinfo.h"
+#include "Constants.h"
 
 extern bool g_shareNodeValueMatrices;
 using namespace Microsoft::MSR::CNTK;
@@ -410,6 +411,11 @@ namespace CNTK
         bool MaxNumCPUThreadsSet()
         {
             return s_threadsAreSet;
+        }
+
+        size_t DefaultPackThresholdSizeInBytes()
+        {
+            return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
         }
     }
 
