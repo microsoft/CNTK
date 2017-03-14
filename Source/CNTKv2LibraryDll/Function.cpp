@@ -387,10 +387,15 @@ namespace CNTK
             modelStreamBuffer buf(modelBuffer, modelBufferLength);
             std::istream modelStream(&buf);
 
-            Dictionary model;
-            modelStream >> model;
-            return Function::Deserialize(model, computeDevice);
+            return LoadModel(modelStream, computeDevice);
         }
+    }
+
+    /*static*/ FunctionPtr Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice)
+    {
+        Dictionary model;
+        inputStream >> model;
+        return Function::Deserialize(model, computeDevice);
     }
 
     void Function::RestoreModel(const std::wstring& modelFilePath)
@@ -1219,28 +1224,44 @@ namespace CNTK
         const std::vector<bool>& autoPadding,
         const NDShape& lowerPad,
         const NDShape& upperPad,
-        bool transpose,
+        size_t maxTempMemSizeInSamples,
+        const std::wstring& name)
+    {
+        return Internal::Convolution(convolutionMap,
+            operand,
+            strides,
+            sharing,
+            autoPadding,
+            lowerPad,
+            upperPad,
+            false,
+            { 0 },
+            maxTempMemSizeInSamples,
+            name);
+    }
+
+    FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
+        const Variable& operand,
+        const NDShape& strides,
+        const std::vector<bool>& sharing,
+        const std::vector<bool>& autoPadding,
+        const NDShape& lowerPad,
+        const NDShape& upperPad,
         const NDShape& outputShape,
         size_t maxTempMemSizeInSamples,
         const std::wstring& name)
     {
-        // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
-        // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
-        // the sample shape and considering the rest to be part of the batch axis
-        if (operand.DynamicAxes().empty())
-            LogicError("Convolution currently requires the main operand '%S' to have dynamic axes.", operand.AsString().c_str());
-
-        auto additionalProperties = Dictionary();
-        additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
-        additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
-        additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
-        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
-        additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
-        additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
-        additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
-
-        return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
+        return Internal::Convolution(convolutionMap,
+            operand,
+            strides,
+            sharing,
+            autoPadding,
+            lowerPad,
+            upperPad,
+            true,
+            outputShape,
+            maxTempMemSizeInSamples,
+            name);
     }
 
     FunctionPtr ROIPooling(const Variable& convolutionMap, const Variable& rois, const NDShape& roiOutputShape, const std::wstring& name/* = L""*/)
@@ -1668,5 +1689,37 @@ namespace CNTK
             //       E.g. used for seq2seq.
             return BinaryOp(PrimitiveOpType::ReconcileDynamicAxis, operand, axesAsOperand, Dictionary(), name);
         }
+
+        FunctionPtr Convolution(const Variable& convolutionMap,
+            const Variable& operand,
+            const NDShape& strides,
+            const std::vector<bool>& sharing,
+            const std::vector<bool>& autoPadding,
+            const NDShape& lowerPad,
+            const NDShape& upperPad,
+            bool transpose,
+            const NDShape& outputShape,
+            size_t maxTempMemSizeInSamples,
+            const std::wstring& name)
+        {
+            // Currently we require that the Convolution function's operand have a dynamic axis since otherwise
+            // the internal implementation incorrectly infers the batch axis dimension by picking up the first axis as 
+            // the sample shape and considering the rest to be part of the batch axis
+            if (operand.DynamicAxes().empty())
+                LogicError("Convolution currently requires the main operand to have dynamic axes");
+
+            auto additionalProperties = Dictionary();
+            additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
+            additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
+            additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
+            additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
+            additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+            additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
+            additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
+            additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
+
+            return BinaryOp(PrimitiveOpType::Convolution, convolutionMap, operand, std::move(additionalProperties), name);
+        }
+
     }
 }

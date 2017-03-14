@@ -6,6 +6,7 @@
 
 from enum import Enum, unique
 from . import cntk_py
+from cntk.internal import typemap
 
 
 @unique
@@ -48,7 +49,17 @@ class DeviceDescriptor(cntk_py.DeviceDescriptor):
         '''
         return super(DeviceDescriptor, self).type()
 
+    def __str__(self):
+        dev_type = self.type()
+        if dev_type == DeviceKind.GPU:
+            details = 'GPU %i' % self.id()
+        else:
+            details = 'CPU'
 
+        return "Device %i (%s)" % (dev_type, details)
+
+
+@typemap
 def all_devices():
     '''
     Returns a device descriptor list with all the available devices
@@ -59,6 +70,7 @@ def all_devices():
     return cntk_py.DeviceDescriptor.all_devices()
 
 
+@typemap
 def best():
     '''
     Returns a device descriptor with the best configuration.
@@ -69,6 +81,7 @@ def best():
     return cntk_py.DeviceDescriptor.best_device()
 
 
+@typemap
 def cpu():
     '''
     Returns CPU device descriptor
@@ -79,6 +92,7 @@ def cpu():
     return cntk_py.DeviceDescriptor.cpu_device()
 
 
+@typemap
 def default():
     '''
     Returns default device
@@ -89,6 +103,7 @@ def default():
     return cntk_py.DeviceDescriptor.default_device()
 
 
+@typemap
 def gpu(device_id):
     '''
     Returns GPU device
@@ -99,6 +114,7 @@ def gpu(device_id):
     return cntk_py.DeviceDescriptor.gpu_device(device_id)
 
 
+@typemap
 def use_default_device():
     '''
     Use default device
@@ -109,6 +125,7 @@ def use_default_device():
     return cntk_py.DeviceDescriptor.use_default_device()
 
 
+@typemap
 def set_default_device(new_default_device):
     '''
     Set new device descriptor as default

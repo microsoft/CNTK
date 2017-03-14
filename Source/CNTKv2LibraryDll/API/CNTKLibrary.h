@@ -30,7 +30,6 @@
 #endif
 
 #include "CNTKLibraryInternals.h"
-#include "Constants.h"
 
 namespace CNTK
 {
@@ -2997,6 +2996,11 @@ namespace CNTK
         CNTK_API static FunctionPtr LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
+        /// Load a Function from an istream. The legacy V1 model is not supported.
+        ///
+        CNTK_API static FunctionPtr LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
         /// Prints the entire graph underlying this Function to stderr
         ///
         CNTK_API void PrintGraph() const;
@@ -3559,17 +3563,33 @@ namespace CNTK
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"");
 
 
-    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, 
+    ///
+    /// Convolution 
+    ///
+    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap,
                                      const Variable& operand, 
                                      const NDShape& strides = { 1 },
                                      const std::vector<bool>& sharing = { true },
                                      const std::vector<bool>& autoPadding = { true },
                                      const NDShape& lowerPad = { 0 },
                                      const NDShape& upperPad = { 0 },
-                                     bool transpose = false, 
-                                     const NDShape& outputShape = { 0 },
                                      size_t maxTempMemSizeInSamples = 0, 
                                      const std::wstring& name = L"");
+
+    ///
+    /// Convolution transpose
+    ///
+    CNTK_API FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
+        const Variable& operand,
+        const NDShape& strides = { 1 },
+        const std::vector<bool>& sharing = { true },
+        const std::vector<bool>& autoPadding = { true },
+        const NDShape& lowerPad = { 0 },
+        const NDShape& upperPad = { 0 },
+        const NDShape& outputShape = { 0 },
+        size_t maxTempMemSizeInSamples = 0,
+        const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
     ///
@@ -4070,16 +4090,23 @@ namespace CNTK
     static MomentumSchedule DefaultVarianceMomentum = MomentumAsTimeConstantSchedule(2 * 3600 * 100);
 
     ///
+    /// Create an instance of FSAdaGrad learner as the original paper.
+    ///
+    CNTK_API LearnerPtr FSAdaGradLearner(const std::vector<Parameter>& parameters,
+                                         const LearningRateSchedule& learningRateSchedule,
+                                         const MomentumSchedule& momentumSchedule,
+                                         bool unitGain = DefaultUnitGainValue(),
+                                         const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
+                                         AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+    ///
     /// Create an instance of Adam learner as the original paper.
-    /// Due to history reason, the legacy implementation of AdamLearner is FSAdaGrad. To keep compitability on the interface, we
-    /// will switch to the original Adam only when lowMemory = false, while keep the legacy logic when it leaves default, aka. true.
     ///
     CNTK_API LearnerPtr AdamLearner(const std::vector<Parameter>& parameters,
                                     const LearningRateSchedule& learningRateSchedule,
                                     const MomentumSchedule& momentumSchedule,
                                     bool unitGain = DefaultUnitGainValue(),
                                     const MomentumSchedule& varianceMomentumSchedule = DefaultVarianceMomentum,
-                                    bool lowMemory = true,
                                     AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
@@ -4779,7 +4806,7 @@ namespace CNTK
     ///
     /// Built-in MPI-based communicator.
     ///
-    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
+    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::DefaultPackThresholdSizeInBytes());
 
     ///
     /// Distributed communicator that allows quantized aggregations.

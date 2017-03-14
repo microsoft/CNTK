@@ -12,7 +12,6 @@ from numbers import Number
 from scipy import sparse
 
 from .. import cntk_py
-from ..device import use_default_device, cpu
 from ..axis import Axis
 from cntk.internal import typemap
 
@@ -149,6 +148,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
                          'input_variable does not contain a sequence axis.')
 
     if device is None:
+        from ..device import use_default_device
         device = use_default_device()
 
     from .. import Value
