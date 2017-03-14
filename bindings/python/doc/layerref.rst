@@ -1,14 +1,14 @@
 Layers Library Reference
 ========================
 
-Note: This documentation has not yet been completely updated w.r.t. the latest update of the Layers library.
-It should be correct but miss several new options and layer types.
+Note: This documentation has not yet been completely updated with respect to the latest update of the Layers library.
+It should be correct but misses several new options and layer types.
 
 CNTK predefines a number of common "layers," which makes it very easy to
 write simple networks that consist of standard layers layered on top of
 each other. Layers are function objects that can be used like a regular
-:class:`~cntk.ops.functions.Function` but hold learnable parameters 
-and have an additional pair of ``()`` to pass construction parameters 
+:class:`~cntk.ops.functions.Function` but hold learnable parameters
+and have an additional pair of ``()`` to pass construction parameters
 or attributes.
 
 For example, this is the network description for a simple 1-hidden layer
@@ -43,7 +43,7 @@ and invoke it like this:
 
     p = my_model(features)
 
-Built on top of ``Sequential()`` is :ref:`layerstack`,
+Built on top of ``Sequential()`` is :ref:`for`,
 which allows to easily create models with repetitions. For example, a
 2011-style feed-forward speech-recognition network with 6 hidden sigmoid
 layers of identical dimensions can be written like this:
@@ -82,13 +82,13 @@ to define scopes with locally changed defaults, using one of the following two f
     with default_options_for(FUNCTION, OPT1=VAL1, OPT2=VAL2, ...):
         # scope with modified defaults for FUNCTION only
 
-The following options can be overridden with the ``with`` statement: 
+The following options can be overridden with the ``with`` statement:
 
-    - ``init`` (default: ``glorot_uniform()``): initializer specification, for :ref:`dense`, :ref:`convolution`, and :ref:`embedding` 
-    - ``activation`` (default: ``None``): activation function, for ``Dense()`` and ``Convolution()`` 
+    - ``init`` (default: ``glorot_uniform()``): initializer specification, for :ref:`dense`, :ref:`convolution`, and :ref:`embedding`
+    - ``activation`` (default: ``None``): activation function, for ``Dense()`` and ``Convolution()``
     - ``bias`` (default: ``True``): have a bias, for ``Dense()`` and ``Convolution()``
-    - ``init_bias`` (default: ``0``): initializer specification for the bias, for ``Dense()`` and ``Convolution()`` 
-    - ``initial_state`` (default: ``None``): initial state to use in ``Recurrence()`` :ref:`recurrence` 
+    - ``init_bias`` (default: ``0``): initializer specification for the bias, for ``Dense()`` and ``Convolution()``
+    - ``initial_state`` (default: ``None``): initial state to use in ``Recurrence()`` :ref:`recurrence`
     - ``use_peepholes`` (default: ``False``): use peephole connections in ``LSTM()`` :ref:`lstm`
 
 The second for allows to set default options on a
@@ -242,7 +242,7 @@ Description
 Use these factory functions to create a fully-connected layer. It
 creates a function object that contains a learnable weight matrix and,
 unless ``bias=False``, a learnable bias. The function object can be used
-like a function, which implements one of these formulas (using Python 
+like a function, which implements one of these formulas (using Python
 3.5 ``@`` operator for matrix multiplication):
 
 ::
@@ -515,12 +515,12 @@ Description
 ~~~~~~~~~~~
 
 Use this factory function to create a global pooling operation. Use
-``GlobalMaxPooling()`` to compute the maximum over all spatial data, 
+``GlobalMaxPooling()`` to compute the maximum over all spatial data,
 or ``GlobalAveragePooling()`` to take their average.
 
-The global pooling operation infer the pooling window shape from the input 
+The global pooling operation infer the pooling window shape from the input
 tensor and create a pooling function with pooling window size that
-matches the input spatial dimension. It then computes either the 
+matches the input spatial dimension. It then computes either the
 maximum or the average of all the values inside the inferred pooling
 window.
 
@@ -529,7 +529,7 @@ Example:
 
 ::
 
-    p = GlobalMaxPooling()(c)    
+    p = GlobalMaxPooling()(c)
 
 Dropout()
 ------------------------------
@@ -544,7 +544,7 @@ Parameters
 ~~~~~~~~~~
 
 -  ``dropout_rate``: a fraction between [0, 1) that specifies the probability by which
-   the dropout operation will randomly set elements of the input to zero. 0 mean 
+   the dropout operation will randomly set elements of the input to zero. 0 mean
    select everything and close to 1 mean drop every element.
 
 Return Value
@@ -555,7 +555,7 @@ A function that implements the desired dropout layer.
 Description
 ~~~~~~~~~~~
 
-Use this factory function to create a dropout operation with a specific 
+Use this factory function to create a dropout operation with a specific
 dropout rate.
 
 Example:
@@ -563,7 +563,7 @@ Example:
 
 ::
 
-    p = Dropout(0.5)(c)    
+    p = Dropout(0.5)(c)
 
 .. _embedding:
 
@@ -1035,7 +1035,7 @@ The ``FGH`` function defined above means the same as
 
 ::
 
-    y = H(G(F(x))) 
+    y = H(G(F(x)))
 
 This is known as `function
 composition <https://en.wikipedia.org/wiki/Function_composition>`_,
@@ -1081,10 +1081,10 @@ deep-neural network work on speech recognition:
 
     my_model = Sequential ([
         Dense(2048, activation=sigmoid),  # four hidden layers
-        Dense(2048, activation=sigmoid), 
-        Dense(2048, activation=sigmoid), 
-        Dense(2048, activation=sigmoid), 
-        Dense(9000, activation=softmax)   # note: last layer is a softmax 
+        Dense(2048, activation=sigmoid),
+        Dense(2048, activation=sigmoid),
+        Dense(2048, activation=sigmoid),
+        Dense(9000, activation=softmax)   # note: last layer is a softmax
     )
     features = Input(40)
     p = my_model(features)
