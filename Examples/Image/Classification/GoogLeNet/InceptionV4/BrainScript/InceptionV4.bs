@@ -1,0 +1,87 @@
+#
+# Inception-V4 network definition
+# Details are in https://arxiv.org/pdf/1602.07261v2.pdf
+#
+
+InceptionV4(input, labelDim, bnTimeConst) =
+{
+    #
+    # Stem
+    #
+    # 299 x 299 x 3
+    conv1 = ConvBNReLULayer{32, (3:3), (2:2), false, bnTimeConst}(input)
+    # 149 x 149 x 32
+    conv2 = ConvBNReLULayer{32, (3:3), (1:1), false, bnTimeConst}(conv1)
+    # 147 x 147 x 32
+    conv3 = ConvBNReLULayer{64, (3:3), (1:1), true, bnTimeConst}(conv2)
+    # 147 x 147 x 64
+    branch1_conv3x3 = ConvBNReLULayer{96, (3:3), (2:2), false, bnTimeConst}(conv3)
+    branch1_pool    = MaxPoolingLayer{(3:3), stride = (2:2), pad = false}(conv3)
+    branch1 = Splice((branch1_conv3x3:branch1_pool), axis=3)
+    # 73 x 73 x 160
+    branch2_conv3x3 = Sequential( 
+        ConvBNReLULayer{64, (1:1), (1:1), true, bnTimeConst} :
+        ConvBNReLULayer{96, (3:3), (1:1), false, bnTimeConst}
+    ) (branch1)
+    branch2_conv7x7_3x3 = Sequential( 
+        ConvBNReLULayer{64, (1:1), (1:1), true, bnTimeConst} :
+        ConvBNReLULayer{64, (7:1), (1:1), true, bnTimeConst} :
+        ConvBNReLULayer{64, (1:7), (1:1), true, bnTimeConst} :
+        ConvBNReLULayer{96, (3:3), (1:1), false, bnTimeConst}
+    ) (branch1)
+    branch2 = Splice((branch2_conv3x3:branch2_conv7x7_3x3), axis=3)
+    # 71 x 71 x 192
+    branch3_conv3x3 = ConvBNReLULayer{192, (3:3), (2:2), false, bnTimeConst}(branch2)
+    branch3_pool    = MaxPoolingLayer{(3:3), stride = (2:2), pad = false}(branch2)
+    branch3 = Splice((branch3_conv3x3:branch3_pool), axis=3)
+
+    #
+    # Inception Blocks
+    #
+    # 35 x 35 x 384
+    inceptionA_1 = InceptionA{bnTimeConst}(branch3)
+    inceptionA_2 = InceptionA{bnTimeConst}(inceptionA_1)
+    inceptionA_3 = InceptionA{bnTimeConst}(inceptionA_2)
+    inceptionA_4 = InceptionA{bnTimeConst}(inceptionA_3)
+    # 35 x 35 x 384
+    reduction_1 = ReductionA{192, 224, 256, 384, bnTimeConst}(inceptionA_4)
+    # 17 x 17 x 1024
+    inceptionB_1 = InceptionB{bnTimeConst}(reduction_1)
+    inceptionB_2 = InceptionB{bnTimeConst}(inceptionB_1)
+    inceptionB_3 = InceptionB{bnTimeConst}(inceptionB_2)
+    inceptionB_4 = InceptionB{bnTimeConst}(inceptionB_3)
+    inceptionB_5 = InceptionB{bnTimeConst}(inceptionB_4)
+    inceptionB_6 = InceptionB{bnTimeConst}(inceptionB_5)
+    inceptionB_7 = InceptionB{bnTimeConst}(inceptionB_6)
+    # 17 x 17 x 1024
+    reduction_2 = ReductionB{bnTimeConst}(inceptionB_7)
+    # 8 x 8 x 1536
+    inceptionC_1 = InceptionC{bnTimeConst}(reduction_2)
+    inceptionC_2 = InceptionC{bnTimeConst}(inceptionC_1)
+    inceptionC_3 = InceptionC{bnTimeConst}(inceptionC_2)
+
+    #
+    # Prediction
+    #
+    # 8 x 8 x 1536
+    pool1 = AveragePoolingLayer{(8:8)}(inceptionC_3)
+    # 1 x 1 x 1536
+    drop = Dropout(pool1)
+    # 1 x 1 x 1536
+    z = LinearLayer{labelDim, init = 'heNormal'}(drop)
+}
+
+#
+# Inception V4 model with normalized input, to use the below function
+# remove "ImageNet1K_mean.xml" from each reader.
+#
+InceptionV4Norm(input, labelDim, bnTimeConst) = 
+{
+    # Normalize inputs to -1 and 1.
+    featMean  = 128
+    featScale = 1/128
+    Normalize{m,f} = x => f .* (x - m)
+            
+    inputNorm = Normalize{featMean, featScale}(input)
+    model     = InceptionV4(inputNorm, labelDim, bnTimeConst)
+}.model
