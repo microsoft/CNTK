@@ -269,17 +269,17 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     This implements a convolution operation over items arranged on an N-dimensional grid, such as pixels in an image.
     Typically, each item is a vector (e.g. pixel: R,G,B), and the result is, in turn, a vector.
     The item-grid dimensions are referred to as the *spatial* dimensions (e.g. dimensions of an image),
-    while the vector dimensions of the individual items are often called *feature-map depth*.
+    while the vector dimension of the individual items is often called *feature-map depth*.
 
     For each item, convolution gathers a window ("receptive field") of items surrounding the item's position on the grid,
     and applies a little fully-connected network to it (the same little network is applied to all item positions).
     The size (spatial extent) of the receptive field is given by ``filter_shape``.
     E.g. to specify a 2D convolution, ``filter_shape`` should be a tuple of two integers, such as `(5,5)`;
     an example for a 3D convolution (e.g. video or an MRI scan) would be ``filter_shape=(3,3,3)``;
-    while for a 1D convolution (e.g. audio or text), ``filter_shape`` has one element, such as (3,).
+    while for a 1D convolution (e.g. audio or text), ``filter_shape`` has one element, such as (3,) or just 3.
 
-    The dimension of the input items (feature-map depth) is not specified, but known from the input.
-    The dimension of the output items generated for each item position is given by ``num_filters``.
+    The dimension of the input items (input feature-map depth) is not to be specified. It is known from the input.
+    The dimension of the output items (output feature-map depth) generated for each item position is given by ``num_filters``.
 
     If the input is a sequence, the sequence elements are by default treated independently.
     To convolve along the sequence dimension as well, pass ``sequential=True``.
@@ -318,9 +318,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
      >>> x = Input(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
      >>> h = f(x)
-     >>> h.shape   # this is the shape per video frame
+     >>> h.shape   # this is the shape per video frame: 637x476 activation vectors of length 128 each
          (128, 476, 637)
-     >>> f.W.shape
+     >>> f.W.shape # (output featuer map depth, input depth, and the three filter dimensions)
          (128, 3, 2, 5, 4)
 
     Args:
@@ -1097,12 +1097,12 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
 
     Layer factory function to create a batch-normalization layer.
 
-    Batch normalization implements this formula:
+    Batch normalization applies this formula to every input element (element-wise):
     ``y = (x - batch_mean) / (batch_stddev + epsilon) * scale + bias``
     where ``batch_mean`` and ``batch_stddev`` are estimated on the minibatch and ``scale`` and ``bias`` are learned parameters.
     TODO: add paper reference
 
-    During operation, this layer also estimates an aggregate running mean and stddev for use in inference.
+    During operation, this layer also estimates an aggregate running mean and standard deviation for use in inference.
 
     A ``BatchNormalization`` layer instance owns its learnable parameter tensors and exposes them as attributes ``.scale`` and ``.bias``.
     The aggregate estimates are exposed as attributes ``aggregate_mean``, ``aggregate_variance``, and ``aggregate_count``.
@@ -1158,7 +1158,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
 
     Layer factory function to create a function that implements layer normalization.
 
-    Layer normalization implements this formula:
+    Layer normalization applies this formula to every input element (element-wise):
     ``y = (x - mean(x)) / (stddev(x) + epsilon) * scale + bias``
     where ``scale`` and ``bias`` are learned scalar parameters.
     TODO: add paper reference
@@ -1172,7 +1172,8 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     Args:
      initial_scale (float, default 1): initial value for the ``scale`` parameter
      initial_bias (float, default 0): initial value for the ``bias`` parameter
-     name (str, optional): the name of the function instance in the network
+     epsilon (float, default 0.00001): epsilon added to the standard deviation to avoid division by 0
+     name (str, optional): the name of the Function instance in the network
 
     Returns:
         cntk.ops.functions.Function:

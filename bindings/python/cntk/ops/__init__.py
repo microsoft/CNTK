@@ -2508,7 +2508,7 @@ from cntk.axis import Axis
 @typemap
 def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
                    dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes(), name='')
+    '''
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
@@ -2538,11 +2538,10 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
 
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
 
-
 @typemap
 def output_variable(shape, dtype, dynamic_axes, name=''):
     '''
-    It creates an output node that is used to define a user defined function.
+    It creates an output variable that is used to define a user defined function.
 
     Args:
         shape (tuple or int): the shape of the input tensor
@@ -2567,19 +2566,20 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
 
     return output_variable(shape, dtype, dynamic_axes, name)
 
-
 @typemap
 def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     '''
-    It creates a variable place holder for recurrence networks, when the network's dynamic axes
-    are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
+    It creates a placeholder variable that has to be later bound to an actual variable.
+    A common use of this is to serve as a placeholder for a later output variable in a
+    recurrent network, which is replaced with the actual output variable by calling
+    replace_placeholder(s).
 
     Args:
         shape (tuple or int): the shape of the variable tensor
         dynamic_axes (list): the list of dynamic axes that the actual variable uses
 
     Returns:
-        :class:`~cntk.ops.functions.Function`
+        :class:`~cntk.ops.variables.Variable`
     '''
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
 
@@ -2593,7 +2593,6 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
 
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
-
 
 @typemap
 def parameter(shape=None, init=None, dtype=None, device=None, name=''):

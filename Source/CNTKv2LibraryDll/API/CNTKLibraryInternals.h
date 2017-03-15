@@ -282,6 +282,8 @@ namespace CNTK
         CNTK_API bool AreEqual(const ::CNTK::NDArrayView& view1, const ::CNTK::NDArrayView& view2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
         CNTK_API bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
+        CNTK_API size_t DefaultPackThresholdSizeInBytes();
+
         class VariableResolver;
 
         ///

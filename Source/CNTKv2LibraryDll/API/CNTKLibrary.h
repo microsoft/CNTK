@@ -30,7 +30,6 @@
 #endif
 
 #include "CNTKLibraryInternals.h"
-#include "Constants.h"
 
 namespace CNTK
 {
@@ -2767,6 +2766,27 @@ namespace CNTK
         CNTK_API virtual ~Function();
 
         ///
+        /// Compute the gradients of the output of this Function, w.r.t. the specified input variables in 'gradients'
+        /// at the specified 'arguments' values for the Function inputs
+        ///
+        CNTK_API void Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                std::unordered_map<Variable, ValuePtr>& gradients,
+                                std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
+                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// Compute the gradients of the output of this Function, w.r.t. the specified input variables in 'gradients'
+        /// at the specified 'arguments' values for the Function inputs
+        ///
+        void Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                       std::unordered_map<Variable, ValuePtr>& gradients,
+                       const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice())
+        {
+            std::unordered_map<Variable, ValuePtr> outputsToEvaluate = {};
+            return Gradients(arguments, gradients, outputsToEvaluate, computeDevice);
+        }
+
+        ///
         /// Performs forward computation, i.e. evaluation, on the computaion graph using provided 'input' and stores the results in the 'outputs' map.
         /// It is same as Forward, but without storing and returning information needed for backpropagation.
         ///
@@ -4807,7 +4827,7 @@ namespace CNTK
     ///
     /// Built-in MPI-based communicator.
     ///
-    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
+    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::DefaultPackThresholdSizeInBytes());
 
     ///
     /// Distributed communicator that allows quantized aggregations.

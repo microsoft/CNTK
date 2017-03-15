@@ -19,6 +19,8 @@ ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it
 
 ## Details
 
-We currently offer the BN-Inception model (https://arxiv.org/abs/1502.03167). Only BrainScript version is available at this moment.
+We currently offer the BN-Inception model (https://arxiv.org/abs/1502.03167). Both Python and BrainScript examples are available.
+
+### [Python](./Python)
 
 ### [BrainScript](./BrainScript)

@@ -17,7 +17,6 @@ from ..axis import Axis
 from cntk.internal import typemap
 
 # To __remove__
-from cntk.debugging import *
 from cntk.logging import *
 # End to remove
 
