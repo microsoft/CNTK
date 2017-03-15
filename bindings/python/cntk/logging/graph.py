@@ -8,7 +8,7 @@ import os
 from cntk.ops import Variable
 
 
-def depth_first_search(root, visitor):
+def depth_first_search(root, visitor, dive_into_blocks=False):
     '''
     Generic function that walks through the graph starting at ``root`` and
     uses function ``visitor`` on each node to check whether it should be
@@ -18,6 +18,8 @@ def depth_first_search(root, visitor):
         root (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the root to start the journey from
         visitor (Python function or lambda): function that takes a node as
          argument and returns ``True`` if that node should be returned.
+        dive_into_blocks (bool, default False): whether the search should look
+         into block functions
     Returns:
         List of functions, for which ``visitor`` was ``True``
     '''
@@ -30,7 +32,7 @@ def depth_first_search(root, visitor):
         if node.uid in visited:
             continue
         from cntk import cntk_py
-        if isinstance(node, cntk_py.Function) and node.is_block:
+        if isinstance(node, cntk_py.Function) and node.is_block and dive_into_blocks:
             composite = node.block_root
             # BlockFunction node
             mapping = node.block_arguments_mapping
@@ -69,7 +71,7 @@ def depth_first_search(root, visitor):
 
     return accum
 
-def find_all_with_name(node, node_name):
+def find_all_with_name(node, node_name, dive_into_blocks=False):
     '''
     Finds functions in the graph starting from ``node`` and doing a depth-first
     search.
@@ -77,6 +79,8 @@ def find_all_with_name(node, node_name):
     Args:
         node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
+        dive_into_blocks (bool, default False): whether the search should look
+         into block functions
 
     Returns:
         List of primitive (or block) functions having the specified name
@@ -85,9 +89,10 @@ def find_all_with_name(node, node_name):
         :func:`~cntk.ops.functions.Function.find_all_with_name` in class
         :class:`~cntk.ops.functions.Function`.
     '''
-    return depth_first_search(node, lambda x: x.name == node_name)
+    return depth_first_search(node, lambda x: x.name == node_name,
+                              dive_into_blocks)
 
-def find_by_name(node, node_name):
+def find_by_name(node, node_name, dive_into_blocks=False):
     '''
     Finds a function in the graph starting from ``node`` and doing a depth-first
     search. It assumes that the name occurs only once.
@@ -95,6 +100,8 @@ def find_by_name(node, node_name):
     Args:
         node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
+        dive_into_blocks (bool, default False): whether the search should look
+         into block functions
 
     Returns:
         Primitive (or block) function having the specified name
@@ -108,7 +115,8 @@ def find_by_name(node, node_name):
         raise ValueError('node name has to be a string. You gave '
                          'a %s' % type(node_name))
 
-    result = depth_first_search(node, lambda x: x.name == node_name)
+    result = depth_first_search(node, lambda x: x.name == node_name,
+                                dive_into_blocks)
 
     if len(result) > 1:
         raise ValueError('found multiple functions matching "%s". '
@@ -345,7 +353,7 @@ def output_function_graph(node, dot_file_path=None, png_file_path=None):
     return result
 
 
-def get_node_outputs(node):
+def get_node_outputs(node, dive_into_blocks=False):
     '''
     Walks through every node of the graph starting at ``node``
     and returns a list of all node outputs.
@@ -356,7 +364,7 @@ def get_node_outputs(node):
     Returns:
         A list of all node outputs
     '''
-    node_list = depth_first_search(node, lambda x: True)
+    node_list = depth_first_search(node, lambda x: True, dive_into_blocks)
     node_outputs = []
     for node in node_list:
         try:

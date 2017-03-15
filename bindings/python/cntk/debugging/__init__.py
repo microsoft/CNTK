@@ -33,7 +33,10 @@ def dump_signature(root, tag=None):
 def dump_function(root, tag=None):
     from cntk.logging.graph import depth_first_search
     from cntk import cntk_py
-    graph = depth_first_search(root.root_function, lambda x: not isinstance(x, cntk_py.Variable) or not x.is_output)
+    graph = depth_first_search(root.root_function,
+                               lambda x: not isinstance(x, cntk_py.Variable)\
+                                         or not x.is_output,
+                               dive_into_blocks=True)
     names = dict()
     def make_name(n): # come up with a letter sequence
         if n < 26:
