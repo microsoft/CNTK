@@ -596,7 +596,7 @@ namespace CNTK
                 placeholderReplacements[clonedInput] = replacements.at(cloneeInput);
             }
             else
-                {
+            {
                 // This is not a replacement. Lets create a fresh clone
 
                 // Is it a leaf

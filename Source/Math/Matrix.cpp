@@ -361,7 +361,7 @@ Matrix<ElemType>::Matrix(shared_ptr<BaseMatrix<ElemType>> baseMatrix, ElemType* 
 #endif
 
 template <class ElemType>
-Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat)
+Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz)
 {
     Init(deviceId);
 
@@ -369,12 +369,12 @@ Matrix<ElemType>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TY
     {
         if (m_preferredDeviceId == CPUDEVICE)
         {
-            m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormat, numRows, numCols, 0);
+            m_CPUSparseMatrix = make_shared<CPUSparseMatrix<ElemType>>(matrixFormat, numRows, numCols, nnz);
             SetDataLocation(CPU, SPARSE);
         }
         else
         {
-            m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, 0, m_preferredDeviceId, matrixFormat);
+            m_GPUSparseMatrix = make_shared<GPUSparseMatrix<ElemType>>(numRows, numCols, nnz, m_preferredDeviceId, matrixFormat);
             SetDataLocation(GPU, SPARSE);
         }
     }
@@ -5855,7 +5855,7 @@ template class Matrix<double>;
 // Let's explicitly instantiate the methods we need for that purpose
 template Matrix<char>::Matrix(DEVICEID_TYPE);
 template Matrix<char>::Matrix(Matrix<char>&&);
-template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
+template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
 template Matrix<char>::Matrix(const size_t numRows, const size_t numCols, char* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
 template Matrix<char>::~Matrix();
 template Matrix<char>& Matrix<char>::operator=(Matrix<char>&& moveFrom);
@@ -5881,7 +5881,7 @@ template char* Matrix<char>::CopyToArray(void) const;
 // Matrix<short> methods
 template Matrix<short>::Matrix(DEVICEID_TYPE);
 template Matrix<short>::Matrix(Matrix<short>&&);
-template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat);
+template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, DEVICEID_TYPE deviceId, const MatrixType matrixType, const MatrixFormat matrixFormat, const size_t nnz);
 template Matrix<short>::Matrix(const size_t numRows, const size_t numCols, short* pArray, DEVICEID_TYPE deviceId, const size_t matrixFlags, const size_t nnz);
 template Matrix<short>::~Matrix();
 template Matrix<short>& Matrix<short>::operator=(Matrix<short>&& moveFrom);
