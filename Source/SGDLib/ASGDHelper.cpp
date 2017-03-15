@@ -180,8 +180,8 @@ namespace Microsoft {
                         mat.CopyToArray(px, m_tableLength[i]);
                     }
 
-                    for (int idx = 1; idx < m_localBufferNum; idx++)
-                        memcpy(m_cpuAsyncBuffer[idx], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
+                    for (int i2 = 1; i2 < m_localBufferNum; i2++)
+                        memcpy(m_cpuAsyncBuffer[i2], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
                     memcpy(m_deltaArray, m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
@@ -190,7 +190,6 @@ namespace Microsoft {
 
                     m_workerArray->Add(m_deltaArray, m_totalModelSize, m_addOptions[0]);
                     m_workerArray->Get(m_deltaArray, m_totalModelSize);
-
                     WaitAll();
                     m_workerArray->Get(m_deltaArray, m_totalModelSize);
 
@@ -322,10 +321,10 @@ namespace Microsoft {
                             // copy parameters from CPU buffer to GPU buffer
                             for (int widx = 0; widx < m_tableCount; widx++)
                             {
-                                ElemType * wpy = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
+                                ElemType * py2 = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
 
                                 CUDA_CALL(cudaMemcpyAsync(m_gpuAsyncBuffer[m_bufferIndexInUse][widx].Data(),
-                                    wpy,
+                                    py2,
                                     m_gpuAsyncBuffer[m_bufferIndexInUse][widx].GetNumElements() * sizeof(ElemType),
                                     cudaMemcpyHostToDevice,
                                     _commStream));
@@ -415,8 +414,8 @@ namespace Microsoft {
                             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                             Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 
-                            ElemType * wpx = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
-                            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), wpx);
+                            ElemType * px2 = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
+                            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px2);
                         }
                         m_reportTimer.Stop();
                         if (m_traceLevel > 3)
@@ -447,8 +446,8 @@ namespace Microsoft {
                 void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes)
                 {
                     // parameter server offer vary of updaters, we only use the SGD updater for this simple case.
-                    //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
-                    multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
+                    multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
+                    //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
 
                     multiverso::MV_Init();
 
@@ -464,7 +463,8 @@ namespace Microsoft {
                         m_addOptions.at(i)->set_learning_rate(1.f);
                     }
 
-                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
+                    int i = 0;
+                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
                     {
                         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                         Matrix<ElemType> &mat = node->Value();
@@ -491,17 +491,18 @@ namespace Microsoft {
                     }
 
 #ifndef CPUONLY
-                    for (int i = 0; i < m_localBufferNum; i++)
-                        m_gpuAsyncBuffer[i].reserve(m_tableCount);
+                    for (int i2 = 0; i2 < m_localBufferNum; i2++)
+                        m_gpuAsyncBuffer[i2].reserve(m_tableCount);
 
                     // create pinned memory
-                    for (int i = 0; i < m_localBufferNum; ++i)
-                        CUDA_CALL(cudaMallocHost((void **)&m_cpuAsyncBuffer[i], sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
+                    for (int i3 = 0; i3 < m_localBufferNum; ++i3)
+                        CUDA_CALL(cudaMallocHost((void **)&m_cpuAsyncBuffer[i3], sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
 
                     CUDA_CALL(cudaMallocHost((void **)&m_deltaArray, sizeof(ElemType) * (m_totalModelSize), cudaHostAllocPortable));
 #else
-                    for (int i = 0; i < m_localBufferNum; i++)
-                        m_cpuAsyncBuffer[i] = new ElemType[m_totalModelSize];
+                    for (int i4 = 0; i4 < m_localBufferNum; i4++)
+                        m_cpuAsyncBuffer[i4] = new ElemType[m_totalModelSize];
+                    m_deltaArray = new ElemType[m_totalModelSize];
 #endif
                 }
 
