@@ -3,13 +3,18 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
 
-function DownloadOperations()
+function DownloadOperations(
+    [Parameter(Mandatory = $true)][hashtable[]] $operationList)
 {
     Write-Host "Performing download operations"
 
-    foreach ($item in $Script:operationList) {
+    foreach ($item in $operationList) {
         foreach ($downloadItem in $item.Download) {
-            DownloadItem $downloadItem
+            $params = $downloadItem.Params
+            $expr = $downloadItem.Function +' @params' 
+        
+            Write-Verbose "Calling Operation: [$expr]($params)"
+            Invoke-Expression $expr
         }
     }
 
@@ -17,31 +22,15 @@ function DownloadOperations()
     Write-Host
 }
 
-
-function DownloadItem(
-    [hashtable] $item)
-{
-    $func = $item["Function"]
-
-    $expr = $func +' $item' 
-        
-    Write-Verbose "Calling Operation: [$func]"
-    Invoke-Expression $expr 
-}
-
-
 function Download(
-    [Parameter(Mandatory = $true)][hashtable] $table)
+    [Parameter(Mandatory = $true)][string] $source,
+    [Parameter(Mandatory = $true)][string] $destination)
 {
-    FunctionIntro $table
-
-    $func = $table["Function"]
-    $source = $table["Source"]
-    $destination = $table["Destination"]
-
     $downloadOk = Copy-FileWebRequest -SourceFile $source -OutFile $destination -maxtry 2
 
     if (-not $downloadOk) {
         throw "Download $SourceFile Failed!"
     }
 }
+
+# vim:set expandtab shiftwidth=4 tabstop=4:

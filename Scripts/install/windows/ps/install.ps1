@@ -154,22 +154,30 @@ Function main
         }
 
         #check we are running inside the unpacked distribution content
-        VerifyInstallationContent $cntkRootDir
-
-        $whlUrl = Get-WheelUrl -path $cntkRootDir -pyVersion $PyVersion -wheelBaseUrl $WheelBaseUrl
-
+#        VerifyInstallationContent $cntkRootDir
+#        $whlUrl = Get-WheelUrl -path $cntkRootDir -pyVersion $PyVersion -wheelBaseUrl $WheelBaseUrl
+$whlUrl="C:\repos\cntk\CNTK.Common.props"
         if(-not (Test-Path -Path $localCache)) {
             new-item -Path $localcache -ItemType Container | Out-Null
         }
 
-        $operations = Set-OperationsInfo -whlUrl $whlUrl 
-        $Script:operationList  = @()
-        $Script:WinProduct = $null
-        if (VerifyOperations -NoConfirm $NoConfirm) {
+        $ops = @()
+        $ops += OpScanPrograms
+        $ops += OpVs2015Runtime -rootDir $cntkRootDir
+        $ops += OpMSMPI -rootDir $cntkRootDir
+        $ops += OpAnaconda -localCache $localCache -anacondaBasePath $AnacondaBasePath
+        $ops += OpPythonEnvironment -pyVersion $PyVersion -ymlDirectory $ymlDir -anacondaBasePath $AnacondaBasePath
+        $ops += OpWhlInstall -pyVersion $PyVersion -whlUrl $whlUrl -anacondaBasePath $AnacondaBasePath
+        $ops += OpPythonBatch  -pyVersion $PyVersion -rootDir $cntkRootDir
 
-            DownloadOperations
+        $Script:WinProduct = $null
+        $opList  = VerifyOperations -operations $ops -NoConfirm $NoConfirm 
+        
+        if ($opList) {
+
+            DownloadOperations -operationList $opList
             
-            ActionOperations
+            ActionOperations -operationList $opList
 
             DisplayEnd
         }
@@ -183,3 +191,5 @@ Function main
 main
 
 exit 0
+
+# vim:set expandtab shiftwidth=4 tabstop=4:

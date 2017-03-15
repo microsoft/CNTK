@@ -3,18 +3,25 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
 function VerifyOperations(
+    [hashtable[]] $operations,
     [bool] $NoConfirm)
 {
+    $operationList  = @()
+
     Write-Host "Determining Operations to perform. This will take a moment..."
 
     foreach ($item in $operations) {
         $needsInstall = $false
 
         foreach ($verificationItem in $item.Verification) {
+            $params = $verificationItem.Params
+            $expr = $verificationItem.Function +' @params' 
+        
+            Write-Verbose "Calling Operation: [$expr]($params)"
+            $needsInstall = Invoke-Expression $expr
             
-            $needsInstall = VerifyItem $verificationItem
             if (-not $needsInstall) {
-                $Script:operationList += $item
+                $operationList += $item
                 break
             }
         }
@@ -22,7 +29,7 @@ function VerifyOperations(
 
     Write-Host 
 
-    if ($Script:operationList.Count -gt 0) {
+    if ($operationList) {
         Write-Host "The following operations will be performed:"
 
         foreach ($item in $Script:operationList) {
@@ -30,7 +37,7 @@ function VerifyOperations(
             Write-Host " * $info"
         }
         if ($NoConfirm) {
-            return $true
+            return $operationList
         }
         Write-Host 
         Write-Host "Do you want to continue? (y/n)"
@@ -38,34 +45,17 @@ function VerifyOperations(
         $choice = GetKey '^[yYnN]+$'
 
         if ($choice -contains "y") {
-            return $true
+            return $operationList
         }
     }
     else {
         Write-Host "No additional installation required"
     }
-    return $false
+    return @()
 }
 
-function VerifyItem(
-    [hashtable] $item)
+function VerifyScanPrograms
 {
-    $func = $item["Function"]
-    $name = $item["Name"]
-
-    $expr = $func +' $item' 
-        
-    Write-Verbose "Calling Operation: [$func]: [$name]"
-    $noInstallRequired = Invoke-Expression $expr 
-
-    return $noInstallRequired
-}
-
-function VerifyScanPrograms(
-    [Parameter(Mandatory = $true)][hashtable] $table)
-{
-    FunctionIntro $table
-    $func = $table["Function"]
     $noInstallRequired = $true
     
     # no actual work is being performed, just the script local datastructure with the list
@@ -75,11 +65,8 @@ function VerifyScanPrograms(
 }
 
 function VerifyWinProductExists(
-    [Parameter(Mandatory = $true)][hashtable] $table)
+    [Parameter(Mandatory = $true)][string] $match)
 {
-    FunctionIntro $table
-    $func = $table["Function"]
-    $match = $table["Match"]
     $noInstallRequired = $true
 
     $allProducts = LoadWinProduct
@@ -89,17 +76,14 @@ function VerifyWinProductExists(
         $noInstallRequired = $false
     }
 
-    Write-Verbose "[$func]: Product [$match] returned [$noInstallRequired]"
+    Write-Verbose "[$MyInvocation.MyCommand]: Product [$match] returned [$noInstallRequired]"
     return $noInstallRequired
 }
 
 function VerifyWinProductVersion(
-    [Parameter(Mandatory = $true)][hashtable] $table)
+    [Parameter(Mandatory = $true)][string] $match,
+    [Parameter(Mandatory = $true)][string] $version)
 {
-    FunctionIntro $table
-    $func = $table["Function"]
-    $match = $table["Match"]
-    $version = $table["Version"]
     $noInstallRequired = $true
 
     $allProducts = LoadWinProduct
@@ -117,119 +101,35 @@ function VerifyWinProductVersion(
         }
     }
 
-    Write-Verbose "[$func]: Product [$match] Version {$version] returned [$noInstallRequired]"
+    Write-Verbose "[$MyInvocation.MyCommand]: Product [$match] Version [$version] returned [$noInstallRequired]"
     return $noInstallRequired
 }
 
 function VerifyDirectory(
-    [Parameter(Mandatory = $true)][hashtable] $table)
+    [Parameter(Mandatory = $true)][string] $path)
 {
-    FunctionIntro $table
-
-    $func = $table["Function"]
-    $path = $table["Path"]
-
     $noInstallRequired = (test-path -path $path -PathType Container)
 
-    Write-Verbose "[$func]: [$path] returned [$noInstallRequired]"
+    Write-Verbose "[$MyInvocation.MyCommand]: [$path] returned [$noInstallRequired]"
     
     return $noInstallRequired
 }
 
-function VerifyRunAlways(
-	[Parameter(Mandatory = $true)][hashtable] $table)
+function VerifyRunAlways
 {
-    FunctionIntro $table
-    $func = $table["Function"]
-
     $noInstallRequired = $false
-    Write-Verbose "[$func]: returned [$noInstallRequired]"
+    Write-Verbose "[$MyInvocation.MyCommand]: returned [$noInstallRequired]"
     return $noInstallRequired
 }
 
 function VerifyFile(
-    [Parameter(Mandatory = $true)][hashtable] $table)
+    [Parameter(Mandatory = $true)][string] $longFileName)
 {
-    FunctionIntro $table
+    $noInstallRequired = (Test-Path -path $longFileName -PathType Leaf)
 
-    $func = $table["Function"]
-    $path = $table["Path"]
-
-    $noInstallRequired = (test-path -path $path -PathType Leaf)
-
-    Write-Verbose "[$func]: [$path] returned [$noInstallRequired]"
+    Write-Verbose "[$MyInvocation.MyCommand]: [$longFileName] returned [$noInstallRequired]"
     
     return $noInstallRequired
-}
-
-function VerifyRegistryKey(
-    [Parameter(Mandatory = $true)][hashtable] $table)
-{
-    FunctionIntro $table
-
-    $func = $table["Function"]
-    $key = $table["Key"]
-
-    $noInstallRequired = (test-path -path $key)
-
-    Write-Verbose "[$func]: [$key] returned [$noInstallRequired]"
-    
-    return $noInstallRequired
-}
-
-function VerifyRegistryKeyName(
-    [Parameter(Mandatory = $true)][hashtable] $table)
-{
-    FunctionIntro $table
-
-    $func     = $table["Function"]
-    $key      = $table["Key"]
-    $regName  = $table["RegName"]
-
-    $noInstallRequired = Test-ItemProperty -Path $key -Name $regName
-
-    Write-Verbose "[$func]: [$key]:[$regname] returned [$noInstallRequired]"
-    
-    return $noInstallRequired
-}
-
-function VerifyRegistryKeyNameData(
-    [Parameter(Mandatory = $true)][hashtable] $table)
-{
-    FunctionIntro $table
-
-    $func     = $table["Function"]
-    $key      = $table["Key"]
-    $regName  = $table["RegName"]
-    $regData  = $table["RegData"]
-
-    $noInstallRequired = (test-path -path $key)
-
-    if ($noInstallRequired) {
-        $theKeyObj = get-item $key
-        $noInstallRequired = ($theKeyObj.GetValue("$regName") -eq $regData)
-    }
-
-    Write-Verbose "[$func]: [$key]:[$regname] == [$regData] returned [$noInstallRequired]"
-    return $noInstallRequired
-}
-
-function Test-ItemProperty (
-    [string] $Path, 
-    [string] $Name)
-{
-    if (Test-Path $Path) {
-        try {
-            $ItemProperty = Get-ItemProperty -Path $Path -Name $Name -ErrorAction SilentlyContinue
-            if ( $ItemProperty -ne $null ) {
-                return $true 
-            }
-        }
-        catch {
-            return $false
-        }
-    }
-    return $false
 }
 
 function LoadWinProduct
@@ -262,3 +162,5 @@ function LoadWinProduct
     }
     return $Script:WinProduct
 }
+
+# vim:set expandtab shiftwidth=4 tabstop=4:
