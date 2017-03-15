@@ -4,13 +4,13 @@
 
 ### Getting the data
 
-CIFAR-10 datasets are not included in the CNTK distribution but can be easily downloaded and converted by following the instructions in [DataSets/CIFAR-10](../../../DataSets/CIFAR-10). We recommend you to keep the downloaded data in the respective folder while downloading, as the scripts in this folder assume that by default.
+CIFAR-10 datasets are not included in the CNTK distribution but can be easily downloaded and converted by following the instructions in [DataSets/CIFAR-10](../../../../DataSets/CIFAR-10). We recommend you to keep the downloaded data in the respective folder while downloading, as the scripts in this folder assume that by default.
 
 ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it through http://image-net.org.
 
 ### BN_Inception_CIFAR10.py
 
-This example code applies BN-Inception model on the CIFAR-10 dataset. The network structure is slightly changed and simplified to fit the CIFAR dataset.
+[This example](./BN_Inception_CIFAR10.py) code applies BN-Inception model on the CIFAR-10 dataset. The network structure is slightly changed and simplified to fit the CIFAR dataset.
 
 We use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for training. Since all training images are pre-padded to `40x40` pixels, effectively we only perform translation transform without scaling. Run the example from the current folder using:
 
@@ -37,7 +37,7 @@ For more parameter definitions, please use `-h` command to see the help text:
 
 ### BN_Inception_ImageNet.py
 
-This example is python implementation of BN-Inception model, which is described in [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167).
+[This example](./BN_Inception_ImageNet.py) is python implementation of BN-Inception model, which is described in [Batch Normalization: Accelerating Deep Network Training by Reducing Internal Covariate Shift](https://arxiv.org/abs/1502.03167).
 
 We use a fixed crop ratio of `0.85` and scale the cropped image down to `224x224` pixels for training. Run the example from the current folder using:
 
