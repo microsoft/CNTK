@@ -212,7 +212,8 @@ BOOST_AUTO_TEST_CASE(ImageAndImageReaderSimple)
         false,
         false,
         true,
-        { L"MapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" });
+        { L"MapFile=\"$RootDir$/ImageReaderSimple_map.txt\"",
+          L"SecondMapFile=\"$RootDir$/ImageReaderSimple_map.txt\"" });
 }
 
 BOOST_AUTO_TEST_CASE(ImageReaderBadMap)
@@ -515,6 +516,36 @@ BOOST_AUTO_TEST_CASE(ImageReaderMissingScaleTransforms)
                 "Please make sure there is a transform that unifies the shape of samples"
                 " for input stream 'features' or the deserializer provides samples with the same shape.") == ex.what();
         });
+}
+
+BOOST_AUTO_TEST_CASE(ImageReaderNoMatchingIds)
+{
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<float>(
+            testDataPath() + "/Config/ImageDeserializers.cntk",
+            testDataPath() + "/Control/ImageReaderNoMatchingIds.txt",
+            testDataPath() + "/Control/ImageReaderNoMatchingIds_Output.txt",
+            "ImageAndImageReaderSimple_Test",
+            "reader",
+            2,
+            2,
+            1,
+            1,
+            0,
+            0,
+            1,
+            false,
+            false,
+            true,
+            { L"MapFile=\"$RootDir$/Base64WithStringIds_map.txt\"",
+              L"SecondMapFile=\"$RootDir$/Base64WithStringIdsAnother_map.txt\"",
+              L"Deserializer=\"Base64ImageDeserializer\""}),
+        std::runtime_error,
+        [](const std::runtime_error& ex)
+    {
+        return string("Could not reconcile data between different deserializers."
+            " Keys of logical sequences do not match.") == ex.what();
+    });
 }
 
 BOOST_AUTO_TEST_SUITE_END()
