@@ -446,8 +446,8 @@ namespace Microsoft {
                 void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes)
                 {
                     // parameter server offer vary of updaters, we only use the SGD updater for this simple case.
-                    multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
-                    //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
+                    //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
+                    multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
 
                     multiverso::MV_Init();
 
