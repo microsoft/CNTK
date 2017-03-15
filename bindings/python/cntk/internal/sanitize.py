@@ -12,7 +12,6 @@ from numbers import Number
 from scipy import sparse
 
 from .. import cntk_py
-from ..device import use_default_device, cpu
 from ..axis import Axis
 from cntk.internal import typemap
 
@@ -149,6 +148,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
                          'input_variable does not contain a sequence axis.')
 
     if device is None:
+        from ..device import use_default_device
         device = use_default_device()
 
     from .. import Value
@@ -418,3 +418,10 @@ def sanitize_dynamic_axes(axes):
             raise TypeError('type Axis expected, got %s instead' % type(ax))
     axes = tuple(reversed(axes))
     return axes
+
+
+def sanitize_variable_value_dict(var_value_dict):
+    if len(var_value_dict) > 1:
+        return var_value_dict
+    else:
+        return list(var_value_dict.values())[0]

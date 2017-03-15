@@ -673,12 +673,13 @@ namespace CNTK
                 if (op == PrimitiveOpType::Convolution)
                     fromShape = operandShape;
 
-                FixNDShape(filterRank, inputRank, kernelShape, 1, fromShape); // convolve over red dim; pool over 1
-                FixNDShape(filterRank, inputRank, strides, 1, fromShape); // stride for reduction dims is red dim or 1
-                FixNDShape(filterRank, inputRank, lowerPad, 0);
-                FixNDShape(filterRank, inputRank, upperPad, 0);
-                Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(filterRank, inputRank, sharing, true);
-                Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(filterRank, inputRank, autoPad, false); // no padding for reduction dims
+                size_t fillRank = (!transpose)? filterRank : filterRank - 1; 
+                FixNDShape(fillRank, inputRank, kernelShape, 1, fromShape); // convolve over red dim; pool over 1
+                FixNDShape(fillRank, inputRank, strides, 1, fromShape); // stride for reduction dims is red dim or 1
+                FixNDShape(fillRank, inputRank, lowerPad, 0);
+                FixNDShape(fillRank, inputRank, upperPad, 0);
+                Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(fillRank, inputRank, sharing, true);
+                Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(fillRank, inputRank, autoPad, false); // no padding for reduction dims
             }
 
             decltype(&Microsoft::MSR::CNTK::ConvolveGeometry::ComputeOutputShape) computeOutputShapeFunc;

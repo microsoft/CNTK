@@ -692,24 +692,24 @@ namespace CNTK
         return MakeSharedObject<LearnerNesterov>(parameters, learningRateSchedule, momentumSchedule, unitGain, additionalOptions);
     }
 
+    LearnerPtr FSAdaGradLearner(const vector<Parameter>& parameters,
+                                const LearningRateSchedule& learningRateSchedule,
+                                const MomentumSchedule& momentumSchedule,
+                                bool unitGain, /*=true*/
+                                const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
+                                AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
+    {
+        return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
+    }
+
     LearnerPtr AdamLearner(const vector<Parameter>& parameters,
                            const LearningRateSchedule& learningRateSchedule,
                            const MomentumSchedule& momentumSchedule,
                            bool unitGain, /*=true*/
                            const MomentumSchedule& varianceMomentumSchedule, /*= MomentumAsTimeConstantSchedulePerSample(2 * 3600 * 100)*/
-                           bool lowMemory, /*= true*/
                            AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
-        // TODO: Due to history reason, the legacy AdamLearner using FSAdaGrad implementation instead of the original paper implementation.
-        //      To keep interface backward compatible, the new adam will be enabled only when lowMemory is false.
-        if (!lowMemory)
-        {
-            return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
-        }
-        else
-        {
-            return MakeSharedObject<LearnerFSAdaGrad>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
-        }
+        return MakeSharedObject<LearnerAdam>(parameters, learningRateSchedule, momentumSchedule, unitGain, varianceMomentumSchedule, additionalOptions);
     }
 
     LearnerPtr AdaGradLearner(const vector<Parameter>& parameters,

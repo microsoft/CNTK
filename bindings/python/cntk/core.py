@@ -143,6 +143,41 @@ class NDArrayView(cntk_py.NDArrayView):
 
         return ndav
 
+    @property
+    def shape(self):
+        '''
+        The shape of this instance.
+        '''
+        return super(NDArrayView, self).shape().dimensions()
+
+    @typemap
+    def slice_view(self, start_offset, extent, read_only=True):
+        '''
+        Returns a sliced view of the instance.
+
+        Example:
+            >>> # Creating an array of shape (1, 1, 2, 3)
+            >>> np_array = np.asarray([[[[10, 20, 30], [40, 50, 60]]]], \
+                                      dtype=np.float32)
+            >>> nd = NDArrayView.from_dense(np_array)
+            >>> sliced = nd.slice_view([0, 0, 0, 0], [2, 3])
+            >>> np_sliced = np.asarray(sliced)
+            >>> # Result is an array of shape (2, 3)
+            >>> print(np_sliced)
+            [[ 10.  20.  30.]
+             [ 40.  50.  60.]]
+
+        Args:
+          start_offset (tuple or list): shape of the same rank as this Value
+           instance that denotes the start of the slicing
+          extent (tuple or list): shape of the right-aligned extent to keep
+          read_only (bool): whether the returned slice is read only or not
+        '''
+        return super(NDArrayView, self).slice_view(
+                list(reversed(start_offset)),
+                list(reversed(extent)), 
+                read_only)
+
 
 class Value(cntk_py.Value):
     '''
@@ -181,6 +216,10 @@ class Value(cntk_py.Value):
             else:
                 ndav = batch
 
+        else:
+            raise ValueError('either shape and dtype or batch must be'
+                             'provided')
+
         if seq_starts:
             super(Value, self).__init__(ndav, seq_starts)
         else:
@@ -199,7 +238,7 @@ class Value(cntk_py.Value):
                     s = s[0]
                 if sparse.issparse(s):
                     raise ValueError('if you provide sparse data, every '
-                                     'sequence has to be encoded as one '
+                                     'sequence must be encoded as one '
                                      'csr_matrix instance. Your sequence '
                                      'was: \'%s\'' % str(sample))
                 else:
@@ -263,7 +302,7 @@ class Value(cntk_py.Value):
             data = Value._as_best_data_type(var, data)
             # Since the core API's Value does not copy single NDArrayViews,
             # we cannot borrow the memory here.
-            ndav = NDArrayView.from_data(data, device=cpu(), borrow=False)
+            ndav = NDArrayView.from_data(data, device=device, borrow=False)
 
             return cntk_py.Value(ndav)
 
@@ -274,6 +313,9 @@ class Value(cntk_py.Value):
                           'graph executen, please convert the data '
                           'beforehand into one NumPy array to speed up '
                           ' training.' % var.uid)
+
+        if isinstance(data, cntk_py.NDArrayView):
+            return cntk_py.Value(data)
 
         if isinstance(data, np.ndarray):
             # The outermost axis has to be Python list. If the user passes a
@@ -292,7 +334,7 @@ class Value(cntk_py.Value):
                 return cntk_py.Value(ndav)
 
         if not isinstance(data, list):
-            raise ValueError('batch has to be a list of NumPy arrays or '
+            raise ValueError('batch must be a list of NumPy arrays or '
                              'SciPy CSR matrices')
 
         # NDArrayViews are all created on CPU. The Value object later then will
@@ -334,21 +376,22 @@ class Value(cntk_py.Value):
             >>> value = C.one_hot(sparse_indices, num_classes)
             >>> z.eval({i0: value})
             [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
-                   [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
-
-        >>> num_classes = 6
-        >>> sample_shape = (2, num_classes)
-        >>> sparse_indices = [[1,5,3,2],[4,1]]
-        >>> i0 = C.input_variable(shape=sample_shape, is_sparse=True)
-        >>> z = C.times(i0, np.eye(num_classes))
-        >>> value = C.one_hot(sparse_indices, sample_shape)
-        >>> z.eval({i0: value})
-        [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
-                [ 0.,  0.,  0.,  0.,  0.,  1.]],
-        <BLANKLINE>
-               [[ 0.,  0.,  0.,  1.,  0.,  0.],
-                [ 0.,  0.,  1.,  0.,  0.,  0.]]], dtype=float32), array([[[ 0.,  0.,  0.,  0.,  1.,  0.],
-                [ 0.,  1.,  0.,  0.,  0.,  0.]]], dtype=float32)]
+                    [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), 
+             array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
+            <BLANKLINE>
+            >>> num_classes = 6
+            >>> sample_shape = (2, num_classes)
+            >>> sparse_indices = [[1,5,3,2],[4,1]]
+            >>> i0 = C.input_variable(shape=sample_shape, is_sparse=True)
+            >>> z = C.times(i0, np.eye(num_classes))
+            >>> value = C.one_hot(sparse_indices, sample_shape)
+            >>> z.eval({i0: value})
+            [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
+                     [ 0.,  0.,  0.,  0.,  0.,  1.]],
+                    [[ 0.,  0.,  0.,  1.,  0.,  0.],
+                     [ 0.,  0.,  1.,  0.,  0.,  0.]]], dtype=float32), 
+             array([[[ 0.,  0.,  0.,  0.,  1.,  0.],
+                     [ 0.,  1.,  0.,  0.,  0.,  0.]]], dtype=float32)]
 
         Args:
             batch (list of lists of integers): batch input data of indices
@@ -416,6 +459,14 @@ class Value(cntk_py.Value):
           minibatch.
         '''
         return np.asarray(super(Value, self).mask())
+
+    @property
+    @typemap
+    def data(self):
+        '''
+        Retrieves the underlying :class:`NDArrayView` instance.
+        '''
+        return super(Value, self).data()
 
     def __len__(self):
         '''
