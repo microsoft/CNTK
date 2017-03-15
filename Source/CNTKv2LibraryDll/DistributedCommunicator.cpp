@@ -13,7 +13,6 @@
 #include "CUDAPageLockedMemAllocator.h"
 #include "MatrixQuantizerImpl.h"
 #include "GPUDataTransferer.h"
-#include "Utils.h"
 #include <numeric>
 #include "Utils.h"
 
@@ -91,7 +90,6 @@ namespace CNTK
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
     {
         assert(CPUDEVICE < 0); // just in case somebody decides to change CPUDEVICE macro.
-
         DeviceDescriptor lastGpuDevice = DeviceDescriptor::CPUDevice();
         m_gpuDataTransferers.resize(values.size());
         m_intermediateCPUBuffers.resize(values.size());
@@ -357,13 +355,16 @@ namespace CNTK
         }
 
         // BUGBUG: assuming the all values on the same device
-        NcclComm m_nccl(AsCNTKImplDeviceId(inputValues[0]->Device()), m_mpi);
+        if (m_nccl == nullptr)
+        {
+            m_nccl.reset(new NcclComm(AsCNTKImplDeviceId(inputValues[0]->Device()), m_mpi));
+        }
 
         // for all values residing on GPU initiate async transfer to CPU buffers.
         for (auto i = 0; i < numValues; ++i)
         {
             auto view = valuesToAggregate[i];
-            if (!m_nccl.IsSupported() && view->Device() != DeviceDescriptor::CPUDevice())
+            if (!m_nccl->IsSupported() && view->Device() != DeviceDescriptor::CPUDevice())
             {
                 auto& transferer = m_gpuDataTransferers[i];
                 auto& buffer = m_intermediateCPUBuffers[i];
@@ -376,7 +377,7 @@ namespace CNTK
         {
             auto inputValue = valuesToAggregate[i];
 
-            if (!m_nccl.IsSupported() && inputValue->Device() != DeviceDescriptor::CPUDevice())
+            if (!m_nccl->IsSupported() && inputValue->Device() != DeviceDescriptor::CPUDevice())
             {
                 // TODO: actually, we can start reducing all cpu values first, and then wait for the gpu->cpu transfer to finish.
                 m_gpuDataTransferers[i]->WaitForCopyGPUToCPUAsync();
@@ -391,7 +392,7 @@ namespace CNTK
             assert(dataType == outputValue->GetDataType());
             assert(inputValue->Device() == outputValue->Device());
 
-            if (!m_nccl.IsSupported() || inputValue->Device() == DeviceDescriptor::CPUDevice())
+            if (!m_nccl->IsSupported() || inputValue->Device() == DeviceDescriptor::CPUDevice())
             {
                 void* inputData = (inputValue->Device() != DeviceDescriptor::CPUDevice()) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(inputValue);
                 void* outputData = (inputValue->Device() != DeviceDescriptor::CPUDevice()) ? m_intermediateCPUBuffers[i].data.get() : GetDataBuffer(outputValue);
@@ -417,17 +418,17 @@ namespace CNTK
             else
             {
                 if (dataType == DataType::Float)
-                    m_nccl.AllReduce(static_cast<float*>(GetDataBuffer(inputValue)), static_cast<float*>(GetDataBuffer(outputValue)), numElements);
+                    m_nccl->AllReduce(static_cast<float*>(GetDataBuffer(inputValue)), static_cast<float*>(GetDataBuffer(outputValue)), numElements);
                 else if (dataType == DataType::Double)
-                    m_nccl.AllReduce(static_cast<double*>(GetDataBuffer(inputValue)), static_cast<double*>(GetDataBuffer(outputValue)), numElements);
+                    m_nccl->AllReduce(static_cast<double*>(GetDataBuffer(inputValue)), static_cast<double*>(GetDataBuffer(outputValue)), numElements);
                 else
                     LogicError("DistributedCommunicator: Unknown DataType.");
             }
         }
 
-        if (m_nccl.IsSupported())
+        if (m_nccl->IsSupported())
         {
-            m_nccl.Sync();
+            m_nccl->Sync();
         }
 
         // wait for async all reduce to complete. As soon as one of the requests is finished,

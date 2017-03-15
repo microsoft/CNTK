@@ -89,6 +89,9 @@ namespace CNTK
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<float>> m_aggregationBufferFloat;
         std::unique_ptr<Microsoft::MSR::CNTK::Matrix<double>> m_aggregationBufferDouble;
 
+        // NcclComm
+        std::unique_ptr<Microsoft::MSR::CNTK::NcclComm> m_nccl;
+
     protected:
         DeviceDescriptor GetNonCPUDevice(const std::vector<NDArrayViewPtr>& values)
         {
