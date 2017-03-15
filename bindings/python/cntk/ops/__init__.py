@@ -2074,7 +2074,7 @@ def one_hot_op(x, num_class, is_output_sparse=False, name=''):
         >>> C.ops.one_hot_op(x, 6, False).eval({x:data})
         array([[[[ 0.,  1.,  0.,  0.,  0.,  0.],
                  [ 0.,  0.,  1.,  0.,  0.,  0.]],
-
+        <BLANKLINE>
                 [[ 0.,  0.,  0.,  0.,  1.,  0.],
                  [ 0.,  0.,  0.,  0.,  0.,  1.]]]], dtype=float32)
 

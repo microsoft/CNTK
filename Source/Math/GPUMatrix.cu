@@ -4257,8 +4257,12 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
     this->RequireSize(nRows, nCols);
     this->PrepareDevice();
     
+    CUDA_CALL(cudaMemset(Data(), 0, nCols * nRows * sizeof(ElemType)));
+
+
     CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
     int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
     _assignOneHot<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data(), Data(), num_class, N);
     
     return *this;
