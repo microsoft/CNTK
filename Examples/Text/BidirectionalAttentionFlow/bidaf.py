@@ -1,7 +1,7 @@
 import cntk as C
 import numpy as np
 from cntk import layers, blocks, models
-from helpers import PastValueWindow, seqlogZ, HighwayNetwork
+from helpers import PastValueWindow, seqlogZ, HighwayNetwork, print_node
 import pickle
 
 with open('vocabs.pkl', 'rb') as vf:
@@ -121,6 +121,7 @@ q_processed = input_layers(q_emb)
 c_processed = input_layers(c_emb)
 
 pvw, mask = PastValueWindow(max_question_len, C.Axis.new_leading_axis())(q_processed)
+#pvw = print_node(pvw)
 print('pvw', pvw)
 
 # This part deserves some explanation
@@ -132,11 +133,12 @@ print('pvw', pvw)
 ws1 = C.parameter(shape=(2 * dim, 1), init=C.glorot_uniform())
 ws2 = C.parameter(shape=(2 * dim, 1), init=C.glorot_uniform())
 ws3 = C.parameter(shape=(1, 2 * dim), init=C.glorot_uniform())
+att_bias = C.parameter(shape=(1,), init=0)
 
 wh = C.times (c_processed, ws1)
 wu = C.reshape(C.times (pvw, ws2), (max_question_len,))
 whu = C.times_transpose(c_processed, C.sequence.broadcast_as(C.element_times (pvw, ws3), c_processed))
-S = wh + whu + C.sequence.broadcast_as(wu, c_processed)
+S = wh + whu + C.sequence.broadcast_as(wu, c_processed) + att_bias
 q_logZ = C.reshape(C.reduce_log_sum_exp(S),(1,))
 q_attn = C.reshape(C.exp(S - q_logZ),(-1,1))
 utilde = C.reshape(C.reduce_sum(C.sequence.broadcast_as(pvw, q_attn) * q_attn, axis=0),(-1))
@@ -167,29 +169,25 @@ mod_context = modeling_layer(att_context)
 print(mod_context)
 
 def seqloss(logits, y):
-    return C.sequence.last(C.sequence.gather(logits, y)) - seqlogZ(logits)
+    return seqlogZ(logits) - C.sequence.last(C.sequence.gather(logits, y))
 
 #output layer
 start_logits = C.layers.Dense(1)(C.splice(mod_context, att_context))
-
-# dropout?
 start_loss = seqloss(start_logits, ab) # need sequence.argmax for eval to determine start position
-
-att_mod_ctx = C.sequence.reduce_sum(C.sequence.gather(mod_context, C.greater(ab, 0))) # TODO: seems we need to handle ab == 0 in CTF (change to 1-based)
+att_mod_ctx = C.sequence.last(C.sequence.gather(mod_context, ab))
 att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
 end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
 m2 = BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))(end_input)
 end_logits = C.layers.Dense(1)(m2)
 end_loss = seqloss(end_logits, ae)
-
-loss = -(start_loss + end_loss)
+loss = start_loss + end_loss
 
 print(loss)
 print([t.shape for t in loss.grad(mb_data, wrt=loss.parameters)])
 
 progress_writers = [C.ProgressPrinter(tag='Training')]
 
-minibatch_size = 1280
+minibatch_size = 768
 lr_schedule = C.learning_rate_schedule(0.0001, C.UnitType.sample)
 momentum_time_constant = -minibatch_size/np.log(0.9)
 mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
@@ -202,6 +200,6 @@ C.training_session(
     mb_source = mb_source,
     mb_size = minibatch_size,
     var_to_stream = input_map,
-    max_samples = 10000000,
-    progress_frequency=1
+    max_samples = 35600,
+    progress_frequency=89
 ).train()

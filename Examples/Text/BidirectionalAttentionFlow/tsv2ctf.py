@@ -90,10 +90,10 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
             if qwid is not None:
                 out.append('|qw %d:1' % qwid)
             if ccid is not None:
-                outc = ' '.join(['%d:1' % (word_size * c + i) for i, c in enumerate(ccid)])
+                outc = ' '.join(['%d:1' % c for i, c in enumerate(ccid)])
                 out.append('|cc %s' % outc)
             if qcid is not None:
-                outq = ' '.join(['%d:1' % (word_size * c + i) for i, c in enumerate(qcid)])
+                outq = ' '.join(['%d:1' % c for i, c in enumerate(qcid)])
                 out.append('|qc %s' % outq)
             g.write('\t'.join(out))
             g.write('\n')

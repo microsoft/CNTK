@@ -56,3 +56,32 @@ def seqlogZ(seq):
     ret = C.sequence.last(logaddexp)
     #print('ret', ret)
     return ret
+
+class LambdaFunc(C.ops.functions.UserFunction):
+    def __init__(self,
+            arg,
+            when=lambda arg: True,
+            execute=lambda arg: print(arg),
+            name=''):
+        self.when = when
+        self.execute = execute
+
+        super(LambdaFunc, self).__init__([arg], name=name)
+
+    def infer_outputs(self):
+        return [C.output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+
+    def forward(self, argument, device=None, outputs_to_retain=None):
+        if self.when(argument):
+            self.execute(argument)
+
+        return None, argument
+
+    def backward(self, state, root_gradients):
+        return root_gradients
+        
+    def clone(cloned_inputs):
+        return __init__(*cloned_inputs)
+        
+def print_node(v):
+    return C.user_function(LambdaFunc(v))
