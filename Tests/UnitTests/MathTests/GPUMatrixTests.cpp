@@ -680,6 +680,39 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixOneHot, RandomSeedFixture)
     BOOST_CHECK(dirty_result.IsEqualTo(dirty_exp, 1e-6));
 }
 
+BOOST_FIXTURE_TEST_CASE(GPUMatrixGatherFromTarget, RandomSeedFixture)
+{
+    const size_t row_elements = 2;
+
+    double data[4] = {1,2,3,4};
+    GPUMatrix<double> m0(2, 2, c_deviceIdZero);
+    m0.SetValue(2, 2, c_deviceIdZero, data, matrixFormatRowMajor);
+
+    double target[12];
+    memset(&target[0], 0, sizeof(double) * 12);
+    target[2] = target[3] = 4;
+    target[4] = target[5] = 3;
+    target[6] = target[7] = 2;
+    target[8] = target[9] = 1;
+    GPUMatrix<double> m1(row_elements, 6, c_deviceIdZero);
+    m1.SetValue(row_elements, 6, c_deviceIdZero, target, matrixFormatColMajor);
+
+    double exp_data[8];
+    memset(&exp_data[0], 0, sizeof(double) * 8);
+    exp_data[0] = exp_data[1] = 4;
+    exp_data[2] = exp_data[3] = 2;
+    exp_data[4] = exp_data[5] = 3;
+    exp_data[6] = exp_data[7] = 1;
+    GPUMatrix<double> expect(4, 2, c_deviceIdZero);
+    expect.SetValue(4, 2, c_deviceIdZero, exp_data, matrixFormatColMajor);
+
+    GPUMatrix<double> m2(c_deviceIdZero);
+    m2.GatherFromTarget(m0, m1, row_elements);
+    BOOST_CHECK(m2.GetNumRows() == 4);
+    BOOST_CHECK(m2.GetNumCols() == 2);
+    BOOST_CHECK(m2.IsEqualTo(expect, 1e-6));
+}
+
 #if 0 // Temporarily disabling
 BOOST_FIXTURE_TEST_CASE(GPUMatrixLargeInequality, RandomSeedFixture)
 {

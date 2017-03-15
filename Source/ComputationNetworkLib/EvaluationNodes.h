@@ -890,9 +890,19 @@ public:
         auto& target = InputRef(1);
         const auto& targetSampleLayout = Input(1)->GetSampleLayout();
         const auto& targetDims = targetSampleLayout.GetDims();
+        if (targetDims.size() == 0)
+        {
+            LogicError("%ls operation's right operand must have at least 1 dim", OperationName().c_str());
+        }
+
+        size_t row_elements = 1;
+        for (int i = 0; i < targetDims.size() - 1; i++)
+        {
+            row_elements *= targetDims[i];
+        }
 
         auto& output = Value();
-        output.GatherFromTarget(indices.Value(), target.Value(), targetDims);
+        output.GatherFromTarget(indices.Value(), target.Value(), row_elements);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -905,7 +915,18 @@ public:
             const auto& sampleLayout = InputRef(1).GetSampleLayout();
             const auto& dims = sampleLayout.GetDims();
 
-            sourceGradient.ScatterAccordingIndices(outputGradient, indices, dims);
+            if (dims.size() == 0)
+            {
+                LogicError("%ls operation's right operand must have at least 1 dim", OperationName().c_str());
+            }
+
+            size_t row_elements = 1;
+            for (int i = 0; i < dims.size() - 1; i++)
+            {
+                row_elements *= dims[i];
+            }
+
+            sourceGradient.ScatterAccordingIndices(outputGradient, indices, row_elements);
         }
     }
 

@@ -3332,15 +3332,15 @@ Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vect
 }
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& indices, const Matrix<ElemType>& target, const SmallVector<size_t>& targetShape)
+Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& indices, const Matrix<ElemType>& target, size_t row_elements)
 {
     if (indices.IsEmpty() || target.IsEmpty())
         LogicError("GatherFromTarget: Input matrix is empty.");
 
     DISPATCH_MATRIX_ON_FLAG(&indices,
                             this,
-                            m_CPUMatrix->GatherFromTarget(*indices.m_CPUMatrix, *target.m_CPUMatrix, targetShape),
-                            NOT_IMPLEMENTED,
+                            m_CPUMatrix->GatherFromTarget(*indices.m_CPUMatrix, *target.m_CPUMatrix, row_elements),
+                            m_GPUMatrix->GatherFromTarget(*indices.m_GPUMatrix, *target.m_GPUMatrix, row_elements),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 
@@ -3348,15 +3348,15 @@ Matrix<ElemType>& Matrix<ElemType>::GatherFromTarget(const Matrix<ElemType>& ind
 }
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::ScatterAccordingIndices(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, const SmallVector<size_t>& shape)
+Matrix<ElemType>& Matrix<ElemType>::ScatterAccordingIndices(const Matrix<ElemType>& values, const Matrix<ElemType>& indices, size_t row_elements)
 {
     if (indices.IsEmpty() || values.IsEmpty())
         LogicError("ScatterAccordingIndices: input matrix is empty.");
     
     DISPATCH_MATRIX_ON_FLAG(&values,
                             this,
-                            m_CPUMatrix->ScatterAccordingIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, shape),
-                            NOT_IMPLEMENTED,
+                            m_CPUMatrix->ScatterAccordingIndices(*values.m_CPUMatrix, *indices.m_CPUMatrix, row_elements),
+                            m_GPUMatrix->ScatterAccordingIndices(*values.m_GPUMatrix, *indices.m_GPUMatrix, row_elements),
                             NOT_IMPLEMENTED,
                             NOT_IMPLEMENTED);
 

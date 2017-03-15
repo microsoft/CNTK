@@ -268,8 +268,8 @@ public:
     CPUMatrix<ElemType>& AssignSumOfElements(const CPUMatrix<ElemType>& a);
 
     CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
-    CPUMatrix<ElemType>& GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, const SmallVector<size_t>& targetShape);
-    CPUMatrix<ElemType>& ScatterAccordingIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, const SmallVector<size_t>& shape);
+    CPUMatrix<ElemType>& GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, size_t row_elements);
+    CPUMatrix<ElemType>& ScatterAccordingIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements);
 
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 
