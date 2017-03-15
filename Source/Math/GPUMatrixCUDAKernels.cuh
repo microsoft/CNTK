@@ -5611,6 +5611,41 @@ __global__ void _assignOneHot(ElemType *indices,
 }
 
 template<class ElemType>
+__global__ void _gatherFromTarget(ElemType *indices,
+                                  ElemType *target,
+                                  ElemType *buffer,
+                                  size_t num_row_elements,
+                                  size_t num_indices,
+                                  CUDA_LONG num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        size_t indices_index = index / num_row_elements;
+        size_t offset = index % num_row_elements;
+        buffer[index] = target[(size_t)indices[indices_index] * num_row_elements + offset];
+    }
+}
+
+template<class ElemType>
+__global__ void _scatterAccordingIndices(ElemType *indices,
+                                         ElemType *value,
+                                         ElemType *buffer,
+                                         size_t num_row_elements,
+                                         size_t num_indices,
+                                         CUDA_LONG num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        size_t indices_index = index / num_row_elements;
+        size_t offset = index % num_row_elements;
+        buffer[(size_t)indices[indices_index] * num_row_elements + offset] += value[index];
+    }
+}
+
+
+template<class ElemType>
 __global__ void _assignOneHotAsSparse(ElemType *indices,
                                       GPUSPARSE_INDEX_TYPE *secondaryIndices,
                                       GPUSPARSE_INDEX_TYPE *majorIndices,

@@ -2971,23 +2971,16 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, const SmallVector<size_t>& targetShape)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemType>& indices, const CPUMatrix<ElemType>& target, size_t row_elements)
 {
     if (indices.IsEmpty() || target.IsEmpty())
         LogicError("GatherFromTarget: input matrix is empty.");
 
-    if (targetShape.size() == 0)
+    if (row_elements == 0)
         LogicError("GatherFromTarget: target matrix at least need 1 dim.");
 
-    long nElementToRetrive = 1;
-    if (targetShape.size() > 1)
-    {
-        for (int i = 0; i < targetShape.size() - 1; i++)
-            nElementToRetrive *= (long)targetShape[i];
-    }
-
     auto nCols = indices.GetNumCols();
-    auto nRows = indices.GetNumRows() * nElementToRetrive;
+    auto nRows = indices.GetNumRows() * row_elements;
     this->RequireSize(nRows, nCols);
 
     ElemType* indicesBufPtr = indices.Data();
@@ -2997,14 +2990,14 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::GatherFromTarget(const CPUMatrix<ElemT
 #pragma omp parallel for
     for (int i = 0; i < indices.GetNumElements(); i++)
     {
-        memcpy(buffer + i * nElementToRetrive, targetBufPtr + ((size_t)indicesBufPtr[i] * nElementToRetrive), sizeof(ElemType) * nElementToRetrive);
+        memcpy(buffer + i * row_elements, targetBufPtr + ((size_t)indicesBufPtr[i] * row_elements), sizeof(ElemType) * row_elements);
     }
 
     return *this;
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterAccordingIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, const SmallVector<size_t>& shape)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterAccordingIndices(const CPUMatrix<ElemType>& values, const CPUMatrix<ElemType>& indices, size_t row_elements)
 {
     if (indices.IsEmpty() || values.IsEmpty())
         LogicError("ScatterAccordingIndices: input matrix is empty.");
@@ -3012,20 +3005,13 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::ScatterAccordingIndices(const CPUMatri
     ElemType* indicesBufPtr = indices.Data();
     ElemType* valueBufPtr = values.Data();
     ElemType* buffer = Data();
-
-    long nElementToRetrive = 1;
-    if (shape.size() > 1)
-    {
-        for (int i = 0; i < shape.size() - 1; i++)
-            nElementToRetrive *= (long)shape[i];
-    }
-
+    
 #pragma omp parallel for
     for (int i = 0; i < indices.GetNumElements(); i++)
     {
-        auto index = (size_t)indicesBufPtr[i] * nElementToRetrive;
-        for (int j = 0; j < nElementToRetrive; j++)
-            buffer[index + j] += valueBufPtr[i * nElementToRetrive + j];
+        auto index = (size_t)indicesBufPtr[i] * row_elements;
+        for (int j = 0; j < row_elements; j++)
+            buffer[index + j] += valueBufPtr[i * row_elements + j];
     }
 
     return *this;
