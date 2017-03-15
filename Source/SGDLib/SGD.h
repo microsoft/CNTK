@@ -293,6 +293,9 @@ protected:
     double m_adjustCoefficient;
     size_t m_adjustPerMinibatches;
 
+    double m_lambda;
+    double m_momentum;
+
     // sequence training
     double m_hSmoothingWeight;
     double m_frameDropThresh;

@@ -1304,7 +1304,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             if (nSamplesSinceLastModelSync >= m_nSyncSamplesPerWorker[epochNumber])
             {
-                m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+                //m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+                m_pASGDHelper->PushAndPullModel(learnableNodes, learnRatePerSample, m_lambda, m_momentum, nSamplesSinceLastModelSync);
                 nSamplesSinceLastModelSync = 0;
             } 
         }
@@ -1451,7 +1452,8 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
     if (useAsyncGradientAggregation && (m_mpi->NumNodesInUse() > 1))
     {
-        m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+        //m_pASGDHelper->PushAndPullModel(learnableNodes, nSamplesSinceLastModelSync);
+        m_pASGDHelper->PushAndPullModel(learnableNodes, learnRatePerSample, m_lambda, m_momentum, nSamplesSinceLastModelSync);
         nSamplesSinceLastModelSync = 0;
     }
 
