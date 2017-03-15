@@ -31,12 +31,6 @@ def populate_dicts(files):
                     wdcnt[t.lower()] += 1
                     for c in t: chcnt[c] += 1
 
-    # add the special markers first, so <unknown> is 0
-    _ = vocab[unk]
-    _ = vocab[eos]
-    _ = chars[unk]
-    _ = chars[pad]
-
     # add all words that are both in glove and the vocabulary first
     with open('glove.6B.100d.txt', encoding='utf-8') as f:
         for line in f:
@@ -44,6 +38,12 @@ def populate_dicts(files):
             if wdcnt[word] >= 1: # polymath adds word to dict regardless of word_count_threshold when it's in GloVe
                 _ = vocab[word]
     known =len(vocab)
+
+    # add the special markers
+    _ = vocab[unk]
+    _ = vocab[eos]
+    _ = chars[unk]
+    _ = chars[pad]
 
     #finally add all words that are not in yet
     _  = [vocab[word] for word in wdcnt if word not in vocab and wdcnt[word] >= word_count_threshold]
@@ -53,6 +53,11 @@ def populate_dicts(files):
     return known, defaultdict(int, vocab), defaultdict(int, chars)
 
 def tsv_to_ctf(f, g, vocab, chars, is_test):
+    print("Known words: %d" % known)
+    print("Vocab size: %d" % len(vocab))
+    print("Char size: %d" % len(chars))
+    unk_w = vocab[unk]
+    unk_c = chars[unk]
     for lineno, line in enumerate(f):
         if is_test:
             uid, title, context, query, answer, other = line.split('\t')
@@ -60,13 +65,13 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
         else:
             uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
         ctokens = context.split(' ')
-        ctokens.append(eos)
+        #ctokens.append(eos) # polymath-1 does not generates this
         qtokens = query.split(' ')
         atokens = answer.split(' ')
-        cwids = [vocab[t.lower()] for t in ctokens]
-        qwids = [vocab[t.lower()] for t in qtokens]
-        ccids = [[chars[c] for c in pad_spec.format(t)] for t in ctokens]
-        qcids = [[chars[c] for c in pad_spec.format(t)] for t in qtokens]
+        cwids = [vocab.get(t.lower(), unk_w) for t in ctokens]
+        qwids = [vocab.get(t.lower(), unk_w) for t in qtokens]
+        ccids = [[chars.get(c, unk_c) for c in pad_spec.format(t)] for t in ctokens]
+        qcids = [[chars.get(c, unk_c) for c in pad_spec.format(t)] for t in qtokens]
         ba, ea = int(begin_answer), int(end_answer) - 1 # the end from tsv is exclusive
         baidx = [0 if i != ba else 1 for i,t in enumerate(ctokens)]
         eaidx = [0 if i != ea else 1 for i,t in enumerate(ctokens)]
@@ -90,10 +95,10 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
             if qwid is not None:
                 out.append('|qw %d:1' % qwid)
             if ccid is not None:
-                outc = ' '.join(['%d:1' % c for i, c in enumerate(ccid)])
+                outc = ' '.join(['%d:1' % (i + c * word_size) for i, c in enumerate(ccid)]) # TODO, change it to generate 2D sparse once the reader support is in
                 out.append('|cc %s' % outc)
             if qcid is not None:
-                outq = ' '.join(['%d:1' % c for i, c in enumerate(qcid)])
+                outq = ' '.join(['%d:1' % (i + c * word_size) for i, c in enumerate(qcid)]) # TODO, change it to generate 2D sparse once the reader support is in
                 out.append('|qc %s' % outq)
             g.write('\t'.join(out))
             g.write('\n')

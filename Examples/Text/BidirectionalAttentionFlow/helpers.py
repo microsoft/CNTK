@@ -80,8 +80,8 @@ class LambdaFunc(C.ops.functions.UserFunction):
     def backward(self, state, root_gradients):
         return root_gradients
         
-    def clone(cloned_inputs):
-        return __init__(*cloned_inputs)
+    def clone(self, cloned_inputs):
+        return self.__init__(*cloned_inputs)
         
 def print_node(v):
     return C.user_function(LambdaFunc(v))

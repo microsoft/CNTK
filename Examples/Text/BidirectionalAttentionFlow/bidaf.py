@@ -90,8 +90,8 @@ input_map = {
     ae: mb_source.streams.answer_end
 }
 
-mb_data = mb_source.next_minibatch(256, input_map=input_map)
-print(mb_data)
+#mb_data = mb_source.next_minibatch(256, input_map=input_map)
+#print(mb_data)
 
 embedding = embed(known, vocab)
 
@@ -121,7 +121,6 @@ q_processed = input_layers(q_emb)
 c_processed = input_layers(c_emb)
 
 pvw, mask = PastValueWindow(max_question_len, C.Axis.new_leading_axis())(q_processed)
-#pvw = print_node(pvw)
 print('pvw', pvw)
 
 # This part deserves some explanation
@@ -183,7 +182,7 @@ end_loss = seqloss(end_logits, ae)
 loss = start_loss + end_loss
 
 print(loss)
-print([t.shape for t in loss.grad(mb_data, wrt=loss.parameters)])
+#print([t.shape for t in loss.grad(mb_data, wrt=loss.parameters)])
 
 progress_writers = [C.ProgressPrinter(tag='Training')]
 
