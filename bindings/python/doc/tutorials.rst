@@ -40,25 +40,29 @@ Tutorials
 #.  *Training with Sampled Softmax*
      CNTK 207: `Training with Sampled Softmax`_
 
+#.  *Recognize flowers and animals in natural scene images using deep transfer learning*
+     CNTK 301: `Deep transfer learning with pre-trained ResNet model`_
+
 Try these notebooks pre-installed on `CNTK Azure Notebooks`_ for free. 
 
 For our Japanese users, you can find some of the `tutorials in Japanese`_.
 
-.. _`Logistic Regression`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_101_LogisticRegression.ipynb
-.. _`Feed Forward network`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_102_FeedForward.ipynb
-.. _`MNIST data preparation`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb
-.. _`Feed Forward classifier`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb
-.. _`Time Series basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb
-.. _`Feed Forward autoencoder`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb
-.. _`Basic LSTM based time series`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb
-.. _`CIFAR data preparation`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb
-.. _`VGG and ResNet classifiers`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_201B_CIFAR-10_ImageHandsOn.ipynb
-.. _`Language understanding`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_202_Language_Understanding.ipynb
-.. _`Reinforcement learning basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb
-.. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
-.. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
-.. _`Basic Generative Adversarial Networks (GAN)`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_206_Basic_GAN.ipynb
-.. _`Training with Sampled Softmax`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb
+.. _`Logistic Regression`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_101_LogisticRegression.ipynb
+.. _`Feed Forward network`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_102_FeedForward.ipynb
+.. _`Data preparation`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_103A_MNIST_DataLoader.ipynb
+.. _`Feed Forward classifier`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_103B_MNIST_FeedForwardNetwork.ipynb
+.. _`Time Series basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_104_Finance_Timeseries_Basic_with_Pandas_Numpy.ipynb
+.. _`Feed Forward autoencoder`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_105_Basic_Autoencoder_for_Dimensionality_Reduction.ipynb
+.. _`Basic LSTM based time series`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_106A_LSTM_Timeseries_with_Simulated_Data.ipynb
+.. _`data preparation`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_201A_CIFAR-10_DataLoader.ipynb
+.. _`VGG and ResNet classifiers`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_201B_CIFAR-10_ImageHandsOn.ipynb
+.. _`Language understanding`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_202_Language_Understanding.ipynb
+.. _`Reinforcement learning basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb
+.. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
+.. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
+.. _`Basic Generative Adversarial Networks (GAN)`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_206_Basic_GAN.ipynb
+.. _`Training with Sampled Softmax`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb
+.. _`Deep transfer learning with pre-trained ResNet model`: https://github.com/Microsoft/CNTK/blob/v2.0.beta12.0/Tutorials/CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb
 
 .. _`CNTK Azure Notebooks`: https://notebooks.azure.com/cntk/libraries/tutorials
 .. _`tutorials in Japanese`: https://notebooks.azure.com/library/cntkbeta2_ja
