@@ -11,7 +11,7 @@ from __future__ import division, print_function
 import numpy as np
 
 from cntk import *
-from cntk.learner import *
+from cntk.learners import *
 from cntk.ops import *
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.ops.functions import UserFunction
@@ -47,7 +47,7 @@ def linear_layer(input_var, output_dim):
 def dense_layer(input, output_dim, nonlinearity):
     r = linear_layer(input, output_dim)
     r = nonlinearity(r)
-    if isinstance(nonlinearity, UserFunction):
+    if isinstance(r, UserFunction):
         r = user_function(r)
     return r
 

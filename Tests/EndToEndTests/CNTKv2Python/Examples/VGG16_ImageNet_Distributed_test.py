@@ -20,15 +20,17 @@ sys.path.append(abs_path)
 example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "VGG", "Python")
 sys.path.append(example_dir)
 from prepare_test_data import prepare_ImageNet_data
-from ConvNet_CIFAR10_DataAug_Distributed_test import mpiexec_test
+from distributed_common import mpiexec_test
 script_under_test = os.path.join(example_dir, "VGG16_ImageNet_Distributed.py")
 
-# def test_alexnet_imagenet_distributed(device_id):
-    # params = [ "-n", "2",
-               # "-m", "1", 
-               # "-e", "2",
-               # "-datadir", prepare_ImageNet_data(),
-               # "-q", "32",
-               # "-r", 
-               # "-device", "0" ]
-    # mpiexec_test(device_id, script_under_test, params, 0.99, True)
+#mpiexec_params = [ "-n", "2"]
+#
+#def test_alexnet_imagenet_distributed(device_id):
+#    params = [ "-n", "2",
+#               "-m", "1",
+#               "-e", "2",
+#               "-datadir", prepare_ImageNet_data(),
+#               "-q", "32",
+#               "-r",
+#               "-device", str(device_id) ]
+#    mpiexec_test(device_id, script_under_test, mpiexec_params, params, 0.99, True)

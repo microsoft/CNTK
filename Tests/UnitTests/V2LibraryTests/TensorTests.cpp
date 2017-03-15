@@ -127,12 +127,13 @@ BOOST_AUTO_TEST_SUITE(TensorSuite)
 
 BOOST_AUTO_TEST_CASE(TensorPlusInCPU)
 {
-    TestTensorPlus<float>(0, 3, DeviceDescriptor::CPUDevice(), false);
+    if (ShouldRunOnCpu())
+        TestTensorPlus<float>(0, 3, DeviceDescriptor::CPUDevice(), false);
 }
 
 BOOST_AUTO_TEST_CASE(TensorPlusRightOperandWithAxes)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestTensorPlus<double>(4, 1, DeviceDescriptor::GPUDevice(0), true);
         TestTensorPlus<float>(1, 3, DeviceDescriptor::GPUDevice(0), false);
@@ -141,7 +142,7 @@ BOOST_AUTO_TEST_CASE(TensorPlusRightOperandWithAxes)
 
 BOOST_AUTO_TEST_CASE(TensorPlusRightOperandWithoutAxes)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestTensorPlus<double>(2, 0, DeviceDescriptor::GPUDevice(0), false);
         TestTensorPlus<float>(0, 0, DeviceDescriptor::GPUDevice(0), false);

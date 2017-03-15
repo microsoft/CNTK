@@ -7,7 +7,7 @@ python -c "import numpy; print('NumPy: %s'%numpy.version.full_version)"
 python -c "import scipy; print('SciPy: %s'%scipy.version.full_version)"
 python -c "import pytest; print('PyTest: %s'%pytest.__version__)"
 
-py.test --deviceid $TEST_DEVICE --is1bitsgd $TEST_1BIT_SGD
+py.test --verbose --deviceid $TEST_DEVICE --is1bitsgd $TEST_1BIT_SGD
 
 if [ "$?" -eq "0" ]; then
   echo "__COMPLETED__"

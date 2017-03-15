@@ -27,6 +27,7 @@ namespace CNTK
         std::vector<ComputationNodeBasePtr> allInputNodes;
         std::unordered_map<StreamInformation, ComputationNodeBasePtr> streamToInputNodeMap;
         std::unordered_map<StreamInformation, Variable> streamToDummyInputVariableMap;
+        std::unordered_map<StreamInformation, Variable> streamToDummyOutputVariableMap;
         std::unordered_map<StreamInformation, ComputationNodeBasePtr> streamToMeanNodeMap;
         std::unordered_map<StreamInformation, ComputationNodeBasePtr> streamToInvStdDevNodeMap;
 
@@ -35,10 +36,11 @@ namespace CNTK
         {
             auto currentStreamInfo = currentStreamKV.first;
             if (minibatchSourceStreams.find(currentStreamInfo) == minibatchSourceStreams.end())
-                InvalidArgument("ComputeMeanAndVariance: Stream for which mean and variance is to be computed is not supported by the specified minibatchSource");
+                InvalidArgument("Stream '%S' for which mean and variance are to be computed, is not supported by the specified minibatchSource.", currentStreamKV.first.AsString().c_str());
 
             if (currentStreamInfo.m_elementType != DataType::Float)
-                LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
+                LogicError("ComputeInputPerDimMeansAndInvStdDevs: Stream '%S' has unsupported DataType; only DataType::Float is currently supported by the CNTK built-in composite MinibatchSource.",
+                            currentStreamInfo.AsString().c_str());
 
             auto inputVariableShape = currentStreamInfo.m_sampleLayout;
             auto inputTensorShape = AsTensorShape(inputVariableShape);
@@ -60,6 +62,7 @@ namespace CNTK
             allInputNodes.push_back(inputNode);
             streamToInputNodeMap[currentStreamInfo] = inputNode;
             streamToDummyInputVariableMap[currentStreamInfo] = inputVariable;
+            streamToDummyOutputVariableMap[currentStreamInfo] = OutputVariable(inputVariableShape, DataType::Float, {}, currentStreamInfo.m_name);
             streamToMeanNodeMap[currentStreamInfo] = builder.Mean(inputNode);
             streamToInvStdDevNodeMap[currentStreamInfo] = builder.InvStdDev(inputNode);
         }
@@ -105,8 +108,8 @@ namespace CNTK
             if (computedMeanAndInvStdDevs[currentStreamKV.first].second != nullptr)
                 invStdDev = MakeSharedObject<Value>(computedMeanAndInvStdDevs[currentStreamKV.first].second);
 
-            CompositeFunction::GetNodeOutputOrGradient(streamToDummyInputVariableMap[currentStreamKV.first], mean, streamToMeanNodeMap[currentStreamKV.first], false /*getGradient*/);
-            CompositeFunction::GetNodeOutputOrGradient(streamToDummyInputVariableMap[currentStreamKV.first], invStdDev, streamToInvStdDevNodeMap[currentStreamKV.first], false /*getGradient*/);
+            CompositeFunction::GetNodeOutputOrGradient(streamToDummyOutputVariableMap[currentStreamKV.first], mean, streamToMeanNodeMap[currentStreamKV.first], false /*getGradient*/);
+            CompositeFunction::GetNodeOutputOrGradient(streamToDummyOutputVariableMap[currentStreamKV.first], invStdDev, streamToInvStdDevNodeMap[currentStreamKV.first], false /*getGradient*/);
 
             if (computedMeanAndInvStdDevs[currentStreamKV.first].first == nullptr)
                 computedMeanAndInvStdDevs[currentStreamKV.first].first = mean->Data();

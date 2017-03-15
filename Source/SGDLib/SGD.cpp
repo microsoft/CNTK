@@ -30,6 +30,7 @@
 
 #include "ASGDHelper.h"
 
+#include "CNTKLibraryInternals.h"
 #include "SimpleDistGradAggregator.h"
 #include "V2SimpleDistGradAggregator.h"
 #include "ProgressTracing.h"
@@ -371,6 +372,7 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
     }
 
     size_t totalTrainingSamplesSeen = 0; // aggregated over all epochs, for logging purposes only
+    size_t totalMBsSeen = 0;
 
     bool learnRateInitialized = false;
     double prevCriterion = numeric_limits<double>::infinity();
@@ -429,6 +431,13 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
                                          m_traceLevel,
                                          m_syncStatsTrace));
         m_pASGDHelper->InitModel(learnableNodes);
+    }
+
+    // Create TensorBoard writer if needed. When using parallel training, make sure that only Rank 0 actually writes logs.
+    ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter;
+    if (!m_tensorBoardLogDir.empty() && (m_mpi == nullptr || m_mpi->CurrentNodeRank() == 0))
+    {
+        tensorBoardWriter = make_shared<::CNTK::Internal::TensorBoardFileWriter>(m_tensorBoardLogDir, net);
     }
 
     // --- MAIN EPOCH LOOP
@@ -567,21 +576,22 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
 
         EpochCriterion epochCriterion; // criterion values are returned in this
         std::vector<EpochCriterion> epochEvalErrors(evaluationNodes.size());
-        TrainOneEpoch(net,
-                      refNet,
-                      refNode,
-                      i,
-                      m_epochSize,
-                      trainSetDataReader,
-                      learnRatePerSample,
-                      chosenMinibatchSize,
-                      featureNodes,
-                      labelNodes,
-                      criterionNodes,
-                      evaluationNodes,
-                      inputMatrices,
-                      learnableNodes, smoothedGradients, smoothedCounts,
-                      epochCriterion, epochEvalErrors);
+        totalMBsSeen += TrainOneEpoch(net,
+                                      refNet,
+                                      refNode,
+                                      i,
+                                      m_epochSize,
+                                      trainSetDataReader,
+                                      learnRatePerSample,
+                                      chosenMinibatchSize,
+                                      featureNodes,
+                                      labelNodes,
+                                      criterionNodes,
+                                      evaluationNodes,
+                                      inputMatrices,
+                                      learnableNodes, smoothedGradients, smoothedCounts,
+                                      epochCriterion, epochEvalErrors,
+                                      "", SIZE_MAX, totalMBsSeen, tensorBoardWriter);
         totalTrainingSamplesSeen += epochCriterion.second; // aggregate #training samples, for logging purposes only
 
         timer.Stop();
@@ -611,6 +621,17 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
         }
 #endif
 
+        if (tensorBoardWriter)
+        {
+            tensorBoardWriter->WriteValue(L"summary/" + criterionNodes[0]->NodeName(), (float)epochCriterion.Average(), i + 1);
+            for (size_t j = 0; j < epochEvalErrors.size(); j++)
+            {
+                tensorBoardWriter->WriteValue(L"summary/" + evaluationNodes[0]->NodeName(), (float)epochEvalErrors[j].Average(), i + 1);
+            }
+
+            tensorBoardWriter->Flush();
+        }
+
         if (validationSetDataReader != trainSetDataReader && validationSetDataReader != nullptr)
         {
             // TODO(dataASGD) making evaluator becoming nondistributed one when using ASGD, since Multiverso has another background thread using MPI.
@@ -627,12 +648,22 @@ void SGD<ElemType>::TrainOrAdaptModel(int startEpoch, ComputationNetworkPtr net,
             }
 
             // BUGBUG: We should not use the training MB size. The training MB size is constrained by both convergence and memory. Eval is only constrained by memory.
-            let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, m_mbSize[i]);
+            let vScore = evalforvalidation.Evaluate(validationSetDataReader, cvSetTrainAndEvalNodes, UsingAsyncGradientAggregation(i + 1) ? m_mbSize[i] / m_mpi->NumNodesInUse() : m_mbSize[i]);
             LOGPRINTF(stderr, "Finished Epoch[%2d of %d]: [Validate] ", i + 1, (int)m_maxEpochs);
             for (size_t k = 0; k < vScore.size() /*&& k < 2*/; k++)
                 vScore[k].LogCriterion(cvSetTrainAndEvalNodes[k], /*addSemicolon=*/k + 1 < vScore.size());
                 //fprintf(stderr, "%s %ls = %.8f * %d", k ? ";" : "", cvSetTrainAndEvalNodes[k].c_str(), vScore[k].Average(), (int)vScore[k].second);
             fprintf(stderr, "\n");
+
+            if (tensorBoardWriter)
+            {
+                for (size_t k = 0; k < vScore.size(); k++)
+                {
+                    tensorBoardWriter->WriteValue(L"summary/test_" + cvSetTrainAndEvalNodes[k], (float)vScore[k].Average(), i + 1);
+                }
+
+                tensorBoardWriter->Flush();
+            }
 
             if (m_useCVSetControlLRIfCVExists)
             {
@@ -865,7 +896,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                                     /*out*/ EpochCriterion& epochCriterion,
                                     /*out*/ std::vector<EpochCriterion>& epochEvalErrors,
                                     const std::string& prefixMsg,
-                                    const size_t maxNumberOfSamples)
+                                    const size_t maxNumberOfSamples,
+                                    const size_t totalMBsSeenBefore,
+                                    ::CNTK::Internal::TensorBoardFileWriterPtr tensorBoardWriter)
 {
     PROFILE_SCOPE(profilerEvtMainEpoch);
 
@@ -1000,6 +1033,9 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     // for differential logging, we keep the previous criterion values around
     EpochCriterion         epochCriterionLastLogged  = epochCriterion;
     vector<EpochCriterion> epochEvalErrorsLastLogged = epochEvalErrors;
+
+    EpochCriterion         tensorBoardEpochCriterionLastLogged = epochCriterion;
+    vector<EpochCriterion> tensorBoardEpochEvalErrorsLastLogged = epochEvalErrors;
 
     // NOTE: For ResNet, the regularization in BatchNormalization should be disabled.
     if (m_disableRegInBatchNormalization) {
@@ -1325,24 +1361,28 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         numMBsRun++;
         totalTimeInMBs += timer.ElapsedSeconds();
 
+        bool progressPrintNeeded = numMBsRun <= m_firstMBsToShowResult || (m_numMBsToShowResult && (numMBsRun % m_numMBsToShowResult == 0));
+        bool tensorBoardWriteNeeded = tensorBoardWriter && m_tensorBoardNumMBsToLogResult && 
+            ((totalMBsSeenBefore + numMBsRun) % m_tensorBoardNumMBsToLogResult == 0);
+
+        // Get the epoch Values updated. Take care to fetch values from GPU only when this is really needed.
+        if ((progressPrintNeeded || tensorBoardWriteNeeded) && !useGradientAggregation)
+        {
+            // if no aggregation, we directly get the values from the minibatch accumulators
+            timer.Restart();
+            epochCriterion = localEpochCriterion.GetCriterion(0);
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
+                epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
+            timer.Stop();
+
+            // Add the last trailing compute
+            totalTimeInMBs += timer.ElapsedSeconds();
+        }
+
         // log
         // This shows the criterion since last logged.
-        if (numMBsRun <= m_firstMBsToShowResult || (m_numMBsToShowResult && (numMBsRun % m_numMBsToShowResult == 0)))
+        if (progressPrintNeeded)
         {
-            // get the epoch Values updated
-            if (!useGradientAggregation)
-            {
-                // if no aggregation, we directly get the values from the minibatch accumulators
-                timer.Restart();
-                epochCriterion = localEpochCriterion.GetCriterion(0);
-                for (size_t i = 0; i < epochEvalErrors.size(); i++)
-                    epochEvalErrors[i] = localEpochEvalErrors.GetCriterion(i);
-                timer.Stop();
-
-                // Add the last trailing compute
-                totalTimeInMBs += timer.ElapsedSeconds();
-            }
-
             // epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
             EpochCriterion epochCriterionSinceLastLogged = epochCriterion - epochCriterionLastLogged;
             let trainLossSinceLastLogged    =      epochCriterionSinceLastLogged.Average(); // TODO: Check whether old trainSamplesSinceLastLogged matches this ^^ difference
@@ -1426,6 +1466,48 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
             totalTimeInMBs = 0;
         }
 
+        // Log progress to TensorBoard.
+        // Only do this if TensorBoard logging is enabled, the current worker has rank 0, and it is time to write
+        // the log (as controlled by tensorBoardNumMBsToLogResult).
+        if (tensorBoardWriteNeeded)
+        {
+            // epochCriterion aggregates over entire epoch, but we only show difference to last time we logged
+            EpochCriterion epochCriterionSinceLastLogged = epochCriterion - tensorBoardEpochCriterionLastLogged;
+            double trainLossSinceLastLogged = epochCriterionSinceLastLogged.Average();
+
+            // numMBsRun is specific to the current epoch and is reset for each epoch.
+            // We cannot use it if we want to view progress of loss/eval since the start of training. 
+            // Instead, we use a total number of minibatches run from the start of training as a step.
+            const size_t step = totalMBsSeenBefore + (size_t)numMBsRun;
+            tensorBoardWriter->WriteValue(L"minibatch/" + criterionNodes[0]->NodeName(), (float)trainLossSinceLastLogged, step);
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
+            {
+                const std::wstring& nodeName = evaluationNodes[i]->NodeName();
+                // For aggregation nodes, we don't report per minibatch error. These nodes calculate
+                // aggregated error for all samples that passed through network, instead of calculating per
+                // sample error. Aggregated error for all samples will be reported for these nodes.
+                const EpochCriterion& evalErrorSinceLastLogged = ContainsAccumulatedResult(evaluationNodes[i])
+                    ? epochEvalErrors[i]
+                    : epochEvalErrors[i] - tensorBoardEpochEvalErrorsLastLogged[i];
+                tensorBoardWriter->WriteValue(L"minibatch/" + nodeName, (float)evalErrorSinceLastLogged.Average(), step);
+            }
+
+            tensorBoardWriter->Flush();
+
+            // reset statistics for differential logging
+            tensorBoardEpochCriterionLastLogged = epochCriterion;
+            tensorBoardEpochEvalErrorsLastLogged = epochEvalErrors;
+            for (size_t i = 0; i < epochEvalErrors.size(); i++)
+            {
+                if (ContainsAccumulatedResult(evaluationNodes[i]))
+                {
+                    // For nodes that accumulate result we report accumulated error for all samples that passed through
+                    // network so far, instead of per minibatch error. So, we reset last logged error here.
+                    tensorBoardEpochEvalErrorsLastLogged[i] = EpochCriterion(0);
+                }
+            }
+        }
+
         timer.Restart();
         totalEpochSamples += aggregateNumSamplesWithLabel;
 
@@ -1501,7 +1583,6 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         for (size_t i = 0; i < epochEvalErrors.size(); i++)
             epochEvalErrors[i] = EpochCriterion(numer[i], denom[i]);
 
-        // 3. modify return value 
         totalEpochSamples = totalEpochSamplesOfAllWorkers;
     }
 
@@ -1511,10 +1592,10 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         // and recalculate evaluation errors based on accumulators.
         AggregateAccumulatorValuesAndUpdateEpochEvaluation<ElemType>(
             net, evaluationNodesWhichAccumulateResult, m_gradHeader, m_mpi, epochEvalErrors, evaluationNodes,
-            localEpochEvalErrors, ContainsAccumulatedResult);
+            localEpochEvalErrors, ContainsAccumulatedResult, m_packThresholdSizeInBytes);
     }
 
-    return totalEpochSamples;
+    return numMBsRun;
 }
 
 // -----------------------------------------------------------------------
@@ -1570,10 +1651,10 @@ bool SGD<ElemType>::PreCompute(ComputationNetworkPtr net,
     LOGPRINTF(stderr, "Precomputing --> %lu PreCompute nodes found.\n\n", (unsigned long)nodes.size());
     if (m_traceLevel > 0)
     {
-    for (const auto & node : nodes)
-    {
-        LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
-    }
+        for (const auto & node : nodes)
+        {
+            LOGPRINTF(stderr, "\t%ls = %ls()\n", node->NodeName().c_str(), node->OperationName().c_str());
+        }
     }
 
     // compute
@@ -2109,9 +2190,9 @@ void SGD<ElemType>::InitDistGradAgg(int numEvalNodes, int numGradientBits, int d
         if (traceLevel > 0)
             fprintf(stderr, "Initializing dataParallelSGD with FP%d aggregation.\n", numGradientBits);
         if (Globals::UseV2Aggregator()) // Currently used to check V2 against baselines.
-            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator());
+            m_distGradAgg = std::make_shared<V2SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, ::CNTK::MPICommunicator(m_packThresholdSizeInBytes));
         else
-            m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace);
+            m_distGradAgg = std::make_shared<SimpleDistGradAggregator<ElemType>>(m_mpi, m_bufferedAsyncGradientAggregation, deviceId, m_syncStatsTrace, m_packThresholdSizeInBytes);
     }
 
     m_gradHeader.reset(DistGradHeader::Create(numEvalNodes), [](DistGradHeader* ptr) { DistGradHeader::Destroy(ptr); });
@@ -2701,6 +2782,8 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_maxSamplesInRAM = configSGD(L"maxSamplesInRAM", (size_t) SIZE_MAX);
     m_numSubminiBatches = configSGD(L"numSubminibatches", (size_t) 1);
 
+    m_packThresholdSizeInBytes = configSGD(L"packThresholdSizeInKB", DEFAULT_PACK_THRESHOLD_SIZE_IN_KB) * 1024;
+
     if (configAALR.Exists(L"numMiniBatch4LRSearch"))
     {
         LOGPRINTF(stderr, "WARNING: 'numMiniBatch4LRSearch' is deprecated, please remove it and use 'numSamples4Search' instead.\n");
@@ -2747,6 +2830,14 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
     m_numMBsToShowResult = configSGD(L"numMBsToShowResult", (size_t)10);
     m_firstMBsToShowResult = configSGD(L"firstMBsToShowResult", (size_t)0);
     m_numMBsToCUDAProfile = configSGD(L"numMBsToCUDAProfile", (size_t)0);
+
+    // Parameters that control logging of training progress in TensorBoard.
+    // Directory to create TensorBoard event files in. If empty (default), the progress is not logged as event files.
+    m_tensorBoardLogDir = msra::strfun::utf16(configSGD(L"tensorBoardLogDir", L""));
+    // Frequency at which to log intermediate training progress results. Used only when tensorBoardLogDir is not empty.
+    // Setting this to 0 disables intermediate progress logging (only per-epoch loss/eval metric are logged).
+    // Setting this to any other value (n) will log average loss/eval metric for each n minibatches.
+    m_tensorBoardNumMBsToLogResult = configSGD(L"tensorBoardNumMBsToLogResult", m_numMBsToShowResult);
 
     m_gradientClippingWithTruncation = configSGD(L"gradientClippingWithTruncation", true);
     m_clippingThresholdPerSample = configSGD(L"clippingThresholdPerSample", numeric_limits<double>::infinity());
@@ -3036,7 +3127,15 @@ SGDParams::SGDParams(const ConfigRecordType& configSGD, size_t sizeofElemType)
             InvalidArgument("DataParallelASGD is not enabled in this version.\n");
 #else
             const ConfigRecordType & configDataParallelASGD(configParallelTrain(L"DataParallelASGD", ConfigRecordType::Record()));
-            m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
+            m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriodPerWorker", ConfigRecordType::Array(intargvector(vector<int>{256})));
+#if 1       // legacy option
+            if (configDataParallelASGD.Exists(L"syncPeriod"))
+            {
+                if (configDataParallelASGD.Exists(L"syncPeriodPerWorker"))
+                    InvalidArgument("syncPeriod is a deprecated alias of syncPeriodPerWorker. It is not allowed to specify both of them");
+                m_nSyncSamplesPerWorker = configDataParallelASGD(L"syncPeriod", ConfigRecordType::Array(intargvector(vector<int>{256})));
+            }
+#endif
             m_isAsyncBufferEnabled = configDataParallelASGD(L"UsePipeline", false);
             m_isSimulateMA = configDataParallelASGD(L"SimModelAverage", false); // using parameter server-based version of ModelAveragingSGD
             if (configDataParallelASGD.Exists(L"AdjustLearningRateAtBeginning")) // adjust learning rate per m_adjustNumInBatch minibatchs until to original one,

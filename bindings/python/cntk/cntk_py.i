@@ -16,6 +16,7 @@
 %implicitconv CNTK::Variable;
 
 %rename(_forward) CNTK::Function::Forward;
+%rename(_add_progress_writers) CNTK::Internal::AddProgressWriters;
 %rename(_backward) CNTK::Function::Backward;
 %rename(_infer_outputs) CNTK::Function::InferOutputs;
 %rename(_update) CNTK::Learner::Update;
@@ -123,6 +124,8 @@
 %template() std::vector<std::shared_ptr<CNTK::Learner>>;
 %template() std::vector<std::shared_ptr<CNTK::DistributedLearner>>;
 %template() std::vector<std::shared_ptr<CNTK::Trainer>>;
+%template() std::vector<std::shared_ptr<CNTK::ProgressWriter>>;
+%template() std::pair<double, double>;
 %template() std::pair<size_t, double>;
 %template() std::pair<size_t, size_t>;
 %template() std::pair<size_t, int>;
@@ -141,6 +144,7 @@
 %ignore CNTK::Internal::Scatter;
 %ignore CNTK::Internal::Slice;
 %ignore CNTK::Internal::MaxNumCPUThreadsSet;
+%ignore CNTK::Internal::CosineDistanceWithNegativeSamples;
 
 // These aren't exported from the CNTK C++ library
 %ignore CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -148,6 +152,9 @@
 %ignore CNTK::Internal::IsRenamingFunctionsAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
+%ignore CNTK::Internal::GetComputationNetworkTrackGapNans;
+%ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
+%ignore CNTK::Internal::Convolution; 
 
 %ignore CNTK::Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
@@ -624,6 +631,12 @@ public:
 %feature("nodirector") CNTK::TrainingSession::OnCheckpointStart;
 %feature("nodirector") CNTK::TrainingSession::GetMinibatchSize;
 
+%feature("director") CNTK::ProgressWriter;
+%ignore CNTK::ProgressWriter::UpdateTraining;
+%ignore CNTK::ProgressWriter::UpdateTest;
+%ignore CNTK::ProgressWriter::WriteTrainingSummary;
+%ignore CNTK::ProgressWriter::WriteTestSummary;
+
 //
 // NDShape
 //
@@ -808,7 +821,9 @@ public:
     // we do not want. Therefor, we have to explicitly tell it for which ones it should do it.
     std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToFetch,
     std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputs,
-    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& gradients,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToEvaluate
 {
     if (!PyDict_Check($input)) {
         SWIG_exception(SWIG_TypeError, "dictionary expected");
@@ -837,7 +852,9 @@ public:
     // Swig would create this conversion for the 'const' variants as well, which
     // we do not want. Therefor, we have to explicitly tell it for which ones it should do it.
     std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputs,
-    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& gradients,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToEvaluate
 {
     // $1 is the C++ input that needs to be filled with the data from the PyDict
     for (auto it: $1)
@@ -1312,7 +1329,6 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::IDictionarySerializable)
 %shared_ptr(CNTK::Trainer)
 %shared_ptr(CNTK::TrainingSession)
-%shared_ptr(CNTK::BasicTrainingSession)
 %shared_ptr(CNTK::Function)
 %shared_ptr(CNTK::NDArrayView)
 %shared_ptr(CNTK::Value)
@@ -1324,6 +1340,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %shared_ptr(CNTK::QuantizedDistributedCommunicator)
 %shared_ptr(CNTK::DistributedLearner)
 %shared_ptr(CNTK::Internal::TensorBoardFileWriter)
+%shared_ptr(CNTK::ProgressWriter)
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
@@ -1332,18 +1349,21 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
    // Trainer initializers.
    // Because SWIG cannot properly handle smart pointers to derived classes (causes memory leak during the check for distributed learners),
    // we need to redefine CreateTrainer.
-    CNTK::TrainerPtr TrainerImpl(const ::CNTK::FunctionPtr& model, const ::CNTK::FunctionPtr& lossFunction, const ::CNTK::FunctionPtr& evaluationFunction, const std::vector<CNTK::DistributedLearnerPtr>& parameterLearners)
+   // TODO: do progressWriters below also have a similar issue?
+    CNTK::TrainerPtr TrainerImpl(const ::CNTK::FunctionPtr& model, const ::CNTK::FunctionPtr& lossFunction, const ::CNTK::FunctionPtr& evaluationFunction,
+                                 const std::vector<CNTK::DistributedLearnerPtr>& parameterLearners, const std::vector<CNTK::ProgressWriterPtr>& progressWriters)
     {
         std::vector<LearnerPtr> learners;
         learners.reserve(parameterLearners.size());
         for(const auto& l : parameterLearners)
             learners.push_back(l);
-        return CreateTrainer(model, lossFunction, evaluationFunction, learners);
+        return CreateTrainer(model, lossFunction, evaluationFunction, learners, progressWriters);
     }
 
-    CNTK::TrainerPtr TrainerImpl(const ::CNTK::FunctionPtr& model, const ::CNTK::FunctionPtr& lossFunction, const ::CNTK::FunctionPtr& evaluationFunction, const std::vector<CNTK::LearnerPtr>& parameterLearners)
+    CNTK::TrainerPtr TrainerImpl(const ::CNTK::FunctionPtr& model, const ::CNTK::FunctionPtr& lossFunction, const ::CNTK::FunctionPtr& evaluationFunction,
+                                 const std::vector<CNTK::LearnerPtr>& parameterLearners, const std::vector<CNTK::ProgressWriterPtr>& progressWriters)
     {
-        return CreateTrainer(model, lossFunction, evaluationFunction, parameterLearners);
+        return CreateTrainer(model, lossFunction, evaluationFunction, parameterLearners, progressWriters);
     }
 
     // Global rank of current worker
@@ -1411,20 +1431,23 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 //
 %extend CNTK::NDArrayView {
 
-    NDArrayView(PyObject* pyobj, const CNTK::DeviceDescriptor& device, bool readOnly)
+    NDArrayView(PyObject* numpyArrayObject, const CNTK::DeviceDescriptor& device, bool readOnly, bool borrow)
     {
-        if (!PyArray_Check((PyArrayObject*)pyobj))
+        if (!PyArray_Check((PyArrayObject*)numpyArrayObject))
         {
             // Note that in contrast to numpy.i's implementation we demand NumPy arrays
             // and do not accept arbitrary sequences, which would needed to be copied around.
             throw std::logic_error("NumPy array expected");
         }
 
-        PyArrayObject* array = (PyArrayObject*)pyobj;
+        // Borrowing the memory is only allowed on CPU for now
+        borrow &= device == DeviceDescriptor::CPUDevice();
 
-        int rank = PyArray_NDIM(array); 
-        
-        npy_intp* np_shape = PyArray_SHAPE(array); 
+        PyArrayObject* array = (PyArrayObject*)numpyArrayObject;
+
+        int rank = PyArray_NDIM(array);
+
+        npy_intp* np_shape = PyArray_SHAPE(array);
         std::vector<size_t> shape(rank);
 
         npy_intp num_elements = 1;
@@ -1440,15 +1463,29 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
         NDArrayView* view;
         if (typecode == NPY_FLOAT)
         {
-            NDArrayView  tmp(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
-            view = new NDArrayView(DataType::Float, tmp.Shape(), device);
-            view->CopyFrom(tmp);
+            if (borrow)
+            {
+                 view = new NDArrayView(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                 NDArrayView  tmp(NDShape(shape), (float*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Float, tmp.Shape(), device);
+                 view->CopyFrom(tmp);
+            }
         }
         else if (typecode == NPY_DOUBLE)
         {
-            NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
-            view = new NDArrayView(DataType::Double, tmp.Shape(), device);
-            view->CopyFrom(tmp);
+            if (borrow)
+            {
+                 view = new NDArrayView(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                 NDArrayView  tmp(NDShape(shape), (double*)PyArray_DATA(array), num_elements, DeviceDescriptor::CPUDevice(), readOnly);
+                 view = new NDArrayView(DataType::Double, tmp.Shape(), device);
+                 view->CopyFrom(tmp);
+            }
         }
         else
         {
@@ -1458,7 +1495,8 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
         return view;
     }
 
-    NDArrayView(const CNTK::NDShape& shape, PyObject* pyData, PyObject* pyColStarts, PyObject* pyRowIndices, const CNTK::DeviceDescriptor& device, bool readOnly) 
+
+    NDArrayView(const CNTK::NDShape& shape, PyObject* pyData, PyObject* pyColStarts, PyObject* pyRowIndices, const CNTK::DeviceDescriptor& device, bool readOnly, bool borrow)
     {
         //
         // pyData, pyColStarts, and pyRowIndices are fed by
@@ -1480,33 +1518,58 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
             throw std::logic_error("index pointers must be a NumPy array");
         }
 
+        // Borrowing the memory is only allowed on CPU for now
+        borrow &= device == DeviceDescriptor::CPUDevice();
+
         PyArrayObject* data = (PyArrayObject*)pyData;
         PyArrayObject* indices = (PyArrayObject*)pyColStarts;
         PyArrayObject* indptr = (PyArrayObject*)pyRowIndices;
 
         int typecode = PyArray_TYPE(data);
         size_t numNonZeroValues = PyArray_SIZE(data);
-        
+
         NDArrayView* view;
         if (typecode == NPY_FLOAT)
         {
-            NDArrayView  tmp(shape, 
-             (CNTK::SparseIndexType*)PyArray_DATA(indices), 
-             (CNTK::SparseIndexType*)PyArray_DATA(indptr), 
-             (float*)PyArray_DATA(data), numNonZeroValues, 
-             DeviceDescriptor::CPUDevice(), readOnly);
-            view = new NDArrayView(DataType::Float, StorageFormat::SparseCSC, tmp.Shape(), device);
-            view->CopyFrom(tmp);
+            if (borrow)
+            {
+                view = new NDArrayView(shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 (float*)PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                NDArrayView tmp(shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 (float*)PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+                view = new NDArrayView(DataType::Float, StorageFormat::SparseCSC, tmp.Shape(), device);
+                view->CopyFrom(tmp);
+            }
         }
         else if (typecode == NPY_DOUBLE)
         {
-            NDArrayView  tmp(shape, 
-             (CNTK::SparseIndexType*)PyArray_DATA(indices), 
-             (CNTK::SparseIndexType*)PyArray_DATA(indptr), 
-             (double*)PyArray_DATA(data), numNonZeroValues, 
-             DeviceDescriptor::CPUDevice(), readOnly);
-            view = new NDArrayView(DataType::Double, StorageFormat::SparseCSC, tmp.Shape(), device);
-            view->CopyFrom(tmp);
+            if (borrow)
+            {
+                view = new NDArrayView(shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 (double*)PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+            }
+            else
+            {
+                NDArrayView tmp(shape,
+                 (CNTK::SparseIndexType*)PyArray_DATA(indices),
+                 (CNTK::SparseIndexType*)PyArray_DATA(indptr),
+                 (double*)PyArray_DATA(data), numNonZeroValues,
+                 DeviceDescriptor::CPUDevice(), readOnly);
+                view = new NDArrayView(DataType::Double, StorageFormat::SparseCSC, tmp.Shape(), device);
+                view->CopyFrom(tmp);
+            }
         }
         else
         {
@@ -1596,6 +1659,7 @@ namespace CNTK {
   Py_END_ALLOW_THREADS;
 }
 
+
 //
 // Setting up hash calculation so that __hash__ on Swig objects
 // are redirected to the std::hash computation of the C++ API
@@ -1608,11 +1672,31 @@ namespace CNTK {
 }
 %enddef
 
+//
+// Setting __str__ and __repr__ methods for frequently used Swig objects
+//
+%define %py_repr_for(TYPE)
+%extend CNTK::TYPE {
+    const std::wstring __str__() {
+        return self->AsString();
+    }
+
+    const std::wstring __repr__() {
+        return self->AsString();
+    }
+}
+%enddef
+
 %define %py_eq_for(DATA_TYPE, EQ)
 %pythoncode %{
 DATA_TYPE.__eq__ = lambda a,b: (a is not None and b is not None and EQ(a,b)) or (a is None and b is None)
 %}
 %enddef
+
+%py_repr_for(Variable)
+%py_repr_for(Parameter)
+%py_repr_for(Constant)
+%py_repr_for(Function)
 
 %py_eq_for(Variable, Variable_eq)
 %py_hash_for(Variable)

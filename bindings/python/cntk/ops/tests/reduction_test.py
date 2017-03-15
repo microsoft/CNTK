@@ -12,7 +12,7 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 
 REDUCE_TEST_OPERANDS = [
     #(input_data,  axis)
@@ -204,7 +204,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
         expected_forward = fwd(value)
         expected_backward = bwd(value,expected_forward)
         binding = {a: value}
-        actual_backward = input_op.grad(binding)[0]
+        actual_backward = input_op.grad(binding)
         actual_forward  = np.copy(input_op.eval(binding))
         assert np.allclose(actual_forward, expected_forward)
         for ab,eb in zip (actual_backward, expected_backward):

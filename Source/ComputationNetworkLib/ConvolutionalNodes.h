@@ -53,15 +53,15 @@ class ConvolutionNodeBase : public ComputationNode<ElemType>
 
 public:
     ConvolutionNodeBase(DEVICEID_TYPE deviceId, const wstring& name)
-        : Base(deviceId, name), m_poolKind(PoolKind::None), m_transpose(false), m_maxTempMemSizeInSamples(0)
+        : Base(deviceId, name), m_poolKind(PoolKind::None), m_transpose(false), m_outputShape(TensorShape(0)), m_ceilOutDim(false), m_maxTempMemSizeInSamples(0)
     {
     }
     ConvolutionNodeBase(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                         const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                        PoolKind poolKind, bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+                        PoolKind poolKind, bool transpose, const TensorShape& outputShape, bool ceilOutDim, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
                         : Base(deviceId, name), m_kernelShape(kernelShape), m_mapCount(mapCount), m_stride(strideShape), m_sharing(sharing),
-                        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad), m_poolKind(poolKind), m_transpose(transpose),
-                        m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
+                        m_autoPad(autoPadding), m_lowerPad(lowerPad), m_upperPad(upperPad), m_poolKind(poolKind), m_transpose(transpose), m_outputShape(outputShape), 
+                        m_ceilOutDim(ceilOutDim), m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples)
     {
     }
 
@@ -81,6 +81,8 @@ public:
         fstream << (int32_t)m_imageLayout;
         fstream << m_maxTempMemSizeInSamples;
         fstream << m_transpose;
+        m_outputShape.Save(fstream);
+        fstream << m_ceilOutDim;
     }
 
     void Load(File& fstream, size_t modelVersion) override
@@ -109,6 +111,14 @@ public:
         {
             fstream >> m_transpose;
         }
+        if (modelVersion >= CNTK_MODEL_VERSION_20)
+        {
+            m_outputShape.Load(fstream); 
+        }
+        if (modelVersion >= CNTK_MODEL_VERSION_21)
+        {
+            fstream >> m_ceilOutDim;
+        }
     }
 
     void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
@@ -126,6 +136,8 @@ public:
             node->m_upperPad = m_upperPad;
             node->m_poolKind = m_poolKind;
             node->m_transpose = m_transpose;
+            node->m_outputShape = m_outputShape;
+            node->m_ceilOutDim = m_ceilOutDim;
             node->m_imageLayout = m_imageLayout;
             node->m_maxTempMemSizeInSamples = m_maxTempMemSizeInSamples;
         }
@@ -148,8 +160,10 @@ public:
     TensorShape LowerPad() const { return m_lowerPad; }
     TensorShape UpperPad() const { return m_upperPad; }
     bool Transpose() const { return m_transpose; }
+    TensorShape OutputShape() const { return m_outputShape; }
     size_t MaxTempMemSizeInSamples() const { return m_maxTempMemSizeInSamples; }
     PoolKind PoolingKind() const { return m_poolKind; }
+    bool CeilOutDim() const { return m_ceilOutDim; }
 
     // bottomlessly expand shape to filterRank, then expand to inputRank using defaults or given 'from' values
     template<class V, typename T>
@@ -216,7 +230,9 @@ protected:
     TensorShape m_lowerPad;
     TensorShape m_upperPad;
     PoolKind m_poolKind;
-    bool m_transpose; // means de-convolution ...I think
+    bool m_transpose; 
+    TensorShape m_outputShape;
+    bool m_ceilOutDim;
     ImageLayoutKind m_imageLayout;
     
     size_t m_maxTempMemSizeInSamples;
@@ -238,6 +254,8 @@ protected:                                  \
     using Base::m_upperPad;                 \
     using Base::m_poolKind;                 \
     using Base::m_transpose;                \
+    using Base::m_outputShape;              \
+    using Base::m_ceilOutDim;               \
     using Base::m_imageLayout;              \
     using Base::m_maxTempMemSizeInSamples;  \
     using Base::m_tempMatrixForward;        \
@@ -262,8 +280,8 @@ public:
     }
     ConvolutionNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& mapCount, const TensorShape& strideShape,
                     const std::vector<bool>& sharing, const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                    bool transpose, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
-                    : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, transpose, imageLayout, maxTempMemSizeInSamples),
+                    bool transpose, const TensorShape &outputShape, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples)
+                    : Base(deviceId, name, kernelShape, mapCount, strideShape, sharing, autoPadding, lowerPad, upperPad, PoolKind::None, transpose, outputShape, false, imageLayout, maxTempMemSizeInSamples),
                     m_convolution2D(false)
     {
     }
@@ -273,14 +291,14 @@ public:
                     : ConvolutionNode(deviceId, name, TensorShape(kernelWidth, kernelHeight, 1), TensorShape(1, 1, outputChannels),
                                       TensorShape(horizontalSubsample, verticalSubsample, 1), vector<bool>{true},
                                       vector<bool>{zeroPadding}, TensorShape(0), TensorShape(0),
-                                      false, imageLayout, maxTempMemSizeInSamples)
+                                      false, TensorShape(0), imageLayout, maxTempMemSizeInSamples)
     {
         m_convolution2D = true;
     }
     ConvolutionNode(const ScriptableObjects::IConfigRecordPtr configp)
         : ConvolutionNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"kernelShape"), configp->Get(L"mapCount"), configp->Get(L"strideShape"),
                           configp->Get(L"dimSharing"), configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
-                          configp->Get(L"transpose"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
+                          configp->Get(L"transpose"), configp->Get(L"dimOutputShape"), ImageLayoutKindFrom(configp->Get(L"imageLayout")), configp->Get(L"maxTempMemSizeInSamples"))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
     }
@@ -366,6 +384,13 @@ public:
     void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
         auto sliceOutputGrad = GradientFor(fr);
+
+        // this potentially computes over time, so we must mask gaps to 0
+        if (Input(inputIndex)->ReducesInTimeWrt(shared_from_this()))
+            MaskMissingGradientColumnsToZero(fr);
+        if (Input(inputIndex)->ReducesInTimeWrt(Input(1 - inputIndex)))
+            Input(1 - inputIndex)->MaskMissingValueColumnsToZero(fr);
+
         if (inputIndex == 0) // derivative with respect to the weight matrix
         {
             auto& grad = InputRef(0).GradientAsMatrix();
@@ -443,13 +468,41 @@ public:
             {
                 outputShape = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
                                                                     m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+
+                if (m_outputShape.GetRank() > 0 && m_outputShape != TensorShape(0))    // user have explicitly set m_outputShape, we check if it's the same as outputShape
+                {
+                    if (m_outputShape != outputShape)
+                    {
+                        InvalidArgument("%ls %ls the shape of the specified convolution output %ls is different from "
+                            "the result of convoluting the input argument using the provided options %ls. It is recommonded "
+                            "that the output shape is not specified for convolution.", NodeName().c_str(), OperationName().c_str(),
+                            static_cast<std::wstring>(m_outputShape).c_str(),
+                            static_cast<std::wstring>(outputShape).c_str());
+                    }
+                }
             }
             else
             {
-                // In case of transpose (deconvolution), node input (inputShape) is really the output of the convolution
-                // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
-                outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                if (m_outputShape.GetRank() <= 0 || m_outputShape == TensorShape(0))
+                {
+                    // In case of convolution transpose (deconvolution), node input (inputShape) is really the output of the convolution
+                    // and node output (outDims) is convolution input. ConvolveGeometry does not care about deconvolutions (it does not have to).
+                    outputShape = ConvolveGeometry::ComputeInputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
+                                                                      m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                }
+                else
+                {
+                    // in case the user specifies the output shape, we make sure the input shape can be the result of
+                    // convolution from the specified output shape
+                    auto inferredShape = ConvolveGeometry::ComputeOutputShape(m_outputShape, m_kernelShape, m_mapCount, m_stride, m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                    if (inputShape != inferredShape)
+                        InvalidArgument("%ls %ls the shape of the convolution transpose operand %ls is different from "
+                            "the result of convoluting the specified output argument using "
+                            "the provided options %ls", NodeName().c_str(), OperationName().c_str(),
+                            static_cast<std::wstring>(inputShape).c_str(),
+                            static_cast<std::wstring>(inferredShape).c_str());
+                    outputShape = m_outputShape; 
+                }
             }
 
             if (m_imageLayout == ImageLayoutKind::CHW) 
@@ -502,7 +555,7 @@ public:
     void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_tempMatrixForward, matrixPool);
+        RequestMatrixFromPool(m_tempMatrixForward, matrixPool, 0, false, true);
     }
 
     // m_tempMatrixForward is only used as workspace for convolution, we can release it immediately afterwards
@@ -515,7 +568,7 @@ public:
     void RequestMatricesBeforeBackprop(MatrixPool& matrixPool) override
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_tempMatrixBackward, matrixPool);
+        RequestMatrixFromPool(m_tempMatrixBackward, matrixPool, 0, false, true);
     }
 
     void ReleaseMatricesAfterBackprop(MatrixPool& matrixPool) override
@@ -758,15 +811,15 @@ public:
     {
     }
     PoolingNode(DEVICEID_TYPE deviceId, const wstring& name, PoolKind pool, const TensorShape& kernelShape, const TensorShape& strideShape,
-                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
+                const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim,
                 ImageLayoutKind imageLayout)
-                : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, pool, false, imageLayout, 0)
+                : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, pool, false, TensorShape(0), ceilOutDim, imageLayout, 0)
     {
     }
     PoolingNode(const ScriptableObjects::IConfigRecordPtr configp)
         : PoolingNode(configp->Get(L"deviceId"), L"<placeholder>", PoolKindFrom(configp->Get(L"pool")), configp->Get(L"kernelShape"),
                       configp->Get(L"strideShape"),
-                      configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"),
+                      configp->Get(L"dimPadding"), configp->Get(L"dimPadLower"), configp->Get(L"dimPadUpper"), configp->Get(L"ceilOut"),
                       ImageLayoutKindFrom(configp->Get(L"imageLayout")))
     {
         AttachInputsFromConfig(configp, GetExpectedNumInputs());
@@ -816,14 +869,14 @@ public:
         InferReductionDims(inputShape, TensorShape());
 
         auto outDims = ConvolveGeometry::ComputeOutputShape(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                                                            m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_ceilOutDim);
         SetDims(outDims, HasMBLayout());
         if (isFinalValidationPass)
         {
             if (m_convEng == nullptr)
             {
                 auto geometry = std::make_shared<ConvolveGeometry>(inputShape, m_kernelShape, m_mapCount, m_stride,
-                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad);
+                                                                   m_sharing, m_autoPad, m_lowerPad, m_upperPad, m_ceilOutDim);
                 m_convEng = ConvolutionEngine<ElemType>::Create(geometry, m_deviceId, m_imageLayout,
                                                                 m_maxTempMemSizeInSamples, m_poolKind,
                                                                 ConvolutionEngineKind::All, NodeName());
@@ -882,7 +935,7 @@ public:
     MaxUnpoolingNode(DEVICEID_TYPE deviceId, const wstring& name, const TensorShape& kernelShape, const TensorShape& strideShape,
                        const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
                        ImageLayoutKind imageLayout)
-                       : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, PoolKind::Max, true, imageLayout, 0)
+                       : Base(deviceId, name, kernelShape, TensorShape(1), strideShape, vector<bool>{true}, autoPadding, lowerPad, upperPad, PoolKind::Max, true, TensorShape(0), false, imageLayout, 0)
     {
     }
     MaxUnpoolingNode(const ScriptableObjects::IConfigRecordPtr configp)

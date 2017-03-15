@@ -5117,19 +5117,25 @@ __global__ void _assignNumOfDiffCol(const ElemType* a, const ElemType* b, ElemTy
 }
 
 template <class ElemType>
-__global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val)
+__global__ void _maskColumnsValue(ElemType* a, const char* columnsMask, CUDA_LONG numCols, CUDA_LONG numRows, ElemType val, CUDA_LONG numColsPerMaskEntry)
 {
-    CUDA_LONG colIdx = blockIdx.x;
-    if (colIdx > numCols)
-        return;
+    CUDA_LONG maskColIdx = blockIdx.x;
+    CUDA_LONG matrixStartColIdx = maskColIdx * numColsPerMaskEntry;
 
-    if (columnsMask[IDX2C(0, colIdx, 1)] == 1)
-        return;
-
-    CUDA_LONG rowIdx = threadIdx.x;
-    for (; rowIdx < numRows; rowIdx += blockDim.x)
+    for (CUDA_LONG k = 0; k < numColsPerMaskEntry; ++k)
     {
-        a[IDX2C(rowIdx, colIdx, numRows)] = val;
+        CUDA_LONG colIdx = matrixStartColIdx + k;
+        if (colIdx > numCols)
+            return;
+
+        if (columnsMask[IDX2C(0, maskColIdx, 1)] == 1)
+            return;
+
+        CUDA_LONG rowIdx = threadIdx.x;
+        for (; rowIdx < numRows; rowIdx += blockDim.x)
+        {
+            a[IDX2C(rowIdx, colIdx, numRows)] = val;
+        }
     }
 }
 
@@ -5193,7 +5199,6 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     }
 }
 
-// calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 // Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network
@@ -5209,6 +5214,7 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
 // t (input): time stamp to process
 // maxPhoneNum (input): the max number of phones between utterances
 // totalPhoneNum (input): the total number of phones of all utterances
+// blankTokenId (input): id of the CTC blank token
 // delayConstraint -- label output delay constraint introduced during training that allows to have shorter delay during inference.
 //      Alpha and Beta scores outside of the delay boundary are set to zero.
 //      Setting this parameter smaller will result in shorted delay between label output during decoding.
@@ -5228,6 +5234,7 @@ __global__ void _assignAlphaScore(
     const size_t  t,
     const size_t maxPhoneNum, // Maximum length of utterance in this MB
     const size_t totalPhoneNum, // Total number of phones
+    const size_t blankTokenId,
     const int delayConstraint)
 {
     LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
@@ -5278,7 +5285,7 @@ __global__ void _assignAlphaScore(
             if (phoneSeqId > 2)
             {
                 // if current label is not blank and not equal prev non-blank label
-                if ((LONG64)(phoneSeq[labelid]) != totalPhoneNum - 1 && phoneId != (LONG64)(phoneSeq[labelid_2]))
+                if ((LONG64)(phoneSeq[labelid]) != blankTokenId && phoneId != (LONG64)(phoneSeq[labelid_2]))
                 {
                     x = logaddk(x, alphaScore[alphaId_2]);
                 }
@@ -5300,13 +5307,13 @@ __global__ void _assignAlphaScore(
             {
                 LONG64 labelid_r = labelid + 2;
                 LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_r]);
-                if (phoneId == totalPhoneNum - 1)
+                if (phoneId == blankTokenId)
                 {
                     // only constraint right side
                     if (t > phoneBoundId_r + delayConstraint - 1)
                         alphaScore[alphaId] = LZERO;
                 }
-                else if (phoneId != totalPhoneNum - 1)
+                else if (phoneId != blankTokenId)
                 {
                     if (t > phoneBoundId_r + delayConstraint)
                         alphaScore[alphaId] = LZERO;
@@ -5333,6 +5340,7 @@ __global__ void _assignBetaScore(
     const size_t  t,
     const size_t maxPhoneNum,
     const size_t totalPhoneNum,
+    const size_t blankTokenId,
     const int delayConstraint)
 {
     LONG64 uttId = blockDim.x * blockIdx.x + threadIdx.x;
@@ -5369,7 +5377,7 @@ __global__ void _assignBetaScore(
             ElemType ascore;
             if (phoneSeqId < phoneNum - 3)
             {
-                if (phoneSeq[labelid] != totalPhoneNum - 1 && phoneId != phoneSeq[labelid_2])
+                if (phoneSeq[labelid] != blankTokenId && phoneId != phoneSeq[labelid_2])
                 {
                     x = logaddk(x, betaScore[betaid_2]);
                 }
@@ -5390,12 +5398,12 @@ __global__ void _assignBetaScore(
             if (delayConstraint != -1)
             {
                 LONG64 phoneBoundId_r = (LONG64)(phoneBound[labelid_2]);
-                if (phoneId == totalPhoneNum - 1)
+                if (phoneId == blankTokenId)
                 {
                     if (t > phoneBoundId_r + delayConstraint - 1)
                         betaScore[betaid] = LZERO;
                 }
-                else if (phoneId != totalPhoneNum - 1)
+                else if (phoneId != blankTokenId)
                 {
                     if (t > phoneBoundId_r + delayConstraint)
                         betaScore[betaid] = LZERO;

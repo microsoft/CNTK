@@ -3,6 +3,8 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root
 # for full license information.
 # ==============================================================================
+[CmdletBinding()]
+Param([string]$WheelBaseUrl)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
@@ -14,10 +16,10 @@ Expand-Archive -Path BinaryDrop.zip
 $installCache = '.\BinaryDrop\cntk\Scripts\install\windows\InstallCache'
 Move-Item -Path InstallCache -Destination $installCache
 
-# Mock host input for installation
-function Read-Host { if ($global:readHostMockCtr++) { 'y' } else { '1' } }
-
-.\BinaryDrop\cntk\Scripts\install\windows\install.ps1 -Execute
+.\BinaryDrop\cntk\Scripts\install\windows\install.bat -NoConfirm @PSBoundParameters
+if ($LASTEXITCODE -ne 0) {
+  throw "Fail"
+}
 
 Set-Location BinaryDrop
 ..\test-install.bat cntk\scripts\cntkpy35.bat

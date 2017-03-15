@@ -73,7 +73,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         m_multiViewCrop = config(L"multiViewCrop", false);
     }
 
-    void ImageDeserializerBase::PopulateSequenceData(cv::Mat image, size_t classId, size_t copyId, std::vector<SequenceDataPtr>& result)
+    void ImageDeserializerBase::PopulateSequenceData(
+        cv::Mat image,
+        size_t classId,
+        size_t copyId,
+        const KeyType& sequenceKey,
+        std::vector<SequenceDataPtr>& result)
     {
         auto imageData = make_shared<ImageSequenceData>();
         if (!image.data)
@@ -95,6 +100,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             imageData->m_numberOfSamples = 1;
             imageData->m_elementType = dataType;
             imageData->m_isValid = true;
+            imageData->m_key = sequenceKey;
         }
         result.push_back(imageData);
 

@@ -535,13 +535,12 @@ GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
     VerifyWritable(__FUNCTION__);
 
-    size_t n = GetNumCols();
-    if (n != columnsMask.GetNumCols())
-        RuntimeError("Matrix and column mask must have equal number of columns");
+    if (GetNumCols() != (columnsMask.GetNumCols() * numColsPerMaskEntry))
+        RuntimeError("Matrix number of columns must equal 'number of columns in column mask * numColsPerMaskEntry'.");
 
     if (val != 0)
         LogicError("MaskColumnsValue is not implmented for a non-zero mask for sparse matrices.");
@@ -558,10 +557,12 @@ void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsM
         GPUSPARSE_INDEX_TYPE* colVector = GetCondensedVector();
 
         // Verify that if the column is to be masked, there are no elements in it.
+        size_t n = columnsMask.GetNumCols();
         #pragma omp parallel for
         for (long j = 0; j < n; j++)
-            if (maskedCols[j] == 0 && colVector[j + 1] != colVector[j])
-                RuntimeError("GPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)j, (int)(colVector[j + 1] - colVector[j]));
+            for (long k = 0; k < numColsPerMaskEntry; ++k)
+                if (maskedCols[j] == 0 && colVector[(j * numColsPerMaskEntry) + k + 1] != colVector[(j * numColsPerMaskEntry) + k])
+                    RuntimeError("GPUSparseMatrix attempted to mask column %d, but it has %d elements in it.", (int)((j * numColsPerMaskEntry) + k), (int)(colVector[(j * numColsPerMaskEntry) + k + 1] - colVector[(j * numColsPerMaskEntry) + k]));
     }
     else
         NOT_IMPLEMENTED;
@@ -1709,13 +1710,13 @@ void GPUSparseMatrix<ElemType>::MultiplyAndWeightedAdd(ElemType alpha, const GPU
     SyncGuard syncGuard;
     if (sizeof(ElemType) == sizeof(float))
     {
-        CUSPARSE_CALL(cusparseScsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumElemAllocated(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(a.Buffer()),
+        CUSPARSE_CALL(cusparseScsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumNZElements(), reinterpret_cast<float*>(&alpha), descr, reinterpret_cast<const float*>(a.Buffer()),
                                      aRowLocation, aColLocation, reinterpret_cast<float*>(b.Data()),
                                      (int) b.GetNumRows(), reinterpret_cast<float*>(&beta), reinterpret_cast<float*>(c.Data()), (int) c.GetNumRows()));
     }
     else
     {
-        CUSPARSE_CALL(cusparseDcsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumElemAllocated(), reinterpret_cast<double*>(&alpha), descr, reinterpret_cast<const double*>(a.Buffer()),
+        CUSPARSE_CALL(cusparseDcsrmm(cusparseHandle, oper, m, n, k, (int) a.GetNumNZElements(), reinterpret_cast<double*>(&alpha), descr, reinterpret_cast<const double*>(a.Buffer()),
                                      aRowLocation, aColLocation, reinterpret_cast<double*>(b.Data()),
                                      (int) b.GetNumRows(), reinterpret_cast<double*>(&beta), reinterpret_cast<double*>(c.Data()), (int) c.GetNumRows()));
     }

@@ -97,7 +97,7 @@ public:
                    ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
     void Adam(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType learnRatePerSample,
-        ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
+              ElemType momentum, ElemType adaWeight, ElemType adaMul, bool unitGainMomentum);
 
     ElemType RmsProp(CPUMatrix<ElemType>& gradients,
                      ElemType RMS_GAMMA,
@@ -144,7 +144,7 @@ public:
     //void SetValue(const GPUSparseMatrix<ElemType>& deepCopyFrom);
     void SetValue(const size_t numRows, const size_t numCols, ElemType* pArray, size_t matrixFlags = matrixFlagNormal);
 
-    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const CPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const CPUMatrix<ElemType>& valMat, size_t colInd);
@@ -231,7 +231,7 @@ public:
     // sequence training
     CPUMatrix<ElemType>& DropFrame(const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& gamma, const ElemType& threshhold);
     CPUMatrix<ElemType>& AssignSequenceError(const ElemType hsmoothingWeight, const CPUMatrix<ElemType>& label, const CPUMatrix<ElemType>& dnnoutput, const CPUMatrix<ElemType>& gamma, ElemType alpha);
-    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const int delayConstraint, const bool isColWise);
+    CPUMatrix<ElemType>& AssignCTCScore(const CPUMatrix<ElemType>& prob, CPUMatrix<ElemType>& alpha, CPUMatrix<ElemType>& beta, const CPUMatrix<ElemType>& phoneSeq, const CPUMatrix<ElemType>& phoneBoundary, ElemType &totalScore, const vector<size_t>& uttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep, const size_t maxFrameNum, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
     CPUMatrix<ElemType>& InplaceSqrt();
     CPUMatrix<ElemType>& AssignSqrtOf(const CPUMatrix<ElemType>& a);
 
@@ -501,7 +501,7 @@ public:
 
         stream << us.m_numRows << us.m_numCols;
         for (size_t i = 0; i < us.GetNumElements(); ++i)
-            stream << us.Buffer()[i];
+            stream << us.Data()[i];
         stream.PutMarker(fileMarkerEndSection, std::wstring(L"EMAT"));
         return stream;
     }

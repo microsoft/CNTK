@@ -67,7 +67,7 @@ namespace
         session->Train(device);
     }
 
-    FeedForwardClassifier BuildFeedForwardClassifer(const DeviceDescriptor& device)
+    FeedForwardClassifier BuildFeedForwardClassifier(const DeviceDescriptor& device)
     {
         const size_t inputDim = 2;
         const size_t numOutputClasses = 2;
@@ -114,8 +114,9 @@ void TestFrameMode()
 
     // Create a set of devices.
     std::vector<DeviceDescriptor> devices;
-    devices.push_back(DeviceDescriptor::CPUDevice());
-    if (IsGPUAvailable())
+    if (ShouldRunOnCpu())
+        devices.push_back(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnGpu())
         devices.push_back(DeviceDescriptor::GPUDevice(0));
 
     // Create different types of loops.
@@ -131,7 +132,7 @@ void TestFrameMode()
             for (auto loop : loops)
             {
                 sync->Barrier();
-                loop(l.first, device, l.second, BuildFeedForwardClassifer(device));
+                loop(l.first, device, l.second, BuildFeedForwardClassifier(device));
             }
         }
     }

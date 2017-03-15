@@ -43,6 +43,9 @@ struct V2LibraryTestFixture
         // Lets disable automatic unpacking of PackedValue object to detect any accidental unpacking
         // which will have a silent performance degradation otherwise
         Internal::SetAutomaticUnpackingOfPackedValues(/*disable =*/ true);
+
+        // Turn on gap nan tracking
+        Internal::SetComputationNetworkTrackGapNans(true);
     }
 };
 
@@ -70,7 +73,8 @@ inline void ReportFailure(const char* format, ...)
 static const double relativeTolerance = 0.001f;
 static const double absoluteTolerance = 0.000001f;
 
-bool IsGPUAvailable();
+bool ShouldRunOnCpu();
+bool ShouldRunOnGpu();
 
 template <typename ElementType>
 inline void FloatingPointCompare(ElementType actual, ElementType expected, const char* message)
@@ -385,12 +389,15 @@ inline ValuePtr GenerateSequences(const std::vector<size_t>& sequenceLengths, co
     }
     else
     {
-        if (sampleShape.Rank() != 1)
-            throw std::runtime_error("GenerateSequences can generate one hot sequences only for 1D sample shapes");
-
+        size_t numSequences = sequenceLengths.size();
         size_t vocabularySize = sampleShape[0];
-        std::vector<std::vector<size_t>> oneHotSequences = GenerateOneHotSequences(sequenceLengths, vocabularySize);
-        return Value::Create<ElementType>(vocabularySize, oneHotSequences, device, true);
+        size_t numColumnsPerSample = sampleShape.SubShape(1).TotalSize();
+        std::vector<size_t> columnLengths = sequenceLengths;
+        for (size_t i = 0; i < numSequences; ++i)
+            columnLengths[i] *= numColumnsPerSample;
+
+        std::vector<std::vector<size_t>> oneHotSequences = GenerateOneHotSequences(columnLengths, vocabularySize);
+        return Value::Create<ElementType>(sampleShape, oneHotSequences, {}, device, true);
     }
 }
 
@@ -506,7 +513,7 @@ inline FunctionPtr Embedding(const Variable& input, size_t embeddingDim, const D
     return Times(embeddingParameters, input);
 }
 
-inline FunctionPtr LSTMSequenceClassiferNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
+inline FunctionPtr LSTMSequenceClassifierNet(const Variable& input, size_t numOutputClasses, size_t embeddingDim, size_t LSTMDim, size_t cellDim, const DeviceDescriptor& device, const std::wstring& outputName)
 {
     auto embeddingFunction = Embedding(input, embeddingDim, device);
     auto pastValueRecurrenceHook = [](const Variable& x) { return PastValue(x); };

@@ -58,6 +58,7 @@ struct /*interface*/ MATH_API MatrixBase
     virtual int GetDeviceId() const = 0;
     virtual MatrixType GetMatrixType() const = 0;
     virtual MatrixFormat GetFormat() const = 0;
+    virtual void CastAssignValuesOf(const MatrixBase& other) = 0; // allows for mixed assignment with conversion
     // TODO: Move more generic functions such as getting dims, resizing, and getting/setting as scalars in here.
     virtual ~MatrixBase();
 };
@@ -271,6 +272,7 @@ public:
         assert(vals.size() == numRows * numCols);
         SetValue(numRows, numCols, GetDeviceId(), vals.data(), matrixFormatRowMajor);
     }
+    void CastAssignValuesOf(const MatrixBase& other) override; // allows for mixed assignment with conversion
     static ElemType MakeNan(size_t payload);
     void Invalidate()
     {
@@ -279,7 +281,7 @@ public:
     void SetMatrixFromCSCFormat(const CPUSPARSE_INDEX_TYPE* h_CSCCol, const CPUSPARSE_INDEX_TYPE* h_Row, const ElemType* h_Val,
         const size_t nz, const size_t numRows, const size_t numCols, DataTransferer* transferer = nullptr);
 
-    void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val);
+    void MaskColumnsValue(const Matrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry);
 
     void SetColumn(const ElemType* colPointer, size_t colInd);
     void SetColumn(const ElemType val, size_t colInd);
@@ -378,7 +380,7 @@ public:
 
     Matrix<ElemType>& AssignCTCScore(const Matrix<ElemType>& prob, Matrix<ElemType>& alpha, Matrix<ElemType>& beta, const Matrix<ElemType>& phoneSeq, const Matrix<ElemType>& phoneBound, ElemType &totalScore,
         const vector<size_t> & extraUttMap, const vector<size_t> & uttBeginFrame, const vector<size_t> & uttFrameNum, const vector<size_t> & uttPhoneNum, const size_t samplesInRecurrentStep,
-        const size_t mbSize, const int delayConstraint, const bool isColWise);
+        const size_t mbSize, const size_t blankTokenId, const int delayConstraint, const bool isColWise);
 
     Matrix<ElemType>& InplaceSqrt();
     Matrix<ElemType>& AssignSqrtOf(const Matrix<ElemType>& a);

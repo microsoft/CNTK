@@ -43,10 +43,10 @@ namespace CNTK
         }
 
         if (matchingStreamInfos.empty())
-            RuntimeError("No stream found matching given name");
+            RuntimeError("No stream found matching given name '%S'.", streamName.c_str());
 
         if (matchingStreamInfos.size() > 1)
-            RuntimeError("Multiple streams found matching given name");
+            RuntimeError("Multiple streams (%d) found matching given name '%S'.", (int)matchingStreamInfos.size(), streamName.c_str());
 
         return *(*(matchingStreamInfos.begin()));
     }
@@ -63,10 +63,10 @@ namespace CNTK
         }
 
         if (matchingStreamInfos.empty())
-            RuntimeError("No stream found matching given Variable's attributes");
+            RuntimeError("No stream found matching given Variable '%S'.", variableToMatch.AsString().c_str());
 
         if (matchingStreamInfos.size() > 1)
-            RuntimeError("Multiple streams found matching given Variable's attributes");
+            RuntimeError("Multiple streams (%d) found matching given Variable '%S'.", (int)matchingStreamInfos.size(), variableToMatch.AsString().c_str());
 
         return *(*(matchingStreamInfos.begin()));
     }
@@ -127,7 +127,7 @@ namespace CNTK
             }
 
             if (deserializerTypeNameToModuleNameMap.find(deserializerTypeName) == deserializerTypeNameToModuleNameMap.end())
-                InvalidArgument("Unknown deserializer type (%S)", deserializerTypeName.c_str());
+                InvalidArgument("Unknown deserializer type '%S' specified for CNTK built-in composite MinibatchSource construction.", deserializerTypeName.c_str());
 
             deserializerConfigDict[L"module"] = deserializerTypeNameToModuleNameMap.at(deserializerTypeName);
         }
@@ -177,13 +177,10 @@ namespace CNTK
 
             const wchar_t* workerRankConfigurationKey = L"workerRank";
             if (configuration.Contains(workerRankConfigurationKey))
-            {
                 m_workerRank = configuration[workerRankConfigurationKey].Value<size_t>();
-            }
+
             if (m_workerRank > m_numWorkers - 1)
-            {
-                LogicError("Invalid worker rank %lu (numWorkers %lu)", m_workerRank, m_numWorkers);
-            }
+                LogicError("CompositeMinibatchSource: Invalid worker rank %lu (numWorkers %lu)", m_workerRank, m_numWorkers);
         }
     }
 
@@ -201,10 +198,10 @@ namespace CNTK
         if (!m_epochEndReached)
         {
             if (minibatchSizeInSequences != 0)
-                LogicError("Specifying minibatch size in #sequences is currently unsupported");
+                LogicError("GetNextMinibatch: Specifying minibatch size in #sequences is currently unsupported");
 
             if (minibatchSizeInSamples == 0)
-                InvalidArgument("GetNextMinibatch: Requested minibatch sizes must be > 0");
+                InvalidArgument("GetNextMinibatch: Requested minibatch size must be > 0.");
 
             if (m_prevMinibatchSize == 0)
             {
@@ -253,7 +250,7 @@ namespace CNTK
                             *(*iter)->m_sampleLayout);
                     }
                     else
-                        LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
+                        LogicError("GetNextMinibatch: Input of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
                 }
 
                 m_shim->StartEpoch(epochConfig, inputs);
@@ -305,7 +302,7 @@ namespace CNTK
                 ValuePtr minibatchValuePtr;
                 if (!hasData)
                 {
-                    m_minibatchData[currentStreamInfo] = {nullptr, 0, 0 };
+                    m_minibatchData[currentStreamInfo] = { nullptr, 0, 0 };
                     continue;
                 }
 
@@ -313,9 +310,9 @@ namespace CNTK
                 {
                     auto matrix = dynamic_pointer_cast<Matrix<float>>(input.matrix);
                     if (!matrix)
-                        LogicError("Invalid matrix type.");
+                        LogicError("GetNextMinibatch: Invalid matrix type.");
 
-                    minibatchValuePtr = MakeSharedObject<PackedValue>(s.m_sampleLayout, matrix, input.pMBLayout, /*readOnly =*/ false);
+                    minibatchValuePtr = MakeSharedObject<PackedValue>(s.m_sampleLayout, Axis::DefaultInputVariableDynamicAxes(), matrix, input.pMBLayout, /*readOnly =*/ false);
 
                     size_t numSamples = input.pMBLayout->GetActualNumSamples();
                     size_t numSequences = input.pMBLayout->GetNumSequences();
@@ -323,7 +320,7 @@ namespace CNTK
                     m_minibatchData[currentStreamInfo] = { minibatchValuePtr, numSequences, numSamples, hasReachedSweepEnd };
                 }
                 else
-                    LogicError("Input data of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
+                    LogicError("GetNextMinibatch: Input of type other than DataType::Float is currently unsupported by the CNTK built-in composite MinibatchSource!");
             }
         }
 

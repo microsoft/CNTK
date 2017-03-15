@@ -84,71 +84,64 @@ class TensorOpsMixin(object):
     # 'for var in variables'.
     # __lt__, __le__, __gt__, __ge__, __and__, __rand__, __or__, __ror__,
 
-    def __getitem__(self, key):
+    def __getitem__(self, arg):
+        '''
+        Slicing of a Variable. E.g. var[2:3] will translate into slice(var, axis=0, begin_index=2, end_index=3)
+        '''
         from . import ops
-        if isinstance(key, int):
-            # Case 1: e.g. data[3] -> key=3
-            return ops.slice(self, 0, key, key + 1)
 
-        elif isinstance(key, slice):
-            # Case 2: e.g. data[2:4] -> key will be a slice object
-            if key.step is not None:
-                raise TypeError('step argument is not supported')
-            if not isinstance(key.stop, int):
-                raise TypeError(
-                    'end index has to be of type int, not "%s"' % type(key.stop))
+        # int or slice: normalize into a tuple of int or tuple of slice
+        if not isinstance(arg, tuple): 
+            arg = (arg,)
+        r = self
+        axis0 = 0
 
-            if isinstance(key.start, int):
-                if key.stop <= key.start:
-                    raise ValueError(
-                        'end index has to be greater than start index')
-            return ops.slice(self, 0, key.start or 0, key.stop or 0)
+        for axis, s in enumerate(arg):
+            if s is Ellipsis: # ellipsis means index relative to end after this point
+                axis0 = -len(arg)
+                continue
+            if isinstance(s, int): # int: normalize into a slice
+                s = slice(s, s+1)
 
-        elif isinstance(key, (tuple, list)):
-            # Case 3: e.g. data[2:4,1:,1:7] -> key will be an iterable of ints
-            # (case 1) or slices (case 2)
-            # objects.
-            # FIXME: we need to check that len(key) equals the node's rank
-            node = self
-            for ax_counter, so in enumerate(key):
-                if isinstance(so, int):
-                    # Proceed as case 1
-                    node = ops.slice(node, ax_counter, so, so + 1)
+            if isinstance(s, slice):
+                if s.step is not None and s.step != 1:
+                    # TODO: This is not hard to implement in SliceNode.
+                    raise ValueError("slicing with a step other than 1 is "
+                                     "currently not supported")
+                # implement as a CNTK slice() operation
+                begin = s.start or 0
+                end   = s.stop  or 0
+                if begin != 0 or end != 0:
+                    r = ops.slice(r, axis=axis + axis0, begin_index=begin, end_index=end)
+            elif isinstance(s, (tuple, list)):
+                # Select multiple elements from the same dimension. This is
+                # different from NumPy's advanced indexing, since we just go
+                # axis by axis from left to right and don't do any
+                # broadcasting.
 
-                elif isinstance(so, slice):
-                    # Proceed as case 2
-                    if so.step is not None:
-                        raise TypeError('step argument is not supported')
-                    if isinstance(so.start, int) and isinstance(so.stop, int):
-                        if so.stop <= so.start:
-                            raise ValueError(
-                                'end index has to be greater than start index')
-                    if so.start is None and so.stop is None:
-                        continue
-                    node = ops.slice(node, ax_counter, so.start or 0, so.stop or 0)
-                elif isinstance(so, list):
-                    # Case 3b: e.g. data[[0],[2,3]] aka "advanced indexing" ->
-                    # so = ([0], [2,3])
-                    # In NumPy we would have another dimension, but since
-                    # data[0].shape != data[[0]].shape == data[[[0]]].shape ==
-                    # we decided to have all shapes like data[0] in this case
-                    for idx in so:
-                        if not isinstance(idx, int):
-                            raise IndexError(
-                                'indices have to be of type int and not "%s"' % type(idx))
-                        node = ops.slice(node, ax_counter, idx, idx + 1)
+                slice_accum = []
+                for idx in s:
+                    if not isinstance(idx, int):
+                        raise IndexError(
+                              'indices have to be of type int and not "%s"' %
+                               type(idx))
+                    slice_accum.append(ops.slice(r, axis=axis,
+                                                 begin_index=idx,
+                                                 end_index=idx + 1))
+                if len(slice_accum) > 1:
+                    r = ops.splice(*slice_accum, axis=axis)
                 else:
-                    raise IndexError(
-                        'type "%s" is not supported as index' % type(so))
+                    r = slice_accum[0]
+            else:
+                raise IndexError(
+                    'type "%s" is not supported as index' % type(s))
 
-            return node
-        else:
-            raise TypeError(
-                'index must be int or slice, not {}'.format(type(key).__name__))
+        return r
+
 
 AVAILABLE_TENSOR_OPS = ['abs', 'add', 'div', 'getitem', 'matmul', 'mul',
-                        'radd', 'rdiv', 'rmatmul', 'rmul', 'rsub', 'rtruediv', 'sub',
-                        'truediv', 'neg']
+                        'radd', 'rdiv', 'rmatmul', 'rmul', 'rsub', 'rtruediv',
+                        'sub', 'truediv', 'neg']
 
 
 def _add_tensor_ops(klass):

@@ -14,7 +14,7 @@ import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
 import cntk as C
 from cntk.axis import Axis
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 
 AS_BLOCK_TEST_CASES = [
@@ -32,7 +32,7 @@ def test_op_as_block(input_shape, output_shape, expected_output_shape, device_id
     # We test using reshape as the operation that is encapsulated in a block
 
     dev = cntk_device(device_id)
-    from ...utils import sanitize_dtype_cntk
+    from cntk.internal import sanitize_dtype_cntk
     from .. import reshape, element_times, as_block
 
     num_tensor_elements = np.multiply.reduce(input_shape)

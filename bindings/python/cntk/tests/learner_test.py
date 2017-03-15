@@ -6,7 +6,7 @@
 
 from __future__ import division
 import numpy as np
-from ..learner import *
+from ..learners import *
 from .. import parameter, input_variable
 
 import pytest
@@ -97,9 +97,9 @@ def test_learner_init():
     assert unit_gain_value
 
     lr_per_sample = learning_rate_schedule([(3,0.1), (2, 0.2), (1, 0.3)], UnitType.sample)
-    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
-    adam_sgd(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
-    adam_sgd(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
+    fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant)
+    fsadagrad(res.parameters, lr_per_sample, momentum_time_constant, unit_gain_value)
+    fsadagrad(res.parameters, lr=lr_per_sample, momentum=momentum_time_constant, unit_gain=unit_gain_value)
 
     gamma, inc, dec, max, min = [0.1]*5
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)
@@ -119,6 +119,11 @@ def test_learner_update():
     assert learner.learning_rate() == 0.2
     assert w.value < w_init
 
+    learner.reset_learning_rate(learning_rate_schedule([0.3]*50 + [0.4]*50, UnitType.sample, 1));
+    assert learner.learning_rate() == 0.3
+    x = learner.update({w: np.asarray([[2.]], dtype=np.float32)}, 100)
+    assert learner.learning_rate() == 0.4
+
 def test_training_parameter_schedule():
     training_parameter_schedule(0.01, unit='minibatch')
     training_parameter_schedule(0.01, unit='sample')
@@ -131,7 +136,7 @@ def test_training_parameter_schedule():
 def test_sweep_based_schedule(tmpdir, device_id):
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
     from .. import cross_entropy_with_softmax, classification_error, plus, reduce_sum
-    from ..trainer import Trainer
+    from ..train.trainer import Trainer
 
     input_dim = 69
 
@@ -188,5 +193,5 @@ def test_sweep_based_schedule(tmpdir, device_id):
 
     # fetch minibatch (multiple sweeps)
     data = mbs.next_minibatch(30, input_map=input_map)
-    trainer.train_minibatch(data, [z.output])
+    trainer.train_minibatch(data, outputs=[z.output])
     assert learner.learning_rate() == 0.0

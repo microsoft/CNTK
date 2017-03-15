@@ -94,34 +94,33 @@ ConvolutionalLayer {numOutputChannels,   # e.g. (1) or BS.Constants.None
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)                                                       # [ 1 x 1 x     K ]
     sharing = true    # TODO: support this
     apply (x) = {
-        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, deconv = false, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        c = Convolution (W, x, filterShape, mapDims = numOutputChannels, stride = stride, sharing = sharing, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
 }.apply
 
-# DeconvLayer -- create a deconvolution layer with optional non-linearity
-DeconvLayer {numOutputChannels,
-             filterShape,         # e.g. (3:3)
-             numInputChannels,
-             bias = true,
-             activation = (x=>x),
-             init = 'glorotUniform',
-             initValueScale = 0.001,
-             initBias = 0,
-             stride = 1, 
-             sharing = true,
-             autoPadding = false,
-             lowerPad = 0, 
-             upperPad = 0,
-             maxTempMemSizeInSamples = 0} =
+# ConvolutionTransposeLayer -- create a convolution transpose layer with optional non-linearity
+ConvolutionTransposeLayer {numOutputChannels,
+                           filterShape,         # e.g. (3:3)
+                           numInputChannels,
+                           bias = true, 
+                           activation = (x=>x), 
+                           init = 'glorotUniform', 
+                           initValueScale = 0.001, 
+                           initBias = 0, 
+                           stride = 1, pad = false, 
+                           lowerPad = 0, upperPad = 0, 
+                           outputShape = None, 
+                           maxTempMemSizeInSamples = 0} =
 {
     outputChannelsShape = _AsArray (numOutputChannels)
     kernelShape = _ConcatArrays (filterShape, outputChannelsShape) 
     paramShape = _ConcatArrays (kernelShape, _AsArray (numInputChannels)) 
     W = ParameterTensor{paramShape, init=init, initValueScale=initValueScale, initOnCPUOnly=true}
     b = ParameterTensor(_ConcatArrays (Repeat (Length (filterShape), 1), outputChannelsShape), initValue = initBias)
+    sharing = true    # TODO: support this
     apply (x) = {
-        c = Convolution(W, x, kernelShape, mapDims=numInputChannels, stride=stride, sharing=sharing, autoPadding=autoPadding, lowerPad=lowerPad, upperPad=upperPad, deconv=true, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
+        c = ConvolutionTranspose (W, x, kernelShape, mapDims=numInputChannels, stride=stride, sharing=sharing, autoPadding=pad, lowerPad=lowerPad, upperPad=upperPad, outputShape = outputShape, maxTempMemSizeInSamples = maxTempMemSizeInSamples)
         res = activation (if bias then c + b else c)
     }.res
 }.apply
@@ -130,14 +129,14 @@ DeconvLayer {numOutputChannels,
 _PoolingLayer {poolKind,            # "max" or "average"
                filterShape,         # e.g. (3:3)
                stride = 1, pad = false,
-               lowerPad = 0, upperPad = 0} = # TODO: support this
+               lowerPad = 0, upperPad = 0, ceilOutDim = false} = # TODO: support this
 {
-    apply (x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad)
+    apply (x) = Pooling (x, poolKind, filterShape, stride = stride, autoPadding = pad, lowerPad = lowerPad, upperPad = upperPad, ceilOutDim = ceilOutDim)
 }.apply
-MaxPoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0} =
-    _PoolingLayer {"max", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad}
-AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0} =
-    _PoolingLayer {"average", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad}
+MaxPoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0, ceilOutDim = false} =
+    _PoolingLayer {"max", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad, ceilOutDim = ceilOutDim}
+AveragePoolingLayer {filterShape, stride = 1, pad = false, lowerPad = 0, upperPad = 0, ceilOutDim = false} =
+    _PoolingLayer {"average", filterShape, stride = stride, pad = pad, lowerPad = lowerPad, upperPad = upperPad, ceilOutDim = ceilOutDim}
 
 MaxUnpoolingLayer {filterShape,     # e.g. (3:3)
                    stride = 1, 
@@ -237,7 +236,7 @@ BatchNormalizationLayer {spatialRank = 0,  # reduce over these dims. E.g. 2 to r
     runMean     = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0} # note: disable learning since these are updated differently
     runVariance = ParameterTensor {normShape, initValue = 0, learningRateMultiplier = 0}
     runCount    = ParameterTensor {(1),       initValue = 0, learningRateMultiplier = 0}
-    apply (x)   = BatchNormalization (x, scale, bias, runMean, runVariance, runCount=runCount, spatial=(spatialRank > 0), normalizationTimeConstant = normalizationTimeConstant, blendTimeConstant = blendTimeConstant, epsilon = epsilon, useCntkEngine = useCntkEngine)
+    apply (x)   = BatchNormalization (x, scale, bias, runMean, runVariance, runCount=runCount, spatial=(spatialRank > 0), normalizationTimeConstant=normalizationTimeConstant, blendTimeConstant=blendTimeConstant, epsilon=epsilon, useCntkEngine=useCntkEngine)
 }.apply
 
 # LayerNormalizationLayer -- create a layer-normalization layer
@@ -607,8 +606,9 @@ ReconcileDynamicAxis(dataInput, layoutInput, tag='') = new ComputationNode [ ope
 ReconcileMBLayout = ReconcileDynamicAxis # back compat
 CastAs (type, data) = ReconcileDynamicAxis (data, type) # read as CastAs<type>(data) where the cast may consist of rearranging the data w.r.t. MBLayout or broadcasting across sequence items
 # ND convo & pooling/unpooling   --why is autoPadding true? Normally one would want to reduce dimensions, no?
-Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, deconv=false, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; transpose = deconv /*plus the function args*/ ]
-Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = _AsNodes (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
+Convolution(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; transpose = false; dimOutputShape = new TensorShape [ dims = 0 ]  /*plus the function args*/ ]
+ConvolutionTranspose(weightNode, inputValueNode, kernelDims, mapDims = 0, stride = 1, sharing = true, autoPadding = true, lowerPad = 0, upperPad = 0, outputShape = None, imageLayout='CHW', maxTempMemSizeInSamples = 0, tag='') = new ComputationNode [ operation = 'Convolution' ; inputs = _AsNodes (weightNode : inputValueNode); kernelShape = new TensorShape [ dims = kernelDims ] ; mapCount = new TensorShape [ dims = mapDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimSharing = new BoolVector [ items = sharing ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; transpose = true; dimOutputShape = new TensorShape [ dims = if BS.Constants.IsNone (outputShape) then 0 else outputShape ]  /*plus the function args*/ ]
+Pooling(input, poolKind/*'max'|'average'*/, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, ceilOutDim = false, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'Pooling' ; inputs = _AsNodes (input); pool = poolKind ; kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] ; ceilOut = ceilOutDim /*plus the function args*/ ]
 MaxUnpooling(unpoolInput, poolInput, kernelDims, stride=1, autoPadding = true, lowerPad = 0, upperPad = 0, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxUnpooling' ; inputs = _AsNodes (unpoolInput : poolInput); kernelShape = new TensorShape [ dims = kernelDims ] ; strideShape = new TensorShape [ dims = stride ] ; dimPadding = new BoolVector [ items = autoPadding ] ; dimPadLower = new TensorShape [ dims = lowerPad ] ; dimPadUpper = new TensorShape [ dims = upperPad ] /*plus the function args*/ ]
 # 2D pooling
 MaxPooling(input, windowWidth, windowHeight, horizontalSubsample, verticalSubsample, imageLayout='CHW', tag='') = new ComputationNode [ operation = 'MaxPooling' ; inputs = _AsNodes (input) /*plus the function args*/ ]
@@ -827,7 +827,7 @@ Sequences = [
     ].out
 
     # rolling window over past N samples
-    # returns a record [ value=..., valid=... ], both being 1-step sequences of [dim x N]. N can optionally be moved to axes >2.
+    # returns a record [ value=..., valid=... ], both being 1-step sequences of [K x N] (K=dim for value and 1 for valid). N can optionally be moved to axes >2.
     # This implementation is suboptimal in that it creates copies for the intermediate steps.
     PastValueWindow (N, in, axis=2) = [
         isLast = Loop.IsLast (in)

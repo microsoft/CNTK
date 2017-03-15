@@ -63,6 +63,7 @@
 %ignore_function CNTK::PlaceholderVariable;
 %ignore_function CNTK::InputVariable;
 %ignore_function CNTK::OutputVariable;
+%ignore_function CNTK::Internal::AddProgressWriters;
 
 %ignore_class CNTK::Variable::CompositeFunction;
 %ignore_class CNTK::Variable::Trainer;
@@ -106,6 +107,10 @@
 %ignore_function CNTK::Function::ReplacePlaceholder;
 %ignore_function CNTK::Function::Function;
 %ignore_function CNTK::Function::RestoreFromCheckpoint;
+%ignore_function CNTK::Function::Gradients;
+// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
+%ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice);
+%ignore CNTK::Function::LoadModel(std::istream& inputStream);
 
 %ignore_class CNTK::Parameter;
 %ignore_class CNTK::Constant;
@@ -153,6 +158,7 @@
 %ignore_function CNTK::Times;
 %ignore_function CNTK::TransposeTimes;
 %ignore_function CNTK::CosineDistance;
+%ignore_function CNTK::CosineDistanceWithNegativeSamples;
 %ignore_function CNTK::BinaryCrossEntropy;
 %ignore_function CNTK::WeightedBinaryCrossEntropy;
 %ignore_function CNTK::SquaredError;
@@ -206,6 +212,7 @@
 
 %ignore_variable CNTK::DefaultVarianceMomentum;
 
+%ignore_function CNTK::FSAdaGradLearner;
 %ignore_function CNTK::AdamLearner;
 %ignore_function CNTK::AdaGradLearner;
 %ignore_function CNTK::RMSPropLearner;
@@ -237,8 +244,11 @@
 
 %ignore_class CNTK::TrainingSession;
 %ignore_function CNTK::CreateBasicTrainingSession;
+%ignore_function CNTK::CreateTrainingSession;
 %ignore_function CNTK::CreateDataParallelDistributedTrainer;
 %ignore_function CNTK::CreateQuantizedDataParallelDistributedTrainer;
+
+%ignore_class CNTK::ProgressWriter;
 
 %ignore_struct std::hash<::CNTK::DistributedWorkerDescriptor>;
 
@@ -260,6 +270,7 @@
 %ignore_function CNTK::Internal::Scatter;
 %ignore_function CNTK::Internal::Slice;
 %ignore_function CNTK::Internal::ReduceElements;
+%ignore_function CNTK::Internal::CosineDistanceWithNegativeSamples;
 
 %ignore_function CNTK::Internal::EnableReversingTensorShapesInErrorMessages;
 %ignore_function CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -271,6 +282,8 @@
 %ignore_function CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore_function CNTK::Internal::SetComputationNetworkTraceLevel;
 %ignore_function CNTK::Internal::GetComputationNetworkTraceLevel;
+%ignore_function CNTK::Internal::SetComputationNetworkTrackGapNans;
+%ignore_function CNTK::Internal::GetComputationNetworkTrackGapNans;
 %ignore_function CNTK::Internal::SetGPUMemoryAllocationTraceLevel;
 %ignore_function CNTK::Internal::ForceSynchronousCUDAKernelExecutions;
 %ignore_function CNTK::Internal::ForceDeterministicAlgorithms;
@@ -285,6 +298,8 @@
 %ignore_function CNTK::Internal::AreEquivalent;
 %ignore_function CNTK::Internal::AreEqual;
 %ignore_function CNTK::PrintBuiltInfo;
+
+%ignore_class CNTK::Internal::TensorBoardFileWriter;
 
 // map the pointer to array
 %apply float INPUT[]  { float *dataBuffer }
@@ -518,6 +533,12 @@
 %rename (_IsPrimitive) CNTK::Function::IsPrimitive;
 %rename (_IsBlock) CNTK::Function::IsBlock;
 
+// Customize type mapping for modelBuffer, used by LoadModel
+%apply char* INPUT { char* modelBuffer }
+%typemap(ctype) (char* modelBuffer) "char*"
+%typemap(imtype) (char* modelBuffer) "byte[]"
+%typemap(cstype) (char* modelBuffer) "byte[]"
+
 %typemap(cscode) CNTK::Function %{
 
     // This is a reference to prevent premature garbage collection 
@@ -527,6 +548,11 @@
     private System.Collections.Generic.List<Variable> argumentList;
     private System.Collections.Generic.List<Variable> outputList;
     private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
+
+    public static Function LoadModel(byte[] modelBuffer, DeviceDescriptor computeDevice)
+    {
+        return LoadModel(modelBuffer, (uint)modelBuffer.Length, computeDevice);
+    }
 
     public string Name
     {
@@ -904,6 +930,7 @@
 %rename (_IsSparse) CNTK::Value::IsSparse;
 %rename (_IsReadOnly) CNTK::Value::IsReadOnly;
 %rename (_MaskedCount) CNTK::Value::MaskedCount;
+
 
 %typemap(cscode) CNTK::Value %{
 

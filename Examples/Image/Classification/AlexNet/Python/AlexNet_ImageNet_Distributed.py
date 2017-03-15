@@ -13,16 +13,16 @@ import cntk
 import _cntk_py
 
 from cntk.utils import *
+from cntk.training_session import *
 from cntk.ops import *
-from cntk.distributed import data_parallel_distributed_learner, Communicator
+from cntk.distributed import *
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
 import cntk.io.transforms as xforms
-from cntk.layers import Placeholder, Block, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
+from cntk.layers import Placeholder, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
 from cntk.initializer import normal
 
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
-data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "ImageNet")
 model_path = os.path.join(abs_path, "Models")
 log_dir = None
 
@@ -80,7 +80,7 @@ def LocalResponseNormalization(k, n, alpha, beta, name=''):
     b = cntk.ops.reshape(y, cntk.InferredDimension, 0, 2)
     den = cntk.ops.exp(beta * cntk.ops.log(k + b))
     apply_x = cntk.ops.element_divide(x, den)
-    return cntk.blocks.Block(apply_x, 'LocalResponseNormalization', name, make_block=True)
+    return apply_x
 
 # Create the network.
 def create_alexnet():
@@ -90,29 +90,29 @@ def create_alexnet():
     label_var = input_variable((num_classes))
 
     # apply model to input
-    # remove mean value
+    # remove mean value 
     input = minus(feature_var, constant(114), name='mean_removed_input')
-
+    
     with default_options(activation=None, pad=True, bias=True):
         z = Sequential([
-            # we separate Convolution and ReLU to name the output for feature extraction (usually before ReLU)
+            # we separate Convolution and ReLU to name the output for feature extraction (usually before ReLU) 
             Convolution2D((11,11), 96, init=normal(0.01), pad=False, strides=(4,4), name='conv1'),
             Activation(activation=relu, name='relu1'),
             LocalResponseNormalization(1.0, 2, 0.0001, 0.75, name='norm1'),
             MaxPooling((3,3), (2,2), name='pool1'),
 
-            Convolution2D((5,5), 192, init=normal(0.01), init_bias=0.1, name='conv2'),
+            Convolution2D((5,5), 192, init=normal(0.01), init_bias=0.1, name='conv2'), 
             Activation(activation=relu, name='relu2'),
             LocalResponseNormalization(1.0, 2, 0.0001, 0.75, name='norm2'),
             MaxPooling((3,3), (2,2), name='pool2'),
 
-            Convolution2D((3,3), 384, init=normal(0.01), name='conv3'),
+            Convolution2D((3,3), 384, init=normal(0.01), name='conv3'), 
             Activation(activation=relu, name='relu3'),
-            Convolution2D((3,3), 384, init=normal(0.01), init_bias=0.1, name='conv4'),
+            Convolution2D((3,3), 384, init=normal(0.01), init_bias=0.1, name='conv4'), 
             Activation(activation=relu, name='relu4'),
-            Convolution2D((3,3), 256, init=normal(0.01), init_bias=0.1, name='conv5'),
-            Activation(activation=relu, name='relu5'),
-            MaxPooling((3,3), (2,2), name='pool5'),
+            Convolution2D((3,3), 256, init=normal(0.01), init_bias=0.1, name='conv5'), 
+            Activation(activation=relu, name='relu5'), 
+            MaxPooling((3,3), (2,2), name='pool5'), 
 
             Dense(4096, init=normal(0.005), init_bias=0.1, name='fc6'),
             Activation(activation=relu, name='relu6'),
@@ -140,26 +140,30 @@ def create_alexnet():
     }
 
 # Create trainer
-def create_trainer(network, epoch_size, num_quantization_bits):
+def create_trainer(network, epoch_size, num_quantization_bits, printer, block_size, warm_up):
     # Set learning parameters
     lr_per_mb         = [0.01]*25 + [0.001]*25 + [0.0001]*25 + [0.00001]*25 + [0.000001]
     lr_schedule       = cntk.learning_rate_schedule(lr_per_mb, unit=cntk.learner.UnitType.minibatch, epoch_size=epoch_size)
     mm_schedule       = cntk.learner.momentum_schedule(0.9)
     l2_reg_weight     = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
 
+    if block_size != None and num_quantization_bits != 32:
+        raise RuntimeError("Block momentum cannot be used with quantization, please remove quantized_bits option.")
+
     # Create learner
     local_learner = cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
     # Since we reuse parameter settings (learning rate, momentum) from Caffe, we set unit_gain to False to ensure consistency
-    parameter_learner = data_parallel_distributed_learner(
-        local_learner,
-        num_quantization_bits=num_quantization_bits,
-        distributed_after=0)
 
     # Create trainer
-    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner)
+    if block_size != None:
+        parameter_learner = block_momentum_distributed_learner(local_learner, block_size=block_size)
+    else:
+        parameter_learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
+
+    return cntk.Trainer(network['output'], (network['ce'], network['pe']), parameter_learner, printer)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore):
+def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -167,26 +171,18 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         network['label']: train_source.streams.labels
     }
 
-    training_session = cntk.training_session(
-        training_minibatch_source = train_source,
-        trainer = trainer,
-        model_inputs_to_mb_source_mapping = input_map,
-        mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
-        progress_printer = progress_printer,
-#        checkpoint_frequency = epoch_size,
-        checkpoint_filename = os.path.join(model_path, model_name),
-#        save_all_checkpoints = True,
-        progress_frequency = epoch_size,
-        cv_source = test_source,
-        cv_mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
-#        cv_frequency = epoch_size,
-        restore = restore)
-
-    # Train all minibatches
-    training_session.train()
+    # Train all minibatches 
+    training_session(
+        trainer=trainer, mb_source = train_source,
+        var_to_stream = input_map,
+        mb_size = minibatch_size,
+        progress_frequency=epoch_size,
+        checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),
+        cv_config= CrossValidationConfig(source=test_source, mb_size=minibatch_size)
+    ).train()
 
 # Train and evaluate the network.
-def alexnet_train_and_eval(train_data, test_data, num_quantization_bits=32, minibatch_size=256, epoch_size = 1281167, max_epochs=112,
+def alexnet_train_and_eval(train_data, test_data, num_quantization_bits=32, block_size=3200, warm_up=0, minibatch_size=256, epoch_size = 1281167, max_epochs=112,
                            restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=True):
     _cntk_py.set_computation_network_trace_level(0)
 
@@ -199,15 +195,16 @@ def alexnet_train_and_eval(train_data, test_data, num_quantization_bits=32, mini
         num_epochs=max_epochs)
 
     network = create_alexnet()
-    trainer = create_trainer(network, epoch_size, num_quantization_bits)
+    trainer = create_trainer(network, epoch_size, num_quantization_bits, progress_printer, block_size, warm_up)
     train_source = create_image_mb_source(train_data, True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, False, total_number_of_samples=FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, restore)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore)
 
 
 if __name__=='__main__':
 
     parser = argparse.ArgumentParser()
+    data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "ImageNet")
 
     parser.add_argument('-datadir', '--datadir', help='Data directory where the ImageNet dataset is located', required=False, default=data_path)
     parser.add_argument('-outputdir', '--outputdir', help='Output directory for checkpoints and models', required=False, default=None)
@@ -218,30 +215,41 @@ if __name__=='__main__':
     parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int, required=False, default='32')
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
+    parser.add_argument('-b', '--block_samples', type=int, help="Number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", required=False, default=None)
+    parser.add_argument('-a', '--distributed_after', help='Number of samples to train with before running distributed', type=int, required=False, default='0')
 
     args = vars(parser.parse_args())
 
     if args['outputdir'] is not None:
         model_path = args['outputdir'] + "/models"
-    if args['datadir'] is not None:
-        data_path = args['datadir']
     if args['logdir'] is not None:
         log_dir = args['logdir']
     if args['device'] is not None:
-        cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
+        if Communicator.rank() == 0:
+            cntk.device.set_default_device(cntk.device.gpu(args['device']))
+        else:
+            cntk.device.set_default_device(cntk.device.cpu())
 
-    train_data=os.path.join(data_path, 'train_map.txt')
-    test_data=os.path.join(data_path, 'val_map.txt')
+    data_path = args['datadir']
+
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
+
+    train_data = os.path.join(data_path, 'train_map.txt')
+    test_data = os.path.join(data_path, 'val_map.txt')
 
     try:
         alexnet_train_and_eval(train_data, test_data,
-                               minibatch_size=args['minibatch_size'],
-                               epoch_size=args['epoch_size'],
-                               num_quantization_bits=args['quantized_bits'],
                                max_epochs=args['num_epochs'],
                                restore=not args['restart'],
                                log_to_file=args['logdir'],
                                num_mbs_per_log=200,
+                               num_quantization_bits=args['quantized_bits'],
+                               block_size=args['block_samples'],
+                               warm_up=args['distributed_after'],
+                               minibatch_size=args['minibatch_size'],
+                               epoch_size=args['epoch_size'],
                                gen_heartbeat=True)
     finally:
         cntk.distributed.Communicator.finalize()

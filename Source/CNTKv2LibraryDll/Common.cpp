@@ -19,6 +19,7 @@
 #include "Basics.h"
 #include "ProgressTracing.h"
 #include "buildinfo.h"
+#include "Constants.h"
 
 extern bool g_shareNodeValueMatrices;
 using namespace Microsoft::MSR::CNTK;
@@ -282,7 +283,7 @@ namespace CNTK
             if (view1.GetDataType() == DataType::Double)
                 return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
 
-            LogicError("Unknown DataType");
+            LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }
 
         std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
@@ -366,7 +367,7 @@ namespace CNTK
             if (value1.GetDataType() == DataType::Double)
                 return AreEqual<double>(value1, value2, relativeTolerance, absoluteTolerance);
 
-            LogicError("Unknown DataType");
+            LogicError("AreEqual(Value): Unknown DataType.");
         }
 
         std::atomic<int> s_computationNetworkTraceLevel(0);
@@ -378,6 +379,17 @@ namespace CNTK
         int GetComputationNetworkTraceLevel()
         {
             return s_computationNetworkTraceLevel.load();
+        }
+
+        std::atomic<bool> s_computationNetworkTrackGapNans(false);
+        void SetComputationNetworkTrackGapNans(bool enable)
+        {
+            s_computationNetworkTrackGapNans.store(enable);
+        }
+
+        bool GetComputationNetworkTrackGapNans()
+        {
+            return s_computationNetworkTrackGapNans.load();
         }
 
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)
@@ -399,6 +411,11 @@ namespace CNTK
         bool MaxNumCPUThreadsSet()
         {
             return s_threadsAreSet;
+        }
+
+        size_t DefaultPackThresholdSizeInBytes()
+        {
+            return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
         }
     }
 
@@ -437,7 +454,11 @@ namespace CNTK
 
         // As a testing backdoor we allow changing the default device even after being "used/frozen"
         if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
-            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
+        {
+            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used "
+                         "as the default device in a CNTK API call; Current default = %S, New default = %S.",
+                         DefaultDevice().AsString().c_str(), newDefaultDevice.AsString().c_str());
+        }
 
         std::call_once(s_initDefaultDeviceFlag, []
         {
@@ -553,6 +574,12 @@ namespace CNTK
     {
         static const Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
         return s_defaultDynamicAxis;
+    }
+
+    /*static*/ const Axis& Axis::OperandSequenceAxis()
+    {
+        static const Axis s_operandSequenceAxis(L"__operandSequenceAxis");
+        return s_operandSequenceAxis;
     }
 
     /*static*/ const Axis& Axis::DefaultBatchAxis()
