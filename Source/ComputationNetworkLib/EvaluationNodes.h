@@ -686,6 +686,26 @@ public:
         return (ElemType)(wrongSampleNum * totalframeNum / totalSampleNum);
     }
 
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_SubPen;
+        fstream << m_DelPen;
+        fstream << m_InsPen;
+        fstream << m_SquashInputs;
+        fstream << m_tokensToIgnore;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_SubPen;
+        fstream >> m_DelPen;
+        fstream >> m_InsPen;
+        fstream >> m_SquashInputs;
+        fstream >> m_tokensToIgnore;
+    }
+
     float SubstitutionPenalty() const { return m_SubPen; }
     float DeletionPenalty() const { return m_DelPen; }
     float InsertionPenalty() const { return m_InsPen; }
