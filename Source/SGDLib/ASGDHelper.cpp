@@ -180,8 +180,8 @@ namespace Microsoft {
                         mat.CopyToArray(px, m_tableLength[i]);
                     }
 
-                    for (int i = 1; i < m_localBufferNum; i++)
-                        memcpy(m_cpuAsyncBuffer[i], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
+                    for (int idx = 1; idx < m_localBufferNum; idx++)
+                        memcpy(m_cpuAsyncBuffer[idx], m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
                     memcpy(m_deltaArray, m_cpuAsyncBuffer[0], sizeof(ElemType) * m_totalModelSize);
 
@@ -322,10 +322,10 @@ namespace Microsoft {
                             // copy parameters from CPU buffer to GPU buffer
                             for (int widx = 0; widx < m_tableCount; widx++)
                             {
-                                ElemType * py = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
+                                ElemType * wpy = m_cpuAsyncBuffer[m_bufferIndexInUse] + m_tableOffsets[widx];
 
                                 CUDA_CALL(cudaMemcpyAsync(m_gpuAsyncBuffer[m_bufferIndexInUse][widx].Data(),
-                                    py,
+                                    wpy,
                                     m_gpuAsyncBuffer[m_bufferIndexInUse][widx].GetNumElements() * sizeof(ElemType),
                                     cudaMemcpyHostToDevice,
                                     _commStream));
@@ -415,8 +415,8 @@ namespace Microsoft {
                             ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                             Microsoft::MSR::CNTK::Matrix<ElemType> &mat = node->Value();
 
-                            ElemType * px = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
-                            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), px);
+                            ElemType * wpx = m_cpuAsyncBuffer[0] + m_tableOffsets[i];
+                            mat.SetValue(mat.GetNumRows(), mat.GetNumCols(), mat.GetDeviceId(), wpx);
                         }
                         m_reportTimer.Stop();
                         if (m_traceLevel > 3)
@@ -464,8 +464,7 @@ namespace Microsoft {
                         m_addOptions.at(i)->set_learning_rate(1.f);
                     }
 
-                    int i = 0;
-                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++, i++)
+                    for (auto nodeIter = learnableNodes.begin(); nodeIter != learnableNodes.end(); nodeIter++)
                     {
                         ComputationNodePtr node = dynamic_pointer_cast<ComputationNode<ElemType>>(*nodeIter);
                         Matrix<ElemType> &mat = node->Value();
