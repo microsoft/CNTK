@@ -931,7 +931,7 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixAdam, RandomSeedFixture)
 BOOST_FIXTURE_TEST_CASE(CPUMatrixOneHot, RandomSeedFixture)
 {
     const size_t num_class = 6;
-    
+
     DMatrix m0(2, 2);
     m0(0, 0) = 1;
     m0(0, 1) = 2;
@@ -983,6 +983,35 @@ BOOST_FIXTURE_TEST_CASE(CPUMatrixOneHot, RandomSeedFixture)
     BOOST_CHECK(dirty_m.GetNumRows() == 12);
     BOOST_CHECK(dirty_m.GetNumCols() == 2);
     BOOST_CHECK(dirty_m.IsEqualTo(dirtyExpect, 1e-6));
+}
+
+BOOST_FIXTURE_TEST_CASE(CPUMatrixGatherFromTarget, RandomSeedFixture)
+{
+    const size_t row_elements = 2;
+
+    DMatrix m0(2, 2);
+    m0(0, 0) = 1;
+    m0(0, 1) = 2;
+    m0(1, 0) = 3;
+    m0(1, 1) = 4;
+
+    DMatrix m1(row_elements, 6);
+    m1(0, 1) = m1(1, 1) = 4;
+    m1(0, 2) = m1(1, 2) = 3;
+    m1(0, 3) = m1(1, 3) = 2;
+    m1(0, 4) = m1(1, 4) = 1;
+
+    DMatrix expect(4, 2);
+    expect(0, 0) = expect(1, 0) = 4;
+    expect(2, 0) = expect(3, 0) = 2;
+    expect(0, 1) = expect(1, 1) = 3;
+    expect(2, 1) = expect(3, 1) = 1;
+
+    DMatrix m2;
+    m2.GatherFromTarget(m0, m1, row_elements);
+    BOOST_CHECK(m2.GetNumRows() == 4);
+    BOOST_CHECK(m2.GetNumCols() == 2);
+    BOOST_CHECK(m2.IsEqualTo(expect, 1e-6));
 }
 
 BOOST_AUTO_TEST_SUITE_END()
