@@ -969,7 +969,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
     size_t numSubminibatchesNeeded = DataReaderHelpers::GetNumSubminibatchesNeeded<ElemType>(trainSetDataReader, m_maxSamplesInRAM, m_numSubminiBatches, tunedMBSize);
 
     // this is non-trivial, we need a manager object to handle this
-    if (numSubminibatchesNeeded > 1)
+    if (numSubminibatchesNeeded > 1 || m_maxSamplesInRAM < SIZE_MAX)
         smbDispatcher.Init(net, learnableNodes, criterionNodes, evaluationNodes);
 
     // The following is a special feature only supported by the Kaldi2Reader for more efficient sequence training.
@@ -1007,13 +1007,11 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
         if (useDistributedMBReading)
             fprintf(stderr, ", distributed reading is ENABLED");
 
-        if (numSubminibatchesNeeded > 1)
-        {
-            if (m_maxSamplesInRAM < SIZE_MAX)
-                fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
-            else
-                fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
-        }
+        if (m_maxSamplesInRAM < SIZE_MAX)
+            fprintf(stderr, ", with maximum %d samples in RAM", (int)m_maxSamplesInRAM);
+        else if (numSubminibatchesNeeded > 1)
+            fprintf(stderr, ", with %d subminibatch", (int)numSubminibatchesNeeded);
+
         fprintf(stderr, ".\n");
     }
 
@@ -1136,7 +1134,20 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
 
             // We optionally break the minibatch into sub-minibatches.
             // This, when enabled, is used when a full minibatch does not fit into GPU RAM.
-            size_t actualNumSubminibatches = numSubminibatchesNeeded <= 1 ? 1 : smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
+            size_t actualNumSubminibatches = 1;
+            if (numSubminibatchesNeeded <= 1)
+            { // auto-scale subminibatches based on actualMBSize
+                if (actualMBSize > m_maxSamplesInRAM)
+                {
+                    int nsmb = (actualMBSize + m_maxSamplesInRAM - 1) / m_maxSamplesInRAM;
+                    actualNumSubminibatches = smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, nsmb);
+                    fprintf(stderr, "auto-scaled to %d subminibatches\n", (int)actualNumSubminibatches);
+                }
+            }
+            else
+            {
+                actualNumSubminibatches = smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, numSubminibatchesNeeded);
+            }
             for (size_t ismb = 0; ismb < actualNumSubminibatches; ismb++)
             {
                 if (actualNumSubminibatches > 1)
