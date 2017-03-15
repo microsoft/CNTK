@@ -110,11 +110,10 @@ extra_compile_args = [
 if IS_WINDOWS:
     extra_compile_args += [
         "/EHsc",
-        "/DEBUG",
         "/Zi",
         "/WX"
     ]
-    extra_link_args = ['/DEBUG']
+    extra_link_args = []
     runtime_library_dirs = []
 else:
     extra_compile_args += [
