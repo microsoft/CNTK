@@ -142,8 +142,7 @@ cntk_module = Extension(
 
     include_dirs = [
         cntkV2LibraryInclude,
-        os.path.join(CNTK_SOURCE_PATH, "Math"),
-        os.path.join(CNTK_SOURCE_PATH, "Common", "Include"),
+        os.path.join(CNTK_SOURCE_PATH, "Common", "Include"), # ExceptionWithCallStack.h
         numpy.get_include(),
     ],
 
@@ -155,7 +154,7 @@ cntk_module = Extension(
 # Do not include examples
 packages = [x for x in find_packages() if x.startswith('cntk') and not x.startswith('cntk.swig')]
 
-package_data = { 'cntk': ['pytest.ini', 'io/tests/tf_data.txt'] }
+package_data = { 'cntk': ['pytest.ini'] }
 
 if IS_WINDOWS:
     # On Windows copy all runtime libs to the base folder of Python
