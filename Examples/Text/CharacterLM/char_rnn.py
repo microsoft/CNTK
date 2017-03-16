@@ -9,11 +9,13 @@ import numpy as np
 import os
 import sys
 from cntk import Trainer, Axis
-from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
+from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.ops import input_variable
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 from cntk.ops.functions import load_model
 from cntk.layers import LSTM, Stabilizer, Recurrence, Dense, For, Sequential
-from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.logging import log_number_of_parameters, ProgressPrinter
 
 # model hyperparameters
 hidden_dim = 256

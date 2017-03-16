@@ -6,6 +6,7 @@
 
 import numpy as np
 from cntk import *
+from cntk.layers import *
 from cntk.layers.typing import *
 
 # Note: We do not test gradients here, assuming that those are tested elsewhere.

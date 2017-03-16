@@ -57,12 +57,12 @@ def deconv_mnist(max_epochs=3):
     minibatch_size = 64
 
     # Set learning parameters
-    lr_schedule = cntk.learning_rate_schedule([0.00015], cntk.learner.UnitType.sample, epoch_size)
-    mm_schedule = cntk.learner.momentum_as_time_constant_schedule([600], epoch_size)
+    lr_schedule = cntk.learning_rate_schedule([0.00015], cntk.learners.UnitType.sample, epoch_size)
+    mm_schedule = cntk.learners.momentum_as_time_constant_schedule([600], epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=True)
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training')
+    learner = cntk.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=True)
+    progress_printer = cntk.logging.ProgressPrinter(tag='Training')
     trainer = cntk.Trainer(z, (rmse_loss, rmse_eval), learner, progress_printer)
 
     # define mapping from reader streams to network inputs
@@ -70,7 +70,7 @@ def deconv_mnist(max_epochs=3):
         input_var : reader_train.streams.features
     }
 
-    cntk.utils.log_number_of_parameters(z) ; print()
+    cntk.logging.log_number_of_parameters(z) ; print()
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs

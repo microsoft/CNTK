@@ -5,4 +5,4 @@
 # ==============================================================================
 
 # To __remove__
-from cntk.layers.models.attention import *
+# from cntk.layers.models.attention import *

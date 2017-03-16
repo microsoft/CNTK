@@ -66,7 +66,8 @@ def test_times_2d_sparse_sequence_operand(device_id):
 
 
 def test_training_2d_sparse_sequence_operand(device_id):
-    from .. import times, cross_entropy_with_softmax
+    from .. import times
+    from cntk.losses import cross_entropy_with_softmax
 
     dev = cntk_device(device_id)
     vocab_size = 6

@@ -5,4 +5,4 @@
 # ==============================================================================
 
 # To __remove__
-from cntk.train.training_session import *
+# from cntk.train.training_session import *

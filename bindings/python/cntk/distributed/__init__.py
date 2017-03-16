@@ -5,4 +5,4 @@
 # ==============================================================================
 
 # To __remove__
-from cntk.train.distributed import *
+# from cntk.train.distributed import *
