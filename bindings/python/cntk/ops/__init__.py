@@ -918,7 +918,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_NO_INFERRED_
         output_rank (int): in case we have tensors as arguments, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
-        infer_input_rank_to_map ('int'): meant for internal use only. Always use default value
+        infer_input_rank_to_map (int): meant for internal use only. Always use default value
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -2002,7 +2002,7 @@ def slice(x, axis, begin_index, end_index, name=''):
         name (str, optional): the name of the Function instance in the network
 
     See also:
-        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+        Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
         :class:`~cntk.ops.functions.Function`

@@ -1,6 +1,6 @@
 
 .. some aliases
-.. _CNTK: http://cntk.ai/
+.. _CNTK: https://cntk.ai/
 
 Python API for CNTK (2.0.beta15.0)
 ==================================

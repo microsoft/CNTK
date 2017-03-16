@@ -432,7 +432,7 @@ def sgd(parameters, lr,
 
     See also:
         [1] L. Bottou. `Stochastic Gradient Descent Tricks
-        <http://research.microsoft.com/pubs/192769/tricks-2012.pdf>`_. Neural
+        <https://www.microsoft.com/en-us/research/publication/stochastic-gradient-tricks>`_. Neural
         Networks: Tricks of the Trade: Springer, 2012.
     '''
     _verify_learning_rate_type(lr)
@@ -699,7 +699,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
-        <http://arxiv.org/abs/1412.6980>`_. International Conference for
+        <https://arxiv.org/abs/1412.6980>`_. International Conference for
         Learning Representations, 2015.
     '''
     _verify_learning_rate_type(lr)
@@ -761,7 +761,7 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
-        <http://arxiv.org/abs/1412.6980>`_. International Conference for
+        <https://arxiv.org/abs/1412.6980>`_. International Conference for
         Learning Representations, 2015. 
     '''
     import warnings

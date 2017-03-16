@@ -61,7 +61,7 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
         frequency (int): frequency in samples for cross validation
           If ``sys.maxsize``, a single cross validation is performed at the end of training.
         schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for cross validation
-        callback (func (index, avarage_error, cv_num_samples, cv_num_minibatches)): Callback that will 
+        callback (func (index, average_error, cv_num_samples, cv_num_minibatches)): Callback that will
           be called with frequency which can implement custom cross validation logic,
           returns False if training should be stopped.
     '''
