@@ -2158,7 +2158,6 @@ namespace CNTK
             return Create(sampleShape, sequences, {}, device, readOnly);
         }
 
-
         ///
         /// Create a new Value object containing a collection of variable length sequences.
         ///
