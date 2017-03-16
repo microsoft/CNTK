@@ -36,7 +36,7 @@ if [ "$OS" == "Windows_NT" ]; then
   SOURCE_DIR="C:\\repos\\cntk"
   DLL_DIR="C:\\repos\\cntk\\x64\\"$TEST_STRING
   cd $TEST_BIN_DIR
-  ../../bindings/java/Swig/run-java-test.cmd $SOURCE_DIR $DLL_DIR || exit $?
+  ../../bindings/java/JavaEvalTest/run-java-test.cmd $SOURCE_DIR $DLL_DIR || exit $?
 
   # Check whether any exceptions encountered
   exit 0
