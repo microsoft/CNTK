@@ -164,18 +164,54 @@ def _sanitize_function(f):
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
-    Layer factory function to create a function that runs a cell function recurrently over a time sequence, with initial state.
+    Layer factory function to create a function that runs a cell function recurrently over an input sequence, with initial state.
+    This layer is very similar to :function:`~cntk.layers.Recurrence`,
+    except that the initial state is data dependent, and thus passed to the layer function as a data input
+    rather than as an initialization parameter to the factory function.
     This form is meant for use in sequence-to-sequence scenarios.
-    The difference to Recurrence() is that this returns a function that accepts the initial state as data argument(s).
-    Initial state consists of N arguments, matching ``step_function.
+    This documentation only covers this case; for additional information on parameters, see :function:`~cntk.layers.Recurrence`.
+
+    The layer function returned by this factory function accepts the initial state as data argument(s).
+    It has the signature ``(initial_state, input_sequence) -> output_sequence``.
+    If the step function has multiple state variables, then the first N parameters are the initial state variables.
+
+    The initial state can be non-sequential data, as one would have for a plain sequence-to-sequence model,
+    or sequential data. In the latter case, the last item is the initial state.
+
+    Example:
+     >>> from cntk.layers import *
+     >>> from cntk.layers.typing import *
+
+     >>> # a plain sequence-to-sequence model in training (where label length is known)
+     >>> en = Input(**SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
+     >>> fr = Input(**SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
+
+     >>> embed = Embedding(300)
+     >>> encoder = Recurrence(LSTM(500), return_full_state=True)
+     >>> decoder = RecurrenceFrom(LSTM(500))       # decoder starts from a data-dependent initial state, hence -From()
+     >>> emit = Dense(30000)
+     >>> h, c = encoder(embed(en)).outputs         # LSTM encoder has two outputs (h, c)
+     >>> z = emit(decoder(h, c, past_value(fr)))   # decoder takes encoder outputs as initial state
+     >>> loss = C.cross_entropy_with_softmax(z, fr)
 
     Args:
      step_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
-      This function xxx
+      This function must have N+1 inputs and N outputs, where N is the number of state variables
+      (typically 1 for GRU and plain RNNs, and 2 for LSTMs).
+     go_backwards (bool, defaults to ``False``): if ``True`` then run the recurrence from the end of the sequence to the start.
+, c     initial_state (scalar or tensor without batch dimension; or a tuple thereof):
+      the initial value for the state. This can be a constant or a learnable parameter.
+      In the latter case, if the step function has more than 1 state variable,
+      this parameter must be a tuple providing one initial state for every state variable.
+     return_full_state (bool, defaults to ``False``): if ``True`` and the step function has more than one
+      state variable, then the layer returns a all state variables (a tuple of sequences);
+      whereas if not given or ``False``, only the first state variable is returned to the caller.
 
     Returns:
         cntk.ops.functions.Function: 
-        A function that accepts one argument, which must be a sequence, and performs the recurrent operation on it
+        A function that accepts arguments ``(initial_state_1, initial_state_2, ..., input_sequence)``,
+        where the number of initial state variables must match the step function's.
+        The initial state can be a sequence, in which case its last (or first if ``go_backwards``) item is used.
     '''
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
@@ -264,10 +300,11 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     ``initial_state`` must be a constant. To pass initial_state as a data input, e.g. for a sequence-to-sequence
     model, use :function:`~cntk.layers.sequence.RecurrenceFrom()` instead.
 
+    Note: ``Recurrence()`` is the equivalent to what in functional programming is often called ``scanl()``.
+
     Example:
      >>> from cntk.layers import Input, Constant, Sequential
      >>> from cntk.layers.typing import Tensor, Sequence
-     >>> from cntk.ops import plus
 
      >>> # a recurrent LSTM layer
      >>> lstm_layer = Recurrence(LSTM(500))
@@ -288,9 +325,9 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      >>> x0 = np.array([[   3,    2],
      ...                [  13,   42],
      ...                [-100, +100]])
-     >>> #cum_sum = Recurrence(plus, initial_state=np.array([0, 0.5]))
+     >>> #cum_sum = Recurrence(C.plus, initial_state=np.array([0, 0.5]))
      >>> # BUGBUG: passing a NumPy array fails
-     >>> cum_sum = Recurrence(plus, initial_state=Constant([0, 0.5]))
+     >>> cum_sum = Recurrence(C.plus, initial_state=Constant([0, 0.5]))
      >>> y = cum_sum(x)
      >>> y(x0)
      array([[[   3. ,    2.5],
