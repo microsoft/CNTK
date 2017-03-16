@@ -542,7 +542,7 @@ class Function(cntk_py.Function):
             >>> # 1st sequence: word 1
             >>> # 2nd sequence: words 2 and 4
             >>> batch = [[1],[2,4]]
-            >>> sparse_batch = C.one_hot(batch, vocab_size)
+            >>> sparse_batch = C.Value.one_hot(batch, vocab_size)
             >>> _, fv = f.forward({v:sparse_batch})
             >>> list(fv.values())[0]
             [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),

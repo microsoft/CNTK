@@ -300,14 +300,20 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     '''
     def __init__(self, value=None, shape=None, dtype=None, device=None, name=''):
 
-        if dtype is None:
+        if not device:
+            device = use_default_device()
+
+        if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
+            shape = ()
+
+        if dtype is not None:
+            if isinstance(value, np.ndarray) and dtype != value.dtype:
+                value = np.array(value, dtype=dtype)
+        else:
             if isinstance(value, np.ndarray):
                 dtype = value.dtype
             else:
                 dtype = np.float32
-
-        if device is None:
-            device = DeviceDescriptor.use_default_device()
 
         if np.isscalar(value):
             super(Constant, self).__init__(sanitize_shape(shape),

@@ -115,7 +115,7 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
     criterion = create_criterion_function(model, normalize=lambda x: x / 256)
     #debughelpers.dump_function(criterion, 'criterion')
 
-    #from cntk.graph import plot
+    #from cntk.logging.graph import plot
     #plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))
 
     # iteration parameters
