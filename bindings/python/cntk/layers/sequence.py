@@ -14,8 +14,39 @@ from .blocks import _get_initial_state_or_default, _inject_name
 
 def Delay(T=1, initial_state=default_override_or(0), name=''):
     '''
+    Delay(T=1, initial_state=0, name='')
+
     Layer factory function to create a layer that delays input the input by a given number of time steps. Negative means future.
-    This is provided as a layer instead of a function so that it can easily be used in a Sequential() expression.
+    This is provided as a layer that wraps :function:`~cntk.ops.sequence.delay` so that it can easily be used in a Sequential() expression.
+
+    Example:
+        >>> # create example input: one sequence with 4 tensors of shape (3, 2)
+        >>> from cntk.layers import Input, Sequential
+        >>> from cntk.layers.typing import Tensor, Sequence
+        >>> x = Input(**Sequence[Tensor[2]])
+        >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
+        >>> x0
+        array([[[ 0.,  1.],
+                [ 2.,  3.],
+                [ 4.,  5.]]], dtype=float32)
+        >>> # trigram expansion: augment each item of the sequence with its left and right neighbor
+        >>> make_trigram = Sequential([tuple(Delay(T) for T in (-1,0,1)),  # create 3 shifted versions
+        ...                            splice])                            # concatenate them
+        >>> y = make_trigram(x)
+        >>> y(x0)
+        array([[[ 2.,  3.,  0.,  1.,  0.,  0.],
+                [ 4.,  5.,  2.,  3.,  0.,  1.],
+                [ 0.,  0.,  4.,  5.,  2.,  3.]]], dtype=float32)
+        >>> #    --(t-1)--  ---t---  --(t+1)--      
+
+    Args:
+        T (int): the number of time steps to look into the past, where negative values mean to look into the future, and 0 means a no-op (default 1).
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function: 
+        A function that accepts one argument (which must be a sequence) and returns it delayed by ``T`` steps
     '''
     initial_state = get_default_override(Delay, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
@@ -39,8 +70,56 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
 # TODO: reconsider the name. Windowed()?
 def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name=''):
     '''
+    PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name='')
+
     Layer factory function to create a function that returns a static, maskable view for N past steps over a sequence along the given 'axis'.
-    It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
+    It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(N,1).
+
+    This is used for attention modeling. CNTK presently does not support nested dynamic axes.
+    Since attention models require nested axes (encoder hidden state vs. decoder hidden state),
+    this layer can be used to map the encoder's dynamic axis to a static tensor axis.
+    The static axis has a maximum length (``window_size``). To account for shorter input
+    sequences, this function also returns a validity mask of the same axis dimension.
+    Longer sequences will be truncated.
+
+    Example:
+        >>> # create example input: one sequence with 4 tensors of shape (3, 2)
+        >>> from cntk.layers import Input, Sequential
+        >>> from cntk.layers.typing import Tensor, Sequence
+        >>> x = Input(**Sequence[Tensor[2]])
+        >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
+        >>> x0
+        array([[[ 0.,  1.],
+                [ 2.,  3.],
+                [ 4.,  5.]]], dtype=float32)
+        >>> # convert dynamic-length sequence to a static-dimension tensor
+        >>> to_static_axis = PastValueWindow(4, axis=-2)  # axis=-2 means second last
+        >>> y = to_static_axis(x)
+        >>> value, valid = y(x0)
+        >>> # 'value' contains the items from the back, padded with 0
+        >>> value
+        array([[[ 4.,  5.],
+                [ 2.,  3.],
+                [ 0.,  1.],
+                [ 0.,  0.]]], dtype=float32)
+        >>> # 'valid' contains a scalar 1 for each valid item, and 0 for the padded ones
+        >>> # E.g., when computing the attention softmax, only items with a 1 should be considered.
+        >>> valid
+        array([[[ 1.],
+                [ 1.],
+                [ 1.],
+                [ 0.]]], dtype=float32)
+
+    Args:
+        window_size (int): maximum number of items in sequences. The `axis` will have this dimension.
+        axis (int or :class:`~cntk.axis.Axis`, optional, keyword only): axis along which the
+         concatenation will be performed
+        name (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function: 
+        A function that accepts one argument, which must be a sequence. It returns a fixed-size window of the last ``window_size`` items,
+        spliced along ``axis``.
     '''
 
     go_backwards = get_default_override(PastValueWindow, go_backwards=go_backwards)
@@ -88,7 +167,15 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
     Layer factory function to create a function that runs a cell function recurrently over a time sequence, with initial state.
     This form is meant for use in sequence-to-sequence scenarios.
     The difference to Recurrence() is that this returns a function that accepts the initial state as data argument(s).
-    Initial state consists of N arguments, matching 'over'.
+    Initial state consists of N arguments, matching ``step_function.
+
+    Args:
+     step_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
+      This function xxx
+
+    Returns:
+        cntk.ops.functions.Function: 
+        A function that accepts one argument, which must be a sequence, and performs the recurrent operation on it
     '''
 
     go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
@@ -148,12 +235,84 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
     return _inject_name(recurrence_from, name)
 
 
+# TODO: Can bidirectionality be an option of this? bidirectional=True?
 def Recurrence(step_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
-    Layer factory function to create a function that runs a cell function recurrently over a time sequence.
-    This form is meant for use in regular recurrent-model scenarios.
-    ``initial_state`` must be a constant (or at least have known shape). To pass initial_state as a data input, use RecurrenceFrom() instead.
-    TODO: Can bidirectionality be an option of this? bidirectional=True? What was the reason it cannot?
+    Layer factory function to create a function that runs a step function recurrently over an input sequence.
+    This implements the typical recurrent model.
+
+    The step function can be any :class:`~cntk.ops.functions.Function` or Python function
+    with a signature ``(h_prev, x) -> h``, where ``h_prev`` is the previous state, ``x`` is the new
+    data input, and the output is the new state.
+    All three are sequences of the same length. The step function will be called item by item.
+
+    Step functions can have more than one state output, e.g. :function:`~cntk.layers.LSTM`.
+    In this case, the first N arguments are the previous state, followed by one more argument that
+    is the data input; and its output must be a tuple of N values.
+    In this case, the recurrence operation will, by default, return the first of the state variables
+    (in the LSTM case, the ``h``), while additional state variables are internal (like the LSTM's ``c``).
+    If all state variables should be returned, pass ``return_full_state=True``.
+
+    Typical step functions are :function:`~cntk.layers.LSTM`, :function:`~cntk.layers.GRU`, and :function:`~cntk.layers.RNNBlock`.
+    However, any function with a signature as described above is admissible.
+    For example, a cumulative sum over a sequence can be computed as ``Recurrence(plus)``,
+    or a GRU layer with projection could be realized as ``Recurrence(GRU(500) >> Dense(200))``;
+    where the projection is applied to the hidden state as fed back to the next step.
+
+    Optionally, the recurrence can run backwards. This is useful for constructing bidirectional models.
+
+    ``initial_state`` must be a constant. To pass initial_state as a data input, e.g. for a sequence-to-sequence
+    model, use :function:`~cntk.layers.sequence.RecurrenceFrom()` instead.
+
+    Example:
+     >>> from cntk.layers import Input, Constant, Sequential
+     >>> from cntk.layers.typing import Tensor, Sequence
+     >>> from cntk.ops import plus
+
+     >>> # a recurrent LSTM layer
+     >>> lstm_layer = Recurrence(LSTM(500))
+
+     >>> # a bidirectional LSTM layer
+     >>> # using function tuples to implement a bidirectional LSTM
+     >>> bi_lstm_layer = Sequential([(Recurrence(LSTM(250)),                      # first tuple entry: forward pass
+     ...                              Recurrence(LSTM(250), go_backwards=True)),  # second: backward pass
+     ...                             splice])                                     # splice both on top of each other
+     >>> bi_lstm_layer.update_signature(13)
+     >>> bi_lstm_layer.shape   # shape reflects concatenation of both output states
+     (500,)
+     >>> tuple(axis.name for axis in bi_lstm_layer.dynamic_axes)
+     ('defaultBatchAxis', 'defaultDynamicAxis')
+
+     >>> # cumulative sum over inputs
+     >>> x = Input(**Sequence[Tensor[2]])
+     >>> x0 = np.array([[   3,    2],
+     ...                [  13,   42],
+     ...                [-100, +100]])
+     >>> #cum_sum = Recurrence(plus, initial_state=np.array([0, 0.5]))
+     >>> # BUGBUG: passing a NumPy array fails
+     >>> cum_sum = Recurrence(plus, initial_state=Constant([0, 0.5]))
+     >>> y = cum_sum(x)
+     >>> y(x0)
+     array([[[   3. ,    2.5],
+             [  16. ,   44.5],
+             [ -84. ,  144.5]]], dtype=float32)
+
+    Args:
+     step_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
+      This function must have N+1 inputs and N outputs, where N is the number of state variables
+      (typically 1 for GRU and plain RNNs, and 2 for LSTMs).
+     go_backwards (bool, defaults to ``False``): if ``True`` then run the recurrence from the end of the sequence to the start.
+     initial_state (scalar or tensor without batch dimension; or a tuple thereof):
+      the initial value for the state. This can be a constant or a learnable parameter.
+      In the latter case, if the step function has more than 1 state variable,
+      this parameter must be a tuple providing one initial state for every state variable.
+     return_full_state (bool, defaults to ``False``): if ``True`` and the step function has more than one
+      state variable, then the layer returns a all state variables (a tuple of sequences);
+      whereas if not given or ``False``, only the first state variable is returned to the caller.
+
+    Returns:
+        cntk.ops.functions.Function: 
+        A function that accepts one argument (which must be a sequence) and performs the recurrent operation on it
     '''
 
     go_backwards  = get_default_override(Recurrence, go_backwards=go_backwards)

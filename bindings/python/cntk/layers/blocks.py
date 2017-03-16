@@ -195,7 +195,6 @@ def identity(keep):
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True), name=''):
     '''
     Stabilizer(steepness=4, enable_self_stabilization=True, name='')
-
     Layer factory function to create a `Droppo self-stabilizer <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/SelfLR.pdf>`_.
     It multiplies its input with a scalar that is learned.
 
@@ -396,20 +395,24 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
     LSTM(shape, cell_shape=None, activation=tanh, use_peepholes=False, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
 
     Layer factory function to create an LSTM block for use inside a recurrence.
+    The LSTM block implements one step of the recurrence and is stateless. It accepts the previous state as its first two arguments,
+    and outputs its new state as a two-valued tuple ``(h,c)``.
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): 
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computet at `cell_shape`
+         and linearly projected to `shape`
         activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
         use_peepholes (bool, defaults to `False`):
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`):
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :function:`~cntk.layers.Stabilizer`
+         to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
         cntk.ops.functions.Function:
-        A function (prev_h, prev_c, input) -> h)
+        A function ``(prev_h, prev_c, input) -> (h, c)`` that implements one step of a recurrent LSTM layer.
     '''
 
     activation                = get_default_override(RNNUnit, activation=activation)
@@ -427,24 +430,28 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
 def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
             init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
             enable_self_stabilization=default_override_or(False),
-            name=''): # (prev_h, x) -> (h)
+            name=''):
     '''
     RNNUnit(shape, cell_shape=None, activation=sigmoid, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
 
     Layer factory function to create a plain RNN block for use inside a recurrence.
+    The RNN block implements one step of the recurrence and is stateless. It accepts the previous state as its first argument,
+    and outputs its new state.
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): 
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computet at `cell_shape`
+         and linearly projected to `shape`
         activation (:class:`~cntk.ops.functions.Function`, defaults to signmoid): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`):
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :function:`~cntk.layers.Stabilizer`
+         to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
         cntk.ops.functions.Function:
-        A function (prev_h, input) -> h) where h = activation (W * input + R * prev_h + b)
+        A function ``(prev_h, input) -> h`` where ``h = activation(input @ W + prev_h @ R + b)``
     '''
 
     activation                = get_default_override(RNNUnit, activation=activation)
@@ -460,24 +467,28 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
 def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
         init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
         enable_self_stabilization=default_override_or(False),
-        name=''): # (prev_h, x) -> (h)
+        name=''):
     '''
     GRU(shape, cell_shape=None, activation=tanh, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
 
     Layer factory function to create a GRU block for use inside a recurrence.
+    The GRU block implements one step of the recurrence and is stateless. It accepts the previous state as its first argument,
+    and outputs its new state.
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): 
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computet at `cell_shape`
+         and linearly projected to `shape`
         activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`):
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :function:`~cntk.layers.Stabilizer`
+         to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
         cntk.ops.functions.Function:
-        A function (prev_h, input) -> h)
+        A function ``(prev_h, input) -> h`` that implements one step of a recurrent GRU layer.
     '''
 
     activation                = get_default_override(GRU, activation=activation)

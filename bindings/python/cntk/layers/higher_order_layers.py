@@ -73,6 +73,10 @@ def Sequential(layers, name=''):
        the list of functions to apply in sequence.
        A tuple aplies each of its items to the input and results in a tuple value.
        An item that is a list will be flattened.
+
+    Returns:
+        cntk.ops.functions.Function: 
+        A function that accepts one argument and applies the given ``functions`` one after another.
     '''
     if not isinstance(layers, list): # to support nested lists, run every item recursively through Sequential()
         # TODO: Is this confusing w.r.t. tuple which is parallel and list which is sequential?
@@ -132,6 +136,9 @@ def For(rng, constructor, name=''):
      rng (range): a Python range to loop over
      constructor (Python function/lambda with 1 or 0 arguments): lambda that constructs a layer
 
+    Returns:
+        cntk.ops.functions.Function: 
+        A function that accepts one argument and applies the layers as constructed by ``constructor`` one after another.
     '''
     # Python 2.7 support requires us to use getargspec() instead of inspect
     from inspect import getargspec
@@ -194,6 +201,10 @@ def ResNetBlock(f, name=''):
     Args:
       f (:class:`~cntk.ops.functions.Function` or equivalent Python function):
        the function to add the skip connection to.
+
+    Returns:
+        cntk.ops.functions.Function: 
+        A function that accepts one argument, applies ``f`` to it, and adds the original argument.
     '''
     def skip(x):
         return f(x) + x
