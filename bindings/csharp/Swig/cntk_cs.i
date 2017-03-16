@@ -108,9 +108,6 @@
 %ignore_function CNTK::Function::Function;
 %ignore_function CNTK::Function::RestoreFromCheckpoint;
 %ignore_function CNTK::Function::Gradients;
-// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
-%ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice);
-%ignore CNTK::Function::LoadModel(std::istream& inputStream);
 
 %ignore_class CNTK::Parameter;
 %ignore_class CNTK::Constant;
@@ -523,6 +520,9 @@
         }
     }
 %}
+
+// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
+%ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
 
 %rename (GetName) CNTK::Function::Name;
 %rename (GetUid) CNTK::Function::Uid;
@@ -1380,5 +1380,4 @@
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
-
 
