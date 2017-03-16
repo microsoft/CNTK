@@ -1,7 +1,7 @@
 import cntk as C
 import numpy as np
 from cntk import layers, blocks, models
-from helpers import PastValueWindow, seqlogZ, HighwayNetwork, print_node
+from helpers import ValueWindow, HighwayNetwork, print_node
 import pickle
 
 with open('vocabs.pkl', 'rb') as vf:
@@ -120,8 +120,12 @@ c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cw,
 q_processed = input_layers(q_emb)
 c_processed = input_layers(c_emb)
 
-pvw, mask = PastValueWindow(max_question_len, C.Axis.new_leading_axis())(q_processed)
+pvw, mask = ValueWindow(max_question_len, C.Axis.new_leading_axis())(q_processed)
 print('pvw', pvw)
+
+#pvw_c = C.reduce_sum(pvw, 1)
+#pvw_c = print_node(pvw_c)
+#pvw = C.times(pvw_c, np.ones((1,200))) + pvw
 
 # This part deserves some explanation
 # It is the attention layer
@@ -132,28 +136,31 @@ print('pvw', pvw)
 ws1 = C.parameter(shape=(2 * dim, 1), init=C.glorot_uniform())
 ws2 = C.parameter(shape=(2 * dim, 1), init=C.glorot_uniform())
 ws3 = C.parameter(shape=(1, 2 * dim), init=C.glorot_uniform())
-att_bias = C.parameter(shape=(1,), init=0)
+att_bias = C.parameter(shape=(max_question_len,), init=0)
 
 wh = C.times (c_processed, ws1)
 wu = C.reshape(C.times (pvw, ws2), (max_question_len,))
 whu = C.times_transpose(c_processed, C.sequence.broadcast_as(C.element_times (pvw, ws3), c_processed))
 S = wh + whu + C.sequence.broadcast_as(wu, c_processed) + att_bias
+# mask out values outside of Query, and fill in gaps with -1e+30 as neutral value for both reduce_log_sum_exp and reduce_max
+mask_expanded = C.sequence.broadcast_as(C.reshape(mask, (max_question_len,)), c_processed)
+S = C.element_select(mask_expanded, S, C.constant(-1e+30, S.shape))
 q_logZ = C.reshape(C.reduce_log_sum_exp(S),(1,))
 q_attn = C.reshape(C.exp(S - q_logZ),(-1,1))
+#q_attn = print_node(q_attn)
 utilde = C.reshape(C.reduce_sum(C.sequence.broadcast_as(pvw, q_attn) * q_attn, axis=0),(-1))
-print(utilde)
+print('utilde', utilde)
 
 max_col = C.reduce_max(S)
-c_logZ = seqlogZ(max_col)
+c_logZ = C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, max_col.shape))(max_col)
 c_attn = C.exp(max_col - C.sequence.broadcast_as(c_logZ, max_col))
-
 htilde = C.sequence.reduce_sum(c_processed * c_attn)
-print(htilde)
-print(c_processed)
+print('htilde', htilde)
+print('c_processed', c_processed)
 
 Htilde = C.sequence.broadcast_as(htilde, c_processed)
 att_context = C.splice(c_processed, utilde, c_processed * utilde,  c_processed * Htilde)
-print(att_context)
+print('att_context', att_context)
 
 #modeling layer
 #todo replace with optimized_rnnstack for training purposes once it supports dropout
@@ -168,7 +175,7 @@ mod_context = modeling_layer(att_context)
 print(mod_context)
 
 def seqloss(logits, y):
-    return seqlogZ(logits) - C.sequence.last(C.sequence.gather(logits, y))
+    return C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, logits.shape))(logits) - C.sequence.last(C.sequence.gather(logits, y))
 
 #output layer
 start_logits = C.layers.Dense(1)(C.splice(mod_context, att_context))
@@ -186,8 +193,8 @@ print(loss)
 
 progress_writers = [C.ProgressPrinter(tag='Training')]
 
-minibatch_size = 768
-lr_schedule = C.learning_rate_schedule(0.0001, C.UnitType.sample)
+minibatch_size = 2048
+lr_schedule = C.learning_rate_schedule(0.00001, C.UnitType.sample)
 momentum_time_constant = -minibatch_size/np.log(0.9)
 mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
 z = C.combine([start_logits, end_logits])
@@ -200,5 +207,5 @@ C.training_session(
     mb_size = minibatch_size,
     var_to_stream = input_map,
     max_samples = 35600,
-    progress_frequency=89
+    progress_frequency=100
 ).train()

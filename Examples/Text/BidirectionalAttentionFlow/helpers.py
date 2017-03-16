@@ -1,7 +1,7 @@
 import cntk as C
 
 
-def PastValueWindow(window_size, axis, name=''):
+def ValueWindow(window_size, axis, name=''):
     '''
     Layer factory function to create a function that returns a static, maskable view for N past steps over a sequence along the given 'axis'.
     It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(1,dim)
@@ -9,7 +9,10 @@ def PastValueWindow(window_size, axis, name=''):
 
     # helper to get the nth element
     def nth(input, offset):
-        return C.sequence.last(C.past_value(input, time_step=offset+1))
+        if offset == 0:
+            return C.sequence.first(input)
+        else:
+            return C.sequence.first(C.future_value(input, time_step=offset))
 
     def past_value_window(x):
 
