@@ -852,6 +852,10 @@ static shared_ptr<ElemType> GetReductionBuffer(size_t N)
     let deviceId = GridDim::GetCurrentDeviceId();
     if (deviceId >= _countof(reductionBuffersCache)) // index check w.r.t. our hard-coded dimensions
         return AllocateReductionBuffer<ElemType>(N); // out of bounds: don't cache
+
+    static std::mutex bufferCacheMutex;
+    std::unique_lock<std::mutex> lock(bufferCacheMutex);
+
     if (!reductionBuffersCache[deviceId])
     {
         reductionBuffersCache[deviceId] = AllocateReductionBuffer<ElemType>(N);
