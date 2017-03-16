@@ -399,6 +399,8 @@ namespace Microsoft {
                         ElemType* px = m_deltaArray;
                         ElemType* py = m_cpuAsyncBuffer[0];
                         m_workerArray->AddAsync(px, m_totalModelSize, m_addOptions[0]);
+                        WaitAll();
+
                         m_workerArray->Get(py, m_totalModelSize);
 
                         m_reportTimer.Stop();
@@ -449,7 +451,7 @@ namespace Microsoft {
                     //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
                     multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
 
-                    multiverso::SetCMDFlag<bool>(std::string("sync"), true);
+                    //multiverso::SetCMDFlag<bool>(std::string("sync"), true);
 
 
                     multiverso::MV_Init();
