@@ -2626,22 +2626,6 @@ def parameter(shape=None, init=None, dtype=None, device=None, name=''):
     '''
 
     from .variables import Parameter
-    if not device:
-        device = use_default_device()
-
-    if dtype is not None:
-        if isinstance(init, np.ndarray) and dtype != init.dtype:
-            init = np.array(init, dtype=dtype)
-    else:
-        if np.isscalar(init) and not shape:
-            shape = ()
-            if isinstance(init, np.ndarray):
-                dtype = init.dtype
-            else:
-                dtype = np.float32
-        else:
-            dtype = None
-
     return Parameter(shape, init, dtype, device, name)
 
 

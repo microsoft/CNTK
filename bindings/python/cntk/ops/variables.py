@@ -1,6 +1,6 @@
 import numpy as np
 from cntk import cntk_py, NDArrayView
-from cntk.device import DeviceDescriptor
+from cntk.device import DeviceDescriptor, use_default_device
 from ..tensor import TensorOpsMixin
 from ..utils import Record
 from cntk.internal import typemap, sanitize_precision, sanitize_value, \
@@ -240,8 +240,15 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     '''
     def __init__(self, shape=None, init=None, dtype=None,
                  device=None, name=''):
+        if not device:
+            device = use_default_device()
 
-        if dtype is None:
+        if dtype is not None:
+            if isinstance(init, np.ndarray) and dtype != init.dtype:
+                init = np.array(init, dtype=dtype)
+        else:
+            if np.isscalar(init) and not shape:
+                shape = ()
             if isinstance(init, np.ndarray):
                 dtype = init.dtype
             else:

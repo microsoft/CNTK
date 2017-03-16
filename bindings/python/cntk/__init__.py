@@ -12,26 +12,22 @@ from . import cntk_py
 #
 # Bubble the below namespaces to cntk root namespace.
 #
+from . import internal
+from . import utils
 from .core import *
 from .ops import *
 from .device import *
-from .train import *
+from . import debugging
+from . import logging
+from . import io
 from .learners import *
+from .train import *
 from .losses import *
 from .metrics import *
 from .initializer import *
-from .sample_installer import install_samples
-
-#
-# Import the actual modules.
-#
-from . import debugging
-from . import logging
-from . import internal
-from . import utils
-from . import ops
-from . import io
 from . import layers
+
+from .sample_installer import install_samples
 
 # To __remove__
 # from .io import *
