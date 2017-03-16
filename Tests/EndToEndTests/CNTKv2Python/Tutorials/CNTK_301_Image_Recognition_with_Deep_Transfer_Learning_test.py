@@ -22,8 +22,8 @@ def test_CNTK_301_Image_Recognition_with_Deep_Transfer_Learning_noErrors(nb):
     print(errors)
     assert errors == []
 
-expectedEvalError = 79.0
-expectedEvalErrorAtol = 5.0    
+expectedEvalError = 84.0
+expectedEvalErrorAtol = 8.0    
 
 def test_CNTK_301_Image_Recognition_with_Deep_Transfer_Learning_predictionerror(nb):
     testCell = [cell for cell in nb.cells
