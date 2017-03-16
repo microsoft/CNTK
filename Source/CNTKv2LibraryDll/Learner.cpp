@@ -32,6 +32,25 @@ using namespace std;
 
 namespace CNTK
 {
+    // This method completely replaces the current schedule with the new schedule. However, since
+    // the new schedule starts at time 0 and the current time (in terms of the number of elapsed
+    // samples or sweeps) t can be greater than 0, we need to adjust the new schedule by t time
+    // units, so that it takes effect from the current point in time onwards.
+    CNTK_API void Learner::ResetLearningRate(const LearningRateSchedule& learningRateSchedule)
+    {
+        m_learningRateSchedule.m_schedule.clear();
+        m_learningRateSchedule.m_epochSize = learningRateSchedule.m_epochSize;
+        m_learningRateSchedule.m_unit = learningRateSchedule.m_unit;
+
+        // copy the new schedule over, adjusting for the current varlue of the corresponding unit
+        // (samples or sweeps) count.
+        auto currentCount = m_learningRateSchedule.IsSweepBased() ? m_sweepCount : m_sampleCount;
+        for (const auto& kv : learningRateSchedule.m_schedule) 
+        {
+            m_learningRateSchedule.m_schedule[currentCount + kv.first] = kv.second;
+        }
+    }
+
     template <typename ElementType>
     /*static*/ shared_ptr<const Matrix<ElementType>> LearnerBase::GetMatrix(const NDArrayViewPtr& arrayView)
     {
@@ -179,7 +198,6 @@ namespace CNTK
                              AdditionalLearningOptions additionalOptions,
                              bool allocateSmoothGradients /* = true */)
                              : Learner(parameters, learningRateSchedule),
-                             m_minibatchCount(0),
                              m_additionalOptions(additionalOptions)
     {
         std::unordered_set<Parameter> uniqueParameters(parameters.begin(), parameters.end());

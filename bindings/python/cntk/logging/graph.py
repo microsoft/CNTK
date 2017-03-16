@@ -130,13 +130,13 @@ def plot(root, filename=None):
 
      * for DOT output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_
      * for PNG, PDF, and SVG output: `pydot_ng <https://pypi.python.org/pypi/pydot-ng>`_ 
-       and `graphviz <[http://graphviz.org](http://graphviz.org)>_ (GraphViz executable has to be in the system's PATH).
+       and `graphviz <http://graphviz.org>`_ (GraphViz executable has to be in the system's PATH).
 
     Args:
         node (graph node): the node to start the journey from
         filename (`str`, default None): file with extension '.dot', 'png', 'pdf', or 'svg'
-        to denote what format should be written. If `None` then nothing
-        will be plotted. Instead, and the returned string can be used to debug the graph.
+         to denote what format should be written. If `None` then nothing
+         will be plotted, and the returned string can be used to debug the graph.
 
     Returns:
         `str` describing the graph

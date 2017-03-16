@@ -7,7 +7,7 @@ you can start using CNTK from Python right away (don't forget to ``activate`` yo
 
     >>> import cntk
     >>> cntk.__version__
-    '2.0.beta12.0+'
+    '2.0.beta15.0+'
     
     >>> cntk.minus([1, 2, 3], [4, 5, 6]).eval()
     array([-3., -3., -3.], dtype=float32)

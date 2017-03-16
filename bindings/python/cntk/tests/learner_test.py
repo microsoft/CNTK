@@ -119,6 +119,11 @@ def test_learner_update():
     assert learner.learning_rate() == 0.2
     assert w.value < w_init
 
+    learner.reset_learning_rate(learning_rate_schedule([0.3]*50 + [0.4]*50, UnitType.sample, 1));
+    assert learner.learning_rate() == 0.3
+    x = learner.update({w: np.asarray([[2.]], dtype=np.float32)}, 100)
+    assert learner.learning_rate() == 0.4
+
 def test_training_parameter_schedule():
     training_parameter_schedule(0.01, unit='minibatch')
     training_parameter_schedule(0.01, unit='sample')

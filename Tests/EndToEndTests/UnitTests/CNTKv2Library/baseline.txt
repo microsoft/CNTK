@@ -370,6 +370,8 @@ Test module "V2LibraryTests" has passed with:
 
     Test case "LearnerSuite/CreateAndUpdateAdamLearner" has passed
 
+    Test case "LearnerSuite/TestResettingLearningRate" has passed
+
   Test suite "LoadLegacyModelSuite" has passed with:
     2 test cases out of 2 passed
 

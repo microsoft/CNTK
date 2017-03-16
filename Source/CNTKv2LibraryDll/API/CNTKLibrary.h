@@ -30,7 +30,6 @@
 #endif
 
 #include "CNTKLibraryInternals.h"
-#include "Constants.h"
 
 namespace CNTK
 {
@@ -2767,6 +2766,27 @@ namespace CNTK
         CNTK_API virtual ~Function();
 
         ///
+        /// Compute the gradients of the output of this Function, w.r.t. the specified input variables in 'gradients'
+        /// at the specified 'arguments' values for the Function inputs
+        ///
+        CNTK_API void Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                                std::unordered_map<Variable, ValuePtr>& gradients,
+                                std::unordered_map<Variable, ValuePtr>& outputsToEvaluate,
+                                const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// Compute the gradients of the output of this Function, w.r.t. the specified input variables in 'gradients'
+        /// at the specified 'arguments' values for the Function inputs
+        ///
+        void Gradients(const std::unordered_map<Variable, ValuePtr>& arguments,
+                       std::unordered_map<Variable, ValuePtr>& gradients,
+                       const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice())
+        {
+            std::unordered_map<Variable, ValuePtr> outputsToEvaluate = {};
+            return Gradients(arguments, gradients, outputsToEvaluate, computeDevice);
+        }
+
+        ///
         /// Performs forward computation, i.e. evaluation, on the computaion graph using provided 'input' and stores the results in the 'outputs' map.
         /// It is same as Forward, but without storing and returning information needed for backpropagation.
         ///
@@ -2995,6 +3015,11 @@ namespace CNTK
         /// Load a Function from a memory buffer
         ///
         CNTK_API static FunctionPtr LoadModel(char *modelBuffer, size_t modelBufferLength, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// Load a Function from an istream. The legacy V1 model is not supported.
+        ///
+        CNTK_API static FunctionPtr LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
         /// Prints the entire graph underlying this Function to stderr
@@ -3559,17 +3584,33 @@ namespace CNTK
     CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"");
 
 
-    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap, 
+    ///
+    /// Convolution 
+    ///
+    CNTK_API FunctionPtr Convolution(const Variable& convolutionMap,
                                      const Variable& operand, 
                                      const NDShape& strides = { 1 },
                                      const std::vector<bool>& sharing = { true },
                                      const std::vector<bool>& autoPadding = { true },
                                      const NDShape& lowerPad = { 0 },
                                      const NDShape& upperPad = { 0 },
-                                     bool transpose = false, 
-                                     const NDShape& outputShape = { 0 },
                                      size_t maxTempMemSizeInSamples = 0, 
                                      const std::wstring& name = L"");
+
+    ///
+    /// Convolution transpose
+    ///
+    CNTK_API FunctionPtr ConvolutionTranspose(const Variable& convolutionMap,
+        const Variable& operand,
+        const NDShape& strides = { 1 },
+        const std::vector<bool>& sharing = { true },
+        const std::vector<bool>& autoPadding = { true },
+        const NDShape& lowerPad = { 0 },
+        const NDShape& upperPad = { 0 },
+        const NDShape& outputShape = { 0 },
+        size_t maxTempMemSizeInSamples = 0,
+        const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in ROI pooling operation on specified tensor input operands with the specified output shape
     ///
@@ -3814,6 +3855,9 @@ namespace CNTK
         CNTK_API static TrainingParameterSchedule<T> Deserialize(const Dictionary& dictionary);
 
     private:
+
+        friend class Learner;
+
         CNTK_API void ConstructSchedule(const std::vector<std::pair<size_t, T>>& schedule);
 
         CNTK_API TrainingParameterSchedule(const Dictionary& dictionary);
@@ -3983,11 +4027,11 @@ namespace CNTK
 
         ///
         /// Sets a new learning rate overriding the schedule parameter used to construct this learner.
+        /// The new schedule is adjusted to be relative to the current number of elapsed samples/sweeps:
+        /// the 0 offset in the new schedule corresponds to the current value of elapsed samples/sweeps, 
+        /// and it takes effect from the current position in the training process onwards.
         ///
-        virtual void ResetLearningRate(const LearningRateSchedule& learningRateSchedule)
-        {
-            m_learningRateSchedule = learningRateSchedule;
-        }
+        CNTK_API virtual void ResetLearningRate(const LearningRateSchedule& learningRateSchedule);
 
         ///
         /// Resets smoothed gradients.
@@ -4783,7 +4827,7 @@ namespace CNTK
     ///
     /// Built-in MPI-based communicator.
     ///
-    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES);
+    CNTK_API DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes = Internal::DefaultPackThresholdSizeInBytes());
 
     ///
     /// Distributed communicator that allows quantized aggregations.

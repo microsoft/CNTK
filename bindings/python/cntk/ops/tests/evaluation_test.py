@@ -240,8 +240,7 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
     n = I((1,))
     f = lambda_rank(s, n, g)
 
-    actual_grad  = f.grad({s:score, n:gain, g:group}, [s])
-    actual_value = f.eval({s:score, n:gain, g:group})
+    actual_grad, actual_value = f.grad({s:score, n:gain, g:group}, [s], [f.output])
 
     assert np.allclose(actual_value, expected_value)
     assert np.allclose(actual_grad,  expected_grad)

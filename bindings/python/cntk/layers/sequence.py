@@ -36,6 +36,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
     return delay
 
 
+# TODO: reconsider the name. Windowed()?
 def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name=''):
     '''
     Layer factory function to create a function that returns a static, maskable view for N past steps over a sequence along the given 'axis'.
@@ -188,9 +189,15 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
 def Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
     Layer factory function to create a function that implements the fold() catamorphism.
+    It is like ``Recurrence()`` except that it returns only the final state.
+    This is often used for embeddings of sequences, e.g. in a sequence-to-sequence model.
+
+    Commonly, the ``folder_function`` is a recurrent block such as an LSTM.
+    One can, however, pass any binary function. E.g. passing ``plus`` will sum
+    up all items of a sequence; while ``element_max`` would perform a max-pooling over all items of the sequence.
+
     ``go_backwards=False`` selects a fold-left, while ``True`` a fold-right,
     but note that the ``folder_function`` signature is always the one of fold-left.
-    Like ``Recurrence()`` but returns only the final state.
     '''
 
     go_backwards  = get_default_override(Fold, go_backwards=go_backwards)
@@ -211,10 +218,14 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
     '''
     Layer factory function to create a function that implements the unfold() anamorphism. It creates a function that, starting with a seed input,
     applies 'generator_function' repeatedly and emits the sequence of results. Depending on the recurrent block,
-    it may have this form:
-       `result = f(... f(f([g(input), initial_state])) ... )`
-    or this form:
-       `result = f(g(input), ... f(g(input), f(g(input), initial_state)) ... )`
+    it may have this form::
+
+      result = f(... f(f([g(input), initial_state])) ... )
+
+    or this form::
+
+      result = f(g(input), ... f(g(input), f(g(input), initial_state)) ... )
+
     where `f` is `generator_function`.
     An example use of this is sequence-to-sequence decoding, where `g(input)` is the sequence encoder,
     `initial_state` is the sentence-start symbol, and `f` is the decoder. The first
