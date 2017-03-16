@@ -449,6 +449,9 @@ namespace Microsoft {
                     //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
                     multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
 
+                    multiverso::SetCMDFlag<bool>(std::string("sync"), true);
+
+
                     multiverso::MV_Init();
 
                     for (int i = 0; i < m_localBufferNum; i++)
