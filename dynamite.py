@@ -4,26 +4,26 @@ import collections
 INFER = 0
 times_initializer="x" # for now a dummy string that is not None
 
-class NDArray(np.ndarray):
-    def __new__(cls, *args, **kwargs):
-        return np.ndarray.__new__(cls, *args, **kwargs)
-
-class Variable(NDArray):
+class Variable:
     def __new__(cls, shape, op, inputs):
-        #v = NDArray.__new__(cls, shape)
-        v = NDArray.__new__(cls, tuple(0 for dim in shape))
-        v.initializer = None
+        #v = NDArray.__new__(cls, tuple(0 for dim in shape))
+        v = object.__new__(cls)
+        v.shape = shape
         v.op = op
         v.inputs = inputs
         return v
+    def __add__(self, other):
+        return plus(self, other)
 
 class Parameter(Variable):
     def __new__(cls,  shape, initializer=None):
         v = Variable.__new__(cls, shape, -1, [])
-        v.initializer = None
         return v
     def __init__(self, shape, initializer=None):
-        self.initializer = initializer
+        if initializer:
+            self.initializer = initializer
+    def resize(self, shape, refcheck=False):
+        self.shape = shape
     
 def BroadcastingBinary(binary_op):
     # BUGBUG: testing for nested sequences must know how to align... how to do that?
@@ -40,29 +40,32 @@ def BroadcastingBinary(binary_op):
 def binary_op(opcode):
     @BroadcastingBinary
     def f(a,b):
-        v = Variable(a.shape if isinstance(a, np.ndarray) else (1,), opcode, (a,b))
-        return v
+        return Variable((max(a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1, # broadcasting
+                             b.shape[0] if isinstance(b, (np.ndarray, Variable)) else 1
+                             ),), opcode, (a,b))
     return f
 
 def unary_op(opcode):
     def f(x):
-        if isinstance(x, list):
+        if isinstance(x, list): # broadcast along sequence
             return map(f, x)
-        v = Variable(x.shape, opcode, (x,))
-        return v
+        return Variable(x.shape, opcode, (x,))
     return f
 
 @BroadcastingBinary
 def times(a,b):
-    if b.initializer is not None:
-        b.resize((a.shape[0] if isinstance(a, np.ndarray) else 1, b.shape[1]), refcheck=False)
-        b.initializer = None
-    v = Variable((b.shape[1],), '@', (a,b))
-    return v
+    if hasattr(b, 'initializer'):
+        b.resize((a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1,
+                  b.shape[1]),
+                 refcheck=False)
+        del b.initializer
+    return Variable((b.shape[1],), '@', (a,b))
+
 plus = binary_op('+')
 cross_entropy_with_softmax = binary_op('cross_entropy_with_softmax')
-sigmoid = unary_op('sigmoid')
+
 tanh = unary_op('tanh')
+sigmoid = unary_op('sigmoid')
 softmax = unary_op('softmax')
 
 def identity(x):
@@ -150,20 +153,37 @@ def dump_parameters(m, root='$'):
         elif hasattr(member, '__ismodel__'):
             dump_parameters(member, root + '.' + member_name)
 
-# TODO: this may be borked
+# TODO: This is less trivial than it seems; need to double-check and test very carefully
 def topo_sort(v):
+    if not isinstance(v, (np.ndarray, Variable)):
+       return
     visited = set() # [id(obj)]
-    stack = [v] if isinstance(v, np.ndarray) else []
+    stack = []
     order = []
+    stack.append(v)
+    visited.add(id(v))
+    num_implanted = 0
     while stack:
-        v = stack.pop()
-        if id(v) in visited:
-            continue
-        visited.add(id(v))
-        if isinstance(v, Variable):
-            for x in v.inputs:
-                stack.insert(0,x) # (TODO: use bulk insertion)
-        order.insert(0,v)
+        p = stack.pop()
+        for v in p.inputs:
+            if isinstance(v, Variable):
+                if id(v) in visited:
+                    continue
+                if p:
+                    v.parent = p # once we emit the first one, we can emit its parent, too
+                    num_implanted += 1 # (sanity check only)
+                    p = None
+                stack.append(v)
+                visited.add(id(v))
+        while p:  # no children (left) to process -> we can emit this and all parents that are ready
+            order.append(p)
+            q = getattr(p, 'parent', None)
+            if q:
+                del p.parent # clean up after ourselves (may not be needed)
+                num_implanted -= 1 # (sanity check only)
+            p = q
+    assert num_implanted == 0
+    assert len(order) == len(visited)
     return order
 
 def dump_graph(v):
@@ -180,7 +200,7 @@ def dump_graph(v):
             names[id(v)] = name
             return name
         def format_shape(v):
-            if not isinstance(v, np.ndarray):
+            if not isinstance(v, (np.ndarray, Variable)):
                 return str(v) # e.g. a constant
             t = name_it(v) + ": "
             t += "Parameter" if isinstance(v, Parameter) else "Variable" if isinstance(v, Variable) else "ndarray"
@@ -236,6 +256,12 @@ def train_minibatch(criterion, mb):
 if True:
     from timeit import default_timer as timer
 
+    p1 = Embedding(1)(1)
+    v1 = plus(p1, times(3, np.array([[4]])))
+    v2 = plus(p1, times(5, np.array([[6]])))
+    v = v1 + v2
+    dump_graph(v)
+
     model = create_model()
     print(dir(model))
     #model[0]
@@ -250,7 +276,7 @@ if True:
     for count in range(repetitions):
         crit = train_minibatch(criterion, mb)
     end = timer()
-    #dump_graph(crit)
+    dump_graph(crit)
     num_nodes = len(topo_sort(crit))
     num_samples = sum(len(batch_item[0]) for batch_item in mb.values())
     dur = (end - start) / repetitions
