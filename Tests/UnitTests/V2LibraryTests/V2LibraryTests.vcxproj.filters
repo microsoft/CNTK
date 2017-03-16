@@ -42,9 +42,6 @@
     <ClCompile Include="DeviceSelectionTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="Common.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="MinibatchSourceTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -63,6 +60,9 @@
     <ClCompile Include="LoadLegacyModelTests.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\EndToEndTests\CNTKv2Library\Common\Common.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -74,7 +74,7 @@
     <ClInclude Include="Common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Image.h">
+    <ClInclude Include="..\..\EndToEndTests\CNTKv2Library\Common\Image.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -92,6 +92,9 @@
       <Filter>Input Files</Filter>
     </None>
     <None Include="data\batch.norm.no.sample.count.v1.bin">
+      <Filter>Input Files</Filter>
+    </None>
+    <None Include="data\learner.checkpoint.backcompat.bin">
       <Filter>Input Files</Filter>
     </None>
   </ItemGroup>

@@ -109,7 +109,7 @@ void TestReduceSum(size_t sampleRank, const DeviceDescriptor& device)
             auto inputVar = InputVariable({ inputShape }, DataType::Float, L"input");
             FunctionPtr reduceSumFunc = Sequence::ReduceSum(inputVar);
 
-            NDShape maskShape = { 1, numSequences };
+            NDShape maskShape = { numSequences };
             NDShape outputShape = reduceSumFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape(maskShape);
 
@@ -227,7 +227,10 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
 
             size_t outputSequenceAxisLength = maxSliceLength;
             size_t outputBatchAxisLength = numSequences;
-            NDShape outputShape = sliceFunc->Output().Shape().AppendShape({ outputSequenceAxisLength, outputBatchAxisLength });
+            NDShape outputShape = sliceFunc->Output().Shape();
+            if (endAndBeginOffsetDiff != 1)
+                outputShape = outputShape.AppendShape({ outputSequenceAxisLength });
+            outputShape = outputShape.AppendShape({ outputBatchAxisLength });
             std::vector<float> outputData(outputShape.TotalSize(), 0);
             NDMaskPtr mask;
             if (endAndBeginOffsetDiff < 0)
@@ -443,11 +446,14 @@ void TestSplice()
 {
     srand(1);
 
-    TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
-    TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
-    TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+    {
+        TestSplice(4, 2, 0, DeviceDescriptor::CPUDevice());
+        TestSplice(3, 3, 2, DeviceDescriptor::CPUDevice());
+        TestSplice(2, 3, 3, DeviceDescriptor::CPUDevice());
+    }
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
         TestSplice(4, 3, 1, DeviceDescriptor::GPUDevice(0));
         TestSplice(3, 4, 2, DeviceDescriptor::GPUDevice(0));
@@ -514,6 +520,42 @@ void TestTimesNodeShapeInference()
     timesNodeShapeInferenceTest(2, 1, 1);
     timesNodeShapeInferenceTest(1, 2, 0);
     timesNodeShapeInferenceTest(3, 2, 2);
+}
+
+void TestTimesIndirectSparseInputGradientSparse(const DeviceDescriptor& device)
+{
+    size_t dim = 5;
+    size_t numSequences = 1;
+
+    auto timesParam = Parameter(NDShape({ 1, dim }), DataType::Float, 0.0, device);
+
+    auto input = InputVariable(NDShape({ dim }), /* isSparse*/ true, DataType::Float);
+    auto timesFunction = Times(timesParam, Sequence::First(input));
+
+    auto inputValue = Value::CreateSequence<float>(dim, { 2 }, device, true);
+    std::unordered_map<Variable, ValuePtr> inputMap;
+    inputMap.insert(std::make_pair(input, inputValue));
+
+    std::vector<float> outputData(numSequences);
+    ValuePtr outputValue = MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ 1, numSequences }), outputData, false));
+    std::unordered_map<Variable, ValuePtr> outputMap;
+    outputMap.insert(std::make_pair(timesFunction->Output(), outputValue));
+
+    auto backState = timesFunction->Forward(inputMap, outputMap, device, { timesFunction->Output() });
+
+    std::unordered_map<Variable, ValuePtr> rootGradients;
+    std::vector<float> rootGradient(numSequences, 1.0f);
+    rootGradients.insert(std::make_pair(timesFunction->Output(), MakeSharedObject<Value>(MakeSharedObject<NDArrayView>(NDShape({ numSequences }), rootGradient, false))));
+
+    std::unordered_map<Variable, ValuePtr> inputGradients;
+    inputGradients.insert(std::make_pair(timesParam, nullptr));
+
+    timesFunction->Backward(backState, rootGradients, inputGradients);
+
+    ValuePtr paramGradient = inputGradients[timesParam];
+
+    if (!paramGradient->IsSparse())
+        ReportFailure("Gradient is expected to be sparse.");
 }
 
 template <typename ElementType>
@@ -695,7 +737,7 @@ void TestFunctionOutputs(const DeviceDescriptor& device)
     }
 }
 
-void TestOuputVariableName(const DeviceDescriptor& device)
+void TestOutputVariableName(const DeviceDescriptor& device)
 {
     size_t inputDim = 10;
     size_t outputDim = 20;
@@ -946,91 +988,108 @@ BOOST_AUTO_TEST_SUITE(FunctionSuite)
 
 BOOST_AUTO_TEST_CASE(FindNameInCPU)
 {
-    TestFindName(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestFindName(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(FindNameInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestFindName(DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(Splice)
 {
+    // Handles device internally.
     TestSplice();
 }
 
 BOOST_AUTO_TEST_CASE(ChangingParameterValuesInCPU)
 {
-    TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
-    TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+    {
+        TestChangingParameterValues<float>(2, DeviceDescriptor::CPUDevice());
+        TestChangingParameterValues<double>(3, DeviceDescriptor::CPUDevice());
+    }
 }
 
 BOOST_AUTO_TEST_CASE(ChangingParameterValuesInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestChangingParameterValues<double>(3, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(TimesNodeShapeInference)
 {
-    TestTimesNodeShapeInference();
+    if (ShouldRunOnCpu())
+        TestTimesNodeShapeInference();
 }
 
 BOOST_AUTO_TEST_CASE(RecurrenceShapeInference)
 {
-    TestRecurrenceShapeInference();
+    if (ShouldRunOnCpu())
+        TestRecurrenceShapeInference();
 }
 
 BOOST_AUTO_TEST_CASE(SliceInCPU)
 {
-    TestSlice(2, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestSlice(2, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(SliceInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestSlice(1, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(ReduceSumInCPU)
 {
-    TestReduceSum(1, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestReduceSum(1, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(ReduceSumInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestReduceSum(2, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(RecurrentFunctionCloning)
 {
-    TestRecurrentFunctionCloning();
+    if (ShouldRunOnCpu())
+        TestRecurrentFunctionCloning();
 }
 
 BOOST_AUTO_TEST_CASE(TransposeInCPU)
 {
-    TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestTranspose(2, 0, 1, DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(TransposeInGPU)
 {
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestTranspose(3, 1, 2, DeviceDescriptor::GPUDevice(0));
 }
 
 BOOST_AUTO_TEST_CASE(OutputVariableNameInCPU)
 {
-    TestOuputVariableName(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestOutputVariableName(DeviceDescriptor::CPUDevice());
 }
 
 BOOST_AUTO_TEST_CASE(FunctionOutputs)
 {
-    TestFunctionOutputs(DeviceDescriptor::CPUDevice());
+    if (ShouldRunOnCpu())
+        TestFunctionOutputs(DeviceDescriptor::CPUDevice());
 }
 
-
+BOOST_AUTO_TEST_CASE(TimesIndirectSparseGradType)
+{
+    if (ShouldRunOnCpu())
+        TestTimesIndirectSparseInputGradientSparse(DeviceDescriptor::CPUDevice());
+}
 
 BOOST_AUTO_TEST_SUITE_END()
 

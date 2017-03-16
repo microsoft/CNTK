@@ -52,6 +52,15 @@
     <Filter Include="Config\HTKDeserializers">
       <UniqueIdentifier>{b2a5f515-1b00-4f19-bd19-8e3fd7eb6872}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Config\CNTKBinaryReader">
+      <UniqueIdentifier>{46df705e-a35d-4bb8-9272-92c7cb293079}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Control\CNTKBinaryReader">
+      <UniqueIdentifier>{4194f906-450f-4112-841d-c80b3f90081e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data\CNTKBinaryReader">
+      <UniqueIdentifier>{4637ff35-9ba4-4850-bfe5-d534c5920388}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <Text Include="Data\ImageReaderSimple_map.txt">
@@ -324,6 +333,18 @@
     <Text Include="Data\ImageAndTextReaderSimple_map.txt">
       <Filter>Data</Filter>
     </Text>
+    <Text Include="Control\CNTKBinaryReader\Simple_dense.txt">
+      <Filter>Control\CNTKBinaryReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKBinaryReader\Simple_dense_312.txt">
+      <Filter>Control\CNTKBinaryReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKBinaryReader\Simple_sparse.txt">
+      <Filter>Control\CNTKBinaryReader</Filter>
+    </Text>
+    <Text Include="Control\CNTKBinaryReader\Simple_sparse_seq.txt">
+      <Filter>Control\CNTKBinaryReader</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <Image Include="Data\images\black.jpg">
@@ -429,6 +450,18 @@
     </None>
     <None Include="Config\ImageDeserializers.cntk">
       <Filter>Config</Filter>
+    </None>
+    <None Include="Config\CNTKBinaryReader\test.cntk">
+      <Filter>Config\CNTKBinaryReader</Filter>
+    </None>
+    <None Include="Data\CNTKBinaryReader\simple.bin">
+      <Filter>Data\CNTKBinaryReader</Filter>
+    </None>
+    <None Include="Data\CNTKBinaryReader\sparseoutput.bin">
+      <Filter>Data\CNTKBinaryReader</Filter>
+    </None>
+    <None Include="Data\CNTKBinaryReader\sparseseqoutput.bin">
+      <Filter>Data\CNTKBinaryReader</Filter>
     </None>
   </ItemGroup>
   <ItemGroup>

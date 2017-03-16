@@ -116,6 +116,37 @@ BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixMultiplyAndAdd, RandomSeedFixture)
     }
 }
 
+BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixDoGatherColumnsOf, RandomSeedFixture)
+{
+    const size_t m = 100;
+    const size_t n = 50;
+
+    DenseMatrix dm(m, n);
+    dm.SetUniformRandomValue(-200, 1, IncrementCounter());
+    dm.InplaceTruncateBottom(0);
+
+    SparseMatrix sm(MatrixFormat::matrixFormatSparseCSC, m, n, 0);
+    foreach_coord(row, col, dm)
+    {
+        if (dm(row, col) != 0)
+        {
+            sm.SetValue(row, col, dm(row, col));
+        }
+    }
+
+    std::vector<double> indexValue(n);
+    for(size_t i = 0; i < n; i++) indexValue[i] = i % 3 ? (double)i : -1;
+    DenseMatrix index(1, n, indexValue.data());
+
+    SparseMatrix sm2(MatrixFormat::matrixFormatSparseCSC, m, n, 0);
+    sm2.DoGatherColumnsOf(0, index, sm, 1);
+
+    for (size_t i = 1; i < sm2.GetNumCols() + 1; i++)
+    {
+        BOOST_CHECK(sm2.ColLocation()[i] >= sm2.ColLocation()[i-1]);
+    }
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }
 } } }

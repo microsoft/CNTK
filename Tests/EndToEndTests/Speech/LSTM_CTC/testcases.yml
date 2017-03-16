@@ -1,0 +1,22 @@
+dataDir: ../Data
+tags:
+     - bvt-s (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+     - nightly-s (build_sku == 'gpu')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - __COMPLETED__
+
+  Must train epochs in exactly same order and parameters:
+    patterns:
+      - Starting Epoch {{integer}}
+      - learning rate per sample = {{float}}
+      - effective momentum = {{float,tolerance=.1%}}
+
+  Epochs must be finished with expected results:
+    patterns:
+      - Finished Epoch[{{integer}} of {{integer}}]
+      - cr = {{float,tolerance=.1%}} * {{integer}}
+      - Err = {{float,tolerance=.1%}} * {{integer}}
+      - learningRatePerSample = {{float,tolerance=0.001%}}

@@ -54,9 +54,9 @@ struct Index
     std::vector<ChunkDescriptor> m_chunks;                                  // chunks
     std::map<size_t, std::pair<size_t, size_t>> m_keyToSequenceInChunk;     // sequence key -> sequence location in chunk
     const size_t m_maxChunkSize;                                            // maximum chunk size in bytes
-    bool m_isPrimary;                                                       // index for primary deserializer
+    bool m_primary;                                                         // index for primary deserializer
 
-    Index(size_t chunkSize, bool isPrimary) : m_maxChunkSize(chunkSize), m_isPrimary(isPrimary)
+    Index(size_t chunkSize, bool primary) : m_maxChunkSize(chunkSize), m_primary(primary)
     {}
 
     // Adds sequence (metadata) to the index. Additionally, it
@@ -84,10 +84,10 @@ struct Index
         chunk->m_numberOfSequences++;
         chunk->m_numberOfSamples += sd.m_numberOfSamples;
         sd.m_chunkId = chunk->m_id;
-        sd.m_id = chunk->m_sequences.size();
-        if (!m_isPrimary)
+        sd.m_indexInChunk = chunk->m_sequences.size();
+        if (!m_primary)
         {
-            auto location = std::make_pair(chunk->m_id, sd.m_id);
+            auto location = std::make_pair(chunk->m_id, sd.m_indexInChunk);
             auto sequenceId = sd.m_key.m_sequence;
             m_keyToSequenceInChunk.insert(std::make_pair(sequenceId, location));
         }
@@ -158,9 +158,6 @@ private:
 
     const char m_streamPrefix;
 
-    // Same function as above but with check that the sequence is included in the corpus descriptor.
-    void AddSequenceIfIncluded(CorpusDescriptorPtr corpus, size_t sequenceKey, SequenceDescriptor& sd);
-
     // fills up the buffer with data from file, all previously buffered data
     // will be overwritten.
     void RefillBuffer();
@@ -168,17 +165,22 @@ private:
     // Moves the buffer position to the beginning of the next line.
     void SkipLine();
 
-    // Reads the line until the next pipe character, parsing numerical characters into a sequence id.
+    // Tries to get numeric sequence id.
     // Throws an exception if a non-numerical is read until the pipe character or 
     // EOF is reached without hitting the pipe character.
     // Returns false if no numerical characters are found preceding the pipe.
     // Otherwise, writes sequence id value to the provided reference, returns true.
-    bool TryGetSequenceId(size_t& id);
+    bool TryGetNumericSequenceId(size_t& id);
+
+    // Same as above but for symbolic ids.
+    // It reads a symbolic key and converts it to numeric id using provided keyToId function.
+    bool TryGetSymbolicSequenceId(size_t& id, std::function<size_t(const std::string&)> keyToId);
+
 
     // Build a chunk/sequence index, treating each line as an individual sequence.
     // Does not do any sequence parsing, instead uses line number as 
     // the corresponding sequence id.
-    void BuildFromLines(CorpusDescriptorPtr corpus);
+    void BuildFromLines();
 
     // Returns current offset in the input file (in bytes). 
     int64_t GetFileOffset() const { return m_fileOffsetStart + (m_pos - m_bufferStart); }

@@ -16,10 +16,10 @@ using namespace CNTK;
 using namespace std::placeholders;
 
 void TrainCifarResnet();
-void TrainLSTMSequenceClassifer();
+void TrainLSTMSequenceClassifier();
 void MNISTClassifierTests();
 void TrainSequenceToSequenceTranslator();
-void TrainTruncatedLSTMAcousticModelClassifer();
+void TrainTruncatedLSTMAcousticModelClassifier();
 void TestFrameMode();
 
 int main(int argc, char *argv[])
@@ -78,19 +78,20 @@ int main(int argc, char *argv[])
 
     if (!testName.compare("CifarResNet"))
     {
-        if (IsGPUAvailable())
+        if (ShouldRunOnGpu())
         {
             fprintf(stderr, "Run test on a GPU device.\n");
             TrainCifarResnet();
         }
-        else
+        
+        if (ShouldRunOnCpu())
         {
             fprintf(stderr, "Cannot run TrainCifarResnet test on a CPU device.\n");
         }
     }
     else if (!testName.compare("LSTMSequenceClassifier"))
     {
-        TrainLSTMSequenceClassifer();
+        TrainLSTMSequenceClassifier();
     }
     else if (!testName.compare("MNISTClassifier"))
     {
@@ -102,7 +103,7 @@ int main(int argc, char *argv[])
     }
     else if (!testName.compare("TruncatedLSTMAcousticModel"))
     {
-        TrainTruncatedLSTMAcousticModelClassifer();
+        TrainTruncatedLSTMAcousticModelClassifier();
     }
     else
     {

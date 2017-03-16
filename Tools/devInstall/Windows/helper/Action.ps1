@@ -107,7 +107,7 @@ function ExecuteApplication(
     $appName = $table["AppName"]
     $param= $table["Param"]
     $dir  = $table["WorkDir"]
-    $appDir = GetTableDefaultString -table $table -entryName "AppDir" -defaultValue [string]::Empty
+    $appDir = GetTableDefaultString -table $table -entryName "AppDir" -defaultValue ""
     $usePath = GetTableDefaultBool -table $table -entryName "UseEnvPath" -defaultValue $false
     $maxErrorLevel = GetTableDefaultInt -table $table -entryName "maxErrorLevel" -defaultValue 0
 
@@ -115,8 +115,8 @@ function ExecuteApplication(
          Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
          return 
     }
-    $application = ResolveApplicationName $appName $appDir $usePath
-    if ($application.Length -eq 0) {
+    $application = ResolveApplicationName -name $appName -directory $appDir -usePath $usePath
+    if (-not $application) {
         throw "ExecuteApplication: Couldn't resolve program [$appName] with location directory [$appDir] and usePath [$usePath]"
     }
     if ($dir -eq $null) {
@@ -386,14 +386,11 @@ function ExtractAllFromTarGz(
         return 
     }
 
-    $app = CallGetCommand -application git.exe
-
-    if (-not $app) {
+    $location = ResolveApplicationName -name git.exe -usePath $true
+    if (-not $location) {
         throw "Unpacking the file [$targzFileName] requires extraction utility TAR.EXE.\n Make sure `"Git for Windows`" is installed on your machine."
     }
 
-    $location = Get-Command "git.exe" -CommandType Application
-    $location = $location.Source
     $location = Split-Path $location -Parent
     $location = Split-Path $location -Parent
 
@@ -660,42 +657,6 @@ function Invoke-DosCommand {
     }
 }
 
-function ResolveApplicationName(
-    [string] $name,
-    [string] $directory,
-    [bool] $usePath)
-{
-    $application = ""
-
-    if ($directory.Length -gt 0) {
-        $application = CallGetCommand (join-path $directory $name)
-    }
-    if ($application.Length -eq 0) {
-        if ($usePath) {
-            # we are at this point if we are supposed to check in the path environment for a match and
-            # $directory was empty or we couldn't find it in the $directory
-
-            $application = CallGetCommand $name
-        }
-    }
-    # application will be an empty string if we couldn't resolve the name, otherwise we can execute $application
-
-    return $application
-}
-
-function CallGetCommand(
-    [string] $application)
-{
-    try {
-        get-command $application -CommandType Application -ErrorAction Stop | Out-Null
-        return $application
-    }
-    catch {
-        # the application can't be found, so return empty string
-        return ""
-    }
-}
-
 function GetBatchBuildProtoBuf(
     [string] $sourceDir,
     [string] $targetDir,
@@ -718,6 +679,39 @@ function GetBatchBuildZlibBuf(
 @"
 call $batchFile $libzipSourceDir $zlibSourceDir $targetDir
 "@
+}
+
+function ResolveApplicationName(
+    [Parameter(Mandatory=$True)][string] $name,
+    [string] $directory = "",
+    [bool] $usePath = $false)
+{
+    $application = ""
+
+    if ($directory) {
+        $application = CallGetCommand (join-path $directory $name)
+    }
+    if (-not $application) {
+        if ($usePath) {
+            # we are at this point if we are supposed to check in the path environment for a match and
+            # $directory was empty or we couldn't find it in the $directory
+
+            $application = CallGetCommand $name
+        }
+    }
+    # application will be an empty string if we couldn't resolve the name, otherwise we can execute $application
+    return $application
+}
+
+function CallGetCommand(
+    [Parameter(Mandatory=$True)][string] $application)
+{
+    $matches = @(get-command $application -CommandType Application -TotalCount 1 -ErrorAction SilentlyContinue)
+    if ($matches.Count -eq 0) {
+        return ""
+    }
+
+    return $matches[0].Source
 }
 
 # vim:set expandtab shiftwidth=4 tabstop=4:

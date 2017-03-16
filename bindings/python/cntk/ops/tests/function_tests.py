@@ -11,11 +11,13 @@ Unit tests for the function class.
 import numpy as np
 import pytest
 from ..functions import *
-from ...trainer import *
+from ...train.trainer import *
 from ...initializer import glorot_uniform
 from .. import constant, parameter, input_variable, placeholder_variable, times, plus, past_value, sequence, as_composite, combine, convolution, splice
-from ... import InferredDimension
-from .ops_test_utils import compare_lists_of_np_arrays, AA
+from ... import InferredDimension, gpu, cpu
+from .ops_test_utils import compare_lists_of_np_arrays, AA, cntk_device
+
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef
 
 def test_variable_forwarding():
     op = constant(value=2, shape=(3,4)) + 1
@@ -31,7 +33,7 @@ def test_eval_by_node_name():
     assert res.eval({'i': [[3]]}) == [6]
     assert res.eval({u'i': [[3]]}) == [6]
 
-    
+
 def test_replace_placeholders():
     p = placeholder_variable(shape=(1,))
     i = input_variable(shape=(1,),
@@ -219,19 +221,19 @@ def test_clone_with_function_in_substitution_map():
     t = times(x, w)
     b = parameter((proj_dim))
     t_plus_b = t + b
-    
+
     p = placeholder_variable()
     just_b = t_plus_b.clone('clone', {t : p})
     t_plus_b_clone = just_b.clone('share', {p : t})
 
-def test_clone_with_slice(): 
+def test_clone_with_slice():
     i1 = input_variable((2,2), name='i1')
     i2 = input_variable((2,2), name='i2')
-    x = splice(i1, i2, axis=0) 
-    W = constant(1, (4,1), name='W') 
+    x = splice(i1, i2, axis=0)
+    W = constant(1, (4,1), name='W')
     y = convolution(W, x)
-    assert(y.shape == (4,2)) 
-    
+    assert(y.shape == (4,2))
+
     from ..functions import CloneMethod
     x1 = input_variable((2,1), name='x1')
     x2 = input_variable((2,1), name='x2')
@@ -267,7 +269,7 @@ def test_input_order():
     t = times(x, w)
     t_plus_b = plus(t, b, name=func_name)
 
-    def compare_var_names(vars, names): 
+    def compare_var_names(vars, names):
         num_vars = len(vars)
         for i in range(num_vars):
             if (vars[i].name != names[i]):
@@ -290,8 +292,8 @@ def test_combine_duplicated_inputs():
     t_plus_b = plus(t, b, name=func_name)
 
     duplicated_t_plus_b = combine([t_plus_b, t_plus_b])
-    
-    def compare_var_names(vars, names): 
+
+    def compare_var_names(vars, names):
         num_vars = len(vars)
         for i in range(num_vars):
             if (vars[i].name != names[i]):
@@ -300,7 +302,7 @@ def test_combine_duplicated_inputs():
         return True
 
     assert compare_var_names(duplicated_t_plus_b.outputs, [func_name, func_name])
-    
+
 
 def test_extra_arguments_in_eval():
     x1 = input_variable((1,), name='x1')
@@ -310,4 +312,64 @@ def test_extra_arguments_in_eval():
 
     result = x1_plus_1.eval({x1 : np.asarray([[1]]), x2 : np.asarray([[1]])})
     assert np.allclose(result, [[[2]]])
+
+
+def test_MinibatchData_and_Value_as_input(tmpdir):
+
+    mbdata = r'''0  |S0 100'''
+
+    tmpfile = str(tmpdir/'mbtest.txt')
+    with open(tmpfile, 'w') as f:
+        f.write(mbdata)
+
+    defs = StreamDefs(f1 = StreamDef(field='S0', shape=1))
+    mb_source = MinibatchSource(CTFDeserializer(tmpfile, defs),
+                                randomize=False)
+
+    f1_si = mb_source.stream_info('f1')
+
+    mb = mb_source.next_minibatch(1)
+
+    f1 = input_variable(shape=(1,),
+                       needs_gradient=True,
+                       name='f')
+    res = f1 * 2
+
+    assert res.eval({f1: mb[f1_si]}) == [[200]]
+    # Test MinibatchData
+    assert res.eval(mb[f1_si]) == [[200]]
+    # Test Value
+    assert res.eval(mb[f1_si].data) == [[200]]
+    # Test NumPy (converted back from MinibatchData)
+    assert res.eval(mb[f1_si].value) == [[200]]
+    # Test Value
+    assert res.eval(mb[f1_si].data) == [[200]]
+
+
+def test_output_subset_evaluation(device_id):
     
+    try:
+        gpu_device = gpu(0)
+    except ValueError:
+        pytest.skip('Test only runs when GPU available')
+
+    device = cntk_device(device_id)
+    x1 = input_variable(shape=())
+    op1 = constant(value=1, shape=(1), device=device) + (constant(value=1, shape=(1), device=device) + x1)
+
+    x2 = input_variable(shape=(1))
+
+    # Deliberately locate the parameter on a different device
+    # instead of the actual compute target device, so that
+    # if we try to use this parameter, it results in an error
+    if (device.type() == 0):
+        parameter_device = gpu_device
+    else:
+        parameter_device = cpu()
+    p = parameter(shape=(1), init=glorot_uniform(), device=parameter_device)
+    op2 = (x2 - constant(value=10, shape=(1), device=device)) - p
+    
+    op = combine([op1, op2]);
+
+    _, result = op.forward({x1 : np.asarray([1, 2, 3])}, [op1], device=device)
+    assert np.array_equal(result[op1], np.asarray([[[3], [4], [5]]]))

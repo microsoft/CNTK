@@ -12,7 +12,7 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import unittest_helper, _test_unary_op, AA, I, precision, PRECISION_TO_TYPE, constant
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 
 REDUCE_TEST_OPERANDS = [
     #(input_data,  axis)
@@ -146,7 +146,7 @@ def test_op_reduce_log_sum(input_data, axis, device_id, precision):
     from .. import reduce_log_sum_exp
     _test_unary_op(precision, device_id, reduce_log_sum_exp, input_data,
                    expected_forward, expected_backward, {'axis': axis})
-                   
+
 @pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
 def test_op_reduce_prod(input_data, axis, device_id, precision):
     dt = PRECISION_TO_TYPE[precision]
@@ -204,7 +204,7 @@ def test_op_reduce_all(input_data, axis, device_id, precision):
         expected_forward = fwd(value)
         expected_backward = bwd(value,expected_forward)
         binding = {a: value}
-        actual_backward = input_op.grad(binding)[0]
+        actual_backward = input_op.grad(binding)
         actual_forward  = np.copy(input_op.eval(binding))
         assert np.allclose(actual_forward, expected_forward)
         for ab,eb in zip (actual_backward, expected_backward):
@@ -227,3 +227,31 @@ def test_op_reduce_mean_all_constant(input_data, axis, device_id, precision):
     expected_forward = AA(np.mean(value))
     actual_forward  = input_op.eval()
     assert np.allclose(actual_forward, expected_forward)
+
+@pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
+def test_op_reduce_argmax(input_data, axis, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    data = AA(input_data, dtype=dt)
+
+    # numpy argmax doesn't support keepdims
+    arg_shape = np.amax(data, axis=(axis), keepdims=True).shape
+    expected_forward = [[np.argmax(data, axis=(axis)).reshape(arg_shape)]]
+
+    from .. import argmax
+    _test_unary_op(precision, device_id, argmax, input_data,
+                   expected_forward, None, {'axis': axis})
+
+@pytest.mark.parametrize("input_data, axis", REDUCE_TEST_OPERANDS)
+def test_op_reduce_argmin(input_data, axis, device_id, precision):
+    dt = PRECISION_TO_TYPE[precision]
+
+    data = AA(input_data, dtype=dt)
+
+    # numpy argmin doesn't support keepdims
+    arg_shape = np.amin(data, axis=(axis), keepdims=True).shape
+    expected_forward = [[np.argmin(data, axis=(axis)).reshape(arg_shape)]]
+
+    from .. import argmin
+    _test_unary_op(precision, device_id, argmin, input_data,
+                   expected_forward, None, {'axis': axis})

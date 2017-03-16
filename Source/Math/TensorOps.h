@@ -48,6 +48,7 @@ OverloadUnaryMathFns(fabs);
 OverloadUnaryMathFns(cos);
 OverloadUnaryMathFns(sin);
 OverloadUnaryMathFns(floor);
+OverloadUnaryMathFns(log1p);
 
 #pragma pop_macro("OverloadUnaryMathFns")
 
@@ -98,6 +99,12 @@ DECL ElemType LinearRectifierDerivative(ElemType z)
 }
 
 template <class ElemType>
+DECL ElemType ExponentialLinearUnitDerivative(ElemType z)
+{
+    return z >= 0 ? (ElemType)1 : exp_(z);
+}
+
+template <class ElemType>
 DECL ElemType Sgn(ElemType z)
 {
     if (z > 0.0) return 1.0;
@@ -140,22 +147,15 @@ DECL ElemType ClippedQuotient(ElemType a, ElemType b)
 template <typename ElemType>
 DECL ElemType LogAdd(ElemType x, ElemType y)
 {
+    // The reason that we don't use std::swap, is because this code is used in Cuda and not just cpu.
     if (x < y)
     {
         ElemType temp = x;
         x = y;
         y = temp;
     }
-    ElemType diff = y - x;
-    if (diff < (ElemType) MINLOGEXP)
-    {
-        return (x < (ElemType) LSMALL) ? (ElemType) LZERO : x;
-    }
-    else
-    {
-        ElemType z = exp_(diff);
-        return x + log_((ElemType) 1.0 + z);
-    }
+
+    return x + log1p_(exp_(y - x));
 }
 
 // IndexElement reindexes a tensor along one dimension.
@@ -206,6 +206,7 @@ DefUnaryOp(LinearRectifier, a > 0 ? a : 0);
 DefUnaryOp(Cosine, cos_(a));
 DefUnaryOp(Sin, sin_(a));
 DefUnaryOp(Reciprocal, a == 0 ? 0 : 1 / a);
+DefUnaryOp(ExponentialLinearUnit, a >= 0 ? a : (exp_(a)-1));
 #pragma pop_macro("DefUnaryOp")
 
 #pragma push_macro("DefBinaryOp")
@@ -245,6 +246,7 @@ DefBinaryOp(ElementwiseProductWithAbsDerivative, a * Sgn(b)); // note: b = input
 DefBinaryOp(ElementwiseProductWithReciprocalDerivative, a * -Sqr(b)); // b = output
 DefBinaryOp(ElementwiseProductWithSqrtDerivative, a / (2 * b)); // b = output; d/dx sqrt(x) = 1/(2 * sqrt(x)) --> note this is the same as ElementwiseQuotient w a constant; if more show up like this we should add more template params
 DefBinaryOp(SqrOfDifference, Sqr(a - b));
+DefBinaryOp(ElementwiseProductWithExponentialLinearUnitDerivativeFromOutput, b >= 0 ? a : a*(1+b)); // b = output;
 //DefBinaryOp(Index, IndexElement(a, b, i));  // note: this one uses the third argument
 
 #pragma pop_macro("DefBinaryOp")

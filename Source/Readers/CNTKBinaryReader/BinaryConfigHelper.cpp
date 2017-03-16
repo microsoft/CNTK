@@ -10,6 +10,8 @@
 #include "BinaryConfigHelper.h"
 #include "DataReader.h"
 #include "StringUtil.h"
+#include "ReaderConstants.h"
+#include "ReaderUtil.h"
 
 using std::string;
 using std::wstring;
@@ -46,26 +48,33 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
         }
 
+        string precision = config.Find("precision", "float");
+        if (AreEqualIgnoreCase(precision, "double"))
+        {
+            m_elementType = ElementType::tdouble;
+        }
+        else if (AreEqualIgnoreCase(precision, "float"))
+        {
+            m_elementType = ElementType::tfloat;
+        }
+        else
+        {
+            RuntimeError("Not supported precision '%s'. Expected 'double' or 'float'.", precision.c_str());
+        }
+
         m_filepath = msra::strfun::utf16(config(L"file"));
         m_keepDataInMemory = config(L"keepDataInMemory", false);
 
-        // EvalActions inserts randomize = "none" into the reader config in DoWriteOutoput. We would like this to be true/false,
-        // but we can't for this reason. So we will assume false unless we specifically get "true"
-
-        m_randomize = false;
-        wstring randomizeString = config(L"randomize", L"false");
-        if (!_wcsicmp(randomizeString.c_str(), L"true")) // TODO: don't support case-insensitive option strings in the new reader
-            m_randomize = true;
-
-        if (m_randomize)
+        m_randomizationWindow = GetRandomizationWindowFromConfig(config);
+        m_sampleBasedRandomizationWindow = config(L"sampleBasedRandomizationWindow", false);
+        if (!m_sampleBasedRandomizationWindow && m_randomizationWindow == randomizeAuto)
         {
-            if (config.Exists(L"randomizationWindow"))
-                m_randomizationWindow = config(L"randomizationWindow");
-            else
-                m_randomizationWindow = randomizeAuto;
+            // The size of the chunk for the binary reader is specified in terms of the number of sequences
+            // per chunk and is fixed at the time when the data is serialized into the binary format.
+            // As a result, the on-disk size of a chunk can be arbitrary, and 32MB number used here is 
+            // merely a heuristic. 
+            m_randomizationWindow = g_4GB / g_32MB; // 128 chunks. 
         }
-        else
-            m_randomizationWindow = randomizeNone;
 
         m_traceLevel = config(L"traceLevel", 1);
     }

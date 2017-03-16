@@ -3,11 +3,34 @@
 # for full license information.
 # ==============================================================================
 
-from ...utils import sanitize_input, get_data_type, typemap
+from ...utils import get_data_type
+from cntk.internal import typemap, sanitize_input
 
 ##########################################################################
 # sequence ops
 ##########################################################################
+
+def delay(x, initial_state=None, time_step=1, name=''):
+    '''
+    This function combines ``past_value`` and ``future_value`` into a single function.
+    This is useful when the time_step can be specified as positive or negative.
+
+    Args:
+        x: the tensor (or its name) from which the past value is obtained
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
+        time_step (int): the number of time steps to look into the past, where negative values mean to look into the future, and 0 means a no-op (default 1).
+        name (str, optional): the name of the Function instance in the network
+    '''
+    from ...ops import alias, past_value, future_value
+    if time_step > 0:
+        return past_value  (x, time_step= time_step, initial_state=initial_state, name=name)
+    elif time_step < 0:
+        return future_value(x, time_step=-time_step, initial_state=initial_state, name=name)
+    else:
+        if name:
+            return alias(x, name)
+        else:
+            return x
 
 
 @typemap
@@ -61,6 +84,7 @@ def is_last(seq, name=''):
     seq = sanitize_input(seq, get_data_type(seq))
     return is_last(seq, name)
 
+
 @typemap
 def slice(seq, begin_index, end_index, name=''):
     '''
@@ -84,6 +108,7 @@ def slice(seq, begin_index, end_index, name=''):
     seq = sanitize_input(seq, get_data_type(seq))
     return sequence_slice(seq, begin_index, end_index, name)
 
+
 @typemap
 def first(seq, name=''):
     '''
@@ -95,9 +120,9 @@ def first(seq, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 0.,  1.],
+        array([[[ 0.,  1.],
                  [ 2.,  3.],
-                 [ 4.,  5.]]]], dtype=float32)
+                 [ 4.,  5.]]], dtype=float32)
 
     Args:
         seq: the symbolic tensor denoting a sequence
@@ -121,9 +146,9 @@ def last(seq, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 18.,  19.],
+        array([[[ 18.,  19.],
                  [ 20.,  21.],
-                 [ 22.,  23.]]]], dtype=float32)
+                 [ 22.,  23.]]], dtype=float32)
 
     Args:
         seq: the symbolic tensor denoting a sequence
@@ -140,8 +165,12 @@ def last(seq, name=''):
 @typemap
 def where(condition, name=''):
     '''
-    Given a symbolic sequence ``condition`` of boolean-like values, it will return
+    Given a symbolic sequence ``condition`` of boolean-like (1/0) values, it will return
     a new sequence containing the indices for which the values were true.
+
+    If ``condition`` has a value other than 0 or 1, it will denote a repeat factor.
+    If a repeat factor is fractional, it will round up but deduct the overshoot from the
+    next repeat factor.
 
     Example:
         >>> x = C.input_variable(shape=(3,2))
@@ -155,11 +184,20 @@ def where(condition, name=''):
                 [ 1.]]], dtype=float32)
         >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
-        array([[[ 2.],
-                [ 3.]]], dtype=float32)
+        array([[ 2.,  3.]], dtype=float32)
+
+        >>> # repeat frame[1] twice, frame[3] three times, and frame[4] twice
+        >>> C.sequence.where(C.input_variable(1)).eval([[[1], [2], [1], [3], [2]]])
+        array([[ 0.,  1.,  1.,  2.,  3.,  3.,  3.,  4.,  4.]], dtype=float32)
+        >>> # note that the above are the indices that are passed to 
+
+        >>> # repeat frames with a fractional factor
+        >>> C.sequence.where(C.input_variable(1)).eval([[[1.2]]*10])
+        array([[ 0.,  0.,  1.,  2.,  3.,  4.,  5.,  5.,  6.,  7.,  8.,  9.]], dtype=float32)
+        >>> # as a result, a 1.2 times stretch is realized by duplicating frame[0] and frame[5]
 
     Args:
-        condition: the symbolic sequence of booleans
+        condition: sequence of 0 or 1 values for filtering, or other positive values for repetition (also fractional)
         name (str): the name of the node in the network
 
     Returns:
@@ -168,6 +206,7 @@ def where(condition, name=''):
     from cntk.cntk_py import where
     condition = sanitize_input(condition, get_data_type(condition))
     return where(condition, name)
+
 
 @typemap
 def gather(seq, condition, new_sequence_axis_typeinfo=None, name=''):
@@ -318,6 +357,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         broadcast_as_operand, get_data_type(broadcast_as_operand))
     return broadcast_as(operand, broadcast_as_operand, name)
 
+
 @typemap
 def reduce_sum(seq, name=''):
     '''
@@ -329,9 +369,9 @@ def reduce_sum(seq, name=''):
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y = C.sequence.reduce_sum(x)
         >>> y.eval({x:x0})
-        array([[[[ 36.,  40.],
+        array([[[ 36.,  40.],
                  [ 44.,  48.],
-                 [ 52.,  56.]]]], dtype=float32)
+                 [ 52.,  56.]]], dtype=float32)
 
     Args:
         seq: sequence input tensor

@@ -18,6 +18,7 @@ from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_
 from _cntk_py import set_computation_network_trace_level
 from cntk.device import set_default_device, gpu
 from cntk.distributed import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
+from cntk.training_session import *
 
 from resnet_models import *
 
@@ -36,6 +37,7 @@ image_height = 32
 image_width  = 32
 num_channels = 3  # RGB
 num_classes  = 10
+model_name   = "ResNet_CIFAR10_DataAug.model"
 
 # Create network
 def create_resnet_network(network_name):
@@ -66,7 +68,7 @@ def create_resnet_network(network_name):
 
 
 # Create trainer
-def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up):
+def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer):
     if network['name'] == 'resnet20': 
         lr_per_mb = [1.0]*80+[0.1]*40+[0.01]
     elif network['name'] == 'resnet110': 
@@ -94,10 +96,10 @@ def create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, b
     else:
         learner = data_parallel_distributed_learner(local_learner, num_quantization_bits=num_quantization_bits, distributed_after=warm_up)
     
-    return Trainer(network['output'], (network['ce'], network['pe']), learner)
+    return Trainer(network['output'], (network['ce'], network['pe']), learner, progress_printer)
 
 # Train and test
-def train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling=False):
+def train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, restore, profiling=False):
 
     # define mapping from intput streams to network inputs
     input_map = {
@@ -105,29 +107,24 @@ def train_and_test(network, trainer, train_source, test_source, progress_printer
         network['label']: train_source.streams.labels
     }
 
-    training_session = cntk.training_session(
-        training_minibatch_source = train_source, 
-        trainer = trainer,
-        mb_size_schedule = cntk.minibatch_size_schedule(minibatch_size),
-        progress_printer = progress_printer,
-        model_inputs_to_mb_source_mapping = input_map, 
-        checkpoint_frequency = epoch_size,
-        checkpoint_filename="ResNet_CIFAR10_DataAug", 
-        progress_frequency=epoch_size,
-        cv_source=test_source,
-        cv_mb_size_schedule=cntk.minibatch_size_schedule(16),
-        restore=False)
-	
     if profiling:
         start_profiler(sync_gpu=True)
         
-    training_session.train()
+    training_session(
+        trainer=trainer, mb_source = train_source, 
+        mb_size = minibatch_size,
+        var_to_stream = input_map,
+        checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
+        progress_frequency=epoch_size,
+        cv_config = CrossValidationConfig(source=test_source, mb_size=16)
+    ).train()
     
     if profiling:
         stop_profiler()
 
 # Train and evaluate the network.
-def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=3200, warm_up=0, max_epochs=5, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiling=False):
+def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, num_quantization_bits=32, block_size=3200, warm_up=0, 
+                   max_epochs=5, restore=True, log_to_file=None, num_mbs_per_log=None, gen_heartbeat=False, scale_up=False, profiling=False):
 
     set_computation_network_trace_level(0)
     
@@ -146,14 +143,13 @@ def resnet_cifar10(train_data, test_data, mean_data, network_name, epoch_size, n
         num_epochs=max_epochs)
 
     network = create_resnet_network(network_name)
-    trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up)
+    trainer = create_trainer(network, minibatch_size, epoch_size, num_quantization_bits, block_size, warm_up, progress_printer)
     train_source = create_image_mb_source(train_data, mean_data, train=True, total_number_of_samples=max_epochs * epoch_size)
     test_source = create_image_mb_source(test_data, mean_data, train=False, total_number_of_samples=cntk.io.FULL_DATA_SWEEP)
-    train_and_test(network, trainer, train_source, test_source, progress_printer, minibatch_size, epoch_size, profiling)
+    train_and_test(network, trainer, train_source, test_source, minibatch_size, epoch_size, profiling)
 
 
 if __name__=='__main__':
-
     data_path  = os.path.join(abs_path, "..", "..", "..", "DataSets", "CIFAR-10")
 
     parser = argparse.ArgumentParser()
@@ -167,6 +163,7 @@ if __name__=='__main__':
     parser.add_argument('-q', '--quantized_bits', help='Number of quantized bits used for gradient aggregation', type=int, required=False, default='32')
     parser.add_argument('-b', '--block_samples', type=int, help="Number of samples per block for block momentum (BM) distributed learner (if 0 BM learner is not used)", required=False, default=None)
     parser.add_argument('-a', '--distributed_after', help='Number of samples to train with before running distributed', type=int, required=False, default='0')
+    parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
     parser.add_argument('-device', '--device', type=int, help="Force to run the script on a specified device", required=False, default=None)
     parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
 
@@ -177,10 +174,14 @@ if __name__=='__main__':
         model_path = args['outputdir'] + "/models"
     if args['device'] != None:
         set_default_device(gpu(args['device']))
-    if args['datadir'] is not None:
-        data_path = args['datadir']
+
     if args['epoch_size'] is not None:
         epoch_size = args['epoch_size']
+
+    data_path = args['datadir']
+
+    if not os.path.isdir(data_path):
+        raise RuntimeError("Directory %s does not exist" % data_path)
 
     mean_data=os.path.join(data_path, 'CIFAR-10_mean.xml')
     train_data=os.path.join(data_path, 'train_map.txt')
@@ -203,6 +204,7 @@ if __name__=='__main__':
                        block_size=args['block_samples'],
                        warm_up=args['distributed_after'],
                        max_epochs=epochs,
+                       restore=not args['restart'],
                        scale_up=scale_up,
                        log_to_file=args['logdir'],
                        profiling=args['profile'])

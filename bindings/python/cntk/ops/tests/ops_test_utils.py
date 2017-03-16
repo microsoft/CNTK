@@ -15,7 +15,7 @@ from cntk.tests.test_utils import *
 
 from cntk.device import cpu, gpu
 from ...ops.functions import Function
-from ...utils import sanitize_dtype_cntk
+from cntk.internal import sanitize_dtype_cntk
 from ...utils import eval as cntk_eval
 from .. import constant, input_variable
 
@@ -56,7 +56,7 @@ def _test_unary_op(precision, device_id, op_func,
         input_op = op_func(a, **op_param_dict)
 
     forward_input = {a: value}
-    expected_backward = {a: expected_backward_all['arg'], }
+    expected_backward = {a: expected_backward_all['arg'], } if expected_backward_all is not None else None
     unittest_helper(input_op,
                     forward_input, expected_forward, expected_backward,
                     device_id=device_id, precision=precision)
@@ -169,7 +169,6 @@ def batch_dense_to_sparse(batch, dynamic_axis=''):
 
     batch_indices = []
     batch_values = []
-    tensor_shape = []
 
     shapes_in_tensor = set()
 

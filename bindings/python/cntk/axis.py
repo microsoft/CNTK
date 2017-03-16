@@ -4,7 +4,7 @@
 # ==============================================================================
 
 from . import cntk_py
-from .utils import typemap
+from cntk.internal import typemap
 
 class Axis(cntk_py.Axis):
     '''
@@ -104,7 +104,7 @@ class Axis(cntk_py.Axis):
     @typemap
     def all_axes():
         '''
-        Axis object representing all the axes of an operand.
+        Axis object representing all the axes--static and dynamic--of an operand.
 
         Returns:
             :class:`Axis`: all axes
@@ -151,9 +151,25 @@ class Axis(cntk_py.Axis):
     @typemap
     def end_static_axis():
         '''
-        Creates an Axis object representing the end (one past last) static axis.
+        DEPRECATED.
+
+        Creates an Axis object representing a new leading static axis.
 
         Returns:
-            :class:`Axis`: axis object representing the end (one past last) static axis.
+            :class:`Axis`: axis object representing a new leading static axis.
+        '''
+        import warnings
+        warnings.warn('This will be removed in future versions. Please use '
+                'Axis.new_leading_axis() instead.', DeprecationWarning)
+        return cntk_py.Axis.end_static_axis()
+
+    @staticmethod
+    @typemap
+    def new_leading_axis():
+        '''
+        Creates an Axis object representing a new leading static axis.
+
+        Returns:
+            :class:`Axis`: axis object representing a new leading static axis.
         '''
         return cntk_py.Axis.end_static_axis()

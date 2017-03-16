@@ -12,8 +12,8 @@ import numpy as np
 import pytest
 
 from cntk import *
-from cntk.trainer import *
-from cntk.learner import *
+from cntk.train.trainer import *
+from cntk.learners import *
 from cntk.ops.functions import UserFunction
 from .ops_test_utils import AA
 
@@ -27,6 +27,9 @@ class MyPlus(UserFunction):
     def infer_outputs(self):
         return [output_variable(self.inputs[0].shape,
             self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+
+    def clone(self, cloned_inputs):
+        return MyPlus(cloned_inputs[0], cloned_inputs[1])
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
@@ -115,7 +118,7 @@ def test_ext_eval_6_clone():
 
     p = parameter(shape=(dim,), init=10, name='p')
     z = m + p
-    
+
     m_udf = user_function(MyPlus(i, constant(3)))
     z_clone = z.clone('share', {m : m_udf} );
 
@@ -148,8 +151,8 @@ def test_ext_train():
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, (z+0, z+0), \
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                True)])
+                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+                      True)])
 
     i = 0
     while i<100:
@@ -158,6 +161,20 @@ def test_ext_train():
         trainer.train_minibatch([input_data])
 
     assert m.forward_calls == m.backward_calls == 100
+
+def test_udf_clone():
+    dim = 4
+    i = input_variable(dim, needs_gradient=True, name='i_var')
+    m_udf = user_function(MyPlus(i, constant(3)))
+    p = parameter(shape=(dim,), init=10, name='p')
+    z = m_udf + p
+
+    z_clone = z.clone('share');
+
+    input_data = np.random.rand(dim)
+    result = z_clone.eval([input_data])
+    assert np.allclose(result[0][0], input_data+3+10)
+
 
 @pytest.mark.parametrize("payload", [
     (np.asarray([[[1,2,3.0]]]),),
@@ -191,8 +208,7 @@ def test_ext_backpropstate(payload):
     z = m+p
 
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
-    trainer = Trainer(z, (z+0, z+0), \
-            [sgd(z.parameters, lr_per_sample)])
+    trainer = Trainer(None, (z), [sgd(z.parameters, lr_per_sample)])
 
     for i in range(100):
         input_data = np.random.rand(dim)
@@ -244,8 +260,8 @@ def test_ext_lambdafunc():
     momentum_time_constant = momentum_as_time_constant_schedule(1100)
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, (z+0, z+0), \
-            [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
-                True)])
+                      [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant,
+                      True)])
 
     i = 0
     input_data = 0.1 * np.ones(dim)
@@ -277,7 +293,7 @@ class PlusAndLast(UserFunction):
 def test_udf_plus_and_last():
     x = input_variable(shape=(2,))
     y = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis()])
-    
+
     func = user_function(PlusAndLast(x, y))
 
     dt_precision = np.float32
@@ -285,6 +301,47 @@ def test_udf_plus_and_last():
     operand2 = [AA([2., 2.], dtype=dt_precision)]
 
     _, result = func.forward({x : operand1, y : operand2}, [func.output])
-    
+
     expected_forward = AA([[[5., 6.]]], dtype=dt_precision)
     assert np.allclose(result[func.output], expected_forward)
+
+
+class MultiOutputUserFunction(UserFunction):
+    def __init__(self, arg1, arg2, name='f1'):
+        super(MultiOutputUserFunction, self).__init__([arg1, arg2], name=name)
+
+    def infer_outputs(self):
+        return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes),
+                output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+
+    def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
+        assert len(self.inputs)==2
+
+        outputs[self.outputs[0]] = arguments[0] + 2*arguments[1]
+        outputs[self.outputs[1]] = 2*arguments[0] + arguments[1]
+
+        return None
+
+    def backward(self, state, root_gradients, variables):
+        if self.inputs[0] in variables:
+            variables[self.inputs[0]] = root_gradients[self.outputs[0]] + 2*root_gradients[self.outputs[1]]
+
+        if self.inputs[1] in variables:
+            variables[self.inputs[1]] = 2*root_gradients[self.outputs[0]] + root_gradients[self.outputs[1]]
+
+def test_multioutput_udf():
+    dim = 2
+    x = input_variable(dim, needs_gradient=True, name='x')
+    y = input_variable(dim, needs_gradient=True, name='y')
+    op = user_function(MultiOutputUserFunction(x, y))
+
+    x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]
+    y_data = [AA([[5., 6.], [7., 8.]], dtype=np.float32)]
+    result = op.eval({x : x_data, y : y_data})
+    assert np.allclose(result[op.outputs[0]], x_data[0] + 2*y_data[0])
+    assert np.allclose(result[op.outputs[1]], 2*x_data[0] + y_data[0])
+
+    op = op.outputs[0] + op.outputs[1]
+    gradients = op.grad({x : x_data, y : y_data}, op.arguments)
+    assert np.allclose(gradients[op.arguments[0]], [[[3., 3.], [3., 3.]]])
+    assert np.allclose(gradients[op.arguments[1]], [[[3., 3.], [3., 3.]]])
