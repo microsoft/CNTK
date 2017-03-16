@@ -2355,6 +2355,9 @@ float CudaTimer::Elapsed()
 /*static*/ void SyncGuard::EnableSync()
 {
 }
+
+/*static*/ bool SyncGuard::IsSyncEnabled() { return false; }
+
 } } }
 
 // define a dummy GPUWatcher class too
