@@ -1337,14 +1337,15 @@
     }
 }
 
-%include "CNTKLibraryInternals.h"
-%include "CNTKLibrary.h"
-
 %include "CNTKValueExtend.i"
 
 //
 // NDArryView
 //
+%ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
+%ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device);
+
+
 %extend CNTK::NDArrayView {
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
@@ -1376,4 +1377,8 @@
         return (*self)[axisId];
     }
 }
+
+%include "CNTKLibraryInternals.h"
+%include "CNTKLibrary.h"
+
 
