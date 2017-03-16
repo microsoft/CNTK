@@ -126,3 +126,47 @@ def test_as_block_with_function_in_arguments_map():
 
     expected_forward = [[[4.]]]
     assert np.array_equal(res, expected_forward)
+
+
+def test_block_clone():
+    from .. import placeholder_variable, as_block, input_variable, parameter, times
+
+    input = input_variable((1,), name='input')
+    
+    operand_placeholder = placeholder_variable(name='placeholder')
+    w = parameter(shape=(1,1), init=1)
+    b = parameter(shape=(1,), init=2)
+    block_composite = times(operand_placeholder, w) + b
+    dense_block = as_block(block_composite, [(operand_placeholder, input)], 'dense')
+
+    w_new = parameter(shape=(1,1), init=3)
+    dense_block_clone = dense_block.clone('share', {w : w_new})
+    assert dense_block_clone.parameters[0].uid == b.uid
+    assert dense_block_clone.inputs[1].uid == w_new.uid
+    
+    result = dense_block_clone.eval({dense_block_clone.arguments[0] : [np.asarray([2.], dtype=np.float32)]})
+    assert np.array_equal(result, [[[8.]]])
+
+
+def test_root_block_clone():
+    from .. import placeholder_variable, as_block, input_variable, parameter, times
+
+    input = input_variable((1,), name='input')
+    
+    operand_placeholder = placeholder_variable(name='placeholder')
+    w = parameter(shape=(1,1), init=1)
+    b1 = parameter(shape=(1,), init=2)
+    block_composite = times(operand_placeholder, w) + b1
+    dense_block = as_block(block_composite, [(operand_placeholder, input)], 'dense')
+
+    b2 = parameter(shape=(1,), init=3)
+    replacement = dense_block + b2
+    dense_block_clone = dense_block.clone('share', {dense_block : replacement})
+    assert replacement.root_function.uid == dense_block_clone.root_function.uid
+    
+    assert dense_block_clone.parameters[0].uid == w.uid
+    assert dense_block_clone.parameters[1].uid == b1.uid
+    assert dense_block_clone.parameters[2].uid == b2.uid
+
+    result = dense_block_clone.eval({input : [np.asarray([2.], dtype=np.float32)]})
+    assert np.array_equal(result, [[[7.]]])
