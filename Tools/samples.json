@@ -414,5 +414,21 @@
         "description":  "Improve training speed for models with large vocabularies.",
         "language":  ["Python"],
         "type":  ["Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "Machine comprehension with ReasoNet",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_302_ReasoNet.ipynb",
+        "description":  "Implementation of ReasoNet algorithm for machine comprehension using CNN dataset",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Text"],
+        "name":  "Machine comprehension with ReasoNet-Prediction",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_302b_ReasoNet_Evaluation_With_CNN_Dataset.ipynb",
+        "description":  "Prediction of pre-trained ReasoNet model for machine comprehension using CNN dataset",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
     }
 ]

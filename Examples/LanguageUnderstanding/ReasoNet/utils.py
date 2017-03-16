@@ -3,13 +3,14 @@ import numpy as np
 from datetime import datetime
 import math
 from cntk import Trainer, Axis, device, combine
-from cntk.layers.blocks import Stabilizer, _initializer_for,  _INFERRED, Parameter, Placeholder
+from cntk.layers.blocks import Stabilizer, _initializer_for,  _INFERRED, Parameter
 from cntk.layers import Recurrence, Convolution, Dense
 from cntk.ops import input, sequence, reduce_sum, \
     parameter, times, element_times, plus, placeholder, reshape, constant, sigmoid, convolution, tanh, times_transpose, greater, element_divide, element_select, exp
 from cntk.losses import cosine_distance
 from cntk.internal import _as_tuple, sanitize_input
 from cntk.initializer import uniform, glorot_uniform
+from io import open
 
 try:
   from wordvocab import *
@@ -41,8 +42,8 @@ class logger:
       logger.init()
     if toconsole:
       print(message)
-    with open(logger.__logfile, 'a') as logf:
-      logf.write("{}| {}\n".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), message))
+    with open(logger.__logfile, 'a', encoding='utf-8') as logf:
+      logf.write(u"{}| {}\n".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S"), message))
 
 class uniform_initializer:
   def __init__(self, scale=1, bias=0, seed=0):
@@ -70,7 +71,7 @@ def load_embedding(embedding_path, vocab_path, dim, init=None):
   vocab_dim = len(entity_vocab) + len(word_vocab) + 1
   entity_size = len(entity_vocab)
   item_embedding = [None]*vocab_dim
-  with open(embedding_path, 'r') as embedding:
+  with open(embedding_path, 'r', encoding='utf-8') as embedding:
     for line in embedding.readlines():
       line = line.strip('\n')
       item = line.split(' ')

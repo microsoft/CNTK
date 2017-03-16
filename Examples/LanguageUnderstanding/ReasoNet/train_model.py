@@ -6,12 +6,15 @@ import math
 try:
   from .utils import *
   from .reasonet import *
+  from .prepare_cnn_data import prepare_data
 except Exception:
   from utils import *
   from reasonet import *
+  from prepare_cnn_data import prepare_data
 
 module_path = os.path.abspath(os.path.dirname(os.path.abspath(__file__)))
 def train_cnn_model():  
+  prepare_data()
   logger.init("cnn_train")
   data_path = os.path.join(module_path, "Data/cnn/training.ctf")
   eval_path = os.path.join(module_path, "Data/cnn/validation.ctf")

@@ -49,6 +49,10 @@ Tutorials
 #.  *Recognize flowers and animals in natural scene images using deep transfer learning*
      CNTK 301: :cntktut:`Deep transfer learning with pre-trained ResNet model <CNTK_301_Image_Recognition_with_Deep_Transfer_Learning>`
 
+#.  *Comprehend passages for question answering task*
+     CNTK 302: ReasoNet model for Q & A- Part A: :cntktut:`Training with CNN data <CNTK_302_Reasonet>`,
+     Part B: :cntktut:`Prediction with CNN data <CNTK_302b_ReasoNet_Evaluation_With_CNN_Dataset>`
+
 Try these notebooks pre-installed on `CNTK Azure Notebooks`_ for free.
 
 For our Japanese users, you can find some of the `tutorials in Japanese`_ (unsupported).

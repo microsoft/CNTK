@@ -3,6 +3,7 @@ import os
 import math
 import functools
 import numpy as np
+from io import open
 
 class WordFreq:
   def __init__(self, word, id, freq):
@@ -46,9 +47,9 @@ class Vocabulary:
     if not self.__has_index:
       self.build_index(sys.maxsize)
     if self.name != None:
-      dst.write("{0}\t{1}\n".format(self.name, self.size))
+      dst.write(u"{0}\t{1}\n".format(self.name, self.size))
     for it in sorted(self.__dict.values(), key=lambda it:it.id):
-      dst.write("{0}\t{1}\t{2}\n".format(it.word, it.id, it.freq))
+      dst.write(u"{0}\t{1}\t{2}\n".format(it.word, it.id, it.freq))
 
   def load(self, src):
     line = src.readline()
@@ -244,17 +245,17 @@ class Vocabulary:
               item = words[q]
               query_ids += [ (item.id + 1 + entities.size) if item != None else 0 ]
           #Write featurized ids
-          outf.write("{0}".format(seq_id))
+          outf.write(u"{0}".format(seq_id))
           for i in range(max(len(context_ids), len(query_ids))):
             if i < len(query_ids):
-              outf.write(" |Q {0}:1".format(query_ids[i]))
+              outf.write(u" |Q {0}:1".format(query_ids[i]))
             if i < len(context_ids):
-              outf.write(" |C {0}:1".format(context_ids[i]))
-              outf.write(" |E {0}".format(is_entity[i]))
-              outf.write(" |L {0}".format(labels[i]))
+              outf.write(u" |C {0}:1".format(context_ids[i]))
+              outf.write(u" |E {0}".format(is_entity[i]))
+              outf.write(u" |L {0}".format(labels[i]))
             if i < len(entity_ids):
-              outf.write(" |EID {0}:1".format(entity_ids[i]))
-            outf.write("\n")
+              outf.write(u" |EID {0}:1".format(entity_ids[i]))
+            outf.write(u"\n")
           seq_id += 1
           if seq_id%1000 == 0:
             sys.stdout.write(".")
