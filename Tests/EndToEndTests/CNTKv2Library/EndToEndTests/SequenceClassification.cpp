@@ -10,7 +10,7 @@ using namespace CNTK;
 
 using namespace std::placeholders;
 
-void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool useSparseLabels, bool testSaveAndReLoad)
+void TrainLSTMSequenceClassifier(const DeviceDescriptor& device, bool useSparseLabels, bool testSaveAndReLoad)
 {
     const size_t inputDim = 2000;
     const size_t cellDim = 25;
@@ -20,7 +20,7 @@ void TrainLSTMSequenceClassifer(const DeviceDescriptor& device, bool useSparseLa
 
     auto featuresName = L"features";
     auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto classifierOutput = LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+    auto classifierOutput = LSTMSequenceClassifierNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
 
     auto labelsName = L"labels";
     auto labels = InputVariable({ numOutputClasses }, useSparseLabels, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
@@ -74,7 +74,7 @@ void TestLearningRateControl(const DeviceDescriptor& device)
 
     auto featuresName = L"features";
     auto features = InputVariable({ inputDim }, true /*isSparse*/, DataType::Float, featuresName);
-    auto classifierOutput = LSTMSequenceClassiferNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
+    auto classifierOutput = LSTMSequenceClassifierNet(features, numOutputClasses, embeddingDim, hiddenDim, cellDim, device, L"classifierOutput");
 
     auto labelsName = L"labels";
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, labelsName, { Axis::DefaultBatchAxis() });
@@ -156,20 +156,22 @@ void TestLearningRateControl(const DeviceDescriptor& device)
     FloatingPointCompare(learner->LearningRate(), 0.0004, "Learner::LearningRate does not match expectation");
 }
 
-void TrainLSTMSequenceClassifer()
+void TrainLSTMSequenceClassifier()
 {
-    fprintf(stderr, "\nTrainLSTMSequenceClassifer..\n");
+    fprintf(stderr, "\nTrainLSTMSequenceClassifier..\n");
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
         TestLearningRateControl(DeviceDescriptor::GPUDevice(0));
-    else
+
+    if (ShouldRunOnCpu())
         fprintf(stderr, "Cannot run TestLearningRateControl test on CPU device.\n");
 
-    if (IsGPUAvailable())
+    if (ShouldRunOnGpu())
     {
-        TrainLSTMSequenceClassifer(DeviceDescriptor::GPUDevice(0), true, false);
-        TrainLSTMSequenceClassifer(DeviceDescriptor::GPUDevice(0), false, true);
+        TrainLSTMSequenceClassifier(DeviceDescriptor::GPUDevice(0), true, false);
+        TrainLSTMSequenceClassifier(DeviceDescriptor::GPUDevice(0), false, true);
     }
 
-    TrainLSTMSequenceClassifer(DeviceDescriptor::CPUDevice(), true, false);
+    if (ShouldRunOnCpu())
+        TrainLSTMSequenceClassifier(DeviceDescriptor::CPUDevice(), true, false);
 }

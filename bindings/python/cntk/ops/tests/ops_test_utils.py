@@ -169,7 +169,6 @@ def batch_dense_to_sparse(batch, dynamic_axis=''):
 
     batch_indices = []
     batch_values = []
-    tensor_shape = []
 
     shapes_in_tensor = set()
 

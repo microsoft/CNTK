@@ -114,8 +114,8 @@ class SVMTrainer(object):
                     cls_feat = feat[cls_inds, :]
                     self.trainers[j].append_pos(cls_feat)
             if i % 50 == 0:
-                print 'get_pos_examples: {:d}/{:d} {:.3f}s' \
-                      .format(i + 1, len(roidb), _t.average_time)
+                print('get_pos_examples: {:d}/{:d} {:.3f}s' \
+                      .format(i + 1, len(roidb), _t.average_time))
 
     def initialize_net(self):
         # Start all SVM parameters at zero
@@ -147,7 +147,7 @@ class SVMTrainer(object):
 
             # num_images = 100
             for i in range(num_images):
-                print "*** EPOCH = %d, IMAGE = %d *** " % (epoch, i)
+                print("*** EPOCH = %d, IMAGE = %d *** " % (epoch, i))
                 #im = cv2.imread(self.imdb.image_path_at(i))
                 #if roidb[i]['flipped']:
                 #    im = im[:, ::-1, :]

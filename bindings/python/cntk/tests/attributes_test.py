@@ -34,7 +34,7 @@ def test_convolution_transpose_attributes():
     x = C.input_variable( (1, 5, 5) )
     filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
     kernel = C.constant(value = filter)
-    f = C.convolution(kernel , x, auto_padding = [False], transpose = True)
+    f = C.convolution_transpose(kernel , x, auto_padding = [False])
     d = f.root_function.attributes
     expected = {'autoPadding': [False, False, False], 
         'sharing': [True, True, True], 

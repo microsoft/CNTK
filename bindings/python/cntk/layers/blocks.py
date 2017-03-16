@@ -86,8 +86,17 @@ def _inject_name(f, name):
 # some mappings--these currently exist only so that I can name the nodes for debugging
 def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
     '''
+    Parameter(shape, init, dtype=np.float32, name='')
+
     Constructs a Parameter variable.
+
+    Args:
+        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
+        init (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `W`
+        dtype (np.dtype, defaults to np.float32): data type
+        name (str, defaults to ''): the name of the Function instance in the network
     '''
+    
     pure = get_default_override(None, pure=default_override_or(False))
     if pure:
         raise TypeError('parameters cannot be created inside a @Function def')
@@ -97,8 +106,17 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
 
 def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
     '''
+    Constant(value, shape=None, dtype=np.float32, name='')
+
     Constructs a Variable object that is constant.
+
+    Args:
+        value (object): the object you want to make constant
+        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
+        dtype (np.dtype, defaults to np.float32): data type
+        name (str, defaults to ''): the name of the Function instance in the network
     '''
+
     dtype = get_default_override(Constant, dtype=dtype)
     return constant(value, shape=shape, dtype=dtype, name=name)
 
@@ -106,16 +124,38 @@ def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
 def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,
           dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
     '''
+    Input(shape, dtype=np.float32, needs_gradient=True, is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes(), name='')
+
     Constructs an Input variable.
+
+    Args:
+        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
+        dtype (np.dtype, defaults to np.float32): data type
+        needs_gradient (bool, defaults to `True`):
+        is_sparse (bool, defaults to `False`):
+        dynamic_axes (object, Axis.default_input_variable_dynamic_axes):
+        name (str, defaults to ''): the name of the Function instance in the network
+        
     '''
+
     dtype = get_default_override(Input, dtype=dtype)
     return input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
                           dynamic_axes=dynamic_axes, name=name)
 
 def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder'):
     '''
+    Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder')
+
     Constructs a Placeholder variable.
+
+    Args:
+        shape (`int` or `tuple` of `ints`, defaults to `None`): vector or tensor dimension of the output of this layer
+        dynamic_axes (object, defaults to `None`):
+        is_sparse (bool, defaults to `False`):
+        name (str, defaults to 'placeholder'): the name of the Function instance in the network
+        
     '''
+
     if shape is not None or dynamic_axes is not None or is_sparse is not None:
         import warnings
         warnings.warn('Placeholder() no longer requires shapes, axes, or spares to be specified. Please just remove the arguments.', DeprecationWarning)
@@ -154,7 +194,9 @@ def identity(keep):
 
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True), name=''):
     '''
-    Layer factory function to create a Droppo self-stabilizer <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/SelfLR.pdf>.
+    Stabilizer(steepness=4, enable_self_stabilization=True, name='')
+
+    Layer factory function to create a `Droppo self-stabilizer <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/SelfLR.pdf>`_.
     It multiplies its input with a scalar that is learned.
 
     This takes `enable_self_stabilization` as a flag that allows to disable itself. Useful if this is a global default.
@@ -163,6 +205,15 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
     CNTK uses a sharpened Softplus: 1/steepness ln(1+e^{steepness*beta}).
     The softplus behaves linear for weights around and above 1 (like the linear scalar) while guaranteeing
     positiveness (like the exponentional variant) but is also more robust by avoiding exploding gradients.
+
+    Args:
+        steepness (`int`, defaults to 4):
+        enable_self_stabilization (bool, defaults to `False`): a flag that allows to disable itself. Useful if this is a global default
+        name (str, defaults to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        A function
     '''
 
     enable_self_stabilization = get_default_override(Stabilizer, enable_self_stabilization=enable_self_stabilization)
@@ -342,8 +393,23 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
          enable_self_stabilization=default_override_or(False),
          name=''):
     '''
+    LSTM(shape, cell_shape=None, activation=tanh, use_peepholes=False, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
+
     Layer factory function to create an LSTM block for use inside a recurrence.
-    Returns a function (prev_h, prev_c, input) -> h).
+
+    Args:
+        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
+        cell_shape (tuple, defaults to `None`): 
+        activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
+        use_peepholes (bool, defaults to `False`):
+        init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
+        init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
+        enable_self_stabilization (bool, defaults to `False`):
+        name (str, defaults to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        A function (prev_h, prev_c, input) -> h)
     '''
 
     activation                = get_default_override(RNNUnit, activation=activation)
@@ -363,9 +429,22 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
             enable_self_stabilization=default_override_or(False),
             name=''): # (prev_h, x) -> (h)
     '''
+    RNNUnit(shape, cell_shape=None, activation=sigmoid, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
+
     Layer factory function to create a plain RNN block for use inside a recurrence.
-    Returns a function (prev_h, input) -> h):
-     h = activation (W * input + R * prev_h + b)
+
+    Args:
+        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
+        cell_shape (tuple, defaults to `None`): 
+        activation (:class:`~cntk.ops.functions.Function`, defaults to signmoid): function to apply at the end, e.g. `relu`
+        init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
+        init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
+        enable_self_stabilization (bool, defaults to `False`):
+        name (str, defaults to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        A function (prev_h, input) -> h) where h = activation (W * input + R * prev_h + b)
     '''
 
     activation                = get_default_override(RNNUnit, activation=activation)
@@ -383,8 +462,22 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
         enable_self_stabilization=default_override_or(False),
         name=''): # (prev_h, x) -> (h)
     '''
+    GRU(shape, cell_shape=None, activation=tanh, init=glorot_uniform(), init_bias=0, enable_self_stabilization=False, name='')
+
     Layer factory function to create a GRU block for use inside a recurrence.
-    Returns a function (prev_h, input) -> h).
+
+    Args:
+        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
+        cell_shape (tuple, defaults to `None`): 
+        activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
+        init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
+        init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
+        enable_self_stabilization (bool, defaults to `False`):
+        name (str, defaults to ''): the name of the Function instance in the network
+
+    Returns:
+        cntk.ops.functions.Function:
+        A function (prev_h, input) -> h)
     '''
 
     activation                = get_default_override(GRU, activation=activation)

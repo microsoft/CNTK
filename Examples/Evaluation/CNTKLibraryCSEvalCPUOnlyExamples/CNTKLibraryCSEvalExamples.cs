@@ -277,6 +277,80 @@ namespace CNTKLibraryCSEvalExamples
         }
 
         /// <summary>
+        /// The example shows
+        /// - how to load model from a memory buffer.
+        /// </summary>
+        /// <param name="device">Specify on which device to run the evaluation.</param>
+        public static void LoadModelFromMemory(DeviceDescriptor device)
+        {
+            try
+            {
+                Console.WriteLine("\n===== Load model from memory buffer =====");
+
+                // For demo purpose, we first read the the model into memory
+                // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
+                // Please see README.md in <CNTK>/Examples/Image/Classification/ResNet about how to train the model.
+                string modelFilePath = "resnet20.dnn";
+                ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/Image/Classification/ResNet to create the model.", modelFilePath));
+                var modelBuffer = File.ReadAllBytes(modelFilePath);
+
+                // Load model from memroy buffer
+                Function modelFunc = Function.LoadModel(modelBuffer, device);
+
+                // Get input variable. The model has only one single input.
+                // The same way described above for output variable can be used here to get input variable by name.
+                Variable inputVar = modelFunc.Arguments.Single();
+
+                // Get shape data for the input variable
+                NDShape inputShape = inputVar.Shape;
+                uint imageWidth = inputShape[0];
+                uint imageHeight = inputShape[1];
+                uint imageChannels = inputShape[2];
+                uint imageSize = inputShape.TotalSize;
+
+                // The model has only one output.
+                // If the model have more than one output, use the following way to get output variable by name.
+                // Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
+                Variable outputVar = modelFunc.Output;
+
+                var inputDataMap = new Dictionary<Variable, Value>();
+                var outputDataMap = new Dictionary<Variable, Value>();
+
+                // Image preprocessing to match input requirements of the model.
+                // This program uses images from the CIFAR-10 dataset for evaluation.
+                // Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.
+                string sampleImage = "00000.png";
+                ThrowIfFileNotExist(sampleImage, string.Format("Error: The sample image '{0}' does not exist. Please see README.md in <CNTK>/Examples/Image/DataSets/CIFAR-10 about how to download the CIFAR-10 dataset.", sampleImage));
+                Bitmap bmp = new Bitmap(Bitmap.FromFile(sampleImage));
+                var resized = bmp.Resize((int)imageWidth, (int)imageHeight, true);
+                List<float> resizedCHW = resized.ParallelExtractCHW();
+
+                // Create input data map
+                var inputVal = Value.CreateBatch(inputVar.Shape, resizedCHW, device);
+                inputDataMap.Add(inputVar, inputVal);
+
+                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                // Alternatively, create a Value object and add it to the data map.
+                outputDataMap.Add(outputVar, null);
+
+                // Start evaluation on the device
+                modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+
+                // Get evaluate result as dense output
+                var outputBuffer = new List<List<float>>();
+                var outputVal = outputDataMap[outputVar];
+                outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+
+                PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                throw ex;
+            }
+        }
+
+        /// <summary>
         /// Print out the evalaution results.
         /// </summary>
         /// <typeparam name="T">The data value type</typeparam>

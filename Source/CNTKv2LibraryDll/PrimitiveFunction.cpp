@@ -153,6 +153,7 @@ namespace CNTK
             (op == PrimitiveOpType::ReduceElements && functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>() == Axis::AllAxes()) ||
             (op == PrimitiveOpType::SquaredError) ||
             (op == PrimitiveOpType::CrossEntropyWithSoftmax) ||
+            (op == PrimitiveOpType::EditDistanceError) ||
             (op == PrimitiveOpType::ClassificationError) ||
             (op == PrimitiveOpType::Logistic) ||
             (op == PrimitiveOpType::LambdaRank) ||
@@ -552,7 +553,7 @@ namespace CNTK
                                                 m_inputs[0].AsString().c_str(), (int)m_inputs[0].Shape().Rank(), (int)m_inputs[1].Shape().Rank(), m_inputs[1].AsString().c_str());
 
                             NDShape outputMapCount, kernelShape;
-                            std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(m_inputs[0].Shape(), m_inputs[1].Shape());
+                            std::tie(outputMapCount, kernelShape) = GetConvolutionOutputMapCountAndKernelShape(m_inputs[0].Shape(), m_inputs[1].Shape(), transpose);
                             auto originalKernelShape = kernelShape;
 
                             auto inputShape = m_inputs[1].Shape();
@@ -572,24 +573,26 @@ namespace CNTK
                                 outputShape = tmpShape; 
                             }
 
+                            auto kernelRank = kernelShape.Rank(); 
                             if (originalKernelShape != kernelShape)
                             {
-                                for (size_t i2 = 0; i2 < kernelShape.Rank(); ++i2)
+                                for (size_t i2 = 0; i2 < kernelRank; ++i2)
                                     m_inputs[0].m_dataFields->m_shape[i2] = kernelShape[i2];
                             }
+                            if (transpose && m_inputs[0].m_dataFields->m_shape[kernelRank] == NDShape::InferredDimension)
+                                m_inputs[0].m_dataFields->m_shape[kernelRank] = outputMapCount[outputMapCount.Rank()-1]; 
 
                             m_attributes[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
                             m_attributes[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
                             break;
                         }
-                        case PrimitiveOpType::CosDistance:
-                        case PrimitiveOpType::EditDistanceError:
-                        case PrimitiveOpType::ForwardBackward:
-                        case PrimitiveOpType::Logistic:
-                        case PrimitiveOpType::SquaredError:
                         case PrimitiveOpType::CrossEntropyWithSoftmax:
-                        case PrimitiveOpType::ClassificationError:
+                        case PrimitiveOpType::Logistic:
                         case PrimitiveOpType::LambdaRank:
+                        case PrimitiveOpType::CosDistance:
+                        case PrimitiveOpType::SquaredError:
+                        case PrimitiveOpType::EditDistanceError:
+                        case PrimitiveOpType::ClassificationError:
                         case PrimitiveOpType::NDCG:
                         {
                             if ((m_op == PrimitiveOpType::ClassificationError) || (m_op == PrimitiveOpType::Logistic))
@@ -599,25 +602,30 @@ namespace CNTK
                             else
                                 assert(m_inputs.size() == 2);
 
-                            if (((m_inputs[0].Shape().Rank() > 2) || ((m_inputs[0].Shape().Rank() > 1) && (m_inputs[0].Shape()[1] != 1))) ||
-                                ((m_inputs[1].Shape().Rank() > 2) || ((m_inputs[1].Shape().Rank() > 1) && (m_inputs[1].Shape()[1] != 1))))
+                            // Validate that the first 2 operands are elementwise compatible and also infer operand shapes as needed
+                            BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[1], true, true);
+
+                            if (m_op == PrimitiveOpType::ClassificationError)
                             {
-                                InvalidArgument("The rank of input operands '%S' for the %S operation should be <= 1",
-                                                NamedListString(std::vector<Variable>({ m_inputs[0] , m_inputs[1] })).c_str(), PrimitiveOpTypeName(m_op).c_str());
+                                if ((m_inputs.size() == 3) && !IsConstantScalar(m_inputs[2]))
+                                    InvalidArgument("ClassificationError: Input(2) '%S' correponds to topK input and must be a scalar constant.", m_inputs[2].AsString().c_str());
+                            }
+                            else if (m_op == PrimitiveOpType::Logistic)
+                            {
+                                if (m_inputs.size() == 3)
+                                    BinaryElementwiseOpOutputShape(m_op, m_inputs[0], m_inputs[2], true, true);
                             }
 
-                            auto predictionShape = m_inputs[0].Shape();
-                            auto labelsShape = m_inputs[1].Shape();
-                            auto numLeadingAxesToCompare = std::min(predictionShape.Rank(), labelsShape.Rank());
-                            if (predictionShape.SubShape(0, numLeadingAxesToCompare) != labelsShape.SubShape(0, numLeadingAxesToCompare))
-                                RuntimeError("Operation %S: Prediction output operand '%S' shape '%S' is incompatible with label operand '%S' shape '%S'.", 
-                                             PrimitiveOpTypeName(m_op).c_str(), m_inputs[0].AsString().c_str(), predictionShape.AsString().c_str(), m_inputs[1].AsString().c_str(), labelsShape.AsString().c_str());
+                            outputShape = {};
+                            break;
+                        }
+                        case PrimitiveOpType::ForwardBackward:
+                        {
+                            assert(m_inputs.size() == 2);
+                            if (m_inputs[0].Shape().TotalSize() != m_inputs[1].Shape().TotalSize())
+                                InvalidArgument("ForwardBackward: The shapes of operands '%S' and '%S' must have the same total size.", m_inputs[0].AsString().c_str(), m_inputs[1].AsString().c_str());
 
-                            std::vector<int> reductionAxes;
-                            for (int i3 = 0; i3 < (int)m_inputs[0].Shape().Rank(); ++i3)
-                                reductionAxes.push_back(i3);
-
-                            outputShape = ReductionOpOutputShape(m_op, predictionShape, reductionAxes, /*preserveReductionAxes =*/ false);
+                            outputShape = {};
                             break;
                         }
                         case PrimitiveOpType::ReduceElements:
@@ -748,9 +756,6 @@ namespace CNTK
 
                             auto shiftInput = m_inputs[2];
                             auto numNegativeSamplesInput = m_inputs[3];
-                            auto IsConstantScalar = [](const Variable& var) {
-                                return var.IsConstant() && (var.Shape().TotalSize() == 1);
-                            };
                             if (!IsConstantScalar(shiftInput) || !IsConstantScalar(numNegativeSamplesInput))
                                 InvalidArgument("CosDistanceWithNegativeSamples: Input(2) '%S' and Input(3) '%S' correpond to shift and numNegativeSamples inputs and must be scalar constants.",
                                                 shiftInput.AsString().c_str(), numNegativeSamplesInput.AsString().c_str());

@@ -349,8 +349,8 @@ def test_op_times_reduce_sequence_axis(device_id, precision):
     
     actual_forward = forward_output[func.output]
 
-    expected_forward = AA([[[[1,1,1,0,0,0,0,0,0,0]]],
-                           [[[0,0,0,1,0,0,0,0,0,0]]],
-                           [[[0,0,0,0,1,1,1,1,1,1]]]])
+    expected_forward = AA([[[1,1,1,0,0,0,0,0,0,0]],
+                           [[0,0,0,1,0,0,0,0,0,0]],
+                           [[0,0,0,0,1,1,1,1,1,1]]])
     
     assert np.allclose(actual_forward, expected_forward)

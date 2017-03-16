@@ -23,9 +23,7 @@ mkdir $TestDataDir
 cp -R $DataSourceDir/CIFAR/v0/cifar-10-batches-py $TestDataDir || exit $?
 
 # Set CUDA_VISIBLE_DEVICES to exclude all gpu if running on cpu device
-if [ "$TEST_DEVICE" == "cpu" ]; then
-  export CUDA_VISIBLE_DEVICES=-1
-fi
+[ "$TEST_DEVICE" == "cpu" ] && export CUDA_VISIBLE_DEVICES=-1
 
 pushd $TestDataDir
 
@@ -40,9 +38,5 @@ ExitCode=$?
 # Delete the test data
 popd
 rm -rf $TestDataDir
-
-if [ "$TEST_DEVICE" == "cpu" ]; then
-  unset CUDA_VISIBLE_DEVICES
-fi
 
 exit $ExitCode

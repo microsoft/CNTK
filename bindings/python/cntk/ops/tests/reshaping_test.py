@@ -11,17 +11,14 @@ Unit tests for reshaping operations.
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, AA, I, precision, PRECISION_TO_TYPE, cntk_device
+from .ops_test_utils import unittest_helper, _test_unary_op, _test_binary_op, \
+                            AA, I, precision, PRECISION_TO_TYPE, cntk_device
 import cntk as C
 from cntk import Value
 from cntk.axis import Axis
 from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 
-EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
-# the backward result returned by CNTK log() for epsilon
-BACKWARD_RESULST_FOR_LOG_EPS = 9.08782e+36
-LOG_OF_EPS_IN_LOG = -85.1  # log(EPS_IN_LOG)
 
 RESHAPE_TEST_CASES = [
     #(input_shape, output_shape, expected_output_shape)
@@ -34,7 +31,8 @@ RESHAPE_TEST_CASES = [
     ((2, 3, 5), (5, C.InferredDimension), (5, 6)),
 ]
 
-@pytest.mark.parametrize("input_shape, output_shape, expected_output_shape", RESHAPE_TEST_CASES)
+@pytest.mark.parametrize("input_shape, output_shape, expected_output_shape",
+                         RESHAPE_TEST_CASES)
 def test_op_reshape(input_shape, output_shape, expected_output_shape, device_id, precision):
     # Reshaping is just moving the input values to different indexes of the result tensor.
     # If we compute the gradients on the unmodified tensor, reshape would get 1 for all inputs
@@ -168,7 +166,8 @@ def test_op_reshape_parameter():
     param_reshaped = reshape(param, param_new_shape)
 
     expected_forward = np.copy(param_value).reshape(param_new_shape)
-    state, result = param_reshaped.forward({}, [param_reshaped.output], [param_reshaped.output])
+    state, result = param_reshaped.forward({}, [param_reshaped.output],
+                                           [param_reshaped.output])
     assert np.allclose(result[param_reshaped.output], expected_forward)
     
     grad = param_reshaped.backward(state, np.ones(param_new_shape), [param])
@@ -186,10 +185,6 @@ SLICE_TEST_CASES_STATIC = [
 def test_op_slice(input_data, slice_params, expected_result, device_id, precision):
 
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
-    a = I(shape=input_data.shape,
-          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
-          needs_gradient=True,
-          name='a')
 
     def _ax_slices(x, beg_index, end_index, axis):
         '''
@@ -231,6 +226,63 @@ def test_op_slice(input_data, slice_params, expected_result, device_id, precisio
                     'end_index': slice_params[1],
                     'axis': slice_params[2]})
 
+SLICE_OVERLOAD_TEST_CASES_STATIC = [
+    # (input_data, slices, axis, expected_result)
+
+    ([[1, 2, 3], [-4, 5, 6]],
+        # Selecting from row 1 the column 2
+        (1, 2),
+        [[6]]),
+
+    # slicing with a list of indices
+    ([[1, 2, 3], [-4, 5, 6]],
+        # Selecting from both rows columns 1 and 2
+        (0, [1, 2]),
+        [[2, 3]]),
+]
+
+
+@pytest.mark.parametrize("input_data, slices, expected_result",
+                         SLICE_OVERLOAD_TEST_CASES_STATIC)
+def test_op_slice_overload(input_data, slices, expected_result,
+                           device_id, precision):
+
+    dtype = PRECISION_TO_TYPE[precision]
+    input_data = AA(input_data, dtype=dtype)
+
+    # Backward pass test
+    # ==================
+    # The gradient of the slice operator is a tensor of the same shape as the
+    # input tensor, having 1 for elements that were taken and 0 for elements
+    # that were dropped.
+
+    def grad_slice(x, slices):
+        res = np.zeros_like(x)
+        res[slices] = 1
+        return res
+
+    value = AA(input_data, dtype=dtype)
+
+    expected_forward = [AA([expected_result], dtype=dtype)]
+    expected_backward = [[grad_slice(input_data, slices)]]
+
+    a = I(shape=value.shape,
+          dtype=sanitize_dtype_cntk(dtype),
+          needs_gradient=True,
+          name='a')
+
+    f = a+0
+
+    # create batch
+    value.shape = (1, 1) + value.shape
+
+    input_op = f[slices]
+
+    forward_input = {a: value}
+    expected_backward = {a: expected_backward}
+    unittest_helper(input_op,
+                    forward_input, expected_forward, expected_backward,
+                    device_id=device_id, precision=precision)
 SLICE_TEST_CASES_DYNAMIC = [
     #(input_data, slice_params(beg_index, end_index), expected_result)
     # Note that input_data contains sequences
@@ -242,13 +294,14 @@ SLICE_TEST_CASES_DYNAMIC = [
         [[[1, 2, 3], [11, 12, 13]], [[-4, 5, 6], [-14, 15, 16]]]),
     ([[[1, 2, 3], [11, 12, 13]], [[-4, 5, 6], [-14, 15, 16]], [[7, 8, 9], [17, 18, 19]]],
         (1, 2),
-        [[[-4, 5, 6], [-14, 15, 16]]]),
+        [[-4, 5, 6], [-14, 15, 16]]),
 ]
 
 
 @pytest.mark.parametrize("input_data, slice_params, expected_result",
                          SLICE_TEST_CASES_DYNAMIC)
-def _test_op_slice_sequence(input_data, slice_params, expected_result, device_id, precision):
+def test_op_slice_sequence(input_data, slice_params, expected_result,
+                           device_id, precision):
     input_data = AA(input_data, dtype=PRECISION_TO_TYPE[precision])
 
     t = Axis.new_unique_dynamic_axis('t')
@@ -268,7 +321,6 @@ def _test_op_slice_sequence(input_data, slice_params, expected_result, device_id
         res[beg_index:end_index] = 1
         return res
 
-    expected_gradient = grad_slice(np.asarray(input_data), *slice_params)
 
     expected_forward = AA([expected_result], 
             dtype=PRECISION_TO_TYPE[precision])
@@ -302,7 +354,8 @@ SPLICE_TEST_CASES = [
 ]
 
 
-@pytest.mark.parametrize("input_data1, input_data2, axis, expected_result", SPLICE_TEST_CASES)
+@pytest.mark.parametrize("input_data1, input_data2, axis, expected_result",
+                         SPLICE_TEST_CASES)
 def test_op_splice(input_data1, input_data2, axis, expected_result, device_id, precision):
     # FIXME This test currently fails in C++ with
     # RuntimeError: Node 'splice_ab' (RowStack operation): Attempted to
@@ -397,7 +450,7 @@ def test_op_gather_derived_dynamic_axes_equivalence(device_id, precision):
     input_data2.shape = (1, 1) + input_data2.shape
 
     res = z.eval({a: input_data1, b: input_data2})
-    expected_forward = [[[3.]]]
+    expected_forward = [[3.]]
     assert np.array_equal(res, expected_forward)
 
 
@@ -413,7 +466,7 @@ def test_op_gather_sparse(device_id):
     a_last = sequence.last(a)
     a_last_dense = times(a_last, np.eye(vocab_size))
     res = a_last_dense.eval({a : input_data})
-    assert np.array_equal(res, [[[0, 0, 0, 0, 0, 1]], [[0, 0, 0, 0, 1, 0]], [[0, 0, 1, 0, 0, 0]]])
+    assert np.array_equal(res, [[0, 0, 0, 0, 0, 1], [0, 0, 0, 0, 1, 0], [0, 0, 1, 0, 0, 0]])
 
     a_last_2 = sequence.slice(a, -2, 0)
     a_last_2_dense = times(a_last_2, np.eye(vocab_size))
@@ -441,8 +494,12 @@ def test_op_scatter_sparse(device_id):
 def test_op_broadcast_as(device_id, precision):
     from .. import sequence
 
-    a_data = [AA([1], dtype=PRECISION_TO_TYPE[precision]), AA([2], dtype=PRECISION_TO_TYPE[precision]), AA([3], dtype=PRECISION_TO_TYPE[precision])]
-    b_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
+    a_data = [AA([1], dtype=PRECISION_TO_TYPE[precision]), 
+              AA([2], dtype=PRECISION_TO_TYPE[precision]), 
+              AA([3], dtype=PRECISION_TO_TYPE[precision])]
+    b_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]), 
+              AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]), 
+              AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
 
     a = I(shape=(1,),
           dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
@@ -489,11 +546,14 @@ def test_op_broadcast_as_in_loop(device_id):
 def test_op_sequence_reduce_sum(device_id, precision):
     from .. import sequence
 
-    a = I(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]), needs_gradient=True, name='a')
+    a = I(shape=(1,), dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+          needs_gradient=True, name='a')
 
     sequence_sum_a_plus_sequence_sum_a = sequence.reduce_sum(a) + sequence.reduce_sum(a)
 
-    a_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]), AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
+    a_data = [AA([[2]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[2], [3]], dtype=PRECISION_TO_TYPE[precision]),
+              AA([[2], [3], [4]], dtype=PRECISION_TO_TYPE[precision])]
 
     actual_grad = sequence_sum_a_plus_sequence_sum_a.grad({a: a_data}, [a])
     assert np.array_equal(actual_grad[0], np.asarray([[2.]]))
@@ -501,9 +561,9 @@ def test_op_sequence_reduce_sum(device_id, precision):
     assert np.array_equal(actual_grad[2], np.asarray([[2.], [2.], [2.]]))
     
     res = sequence_sum_a_plus_sequence_sum_a.eval({a: a_data})
-    assert np.array_equal(res[0], np.asarray([[4.]]))
-    assert np.array_equal(res[1], np.asarray([[10.]]))
-    assert np.array_equal(res[2], np.asarray([[18.]]))
+    assert np.array_equal(res[0], np.asarray([4.]))
+    assert np.array_equal(res[1], np.asarray([10.]))
+    assert np.array_equal(res[2], np.asarray([18.]))
 
     # Verify that calling sequence reduction on a placeholder with known
     # shape but unknown dynamic axes does not result in a problem
@@ -512,6 +572,6 @@ def test_op_sequence_reduce_sum(device_id, precision):
     r.replace_placeholder(a)
     
     res = r.eval({a: a_data})
-    assert np.array_equal(res[0], np.asarray([[2.]]))
-    assert np.array_equal(res[1], np.asarray([[5.]]))
-    assert np.array_equal(res[2], np.asarray([[9.]]))
+    assert np.array_equal(res[0], np.asarray([2.]))
+    assert np.array_equal(res[1], np.asarray([5.]))
+    assert np.array_equal(res[2], np.asarray([9.]))
