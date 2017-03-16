@@ -2958,6 +2958,7 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>
     us.RequireSize(nRows, nCols);
     ElemType* bufPtr = Data();
     ElemType* aBufPtr = a.Data();
+    memset(bufPtr, 0, sizeof(ElemType) * nRows *nCols);
 #pragma omp parallel for
     for (long i = 0; i < a.GetNumElements(); i++)
     {
