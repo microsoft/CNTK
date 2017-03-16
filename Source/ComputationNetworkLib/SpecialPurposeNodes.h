@@ -936,6 +936,20 @@ public:
         m_maxValues->Resize(1, cols);
     }
 
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_delayConstraint;
+        fstream << m_blankTokenId;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_delayConstraint;
+        fstream >> m_blankTokenId;
+    }
+
     int DelayConstraint() { return m_delayConstraint; }
     size_t BlankTokenId() { return m_blankTokenId; }
 

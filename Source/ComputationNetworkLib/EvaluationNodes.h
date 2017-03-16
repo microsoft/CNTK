@@ -482,7 +482,7 @@ public:
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
     EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 0.0f, float delPen = 0.0f, float insPen = 0.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
-        : Base(deviceId, name), m_SubPen(subPen), m_DelPen(delPen), m_InsPen(insPen), m_SquashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
+        : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
     {
     }
 
@@ -511,7 +511,7 @@ public:
 
         MaskMissingColumnsToZero(*m_maxIndexes0, Input(0)->GetMBLayout(), frameRange);
         MaskMissingColumnsToZero(*m_maxIndexes1, Input(1)->GetMBLayout(), frameRange);
-        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_SubPen, m_DelPen, m_InsPen, m_SquashInputs, m_tokensToIgnore);
+        Value()(0, 0) = ComputeEditDistanceError(*m_maxIndexes0, *m_maxIndexes1, Input(0)->GetMBLayout(), m_subPen, m_delPen, m_insPen, m_squashInputs, m_tokensToIgnore);
     }
 
     virtual void Validate(bool isFinalValidationPass) override
@@ -540,10 +540,10 @@ public:
             node->m_maxIndexes0 = m_maxIndexes0;
             node->m_maxIndexes1 = m_maxIndexes1;
             node->m_maxValues = m_maxValues;
-            node->m_SquashInputs = m_SquashInputs;
-            node->m_SubPen = m_SubPen;
-            node->m_DelPen = m_DelPen;
-            node->m_InsPen = m_InsPen;
+            node->m_squashInputs = m_squashInputs;
+            node->m_subPen = m_subPen;
+            node->m_delPen = m_delPen;
+            node->m_insPen = m_insPen;
             node->m_tokensToIgnore = m_tokensToIgnore;
         }
     }
@@ -686,19 +686,39 @@ public:
         return (ElemType)(wrongSampleNum * totalframeNum / totalSampleNum);
     }
 
-    float SubstitutionPenalty() const { return m_SubPen; }
-    float DeletionPenalty() const { return m_DelPen; }
-    float InsertionPenalty() const { return m_InsPen; }
-    bool SquashInputs() const { return m_SquashInputs; }
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_subPen;
+        fstream << m_delPen;
+        fstream << m_insPen;
+        fstream << m_squashInputs;
+        fstream << m_tokensToIgnore;
+    }
+
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_subPen;
+        fstream >> m_delPen;
+        fstream >> m_insPen;
+        fstream >> m_squashInputs;
+        fstream >> m_tokensToIgnore;
+    }
+
+    float SubstitutionPenalty() const { return m_subPen; }
+    float DeletionPenalty() const { return m_delPen; }
+    float InsertionPenalty() const { return m_insPen; }
+    bool SquashInputs() const { return m_squashInputs; }
     std::vector<size_t> TokensToIgnore() const { return m_tokensToIgnore; }
 
 private:
     shared_ptr<Matrix<ElemType>> m_maxIndexes0, m_maxIndexes1;
     shared_ptr<Matrix<ElemType>> m_maxValues;
-    bool m_SquashInputs;
-    float m_SubPen;
-    float m_DelPen;
-    float m_InsPen;
+    bool m_squashInputs;
+    float m_subPen;
+    float m_delPen;
+    float m_insPen;
     std::vector<size_t> m_tokensToIgnore;
 
     // Clear out_SampleSeqVec and extract a vector of samples from the matrix into out_SampleSeqVec.
