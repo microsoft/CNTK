@@ -681,12 +681,15 @@ namespace CNTK
             auto cloneeCompositeInputs = cloneeComposite->Inputs();
             std::unordered_map<Variable, Variable> cloneeCompositeReplacements;
             std::vector<std::pair<Variable, Variable>> clonedBlockCompositeArgumentsMap;
+
+            // When cloning the block, we need to replace any Parameter/Constants inside the block with
+            // the correspondind replacements if any were specified
             for (size_t i = 0; i < cloneeCompositeInputs.size(); ++i)
             {
                 auto cloneeCompositeInput = cloneeCompositeInputs[i];
                 if (replacements.find(cloneeCompositeInput) != replacements.end())
                 {
-                    if (!cloneeCompositeInput.IsConstant() && !cloneeCompositeInput.IsParameter())
+                    if (IsArgument(cloneeCompositeInput))
                     {
                         InvalidArgument("Function '%S': Illegal to replace internal variable '%S' of nested Block Function '%S'.",
                                         clonee->AsString().c_str(),

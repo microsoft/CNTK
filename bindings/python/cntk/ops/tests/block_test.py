@@ -103,23 +103,23 @@ def test_combine_op_as_block():
 
 def test_block_with_duplicate_inputs():
     from .. import placeholder_variable, as_block, input_variable
-    input = input_variable((1,), name='input')
+    x = input_variable((1,), name='input')
     
     left_operand_placeholder = placeholder_variable(name='left_placeholder')
     right_operand_placeholder = placeholder_variable()
-    plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, input), (right_operand_placeholder, input)], 'plus')
+    plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, x), (right_operand_placeholder, x)], 'plus')
 
     plus_block_clone = plus_block.clone('share')
 
 
 def test_as_block_with_function_in_arguments_map():
     from .. import placeholder_variable, as_block, input_variable
-    input = input_variable((1,), name='input')
-    input_plus_2 = input + 2
+    x = input_variable((1,), name='input')
+    x_plus_2 = x + 2
     
     left_operand_placeholder = placeholder_variable(name='left_placeholder')
     right_operand_placeholder = placeholder_variable()
-    plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, input_plus_2), (right_operand_placeholder, input)], 'plus')
+    plus_block = as_block(right_operand_placeholder + left_operand_placeholder, [(left_operand_placeholder, x_plus_2), (right_operand_placeholder, x)], 'plus')
 
     # evaluate
     res = plus_block.eval({plus_block.arguments[0]: [[1.0]]})
@@ -131,13 +131,13 @@ def test_as_block_with_function_in_arguments_map():
 def test_block_clone():
     from .. import placeholder_variable, as_block, input_variable, parameter, times
 
-    input = input_variable((1,), name='input')
+    x = input_variable((1,), name='input')
     
     operand_placeholder = placeholder_variable(name='placeholder')
     w = parameter(shape=(1,1), init=1)
     b = parameter(shape=(1,), init=2)
     block_composite = times(operand_placeholder, w) + b
-    dense_block = as_block(block_composite, [(operand_placeholder, input)], 'dense')
+    dense_block = as_block(block_composite, [(operand_placeholder, x)], 'dense')
 
     w_new = parameter(shape=(1,1), init=3)
     dense_block_clone = dense_block.clone('share', {w : w_new})
@@ -151,13 +151,13 @@ def test_block_clone():
 def test_root_block_clone():
     from .. import placeholder_variable, as_block, input_variable, parameter, times
 
-    input = input_variable((1,), name='input')
+    x = input_variable((1,), name='input')
     
     operand_placeholder = placeholder_variable(name='placeholder')
     w = parameter(shape=(1,1), init=1)
     b1 = parameter(shape=(1,), init=2)
     block_composite = times(operand_placeholder, w) + b1
-    dense_block = as_block(block_composite, [(operand_placeholder, input)], 'dense')
+    dense_block = as_block(block_composite, [(operand_placeholder, x)], 'dense')
 
     b2 = parameter(shape=(1,), init=3)
     replacement = dense_block + b2
@@ -168,5 +168,5 @@ def test_root_block_clone():
     assert dense_block_clone.parameters[1].uid == b1.uid
     assert dense_block_clone.parameters[2].uid == b2.uid
 
-    result = dense_block_clone.eval({input : [np.asarray([2.], dtype=np.float32)]})
+    result = dense_block_clone.eval({x : [np.asarray([2.], dtype=np.float32)]})
     assert np.array_equal(result, [[[7.]]])
