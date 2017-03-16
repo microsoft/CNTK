@@ -1284,30 +1284,9 @@ namespace CNTK
         }
     }
 
-    static NDShape GetValueShape(const Variable& var, const ComputationNodeBasePtr& computationNodePtr)
-    {
-        size_t outputValueNumAxes = var.Shape().Rank();
-
-        // Add the batch and dynamic axes if needed
-        if (computationNodePtr->GetMBLayout() != nullptr)
-            outputValueNumAxes += 2;
-
-        std::vector<size_t> outputShapeDims(outputValueNumAxes);
-        for (size_t i = 0; i < var.Shape().Rank(); ++i)
-            outputShapeDims[i] = computationNodePtr->GetSampleLayout().GetDim(i);
-
-        if (computationNodePtr->GetMBLayout() != nullptr)
-        {
-            outputShapeDims[var.Shape().Rank()] = computationNodePtr->GetMBLayout()->GetNumTimeSteps();
-            outputShapeDims[var.Shape().Rank() + 1] = computationNodePtr->GetMBLayout()->GetNumSequences();
-        }
-
-        return NDShape(outputShapeDims);
-    }
-
     /*static*/ void CompositeFunction::GetNodeOutputOrGradient(Variable var, ValuePtr& varValue, Microsoft::MSR::CNTK::ComputationNodeBasePtr& computationNode, bool getGradient)
     {
-        auto valueShape = GetValueShape(var, computationNode);
+        auto valueShape = PackedValue::GetUnpackedShape(var.Shape(), var.DynamicAxes(), computationNode->GetMBLayout());
         if (varValue != nullptr)
         {
             // TODO: The shape of the specified output Value object must match the actual output shape
@@ -1324,7 +1303,7 @@ namespace CNTK
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<float>>()->Gradient() : computationNode->As<ComputationNode<float>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), var.DynamicAxes(), std::make_shared<Matrix<float>>(matrix.AsReference()), layout, /*readOnly =*/ false);
             else
                 nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<float>(var, matrix, layout);
             break;
@@ -1333,7 +1312,7 @@ namespace CNTK
         {
             auto& matrix = getGradient ? computationNode->As<ComputationNode<double>>()->Gradient() : computationNode->As<ComputationNode<double>>()->Value();
             if (varValue == nullptr)
-                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
+                nodeValue = MakeSharedObject<PackedValue>(var.Shape(), var.DynamicAxes(), std::make_shared<Matrix<double>>(matrix.AsReference()), layout, /*readOnly =*/ false);
             else
                 nodeValue = Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout<double>(var, matrix, layout);
             break;

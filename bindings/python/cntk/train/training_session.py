@@ -11,7 +11,7 @@ from cntk.internal import sanitize_var_map, sanitize_function, typemap
 from ..io import _py_dict_to_cntk_dict
 
 __doc__ = '''\
-A training session encapsulates a typical training loop and binds together a minibatch source that is used for training, a :doc:`trainer <cntk.trainer>` and an optional cross validation minibatch source. A training session takes care of consistent checkpointing and progress printing with specified frequencies. 
+A training session encapsulates a typical training loop and binds together a minibatch source that is used for training, a :doc:`trainer <cntk.train.trainer>` and an optional cross validation minibatch source. A training session takes care of consistent checkpointing and progress printing with specified frequencies. 
 '''
 class CheckpointConfig(cntk_py.CheckpointConfig):
     '''
@@ -94,14 +94,14 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
 
 class TrainingSession(cntk_py.TrainingSession):
     '''
-    The instance of the class should be created by using :func:`~cntk.training_session.training_session` function.
+    The instance of the class should be created by using :func:`~cntk.train.training_session.training_session` function.
 
     A training session trains a model using the specified ``trainer`` and configs.
     Different aspects of training such as data sources, checkpointing, cross validation, progress printing
     can be configured using the corresponding config classes.
 
     Args:
-        trainer (:class:`~cntk.trainer.Trainer`): trainer
+        trainer (:class:`~cntk.train.trainer.Trainer`): trainer
         mb_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for training
         mb_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size schedule for training
         var_to_stream (dict): mapping between input variables and input streams
@@ -157,7 +157,7 @@ class TrainingSession(cntk_py.TrainingSession):
         Perform training on a specified device.
 
         Args:
-            device (:class:~cntk.device.DeviceDescriptor): the device descriptor containing
+            device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor containing
                the type and id of the device where training takes place.
         '''
 
@@ -256,7 +256,7 @@ def training_session(training_minibatch_source=None,        # deprecated, will b
 
     Args: 
         training_minibatch_source (:class:`~cntk.io.MinibatchSource`): !DEPRECATED! use mb_source instead
-        trainer (:class:`~cntk.trainer.Trainer`): trainer
+        trainer (:class:`~cntk.train.trainer.Trainer`): trainer
         mb_size_schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): !DEPRECATED! use mb_size instead
         progress_printer (list): !DEPRECATED! list of progress writers from :mod:`cntk.utils`
         model_inputs_to_mb_source_mapping (dict): !DEPRECATED! use var_to_stream instead

@@ -190,10 +190,11 @@ class Value(cntk_py.Value):
         dtype: data type (np.float32 or np.float64)
         batch: batch input for `var`.
          It can be:
+
           * a pure Python structure (list of lists, ...),
           * a list of NumPy arrays or SciPy sparse CSR matrices
           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
-        seq_starts (list of `bool`s or None): if None, every sequence is
+        seq_starts (list of `bool`\ s or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans that tell whether a sequence is a new sequence (`True`) or a
          continuation of the sequence in the same slot of the previous
@@ -277,12 +278,13 @@ class Value(cntk_py.Value):
         Args:
             var (:class:`~cntk.ops.variables.Variable`): variable into which
              ``data`` is passed
-            data: data for `var`
+            data: data for `var`.
              It can be:
+
               * a single NumPy array denoting the full minibatch
               * a list of NumPy arrays or SciPy sparse CSR matrices
               * a single NumPy array denoting one parameter or constant
-            seq_starts (list of `bool`s or None): if None, every sequence is
+            seq_starts (list of `bool`\ s or None): if None, every sequence is
              treated as a new sequence. Otherwise, it is interpreted as a list of
              Booleans that tell whether a sequence is a new sequence (`True`) or a
              continuation of the sequence in the same slot of the previous
@@ -446,6 +448,7 @@ class Value(cntk_py.Value):
         '''
         The mask matrix of this value. Each row denotes a sequence with its
         elements describing the mask of the element:
+
          * 2: beginning of sequence (e.g. an LSTM would be reset)
          * 1: valid element
          * 0: invalid element

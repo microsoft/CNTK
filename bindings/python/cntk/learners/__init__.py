@@ -428,7 +428,7 @@ def sgd(parameters, lr,
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] L. Bottou. `Stochastic Gradient Descent Tricks
@@ -462,11 +462,10 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
-        momentum (output of :func:`momentum_schedule` or
-         :func:`momentum_as_time_constant_schedule`): momentum schedule.
+        momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
-        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
+         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+        unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
          to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
@@ -480,8 +479,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the
-        :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the
+        :class:`~cntk.train.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     _verify_momentum_type(momentum)
@@ -514,10 +513,9 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
-        momentum (output of :func:`momentum_schedule` or
-         :func:`momentum_as_time_constant_schedule`): momentum schedule.
+        momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
@@ -532,8 +530,8 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the
-        :class:`~cntk.trainer.Trainer`.
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the
+        :class:`~cntk.train.trainer.Trainer`.
 
     See also:
         [1] Y. Nesterov. A Method of Solving a Convex Programming Problem with Convergence Rate O(1/ sqrt(k)). Soviet Mathematics Doklady, 1983.
@@ -587,7 +585,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1]  J. Duchi, E. Hazan, and Y. Singer. `Adaptive Subgradient Methods
@@ -626,7 +624,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
          to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
@@ -643,7 +641,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     '''
     _verify_learning_rate_type(lr)
@@ -680,7 +678,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults
          to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults
@@ -697,7 +695,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
@@ -742,7 +740,7 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
         lr (output of :func:`learning_rate_schedule`): learning rate schedule.
         momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): momentum schedule.
          For additional information, please refer to the `wiki
-         <https://github.com/Microsoft/CNTK/wiki/SGD-block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
+         <https://github.com/Microsoft/CNTK/wiki/BrainScript-SGD-Block#converting-learning-rate-and-momentum-parameters-from-other-toolkits>`_.
         unit_gain: when ``True``, momentum is interpreted as a unit-gain filter. Defaults 
          to the value returned by :func:`default_unit_gain_value`.
         variance_momentum (output of :func:`momentum_schedule` or :func:`momentum_as_time_constant_schedule`): variance momentum schedule. Defaults 
@@ -759,7 +757,7 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
@@ -816,7 +814,7 @@ def rmsprop(parameters, lr,
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     gaussian_noise_injection_std_dev = \

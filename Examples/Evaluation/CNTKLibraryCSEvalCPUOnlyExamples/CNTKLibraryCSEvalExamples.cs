@@ -632,6 +632,120 @@ namespace CNTKLibraryCSEvalExamples
         }
 
         /// <summary>
+        /// The example shows
+        /// - how to prepare input data as sequence using sparse input.
+        /// </summary>
+        /// <param name="device">Specify on which device to run the evaluation</param>
+        public static void EvaluationSingleSequenceUsingSparse(DeviceDescriptor device)
+        {
+            try
+            {
+                // The model atis.dnn is trained by <CNTK>/Examples/LanguageUnderstanding/ATIS/Python/LanguageUnderstanding.py
+                // Please see README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS about how to train the model.
+                string modelFilePath = "atis.dnn";
+                ThrowIfFileNotExist(modelFilePath, string.Format("Error: The model '{0}' does not exist. Please follow instructions in README.md in <CNTK>/Examples/LanguageUnderstanding/ATIS to create the model.", modelFilePath));
+                Function modelFunc = Function.LoadModel(modelFilePath, device);
+
+                // Read word and slot index files.
+                string vocabFile = "query.wl";
+                string labelFile = "slots.wl";
+                ThrowIfFileNotExist(vocabFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", vocabFile));
+                ThrowIfFileNotExist(labelFile, string.Format("Error: The file '{0}' does not exist. Please copy it from <CNTK>/Examples/LanguageUnderstanding/ATIS/BrainScript/ to the output directory.", labelFile));
+                var vocabToIndex = buildVocabIndex(vocabFile);
+                var indexToSlots = buildSlotIndex(labelFile);
+
+                Console.WriteLine("\n===== Evaluate single sequence using sparse input =====");
+
+                // Get input variable
+                var inputVar = modelFunc.Arguments.Single();
+                uint vocabSize = inputVar.Shape.TotalSize;
+
+                var inputSentence = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
+
+                // Get the index of each word in the sentence.
+                string[] inputWords = inputSentence.Split(' ');
+                var seqLen = (uint)inputWords.Length;
+                // For this example, only 1 non-zero value for each sample.
+                var numNonZeroValues = seqLen * 1;
+                var colStarts = new int[seqLen + 1];
+                var rowIndices = new int[numNonZeroValues];
+                var nonZeroValues = new float[numNonZeroValues];
+
+                int count = 0;
+                for (; count < seqLen; count++)
+                {
+                    // Get the index of the word
+                    var nonZeroValueIndex = (int)vocabToIndex[inputWords[count]];
+                    // Add the sample to the sequence
+                    nonZeroValues[count] = (float)1.0;
+                    rowIndices[count] = nonZeroValueIndex;
+                    colStarts[count] = count;
+                }
+                colStarts[count] = (int)numNonZeroValues;
+
+                // Create input value using OneHot vector data.
+                var inputValue = Value.CreateSequence<float>(vocabSize, seqLen, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device);
+
+                // Build input data map.
+                var inputDataMap = new Dictionary<Variable, Value>();
+                inputDataMap.Add(inputVar, inputValue);
+
+                // Prepare output
+                Variable outputVar = modelFunc.Output;
+
+                // Create ouput data map. Using null as Value to indicate using system allocated memory.
+                var outputDataMap = new Dictionary<Variable, Value>();
+                outputDataMap.Add(outputVar, null);
+
+                // Evalaute the model.
+                modelFunc.Evaluate(inputDataMap, outputDataMap, device);
+
+                // Get output result
+                var outputData = new List<List<float>>();
+                Value outputVal = outputDataMap[outputVar];
+                outputVal.CopyVariableValueTo(outputVar, outputData);
+
+                // output the result
+                var outputSampleSize = (int)outputVar.Shape.TotalSize;
+                if (outputData.Count != 1)
+                {
+                    throw new ApplicationException("Only one sequence of slots is expected as output.");
+                }
+                var slotSeq = outputData[0];
+                if (slotSeq.Count % outputSampleSize != 0)
+                {
+                    throw new ApplicationException("The number of elements in the slot sequence is not a multiple of sample size");
+                }
+
+                var numOfSlotsInOutput = slotSeq.Count / outputSampleSize;
+                if (inputWords.Count() != numOfSlotsInOutput)
+                {
+                    throw new ApplicationException("The number of input words and the number of output slots do not match");
+                }
+                for (int i = 0; i < numOfSlotsInOutput; i++)
+                {
+                    var max = slotSeq[i * outputSampleSize];
+                    var maxIndex = 0;
+                    for (int j = 1; j < outputSampleSize; j++)
+                    {
+                        if (slotSeq[i * outputSampleSize + j] > max)
+                        {
+                            max = slotSeq[i * outputSampleSize + j];
+                            maxIndex = j;
+                        }
+                    }
+                    Console.WriteLine(String.Format("     {0, 10} ---- {1}", inputWords[i], indexToSlots[maxIndex]));
+                }
+                Console.WriteLine();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error: {0}\nCallStack: {1}\n Inner Exception: {2}", ex.Message, ex.StackTrace, ex.InnerException != null ? ex.InnerException.Message : "No Inner Exception");
+                throw ex;
+            }
+        }
+
+        /// <summary>
         /// Checks whether the file exists. If not, write the error message on the console and throw FileNotFoundException.
         /// </summary>
         /// <param name="filePath">The file to check.</param>

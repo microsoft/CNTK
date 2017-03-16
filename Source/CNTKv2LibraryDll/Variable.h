@@ -46,6 +46,15 @@ namespace CNTK
                 if (!retVal.second)
                     InvalidArgument("Dynamic axis named %S is specified more than once for Variable '%S'", currentDynamicAxis.Name().c_str(), AsString().c_str());
             }
+
+            if (m_varKind == VariableKind::Input)
+            {
+                for (auto dim : m_shape.Dimensions())
+                {
+                    if (dim == 0)
+                        InvalidArgument("Variable '%S' has invalid shape '%S'.", AsString().c_str(), m_shape.AsString().c_str());
+                }
+            }
         }
 
         std::wstring AsString() const;

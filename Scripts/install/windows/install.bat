@@ -6,6 +6,7 @@
 
 setlocal
 set allArgs=%*
+pushd "%~dp0"
 set psInstall="%~p0\ps\install.ps1"
 set PSModulePath=%PSModulePath%;%~dp0\ps\Modules
 :loop
@@ -19,6 +20,9 @@ shift
 
 if not "%~1"=="" goto loop
 
+powershell -NoProfile -NoLogo -Command unblock-file ps\*.ps1
+powershell -NoProfile -NoLogo -Command unblock-file ps\Modules\Download\*.psm1
+popd
 powershell -NoProfile -NoLogo -ExecutionPolicy RemoteSigned %psInstall% %allArgs%
 
 goto :EOF

@@ -157,7 +157,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
 
 def sanitize_value(shape, value, dtype, device):
     '''
-    Converts a given ``value`` to an :class:`~cntk.NDArrayView` object that can be passed to
+    Converts a given ``value`` to an :class:`~cntk.core.NDArrayView` object that can be passed to
     the CNTK core.
 
     Args:
@@ -169,7 +169,7 @@ def sanitize_value(shape, value, dtype, device):
          on
 
     Returns:
-        :class:`~cntk.NDArrayView` object representing ``value``
+        :class:`~cntk.core.NDArrayView` object representing ``value``
     '''
     from .. import NDArrayView
     if value is None:
@@ -216,8 +216,8 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     handed off to the evaluation methods
     (:meth:`~cntk.ops.functions.Function.forward`,
     :meth:`~cntk.ops.functions.Function.backward`,
-    :meth:`~cntk.Trainer.train_minibatch` and
-    :meth:`~cntk.Trainer.test_minibatch`).
+    :meth:`~cntk.train.trainer.Trainer.train_minibatch` and
+    :meth:`~cntk.train.trainer.Trainer.test_minibatch`).
 
     Args:
         op_arguments (:class:`~cntk.ops.functions.Function`): arguments of the
@@ -231,6 +231,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
             data.
           * any other type: if node has a unique input, arguments is
             mapped to this input.
+
          For nodes with more than one input, only dict is allowed.
 
          In both cases, every sample in the data will be interpreted
@@ -263,7 +264,7 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
          map are converted to the underlying value (:class:`~cntk.core.Value`)
          instances (default), or if they should remain intact, as they contain
          additional meta information required by the Trainer (specifically, by
-         the :meth:`~cntk.Trainer.train_minibatch` method).
+         the :meth:`~cntk.train.trainer.Trainer.train_minibatch` method).
 
     Returns:
         `dict` that maps variables to sanitized batches
@@ -418,3 +419,10 @@ def sanitize_dynamic_axes(axes):
             raise TypeError('type Axis expected, got %s instead' % type(ax))
     axes = tuple(reversed(axes))
     return axes
+
+
+def sanitize_variable_value_dict(var_value_dict):
+    if len(var_value_dict) > 1:
+        return var_value_dict
+    else:
+        return list(var_value_dict.values())[0]

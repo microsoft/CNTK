@@ -379,7 +379,7 @@ void TestTimesReduceSequenceAxis(
 
     std::vector<ElementType> outputData[(int)FuncType::TotalTypes];
     ValuePtr outputValue[(int)FuncType::TotalTypes];
-    NDShape outputShape = funcs[0]->Output().Shape().AppendShape({ 1, numSequences });
+    NDShape outputShape = funcs[0]->Output().Shape().AppendShape({ numSequences });
 
     std::vector<ElementType> inputGradientData[(int)FuncType::TotalTypes][NumInputs];
     ValuePtr inputGradientValue[(int)FuncType::TotalTypes][NumInputs];
