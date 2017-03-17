@@ -18,8 +18,8 @@ DEBUG_USAGE = '''\
         n - execute the next node
         n <number> - execute the next <number> nodes
 
-        u f - exeucte until forward pass (like 'n' when already in forward pass)
-        u b - exeucte until backward pass (like 'n' when already in backward pass)
+        u f - execute until forward pass (like 'n' when already in forward pass)
+        u b - execute until backward pass (like 'n' when already in backward pass)
         u name - execute until a node with that name is hit
         u <lambda> - execute until the lambda expression is True. Examples:
                      Until a Times node is hit:
@@ -29,7 +29,7 @@ DEBUG_USAGE = '''\
                      Until the variance of the input exceeds 1 (np = numpy):
                          lambda arg, node: np.var(arg) > 1
 
-        c - exeucte until end
+        c - execute until end
         p - print input (forward) or root gradients (backward)
         d - drop into a pdb shell
         q - quit\
@@ -112,7 +112,7 @@ def set_computation_network_track_gap_nans(enable):
     For debugging purposes only.
 
     Args:
-        enable (Boolean): whether to enable gap nans tracking (with performance impact)
+        enable (bool): whether to enable gap nans tracking (with performance impact)
     '''
     cntk_py.set_computation_network_track_gap_nans(enable)
 
@@ -120,10 +120,15 @@ def set_computation_network_track_gap_nans(enable):
 def set_computation_network_trace_level(level):
     '''
     Set trace level to the computation network. Currently supported values:
-       0        : turn off trace
-       1        : output nodes' dimensions and some other static info
-       1000     : output each node's abs sum of elements in its value matrix for every forward/backward
-       1000000  : output each node's full matrix for every forward/backward
+
+       0
+         turn off trace
+       1
+         output nodes' dimensions and some other static info
+       1000
+         output each node's abs sum of elements in its value matrix for every forward/backward
+       1000000
+         output each node's full matrix for every forward/backward
 
     Args:
         level (int): trace level
@@ -391,6 +396,8 @@ def _nodes_to_debug(model):
 def debug_model(model, in_stream=sys.stdin, out_stream=sys.stdout,
                 exit_func=sys.exit):
     '''
+    debug_model(model, in_stream=sys.stdin, out_stream=sys.stdout, exit_func=sys.exit)
+
     Returns a cloned model that has debug nodes inserted everywhere. When the
     graph is evaluated or trained, those nodes will allow to inspect the graph.
 

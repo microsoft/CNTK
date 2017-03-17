@@ -143,7 +143,7 @@ def get_train_eval_criterion(trainer):
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
 
     Args:
-        trainer (:class:`Trainer`): the trainer used.
+        trainer (:class:`~cntk.train.trainer.Trainer`): the trainer used.
     Returns:
         the criterion value
     '''
@@ -201,7 +201,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
     mainly to explore the operators and for convenient unit testing.
 
     Args:
-        op (:class:`Function`): operation to evaluate
+        op (:class:`~cntk.ops.functions.Function`): operation to evaluate
         arguments: maps variables to their input data. The
          interpretation depends on the input type:
 

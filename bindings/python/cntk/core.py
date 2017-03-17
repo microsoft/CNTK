@@ -84,7 +84,7 @@ class NDArrayView(cntk_py.NDArrayView):
         format.
 
         Args:
-            csr_array (scipy.sparse.csr.csr_matrix): SciPy sparse matrix in CSR
+            csr_array (scipy.sparse.csr_matrix): SciPy sparse matrix in CSR
              format
             device (:class:`~cntk.device.DeviceDescriptor`): device this value
              should be put on
@@ -115,7 +115,7 @@ class NDArrayView(cntk_py.NDArrayView):
         array in CSR format.
 
         Args:
-            data (numpy.ndarray or scipy.sparse.csr.csr_matrix): data
+            data (numpy.ndarray or scipy.sparse.csr_matrix): data
             device (:class:`~cntk.device.DeviceDescriptor`): device this value
              should be put on
             read_only (bool, optional): whether the data can be modified or
@@ -397,7 +397,7 @@ class Value(cntk_py.Value):
 
         Args:
             batch (list of lists of integers): batch input data of indices
-            sample_shape (integer or tuple): number of classes or shape of each sample whose trailing axis is one_hot
+            sample_shape (int or tuple): number of classes or shape of each sample whose trailing axis is one_hot
             dtype (`np.float32`, `np.float64`, default None): data type
             device (:class:`~cntk.device.DeviceDescriptor`, default None): device
              this value should be put on
