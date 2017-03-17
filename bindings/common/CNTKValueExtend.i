@@ -63,4 +63,14 @@
         return CNTK::Value::CreateSequence<double>(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, sequenceStartFlag, device, readOnly);
     }
 
+    // Instantiation template functions: copy value
+    void CNTK::Value::CopyVariableValueToFloat(const CNTK::Variable& outputVariable, std::vector<std::vector<float>>& sequences)
+    {
+        return self->CopyVariableValueTo<float>(outputVariable, sequences);
+    }
+
+    void CNTK::Value::CopyVariableValueToDouble(const CNTK::Variable& outputVariable, std::vector<std::vector<double>>& sequences)
+    {
+        return self->CopyVariableValueTo<double>(outputVariable, sequences);
+    }
 }
