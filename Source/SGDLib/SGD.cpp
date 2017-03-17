@@ -1141,7 +1141,7 @@ size_t SGD<ElemType>::TrainOneEpoch(ComputationNetworkPtr net,
                 {
                     int nsmb = (actualMBSize + m_maxSamplesInRAM - 1) / m_maxSamplesInRAM;
                     actualNumSubminibatches = smbDispatcher.GetMinibatchIntoCache(*trainSetDataReader, *net, *inputMatrices, nsmb);
-                    fprintf(stderr, "auto-scaled to %d subminibatches\n", (int)actualNumSubminibatches);
+                    fprintf(stderr, "Node %02d auto-scaled to %d subminibatches (actualMBSize=%d, m_maxSamplesInRam=%d)\n", (int)m_mpi->CurrentNodeRank(), (int)actualNumSubminibatches, (int)actualMBSize, (int)m_maxSamplesInRAM);
                 }
             }
             else
