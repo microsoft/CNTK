@@ -527,13 +527,13 @@ namespace CNTK
         // Copy data to the CPU device if required.
         const ValueType *valueData;
         NDArrayViewPtr cpuArrayView;
-        if (Device().Type() != DeviceKind::CPU)
+        if (Device().Type() == DeviceKind::GPU)
         {
             // TODO: leverage sparse if the original NDArrayView is in spase.
             cpuArrayView = MakeSharedObject<NDArrayView>(GetDataType(), Shape(), DeviceDescriptor::CPUDevice());
             cpuArrayView->CopyFrom(*Data());
         }
-        else
+        else if (Device().Type() == DeviceKind::CPU)
         {
             // TODO: direct process sparse data without copy
             if (GetStorageFormat() != StorageFormat::Dense)
@@ -545,7 +545,12 @@ namespace CNTK
             {
                 cpuArrayView = Data();
             }
+        } 
+        else
+        {
+            LogicError("Invalid device type (%u).", Device().Type());
         }
+
         valueData = cpuArrayView->DataBuffer<ValueType>();
 
         auto sampleSize = outputVariable.Shape().TotalSize();

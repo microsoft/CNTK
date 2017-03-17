@@ -71,7 +71,7 @@ def BNBiRecurrence(fwd, bwd, test_dual=True): # special version that calls one s
 # TODO: the name is wrong
 def test_language_understanding(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
-    DeviceDescriptor.set_default_device(cntk_device(device_id))
+    DeviceDescriptor.try_set_default_device(cntk_device(device_id))
 
     from _cntk_py import set_computation_network_trace_level, set_fixed_random_seed
     #set_computation_network_trace_level(1)

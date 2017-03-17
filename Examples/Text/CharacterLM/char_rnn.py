@@ -220,7 +220,7 @@ def train_and_eval_char_rnn(epochs=50, max_num_minibatches=sys.maxsize):
 if __name__=='__main__':    
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    #set_default_device(cpu())
+    #try_set_default_device(cpu())
 
     output = train_and_eval_char_rnn()
     ff = open('output.txt', 'w', encoding='utf-8')

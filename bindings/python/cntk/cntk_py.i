@@ -24,6 +24,8 @@
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
+%rename(GPUProperties) CNTK::GPUProperties;
+%rename(get_gpu_properties) CNTK::DeviceDescriptor::GetGPUProperties;
 %rename(times_transpose) CNTK::TransposeTimes;
 %rename(sequence_slice) CNTK::Sequence::Slice;
 %rename(sequence_reduce_sum) CNTK::Sequence::ReduceSum;

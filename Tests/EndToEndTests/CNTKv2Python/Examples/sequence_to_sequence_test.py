@@ -7,7 +7,7 @@
 import os, sys
 import numpy as np
 from cntk import load_model
-from cntk.device import set_default_device
+from cntk.device import try_set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "SequenceToSequence", "CMUDict", "Python"))
@@ -21,7 +21,7 @@ def test_sequence_to_sequence(device_id):
     from Sequence2Sequence import create_reader, DATA_DIR, MODEL_DIR, TRAINING_DATA, VALIDATION_DATA, TESTING_DATA, \
                                   VOCAB_FILE, get_vocab, create_model, model_path_stem, train, evaluate_metric
     from cntk.ops.tests.ops_test_utils import cntk_device
-    set_default_device(cntk_device(device_id))
+    try_set_default_device(cntk_device(device_id))
 
     # hook up data (train_reader gets False randomization to get consistent error)
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), False)
