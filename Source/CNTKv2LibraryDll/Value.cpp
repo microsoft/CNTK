@@ -548,7 +548,7 @@ namespace CNTK
         } 
         else
         {
-            LogicError("Invalid device type (%u).", Device().Type());
+            LogicError("Invalid device type (%u).", (unsigned int)Device().Type());
         }
 
         valueData = cpuArrayView->DataBuffer<ValueType>();

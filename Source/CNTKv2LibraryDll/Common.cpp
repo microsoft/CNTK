@@ -253,7 +253,7 @@ namespace CNTK
                 return{ tempCPUDataView->WritableDataBuffer<ElementType>(), tempCPUDataView };
             }
             
-            LogicError("Invalid device type (%u).", deviceType);
+            LogicError("Invalid device type (%u).", (unsigned int)deviceType);
         }
 
         template <typename ElementType> 
