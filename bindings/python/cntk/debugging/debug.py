@@ -8,7 +8,7 @@ from collections import defaultdict
 
 from cntk import cntk_py, user_function
 
-from cntk import output_variable, CloneMethod
+from cntk.ops import output_variable, CloneMethod
 
 from cntk.ops.functions import UserFunction
 from cntk.internal import map_if_possible
