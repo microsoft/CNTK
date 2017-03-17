@@ -115,6 +115,7 @@ void DoTrain(const ConfigRecordType& config)
 
     // create or load from checkpoint
     shared_ptr<ComputationNetwork> net = !loadNetworkFromCheckpoint ? createNetworkFn(deviceId) : ComputationNetwork::CreateFromFile<ElemType>(deviceId, modelFileName);
+    net->SetTraceLevel(config(L"traceLevel", 0)); // TODO: All CreateFromFile should set trace level appropriately
 
     auto dataReader = CreateObject<DataReader>(config, L"reader");
 
