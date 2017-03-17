@@ -3,10 +3,10 @@ import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs,\
         INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, \
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk import input_variable, cross_entropy_with_softmax, \
         classification_error, sequence
-from cntk.utils import ProgressPrinter
+from cntk.logging import ProgressPrinter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "Examples", "common"))

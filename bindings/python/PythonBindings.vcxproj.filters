@@ -344,5 +344,8 @@
     <None Include="cntk\logging\tests\__init__.py">
       <Filter>cntk\logging\tests</Filter>
     </None>
+    <None Include="cntk\ops\tests\sparse_test.py">
+      <Filter>cntk\ops\tests</Filter>
+    </None>
   </ItemGroup>
 </Project>

@@ -9,9 +9,11 @@ import sys
 import os
 from cntk.device import cpu, try_set_default_device
 from cntk import Trainer
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sigmoid
-from cntk.utils import ProgressPrinter
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.ops import input_variable, sigmoid
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk.logging import ProgressPrinter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "Examples", "common"))

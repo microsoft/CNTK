@@ -68,7 +68,8 @@ def test_times_2d_sparse_sequence_operand(device_id):
 
 
 def test_training_2d_sparse_sequence_operand(device_id):
-    from .. import times, cross_entropy_with_softmax
+    from .. import times
+    from cntk.losses import cross_entropy_with_softmax
 
     dev = cntk_device(device_id)
     vocab_size = 6
@@ -115,7 +116,8 @@ def test_training_2d_sparse_sequence_operand(device_id):
 
 
 def test_training_3d_sparse_sequence_with_recurrence(device_id):
-    from .. import times, cross_entropy_with_softmax, times_transpose, reshape
+    from .. import times, times_transpose, reshape
+    from cntk.losses import cross_entropy_with_softmax
 
     dev = cntk_device(device_id)
     vocab_size = 3

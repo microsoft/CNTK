@@ -11,7 +11,7 @@ import sys
 from cntk import load_model
 from cntk.cntk_py import DeviceKind_GPU
 from cntk.device import try_set_default_device, gpu
-from cntk.graph import get_node_outputs
+from cntk.logging.graph import get_node_outputs
 from cntk.ops.tests.ops_test_utils import cntk_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))

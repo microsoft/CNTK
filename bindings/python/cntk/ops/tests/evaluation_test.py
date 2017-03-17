@@ -233,7 +233,7 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
     expected_value = AA(value, dtype=dt)
     expected_grad  = AA(grad, dtype=dt)
 
-    from cntk.metrics import lambda_rank
+    from cntk.losses import lambda_rank
 
     g = I((1,))
     s = I((1,), needs_gradient=True)

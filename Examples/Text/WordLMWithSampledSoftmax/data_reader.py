@@ -71,14 +71,14 @@ class DataReader(object):
 
                 # When the expected number of sequences per batch is reached yield the data and reset the array
                 if len(feature_sequences) == sequences_per_batch:
-                    yield C.one_hot(feature_sequences, self.vocab_dim), C.one_hot(label_sequences, self.vocab_dim), token_count
+                    yield C.Value.one_hot(feature_sequences, self.vocab_dim), C.Value.one_hot(label_sequences, self.vocab_dim), token_count
                     feature_sequences = []
                     label_sequences   = []
                     token_count = 0
 
             # From the end of the file there are probably some leftover lines
             if len(feature_sequences) > 0:
-                yield C.one_hot(feature_sequences, self.vocab_dim), C.one_hot(label_sequences, self.vocab_dim), token_count
+                yield C.Value.one_hot(feature_sequences, self.vocab_dim), C.one_hot(label_sequences, self.vocab_dim), token_count
 
 
 
