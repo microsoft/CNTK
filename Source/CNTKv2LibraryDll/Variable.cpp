@@ -72,9 +72,18 @@ namespace CNTK
 
     FunctionPtr Variable::Owner() const 
     {
-        auto ownerFunctionPtr = m_dataFields->m_ownerFunction.lock();
-        if (ownerFunctionPtr != nullptr)
-            return ownerFunctionPtr->shared_from_this();
+        auto ownerWeakPtr = m_dataFields->m_ownerFunction;
+        if (ownerWeakPtr.owner_before(std::weak_ptr<int>{}) || std::weak_ptr<int>{}.owner_before(ownerWeakPtr))
+        {
+            // owner function is not emptry, i.e. has been set before.
+            if (ownerWeakPtr.expired())
+                LogicError("The owner function of Variable '%S' is unexpectedly expired.", AsString().c_str());
+            auto ownerFunctionPtr = m_dataFields->m_ownerFunction.lock();
+            if (ownerFunctionPtr != nullptr)
+                return ownerFunctionPtr->shared_from_this();
+            else
+                return nullptr;
+        }
         else
             return nullptr;
     }
@@ -100,7 +109,7 @@ namespace CNTK
         if (Kind() != VariableKind::Output)
             LogicError("Variable '%S' SetOwner: Owner can only be set for Output Variables", AsString().c_str());
 
-        if (m_dataFields->m_ownerFunction.lock() != nullptr)
+        if (Owner() != nullptr)
             LogicError("Variable '%S' SetOwner: An Output Variable whose owner has previously been set, cannot be reset.", AsString().c_str());
 
         m_dataFields->m_ownerFunction = ownerFunction;
@@ -216,8 +225,13 @@ namespace CNTK
 
     std::shared_ptr<VariableFields> VariableFields::Clone() const
     {
-        if (m_ownerFunction.lock() != nullptr)
-            InvalidArgument("Output variable '%S' cannot be cloned.", AsString().c_str());
+        if (m_ownerFunction.owner_before(std::weak_ptr<int>{}) || std::weak_ptr<int>{}.owner_before(m_ownerFunction))
+        {
+            if (m_ownerFunction.expired())
+                LogicError("The owner function of Variable '%S' is unexpectedly expired.", AsString().c_str());
+            if (m_ownerFunction.lock() != nullptr)
+                InvalidArgument("Output variable '%S' cannot be cloned.", AsString().c_str());
+        }
 
         // Note: We do not clone m_blockFunctionVariableMapping
 
