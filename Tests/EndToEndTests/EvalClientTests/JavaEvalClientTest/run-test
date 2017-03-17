@@ -4,8 +4,8 @@
 
 set -x
 
-# This test case is to test CSEvalClient works with the same setup of users. 
-# For that purpose, the test needs to create some models and data in the Examples directories as expected by CSEvalClient.
+# This test case is to test Java Evaluation works with the same setup of users.
+# For that purpose, the test needs to create some models and data in the Examples directories as expected by Java.
 # These files are removed by Jenkins during workspace cleanup.
 
 # The eval test uses some pretrained models which are not part of the CNTK repository itself
@@ -42,6 +42,10 @@ if [ "$OS" == "Windows_NT" ]; then
   exit 0
 
 else
-  echo JavaEvalClientTest can only run on Windows.
-  exit 1
+  # Run the evaluation test
+  CNTK_ROOT=$TEST_BUILD_LOCATION/..
+  cd $TEST_BIN_DIR
+  $CNTK_ROOT/bindings/java/JavaEvalTest/run-java-test.bash $CNTK_ROOT $TEST_BUILD_LOCATION/$TEST_FLAVOR/lib || exit $?
+
+  exit 0
 fi
