@@ -14,6 +14,8 @@ class Variable:
         return v
     def __add__(self, other):
         return plus(self, other)
+    def __matmul__(self, other):
+        return times(self, other)
 
 class Parameter(Variable):
     def __new__(cls,  shape, initializer=None):
@@ -87,7 +89,7 @@ def Dense(N, activation=identity):
     b = Parameter((N,))
     @Model(W=W, b=b)
     def dense(x):
-        return activation(plus(times(x,W), b))
+        return activation(x @ W + b)
     return dense
 
 def RNNBlock(N, activation=sigmoid):
@@ -218,6 +220,21 @@ def dump_graph(v):
         print_node(node)
     return len(order)
 
+# excecution
+#  - prep: for all nodes,
+#     - determine set of consumers
+#     - set not-ready-children counter to #inputs
+#     - add any node with not-ready-children counter==0 to ready batched group
+#  - select a batched group to execute
+#     - e.g. largest (=largest chance of full util, while others may become fuller as a result)
+#  - execute the batched group
+#     - inserting reshuffling operation into dense tensor form if needed
+#     - perform as one batched operation
+#  - for each member of the batched op, check each consumer whether it is now ready; if so, move to ready set
+#     - sort each one right away into its batched group
+#     - this requires consumer sets for all nodes, and a not-ready-children counter
+#  - delete the batched group
+
 # ---
 
 in_dim = 3  # 30000
@@ -257,8 +274,8 @@ if True:
     from timeit import default_timer as timer
 
     p1 = Embedding(1)(1)
-    v1 = plus(p1, times(3, np.array([[4]])))
-    v2 = plus(p1, times(5, np.array([[6]])))
+    v1 = plus(p1, 3 @ np.array([[4]]))
+    v2 = plus(p1, 5 @ np.array([[6]]))
     v = v1 + v2
     dump_graph(v)
 
