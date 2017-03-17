@@ -19,7 +19,7 @@ from cntk.layers import Recurrence, Dense, LSTM, Stabilizer, For, Sequential
 from cntk.logging import log_number_of_parameters, ProgressPrinter
 from data_reader import DataReader
 from math import log, exp
-from cntk.device import set_default_device, cpu, gpu
+from cntk.device import try_set_default_device, cpu, gpu
 
 # Setting global parameters
 use_sampled_softmax = True

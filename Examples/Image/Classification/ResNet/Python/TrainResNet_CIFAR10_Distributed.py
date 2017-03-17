@@ -17,7 +17,7 @@ from cntk import input_variable, cross_entropy_with_softmax, classification_erro
 from cntk import Trainer, cntk_py 
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.debugging import set_computation_network_trace_level
-from cntk.device import set_default_device, gpu
+from cntk.device import try_set_default_device, gpu
 from cntk import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
 from cntk.train.training_session import *
 
@@ -174,7 +174,7 @@ if __name__=='__main__':
     if args['outputdir'] != None:
         model_path = args['outputdir'] + "/models"
     if args['device'] != None:
-        set_default_device(gpu(args['device']))
+        try_set_default_device(gpu(args['device']))
 
     if args['epoch_size'] is not None:
         epoch_size = args['epoch_size']

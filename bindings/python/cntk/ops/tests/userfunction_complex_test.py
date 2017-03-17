@@ -72,7 +72,7 @@ def print_training_progress(trainer, mb, frequency):
 def train(nonlinearity, num_hidden_layers, device_id):
     from cntk.cntk_py import always_allow_setting_default_device
     always_allow_setting_default_device()
-    set_default_device(cntk_device(device_id))
+    try_set_default_device(cntk_device(device_id))
     np.random.seed(0)
 
     learning_rate = 0.5

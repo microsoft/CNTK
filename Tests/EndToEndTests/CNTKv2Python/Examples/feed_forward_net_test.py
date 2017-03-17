@@ -6,7 +6,7 @@
 
 import os, sys
 import numpy as np
-from cntk.device import set_default_device
+from cntk.device import try_set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "NumpyInterop"))
@@ -16,7 +16,7 @@ TOLERANCE_ABSOLUTE = 1E-03
 
 def test_ffnet_error(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
-    set_default_device(cntk_device(device_id))
+    try_set_default_device(cntk_device(device_id))
 
     np.random.seed(0)
     avg_error = ffnet()

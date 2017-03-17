@@ -112,6 +112,10 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         m_initString = initString;
         m_initValue = initValue;
     }
+    else if (initString == L"bilinear")
+    {
+        m_initString = initString;
+    }
     // non-deferred variants
     // For the dimensions are always known at this point, so we don't need/want to have to save all those parameters.
     else if (initString == L"fromValueArray") // from 'initValue' which has array form
@@ -121,13 +125,6 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         if (initFromFilePath.empty())
             RuntimeError("initFromFilePath parameter must be provided when using \"fromFile\" initialization method");
         InitFromFile(initFromFilePath);
-        m_initString.clear();
-    }
-    else if (initString == L"bilinear")
-    {
-        const size_t kernelWidth = configp->Get(L"kernelWidth");
-        const size_t kernelHeight = configp->Get(L"kernelHeight");
-        InitBilinear(kernelWidth, kernelHeight);
         m_initString.clear();
     }
     // legacy
@@ -147,7 +144,7 @@ LearnableParameter<ElemType>::LearnableParameter(const ScriptableObjects::IConfi
         m_initString.clear();
     }
     else
-        RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile ]");
+        RuntimeError("init must be one of the values of [ uniform | gaussian | fixedValue | fromFile | bilinear ]");
 
     // initialize
     // This will be repeated if the matrix gets resized due to dimension inference.
@@ -296,11 +293,11 @@ void LearnableParameter<ElemType>::InitBilinear(Matrix<ElemType>& valueMatrix, c
     valueMatrix.TransferToDeviceIfNotThere(CPUDEVICE, true);
 
     const SmallVector<size_t>& dims = sampleShape.GetDims();
-    assert(dims.size() == 2);
-    const size_t kernelCount = dims[0];
-    const size_t kernelWeightCount = dims[1];
-    assert(kernelWeightCount % (kernelWidth * kernelHeight) == 0);
-    const size_t channels = kernelWeightCount / (kernelWidth * kernelHeight);
+    assert(dims.size() >= 4);
+    assert(dims[0] == kernelWidth);
+    assert(dims[1] == kernelHeight);
+    const size_t kernelCount = dims[2];
+    const size_t channels = dims[3];
     if (kernelCount != channels)
         LogicError("Number of input and output channels of filter for bilinear interpolation must be equal.");
 
@@ -547,6 +544,13 @@ void LearnableParameter<ElemType>::LazyInitParameters()
     {
         let randomSeed = Globals::ShouldForceConstantRandomSeed() ? 1UL : m_randomSeed; // debugging feature to enforce identical results across NDL, BrainScript, and V2 API/Python
         InitRandom(m_initString, randomSeed, m_initValueScale, m_initFilterRank, m_initOutputRank, m_initOnCPUOnly);
+    }
+    else if (m_initString == L"bilinear")
+    {
+        const TensorShape shape = GetSampleLayout();
+        const size_t kernelWidth = shape[0];
+        const size_t kernelHeight = shape[1];
+        InitBilinear(kernelWidth, kernelHeight);
     }
     else
         LogicError("LearnableParameter: Invalid value of m_initString '%ls' for deferred initialization for %ls.", m_initString.c_str(), NodeDescription().c_str());

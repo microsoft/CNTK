@@ -9,7 +9,6 @@ import scipy.sparse as sparse
 csr = sparse.csr_matrix
 import pytest
 
-from cntk.device import default
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
 from cntk.utils import *
