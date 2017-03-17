@@ -200,7 +200,7 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
         dtype (np.dtype, defaults to np.float32): data type
         needs_gradient (bool, defaults to `True`):
         is_sparse (bool, defaults to `False`):
-        dynamic_axes (object, Axis.default_input_variable_dynamic_axes):
+        dynamic_axes (object, `Axis.default_input_variable_dynamic_axes`):
         name (str, defaults to ''): the name of the Function instance in the network
 
     Returns:
@@ -306,7 +306,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     This takes `enable_self_stabilization` as a flag that allows to disable itself. Useful if this is a global default.
 
-    Note: Some other layers (specifically, recurrent units like :func:`~cntk.blocks.LSTM`) also have the option to
+    Note: Some other layers (specifically, recurrent units like :func:`~cntk.layers.blocks.LSTM`) also have the option to
     use the ``Stabilizer()`` layer internally. That is enabled by passing `enable_self_stabilization=True`
     to those layers. In conjunction with those, the rule is that an explicit ``Stabilizer()`` must be
     inserted by the user for the main data input, whereas the recurrent layer will own the stabilizer(s)
@@ -529,13 +529,13 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): if given, then the output state is first computet at `cell_shape`
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computed at `cell_shape`
          and linearly projected to `shape`
         activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
         use_peepholes (bool, defaults to `False`):
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.Stabilizer`
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.blocks.Stabilizer`
          to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
@@ -574,12 +574,12 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): if given, then the output state is first computet at `cell_shape`
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computed at `cell_shape`
          and linearly projected to `shape`
         activation (:class:`~cntk.ops.functions.Function`, defaults to signmoid): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.Stabilizer`
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.blocks.Stabilizer`
          to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
@@ -616,12 +616,12 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        cell_shape (tuple, defaults to `None`): if given, then the output state is first computet at `cell_shape`
+        cell_shape (tuple, defaults to `None`): if given, then the output state is first computed at `cell_shape`
          and linearly projected to `shape`
         activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.Stabilizer`
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.blocks.Stabilizer`
          to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
