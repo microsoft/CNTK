@@ -781,8 +781,12 @@ public:
     // difference: needs to sum gradients over all the ROIs that may
     // have used that location. One image location could be in
     // multiple ROIs--in that case each ROI may contribute a gradient term.
-    void BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
+    void BackpropTo(const size_t inputIndex, const FrameRange& fr) override
     {
+        // TODO: Ungly hack, do not commit.
+        if (inputIndex == 1)
+            return;
+
         auto inputShape = GetInputSampleLayout(0);
         Matrix<ElemType> inputSlice = Input(0)->ValueFor(fr);
 

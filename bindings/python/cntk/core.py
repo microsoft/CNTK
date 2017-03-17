@@ -69,6 +69,7 @@ class NDArrayView(cntk_py.NDArrayView):
                             ' and not %s' % type(np_array))
 
         if not _is_c_contiguous(np_array):
+            import pdb; pdb.set_trace()
             warnings.warn('data is not C contiguous; rearrange your '
                           'data/computation to avoid costly data conversions',
                           RuntimeWarning)

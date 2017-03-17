@@ -121,8 +121,11 @@ def readRois(roiDir, subdir, imgFilename):
 def readGtAnnotation(imgPath):
     bboxesPath = imgPath[:-4] + ".bboxes.tsv"
     labelsPath = imgPath[:-4] + ".bboxes.labels.tsv"
-    bboxes = np.array(readTable(bboxesPath), np.int32)
-    labels = readFile(labelsPath)
+    bboxes = [[0, 0, 0, 0],]
+    labels = [b'__background__']
+    if os.path.exists(bboxesPath) and os.path.exists(labelsPath):
+        bboxes = np.array(readTable(bboxesPath), np.int32)
+        labels = readFile(labelsPath)
     assert (len(bboxes) == len(labels))
     return bboxes, labels
 
