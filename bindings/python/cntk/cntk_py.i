@@ -602,6 +602,7 @@ public:
 // Callback support
 %feature("director") CNTK::Function;
 %feature("nodirector") CNTK::Function::OnPlaceholdersReplaced;
+%feature("nodirector") CNTK::Function::OpName;
 
 %feature("director") CNTK::Learner;
 %feature("nodirector") CNTK::Learner::Parameters;

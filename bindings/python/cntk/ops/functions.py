@@ -1239,9 +1239,3 @@ class UserFunction(Function):
             A cloned instance of this user-defined function.
         '''
         raise NotImplementedError('clone has to be overwritten')
-
-    def op_name(self):
-        '''
-        Returns the operator name.
-        '''
-        return 'UserFunction'

@@ -114,6 +114,12 @@ namespace CNTK
 
     /*virtual*/ Function::~Function() {}
 
+    /*virtual*/ const std::wstring& Function::OpName() const
+    {
+        static const std::wstring defaultUserFunctionOpName = L"UserFunction"; 
+        return defaultUserFunctionOpName;
+    }
+
     BackPropStatePtr Function::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                        std::unordered_map<Variable, ValuePtr>& outputs,
                                        const DeviceDescriptor& computeDevice,
