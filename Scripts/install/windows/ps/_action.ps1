@@ -312,7 +312,7 @@ function DoProcess(
     $eCode = ($process.ExitCode)
 
     if ($ecode -gt $maxErrorLevel) {
-        throw "Running 'start-process $commandString $param' failed with exit code [$ecode]"
+        throw "Running 'start-process $command $param' failed with exit code [$ecode]"
     }
     
     return

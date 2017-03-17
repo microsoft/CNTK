@@ -1221,7 +1221,7 @@ class UserFunction(Function):
         outputs.
 
         Output variables are created by
-        :meth:`~cntk.ops.functions.output_variable`.
+        :meth:`~cntk.ops.output_variable`.
         '''
         raise NotImplementedError('infer_outputs has to be overwritten')
 

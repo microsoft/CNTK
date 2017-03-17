@@ -89,7 +89,7 @@ def save_as_legacy_model(root_op, filename):
     For debugging purposes only, very likely to be deprecated in the future.
 
     Args:
-        root_op (:class:`~cntk.functions.Function`): op of the graph to save
+        root_op (:class:`~cntk.ops.functions.Function`): op of the graph to save
         filename (str): filename to store the model in.
     '''
     cntk_py.save_as_legacy_model(root_op, filename)

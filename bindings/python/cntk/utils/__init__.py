@@ -130,7 +130,7 @@ def get_train_loss(trainer):
     Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
 
     Args:
-        trainer (:class:`~cntk.trainer.Trainer`): the trainer used.
+        trainer (:class:`~cntk.train.trainer.Trainer`): the trainer used.
     Returns:
         the loss value
     '''

@@ -84,7 +84,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
     A `MinibatchSource` can be indexed by the stream name, which will return a
     Parent class of all minibatch sources.  A `MinibatchSource` can be indexed by the stream name, which will return a
     :class:`MinibatchData` object that can be passed e.g. to the
-    :func:`~cntk.trainer.Trainer.train_minibatch` function.
+    :func:`~cntk.train.trainer.Trainer.train_minibatch` function.
 
     Args:
         deserializers (`list`, defaults to empty): list of deserializers
@@ -366,7 +366,7 @@ class _ReaderConfig(dict):
         '''
         Creates an instance of :class:`MinibatchSource` from this
         instance, which can be used to feed data into the `eval()` methods of
-        the graph nodes or the `train_minibatch()` of :class:`~cntk.trainer.Trainer`.
+        the graph nodes or the `train_minibatch()` of :class:`~cntk.train.trainer.Trainer`.
 
         Returns:
             cntk.io.MinibatchSource:

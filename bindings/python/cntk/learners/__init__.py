@@ -428,7 +428,7 @@ def sgd(parameters, lr,
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] L. Bottou. `Stochastic Gradient Descent Tricks
@@ -479,8 +479,8 @@ def momentum_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the
-        :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the
+        :class:`~cntk.train.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     _verify_momentum_type(momentum)
@@ -530,8 +530,8 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the
-        :class:`~cntk.trainer.Trainer`.
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the
+        :class:`~cntk.train.trainer.Trainer`.
 
     See also:
         [1] Y. Nesterov. A Method of Solving a Convex Programming Problem with Convergence Rate O(1/ sqrt(k)). Soviet Mathematics Doklady, 1983.
@@ -585,7 +585,7 @@ def adagrad(parameters, lr, need_ave_multiplier=True,
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1]  J. Duchi, E. Hazan, and Y. Singer. `Adaptive Subgradient Methods
@@ -641,7 +641,7 @@ def fsadagrad(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     '''
     _verify_learning_rate_type(lr)
@@ -695,7 +695,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
@@ -757,7 +757,7 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
@@ -814,7 +814,7 @@ def rmsprop(parameters, lr,
          with truncation
 
     Returns:
-        Instance of a :class:`~cntk.learner.Learner` that can be passed to the :class:`~cntk.trainer.Trainer`
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
     '''
     _verify_learning_rate_type(lr)
     gaussian_noise_injection_std_dev = \
