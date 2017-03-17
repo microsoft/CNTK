@@ -89,10 +89,10 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
     Parameter(shape, init, dtype=np.float32, name='')
 
     Constructs a Parameter variable.
-    Some operations, such as :function:`~cntk.ops.times`,
+    Some operations, such as :func:`~cntk.ops.times`,
     can update a parameter's shape depending on its data input. For those dimensions, pass ``InferredDimension``.
 
-    This is a wrapper around :function:`~cntk.ops.parameter` that allows to specify
+    This is a wrapper around :func:`~cntk.ops.parameter` that allows to specify
     the ``dtype`` (float/double) per :class:`~cntk.default_options`.
 
     Example:
@@ -132,7 +132,7 @@ def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
     Constant(value, shape=None, dtype=np.float32, name='')
 
     Constructs a Variable object that is constant.
-    This is a wrapper around :function:`~cntk.ops.constant`.
+    This is a wrapper around :func:`~cntk.ops.constant`.
 
     Example:
      >>> c = Constant(1, (2,3))
@@ -162,7 +162,7 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
     Constructs an Input variable.
     Input variables are used when explicitly constructing a graph.
     In the context of the Layers library, however, the preferred method is to use the @Signature pattern.
-    This is a wrapper around :function:`~cntk.ops.input_variable`.
+    This is a wrapper around :func:`~cntk.ops.input_variable`.
 
     Example:
      >>> # an input receptacle for explicit graph building
@@ -217,7 +217,7 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
 
     Constructs a Placeholder variable.
     This is only used for explicit graph building.
-    This is a wrapper around :function:`~cntk.ops.placeholder_variable`.
+    This is a wrapper around :func:`~cntk.ops.placeholder_variable`.
 
     Example:
      >>> # an function-input placeholder for explicit graph building
@@ -306,7 +306,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     This takes `enable_self_stabilization` as a flag that allows to disable itself. Useful if this is a global default.
 
-    Note: Some other layers (specifically, recurrent units like :function:`~cntk.blocks.LSTM`) also have the option to
+    Note: Some other layers (specifically, recurrent units like :func:`~cntk.blocks.LSTM`) also have the option to
     use the ``Stabilizer()`` layer internally. That is enabled by passing `enable_self_stabilization=True`
     to those layers. In conjunction with those, the rule is that an explicit ``Stabilizer()`` must be
     inserted by the user for the main data input, whereas the recurrent layer will own the stabilizer(s)
@@ -535,7 +535,7 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
         use_peepholes (bool, defaults to `False`):
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :function:`~cntk.layers.Stabilizer`
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.Stabilizer`
          to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
@@ -579,7 +579,7 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
         activation (:class:`~cntk.ops.functions.Function`, defaults to signmoid): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :function:`~cntk.layers.Stabilizer`
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.Stabilizer`
          to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 
@@ -621,7 +621,7 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
         activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
-        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :function:`~cntk.layers.Stabilizer`
+        enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.Stabilizer`
          to all state-related projections (but not the data input)
         name (str, defaults to ''): the name of the Function instance in the network
 

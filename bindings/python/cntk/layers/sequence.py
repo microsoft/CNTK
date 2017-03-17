@@ -17,7 +17,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
     Delay(T=1, initial_state=0, name='')
 
     Layer factory function to create a layer that delays input the input by a given number of time steps. Negative means future.
-    This is provided as a layer that wraps :function:`~cntk.ops.sequence.delay` so that it can easily be used in a Sequential() expression.
+    This is provided as a layer that wraps :func:`~cntk.ops.sequence.delay` so that it can easily be used in a Sequential() expression.
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
@@ -165,11 +165,11 @@ def _sanitize_function(f):
 def RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
     Layer factory function to create a function that runs a cell function recurrently over an input sequence, with initial state.
-    This layer is very similar to :function:`~cntk.layers.Recurrence`,
+    This layer is very similar to :func:`~cntk.layers.Recurrence`,
     except that the initial state is data dependent, and thus passed to the layer function as a data input
     rather than as an initialization parameter to the factory function.
     This form is meant for use in sequence-to-sequence scenarios.
-    This documentation only covers this case; for additional information on parameters, see :function:`~cntk.layers.Recurrence`.
+    This documentation only covers this case; for additional information on parameters, see :func:`~cntk.layers.Recurrence`.
 
     The layer function returned by this factory function accepts the initial state as data argument(s).
     It has the signature ``(initial_state, input_sequence) -> output_sequence``.
@@ -283,14 +283,14 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     data input, and the output is the new state.
     All three are sequences of the same length. The step function will be called item by item.
 
-    Step functions can have more than one state output, e.g. :function:`~cntk.layers.LSTM`.
+    Step functions can have more than one state output, e.g. :func:`~cntk.layers.LSTM`.
     In this case, the first N arguments are the previous state, followed by one more argument that
     is the data input; and its output must be a tuple of N values.
     In this case, the recurrence operation will, by default, return the first of the state variables
     (in the LSTM case, the ``h``), while additional state variables are internal (like the LSTM's ``c``).
     If all state variables should be returned, pass ``return_full_state=True``.
 
-    Typical step functions are :function:`~cntk.layers.LSTM`, :function:`~cntk.layers.GRU`, and :function:`~cntk.layers.RNNBlock`.
+    Typical step functions are :func:`~cntk.layers.LSTM`, :func:`~cntk.layers.GRU`, and :func:`~cntk.layers.RNNBlock`.
     However, any function with a signature as described above is admissible.
     For example, a cumulative sum over a sequence can be computed as ``Recurrence(plus)``,
     or a GRU layer with projection could be realized as ``Recurrence(GRU(500) >> Dense(200))``;
@@ -299,7 +299,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     Optionally, the recurrence can run backwards. This is useful for constructing bidirectional models.
 
     ``initial_state`` must be a constant. To pass initial_state as a data input, e.g. for a sequence-to-sequence
-    model, use :function:`~cntk.layers.sequence.RecurrenceFrom()` instead.
+    model, use :func:`~cntk.layers.sequence.RecurrenceFrom()` instead.
 
     Note: ``Recurrence()`` is the equivalent to what in functional programming is often called ``scanl()``.
 
@@ -390,10 +390,10 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
     and returns the final state.
     This is often used for embeddings of sequences, e.g. in a sequence-to-sequence model.
 
-    ``Fold()`` is the same as :function:`~cntk.layers.Recurrence` except that only the final state is returned
+    ``Fold()`` is the same as :func:`~cntk.layers.Recurrence` except that only the final state is returned
     (whereas ``Recurrence()`` returns the entire state sequence).
     Hence, this documentation will only focus on the differences to ``Recurrence()``,
-    please see :function:`~cntk.layers.Recurrence` for a detailed information on parameters.
+    please see :func:`~cntk.layers.Recurrence` for a detailed information on parameters.
 
     Commonly, the ``folder_function`` is a recurrent block such as an LSTM.
     However, one can pass any binary function. E.g. passing ``plus`` will sum
@@ -486,7 +486,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
     The initial state would be a tuple ``(w0, h0)``
     where ``w0`` represents the sentence-start symbol,
     and ``h0`` is a thought vector that encodes the input sequence (as obtained
-    from a :function:`~cntk.layers.sequence.Fold()` operation).
+    from a :func:`~cntk.layers.sequence.Fold()` operation).
 
     BUGBUG: ^^ the above is not right; it presently does not allow tuple-valued state.
 
