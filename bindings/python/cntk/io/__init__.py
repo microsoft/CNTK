@@ -10,6 +10,7 @@ from ..utils import typemap, value_to_seq
 from cntk.device import use_default_device
 
 import numpy as np
+import uuid
 
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
@@ -434,7 +435,9 @@ def ImageDeserializer(filename, streams):
         `Image reader definition <https://github.com/microsoft/cntk/wiki/Image-reader>`_
     '''
     image_stream_name = None
-    label_stream_name = '_ignore_labels_'
+
+    # streams with the same name are not allowed, make sure the default is unique.
+    label_stream_name = '_ignore_labels_' + str(uuid.uuid1())
     num_labels = 2
     transforms = []
     for key in streams:
