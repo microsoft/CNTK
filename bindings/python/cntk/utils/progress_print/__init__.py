@@ -5,4 +5,4 @@
 # ==============================================================================
 
 # To __remove__
-# from cntk.logging.progress_print import *
+from cntk.logging.progress_print import *

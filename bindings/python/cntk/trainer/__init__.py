@@ -5,4 +5,4 @@
 # ==============================================================================
 
 # To __remove__
-# from cntk.train.trainer import *
+from cntk.train.trainer import *

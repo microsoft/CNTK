@@ -5,4 +5,4 @@
 # ==============================================================================
 
 # To __remove__
-# from cntk.logging.graph import *
+from cntk.logging.graph import *

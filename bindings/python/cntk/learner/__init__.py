@@ -5,4 +5,4 @@
 # ==============================================================================
 
 # To __remove__
-# from cntk.learners import *
+from cntk.learners import *

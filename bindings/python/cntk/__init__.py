@@ -7,34 +7,44 @@ __version__ = '2.0.beta15.0+'
 
 import numpy as np
 
+from .core import *
+
+from . import ops
+
 from . import cntk_py
 
-#
-# Bubble the below namespaces to cntk root namespace.
-#
-from . import internal
-from . import utils
-from .core import *
-from .ops import *
-from .device import *
-from . import debugging
-from . import logging
-from . import io
-from .learners import *
 from .train import *
+
+from .learners import *
+
 from .losses import *
+
 from .metrics import *
+
 from .initializer import *
-from . import layers
+
+from .utils import *
+
+from .ops import *
+
+from .device import *
+
+from .layers import *
 
 from .sample_installer import install_samples
 
+
+
 # To __remove__
-# from .io import *
-# from .learner import *
-# from .utils import *
-# from .layers import *
+
+from .io import *
+
+from .learner import *
+
 # End of to remove
 
+
+
 DATATYPE = np.float32
+
 InferredDimension = cntk_py.InferredDimension
