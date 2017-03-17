@@ -28,6 +28,8 @@
 #include "Convolution.cuh"
 #include "CuDnnRNN.h"
 
+#include<random>
+
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
 #pragma comment(lib, "cusparse.lib")
@@ -3396,6 +3398,77 @@ static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const float* alp
 static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const double* alpha, const double* x, int incx, double* y, int incy)
 {
     return cublasDaxpy(handle, n, alpha, x, incx, y, incy);
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b) {
+	a.PrepareDevice();
+	if (a.GetComputeDeviceId() != b.GetComputeDeviceId()) // different GPUs
+		InvalidArgument("Matrices must be on the same GPU");
+	if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+		RuntimeError("Matrices should be in the same shape");
+
+    size_t m = a.GetNumRows();
+	size_t n = a.GetNumCols();
+	CUDA_LONG N = (CUDA_LONG)(m*n);
+
+	/* generate uniform random floats bewteen 0.0 and 1.0 for each thread. */
+	float *d_rands;
+	//curandGenerator_t gens;
+	CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
+	//CURAND_CALL(curandCreateGenerator(&gens, CURAND_RNG_PSEUDO_DEFAULT));
+	//CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, 1234ULL));
+	//CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
+
+	float* rands = new float[N];
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> dis(0, 1);
+	for (int i = 0; i < N; i++) {
+		rands[i] = (float)dis(gen);
+	}
+	CUDA_CALL(cudaMemcpy(d_rands, rands, N * sizeof(float), cudaMemcpyHostToDevice));
+
+	//fprintf(stderr, "\n");
+	//for (int i = 0; i < N - 1; i++)
+	//	fprintf(stderr, "%f ", rands[i]);
+	//fprintf(stderr, "\n");
+	//free(rands);
+
+	size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
+	SyncGuard syncGuard;
+	_stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N);
+	CUDA_CALL(cudaFree(d_rands));
+}
+
+template <class ElemType>
+void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealRate) {
+	a.PrepareDevice();
+	if (a.GetComputeDeviceId() != outgrad.GetComputeDeviceId()) // different GPUs
+		InvalidArgument("Matrices must be on the same GPU");
+	if (a.GetNumRows() != outgrad.GetNumRows() || a.GetNumCols() != outgrad.GetNumCols())
+		RuntimeError("Matrices should be in the same shape");
+	if (annealRate < 0.0) RuntimeError("Anneal Rate should be a positive number.");
+	if (RFAdjusted) RuntimeError("not implemented.");
+
+	size_t m = a.GetNumRows();
+	size_t n = a.GetNumCols();
+	CUDA_LONG N = (CUDA_LONG)(m*n);
+
+	size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
+	SyncGuard syncGuard;
+	assert((RFAdjusted || !RFAdjusted) && annealRate > 0); 
+
+	if (neuronST) {
+		if (passThrough) {
+			//fprintf(stderr, "pass through here!!!\n");
+			_stochasticbinaryBackward_PassThrough<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
+		}
+		else {
+			//fprintf(stderr, "here!!!\n");
+			_stochasticbinaryBackward_Anneal<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
+		}
+	} 
 }
 
 template <class ElemType>

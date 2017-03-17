@@ -610,6 +610,36 @@ __global__ void _scaleAndAddScalar(
 };
 
 template <class ElemType>
+__global__ void _stochasticbinaryForward(const ElemType* a, ElemType* b, float* rands, CUDA_LONG N) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	ElemType sigma = 1. / (1. + exp(-a[id]));
+	b[id] = rands[id] < sigma ? 1 : 0;
+}
+
+template <class ElemType>
+__global__ void _stochasticbinaryBackward_PassThrough(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	//ElemType sigma = 1. / (1. + exp(-a[id]));
+	//ingrad[id] = outgrad[id] * sigma * (1 - sigma);
+	ingrad[id] = output[id] > (ElemType)0 ? outgrad[id] : 0;
+}
+
+template <class ElemType>
+__global__ void _stochasticbinaryBackward_Anneal(const ElemType* a, const ElemType* output, ElemType* outgrad, ElemType* ingrad, CUDA_LONG N) {
+	CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+	if (id >= N)
+		return;
+	ElemType sigma = 1. / (1. + exp(-a[id]));
+	//ingrad[id] = outgrad[id] * sigma * (1 - sigma);
+	ingrad[id] = outgrad[id] * sigma * (1 - sigma);
+}
+
+
+template <class ElemType>
 __global__ void _multiply1x1AndWeightedAdd(
     ElemType alpha, const ElemType* a, const ElemType* b, ElemType beta, ElemType* c, CUDA_LONG N)
 {

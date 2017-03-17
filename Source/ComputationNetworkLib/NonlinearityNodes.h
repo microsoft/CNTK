@@ -570,6 +570,81 @@ template class ClipNode<double>;
 
 
 // -----------------------------------------------------------------------
+// StochastciBinaryNode (tensor)
+// -----------------------------------------------------------------------
+// This node clips the values in a tensor elements-wise to ensure they are within minValue <= x >= maxValue
+// The gradient (per element) is (ge(x, minValue) AND le(x, maxValue)), or in other words, 1 if the value has
+// not been clipped, and 0 if the value has been clipped.
+
+template <class ElemType>
+class StochasticBinaryNode : public ComputationNode<ElemType>, public NumInputs<1>
+{
+	typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+	static const std::wstring TypeName() { return L"StochasticBinary"; }
+
+public:
+	StochasticBinaryNode(DEVICEID_TYPE deviceId, const wstring& name, bool neuronST = true, bool RFAdjusted = false, const bool passThrough = true, const float annealRate = 1.0)
+		: Base(deviceId, name), m_neuronST(neuronST), m_RFAdjusted(RFAdjusted), m_passThrough(passThrough), m_annealRate(annealRate)
+	{
+	}
+
+	StochasticBinaryNode(const ScriptableObjects::IConfigRecordPtr configp)
+		: StochasticBinaryNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"neuronST"), configp->Get(L"RFAdjusted"), configp->Get(L"passThrough"), configp->Get(L"annealRate"))
+	{
+	}
+
+	virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+	{
+		//probability = new Matrix<ElemType>(1, nLeafs, value, GetDeviceId());
+		//fprintf(stderr, "after neuronST %d RFAdjusted %d passThrough %d annealRate %f \n", m_neuronST, m_RFAdjusted, m_passThrough, m_annealRate);
+		Matrix<ElemType> result = ValueFor(fr);
+		size_t rank = DetermineElementwiseTensorRank();
+		TensorView<ElemType> input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+		auto shape = input.GetShape();
+		shape.FlattenTo2DInPlace(1, "StochasticBinary Node Forward");
+		auto inputm = input.Reshaped(shape).AsMatrix();
+		Matrix<ElemType>::StochasticBinaryForward(*inputm, result);
+	}
+
+	virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+	{
+		//NOT_IMPLEMENTED;
+		Matrix<ElemType> gradient = GradientFor(fr);
+		Matrix<ElemType> output = ValueFor(fr);
+
+		size_t rank = DetermineElementwiseTensorRank();
+		TensorView<ElemType> input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
+		auto shape = input.GetShape();
+		shape.FlattenTo2DInPlace(1, "StochasticBinary Node Backward");
+		auto inputm = input.Reshaped(shape).AsMatrix();
+
+		if (inputIndex == 0)
+		{
+			TensorView<ElemType> inputGradTensor = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
+			auto shapeGrad = inputGradTensor.GetShape();
+			shapeGrad.FlattenTo2DInPlace(1, "StochasticBinary Node Backward");
+			auto inputGrad = inputGradTensor.Reshaped(shapeGrad).AsMatrix();
+			Matrix<ElemType>::StochasticBinaryBackward(*inputm, output, gradient, *inputGrad, m_neuronST, m_RFAdjusted, m_passThrough, m_annealRate);
+		}
+	}
+
+	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+	{
+		ValidateUnaryMap(isFinalValidationPass);
+	}
+
+protected:
+	bool m_neuronST = true;
+	bool m_RFAdjusted = false;
+	bool m_passThrough = true; 
+	float m_annealRate = 1.0;
+};
+
+template class StochasticBinaryNode<float>;
+template class StochasticBinaryNode<double>;
+
+
+// -----------------------------------------------------------------------
 // CompareNode(a,b)
 // -----------------------------------------------------------------------
 // Template parameters compType (-1, 0, 1) and polarity (0, 1) are used selecting one of the six basic comparison operations. 
