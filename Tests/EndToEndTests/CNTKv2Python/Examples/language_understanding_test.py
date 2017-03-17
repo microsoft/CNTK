@@ -14,6 +14,7 @@ TOLERANCE_ABSOLUTE = 1E-1  # TODO: Once set_fixed_random_seed(1) is honored, thi
 
 from cntk.layers import *
 from cntk.utils import *
+from cntk.logging import *
 from cntk.ops import splice
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
