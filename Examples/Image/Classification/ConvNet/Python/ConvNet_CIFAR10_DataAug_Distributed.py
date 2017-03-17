@@ -79,7 +79,7 @@ def create_conv_network():
     ce = cntk.cross_entropy_with_softmax(z, label_var)
     pe = cntk.classification_error(z, label_var)
 
-    cntk.utils.log_number_of_parameters(z) ; print()
+    cntk.logging.log_number_of_parameters(z) ; print()
 
     return {
         'feature': feature_var,

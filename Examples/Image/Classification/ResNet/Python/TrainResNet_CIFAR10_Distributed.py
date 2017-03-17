@@ -11,6 +11,7 @@ import math
 import cntk
 import numpy as np
 
+from cntk.logging import *
 from cntk.utils import *
 from cntk import input_variable, cross_entropy_with_softmax, classification_error
 from cntk import Trainer, cntk_py 
