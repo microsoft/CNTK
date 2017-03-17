@@ -12,9 +12,9 @@ from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
 from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk import Trainer
+from cntk import Trainer, Value
 from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk.ops import splice, relu
+from cntk import splice, relu
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from cntk.logging import *
@@ -113,7 +113,7 @@ def peek(model, epoch):
     # run a sequence through
     seq = 'BOS flights from new york to seattle EOS'  # example string
     w = [query_dict[w] for w in seq.split()]          # convert to word indices
-    z = model(one_hot([w], vocab_size))               # run it through the model
+    z = model(Value.one_hot([w], vocab_size))               # run it through the model
     best = np.argmax(z,axis=2)                        # classify
     # show result
     print("Example Sentence After Epoch [{}]".format(epoch))
