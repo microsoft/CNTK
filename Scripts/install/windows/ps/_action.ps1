@@ -23,34 +23,33 @@ function ActionOperations(
     Write-Host
 }
 
-function InstallExe(
+function RunDos(
     [Parameter(Mandatory = $true)][string] $cmd,
-    [Parameter(Mandatory = $true)][string] $param,
-    [string] $dir = $null,
-    [string] $platform = $null,
-    [bool] $runAs = $false,
+    [Parameter(Mandatory = $true)][string[]] $param,
+    [string] $workingDir = $null,
     [integer] $maxErrorLevel = 0,
-    [string] $message= $null)
+    [string] $platform = $null,
+    [string] $message= $null,
+    [switch] $SuppressOutput)
 {
-    if ($platform -ne $null) {
+    Write-Verbose "RunDos '$Command $Argument'"
+    if ($platform) {
         $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
         $platform  = ($platform.ToString()).ToUpper()
 
         if (-not $runningOn.StartsWith($platform)) {
+            Write-Verbose "No platform match [$runningOn] : [$platform]"
             return
         }
     }
-
     if ($message) {
         Write-Host $message
     }
-    
-    if ($dir) {
-        DoProcess -command $cmd -param $param -requiresRunAs $runAs -workingDir $dir -maxErrorLevel $maxErrorLevel
-    }
-    else {
-        DoProcess -command $cmd -param $param -requiresRunAs $runAs -maxErrorLevel $maxErrorLevel
-    }
+
+    $dosParam = @{Command = $cmd; Argument = $param;
+                  WorkingDirectory = $workingDir; maxErrorLevel = $maxErrorLevel;
+                  SuppressOutput = $SuppressOutput; DontExecute = (-not $Execute) }
+    Invoke-DosCommand @dosParam
 }
 
 function InstallYml(
@@ -66,8 +65,10 @@ function InstallYml(
     if (Test-Path -path $targetDir -PathType Container) {
         $condaOp = "update"
     }
-    $installExeParam = @{ cmd = "$basepath\Scripts\conda.exe"; param = "env $condaOp --file `"$ymlFile`" --name `"$targetDir`""; dir = "$basePath\Scripts" }
-    InstallExe $installExeParam
+    $dosParam = @{Command = "$basepath\Scripts\conda.exe"; Argument = (Write-Output env $condaOp --file `"$ymlFile`" --name `"$targetDir`");
+                  maxErrorLevel = 0;
+                  SuppressOutput = $false; DontExecute = (-not $Execute) }
+    Invoke-DosCommand  @dosParam
 }
 
 function InstallWheel(
@@ -79,17 +80,13 @@ function InstallWheel(
     if ($message) {
         Write-Host $message
     }
-    if (-not $Execute) {
-         Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
-         return 
-    }
     $condaExe = Join-Path $basePath 'Scripts\conda.exe'
-    $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $envName)  -maxErrorLevel 0
+    $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $envName)  -maxErrorLevel 0 -DontExecute:(-not $Execute)
 
     $oldPath = $env:PATH
     $env:PATH = $newPaths + ';' + $env:PATH
 
-    Invoke-DosCommand pip (Write-Output install $whlUrl) -maxErrorLevel 0
+    Invoke-DosCommand pip (Write-Output install $whlUrl) -maxErrorLevel 0 -DontExecute:(-not $Execute)
     $env:PATH = $oldPath 
 }
 
@@ -121,50 +118,6 @@ set PATH=$rootDir\cntk;%PATH%
     add-content -Path $filename -Encoding Ascii -Value $batchScript
 }
 
-
-function DoProcess(
-    [string]  $command,
-    [string]  $param,
-    [string]  $workingDir = "",
-    [boolean] $requiresRunAs = $false,
-    [int] $maxErrorLevel)
-{
-    $info = "start-process [$command] with [$param]"
-
-    Write-Verbose "$info"
-
-    if (-not $Execute) {
-         Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
-         return
-    }
-
-    if ($workingDir.Length -eq 0) {
-        if ($requiresRunAs) {
-            $process = start-process -FilePath "$command" -ArgumentList "$param" -Wait -PassThru -Verb runas
-        }
-        else {
-            $process = start-process -FilePath "$command" -ArgumentList "$param" -Wait -PassThru
-        }
-
-    }
-    else {
-        if ($requiresRunAs) {
-            $process = start-process -FilePath "$command" -ArgumentList "$param" -Wait -PassThru -Verb runas -WorkingDirectory "$workingDir"
-        }
-        else {
-            $process = start-process -FilePath "$command" -ArgumentList "$param" -Wait -PassThru -WorkingDirectory "$workingDir"
-        }
-    }
-
-    $eCode = ($process.ExitCode)
-
-    if ($ecode -gt $maxErrorLevel) {
-        throw "Running 'start-process $command $param' failed with exit code [$ecode]"
-    }
-    
-    return
-}
-
 function Invoke-DosCommand {
   [CmdletBinding()]
   Param(
@@ -173,9 +126,13 @@ function Invoke-DosCommand {
     [string[]] $Argument,
     [string] [ValidateScript({ Test-Path -PathType Container $_ })] $WorkingDirectory,
     [int] $maxErrorLevel,
-    [switch] $SuppressOutput
+    [switch] $SuppressOutput,
+    [switch] $DontExecute
   )
-    Write-Verbose "Running '$Command $Argument'"
+    Write-Verbose "Invoke-DosCommand; Running '$Command $Argument'"
+    if ($DontExecute) {
+        Write-Host "Execute flag set to $false"
+    }
     if ($WorkingDirectory) {
         Push-Location $WorkingDirectory -ErrorAction Stop
     }

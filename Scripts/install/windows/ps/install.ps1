@@ -74,7 +74,6 @@ $MyDir = Split-Path $MyInvocation.MyCommand.Definition
 $ymlDir = Split-Path $MyDir
 $cntkRootDir = Split-Path $MyDir | Split-Path | Split-Path | Split-Path
 
-$roboCopyCmd    = "C:\Windows\System32\robocopy.exe"
 $localCache     = "$MyDir\InstallCache"
 
 . "$MyDir\_operations"
@@ -93,7 +92,7 @@ function VerifyInstallationContent(
     Write-Verbose "[VerifyInstallationContent]: [$path] result [$structureCorrect]"
 
     if (-not $structureCorrect) {
-        throw "`nFatal Error: Files from the CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package. For help see: https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script"
+        throw "`n`nFatal Error: Files from the CNTK binary download package are missing!`nThe install script must be run out of the unpacked binary CNTK package.`nFor help see: https://github.com/Microsoft/CNTK/wiki/Setup-Windows-Binary-Script"
     }
 }
 
@@ -147,34 +146,34 @@ Function main
 {
     try {
         if (-not (DisplayStart -NoConfirm $NoConfirm)) {
-            Write-Host  
-            Write-Host " ... Quitting ... "
-            Write-Host
+            Write-Output -InputObject "`n ... Quitting ... `n"
             return
         }
 
         #check we are running inside the unpacked distribution content
-#        VerifyInstallationContent $cntkRootDir
-#        $whlUrl = Get-WheelUrl -path $cntkRootDir -pyVersion $PyVersion -wheelBaseUrl $WheelBaseUrl
-$whlUrl="C:\repos\cntk\CNTK.Common.props"
+        #VerifyInstallationContent $cntkRootDir
+
+        $whlUrl = Get-WheelUrl -path $cntkRootDir -pyVersion $PyVersion -wheelBaseUrl $WheelBaseUrl
+
         if(-not (Test-Path -Path $localCache)) {
             new-item -Path $localcache -ItemType Container | Out-Null
         }
 
-        $ops = @()
+        
+        $Script:operationList  = @()
+        $Script:WinProduct = $null
+
+        $ops = @() 
         $ops += OpScanPrograms
         $ops += OpVs2015Runtime -rootDir $cntkRootDir
         $ops += OpMSMPI -rootDir $cntkRootDir
         $ops += OpAnaconda -localCache $localCache -anacondaBasePath $AnacondaBasePath
         $ops += OpPythonEnvironment -pyVersion $PyVersion -ymlDirectory $ymlDir -anacondaBasePath $AnacondaBasePath
         $ops += OpWhlInstall -pyVersion $PyVersion -whlUrl $whlUrl -anacondaBasePath $AnacondaBasePath
-        $ops += OpPythonBatch  -pyVersion $PyVersion -rootDir $cntkRootDir
+        $ops += OpPythonBatch -pyVersion $PyVersion -rootDir $cntkRootDir  -anacondaBasePath $AnacondaBasePath
 
-        $Script:WinProduct = $null
-        $opList  = VerifyOperations -operations $ops -NoConfirm $NoConfirm 
-        
+        $opList = VerifyOperations -operations $ops -NoConfirm $NoConfirm 
         if ($opList) {
-
             DownloadOperations -operationList $opList
             
             ActionOperations -operationList $opList
@@ -191,5 +190,3 @@ $whlUrl="C:\repos\cntk\CNTK.Common.props"
 main
 
 exit 0
-
-# vim:set expandtab shiftwidth=4 tabstop=4:

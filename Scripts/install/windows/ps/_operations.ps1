@@ -21,7 +21,7 @@ function OpVs2015Runtime(
          Verification = @( @{Function = "VerifyWinProductExists"; Params = @{ match = "^Microsoft Visual C\+\+ 201(5|7) x64 Additional Runtime" } },
                            @{Function = "VerifyWinProductExists"; Params = @{ match = "^Microsoft Visual C\+\+ 201(5|7) x64 Minimum Runtime" } } );
          Download = @( );
-         Action = @( @{Function = "InstallExe"; Params = @{ cmd  = $installExe; param = "/install /passive /norestart"; 
+         Action = @( @{Function = "RunDos"; Params = @{ cmd  = $installExe; param = "/install /passive /norestart"; 
                                                             message="Installing VS2015 Runtime...." } } )
         } )
 }
@@ -34,7 +34,7 @@ function OpMSMPI(
     @( @{Name = "MSMPI Installation"; ShortName = "CNTK"; Info = "Install MSMPI";
          Verification = @( @{Function = "VerifyWinProductVersion"; Params = @{ match = "^Microsoft MPI \(\d+\."; version = "7.0.12437.6" } } );
          Download = @( );
-         Action = @( @{Function = "InstallExe"; Params = @{ cmd = $installExe; param = "/unattend"; 
+         Action = @( @{Function = "RunDos"; Params = @{ cmd = $installExe; param = (Write-Output "/unattend"); 
                                                             message="Installing MSMPI ...." } } )
         } )
 }
@@ -49,8 +49,8 @@ function OpAnaconda(
      @( @{Name = "Anaconda3-4.1.1"; ShortName = "ANA3-411"; Info = "Install Anaconda3-4.1.10";
           Verification = @( @{Function = "VerifyDirectory"; Params = @{ path = "$anacondaBasePath"; } } );
           Download = @( @{Function = "Download"; Params = @{ source = $source; destination = $cacheFile } } );
-          Action = @( @{Function = "InstallExe"; Params = @{ cmd = $cacheFile; param = "/InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$anacondaBasePath"; 
-                                                             message="Installing Anaconda3-4.1.1. Please be patient ...."} } );
+          Action = @( @{Function = "RunDos"; Params = @{ cmd = $cacheFile; param =  (write-Output /InstallationType=JustMe /AddToPath=0 /RegisterPython=0 /S /D=$anacondaBasePath); 
+                                                             message="Installing Anaconda3-4.1.1...."} } );
          } )
 }
         

@@ -10,7 +10,7 @@ function DownloadFileWebRequest (
     [Parameter(Mandatory=$True)][string] $OutFile)
 {
     try {
-        $response = Invoke-WebRequest -Uri $SourceFile -OutFile $OutFile -UserAgent Firefox -TimeoutSec 120 
+        Invoke-WebRequest -Uri $SourceFile -OutFile $OutFile -UserAgent Firefox -TimeoutSec 120 | Out-Null
         return $true
     } 
     catch {
