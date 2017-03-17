@@ -16,10 +16,11 @@ import imageio
 
 from cntk import Trainer
 from cntk.utils import *
+from cntk.logging import *
 from cntk.layers import *
-from cntk.learner import sgd, momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
-from _cntk_py import set_computation_network_trace_level
+from cntk.learners import sgd, momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk import input_variable, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
+from cntk.debugging import set_computation_network_trace_level
 
 # Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))

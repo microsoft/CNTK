@@ -18,7 +18,6 @@ from cntk.utils import eval as cntk_eval
 from cntk.internal import sanitize_dtype_cntk
 from .. import constant
 from ..variables import Parameter, Constant
-from cntk import set_default_device
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon

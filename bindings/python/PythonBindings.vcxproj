@@ -88,6 +88,7 @@
     <None Include="cntk\ops\tests\block_test.py" />
     <None Include="cntk\ops\tests\combine_test.py" />
     <None Include="cntk\ops\tests\cosine_distance_test.py" />
+    <None Include="cntk\ops\tests\sparse_test.py" />
     <None Include="cntk\ops\tests\userfunction_complex_test.py" />
     <None Include="cntk\ops\tests\userfunction_test.py" />
     <None Include="cntk\pytest.ini" />

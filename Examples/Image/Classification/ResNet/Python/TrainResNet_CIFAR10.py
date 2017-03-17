@@ -9,12 +9,13 @@ import os
 import argparse
 
 from cntk.utils import *
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, reduce_mean
+from cntk import input_variable, cross_entropy_with_softmax, classification_error, reduce_mean
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
-from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
-from _cntk_py import set_computation_network_trace_level
+from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
+from cntk.debugging import set_computation_network_trace_level
+from cntk.logging import *
 
 from resnet_models import *
 

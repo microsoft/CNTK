@@ -21,8 +21,8 @@ def test_initializer_init(device_id):
     from cntk.ops.tests.ops_test_utils import cntk_device
     from cntk import cntk_py
     cntk_py.always_allow_setting_default_device()
-    from cntk.device import set_default_device
-    set_default_device(cntk_device(device_id))
+    from cntk.device import try_set_default_device
+    try_set_default_device(cntk_device(device_id))
 
     _check(uniform(scale=1), 'uniform')
     _check(normal(scale=1, output_rank=1, filter_rank=2), 'normal')

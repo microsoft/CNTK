@@ -10,6 +10,7 @@ import numpy as np
 from .core import *
 from . import ops
 from . import cntk_py
+from . import debugging
 from .train import *
 from .learners import *
 from .losses import *
@@ -19,7 +20,9 @@ from .utils import *
 from .ops import *
 from .device import *
 from .layers import *
+
 from .sample_installer import install_samples
+
 
 # To __remove__
 from .io import *
@@ -27,4 +30,5 @@ from .learner import *
 # End of to remove
 
 DATATYPE = np.float32
+
 InferredDimension = cntk_py.InferredDimension

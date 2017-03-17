@@ -8,12 +8,15 @@ import argparse
 import numpy as np
 import sys
 import os
-from cntk import Trainer, minibatch_size_schedule 
+from cntk.train import Trainer, minibatch_size_schedule 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, relu, element_times, constant
-from cntk.training_session import *
-from cntk.utils import ProgressPrinter, TensorBoardProgressWriter
+from cntk.device import cpu, try_set_default_device
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.ops import input_variable, relu, element_times, constant
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
+from cntk.train.training_session import *
+from cntk.logging import ProgressPrinter, TensorBoardProgressWriter
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "common"))
@@ -121,7 +124,7 @@ def simple_mnist(tensorboard_logdir=None):
 if __name__=='__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # set_default_device(cpu())
+    # try_set_default_device(cpu())
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-tensorboard_logdir', '--tensorboard_logdir',

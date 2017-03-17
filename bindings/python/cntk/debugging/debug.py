@@ -8,7 +8,7 @@ from collections import defaultdict
 
 from cntk import cntk_py, user_function
 
-from cntk import output_variable, CloneMethod
+from cntk.ops import output_variable, CloneMethod
 
 from cntk.ops.functions import UserFunction
 from cntk.internal import map_if_possible
@@ -368,7 +368,7 @@ class _DebugNode(UserFunction):
 
 
 def _nodes_to_debug(model):
-    from cntk.graph import depth_first_search
+    from cntk.logging.graph import depth_first_search
 
     def node_filter(x):
         if hasattr(x, 'op_name') and x.op_name in ['NoOp']:
@@ -421,7 +421,7 @@ def debug_model(model, in_stream=sys.stdin, out_stream=sys.stdout,
                          for n in nodes}
 
         model = model.clone(CloneMethod.share, modifications)
-        from cntk.graph import plot
+        from cntk.logging.graph import plot
 
         nodes = _nodes_to_debug(model)
         if len(nodes) == 1:

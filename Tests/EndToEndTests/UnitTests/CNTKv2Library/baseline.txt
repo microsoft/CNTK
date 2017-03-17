@@ -267,27 +267,39 @@ minibatchiterator: epoch 0: frames [0..20480] (first utterance at frame 0), data
 + '[' Windows_NT == Windows_NT ']'
 + TEST_BINARY=V2LibraryTests.exe
 + /cygdrive/c/repos/cntk/x64/release_CpuOnly/V2LibraryTests.exe --report_level=detailed --run_test=DeviceSelectionSuite
-Running 4 test cases...
+Running 8 test cases...
 
 Test module "V2LibraryTests" has passed with:
-  4 test cases out of 4 passed
-  8 assertions out of 8 passed
+  8 test cases out of 8 passed
+  45 assertions out of 45 passed
 
   Test suite "DeviceSelectionSuite" has passed with:
-    4 test cases out of 4 passed
-    8 assertions out of 8 passed
+    8 test cases out of 8 passed
+    45 assertions out of 45 passed
 
-    Test case "DeviceSelectionSuite/SetCpuDeviceAsDefault" has passed with:
+    Test case "DeviceSelectionSuite/TestAllDevices" has passed with:
+      3 assertions out of 3 passed
+
+    Test case "DeviceSelectionSuite/TestInvalidGPUDevice" has passed with:
       1 assertion out of 1 passed
 
-    Test case "DeviceSelectionSuite/SetBestDeviceAsDefault" has passed with:
-      1 assertion out of 1 passed
-
-    Test case "DeviceSelectionSuite/UseCpuDeviceAsDefault" has passed with:
-      1 assertion out of 1 passed
-
-    Test case "DeviceSelectionSuite/CpuAndBestDevicesInAllDevices" has passed with:
+    Test case "DeviceSelectionSuite/TestGPUProperties" has passed with:
       5 assertions out of 5 passed
+
+    Test case "DeviceSelectionSuite/TestSetCpuDeviceAsDefault" has passed with:
+      6 assertions out of 6 passed
+
+    Test case "DeviceSelectionSuite/TestSetGpuDeviceAsDefault" has passed with:
+      7 assertions out of 7 passed
+
+    Test case "DeviceSelectionSuite/TestSuccessiveSetDefaultDevice" has passed with:
+      15 assertions out of 15 passed
+
+    Test case "DeviceSelectionSuite/TestDefaultDeviceSelection" has passed with:
+      4 assertions out of 4 passed
+
+    Test case "DeviceSelectionSuite/TestDefaultDeviceSelectionWithExcludedDevices" has passed with:
+      4 assertions out of 4 passed
 
 + ExitCode=0
 + /cygdrive/c/repos/cntk/x64/release_CpuOnly/V2LibraryTests.exe --report_level=detailed --run_test=SerializationSuite/LearnerSerializationBackcompat
