@@ -1090,7 +1090,37 @@
         }
     }
 
-    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
+    // Create Value object from OneHotVector input, for N-dimenstional tensor. Only Create() method for now.
+    private static Value Create<T>(NDShape sampleShape,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
+                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                  DeviceDescriptor device,
+                                  bool readOnly = false)
+    {
+        var seqFlags = new BoolVector(sequenceStartFlags);
+        var inputSeqVector = new SizeTVectorVector();
+        var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
+        foreach (var seq in sequences)
+        {
+            var s = new SizeTVector(seq);
+            sizeTVectorRefList.Add(s);
+            inputSeqVector.Add(s);
+        }
+        if (typeof(T).Equals(typeof(float)))
+        {
+            return Value.CreateOneHotFloat(sampleShape, inputSeqVector, seqFlags, device, readOnly);
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            return Value.CreateOneHotDouble(sampleShape, inputSeqVector, seqFlags, device, readOnly);
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
+    }
+
+    // Create Value object from OneHotVector input, for 1D tensor: batch, sequence or batch of sequences
     public static Value CreateBatch<T>(uint dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
     {
         // Is CreateBatch for OneHot really useful? 
@@ -1164,7 +1194,7 @@
         }
     }
 
-    // Create Value object from sparse input
+    // Create Value object from sparse input, for N-dimensional tensor. Only CreateSequence() for now.
     public static Value CreateSequence<T>(NDShape sampleShape, uint sequenceLength,
                                           int[] colStarts, int[] rowIndices, T[] nonZeroValues, uint numNonZeroValues,
                                           bool sequenceStartFlag,
@@ -1193,6 +1223,7 @@
         return Value.CreateSequence<T>(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, true, device, readOnly);
     }
 
+    // Create Value object from sparse input, for 1D tensor. Only CreateSequence() for now.
     public static Value CreateSequence<T>(uint dimension, uint sequenceLength,
                                           int[] colStarts, int[] rowIndices, T[] nonZeroValues, uint numNonZeroValues,
                                           bool sequenceStartFlag,
