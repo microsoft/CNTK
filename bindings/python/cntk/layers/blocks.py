@@ -89,12 +89,35 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
     Parameter(shape, init, dtype=np.float32, name='')
 
     Constructs a Parameter variable.
+    Some operations, such as :function:`~cntk.ops.times`,
+    can update a parameter's shape depending on its data input. For those dimensions, pass ``InferredDimension``.
+
+    This is a wrapper around :function:`~cntk.ops.parameter` that allows to specify
+    the ``dtype`` (float/double) per :class:`~cntk.default_options`.
+
+    Example:
+     >>> p = Parameter((13,42,7), init=glorot_uniform())
+     >>> p.shape
+         (13, 42, 7)
+
+     >>> # example with inferred dimensions
+     >>> from _cntk_py import InferredDimension
+     >>> W = Parameter((InferredDimension, 42), init=glorot_uniform())
+     >>> W.shape   # -1 indicates dimension yet to be inferred
+         (-1, 42)
+     >>> x = Input(13)
+     >>> y = times(x, W)  # times operation now knows that the input dimension of W must be 13
+     >>> W.shape          # hence, the shape has been updated
+         (13, 42)
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
         init (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `W`
         dtype (np.dtype, defaults to np.float32): data type
         name (str, defaults to ''): the name of the Function instance in the network
+
+    Returns:
+        a learnable parameter Variable
     '''
     
     pure = get_default_override(None, pure=default_override_or(False))
@@ -109,12 +132,22 @@ def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
     Constant(value, shape=None, dtype=np.float32, name='')
 
     Constructs a Variable object that is constant.
+    This is a wrapper around :function:`~cntk.ops.constant`.
+
+    Example:
+     >>> c = Constant(1, (2,3))
+     >>> c.value
+         array([[ 1.,  1.,  1.],
+                [ 1.,  1.,  1.]], dtype=float32)
 
     Args:
         value (object): the object you want to make constant
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
         dtype (np.dtype, defaults to np.float32): data type
         name (str, defaults to ''): the name of the Function instance in the network
+
+    Returns:
+        a constant Variable
     '''
 
     dtype = get_default_override(Constant, dtype=dtype)
@@ -127,6 +160,40 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
     Input(shape, dtype=np.float32, needs_gradient=True, is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes(), name='')
 
     Constructs an Input variable.
+    Input variables are used when explicitly constructing a graph.
+    In the context of the Layers library, however, the preferred method is to use the @Signature pattern.
+    This is a wrapper around :function:`~cntk.ops.input_variable`.
+
+    Example:
+     >>> # an input receptacle for explicit graph building
+     >>> x = Input((2,3), is_sparse=True)
+     >>> x.is_sparse
+         True
+     >>> x.shape
+         (2, 3)
+     >>> y = sigmoid(x)
+     >>> y.shape
+         (2, 3)
+
+     >>> # but the preferred pattern is to use the @Function/@Signature pattern instead:
+     >>> from cntk.ops.functions import Function
+     >>> from cntk.layers.typing import *
+     >>> @Function
+     ... @Signature(x = Tensor[2,3])
+     ... def y(x):
+     ...     return sigmoid(x)
+     >>> y.shape
+         (2, 3)
+
+     >>> # type specifications can also be directly passed to Input:
+     >>> x = Input(**SparseTensor[2,3])
+     >>> x.is_sparse
+         True
+     >>> x.shape
+         (2, 3)
+     >>> y = sigmoid(x)
+     >>> y.shape
+         (2, 3)
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
@@ -135,7 +202,9 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
         is_sparse (bool, defaults to `False`):
         dynamic_axes (object, Axis.default_input_variable_dynamic_axes):
         name (str, defaults to ''): the name of the Function instance in the network
-        
+
+    Returns:
+        an input Variable
     '''
 
     dtype = get_default_override(Input, dtype=dtype)
@@ -147,18 +216,28 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
     Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder')
 
     Constructs a Placeholder variable.
+    This is only used for explicit graph building.
+    This is a wrapper around :function:`~cntk.ops.placeholder_variable`.
+
+    Example:
+     >>> # an function-input placeholder for explicit graph building
+     >>> x = Placeholder()
+     >>> x.shape   # "-2" indicates unknown shape
+         (-2,)
 
     Args:
         shape (`int` or `tuple` of `ints`, defaults to `None`): vector or tensor dimension of the output of this layer
         dynamic_axes (object, defaults to `None`):
         is_sparse (bool, defaults to `False`):
         name (str, defaults to 'placeholder'): the name of the Function instance in the network
-        
+
+    Returns:
+        a placeholder Variable
     '''
 
     if shape is not None or dynamic_axes is not None or is_sparse is not None:
         import warnings
-        warnings.warn('Placeholder() no longer requires shapes, axes, or spares to be specified. Please just remove the arguments.', DeprecationWarning)
+        warnings.warn('Placeholder() no longer requires shapes, axes, or sparse to be specified. Please just remove the arguments.', DeprecationWarning)
     return placeholder_variable(name=name)
     # TODO: delete these vv once confirmed that this is indeed not used anymore
     #p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
@@ -170,6 +249,27 @@ def ForwardDeclaration(name='forward_declaration'):
     Helper for recurrent network declarations.
     Returns a Placeholder variable with an added method resolve_to() to be called
     at the end to close the loop.
+    This is used for explicit graph building with recurrent connections.
+
+    Example:
+     >>> # create a graph with a recurrent loop to compute the length of an input sequence
+     >>> from cntk.layers.typing import *
+     >>> x = Input(**Sequence[Tensor[2]])
+     >>> ones_like_input = sequence.broadcast_as(1, x)  # sequence of scalar ones of same length as input
+     >>> out_fwd = ForwardDeclaration()  # placeholder for the state variables
+     >>> out = past_value(out_fwd, initial_state=0) + ones_like_input
+     >>> out_fwd.resolve_to(out)
+     >>> length = sequence.last(out)
+     >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
+     >>> x0
+         array([[[ 0.,  1.],
+                 [ 2.,  3.],
+                 [ 4.,  5.]]], dtype=float32)
+     >>> length(x0)
+         array([[ 3.]], dtype=float32)
+
+    Returns:
+        a placeholder variable with a method ``resolve_to()`` that resolves it to another variable
     '''
     var_fwd = Placeholder(name=name)
     def resolve_to(var):
@@ -185,8 +285,14 @@ def ForwardDeclaration(name='forward_declaration'):
 @Function
 def identity(keep):
     '''
+    identity()
+
     Identity function.
-    There is no factory for it because there is only one identity function.
+    This is useful to pass to layers that accept, e.g., a non-linearity,
+    but you wish to have none.
+
+    Example:
+     >>> linear_layer = Dense(500, activation=identity)
     '''
     # Note: We cannot use alias() here since parameter-shape inference cannot be done through alias().
     return combine([keep])
@@ -200,10 +306,28 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
 
     This takes `enable_self_stabilization` as a flag that allows to disable itself. Useful if this is a global default.
 
+    Note: Some other layers (specifically, recurrent units like :function:`~cntk.blocks.LSTM`) also have the option to
+    use the ``Stabilizer()`` layer internally. That is enabled by passing `enable_self_stabilization=True`
+    to those layers. In conjunction with those, the rule is that an explicit ``Stabilizer()`` must be
+    inserted by the user for the main data input, whereas the recurrent layer will own the stabilizer(s)
+    for the internal recurrent connection(s).
+
     Note: Unlike the original paper, which proposed a linear or exponential scalar,
     CNTK uses a sharpened Softplus: 1/steepness ln(1+e^{steepness*beta}).
     The softplus behaves linear for weights around and above 1 (like the linear scalar) while guaranteeing
     positiveness (like the exponentional variant) but is also more robust by avoiding exploding gradients.
+
+    Example:
+     >>> # recurrent model with self-stabilization
+     >>> from cntk.layers import *
+     >>> with default_options(enable_self_stabilization=True): # enable stabilizers by default for LSTM()
+     ...     model = Sequential([
+     ...         Embedding(300),
+     ...         Stabilizer(),           # stabilizer for main data input of recurrence
+     ...         Recurrence(LSTM(512)),  # LSTM owns its own stabilizers for the recurrent connections
+     ...         Stabilizer(),
+     ...         Dense(10)
+     ...     ])
 
     Args:
         steepness (`int`, defaults to 4):
@@ -398,6 +522,11 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
     The LSTM block implements one step of the recurrence and is stateless. It accepts the previous state as its first two arguments,
     and outputs its new state as a two-valued tuple ``(h,c)``.
 
+    Example:
+     >>> # a typical recurrent LSTM layer
+     >>> from cntk.layers import *
+     >>> lstm_layer = Recurrence(LSTM(500))
+
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
         cell_shape (tuple, defaults to `None`): if given, then the output state is first computet at `cell_shape`
@@ -438,6 +567,11 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
     The RNN block implements one step of the recurrence and is stateless. It accepts the previous state as its first argument,
     and outputs its new state.
 
+    Example:
+     >>> # a plain relu RNN layer
+     >>> from cntk.layers import *
+     >>> relu_rnn_layer = Recurrence(RNNUnit(500, activation=C.relu))
+
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
         cell_shape (tuple, defaults to `None`): if given, then the output state is first computet at `cell_shape`
@@ -474,6 +608,11 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
     Layer factory function to create a GRU block for use inside a recurrence.
     The GRU block implements one step of the recurrence and is stateless. It accepts the previous state as its first argument,
     and outputs its new state.
+
+    Example:
+     >>> # a gated recurrent layer
+     >>> from cntk.layers import *
+     >>> gru_layer = Recurrence(GRU(500))
 
     Args:
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
