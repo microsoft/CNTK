@@ -1,11 +1,14 @@
 from collections import defaultdict
 from itertools import count, zip_longest
+from config import *
 import pickle
 import numpy as np
 
-char_count_threshold = 50
-word_count_threshold = 10
-word_size = 20
+word_count_threshold = data_config['word_count_threshold']
+char_count_threshold = data_config['char_count_threshold']
+word_size = data_config['word_size']
+max_context_len = data_config['max_context_len']
+max_query_len = data_config['max_query_len']
 
 sanitize = str.maketrans({"|": None, "\n": None})
 tsvs = 'train', 'dev', 'val'
@@ -64,15 +67,26 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
             begin_answer, end_answer = '0', '1'
         else:
             uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
+
         ctokens = context.split(' ')
         #ctokens.append(eos) # polymath-1 does not generates this
+        if len(ctokens) > max_context_len:
+            raise ValueError('input context exceeds max_context_len: %d' % len(ctokens))
+
         qtokens = query.split(' ')
+        if len(qtokens) > max_query_len:
+            raise ValueError('input query exceeds max_query_len: %d' % len(qtokens))
+
         atokens = answer.split(' ')
         cwids = [vocab.get(t.lower(), unk_w) for t in ctokens]
         qwids = [vocab.get(t.lower(), unk_w) for t in qtokens]
         ccids = [[chars.get(c, unk_c) for c in pad_spec.format(t)] for t in ctokens]
         qcids = [[chars.get(c, unk_c) for c in pad_spec.format(t)] for t in qtokens]
+        
         ba, ea = int(begin_answer), int(end_answer) - 1 # the end from tsv is exclusive
+        if ba > ea:
+            raise ValueError('answer problem with input line:\n%s' % line)
+        
         baidx = [0 if i != ba else 1 for i,t in enumerate(ctokens)]
         eaidx = [0 if i != ea else 1 for i,t in enumerate(ctokens)]
         if sum(eaidx) == 0:
@@ -91,9 +105,19 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
             if end is not None:
                 out.append('|ae %3d' % end)
             if cwid is not None:
-                out.append('|cw %d:1' % cwid)
+                if cwid >= known:
+                    out.append('|cgw {}:{}'.format(0, 0))
+                    out.append('|cnw {}:{}'.format(cwid - known, 1))
+                else:
+                    out.append('|cgw {}:{}'.format(cwid, 1))
+                    out.append('|cnw {}:{}'.format(0, 0))
             if qwid is not None:
-                out.append('|qw %d:1' % qwid)
+                if qwid >= known:
+                    out.append('|qgw {}:{}'.format(0, 0))
+                    out.append('|qnw {}:{}'.format(qwid - known, 1))
+                else:
+                    out.append('|qgw {}:{}'.format(qwid, 1))
+                    out.append('|qnw {}:{}'.format(0, 0))
             if ccid is not None:
                 outc = ' '.join(['%d:1' % (i + c * word_size) for i, c in enumerate(ccid)]) # TODO, change it to generate 2D sparse once the reader support is in
                 out.append('|cc %s' % outc)

@@ -53,6 +53,22 @@ def HighwayBlock(dim, # ideally this should be inferred, but times does not allo
     
 def HighwayNetwork(dim, highway_layers, name=''):
     return C.For(range(highway_layers), lambda i : HighwayBlock(dim, name=name+str(i)))
+    
+def seq_loss(logits, y):
+    return C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, logits.shape))(logits) - C.sequence.last(C.sequence.gather(logits, y))
+
+def seq_hardmax(logits):
+    seq_max = C.layers.Fold(C.element_max, initial_state=C.constant(-1e+30, logits.shape))(logits)
+    return C.equal(logits, C.sequence.broadcast_as(seq_max, logits))
+
+def argument_by_name(func, name):
+    found = [arg for arg in func.arguments if arg.name == name]
+    if len(found) == 0:
+        raise ValueError('no matching names in arguments')
+    elif len(found) > 1:
+        raise ValueError('multiple matching names in arguments')
+    else:
+        return found[0]
 
 class LambdaFunc(C.ops.functions.UserFunction):
     def __init__(self,
