@@ -1,5 +1,11 @@
 import cntk as C
 
+def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', init=C.glorot_uniform(), bidirectional=False, name=''):
+    W = C.Parameter(C.blocks._INFERRED + (hidden_dim,), init=init)
+
+    def func(x):
+        return C.optimized_rnnstack(x, W, hidden_dim, num_layers, bidirectional, recurrent_op='lstm', name=name)
+    return func
 
 def ValueWindow(window_size, axis, name=''):
     '''
@@ -14,7 +20,7 @@ def ValueWindow(window_size, axis, name=''):
         else:
             return C.sequence.first(C.future_value(input, time_step=offset))
 
-    def past_value_window(x):
+    def func(x):
 
         ones_like_input = C.sequence.broadcast_as(1, x)
 
@@ -28,8 +34,7 @@ def ValueWindow(window_size, axis, name=''):
 
         # value[t] = value of t steps back; valid[t] = true if there was a value t steps back
         return value, valid
-
-    return past_value_window
+    return func
 
 def HighwayBlock(dim, # ideally this should be inferred, but times does not allow inferred x inferred parameter for now
                  transform_weight_initializer=C.normal(scale=1),
@@ -48,17 +53,6 @@ def HighwayBlock(dim, # ideally this should be inferred, but times does not allo
     
 def HighwayNetwork(dim, highway_layers, name=''):
     return C.For(range(highway_layers), lambda i : HighwayBlock(dim, name=name+str(i)))
-
-def seqlogZ(seq):
-    x = C.placeholder_variable(shape=seq.shape, dynamic_axes=seq.dynamic_axes)
-    #print('x',x)
-    logaddexp = C.log_add_exp(seq, C.past_value(x, initial_state=C.constant(-1e+30,seq.shape)))
-    #print('lse',logaddexp)
-    logaddexp.replace_placeholders({x: logaddexp})
-    #print('lse++', logaddexp)
-    ret = C.sequence.last(logaddexp)
-    #print('ret', ret)
-    return ret
 
 class LambdaFunc(C.ops.functions.UserFunction):
     def __init__(self,

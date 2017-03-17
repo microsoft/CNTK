@@ -1,7 +1,7 @@
 import cntk as C
 import numpy as np
 from cntk import layers, blocks, models
-from helpers import ValueWindow, HighwayNetwork, print_node
+from helpers import ValueWindow, HighwayNetwork, print_node, OptimizedRnnStack
 import pickle
 
 with open('vocabs.pkl', 'rb') as vf:
@@ -102,16 +102,10 @@ input_words = C.placeholder_variable(shape=(w_dim,))
 # todo GlobalPooling/reduce_max should have a keepdims default to False
 embedded = C.splice(embedding(input_words), C.reshape(charcnn(C.reshape(input_chars, (C.InferredDimension, word_size))), convs))
 
-def BidirectionalRecurrence(fwd, bwd):
-    f = C.layers.Recurrence(fwd)
-    b = C.layers.Recurrence(bwd, go_backwards=True)
-    x = C.placeholder_variable()
-    return C.splice (f(x), b(x))
-
 input_layers = C.layers.Sequential([
     HighwayNetwork(dim=(embedded.shape[0]), highway_layers=2),
     C.Dropout(0.2),
-    BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))
+    OptimizedRnnStack(dim, bidirectional=True),
 ])
 
 q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qw,qc])))
@@ -166,9 +160,9 @@ print('att_context', att_context)
 #todo replace with optimized_rnnstack for training purposes once it supports dropout
 modeling_layer = C.layers.Sequential([
     C.Dropout(0.2),
-    BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim)),
+    OptimizedRnnStack(dim, bidirectional=True),
     C.Dropout(0.2),
-    BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))
+    OptimizedRnnStack(dim, bidirectional=True)
 ])
 
 mod_context = modeling_layer(att_context)
@@ -183,7 +177,7 @@ start_loss = seqloss(start_logits, ab) # need sequence.argmax for eval to determ
 att_mod_ctx = C.sequence.last(C.sequence.gather(mod_context, ab))
 att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
 end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
-m2 = BidirectionalRecurrence(C.blocks.LSTM(dim), C.blocks.LSTM(dim))(end_input)
+m2 = OptimizedRnnStack(dim, bidirectional=True)(end_input)
 end_logits = C.layers.Dense(1)(m2)
 end_loss = seqloss(end_logits, ae)
 loss = start_loss + end_loss
@@ -194,7 +188,7 @@ print(loss)
 progress_writers = [C.ProgressPrinter(tag='Training')]
 
 minibatch_size = 2048
-lr_schedule = C.learning_rate_schedule(0.00001, C.UnitType.sample)
+lr_schedule = C.learning_rate_schedule(0.0000001, C.UnitType.sample)
 momentum_time_constant = -minibatch_size/np.log(0.9)
 mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
 z = C.combine([start_logits, end_logits])
