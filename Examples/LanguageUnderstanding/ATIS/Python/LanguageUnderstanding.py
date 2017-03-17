@@ -185,7 +185,7 @@ def train(reader, model, max_epochs):
 # TODO: replace by a proper such class once available
 def Evaluator(model, criterion):
     from cntk import Trainer
-    from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
     loss, metric = Trainer._get_loss_metric(criterion)
     parameters = set(loss.parameters)
     if model:
