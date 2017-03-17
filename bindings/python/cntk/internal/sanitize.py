@@ -124,7 +124,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
 
            * a single NumPy array denoting the full minibatch
            * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
-           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
+           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`cntk.core.Value.one_hot`)
         seq_starts (list of bools or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans one for each sequence in the batch that tell whether a

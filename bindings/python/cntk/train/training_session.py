@@ -212,7 +212,7 @@ class TrainingSession(cntk_py.TrainingSession):
 @typemap
 def minibatch_size_schedule(schedule, epoch_size=1):
     '''
-    Create a minibatch size schedule
+    Creates a minibatch size schedule.
 
     Examples:
         >>> # Use a fixed value 32 for all minibatches
@@ -232,7 +232,7 @@ def minibatch_size_schedule(schedule, epoch_size=1):
         (32, 32, 64, 64, 128, 128)
 
     Args:
-        schedule (integer or list): if integer, it this minibatch size will be used for the whole training.
+        schedule (int or list): if integer, this minibatch size will be used for the whole training.
          In case of list of integers, the elements are used as the values for ``epoch_size`` samples. 
          If list contains pair, the second element is used as a value for (``epoch_size`` x first element) samples
         epoch_size (int): number of samples as a scheduling unit.

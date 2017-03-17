@@ -335,7 +335,10 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
+'''int: constant used to specify maximum pooling'''
+
 AVG_POOLING = PoolingType_Average
+'''int: constant used to specify average pooling'''
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
@@ -364,8 +367,8 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         auto_padding (default [False,]): automatic padding flags for each input dimension.
         lower_pad (default (0,)): precise lower padding for each input dimension
         upper_pad (default (0,)): precise upper padding for each input dimension
-        ceil_out_dim (default false): ceiling while computing output size
-        include_pad(default false): include pad while average pooling
+        ceil_out_dim (default False): ceiling while computing output size
+        include_pad(default False): include pad while average pooling
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -381,6 +384,8 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
 
 MAX_UNPOOLING = PoolingType_Max
+'''int: constant used to specify maximum unpooling'''
+
 @typemap
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):

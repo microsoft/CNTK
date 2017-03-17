@@ -932,7 +932,7 @@ class Function(cntk_py.Function):
         Returns:
             :class:`Function`: itself
 
-        :raises ExceptionType: when the function has multiple placeholders.
+        :raises Exception: when the function has multiple placeholders.
         '''
         return super(Function, self).replace_placeholder(substitution)
 

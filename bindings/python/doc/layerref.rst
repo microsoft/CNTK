@@ -91,7 +91,7 @@ The following options can be overridden with the ``with`` statement:
     - ``initial_state`` (default: ``None``): initial state to use in ``Recurrence()`` :ref:`recurrence`
     - ``use_peepholes`` (default: ``False``): use peephole connections in ``LSTM()`` :ref:`lstm`
 
-The second for allows to set default options on a
+The second form allows to set default options on a
 per-layer type. This is, for example, valuable for the ``pad``
 parameter which enables padding in convolution and pooling, but is not
 always set to the same for these two layer types.

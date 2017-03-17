@@ -25,7 +25,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
           bias=default_override_or(True), init_bias=default_override_or(0),
           name=''):
     '''
-    Dense(shape, activation=identity, init=glorot_uniform(),input_rank=None, map_rank=None, bias=True, init_bias=0, name='')
+    Dense(shape, activation=identity, init=glorot_uniform(), input_rank=None, map_rank=None, bias=True, init_bias=0, name='')
 
     Layer factory function to create an instance of a fully-connected linear layer of the form
     `activation(input @ W + b)` with weights `W` and bias `b`, and `activation` and `b` being optional.
@@ -114,7 +114,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
 def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name=''):
     '''
-    Embedding(shape=None, init=glorot_uniform(), weights=None, name=''):
+    Embedding(shape=None, init=glorot_uniform(), weights=None, name='')
 
     Layer factory function to create a embedding layer.
 
@@ -263,7 +263,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 max_temp_mem_size_in_samples=0,
                 op_name='Convolution', name=''):
     '''
-    Convolution(filter_shape, num_filters=None, sequential=False, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, reduction_rank=1, transpose=False, max_temp_mem_size_in_samples=0, op_name='Convolution', name='')
+    Convolution(filter_shape, num_filters=None, sequential=False, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, reduction_rank=1, transpose_weight=False, max_temp_mem_size_in_samples=0, op_name='Convolution', name='')
 
     Layer factory function to create a convolution layer.
 
@@ -617,6 +617,8 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
                          name=''):
 
     '''
+    ConvolutionTranspose(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, output_shape=None, reduction_rank=1, max_temp_mem_size_in_samples=0, name='')
+
     Layer factory function to create a convolution transpose layer.
 
     This implements a convolution_transpose operation over items arranged on an N-dimensional grid, such as pixels in an image.
@@ -739,6 +741,8 @@ def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3
                            output_shape=None, 
                            name=''):
     '''
+    ConvolutionTranspose1D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
+
     Layer factory function to create a 1D convolution transpose layer with optional non-linearity.
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 1-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.
@@ -765,6 +769,8 @@ def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3)
                            output_shape=None, 
                            name=''):
     '''
+    ConvolutionTranspose2D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
+
     Layer factory function to create a 2D convolution transpose layer with optional non-linearity.
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 2-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.
@@ -792,6 +798,8 @@ def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3)
                            output_shape=None, 
                            name=''):
     '''
+    ConvolutionTranspose3D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
+
     Layer factory function to create a 3D convolution transpose layer with optional non-linearity.
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 3-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.

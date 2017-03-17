@@ -129,7 +129,9 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
     Args:
         input_a: first input sequence
         input_b: second input sequence
-        subPen, delPen, insPen: substitution, deletion and insertion penalties
+        subPen: substitution penalty
+        delPen: deletion penalty
+        insPen: insertion penalty
         squashInputs: whether to merge sequences of identical samples (in both input sequences). If true and tokensToIgnore contains label '-' then
                 given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
         tokensToIgnore: list of samples to ignore during edit distance evaluation (in both sequences)
