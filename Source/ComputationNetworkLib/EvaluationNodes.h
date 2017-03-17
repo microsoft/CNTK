@@ -481,7 +481,7 @@ public:
     // insPen - insertion penalty
     // squashInputs - whether to merge sequences of identical samples.
     // tokensToIgnore - list of samples to ignore during edit distance evaluation
-    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 0.0f, float delPen = 0.0f, float insPen = 0.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
+    EditDistanceErrorNode(DEVICEID_TYPE deviceId, const wstring & name, float subPen = 1.0f, float delPen = 1.0f, float insPen = 1.0f, bool squashInputs = false, vector<size_t> tokensToIgnore = {})
         : Base(deviceId, name), m_subPen(subPen), m_delPen(delPen), m_insPen(insPen), m_squashInputs(squashInputs), m_tokensToIgnore(tokensToIgnore)
     {
     }
