@@ -278,10 +278,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Creat
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::CreatePoolingNode(const std::wstring& nodeName, PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                                                                              const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad, bool ceilOutDim,
-                                                                                             const bool poolPadMode, ImageLayoutKind imageLayout)
+                                                                                             const bool includePad, ImageLayoutKind imageLayout)
 {
     return net.AddNodeToNetWithElemType(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, poolPadMode, imageLayout));
+                                                                   poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, includePad, imageLayout));
 }
 
 template <class ElemType>
@@ -358,11 +358,11 @@ template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pooling(const ComputationNodePtr inputValues,
                                                                                    PoolKind poolKind, const TensorShape& kernelShape, const TensorShape& strideShape,
                                                                                    const std::vector<bool>& autoPadding, const TensorShape& lowerPad, const TensorShape& upperPad,
-                                                                                   bool ceilOutDim, const bool poolPadMode, ImageLayoutKind imageLayout,
+                                                                                   bool ceilOutDim, const bool includePad, ImageLayoutKind imageLayout,
                                                                                    const std::wstring nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<PoolingNode<ElemType>>(net.GetDeviceId(), nodeName,
-                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, poolPadMode, imageLayout),
+                                                                      poolKind, kernelShape, strideShape, autoPadding, lowerPad, upperPad, ceilOutDim, includePad, imageLayout),
                                                                       { inputValues });
 }
 
