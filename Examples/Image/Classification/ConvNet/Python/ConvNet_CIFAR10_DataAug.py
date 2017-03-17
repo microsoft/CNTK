@@ -21,6 +21,7 @@ from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, moment
 from cntk import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import Function
 from cntk.debugging import set_computation_network_trace_level
+from cntk.logging import *
 
 ########################
 # variables and paths  #

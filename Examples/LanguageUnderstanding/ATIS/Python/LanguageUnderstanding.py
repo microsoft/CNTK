@@ -17,6 +17,7 @@ from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_co
 from cntk.ops import splice, relu
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
+from cntk.logging import *
 
 ########################
 # variables and stuff  #

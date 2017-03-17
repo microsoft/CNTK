@@ -15,6 +15,7 @@ import cntk.io.transforms as xforms
 from cntk import Trainer, cntk_py
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.debugging import set_computation_network_trace_level
+from cntk.logging import *
 
 from resnet_models import *
 
