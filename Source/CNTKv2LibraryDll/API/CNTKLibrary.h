@@ -1744,7 +1744,7 @@ private:
 
         CNTK_API static Variable Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
-        void SetOwner(Function* ownerFunction);
+        void SetOwner(const std::weak_ptr<Function>& ownerFunction);
 
         Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
 
