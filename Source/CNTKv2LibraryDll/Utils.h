@@ -33,7 +33,7 @@ namespace CNTK
     template <typename T>
     inline bool IsObjectExpired(std::weak_ptr<T> ptrToObject)
     {
-        if ((ptrToObject.owner_before(std::weak_ptr<T>{}) || std::weak_ptr<T>{}.owner_before(ptrToObject)) && (ptrToObject.expired())
+        if ((ptrToObject.owner_before(std::weak_ptr<T>{}) || std::weak_ptr<T>{}.owner_before(ptrToObject)) && ptrToObject.expired())
             return true;
         else
             return false;
