@@ -3303,10 +3303,13 @@ ElemType Matrix<ElemType>::SumOfElements() const
 }
 
 template <class ElemType>
-Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, size_t num_class, bool is_sparse)
+Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, vector<size_t>& shape, size_t axis, bool is_sparse)
 {
     if (a.IsEmpty())
         LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
 
     if (a.GetMatrixType() == SPARSE)
         NOT_IMPLEMENTED;
@@ -3316,13 +3319,13 @@ Matrix<ElemType>& Matrix<ElemType>::AssignOneHot(const Matrix<ElemType>& a, size
     {
         SwitchToMatrixType(SPARSE, matrixFormatSparseCSC, false);
     }
-
+    
     DISPATCH_MATRIX_ON_FLAG_USECPU_4BOTH(this,
         this,
-        m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
-        m_GPUMatrix->AssignOneHot(*a.m_GPUMatrix, num_class),
-        m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, num_class),
-        m_GPUSparseMatrix->AssignOneHot(*a.m_GPUMatrix, num_class)
+        m_CPUMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
+        m_GPUMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis),
+        m_CPUSparseMatrix->AssignOneHot(*a.m_CPUMatrix, shape, axis),
+        m_GPUSparseMatrix->AssignOneHot(*a.m_GPUMatrix, shape, axis)
         );
 
     return *this;

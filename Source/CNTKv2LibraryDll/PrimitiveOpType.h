@@ -77,8 +77,8 @@ namespace CNTK
         ELU = 65,
         ForwardBackward = 66,
         CosDistanceWithNegativeSamples = 67,
+        OneHot = 68,
         // New op types should only be appended to the end of this list 
-        OneHotOp = 68,
         UnknownOP
         // and UnknownOP should always be last.
         // If you append here, also add checks in SerializationTests (CheckEnumValuesNotModified)

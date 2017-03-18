@@ -1287,12 +1287,13 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::FutureValue, operand, initialState, std::move(additionalProperties), name);
     }
 
-    FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, const std::wstring& name)
+    FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameNumClass] = numClass;
         additionalProperties[PrimitiveFunction::AttributeNameOneHotOutputSparse] = outputSparse;
-        return UnaryOp(PrimitiveOpType::OneHotOp, operand, std::move(additionalProperties), name);
+        additionalProperties[PrimitiveFunction::AttributeNameOneHotAxis] = axis;
+        return UnaryOp(PrimitiveOpType::OneHot, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)

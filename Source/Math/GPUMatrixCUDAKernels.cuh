@@ -5546,12 +5546,18 @@ template<class ElemType>
 __global__ void _assignOneHot(ElemType *indices,
                                   ElemType *targetBuffer,
                                   size_t num_class,
+                                  size_t num_item,
                                   size_t num_element)
 {
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < num_element)
     {
-        targetBuffer[(size_t)(index * num_class + indices[index])] = 1;
+        if (indices[index] >= 0 && indices[index] < num_class)
+        {
+            size_t block_id = index / num_item;
+            size_t item_id = index % num_item;
+            targetBuffer[block_id * num_class * num_item + item_id + num_item * (size_t)indices[index]] = 1;
+        }
     }
 }
 
@@ -5561,6 +5567,7 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
                                       GPUSPARSE_INDEX_TYPE *majorIndices,
                                       ElemType *targetBuffer,
                                       size_t num_class,
+                                      int num_item,
                                       size_t num_rows,
                                       size_t num_columns,
                                       size_t num_elements)
@@ -5568,14 +5575,24 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < num_elements)
     {
-        targetBuffer[index] = 1;
-        majorIndices[index] = ((index % num_rows) * (int)num_class + (int)indices[index]);
+        if (indices[index] >= 0 && indices[index] < num_class)
+        {
+            targetBuffer[index] = 1;
+            int block_id = index / num_item;
+            int item_id = index % num_item;
+            majorIndices[index] = (block_id * num_class * num_item + item_id + num_item * (int)indices[index]) % (num_rows * num_class);
+        }
     }
 
     //running sum
     if (index  < num_columns)
     {
-        secondaryIndices[index + 1] = num_rows * (index + 1);
+        secondaryIndices[index + 1] = 0;
+        for (int i = 0; i < num_rows; i++)
+        {
+            if (indices[index * num_rows + i ] >= 0 && indices[index * num_rows + i] < num_class)
+                secondaryIndices[index + 1] += 1
+        }
     }
 }
 

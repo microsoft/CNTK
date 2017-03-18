@@ -4247,10 +4247,19 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
 }
 
 template <class ElemType>
-GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, size_t num_class)
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
 {
     if(a.IsEmpty())
         LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+
+    size_t item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= shape[i];
+
+    size_t num_class = shape[axis];
 
     auto nCols = a.GetNumCols();
     auto nRows = num_class * a.GetNumRows();
@@ -4263,7 +4272,7 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>
     CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
     int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-    _assignOneHot<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data(), Data(), num_class, N);
+    _assignOneHot<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data(), Data(), num_class, item_size, N);
     
     return *this;
 }

@@ -2062,7 +2062,7 @@ def splice(*inputs, **kw_axis_name):
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
 @typemap
-def one_hot_op(x, num_class, is_output_sparse=False, name=''):
+def to_one_hot(x, num_class, is_output_sparse=False, axis=-1, name=''):
     '''
     Create one hot tensor based on the input tensor
 
@@ -2071,7 +2071,7 @@ def one_hot_op(x, num_class, is_output_sparse=False, name=''):
         ...                      [4, 5]]], dtype=np.float32)
 
         >>> x = C.input_variable((2,))
-        >>> C.ops.one_hot_op(x, 6, False).eval({x:data})
+        >>> C.to_one_hot(x, 6, False).eval({x:data})
         array([[[[ 0.,  1.,  0.,  0.,  0.,  0.],
                  [ 0.,  0.,  1.,  0.,  0.,  0.]],
         <BLANKLINE>
@@ -2082,6 +2082,7 @@ def one_hot_op(x, num_class, is_output_sparse=False, name=''):
         x: input tensor, the value must be positive integer and less than num_class
         num_class: the number of class in one hot tensor
         is_output_sparse: if set as True, we will create the one hot tensor as sparse.
+		axis: The axis to fill (default: -1, a new inner-most axis).
         name (str, optional, keyword only): the name of the Function instance in the network
 
     Returns:
@@ -2089,7 +2090,8 @@ def one_hot_op(x, num_class, is_output_sparse=False, name=''):
     '''
     from cntk.cntk_py import one_hot_op
     x = sanitize_input(x)
-    return one_hot_op(x, num_class, is_output_sparse, name)
+    axis = sanitize_axis(axis)
+    return one_hot_op(x, num_class, is_output_sparse, axis, name)
 
 ##########################################################################
 # reduction ops

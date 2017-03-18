@@ -2947,22 +2947,37 @@ CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignSumOfElements(const CPUMatrix<El
 }
 
 template <class ElemType>
-CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, size_t num_class)
+CPUMatrix<ElemType>& CPUMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
 {
     if (a.IsEmpty())
         LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+    
+    size_t item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= shape[i];
+
+    size_t num_class = shape[axis];
 
     auto& us = *this;
     auto nCols = a.GetNumCols();
     auto nRows = num_class * a.GetNumRows();
     us.RequireSize(nRows, nCols);
+    
     ElemType* bufPtr = Data();
     ElemType* aBufPtr = a.Data();
     memset(bufPtr, 0, sizeof(ElemType) * nRows *nCols);
 #pragma omp parallel for
     for (long i = 0; i < a.GetNumElements(); i++)
     {
-        bufPtr[i * num_class + (size_t)aBufPtr[i]] = 1;
+        if (aBufPtr[i] >= 0 && aBufPtr[i] < num_class)
+        {
+            size_t block_id = i / item_size;
+            size_t item_id = i % item_size;
+            bufPtr[block_id * num_class * item_size + item_id + item_size * (size_t)aBufPtr[i]] = 1;
+        }
     }
 
     return *this;

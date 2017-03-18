@@ -176,10 +176,19 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
 }
 
 template <class ElemType>
-CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, size_t num_class)
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
 {
     if (a.IsEmpty())
         LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+
+    int item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= (int)shape[i];
+
+    int num_class = (int)shape[axis];
 
     auto& us = *this;
     auto nCols = a.GetNumCols();
@@ -197,10 +206,15 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatr
 #pragma omp parallel for
         for (long i = 0; i < a.GetNumElements(); i++)
         {
-            data[i] = 1;
-            size_t colIndex = i / a.GetNumRows();
-            majorIndices[i] = ((i % a.GetNumRows()) * (int)num_class + (int)indices[i]);
-            secondaryIndices[colIndex + 1]++;
+            if (indices[i] >= 0 && indices[i] < num_class)
+            {
+                data[i] = 1;
+                size_t colIndex = i / a.GetNumRows();
+                int block_id = i / item_size;
+                int item_id = i % item_size;
+                majorIndices[i] = (block_id * num_class * item_size + item_id + item_size * (int)indices[i]) % nRows;
+                secondaryIndices[colIndex + 1]++;
+            }
         }
 
         for (long i = 1; i < nCols + 1; i++)

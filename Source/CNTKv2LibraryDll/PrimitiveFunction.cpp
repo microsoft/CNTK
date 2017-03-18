@@ -91,6 +91,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlankTokenId = L"BlankTokenId";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumClass = L"numClass";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotOutputSparse = L"oneHotOutputSparse";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotAxis = L"onehotAxis";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -534,13 +535,27 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
                             outputShape = { 1 };
                             break;
-                        case PrimitiveOpType::OneHotOp:
+                        case PrimitiveOpType::OneHot:
                         {
                             assert(m_inputs.size() == 1);
                             auto inputShape = m_inputs[0].Shape();
                             auto num_class = m_attributes[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
-                            outputShape = { num_class };
-                            outputShape = outputShape.AppendShape(inputShape);
+                            auto axis = m_attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>();
+                            size_t len = inputShape.Dimensions().size();
+                            int axisIndex = axis.StaticAxisIndex();
+                            size_t offset = axisIndex < 0 ? (len + 1 + axisIndex) % (len + 1) : axisIndex % (len + 1);
+
+                            outputShape = {};
+                            if (offset > 0)
+                            {
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(0, offset));
+                            }
+                            outputShape = outputShape.AppendShape({num_class});
+                            if (offset != len)
+                            {
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(offset, len));
+                            }
+
                             break;
                         }
                         case PrimitiveOpType::Times:

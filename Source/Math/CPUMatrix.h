@@ -267,7 +267,7 @@ public:
     ElemType SumOfElements() const;    // sum of all elements
     CPUMatrix<ElemType>& AssignSumOfElements(const CPUMatrix<ElemType>& a);
 
-    CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, size_t num_class);
+    CPUMatrix<ElemType>& AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis);
 
     bool IsEqualTo(const CPUMatrix<ElemType>& a, const ElemType threshold = 1e-8) const;
 

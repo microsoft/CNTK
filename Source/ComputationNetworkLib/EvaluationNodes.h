@@ -773,15 +773,16 @@ class OneHotNode : public ComputationNodeNonLooping<ElemType>, public NumInputs<
     }
 
 public:
-    OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, bool is_sparse, const wstring& name) : Base(deviceId, name)
+    OneHotNode(DEVICEID_TYPE deviceId, size_t num_class, bool is_sparse, int axis, const wstring& name) : Base(deviceId, name)
     {
         m_num_class = num_class;
         m_sparse = is_sparse;
+        m_axis = axis;
     }
     //do we really need this?
-    OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name), m_num_class(0)
+    OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
     {
-        m_sparse = false;
+        OneHotNode(deviceId, 0, false, -1, name);
     }
 
     OneHotNode(const ScriptableObjects::IConfigRecordPtr configp)
@@ -792,15 +793,22 @@ public:
 
     virtual void ForwardPropNonLooping() override
     {
-        auto& input = InputRef(0);
-        FrameRange fr(input.GetMBLayout());
+        auto& dims = GetSampleLayout().GetDims();
+        vector<size_t> shape;
+        shape.assign(dims.begin(), dims.end());
+        
+        const auto& inputSampleLayout = Input(0)->GetSampleLayout();
+        const auto& inputDims = inputSampleLayout.GetDims();
+        size_t len = inputDims.size();
+        size_t offset = m_axis < 0 ? (len + 1 + m_axis) % (len + 1) : m_axis % (len + 1);
+
         auto& output = Value();
-        output.AssignOneHot(InputRef(0).Value(), m_num_class, m_sparse);
+        output.AssignOneHot(InputRef(0).Value(), shape, offset, m_sparse);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
     {
-        LogicError("%ls operation is used for evaluation only.", OperationName().c_str());
+        LogicError("The node \"%ls\" can be used in training, but it does not participate in gradient propagation.", OperationName().c_str());
     }
 
     virtual bool OutputUsedInComputingInputNodesGradients() const override {
@@ -813,13 +821,21 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-
         const auto& inputSampleLayout = Input(0)->GetSampleLayout();
         const auto& inputDims = inputSampleLayout.GetDims();
-
+        size_t len = inputDims.size();
+        size_t offset = m_axis < 0 ? (len + 1 + m_axis) % (len + 1) : m_axis % (len + 1);
         SmallVector<size_t> dims;
+        if (offset > 0)
+        {
+            dims.append(inputDims.begin(), inputDims.begin() + offset);
+        }
         dims.push_back(m_num_class);
-        dims.append(inputDims.begin(), inputDims.end());
+        if (offset != len)
+        {
+            dims.append(inputDims.begin() + offset, inputDims.end());
+        }
+
         auto sampleLayout = TensorShape(dims);
 
         m_pMBLayout = Input(0)->GetMBLayout();
@@ -830,6 +846,7 @@ public:
 protected:
     size_t m_num_class;
     bool m_sparse;
+    int m_axis;
 };
 
 template class OneHotNode<float>;
