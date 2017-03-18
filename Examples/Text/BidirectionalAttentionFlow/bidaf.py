@@ -151,7 +151,7 @@ class PolyMath:
         att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
         end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
         m2 = OptimizedRnnStack(dim, bidirectional=True)(end_input)
-        end_logits = C.layers.Dense(1)(m2)
+        end_logits = C.layers.Dense(1)(C.splice(att_context, m2))
 
         start_loss = seq_loss(start_logits, ab)
         end_loss = seq_loss(end_logits, ae)
@@ -207,9 +207,9 @@ def training():
         argument_by_name(loss, 'ae' ): mb_source.streams.answer_end
     }
 
-    err = 1 - PolyMath.f1_score(argument_by_name(loss, 'ab'), argument_by_name(loss, 'ae'), z.outputs[0], z.outputs[1])
+    f1 = PolyMath.f1_score(argument_by_name(loss, 'ab'), argument_by_name(loss, 'ae'), z.outputs[0], z.outputs[1])
     
-    # currently the err evaluation is too slow, so do it with low frequency
+    # currently the f1 evaluation is too slow, so do it with low frequency
     class MyProgressPrinter(C.ProgressPrinter):
         def __init__(self, *kargs):
             super(MyProgressPrinter, self).__init__(*kargs)
@@ -219,12 +219,12 @@ def training():
             super(MyProgressPrinter, self).on_write_training_summary(*kargs)
             self.count += 1
             if self.count % 20 == 0:
-                print("Test error:", err.forward(mb_source.next_minibatch(1, input_map)))
+                print("Test error:", f1.forward(mb_source.next_minibatch(2048, input_map)))
 
     progress_writers = [MyProgressPrinter()]
 
     minibatch_size = 2048
-    lr_schedule = C.learning_rate_schedule(0.000001, C.UnitType.sample)
+    lr_schedule = C.learning_rate_schedule([0.000001]+[0.0000001], C.UnitType.sample, 0)
     momentum_time_constant = -minibatch_size/np.log(0.9)
     mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
     optimizer = C.adam_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=False, low_memory=False) # should use adadelta
@@ -236,7 +236,7 @@ def training():
         mb_source = mb_source,
         mb_size = minibatch_size,
         var_to_stream = input_map,
-        max_samples = 35600,
+        max_samples = 10000000,
         progress_frequency=100
     ).train()
 
