@@ -11,19 +11,23 @@ class Variable:
         v.shape = shape
         v.op = op
         v.inputs = inputs
+        v.computed = False
         return v
     def __add__(self, other):
         return plus(self, other)
+    def __mul__(self, other):
+        return element_times(self, other)
     def __matmul__(self, other):
         return times(self, other)
 
 class Parameter(Variable):
     def __new__(cls,  shape, initializer=None):
-        v = Variable.__new__(cls, shape, -1, [])
+        v = Variable.__new__(cls, shape, 'Parameter', [])
         return v
     def __init__(self, shape, initializer=None):
         if initializer:
             self.initializer = initializer
+        self.computed = True
     def resize(self, shape, refcheck=False):
         self.shape = shape
     
@@ -47,6 +51,12 @@ def binary_op(opcode):
                              ),), opcode, (a,b))
     return f
 
+def reducing_binary_op(opcode):
+    @BroadcastingBinary
+    def f(a,b):
+        return Variable((1,), opcode, (a,b))
+    return f
+
 def unary_op(opcode):
     def f(x):
         if isinstance(x, list): # broadcast along sequence
@@ -64,11 +74,15 @@ def times(a,b):
     return Variable((b.shape[1],), '@', (a,b))
 
 plus = binary_op('+')
-cross_entropy_with_softmax = binary_op('cross_entropy_with_softmax')
+element_times = binary_op('*')
+cross_entropy_with_softmax = reducing_binary_op('cross_entropy_with_softmax')
 
 tanh = unary_op('tanh')
 sigmoid = unary_op('sigmoid')
 softmax = unary_op('softmax')
+row_slice_0 = unary_op('row_slice')
+def row_slice(x, begin, end):
+    return row_slice_0(x) # (ignore dims for this test)
 
 def identity(x):
     return x
@@ -85,7 +99,7 @@ def Model(**kwargs):
     return patch
 
 def Dense(N, activation=identity):
-    W = Parameter((INFER,N))
+    W = Parameter((INFER,N), initializer=times_initializer)
     b = Parameter((N,))
     @Model(W=W, b=b)
     def dense(x):
@@ -93,13 +107,44 @@ def Dense(N, activation=identity):
     return dense
 
 def RNNBlock(N, activation=sigmoid):
-    W = Parameter((INFER,N))
-    R = Parameter((INFER,N))
+    W = Parameter((INFER,N), initializer=times_initializer)
+    R = Parameter((INFER,N), initializer=times_initializer)
     b = Parameter((N,))
     @Model(W=W, R=R, b=b)
     def rnn_block(s,x):
         return activation(plus(plus(times(s,R), times(x,W)), b))
     return rnn_block
+
+def LSTM(N, activation=sigmoid):
+    # TODO
+    b  = Parameter((       3 * N,))                                 # bias
+    W  = Parameter((INFER, 3 * N,), initializer=times_initializer)  # input
+    R  = Parameter((N    , 3 * N,), initializer=times_initializer)  # hidden-to-hidden
+
+    @Model(W=W, R=R, b=b)
+    def lstm(dhc, x):
+        dh, dc = dhc  # destructure the tuple
+        # projected contribution from input(s), hidden, and bias
+        proj4 = b + times(x, W) + times(dh, R)
+
+        it_proj  = row_slice (proj4, 0*N, 1*N)  # split along stack_axis
+        bit_proj = row_slice (proj4, 1*N, 2*N)
+        ft_proj  = row_slice (proj4, 2*N, 3*N)
+        ot_proj  = row_slice (proj4, 3*N, 4*N)
+
+        it = sigmoid (it_proj)           # input gate(t)
+        bit = it * activation (bit_proj) # applied to tanh of input network
+
+        ft = sigmoid (ft_proj)           # forget-me-not gate(t)
+        bft = ft * dc                    # applied to cell(t-1)
+
+        ct = bft + bit                   # c(t) is sum of both
+
+        ot = sigmoid (ot_proj)           # output gate(t)
+        ht = ot * activation (ct)        # applied to tanh(cell(t))
+
+        return (ht, ct)
+    return lstm
 
 def Embedding(N):
     E = Parameter((INFER,N), initializer=times_initializer)
@@ -122,13 +167,13 @@ def Sequential(functions):
 #        return map(map_function, x)
 #    return map_f
 
-def Fold(step_function):
+def Fold(step_function, initial_state=0):
     @Model(step_function=step_function)
     def fold(x):
-        s = 0  # state
+        s = initial_state  # state
         for sample in x:
             s = step_function(s, sample)
-        return s
+        return s[0] if isinstance(s, tuple) else s
     return fold
 
 def Recurrence(step_function):
@@ -188,6 +233,91 @@ def topo_sort(v):
     assert len(order) == len(visited)
     return order
 
+# excecution
+#  - prep: for all nodes,
+#     - determine set of consumers for each node
+#     - set not-ready-inputs counter to #inputs
+#     - add any node with not-ready-children counter==0 to ready batched group
+#  - select a batched group to execute
+#     - e.g. largest (=largest chance of full util, while others may become fuller as a result)
+#  - execute the batched group
+#     - inserting reshuffling operation into dense tensor form if needed
+#     - perform as one batched operation
+#  - for each member of the batched op, check each consumer whether it is now ready; if so, move to ready set
+#     - sort each one right away into its batched group
+#     - this requires consumer sets for all nodes, and a not-ready-children counter
+#  - delete the batched group
+def eval(v):
+    if not isinstance(v, Variable):
+       return v
+    nodes = topo_sort(v)    # (it is possible to implement this without, just more complex)
+    num_nodes = len(nodes)
+    expected_num_ops = sum(1 for v in nodes if not v.computed)
+
+    # management of batched operations
+    def shape_of(v):
+        if isinstance(v, (np.ndarray, Variable)):
+            return v.shape
+        else:
+            return ()
+
+    ready_ops = dict()  # [key] -> list of Variables
+
+    def add_ready(v):
+        key = v.key
+        if key not in ready_ops:
+            ready_ops[key] = [v] # first entry: create
+        else:
+            ready_ops[key].append(v)
+
+    # initialization
+    #  - determine set of consumers for each node
+    #  - set not-ready-inputs counter to #inputs
+    #  - add any node with not-ready-children counter==0 to ready batched group
+    for p in nodes:
+        if p.computed:
+            continue
+        p.key = (p.op, tuple(shape_of(v) for v in p.inputs)) # batch if both op and input shapes are the same
+        p.consumers = []
+        p.non_ready_inputs = 0
+        for v in p.inputs:
+            if isinstance(v, Variable) and not v.computed:
+                v.consumers.append(p) # (due to topo sort, v is already initialized)
+                p.non_ready_inputs += 1
+        if p.non_ready_inputs == 0:
+            add_ready(p)  # a leaf that's ready to go: make it part of the initial ready set
+
+    # execute as long as still anything pending
+    batches_run = 0
+    ops_run = 0
+    while ready_ops:
+        # select the largest ready batch size
+        key = max(ready_ops.keys(), key=(lambda key: len(ready_ops[key])))
+        op_batch = ready_ops[key]
+        # execute it
+        #print('batch of', len(op_batch), 'for op', key)
+        batches_run += 1
+        # done with this one
+        #  - for each member of the batched op, check each consumer whether it is now ready; if so, move to ready set
+        #  - delete the batched group
+        del ready_ops[key]  # remove from set before we add the newly ready ones
+        for v in op_batch:
+            assert not v.computed
+            v.computed = True # value is available now
+            ops_run += 1
+            for p in v.consumers:
+                assert p.non_ready_inputs > 0
+                p.non_ready_inputs -= 1
+                if p.non_ready_inputs == 0:
+                    add_ready(p)
+
+    # done
+    #print(ops_run, 'operations executed in', batches_run, 'batches')
+    #assert ops_run == expected_num_ops
+    #for v in nodes:
+    #    assert v.computed
+
+
 def dump_graph(v):
     names = {} # [id(obj)] -> faked name
     def print_node(v):
@@ -220,21 +350,6 @@ def dump_graph(v):
         print_node(node)
     return len(order)
 
-# excecution
-#  - prep: for all nodes,
-#     - determine set of consumers
-#     - set not-ready-children counter to #inputs
-#     - add any node with not-ready-children counter==0 to ready batched group
-#  - select a batched group to execute
-#     - e.g. largest (=largest chance of full util, while others may become fuller as a result)
-#  - execute the batched group
-#     - inserting reshuffling operation into dense tensor form if needed
-#     - perform as one batched operation
-#  - for each member of the batched op, check each consumer whether it is now ready; if so, move to ready set
-#     - sort each one right away into its batched group
-#     - this requires consumer sets for all nodes, and a not-ready-children counter
-#  - delete the batched group
-
 # ---
 
 in_dim = 3  # 30000
@@ -245,8 +360,8 @@ num_classes = 3 #0000
 def create_model():
     encoder = Sequential([
         Embedding(embed_dim),
-        Recurrence(RNNBlock(hidden_dim)),
-        Fold(RNNBlock(hidden_dim)),
+        #Recurrence(LSTM(hidden_dim), initial_state=(0,0)),
+        Fold(LSTM(hidden_dim), initial_state=(0,0)),
         Dense(num_classes)
     ])
     model = encoder
@@ -274,8 +389,8 @@ if True:
     from timeit import default_timer as timer
 
     p1 = Embedding(1)(1)
-    v1 = plus(p1, 3 @ np.array([[4]]))
-    v2 = plus(p1, 5 @ np.array([[6]]))
+    v1 = plus(p1, 3 * np.array([[4]]))
+    v2 = plus(p1, 5 * np.array([[6]]))
     v = v1 + v2
     dump_graph(v)
 
@@ -292,8 +407,10 @@ if True:
     repetitions = 10
     for count in range(repetitions):
         crit = train_minibatch(criterion, mb)
+        eval(crit)
     end = timer()
     dump_graph(crit)
+    eval(crit)
     num_nodes = len(topo_sort(crit))
     num_samples = sum(len(batch_item[0]) for batch_item in mb.values())
     dur = (end - start) / repetitions
