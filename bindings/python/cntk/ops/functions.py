@@ -755,6 +755,8 @@ class Function(cntk_py.Function):
 
         if wrt is None:
             wrt = [arg for arg in self.arguments if arg.needs_gradient]
+            if len(wrt) == 0:
+                raise ValueError("None of the Function '%s' arguments have 'needs_gradient == True'" % str(self))
 
         output_map = {v: None for v in outputs}
         wrt_map = {v: None for v in wrt}
@@ -1237,9 +1239,3 @@ class UserFunction(Function):
             A cloned instance of this user-defined function.
         '''
         raise NotImplementedError('clone has to be overwritten')
-
-    def op_name(self):
-        '''
-        Returns the operator name.
-        '''
-        return 'UserFunction'

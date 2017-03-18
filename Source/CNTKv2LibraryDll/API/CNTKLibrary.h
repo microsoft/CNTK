@@ -1744,7 +1744,7 @@ private:
 
         CNTK_API static Variable Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
 
-        void SetOwner(Function* ownerFunction);
+        void SetOwner(const std::weak_ptr<Function>& ownerFunction);
 
         Variable CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const;
 
@@ -2803,11 +2803,6 @@ namespace CNTK
                                        const std::unordered_map<Variable, ValuePtr>& rootGradientValues,
                                        std::unordered_map<Variable, ValuePtr>& backPropagatedGradientValuesForInputs);
 
-        ///
-        /// Returns the name of the operation that this Function denotes
-        ///
-        virtual const std::wstring& OpName() const = 0;
-
     protected:
         ///
         /// Computes and stores the values of specified variables in the 'outputs' map, using provided 'inputs' values for each input of the Function.
@@ -2837,8 +2832,6 @@ namespace CNTK
         ///
         CNTK_API virtual void InferOutputs(std::vector<Variable>& outputs) = 0;
 
-        CNTK_API virtual FunctionPtr Clone(const std::vector<Variable>& /*clonedInputs*/) { NOT_IMPLEMENTED; }
-
     public:
 
         // Optional overrides
@@ -2848,6 +2841,27 @@ namespace CNTK
         ///
         CNTK_API virtual ~Function();
 
+        ///
+        /// Returns the name of the operation that this Function denotes
+        ///
+        CNTK_API virtual const std::wstring& OpName() const;
+
+        ///
+        /// This method needs to be explicitly overriden in subclasses.
+        ///
+        CNTK_API virtual size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
+
+        ///
+        /// Generates a dictionary that captures the state of the Function graph underlying this Function.
+        ///
+        CNTK_API virtual Dictionary Serialize() const override { return Dictionary(); }
+
+        /// 
+        /// Creates a clone of this Function instance, using the specified 'inputs' that are inputs of the clone to be constructed.
+        ///
+        CNTK_API virtual FunctionPtr Clone(const std::vector<Variable>& /*clonedInputs*/) { NOT_IMPLEMENTED; }
+
+    public:
         ///
         /// Compute the gradients of the output of this Function, w.r.t. the specified input variables in 'gradients'
         /// at the specified 'arguments' values for the Function inputs
@@ -2884,21 +2898,11 @@ namespace CNTK
         CNTK_API FunctionPtr Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod::Clone, const std::unordered_map<Variable, Variable>& replacements = {}) const;
 
         ///
-        /// Generates a dictionary that captures the state of the Function graph underlying this Function.
-        ///
-        virtual Dictionary Serialize() const override { return Dictionary(); }
-
-        ///
         /// Deserializes a Function from the dictionary.
         /// TODO: add a second overload with a 'Function builder' parameter that would allow hooking
         /// user-defined op-codes with custom functionality.
         ///
         CNTK_API static FunctionPtr Deserialize(const Dictionary& dictionary, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
-
-        ///
-        /// This method needs to be explicitly overriden in subclasses.
-        ///
-        size_t CurrentVersion() const override { NOT_IMPLEMENTED; }
 
     public:
         ///
@@ -2994,7 +2998,7 @@ namespace CNTK
         std::vector<Variable> Arguments(bool rowMajor = false) const
         {
             return FilteredInputs<Variable>([](const Variable& var) {
-                return (var.IsInput() || var.IsPlaceholder() || var.IsOutput());
+                return IsArgument(var);
             }, rowMajor);
         }
 
@@ -3120,6 +3124,11 @@ namespace CNTK
         static const int MaxNumOutputs = 64;
 
     protected:
+        static bool IsArgument(const Variable& var)
+        {
+            return (var.IsInput() || var.IsPlaceholder() || var.IsOutput());
+        }
+
         ///
         /// Protected constructor for derived 'Function' types to specify the actual input and output variables for the (primitive) Function instance.
         ///

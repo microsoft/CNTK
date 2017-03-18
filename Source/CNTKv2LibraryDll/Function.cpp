@@ -22,9 +22,9 @@ namespace CNTK
             for (auto outputVar : outputs)
             {
                 if (outputVar.IsOutput() && !outputVar.Owner())
-                    outputVar.SetOwner(this);
+                    outputVar.SetOwner(shared_from_this());
 
-                if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.m_dataFields->m_ownerFunction == this)
+                if (m_rootFunction == nullptr && outputVar.IsOutput() && outputVar.Owner().get() == this)
                 {
                     // in case of a primitive function, set uid of output vars to owner function uid + "_Output_" + output index.
                     outputVar.m_dataFields->m_uid = m_uid + L"_" + VariableKindName(outputVar.Kind()) + L"_" + std::to_wstring(m_outputs.size());
@@ -113,6 +113,12 @@ namespace CNTK
     }
 
     /*virtual*/ Function::~Function() {}
+
+    /*virtual*/ const std::wstring& Function::OpName() const
+    {
+        static const std::wstring defaultUserFunctionOpName = L"UserFunction"; 
+        return defaultUserFunctionOpName;
+    }
 
     BackPropStatePtr Function::Forward(const std::unordered_map<Variable, ValuePtr>& arguments,
                                        std::unordered_map<Variable, ValuePtr>& outputs,
@@ -596,7 +602,7 @@ namespace CNTK
                 placeholderReplacements[clonedInput] = replacements.at(cloneeInput);
             }
             else
-                {
+            {
                 // This is not a replacement. Lets create a fresh clone
 
                 // Is it a leaf
@@ -678,16 +684,44 @@ namespace CNTK
         if (blockFunction)
         {
             auto cloneeComposite = blockFunction->Composite();
-            auto clonedComposite = cloneeComposite->Clone(parameterCloneMethod, replacements);
+            auto cloneeCompositeInputs = cloneeComposite->Inputs();
+            std::unordered_map<Variable, Variable> cloneeCompositeReplacements;
+            std::vector<std::pair<Variable, Variable>> clonedBlockCompositeArgumentsMap;
 
-            auto cloneeBlockCompositeArguments = cloneeComposite->Arguments();
-            auto clonedBlockCompositeArguments = clonedComposite->Arguments();
+            // When cloning the block, we need to replace any Parameter/Constants inside the block with
+            // the correspondind replacements if any were specified
+            for (size_t i = 0; i < cloneeCompositeInputs.size(); ++i)
+            {
+                auto cloneeCompositeInput = cloneeCompositeInputs[i];
+                if (replacements.find(cloneeCompositeInput) != replacements.end())
+                {
+                    if (IsArgument(cloneeCompositeInput))
+                    {
+                        InvalidArgument("Function '%S': Illegal to replace internal variable '%S' of nested Block Function '%S'.",
+                                        clonee->AsString().c_str(),
+                                        cloneeCompositeInput.AsString().c_str(),
+                                        blockFunction->AsString().c_str());
+                    }
+                    else
+                    {
+                        auto replacement = PlaceholderVariable(cloneeCompositeInput.Shape(), cloneeCompositeInput.DynamicAxes());
+                        cloneeCompositeReplacements.insert({ cloneeCompositeInput, replacement });
+                        clonedBlockCompositeArgumentsMap.push_back({ replacement, inputs[i]});
+                    }
+                }
+            }
+
+            auto clonedComposite = cloneeComposite->Clone(parameterCloneMethod, cloneeCompositeReplacements);
+
+            auto clonedCompositeInputs = clonedComposite->Inputs();
             std::unordered_map<Variable, Variable> cloneeToClonedBlockCompositeArgumentsMap;
-            for (size_t i = 0; i < cloneeBlockCompositeArguments.size(); ++i)
-                cloneeToClonedBlockCompositeArgumentsMap.insert({ cloneeBlockCompositeArguments[i], clonedBlockCompositeArguments[i] });
+            for (size_t i = 0; i < cloneeCompositeInputs.size(); ++i)
+            {
+                if (IsArgument(cloneeCompositeInputs[i]))
+                    cloneeToClonedBlockCompositeArgumentsMap.insert({ cloneeCompositeInputs[i], clonedCompositeInputs[i] });
+            }
 
             auto cloneeBlockCompositeArgumentsMap = blockFunction->BlockArgumentsMapping();
-            std::vector<std::pair<Variable, Variable>> clonedBlockCompositeArgumentsMap;
             for (auto cloneeArgumentMapping : cloneeBlockCompositeArgumentsMap)
                 clonedBlockCompositeArgumentsMap.push_back({ cloneeToClonedBlockCompositeArgumentsMap.at(cloneeArgumentMapping.first), cloneeToClonedInputMap.at(cloneeArgumentMapping.second) });
 
@@ -706,10 +740,41 @@ namespace CNTK
         if (compositeFunction == nullptr)
             LogicError("Function '%S': Currently only cloning of composite functions is supported.", AsString().c_str());
 
+        auto compositeRootFunction = compositeFunction->RootFunction();
+
+        // Handle the scenario when the root Function outputs themselves are specified to be replaced. 
+        auto compositeRootFunctionOutputs = compositeRootFunction->RawOutputs();
+        std::vector<Variable> rootFunctionOutputReplacements;
+        for (auto output : compositeRootFunctionOutputs)
+        {
+            if (replacements.find(output) != replacements.end())
+                rootFunctionOutputReplacements.push_back(replacements.at(output));
+        }
+
+        if (!rootFunctionOutputReplacements.empty())
+        {
+            if (rootFunctionOutputReplacements.size() != compositeRootFunctionOutputs.size())
+                InvalidArgument("Function '%S': Clone replacements contain some of the root Function's outputs but not all.", AsString().c_str());
+
+            if (rootFunctionOutputReplacements.size() == 1)
+                return rootFunctionOutputReplacements[0];
+            else
+            {
+                std::unordered_set<FunctionPtr> owners;
+                for (auto replacementOutput : rootFunctionOutputReplacements)
+                    owners.insert(replacementOutput.Owner());
+
+                if ((owners.size() == 1) && *owners.begin())
+                    return AsComposite(*owners.begin());
+                else
+                    return Combine(rootFunctionOutputReplacements);
+            }
+        }
+
         std::unordered_map<const Function*, FunctionPtr> cloneMap;
         std::unordered_map<Variable, Variable> leafVariablesCloneMap;
         std::unordered_map<Variable, Variable> placeholderReplacements;
-        auto clonedRootFunction = Function::Clone(compositeFunction->RootFunction(), parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
+        auto clonedRootFunction = Function::Clone(compositeRootFunction, parameterCloneMethod, replacements, cloneMap, leafVariablesCloneMap, placeholderReplacements);
 
         // Patch the values in the placeholderReplacements map with newly cloned Variables where applicable
         std::unordered_set<FunctionPtr> replacementClones;

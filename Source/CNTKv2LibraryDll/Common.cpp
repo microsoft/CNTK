@@ -412,6 +412,16 @@ namespace CNTK
             return Microsoft::MSR::CNTK::Globals::ShouldForceDeterministicAlgorithms();
         }
 
+        void EnableSynchronousGPUKernelExecution()
+        {
+            SyncGuard::EnableSync();
+        }
+
+        bool IsSynchronousGPUKernelExecutionEnabled()
+        {
+            return SyncGuard::IsSyncEnabled();
+        }
+
         static std::atomic<bool> s_threadsAreSet(false);
         bool MaxNumCPUThreadsSet()
         {
