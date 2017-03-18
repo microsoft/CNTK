@@ -37,7 +37,7 @@ namespace CNTK
         if (device.Type() == DeviceKind::GPU)
             return device.Id();
 
-        LogicError("Invalid device type (%u).", device.Type());
+        LogicError("Invalid device type (%u).", (unsigned int)device.Type());
     }
 
     inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKImplMatrixFormat(StorageFormat storageFormat)
