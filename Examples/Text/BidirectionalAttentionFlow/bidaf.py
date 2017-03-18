@@ -89,7 +89,7 @@ class PolyMath:
         c_processed = input_layers(c_emb) # synth_embedding for context
 
         #convert query's sequence axis to static
-        qvw, qvw_mask = ValueWindow(max_query_len, C.Axis.new_leading_axis())(q_processed)
+        qvw, qvw_mask = C.layers.PastValueWindow(max_query_len, C.Axis.new_leading_axis())(q_processed).outputs
         print('qvw', qvw)
 
         #qvw_c = C.reduce_sum(qvw, 1)
@@ -164,7 +164,7 @@ class PolyMath:
     @staticmethod    
     def f1_score(ab, ae, oab, oae):
         answers = C.splice(ab, ae, oab, oae)
-        avw, _ = ValueWindow(max_context_len, C.Axis.new_leading_axis())(answers)
+        avw = C.layers.PastValueWindow(max_context_len, C.Axis.new_leading_axis())(answers).outputs[0]
         answer_indices = C.argmax(avw, 0)
         answer_indices = print_node(answer_indices)
         gt_start = C.slice(answer_indices, 1, 0, 1)
@@ -224,10 +224,10 @@ def training():
     progress_writers = [MyProgressPrinter()]
 
     minibatch_size = 2048
-    lr_schedule = C.learning_rate_schedule([0.000001]+[0.0000001], C.UnitType.sample, 0)
-    momentum_time_constant = -minibatch_size/np.log(0.9)
+    lr_schedule = C.learning_rate_schedule(0.000005, C.UnitType.sample)
+    momentum_time_constant = -minibatch_size/np.log(0.8)
     mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
-    optimizer = C.adam_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=False, low_memory=False) # should use adadelta
+    optimizer = C.adam(z.parameters, lr_schedule, mm_schedule, unit_gain=False) # should use adadelta
     
     trainer = C.Trainer(z, (loss, None), optimizer, progress_writers)
 
