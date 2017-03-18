@@ -37,9 +37,9 @@ def ValueWindow(window_size, axis, name=''):
     return func
 
 def HighwayBlock(dim, # ideally this should be inferred, but times does not allow inferred x inferred parameter for now
-                 transform_weight_initializer=C.normal(scale=1),
+                 transform_weight_initializer=C.glorot_uniform(),
                  transform_bias_initializer=0,
-                 update_weight_initializer=C.normal(scale=1),
+                 update_weight_initializer=C.glorot_uniform(),
                  update_bias_initializer=0,
                  name=''):
     x  = C.placeholder_variable()
