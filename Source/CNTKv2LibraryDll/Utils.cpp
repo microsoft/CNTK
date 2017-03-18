@@ -133,9 +133,6 @@ namespace CNTK
         return !(*this == other);    
     }
 
-    
-
-
     Dictionary::Dictionary()
         : m_dictionaryData(new unordered_map <wstring, DictionaryValue>)
     {
@@ -425,7 +422,6 @@ namespace CNTK
         return fd;
     }
 
-
     std::string ToString(const std::wstring& wstring)
     {
 #ifdef _MSC_VER
@@ -518,6 +514,7 @@ namespace CNTK
 
         return std::pair<size_t, size_t>(maxNumTimeSteps, numSequences);
     }
+
     /*static*/ void Utils::VerifyVariableValueCompatibility(const Variable& var, const ValuePtr& value)
     {
         if (var.GetDataType() != value->GetDataType())

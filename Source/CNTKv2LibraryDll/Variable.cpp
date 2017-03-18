@@ -72,20 +72,7 @@ namespace CNTK
 
     FunctionPtr Variable::Owner() const 
     {
-        auto ownerWeakPtr = m_dataFields->m_ownerFunction;
-        if (ownerWeakPtr.owner_before(std::weak_ptr<int>{}) || std::weak_ptr<int>{}.owner_before(ownerWeakPtr))
-        {
-            // owner function is not emptry, i.e. has been set before.
-            if (ownerWeakPtr.expired())
-                LogicError("The owner function of Variable '%S' is unexpectedly expired.", AsString().c_str());
-            auto ownerFunctionPtr = m_dataFields->m_ownerFunction.lock();
-            if (ownerFunctionPtr != nullptr)
-                return ownerFunctionPtr->shared_from_this();
-            else
-                return nullptr;
-        }
-        else
-            return nullptr;
+        return m_dataFields->Owner();
     }
 
     Variable Variable::CompositePreservingCopy(const std::shared_ptr<const Function>& composite) const
@@ -223,18 +210,24 @@ namespace CNTK
         return wss.str();
     }
 
+    FunctionPtr VariableFields::Owner() const
+    {
+        if (IsObjectExpired(m_ownerFunction))
+            LogicError("The owner function of Variable '%S' is unexpectedly expired.", AsString().c_str());
+
+        auto ownerFunctionPtr = m_ownerFunction.lock();
+        if (ownerFunctionPtr != nullptr)
+            return ownerFunctionPtr->shared_from_this();
+        else
+            return nullptr;
+    }
+
     std::shared_ptr<VariableFields> VariableFields::Clone() const
     {
-        if (m_ownerFunction.owner_before(std::weak_ptr<int>{}) || std::weak_ptr<int>{}.owner_before(m_ownerFunction))
-        {
-            if (m_ownerFunction.expired())
-                LogicError("The owner function of Variable '%S' is unexpectedly expired.", AsString().c_str());
-            if (m_ownerFunction.lock() != nullptr)
-                InvalidArgument("Output variable '%S' cannot be cloned.", AsString().c_str());
-        }
+        if (Owner() != nullptr)
+            InvalidArgument("Output variable '%S' cannot be cloned.", AsString().c_str());
 
         // Note: We do not clone m_blockFunctionVariableMapping
-
         auto clone = MakeSharedObject<VariableFields>(m_shape,
             m_varKind,
             m_dataType,

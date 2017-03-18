@@ -59,6 +59,7 @@ namespace CNTK
 
         std::wstring AsString() const;
         std::shared_ptr<VariableFields> Clone() const;
+        FunctionPtr Owner() const;
 
         CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 
