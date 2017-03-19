@@ -40,7 +40,7 @@ def create_mb_and_map(func, data_file, bidaf, randomize):
     }
     return mb_source, input_map
 
-def train(data_path, model_path, log_file, config_file, restore=False):
+def train(data_path, model_path, log_file, config_file, restore=False, profiling=False):
     bidaf = Bidaf(config_file)
     z, loss = bidaf.model()
     training_config = importlib.import_module(config_file).training_config
@@ -77,12 +77,15 @@ def train(data_path, model_path, log_file, config_file, restore=False):
                             rank = C.Communicator.rank(),
                             gen_heartbeat = False)]
 
-    lr_schedule = C.learning_rate_schedule(0.000005, C.UnitType.sample)
+    lr_schedule = C.learning_rate_schedule(training_config['lr'], C.UnitType.sample, 0)
     momentum_time_constant = -minibatch_size/np.log(0.9)
     mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
-    optimizer = C.adam_sgd(z.parameters, lr_schedule, mm_schedule, unit_gain=False, low_memory=False) # should use adadelta
+    optimizer = C.adam(z.parameters, lr_schedule, mm_schedule, unit_gain=False) # should use adadelta
     
     trainer = C.Trainer(z, (loss, None), optimizer, progress_writers)
+
+    if profiling:
+        C.start_profiler(sync_gpu=True)
 
     C.training_session(
         trainer=trainer,
@@ -93,6 +96,9 @@ def train(data_path, model_path, log_file, config_file, restore=False):
         checkpoint_config = C.CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
         progress_frequency = epoch_size
     ).train()
+    
+    if profiling:
+        stop_profiler()
 
 if __name__=='__main__':
     # default Paths relative to current python file.
@@ -106,6 +112,7 @@ if __name__=='__main__':
     parser.add_argument('-logdir', '--logdir', help='Log file', required=False, default=None)
     parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
     parser.add_argument('-config', '--config', help='Config file', required=False, default='config')
+    parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
 
     args = vars(parser.parse_args())
 
@@ -115,7 +122,7 @@ if __name__=='__main__':
         data_path = args['datadir']
 
     try:
-        train(data_path, model_path, args['logdir'], args['config'])
+        train(data_path, model_path, args['logdir'], args['config'], restore = not args['restart'], profiling = args['profile'])
     finally:
         C.distributed.Communicator.finalize()
 
