@@ -72,11 +72,20 @@ namespace CNTK
         {
             // Substitute any placeholder replacements in the arguments map
             auto arguments = m_composite->Arguments();
+            std::unordered_map<Variable, Variable> blockCompositePlaceholderReplacements;
             for (auto argument : arguments)
             {
                 if (replacedPlaceholders.find(argument.BlockFunctionVariableMapping()) != replacedPlaceholders.end())
-                    argument.m_dataFields->m_blockFunctionVariableMapping = placeholderReplacements.at(argument.BlockFunctionVariableMapping());
+                {
+                    auto replacement = placeholderReplacements.at(argument.BlockFunctionVariableMapping());
+                    if (IsArgument(replacement))
+                        argument.m_dataFields->m_blockFunctionVariableMapping = replacement;
+                    else
+                        blockCompositePlaceholderReplacements.insert({ argument,  replacement });
+                }
             }
+
+            m_composite->ReplacePlaceholders(blockCompositePlaceholderReplacements);
         }
 
     private:
@@ -140,7 +149,7 @@ namespace CNTK
             for (auto currentArgument : currentArguments)
             {
                 auto currentArgumentMapping = currentArgument.BlockFunctionVariableMapping();
-                auto newArgument = PlaceholderVariable(currentArgumentMapping.Shape(), currentArgumentMapping.GetDataType(), currentArgumentMapping.Name(), currentArgumentMapping.DynamicAxes());
+                auto newArgument = PlaceholderLike(currentArgumentMapping);
                 newArgument.m_dataFields->m_blockFunctionVariableMapping = currentArgumentMapping;
 
                 replacementMap.insert({ currentArgument, newArgument });
