@@ -68,13 +68,23 @@ def test_gpu_properties():
         assert props.total_memory > 0
         assert props.version_major > 0
 
-def test_use_default_device():
+def _use_default_device():
+    # use_default_device needs to be tested in isolation
+    # in a freshly created process environment.
     device = use_default_device()
     if (device.type() != DeviceKind.GPU):
         assert not is_locked(device)
     else:
         assert is_locked(device)
-    
+
+def test_use_default_device():
+    # this will release any previous held device locks
+    try_set_default_device(cpu(), False)
+    p = Process(target=_use_default_device)
+    p.start()
+    p.join()
+    assert p.exitcode == 0
+
 def test_set_cpu_as_default_device():
     device = cpu()
     assert not is_locked(device)
@@ -88,7 +98,7 @@ def test_set_cpu_as_default_device():
 def test_set_gpu_as_default_device():
   if len(all_devices()) == 1: 
       return;
-  # this will realease any previous device lock
+  # this will release any previous held device locks
   try_set_default_device(cpu(), False)
   for i in range(len(all_devices()) - 1):
     device = gpu(i)
