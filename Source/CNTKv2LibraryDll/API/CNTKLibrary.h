@@ -1800,22 +1800,13 @@ private:
         Variable NonCompositePreservingCopy() const;
 
     private:
-#ifdef SWIGCSHARP
+#if defined(SWIGCSHARP) || defined(SWIGJAVA)
     public:
         // TODO: a better way to get hash value?
         size_t GetHashValue()
         {
             return std::hash<const void *>()(m_dataFields.get());
         }
-#endif
-
-#ifdef SWIGJAVA
-	public:
-		// TODO: a better way to get hash value?
-		size_t GetHashValue()
-		{
-			return std::hash<const void *>()(m_dataFields.get());
-		}
 #endif
 
     protected:
