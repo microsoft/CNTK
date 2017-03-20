@@ -47,23 +47,6 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     mb_source, input_map = create_mb_and_map(loss, os.path.join(data_path, training_config['train_data']), bidaf, True)
     
     f1 = bidaf.f1_score(argument_by_name(loss, 'ab'), argument_by_name(loss, 'ae'), z.outputs[0], z.outputs[1])
-    cv_source, cv_input_map = create_mb_and_map(f1, os.path.join(data_path, training_config['cv_data']), bidaf, False)
-    
-    # currently the f1 evaluation is too slow, so do it with low frequency
-    class MyProgressPrinter(C.ProgressPrinter):
-        def __init__(self):
-            super(MyProgressPrinter, self).__init__()
-            self.count = 0
-
-        def on_write_training_summary(self, *args):
-            self.count += 1
-            if self.count % training_config['cv_freq'] == 0:
-                cv_data = cv_source.next_minibatch(2048, cv_input_map)
-                f1_em = C.splice(C.reduce_sum(f1, C.Axis.all_axes()), C.reduce_sum(C.greater_equal(f1, 1), C.Axis.all_axes())).eval(cv_data)
-                f1_sum = f1_em[0]
-                em_sum = f1_em[1]
-                num_sequences = cv_data[argument_by_name(f1, 'ab')].num_sequences
-                print("F1 {:0.2f} EM {:0.2f} num_seq {}".format(f1_sum * 100 / num_sequences, em_sum * 100 / num_sequences, num_sequences))
 
     max_epochs = training_config['max_epochs']
     log_freq = training_config['log_freq']
@@ -86,7 +69,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     if C.Communicator.num_workers() > 1:
         learner = C.data_parallel_distributed_learner(learner, num_quantization_bits=32, distributed_after=0)
 
-    trainer = C.Trainer(z, (loss, None), learner, progress_writers)
+    trainer = C.Trainer(z, (loss, f1), learner, progress_writers)
 
     if profiling:
         C.start_profiler(sync_gpu=True)

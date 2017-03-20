@@ -18,7 +18,6 @@ model_config = {
 training_config = {
     'minibatch_size' : 2048, # in samples
     'log_freq'       : 10,  # in minibatchs
-    'lr'             : [0.000005]*100,
     'epoch_size'     : 1780, # in sequences
     'max_epochs'     : 100,
     'train_data'     : 'val.ctf',

@@ -156,10 +156,10 @@ class Bidaf:
         return C.combine([start_hardmax, end_hardmax]), start_loss + end_loss
 
     def f1_score(self, ab, ae, oab, oae):
-        answers = C.splice(ab, ae, oab, oae)
+        answers = C.splice(ab, C.sequence.delay(ae), oab, C.sequence.delay(oae)) # make end non-inclusive
         answers_prop = C.Recurrence(C.element_max, go_backwards=False)(answers)
-        ans_gt = C.slice(answers_prop, 0, 0, 1) - C.slice(answers_prop, 0, 1, 2)
-        ans_out = C.slice(answers_prop, 0, 2, 3) - C.slice(answers_prop, 0, 3, 4)
+        ans_gt = C.element_min(C.slice(answers_prop, 0, 0, 1), (1 - C.slice(answers_prop, 0, 1, 2)))
+        ans_out = C.element_min(C.slice(answers_prop, 0, 2, 3), (1 - C.slice(answers_prop, 0, 3, 4)))
         common = ans_gt * ans_out
         metric = C.layers.Fold(C.plus)(C.splice(ans_gt, ans_out, common))
         gt_len = C.slice(metric, 0, 0, 1)
