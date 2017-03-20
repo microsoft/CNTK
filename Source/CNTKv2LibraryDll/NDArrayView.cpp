@@ -418,12 +418,62 @@ namespace CNTK
             InvalidArgument("NDArrayView::DataBuffer: The specified ElementType '%s' does not match this NDArrayView's DataType '%s'.", typeid(ElementType).name(), DataTypeName(m_dataType));
 
         if (IsSparse())
-            InvalidArgument("DataBuffer/WritableDataBuffer methods not supported for sparse NDArrayiew objects.");
+            InvalidArgument("The stroage format of 'this' NDArrayView is sparse. Please use SparseDataBuffers().");
 
         // First make sure that the underlying matrix is on the right device
         auto matrix = GetMatrix<ElementType>();
         matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
         return matrix->Data();
+    }
+
+    template <typename ElementType>
+    std::tuple<const ElementType *, const SparseIndexType*, const SparseIndexType*, size_t> NDArrayView::SparseCSCDataBuffers() const
+    {
+        if (AsDataType<ElementType>() != m_dataType)
+            InvalidArgument("NDArrayView::SparseDataBuffers: The specified ElementType '%s' does not match this NDArrayView's DataType '%s'.", typeid(ElementType).name(), DataTypeName(m_dataType));
+
+        if (!IsSparse())
+            InvalidArgument("The stroage format of 'this' NDArrayView is dense. Please use another DataBuffer().");
+
+        if(GetStorageFormat() != StorageFormat::SparseCSC)
+            InvalidArgument("The SparseDataBuffers() method currently only supports CSC sparse format.");
+
+        auto matrix = GetMatrix<ElementType>();
+        matrix->TransferToDeviceIfNotThere(AsCNTKImplDeviceId(m_device), true);
+
+        if ((matrix->GetMatrixType() != Microsoft::MSR::CNTK::MatrixType::SPARSE) || (matrix->GetMatrixFormat() != Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC))
+            RuntimeError("NDArrayView::SparseDataBuffers: The underlying matrix of 'this' NDArrayView is not in the CSC sparse format.");
+
+        size_t numNonZeroValues;
+        ElementType* nonZeroValues;
+        SparseIndexType* colStarts;
+        SparseIndexType* rowIndices;
+        if (m_device.Type() == DeviceKind::CPU)
+        {
+            if (sizeof(CPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
+                LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix on CPU.");
+            shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_CPUSparseMatrix;
+            numNonZeroValues = sparseMatrix->NzCount();
+            nonZeroValues = static_case<SparseIndexType>(sparseMatrix->NzValues());
+            colStarts = static_case<SparseIndexType>(sparseMatrix->ColLocation());
+            rowIndices = static_case<SparseIndexType>(sparseMatrix->RowLocation());
+        }
+        else if (m_device.Type() == DeviceKind::GPU)
+        {
+            if (sizeof(GPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
+                LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix on GPU.");
+            shared_ptr<Microsoft::MSR::CNTK::GPUSparseMatrix<ElementType>> sparseMatrix = matrix->m_GPUSparseMatrix;
+            numNonZeroValues = sparseMatrix->NzCount();
+            nonZeroValues = static_case<SparseIndexType>(sparseMatrix->NzValues());
+            colStarts = static_case<SparseIndexType>(sparseMatrix->ColLocation());
+            rowIndices = static_case<SparseIndexType>(sparseMatrix->RowLocation());
+        }
+        else
+        {
+            RuntimeError("NDArrayView::SparseDataBuffers: The device %S is currently not supported.", m_device.DeviceKindName());
+        }
+
+        return std::tuple(nonZeroValues, colStarts, rowIndices, numNonZeroValues);
     }
 
     void NDArrayView::ChangeDevice(const DeviceDescriptor& device)
