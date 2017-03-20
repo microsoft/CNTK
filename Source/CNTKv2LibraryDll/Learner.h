@@ -205,6 +205,24 @@ namespace CNTK
         void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
     };
 
+    class LearnerAdaDelta : public LearnerBase
+    {
+    public:
+        LearnerAdaDelta(
+            const std::vector<Parameter>& parameters,
+            double rho, double epsilon,
+            AdditionalLearningOptions additionalOptions);
+
+    protected:
+        double m_rho;
+        double m_epsilon;
+
+        virtual void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const override;
+
+        template <typename ElementType>
+        void Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue, const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const;
+    };
+
     class LearnerFSAdaGrad : public LearnerMomentumSGD
     {
     public:
