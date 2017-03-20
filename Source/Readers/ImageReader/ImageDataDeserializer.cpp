@@ -297,7 +297,15 @@ cv::Mat FileByteReader::Read(size_t, const std::string& seqPath, bool grayscale)
     assert(!seqPath.empty());
     auto path = Expand3Dots(seqPath, m_expandDirectory);
 
-    return cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+    cv::Mat result;
+    attempt(5, [grayscale, path, &result]()
+    {
+        result = cv::imread(path, grayscale ? cv::IMREAD_GRAYSCALE : cv::IMREAD_COLOR);
+        if(!result.data)
+            RuntimeError("Cannot open file '%s'", path.c_str());
+    });
+
+    return result;
 }
 
 bool ImageDataDeserializer::GetSequenceDescriptionByKey(const KeyType& key, SequenceDescription& result)
