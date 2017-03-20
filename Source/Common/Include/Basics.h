@@ -718,7 +718,7 @@ public:
     }
 
 private:
-    Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc);
+    void *Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc);
 };
 #endif
 
