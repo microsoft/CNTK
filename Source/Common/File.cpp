@@ -986,11 +986,12 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
 #else
 
 #define STRINGIFY(x) #x
+#define TOSTRING(x) STRINGIFY(x)
 
 void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc)
 {
     string soName = plugin;
-    soName += std::string("-") + std::string(STRINGIFY(CNTK_COMPONENT_VERSION));
+    soName += std::string("-") + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
     soName = soName + ".so";
     void* handle = dlopen(soName.c_str(), RTLD_LAZY);
     if (handle == NULL)
