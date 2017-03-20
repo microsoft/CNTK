@@ -1297,6 +1297,7 @@ python: $(PYTHON_LIBS)
             py_paths[35]=$(PYTHON35_PATH); \
             export LD_LIBRARY_PATH=$$LD_LIBRARY_PATH:$$(echo $(GDK_NVML_LIB_PATH) $(LIBPATH) | tr " " :); \
             ldd $(LIBDIR)/* | grep "not found" && false; \
+            export CNTK_COMPONENT_VERSION=$(CNTK_COMPONENT_VERSION); \
             export CNTK_LIBRARIES="$(PYTHON_LIBS)"; \
             export CNTK_EXTRA_LIBRARIES=$$(ldd $(LIBDIR)/* | grep "^\s.*=> " | cut -d ">" -f 2- --only-delimited | cut -d "(" -f 1 --only-delimited | sort -u | grep -Ff <(echo $(PYTHON_EXTRA_LIBS_BASENAMES) | xargs -n1)); \
             test -x $(SWIG_PATH); \
