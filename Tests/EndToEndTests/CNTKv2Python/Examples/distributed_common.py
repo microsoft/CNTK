@@ -13,7 +13,6 @@ import re
 import pytest
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
-from cntk.device import set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 example_dir = os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python")

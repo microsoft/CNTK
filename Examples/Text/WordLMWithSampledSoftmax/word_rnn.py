@@ -8,16 +8,18 @@ import numpy as np
 import os
 import cntk as C
 import timeit
-from cntk import Trainer, Axis
-from cntk.learner import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error
+from cntk import Axis
+from cntk.train import Trainer
+from cntk.learners import momentum_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.ops import input_variable
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 from cntk.ops.functions import load_model
 from cntk.layers import Recurrence, Dense, LSTM, Stabilizer, For, Sequential
-from cntk.utils import log_number_of_parameters, ProgressPrinter
-from cntk.utils import log_number_of_parameters
+from cntk.logging import log_number_of_parameters, ProgressPrinter
 from data_reader import DataReader
 from math import log, exp
-from cntk.device import set_default_device, cpu, gpu
+from cntk.device import try_set_default_device, cpu, gpu
 
 # Setting global parameters
 use_sampled_softmax = True
@@ -78,8 +80,8 @@ def cross_entropy_with_sampled_softmax(
     sampling_weights,        # Node providing weights to be used for the weighted sampling
     allow_duplicates = False # Boolean flag to control whether to use sampling with replacement (allow_duplicates == True) or without replacement.
     ):
-    bias = C.Parameter(shape = (vocab_dim, 1), init = 0)
-    weights = C.Parameter(shape = (vocab_dim, hidden_dim), init = C.initializer.glorot_uniform())
+    bias = C.layers.Parameter(shape = (vocab_dim, 1), init = 0)
+    weights = C.layers.Parameter(shape = (vocab_dim, hidden_dim), init = C.initializer.glorot_uniform())
 
     sample_selector_sparse = C.random_sample(sampling_weights, num_samples, allow_duplicates) # sparse matrix [num_samples * vocab_size]
     if use_sparse:
@@ -135,7 +137,7 @@ def average_cross_entropy(full_cross_entropy_node, input_node, label_node, data)
 def create_model(input_sequence, label_sequence, vocab_dim, hidden_dim):
     # Create the rnn that computes the latent representation for the next token.
     rnn_with_latent_output = Sequential([
-        C.Embedding(hidden_dim),   
+        C.layers.Embedding(hidden_dim),   
         For(range(num_layers), lambda: 
             Sequential([Stabilizer(), Recurrence(LSTM(hidden_dim), go_backwards=False)])),
         ])

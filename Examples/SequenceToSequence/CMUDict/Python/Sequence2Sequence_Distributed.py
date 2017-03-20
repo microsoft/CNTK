@@ -13,15 +13,15 @@ import _cntk_py
 import cntk
 
 from cntk import Trainer, Axis
-from cntk.device import set_default_device, gpu
-from cntk.distributed import *
+from cntk.device import try_set_default_device, gpu
+from cntk.train.distributed import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
+from cntk.learners import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
+from cntk import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
-from cntk.training_session import *
+from cntk.train.training_session import *
 from cntk.utils import *
-
+from cntk.logging import *
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 model_path = os.path.join(abs_path, "Models")
@@ -170,7 +170,7 @@ def train_and_test(network, trainer, train_reader, test_reader, progress_printer
     ).train()
 
 def sequence_to_sequence_translator(train_data, test_data, epoch_size=908241, num_quantization_bits=default_quantization_bits, block_size=3200, warm_up=0, minibatch_size=72, max_epochs=10, randomize_data=False, log_to_file=None, num_mbs_per_log=10, gen_heartbeat=False):
-    _cntk_py.set_computation_network_trace_level(0)
+    cntk.debugging.set_computation_network_trace_level(0)
 
     progress_printer = ProgressPrinter(freq=num_mbs_per_log,
         tag='Training',
@@ -213,7 +213,7 @@ if __name__ == '__main__':
     if args['outputdir'] is not None:
         model_path = args['outputdir'] + "/models"
     if args['device'] is not None:
-        set_default_device(gpu(args['device']))
+        try_set_default_device(gpu(args['device']))
 
     data_path = args['datadir']
 

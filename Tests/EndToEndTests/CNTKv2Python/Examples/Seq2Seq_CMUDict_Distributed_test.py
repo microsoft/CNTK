@@ -7,9 +7,6 @@
 import numpy as np
 import os
 import sys
-from cntk.ops.tests.ops_test_utils import cntk_device
-from cntk.cntk_py import DeviceKind_GPU
-from cntk.device import set_default_device
 from cntk import distributed
 import pytest
 

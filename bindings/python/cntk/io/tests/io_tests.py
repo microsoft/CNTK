@@ -308,3 +308,27 @@ def test_sequence_conversion_dense(idx, alias_tensor_map, expected):
 def test_is_tensor(data, expected):
     from cntk.io import _is_tensor
     assert _is_tensor(data) == expected
+
+
+def test_create_two_image_deserializers(tmpdir):
+    mbdata = r'''filename	0
+filename2	0
+'''
+
+    map_file = str(tmpdir/'mbdata.txt')
+    with open(map_file, 'w') as f:
+        f.write(mbdata)
+
+    image_width = 100
+    image_height = 200
+    num_channels = 3
+    num_classes = 7
+
+    transforms = [xforms.crop(crop_type='randomside', side_ratio=0.5, jitter_type='uniratio'),
+                  xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
+        
+    image1 = ImageDeserializer(map_file, StreamDefs(f1 = StreamDef(field='image', transforms=transforms)))
+    image2 = ImageDeserializer(map_file, StreamDefs(f2 = StreamDef(field='image', transforms=transforms)))
+
+    mb_source = MinibatchSource([image1, image2])
+    assert isinstance(mb_source, MinibatchSource)

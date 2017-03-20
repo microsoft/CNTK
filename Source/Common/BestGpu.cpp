@@ -61,7 +61,7 @@ struct ProcessorData
     nvmlMemory_t memory;
     nvmlUtilization_t utilization;
     cudaDeviceProp deviceProp;
-    bool cntkFound;
+    bool mlAppsFound;
     int deviceId; // the deviceId (cuda side) for this processor
 };
 
@@ -78,7 +78,7 @@ enum BestGpuFlags
 
 class BestGpu
 {
-    std::map<int, std::unique_ptr<CrossProcessMutex>> m_GPUMutex;
+    std::map<int, std::shared_ptr<CrossProcessMutex>> m_GPUMutex;
 
 private:
     bool m_initialized;       // initialized
@@ -115,10 +115,10 @@ public:
     static const int MininumCCMajorForGpu = 3;                                                // cntk supports GPUs with Compute Capability > 3.0
     std::vector<int> GetDevices(int number = AllDevices, BestGpuFlags flags = bestGpuNormal); // get multiple devices
     std::vector<ProcessorData *> GetProcessorData();
-    void UnlockDevice(int deviceId);
+    std::shared_ptr<CrossProcessMutex> GetDeviceLock(int deviceId);
 
 private:
-    bool LockDevice(int deviceId, bool trial = true);
+    bool LockDevice(int deviceId, bool trial);
 };
 
 static DEVICEID_TYPE s_bestDeviceId = DEVICEID_NOTYETDETERMINED;
@@ -166,22 +166,86 @@ static DEVICEID_TYPE SelectDevice(DEVICEID_TYPE deviceId, bool bLockGPU, const i
     return deviceId;
 }
 
-DEVICEID_TYPE GetBestDevice()
+
+static std::unique_ptr<CrossProcessMutex> GetDeviceLock(int deviceId) 
 {
-     return SelectDevice(DEVICEID_AUTO, true, intargvector());
+    if (deviceId < 0) // don't lock CPU, always return a null pointer
+        return nullptr;
+
+    string name = "CNTK_exclusive_lock_for_GPU_" + to_string(deviceId);
+    return std::unique_ptr<CrossProcessMutex>(new CrossProcessMutex(name));
 }
 
-void OnDeviceSelected(DEVICEID_TYPE deviceId)
+
+static std::unique_ptr<CrossProcessMutex> LockDevice(int deviceId)
 {
-    if (s_bestDeviceId != DEVICEID_NOTYETDETERMINED && s_bestDeviceId != deviceId && s_bestDeviceId >= 0)
+    auto mutex = GetDeviceLock(deviceId);
+
+    if (mutex == nullptr)
+        return mutex;
+
+    if (!mutex->Acquire(/*wait=*/false)) // GPU not available
     {
-        // In case when the selected device id is different from the best device id, 
-        // need to release the lock corresponding to the best device, so that other processes
-        // can auto-select and use it.
-        s_bestGpu->UnlockDevice(s_bestDeviceId);
-        // also, reset best device id
-        s_bestDeviceId = DEVICEID_NOTYETDETERMINED;
+        if (GetMathLibTraceLevel() > 0)
+            fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
+
+        return nullptr;
     }
+
+    return std::move(mutex);
+}
+
+static std::shared_ptr<CrossProcessMutex> s_defaultDeviceLock;
+
+DEVICEID_TYPE GetBestDevice(const vector<int>& excluded)
+{
+    BestGpu bestGpu;
+    for (auto id : excluded)
+    {
+        bestGpu.DisallowDevice(id);
+    }
+
+    bestGpu.DisallowUnsupportedDevices();
+
+    auto deviceId = bestGpu.GetDevice(BestGpuFlags((bestGpuAvoidSharing | bestGpuExclusiveLock)));
+
+    s_defaultDeviceLock = bestGpu.GetDeviceLock(deviceId);
+
+    return (DEVICEID_TYPE)deviceId;
+}
+
+bool TryLock(int deviceId) 
+{
+    auto mutex = LockDevice(deviceId);
+    if (mutex != nullptr) // the device is locked now
+    {
+        s_defaultDeviceLock.reset(mutex.release()); // this will release previously held device lock
+        return true;
+    }
+
+    return false;
+}
+
+void ReleaseLock() {
+    // release any previously held device lock;
+    s_defaultDeviceLock.reset();
+}
+
+bool IsLocked(int deviceId)
+{
+    if (deviceId < 0)
+        return false;
+
+    auto mutex = LockDevice(deviceId);
+    if (mutex != nullptr) // the device is locked now
+    {
+        // since we were able to acquire the lock, the device was not locked.
+        // device lock will be released as soon as mutex goes out of scope
+        return false;
+    }
+
+    // we couldn't lock the device, somebody else holds a lock.
+    return true;
 }
 
 //#ifdef MATH_EXPORTS
@@ -473,7 +537,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
         score += pd->cores / 1000.0f * speedW;
         double mem = pd->memory.total > 0 ? pd->memory.free / (double) pd->memory.total : 1; // I saw this to be 0 when remoted in
         score += mem * freeMemW;
-        score += (pd->cntkFound ? 0 : 1) * mlAppRunningW;
+        score += (pd->mlAppsFound ? 0 : 1) * mlAppRunningW;
         for (int i = 0; i < best.size(); i++)
         {
             // look for a better score
@@ -503,7 +567,7 @@ std::vector<int> BestGpu::GetDevices(int number, BestGpuFlags p_bestFlags)
     }
 
     // global lock for this process
-    CrossProcessMutex deviceAllocationLock("DBN.exe GPGPU querying lock");
+    CrossProcessMutex deviceAllocationLock("CNTK_device_allocation_lock");
 
     if (!deviceAllocationLock.Acquire((bestFlags & bestGpuExclusiveLock) != 0)) // failure  --this should not really happen
         RuntimeError("DeviceFromConfig: Unexpected failure acquiring device allocation lock.");
@@ -566,11 +630,9 @@ GpuData GetGpuData(DEVICEID_TYPE deviceId)
     auto it = std::find_if(gpusData.begin(), gpusData.end(), [&deviceId](const GpuData& gpu){return gpu.deviceId == deviceId;});
 
     if (it != gpusData.end())
-    {
         return *it;
-    }
 
-    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0);
+    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0, 0);
 }
 
 // populate a vector with data (id, major/minor version, cuda cores, name and memory) for each gpu device in the machine
@@ -588,16 +650,13 @@ std::vector<GpuData> GetAllGpusData()
         GpuValidity validity = GpuValidity::UnknownDevice;
 
         if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
-        {
             validity = GpuValidity::ComputeCapabilityNotSupported;
-        }
         else
-        {
             validity = GpuValidity::Valid;
-        }
 
-        size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
-        GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory);
+        size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); // From bytes to MBytes
+        size_t freeMemory = pd->memory.free / (1024 * 1024); // From bytes to MBytes
+        GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory, freeMemory);
         data.push_back(gpuData);
     }
 
@@ -680,7 +739,7 @@ void BestGpu::QueryNvmlData()
             result = nvmlDeviceGetComputeRunningProcesses(device, &size, &processInfo[0]);
             if (NVML_SUCCESS != result)
                 return;
-            bool cntkFound = false;
+            bool mlAppsFound = false;
             for (nvmlProcessInfo_t info : processInfo)
             {
                 std::string name;
@@ -694,24 +753,21 @@ void BestGpu::QueryNvmlData()
                 if (GetCurrentProcessId() == info.pid || name.length() == 0)
                     continue;
 #ifdef _WIN32
-                // TODO: add python?
-                cntkFound = cntkFound || EqualCI(name, "cntk.exe"); // recognize ourselves
-                cntkFound = cntkFound || EqualCI(name, "cn.exe") || EqualCI(name, "dbn.exe"); // also recognize some MS-proprietary legacy tools
+                mlAppsFound |= EqualCI(name, "cntk.exe"); // recognize ourselves
+                mlAppsFound |= EqualCI(name, "cn.exe"); // also recognize some MS-proprietary legacy tools
+                mlAppsFound |= EqualCI(name, "dbn.exe"); // also recognize some MS-proprietary legacy tools
+                mlAppsFound |= EqualCI(name, "python.exe");
 #else
-                cntkFound = cntkFound || name == "cntk"; // (Linux is case sensitive)
+                mlAppsFound |= name == "cntk"; // (Linux is case sensitive)
+                mlAppsFound |= name == "python";
 #endif
             }
             // set values to save
-            curPd->cntkFound = cntkFound;
+            curPd->mlAppsFound = mlAppsFound;
         }
     }
     m_nvmlData = true;
     return;
-}
-
-void BestGpu::UnlockDevice(int deviceId)
-{
-    delete m_GPUMutex[deviceId].release();
 }
 
 bool BestGpu::LockDevice(int deviceId, bool trial)
@@ -720,26 +776,29 @@ bool BestGpu::LockDevice(int deviceId, bool trial)
     {
         return true;
     }
-    // ported from dbn.exe, not perfect but it works in practice
-    char buffer[80];
-    sprintf(buffer, "DBN.exe GPGPU exclusive lock for device %d", deviceId);
-    std::unique_ptr<CrossProcessMutex> mutex(new CrossProcessMutex(buffer));
-    if (!mutex->Acquire(/*wait=*/false)) // GPU not available
-    {
-        if (GetMathLibTraceLevel() > 0)
-            fprintf(stderr, "LockDevice: Failed to lock GPU %d for exclusive use.\n", deviceId);
 
+    auto mutex = Microsoft::MSR::CNTK::LockDevice(deviceId);
+
+    if (mutex == nullptr) 
+    {
         return false;
     }
-    else
-    {
-        //fprintf(stderr, "LockDevice: Locked GPU %d %s.\n", deviceId, trial ? "to test availability" : "for exclusive use");
-        if (!trial)
-            m_GPUMutex[deviceId] = std::move(mutex);
-        //else
-        //    fprintf(stderr, "LockDevice: Unlocked GPU %d after testing.\n", deviceId);
-    }
+
+    //fprintf(stderr, "LockDevice: Locked GPU %d %s.\n", deviceId, trial ? "to test availability" : "for exclusive use");
+    if (!trial)
+        m_GPUMutex[deviceId] = std::move(mutex);
+    //else
+    //    fprintf(stderr, "LockDevice: Unlocked GPU %d after testing.\n", deviceId);
+
     return true;
+}
+
+std::shared_ptr<CrossProcessMutex> BestGpu::GetDeviceLock(int deviceId)
+{
+    if (m_GPUMutex.find(deviceId) == m_GPUMutex.end())
+        return nullptr;
+
+    return m_GPUMutex[deviceId];
 }
 
 #ifdef _WIN32

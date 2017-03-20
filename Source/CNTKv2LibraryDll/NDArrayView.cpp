@@ -54,28 +54,31 @@ namespace CNTK
     template <typename ElementType>
     static TensorView<ElementType>* AllocateTensorView(const NDShape& viewShape,
                                                        CNTK::StorageFormat storageType,
-                                                       const DeviceDescriptor& device)
+                                                       const DeviceDescriptor& device,
+                                                       size_t numNonZeroValues = 0)
     {
         auto matrixDims = GetMatrixDimensions(viewShape);
         std::shared_ptr<Matrix<ElementType>> matrix = std::make_shared<Matrix<ElementType>>(matrixDims.first,
                                                                                             matrixDims.second,
                                                                                             AsCNTKImplDeviceId(device),
                                                                                             IsSparseStorageFormat(storageType) ? MatrixType::SPARSE : MatrixType::DENSE,
-                                                                                            AsCNTKImplMatrixFormat(storageType));
+                                                                                            AsCNTKImplMatrixFormat(storageType),
+                                                                                            numNonZeroValues);
         return new TensorView<ElementType>(matrix, AsTensorViewShape(viewShape));
     }
 
     static void* AllocateTensorView(CNTK::DataType dataType,
                                     CNTK::StorageFormat storageType,
                                     const NDShape& viewShape,
-                                    const DeviceDescriptor& device)
+                                    const DeviceDescriptor& device,
+                                    size_t numNonZeroValues = 0)
     {
         switch (dataType)
         {
         case DataType::Float:
-            return AllocateTensorView<float>(viewShape, storageType, device);
+            return AllocateTensorView<float>(viewShape, storageType, device, numNonZeroValues);
         case DataType::Double:
-            return AllocateTensorView<double>(viewShape, storageType, device);
+            return AllocateTensorView<double>(viewShape, storageType, device, numNonZeroValues);
         default:
             LogicError("Unsupported DataType %s", DataTypeName(dataType));
             break;
@@ -89,7 +92,7 @@ namespace CNTK
 
     template <typename ElementType>
     NDArrayView::NDArrayView(const NDShape& viewShape, const SparseIndexType* colStarts, const SparseIndexType* rowIndices, const ElementType* nonZeroValues, size_t numNonZeroValues, const DeviceDescriptor& device, bool readOnly/* = false*/)
-        : NDArrayView(AsDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView<ElementType>(viewShape, StorageFormat::SparseCSC, device))
+        : NDArrayView(AsDataType<ElementType>(), device, StorageFormat::SparseCSC, viewShape, false, AllocateTensorView<ElementType>(viewShape, StorageFormat::SparseCSC, device, numNonZeroValues))
     {
         if ((colStarts == nullptr) || (rowIndices == nullptr) || (nonZeroValues == nullptr) || (numNonZeroValues == 0) || (numNonZeroValues > viewShape.TotalSize()))
             InvalidArgument("Invalid sparse CSC format data specified for construction of NDArrayView with shape '%S'; "

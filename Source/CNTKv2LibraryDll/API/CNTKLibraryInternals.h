@@ -262,6 +262,9 @@ namespace CNTK
         CNTK_API void ForceDeterministicAlgorithms();
         CNTK_API bool ShouldForceDeterministicAlgorithms();
 
+        CNTK_API void EnableSynchronousGPUKernelExecution();
+        CNTK_API bool IsSynchronousGPUKernelExecutionEnabled();
+
         CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
 
         CNTK_API void EnableForwardValuesSharing();
@@ -351,5 +354,11 @@ namespace CNTK
             FILE* m_file;
             std::wstring m_fileName;
         };
+    }
+
+    // Forward-declare test fixtures, so that they can be used as friends.
+    namespace Test 
+    {
+        struct DeviceSelectionTestFixture;
     }
 }

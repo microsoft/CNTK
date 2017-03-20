@@ -345,3 +345,10 @@ def test_multioutput_udf():
     gradients = op.grad({x : x_data, y : y_data}, op.arguments)
     assert np.allclose(gradients[op.arguments[0]], [[[3., 3.], [3., 3.]]])
     assert np.allclose(gradients[op.arguments[1]], [[[3., 3.], [3., 3.]]])
+
+def test_udf_op_name():
+    dim = 4
+    p = parameter(shape=(dim,), init=10, name='p')
+    i = input_variable(dim, needs_gradient=True, name='i_var')
+    m = user_function(MyPlus(i, constant(3)))
+    print(m.root_function)

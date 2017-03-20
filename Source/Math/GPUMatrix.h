@@ -79,6 +79,7 @@ private:
 
 public:
     static MATH_API void EnableSync();
+    static MATH_API bool IsSyncEnabled();
 
     SyncGuard(bool forceSync = false);
     ~SyncGuard();

@@ -127,6 +127,11 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     s_isSyncEnabled = true;
 }
 
+/*static*/ bool SyncGuard::IsSyncEnabled() 
+{
+    return s_isSyncEnabled; 
+}
+
 SyncGuard::SyncGuard(bool forceSync /*= false*/)
     : m_forceSync(forceSync)
 {

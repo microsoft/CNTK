@@ -12,10 +12,11 @@ import numpy as np
 import cntk
 import _cntk_py
 
+from cntk.logging import *
 from cntk.utils import *
-from cntk.training_session import *
-from cntk.ops import *
-from cntk.distributed import *
+from cntk.train.training_session import *
+from cntk import *
+from cntk.train.distributed import *
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
 import cntk.io.transforms as xforms
 from cntk.layers import Placeholder, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
@@ -69,17 +70,17 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
 # where a_{x,y}^i is the activity of a neuron comoputed by applying kernel i at position (x,y)
 # N is the total number of kernals, n is half normalization width.
 def LocalResponseNormalization(k, n, alpha, beta, name=''):
-    x = cntk.blocks.Placeholder(name='lrn_arg')
-    x2 = cntk.ops.square(x)
+    x = Placeholder(name='lrn_arg')
+    x2 = cntk.square(x)
     # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
-    x2s = cntk.ops.reshape(x2, (1, cntk.InferredDimension), 0, 1)
-    W = cntk.ops.constant(alpha/(2*n+1), (1,2*n+1,1,1), name='W')
+    x2s = cntk.reshape(x2, (1, cntk.InferredDimension), 0, 1)
+    W = cntk.constant(alpha/(2*n+1), (1,2*n+1,1,1), name='W')
     # 3D convolution with a filter that has a non 1-size only in the 3rd axis, and does not reduce since the reduction dimension is fake and 1
-    y = cntk.ops.convolution (W, x2s)
+    y = cntk.convolution (W, x2s)
     # reshape back to remove the fake singleton reduction dimension
-    b = cntk.ops.reshape(y, cntk.InferredDimension, 0, 2)
-    den = cntk.ops.exp(beta * cntk.ops.log(k + b))
-    apply_x = cntk.ops.element_divide(x, den)
+    b = cntk.reshape(y, cntk.InferredDimension, 0, 2)
+    den = cntk.exp(beta * cntk.log(k + b))
+    apply_x = cntk.element_divide(x, den)
     return apply_x
 
 # Create the network.
@@ -143,15 +144,15 @@ def create_alexnet():
 def create_trainer(network, epoch_size, num_quantization_bits, printer, block_size, warm_up):
     # Set learning parameters
     lr_per_mb         = [0.01]*25 + [0.001]*25 + [0.0001]*25 + [0.00001]*25 + [0.000001]
-    lr_schedule       = cntk.learning_rate_schedule(lr_per_mb, unit=cntk.learner.UnitType.minibatch, epoch_size=epoch_size)
-    mm_schedule       = cntk.learner.momentum_schedule(0.9)
+    lr_schedule       = cntk.learning_rate_schedule(lr_per_mb, unit=cntk.learners.UnitType.minibatch, epoch_size=epoch_size)
+    mm_schedule       = cntk.learners.momentum_schedule(0.9)
     l2_reg_weight     = 0.0005 # CNTK L2 regularization is per sample, thus same as Caffe
 
     if block_size != None and num_quantization_bits != 32:
         raise RuntimeError("Block momentum cannot be used with quantization, please remove quantized_bits option.")
 
     # Create learner
-    local_learner = cntk.learner.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
+    local_learner = cntk.learners.momentum_sgd(network['output'].parameters, lr_schedule, mm_schedule, unit_gain=False, l2_regularization_weight=l2_reg_weight)
     # Since we reuse parameter settings (learning rate, momentum) from Caffe, we set unit_gain to False to ensure consistency
 
     # Create trainer
@@ -227,9 +228,9 @@ if __name__=='__main__':
     if args['device'] is not None:
         # Setting one worker on GPU and one worker on CPU. Otherwise memory consumption is too high for a single GPU.
         if Communicator.rank() == 0:
-            cntk.device.set_default_device(cntk.device.gpu(args['device']))
+            cntk.device.try_set_default_device(cntk.device.gpu(args['device']))
         else:
-            cntk.device.set_default_device(cntk.device.cpu())
+            cntk.device.try_set_default_device(cntk.device.cpu())
 
     data_path = args['datadir']
 
@@ -252,4 +253,4 @@ if __name__=='__main__':
                                epoch_size=args['epoch_size'],
                                gen_heartbeat=True)
     finally:
-        cntk.distributed.Communicator.finalize()
+        cntk.train.distributed.Communicator.finalize()

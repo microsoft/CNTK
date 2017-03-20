@@ -30,14 +30,23 @@ namespace CNTK
             NOT_IMPLEMENTED;
     }
 
+    template <typename T>
+    inline bool IsObjectExpired(std::weak_ptr<T> ptrToObject)
+    {
+        if ((ptrToObject.owner_before(std::weak_ptr<T>{}) || std::weak_ptr<T>{}.owner_before(ptrToObject)) && ptrToObject.expired())
+            return true;
+        else
+            return false;
+    }
+
     inline DEVICEID_TYPE AsCNTKImplDeviceId(const DeviceDescriptor& device)
     {
         if (device.Type() == DeviceKind::CPU)
             return CPUDEVICE;
-        else if (device.Type() == DeviceKind::GPU)
+        if (device.Type() == DeviceKind::GPU)
             return device.Id();
-        else
-            NOT_IMPLEMENTED;
+
+        LogicError("Invalid device type (%u).", (unsigned int)device.Type());
     }
 
     inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKImplMatrixFormat(StorageFormat storageFormat)

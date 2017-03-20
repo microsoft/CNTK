@@ -8,7 +8,7 @@ from collections import defaultdict
 
 from cntk import cntk_py, user_function
 
-from cntk import output_variable, CloneMethod
+from cntk.ops import output_variable, CloneMethod
 
 from cntk.ops.functions import UserFunction
 from cntk.internal import map_if_possible
@@ -174,7 +174,7 @@ class _DebugNode(UserFunction):
     def clone(self, cloned_inputs):
         arg = cloned_inputs[0]
         map_if_possible(arg)
-        return _DebugNode(arg, self.debug_state)
+        return _DebugNode(arg, self.debug_state, self._in,self._out, self._exit)
 
     # TODO:
     # Breakopint handling
@@ -368,7 +368,7 @@ class _DebugNode(UserFunction):
 
 
 def _nodes_to_debug(model):
-    from cntk.graph import depth_first_search
+    from cntk.logging.graph import depth_first_search
 
     def node_filter(x):
         if hasattr(x, 'op_name') and x.op_name in ['NoOp']:
@@ -410,29 +410,23 @@ def debug_model(model, in_stream=sys.stdin, out_stream=sys.stdout,
     dbg_state = _DebugState(nodes)
 
     orig_node_count = len(nodes)
-    mod_counter = 1
+    mod_counter = 0
 
     # We cannot add the DebugNodes in one clone because the replacements will
     # hide parent nodes.
-    while True:
+    while len(nodes) > 0:
         modifications = {n: user_function(_DebugNode(n, dbg_state,
                                                      in_stream, out_stream,
                                                      exit_func))
                          for n in nodes}
 
         model = model.clone(CloneMethod.share, modifications)
-        from cntk.graph import plot
 
-        nodes = _nodes_to_debug(model)
-        if len(nodes) == 1:
-            # last node is the model node, which we want to debug as well
-            model = user_function(_DebugNode(model, dbg_state,
-                                             in_stream, out_stream))
-            break
+        mod_counter += 1
 
         if mod_counter > orig_node_count:
             raise ValueError('cannot debug this graph')
 
-        mod_counter += 1
+        nodes = _nodes_to_debug(model)
 
     return model

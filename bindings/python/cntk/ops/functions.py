@@ -542,7 +542,7 @@ class Function(cntk_py.Function):
             >>> # 1st sequence: word 1
             >>> # 2nd sequence: words 2 and 4
             >>> batch = [[1],[2,4]]
-            >>> sparse_batch = C.one_hot(batch, vocab_size)
+            >>> sparse_batch = C.Value.one_hot(batch, vocab_size)
             >>> _, fv = f.forward({v:sparse_batch})
             >>> list(fv.values())[0]
             [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
@@ -755,6 +755,8 @@ class Function(cntk_py.Function):
 
         if wrt is None:
             wrt = [arg for arg in self.arguments if arg.needs_gradient]
+            if len(wrt) == 0:
+                raise ValueError("None of the Function '%s' arguments have 'needs_gradient == True'" % str(self))
 
         output_map = {v: None for v in outputs}
         wrt_map = {v: None for v in wrt}
@@ -1237,9 +1239,3 @@ class UserFunction(Function):
             A cloned instance of this user-defined function.
         '''
         raise NotImplementedError('clone has to be overwritten')
-
-    def op_name(self):
-        '''
-        Returns the operator name.
-        '''
-        return 'UserFunction'
