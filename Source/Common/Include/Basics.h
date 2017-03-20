@@ -718,7 +718,7 @@ public:
     }
 
 private:
-    FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc);
+    Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc);
 };
 #endif
 
