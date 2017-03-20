@@ -104,6 +104,8 @@ def test_learner_init():
     gamma, inc, dec, max, min = [0.1]*5
     lr_per_sample = learning_rate_schedule([0.1, 0.2], UnitType.sample, 100)
     rmsprop(res.parameters, lr_per_sample, gamma, inc, dec, max, min, True)
+    
+    adadelta(res.parameters)
 
 def test_learner_update():
     i = input_variable(shape=(1,),

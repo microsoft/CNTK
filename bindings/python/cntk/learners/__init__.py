@@ -572,7 +572,7 @@ def adadelta(parameters, rho=0.95, epsilon=1e-8,
     Args:
         parameters (list of parameters): list of network parameters to tune.
          These can be obtained by the root operator's ``parameters``.
-        rho (float): exponential smooth factor between 0 and 1.
+        rho (float): exponential smooth factor for each minibatch.
         epsilon (float): epsilon for sqrt.
         l1_regularization_weight (float, optional): the L1 regularization weight per sample,
          defaults to 0.0
