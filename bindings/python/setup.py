@@ -68,10 +68,10 @@ def strip_ext(fn):
 
 if IS_WINDOWS:
     libname_rt_ext = '.dll'
-    cntkVersion = "Cntk.library-" + os.environ['CNTK_COMPONENT_VERSION']
+    cntkVersion = "Cntk.Library-" + os.environ['CNTK_COMPONENT_VERSION']
     link_libs = [cntkVersion]
 else:
-    cntkVersion = "Cntk.library-" + os.environ['CNTK_COMPONENT_VERSION']
+    cntkVersion = "Cntk.Library-" + os.environ['CNTK_COMPONENT_VERSION']
     link_libs = [cntkVersion]
     libname_rt_ext = '.so'
 
