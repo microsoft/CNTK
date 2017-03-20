@@ -18,8 +18,8 @@ def test_cntk_206B_dcgan_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedEvalError = 1.8 
-expectedEvalErrorAtol = 0.18
+expectedEvalError = 2.05
+expectedEvalErrorAtol = 0.45
 
 def test_cntk_206B_dcgan_evalCorrect(nb):
     testCell = [cell for cell in nb.cells
