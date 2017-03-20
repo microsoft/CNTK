@@ -51,7 +51,9 @@
 #define CNTK_MODEL_VERSION_19 19 // batch norm: flag whether running mean count is 0
 #define CNTK_MODEL_VERSION_20 20 // adding output shape to convolution node
 #define CNTK_MODEL_VERSION_21 21 // pooling: add a ceilOutDim to decide whether ceil or floor while computing the output size
-#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_21
+#define CNTK_MODEL_VERSION_22 22 // pooling: add include pad func for average pooling
+
+#define CURRENT_CNTK_MODEL_VERSION CNTK_MODEL_VERSION_22
 
 
 // helper mode for debugging
