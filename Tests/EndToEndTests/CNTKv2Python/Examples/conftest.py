@@ -9,8 +9,10 @@ import pytest
 
 _DEFAULT_DEVICE_ID=-1
 
-import cntk.cntk_py
+import cntk
+import cntk.debugging
 cntk.cntk_py.always_allow_setting_default_device()
+cntk.debugging.set_computation_network_track_gap_nans(True)
 
 def pytest_addoption(parser):
     parser.addoption("--deviceid", action="append", default=[_DEFAULT_DEVICE_ID],

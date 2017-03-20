@@ -35,9 +35,11 @@ def Sequential(layers, name=''):
 def For(rng, constructor, name=''):
     '''
     Layer factory function to create a composite that applies a sequence of layers constructed with a constructor lambda(layer).
-    E.g.
-     For(range(3), lambda i: Dense(2000))
-     For(range(3), lambda: Dense(2000))
+    For example::
+
+        For(range(3), lambda i: Dense(2000))
+        For(range(3), lambda: Dense(2000))
+
     '''
     # Python 2.7 support requires us to use getargspec() instead of inspect
     from inspect import getargspec

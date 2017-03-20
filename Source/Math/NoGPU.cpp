@@ -106,7 +106,7 @@ GPUSPARSE_INDEX_TYPE* GPUSparseMatrix<ElemType>::GetCondensedVector() const
 }
 
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+void GPUSparseMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
 }
 
@@ -160,7 +160,7 @@ void GPUSparseMatrix<ElemType>::RequireSizeAndAllocate(const size_t numRows, con
 {
 }
 template <class ElemType>
-void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const MatrixFormat format, const bool growOnly)
+void GPUSparseMatrix<ElemType>::RequireSize(const size_t numRows, const size_t numCols, const size_t numNZElemToReserve, const MatrixFormat format, const bool growOnly)
 {
 }
 template <class ElemType>
@@ -1010,7 +1010,7 @@ void GPUMatrix<ElemType>::SetColumn(const GPUMatrix<ElemType>& valMat, size_t co
 }
 
 template <class ElemType>
-void GPUMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val)
+void GPUMatrix<ElemType>::MaskColumnsValue(const GPUMatrix<char>& columnsMask, ElemType val, size_t numColsPerMaskEntry)
 {
 }
 
@@ -2355,6 +2355,9 @@ float CudaTimer::Elapsed()
 /*static*/ void SyncGuard::EnableSync()
 {
 }
+
+/*static*/ bool SyncGuard::IsSyncEnabled() { return false; }
+
 } } }
 
 // define a dummy GPUWatcher class too

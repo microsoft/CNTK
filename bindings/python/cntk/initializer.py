@@ -18,7 +18,7 @@ def uniform(scale, seed=None):
         seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
+        initializer for :class:`cntk.ops.variables.Parameter`
         initialized to uniform distribution between `scale*[-1.0, 1.0]`
         note this maps to the "uniform1" distribution in BrainScript. 
     '''
@@ -38,7 +38,7 @@ def normal(scale, output_rank=SentinelValueForInferParamInitRank, filter_rank=Se
         seed (int): random seed
 
     Returns:
-        initializer for :class:`cntk.variables.Parameter`
+        initializer for :class:`cntk.ops.variables.Parameter`
         initialized to normal distribution with mean `0` and standard deviation `scale`. 
     '''
     if seed is None:

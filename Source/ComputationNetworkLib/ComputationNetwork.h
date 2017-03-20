@@ -912,6 +912,12 @@ public:
     // diagnostics
     // -----------------------------------------------------------------------
 
+    void SetTrackGapNans(bool enable)
+    {
+        m_environment->trackGapNans = enable;
+    }
+    bool GetTrackGapNaNs() const { return m_environment->trackGapNans; }
+
     void SetTraceLevel(int traceLevel)
     {
         m_environment->traceLevel = traceLevel;

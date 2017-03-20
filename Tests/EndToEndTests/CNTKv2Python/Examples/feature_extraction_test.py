@@ -9,7 +9,7 @@ import os
 import sys
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.cntk_py import DeviceKind_GPU
-from cntk.device import set_default_device
+from cntk.device import try_set_default_device
 import pytest
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
@@ -21,7 +21,7 @@ TOLERANCE_ABSOLUTE = 2E-2
 def disabled_fix_data_set_zip___test_feature_extraction(device_id):
     if cntk_device(device_id).type() != DeviceKind_GPU:
         pytest.skip('test only runs on GPU') # due to batch normalization in ResNet_18
-    set_default_device(cntk_device(device_id))
+    try_set_default_device(cntk_device(device_id))
 
     base_path = os.path.dirname(os.path.abspath(__file__))
     externalData = 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' in os.environ

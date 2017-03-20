@@ -15,7 +15,7 @@ import pytest
 from .ops_test_utils import _test_binary_op, AA, I, precision, PRECISION_TO_TYPE,\
         unittest_helper
 
-from cntk import edit_distance_error, input_variable
+from cntk import edit_distance_error, input_variable, dropout
 
 TARGET_OUT_PAIRS = [
     # (target_vector, output_vector)
@@ -47,7 +47,7 @@ def test_op_cross_entropy_with_soft_max(output_vector, target_vector, device_id,
         'right_arg': [[-1*o]]
     }
 
-    from .. import cross_entropy_with_softmax
+    from cntk.losses import cross_entropy_with_softmax
     _test_binary_op(precision, device_id, cross_entropy_with_softmax,
                     output_vector, target_vector,
                     expected_forward, expected_backward)
@@ -102,7 +102,7 @@ def test_op_cross_entropy_with_soft_max_and_axis(output_vector, target_vector, a
         'right_arg': [[expected_backward_right]]
     }
 
-    from .. import cross_entropy_with_softmax
+    from cntk.losses import cross_entropy_with_softmax
     _test_binary_op(precision, device_id, cross_entropy_with_softmax,
                     output_vector, target_vector,
                     expected_forward, expected_backward, op_param_dict={'axis': axis})
@@ -122,7 +122,7 @@ def test_op_squared_error(output_vector, target_vector, device_id, precision):
         'right_arg': [[-1*backward]]
     }
 
-    from .. import squared_error
+    from cntk.losses import squared_error
     _test_binary_op(precision, device_id, squared_error,
                     output_vector, target_vector,
                     expected_forward, expected_backward)
@@ -155,7 +155,7 @@ def test_op_classification_error(output_vector, target_vector, device_id, precis
         'right_arg': [[right_backward]]
     }
 
-    from .. import classification_error
+    from cntk.metrics import classification_error
     _test_binary_op(precision, device_id, classification_error,
                     output_vector, target_vector,
                     expected_forward, expected_backward)
@@ -211,7 +211,7 @@ def test_op_classification_error_with_axis(output_vector, target_vector, axis, d
         'right_arg': expected_backward_right
     }
 
-    from .. import classification_error
+    from cntk.metrics import classification_error
     _test_binary_op(precision, device_id, classification_error,
                     output_vector, target_vector,
                     expected_forward, expected_backward, op_param_dict={'axis':axis})
@@ -233,15 +233,14 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
     expected_value = AA(value, dtype=dt)
     expected_grad  = AA(grad, dtype=dt)
 
-    from .. import lambda_rank
+    from cntk.losses import lambda_rank
 
     g = I((1,))
     s = I((1,), needs_gradient=True)
     n = I((1,))
     f = lambda_rank(s, n, g)
 
-    actual_grad  = f.grad({s:score, n:gain, g:group}, [s])
-    actual_value = f.eval({s:score, n:gain, g:group})
+    actual_grad, actual_value = f.grad({s:score, n:gain, g:group}, [s], [f.output])
 
     assert np.allclose(actual_value, expected_value)
     assert np.allclose(actual_grad,  expected_grad)
@@ -262,7 +261,7 @@ def test_ndcg(value, output, gain, device_id, precision):
 
     expected_value = AA(value, dtype=dt)
 
-    from .. import ndcg_at_1
+    from cntk.metrics import ndcg_at_1
 
     g = I((1,))
     s = I((1,))
@@ -307,3 +306,8 @@ def test_sequence_grad_as_numpy_false(device_id, precision):
     assert np.array_equal(result[1], np.asarray([[3.], [3.]]))
     assert np.array_equal(result[2], np.asarray([[3.], [3.], [3.]]))
 
+def test_grad_with_no_arguments_needing_gradients():
+    x = input_variable(10)
+    z = dropout(x, .4)
+    with pytest.raises(ValueError):
+        _, result = z.grad({x: [np.array([5]*150, "float32").reshape(15, 10)]}, outputs=[z])

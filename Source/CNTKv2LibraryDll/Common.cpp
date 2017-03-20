@@ -19,6 +19,7 @@
 #include "Basics.h"
 #include "ProgressTracing.h"
 #include "buildinfo.h"
+#include "Constants.h"
 
 extern bool g_shareNodeValueMatrices;
 using namespace Microsoft::MSR::CNTK;
@@ -241,13 +242,18 @@ namespace CNTK
         template <typename ElementType>
         std::pair<ElementType*, NDArrayViewPtr> GetCPUDataPtr(const NDArrayView& view) 
         {
-            if (view.Device().Type() == DeviceKind::CPU)
+            auto deviceType = view.Device().Type();
+
+            if (deviceType == DeviceKind::CPU)
                 return{ const_cast<ElementType*>(view.DataBuffer<ElementType>()), nullptr };
-            else
+            
+            if (deviceType == DeviceKind::GPU) 
             {
                 auto tempCPUDataView = view.DeepClone(DeviceDescriptor::CPUDevice());
                 return{ tempCPUDataView->WritableDataBuffer<ElementType>(), tempCPUDataView };
             }
+            
+            LogicError("Invalid device type (%u).", (unsigned int)deviceType);
         }
 
         template <typename ElementType> 
@@ -282,7 +288,7 @@ namespace CNTK
             if (view1.GetDataType() == DataType::Double)
                 return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
 
-            LogicError("Unknown DataType");
+            LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }
 
         std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
@@ -366,7 +372,7 @@ namespace CNTK
             if (value1.GetDataType() == DataType::Double)
                 return AreEqual<double>(value1, value2, relativeTolerance, absoluteTolerance);
 
-            LogicError("Unknown DataType");
+            LogicError("AreEqual(Value): Unknown DataType.");
         }
 
         std::atomic<int> s_computationNetworkTraceLevel(0);
@@ -378,6 +384,17 @@ namespace CNTK
         int GetComputationNetworkTraceLevel()
         {
             return s_computationNetworkTraceLevel.load();
+        }
+
+        std::atomic<bool> s_computationNetworkTrackGapNans(false);
+        void SetComputationNetworkTrackGapNans(bool enable)
+        {
+            s_computationNetworkTrackGapNans.store(enable);
+        }
+
+        bool GetComputationNetworkTrackGapNans()
+        {
+            return s_computationNetworkTrackGapNans.load();
         }
 
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)
@@ -395,74 +412,114 @@ namespace CNTK
             return Microsoft::MSR::CNTK::Globals::ShouldForceDeterministicAlgorithms();
         }
 
+        void EnableSynchronousGPUKernelExecution()
+        {
+            SyncGuard::EnableSync();
+        }
+
+        bool IsSynchronousGPUKernelExecutionEnabled()
+        {
+            return SyncGuard::IsSyncEnabled();
+        }
+
         static std::atomic<bool> s_threadsAreSet(false);
         bool MaxNumCPUThreadsSet()
         {
             return s_threadsAreSet;
         }
+
+        size_t DefaultPackThresholdSizeInBytes()
+        {
+            return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
+        }
     }
 
     /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
 
-    /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
-    /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice;
-    /*static*/ std::shared_ptr<std::vector<DeviceDescriptor>> DeviceDescriptor::s_allDevices;
+    /*static*/ std::mutex DeviceDescriptor::s_mutex;
+    /*static*/ bool DeviceDescriptor::s_defaultDeviceFrozen(false);
+    /*static*/ std::unique_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(nullptr);
+    /*static*/ std::vector<DeviceDescriptor> DeviceDescriptor::s_excludedDevices;
+    /*static*/ std::vector<DeviceDescriptor> DeviceDescriptor::s_allDevices;
+    /*static*/ std::vector<GPUProperties> DeviceDescriptor::s_gpuProperties;
 
-    static std::once_flag s_initDefaultDeviceFlag, s_initAllDevicesFlag;
+    static std::once_flag s_initAllDevicesFlag;
 
-    /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
+    /*static*/ void DeviceDescriptor::Reset()
     {
-        std::call_once(s_initDefaultDeviceFlag, []
-        {
-            s_defaultDevice.reset(new DeviceDescriptor(DeviceDescriptor::BestDevice()));
-        });
-        return *s_defaultDevice;
+        DeviceDescriptor::s_defaultDevice.reset(nullptr);
+        DeviceDescriptor::s_defaultDeviceFrozen = false;
+        DeviceDescriptor::s_excludedDevices.clear();
+    }
+
+    bool DeviceDescriptor::IsLocked() const
+    {
+        return Microsoft::MSR::CNTK::IsLocked(AsCNTKImplDeviceId(*this));
     }
 
     /*static*/ DeviceDescriptor DeviceDescriptor::UseDefaultDevice()
     {
-        bool alreadyFrozen = s_defaultDeviceFrozen.exchange(true);
-        auto selectedDevice = DefaultDevice();
-        if (!alreadyFrozen)
+        std::unique_lock<std::mutex> lock(s_mutex);
+
+        if (!s_defaultDeviceFrozen && s_defaultDevice == nullptr)
         {
-            Microsoft::MSR::CNTK::OnDeviceSelected(AsCNTKImplDeviceId(selectedDevice));
+            vector<int> excludedIds;
+            for (auto device : s_excludedDevices)
+            {
+                excludedIds.push_back(AsCNTKImplDeviceId(device));
+            }
+            auto id = Microsoft::MSR::CNTK::GetBestDevice(excludedIds);
+            auto selectedDevice = id >= 0 ? DeviceDescriptor::GPUDevice(id) : DeviceDescriptor::CPUDevice();
+            s_defaultDevice.reset(new DeviceDescriptor(selectedDevice));
         }
-        return selectedDevice;
+
+        s_defaultDeviceFrozen = true;
+
+        return *s_defaultDevice;
     }
 
-    /*static*/ void DeviceDescriptor::SetDefaultDevice(const DeviceDescriptor& newDefaultDevice)
+    /*static*/ bool DeviceDescriptor::TrySetDefaultDevice(const DeviceDescriptor& newDefaultDevice, bool acquireDeviceLock)
     {
-        if (newDefaultDevice == DefaultDevice())
-            return;
+        std::unique_lock<std::mutex> lock(s_mutex);
+
+        if (s_defaultDevice != nullptr && newDefaultDevice == *s_defaultDevice)
+            return !acquireDeviceLock || Microsoft::MSR::CNTK::TryLock(AsCNTKImplDeviceId(newDefaultDevice));
 
         // As a testing backdoor we allow changing the default device even after being "used/frozen"
-        if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
-            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
-
-        std::call_once(s_initDefaultDeviceFlag, []
+        if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen)
+            // TODO: alternatively, print a warning and return false.
         {
-            // do nothing. This will set the flag above, in case when DefaultDevice() was never called before.
-        });
+            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used "
+                         "as the default device in a CNTK API call; Current default = %S, New default = %S.",
+                         s_defaultDevice->AsString().c_str(), newDefaultDevice.AsString().c_str());
+        }
+
+        if (std::find(s_excludedDevices.begin(), s_excludedDevices.end(), newDefaultDevice) != s_excludedDevices.end())
+            return false;
+
+        if (acquireDeviceLock && !Microsoft::MSR::CNTK::TryLock(AsCNTKImplDeviceId(newDefaultDevice)))
+            return false;
 
         s_defaultDevice.reset(new DeviceDescriptor(newDefaultDevice));
-    }
-    
-    /*static*/ DeviceDescriptor DeviceDescriptor::BestDevice()
-    {
-        //TODO: BestDevice remains locked if UseDefaultDevice is never executed
-        // or if BestDevice() is invoked after UseDefaultDevice(). 
-        // Should we do anything about it?
-        auto id = Microsoft::MSR::CNTK::GetBestDevice();
-        return id >= 0 ? DeviceDescriptor::GPUDevice(id) : DeviceDescriptor::CPUDevice();
+
+        if (!acquireDeviceLock)
+            Microsoft::MSR::CNTK::ReleaseLock();
+
+        return true;
     }
 
+    /*static*/ void DeviceDescriptor::SetExcludedDevices(const std::vector<DeviceDescriptor>& excluded)
+    {
+        std::unique_lock<std::mutex> lock(s_mutex);
+        s_excludedDevices = excluded;
+    }
+    
     /*static*/ const std::vector<DeviceDescriptor>& DeviceDescriptor::AllDevices()
     {
         using namespace Microsoft::MSR::CNTK;
 
-        std::call_once(s_initAllDevicesFlag, []
+        std::call_once(s_initAllDevicesFlag, [&]
         {
-           s_allDevices.reset(new std::vector<DeviceDescriptor>());
 #ifndef CPUONLY
            auto allGpusData = GetAllGpusData();
 
@@ -470,14 +527,23 @@ namespace CNTK
             {
                 if (gpuData.validity == GpuValidity::Valid)
                 {
-                    s_allDevices->push_back(DeviceDescriptor((unsigned int) gpuData.deviceId, DeviceKind::GPU));
+                    s_allDevices.push_back(DeviceDescriptor((unsigned int) gpuData.deviceId, DeviceKind::GPU));
+                    s_gpuProperties.push_back(
+                    {
+                        (unsigned int)gpuData.deviceId, 
+                        gpuData.versionMajor,
+                        gpuData.versionMinor,
+                        gpuData.cudaCores,
+                        gpuData.name,
+                        gpuData.totalMemory,
+                    });
                 }
             }
 #endif
-            s_allDevices->push_back(DeviceDescriptor::CPUDevice());
+            s_allDevices.push_back(DeviceDescriptor::CPUDevice());
         });
 
-        return *s_allDevices;
+        return s_allDevices;
     }
 
     /*static*/ DeviceDescriptor DeviceDescriptor::GPUDevice(unsigned int deviceId) 
@@ -490,6 +556,24 @@ namespace CNTK
             InvalidArgument("Specified GPU device id (%u) is invalid.", deviceId);
         }
         return { deviceId, DeviceKind::GPU };
+    }
+
+    /*static*/ const GPUProperties& DeviceDescriptor::GetGPUProperties(const DeviceDescriptor& device)
+    {
+        if (device.Type() == DeviceKind::CPU) 
+            InvalidArgument("GPU properties cannot be obtained for a CPU device.");
+
+        // Now, make sure that the device vectores are initialized.
+        const auto& allDevices = AllDevices();
+        UNUSED(allDevices);
+
+        auto result = std::find_if(s_gpuProperties.begin(), s_gpuProperties.end(),
+            [&device](const GPUProperties& props) { return device.Id() == props.deviceId; });
+
+        if (result == s_gpuProperties.end())
+            InvalidArgument("Could not find properties for the specified GPU device (id=%u).", device.Id());
+
+        return *result;
     }
 
     /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";

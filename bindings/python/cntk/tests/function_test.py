@@ -33,7 +33,7 @@ def test_1d_NDArrayView_copy():
     x = input_variable(shape=(1,))
     op = x + 1
     result = op.eval({x : [np.asarray([1])]}, as_numpy=False)
-    result_slice = result.data().slice_view((0, 0, 0), (1,))
+    result_slice = result.data.slice_view((0, 0, 0), (1,))
 
     w = parameter(init=np.asarray([1]))
     w.set_value(result_slice)
@@ -43,14 +43,13 @@ def test_1d_NDArrayView_copy():
 def test_sequences_packed_in_single_ndarray():
     dim = 2
     input_with_sequence_axis = input_variable(shape=(dim,))
-    input_without_sequence_axis = input_variable(shape=(dim,), dynamic_axes=[Axis.default_batch_axis()])
 
     data = np.asarray([[1, 2], [2, 3]])
     op = sequence.last(input_with_sequence_axis)
     result = op.eval({input_with_sequence_axis : data})
-    assert np.array_equal(result, [[[2., 3.]]])
+    assert np.array_equal(result, [[2., 3.]])
 
     result = op.eval({input_with_sequence_axis : (data, [True, True])})
-    assert np.array_equal(result, [[[1., 2.]], [[2., 3.]]])
+    assert np.array_equal(result, [[1., 2.], [2., 3.]])
 
     

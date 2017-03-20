@@ -11,7 +11,7 @@ from __future__ import division, print_function
 import numpy as np
 
 from cntk import *
-from cntk.learner import *
+from cntk.learners import *
 from cntk.ops import *
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.ops.functions import UserFunction
@@ -72,7 +72,7 @@ def print_training_progress(trainer, mb, frequency):
 def train(nonlinearity, num_hidden_layers, device_id):
     from cntk.cntk_py import always_allow_setting_default_device
     always_allow_setting_default_device()
-    set_default_device(cntk_device(device_id))
+    try_set_default_device(cntk_device(device_id))
     np.random.seed(0)
 
     learning_rate = 0.5

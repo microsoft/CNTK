@@ -75,7 +75,9 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
 
     size_t dimension = config.GetLabelDimension();
 
-    m_withPhoneBoundaries = streamConfig(L"phoneBoundaries", "false");
+    m_withPhoneBoundaries = streamConfig(L"phoneBoundaries", false);
+    if (m_frameMode && m_withPhoneBoundaries)
+        LogicError("frameMode and phoneBoundaries are not supposed to be used together.");
     wstring labelMappingFile = streamConfig(L"labelMappingFile", L"");
     InitializeChunkDescriptions(corpus, config, labelMappingFile, dimension);
     InitializeStream(inputName, dimension);
@@ -210,7 +212,8 @@ void MLFDataDeserializer::InitializeChunkDescriptions(CorpusDescriptorPtr corpus
             m_totalNumberOfFrames,
             numClasses);
 
-    if (m_frameMode) {
+    if (m_frameMode)
+    {
         // Initializing array of labels.
         m_categories.reserve(dimension);
         m_categoryIndices.reserve(dimension);

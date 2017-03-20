@@ -12,8 +12,8 @@ import numpy as np
 import pytest
 
 from cntk import *
-from cntk.trainer import *
-from cntk.learner import *
+from cntk.train.trainer import *
+from cntk.learners import *
 from cntk.ops.functions import UserFunction
 from .ops_test_utils import AA
 
@@ -118,7 +118,7 @@ def test_ext_eval_6_clone():
 
     p = parameter(shape=(dim,), init=10, name='p')
     z = m + p
-    
+
     m_udf = user_function(MyPlus(i, constant(3)))
     z_clone = z.clone('share', {m : m_udf} );
 
@@ -168,7 +168,7 @@ def test_udf_clone():
     m_udf = user_function(MyPlus(i, constant(3)))
     p = parameter(shape=(dim,), init=10, name='p')
     z = m_udf + p
-    
+
     z_clone = z.clone('share');
 
     input_data = np.random.rand(dim)
@@ -293,7 +293,7 @@ class PlusAndLast(UserFunction):
 def test_udf_plus_and_last():
     x = input_variable(shape=(2,))
     y = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis()])
-    
+
     func = user_function(PlusAndLast(x, y))
 
     dt_precision = np.float32
@@ -301,7 +301,7 @@ def test_udf_plus_and_last():
     operand2 = [AA([2., 2.], dtype=dt_precision)]
 
     _, result = func.forward({x : operand1, y : operand2}, [func.output])
-    
+
     expected_forward = AA([[[5., 6.]]], dtype=dt_precision)
     assert np.allclose(result[func.output], expected_forward)
 
@@ -345,3 +345,10 @@ def test_multioutput_udf():
     gradients = op.grad({x : x_data, y : y_data}, op.arguments)
     assert np.allclose(gradients[op.arguments[0]], [[[3., 3.], [3., 3.]]])
     assert np.allclose(gradients[op.arguments[1]], [[[3., 3.], [3., 3.]]])
+
+def test_udf_op_name():
+    dim = 4
+    p = parameter(shape=(dim,), init=10, name='p')
+    i = input_variable(dim, needs_gradient=True, name='i_var')
+    m = user_function(MyPlus(i, constant(3)))
+    print(m.root_function)

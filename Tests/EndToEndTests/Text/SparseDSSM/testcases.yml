@@ -1,7 +1,7 @@
 dataDir: ./
 tags:
-     - bvt-p (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
-     - nightly-p (build_sku == 'gpu') and ((os == 'linux') or (device == 'gpu') or (flavor == 'release'))
+     - bvt-p (build_sku == '1bitsgd') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
+     - nightly-p (build_sku == '1bitsgd') and ((os == 'linux') or (device == 'gpu') or (flavor == 'release'))
 
 testCases:
   Must train epochs in exactly same order and parameters:

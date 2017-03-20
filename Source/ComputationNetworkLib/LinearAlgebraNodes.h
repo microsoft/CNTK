@@ -265,12 +265,12 @@ class TimesNodeBase : public ComputationNode<ElemType>, public NumInputs<2>
 public:
     enum : int
     {
-        ReduceAllStaticAxes            = -1, // the default, reduce all static axes of the right operand
-        ReduceAllStaticAndSequenceAxes = -2, // reduce all static axes and sequence axis. Currently only support cases like (m x k x s* x b*) x (k x s* x b*) -> (m x b*)
+        NoInferredInputRank = -1,                        // the default, do not infer left operand input rank from right operand
+        ReduceSequenceAxisWithoutInferredInputRank = -2, // reduce sequence axis. Currently only support cases like (m x k) x (k) -> (m) for sequences
     };
 
 public:
-    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = ReduceAllStaticAxes)
+    TimesNodeBase(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = NoInferredInputRank)
         : Base(deviceId, name), m_outputRank(outputRank), m_inferInputRankToMap(inferInputRankToMap), m_beingUnrolled(false)
     {
     }
@@ -303,7 +303,7 @@ public:
         if (modelVersion >= CNTK_MODEL_VERSION_12)
             fstream >> m_inferInputRankToMap;
         else
-            m_inferInputRankToMap = ReduceAllStaticAxes;
+            m_inferInputRankToMap = NoInferredInputRank;
     }
 
 protected:
@@ -472,7 +472,7 @@ private:
                 Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // k x s*
                 inputValueSlice.Reshape(k * maxNumTimeSteps, 1); // (k * s*) x 1
                 Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? (ElemType)0 : (ElemType)1, inputGradientSlice);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, gradientSlice, false, inputValueSlice, true, unpacked[inputIndex] ? 0 : beta, inputGradientSlice);
             }
 
             if (unpacked[inputIndex])
@@ -490,7 +490,7 @@ private:
                 Matrix<ElemType> inputValueSlice = unpackedInputValue.ColumnSlice(s * maxNumTimeSteps, maxNumTimeSteps); // (m * k) x s*
                 inputValueSlice.Reshape(m, k * maxNumTimeSteps); // m x (k * s*)
                 Matrix<ElemType> gradientSlice = Gradient().ColumnSlice(s, 1); // m x 1
-                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? (ElemType)0 : (ElemType)1, inputGradientSlice);
+                Matrix<ElemType>::MultiplyAndWeightedAdd(1, inputValueSlice, true, gradientSlice, false, unpacked[inputIndex] ? 0 : beta, inputGradientSlice);
             }
             
             if (unpacked[inputIndex])
@@ -888,7 +888,7 @@ private:
     bool m_beingUnrolled;
     std::once_flag m_unrollWarningOnceFlag;
 
-    bool ReduceSequenceAxis() const { return m_inferInputRankToMap == ReduceAllStaticAndSequenceAxes; }
+    bool ReduceSequenceAxis() const { return m_inferInputRankToMap == ReduceSequenceAxisWithoutInferredInputRank; }
 
     static const int NumInputs = 2;
     shared_ptr<Matrix<ElemType>> m_tempScatterIndices[NumInputs];
@@ -919,7 +919,7 @@ class TimesNode : public TimesNodeBase<ElemType, false>
     static const std::wstring TypeName() { return L"Times"; }
 
 public:
-    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = Base::ReduceAllStaticAxes)
+    TimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1, int inferInputRankToMap = Base::NoInferredInputRank)
         : Base(deviceId, name, outputRank, inferInputRankToMap)
     {
     }
@@ -952,7 +952,7 @@ class TransposeTimesNode : public TimesNodeBase<ElemType, true>
 public:
     DeclareConstructorFromConfigWithNumInputs(TransposeTimesNode);
     TransposeTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t outputRank = 1)
-        : Base(deviceId, name, outputRank, Base::ReduceAllStaticAxes)
+        : Base(deviceId, name, outputRank, Base::NoInferredInputRank)
     {
         if (outputRank != 1)
             LogicError("TransposeTimes does not yet support outputRank other than 1");
@@ -989,7 +989,7 @@ private:
     size_t m_bitShiftB; 
 
 public:
-    QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = Base::ReduceAllStaticAxes)
+    QuantizedTimesNode(DEVICEID_TYPE deviceId, const wstring& name, size_t bitShiftA = 1, size_t bitShiftB = 1, size_t outputRank = 1, int inferInputRankToMap = Base::NoInferredInputRank)
         : Base(deviceId, name, outputRank, inferInputRankToMap), m_bitShiftA(bitShiftA), m_bitShiftB(bitShiftB)
     {
         // TODO support multiplication on GPUs as well.
@@ -1255,18 +1255,15 @@ public:
             m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm0);
         else // right derivative
             m_temp->AssignElementProductOf(*m_invNorm1, *m_invNorm1);
-
-        m_temp->ElementMultiplyWith(ValueFor(fr));
-        m_rightTerm->SetValue(Input(inputIndex)->ValueFor(fr));
-        m_rightTerm->RowElementMultiplyWith(*m_temp);
+        auto tempView = TensorView<ElemType>(m_temp, this->GetTensorShape(SIZE_MAX));
+        tempView.AssignElementwiseProductOf(ValueTensorFor(1, fr), tempView);
+        tempView.AssignElementwiseProductOf(GradientTensorFor(1, fr), tempView);
+        auto gradientView = Input(inputIndex)->GradientTensorFor(SIZE_MAX, fr);
+        gradientView.AddElementwiseProductOf(tempView, Input(inputIndex)->ValueTensorFor(SIZE_MAX, fr), -1);
 
         m_temp->AssignElementProductOf(*m_invNorm0, *m_invNorm1);
-        m_leftTerm->SetValue(Input(1 - inputIndex)->ValueFor(fr));
-        m_leftTerm->RowElementMultiplyWith(*m_temp);
-
-        *m_leftTerm -= *m_rightTerm;
-        m_leftTerm->RowElementMultiplyWith(GradientFor(fr));
-        Input(inputIndex)->GradientFor(fr) += *m_leftTerm;
+        tempView.AssignElementwiseProductOf(GradientTensorFor(1, fr), tempView);
+        gradientView.AddElementwiseProductOf(tempView, Input(1 - inputIndex)->ValueTensorFor(SIZE_MAX, fr));
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
@@ -1284,7 +1281,6 @@ public:
         sliceOutputValue.AssignInnerProductOf(sliceInput0Value, sliceInput1Value, true);
         sliceOutputValue.ElementMultiplyWith(*m_invNorm0);
         sliceOutputValue.ElementMultiplyWith(*m_invNorm1);
-        // TODO: This formulation above would allow to use the TensorView lib for this, with automatic broadcasting.
     }
 
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -1307,26 +1303,23 @@ public:
             auto node = dynamic_pointer_cast<CosDistanceNode<ElemType>>(nodeP);
             node->m_invNorm0->SetValue(*m_invNorm0);
             node->m_invNorm1->SetValue(*m_invNorm1);
-            node->m_leftTerm->SetValue(*m_leftTerm);
-            node->m_rightTerm->SetValue(*m_rightTerm);
             node->m_temp->SetValue(*m_temp);
         }
     }
+
     // request matrices needed to do node function value evaluation
     virtual void RequestMatricesBeforeForwardProp(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeForwardProp(matrixPool);
-        RequestMatrixFromPool(m_invNorm0, matrixPool);
-        RequestMatrixFromPool(m_invNorm1, matrixPool);
+        RequestMatrixFromPool(m_invNorm0, matrixPool, 1, true, true);
+        RequestMatrixFromPool(m_invNorm1, matrixPool, 1, true, true);
     }
 
     // request matrices that are needed for gradient computation
     virtual void RequestMatricesBeforeBackprop(MatrixPool& matrixPool)
     {
         Base::RequestMatricesBeforeBackprop(matrixPool);
-        RequestMatrixFromPool(m_leftTerm, matrixPool);
-        RequestMatrixFromPool(m_rightTerm, matrixPool);
-        RequestMatrixFromPool(m_temp, matrixPool);
+        RequestMatrixFromPool(m_temp, matrixPool, 1, true, true);
     }
 
     // release gradient and temp matrices that no longer needed after all the children's gradients are computed.
@@ -1335,8 +1328,6 @@ public:
         Base::ReleaseMatricesAfterBackprop(matrixPool);
         ReleaseMatrixToPool(m_invNorm0, matrixPool);
         ReleaseMatrixToPool(m_invNorm1, matrixPool);
-        ReleaseMatrixToPool(m_leftTerm, matrixPool);
-        ReleaseMatrixToPool(m_rightTerm, matrixPool);
         ReleaseMatrixToPool(m_temp, matrixPool);
     }
 
@@ -1345,8 +1336,6 @@ private:
     shared_ptr<Matrix<ElemType>> m_invNorm0;
     shared_ptr<Matrix<ElemType>> m_invNorm1;
     // the rest are temporaries, values don't need to be maintained
-    shared_ptr<Matrix<ElemType>> m_leftTerm;
-    shared_ptr<Matrix<ElemType>> m_rightTerm;
     shared_ptr<Matrix<ElemType>> m_temp;
 };
 

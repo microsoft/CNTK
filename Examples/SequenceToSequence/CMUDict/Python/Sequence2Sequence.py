@@ -9,16 +9,16 @@ import numpy as np
 import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learner import momentum_sgd, adam_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
-                     element_select, alias, hardmax, placeholder_variable, combine, parameter, times, plus
+from cntk.learners import momentum_sgd, adam_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
+                 element_select, alias, hardmax, placeholder_variable, combine, parameter, times, plus
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.initializer import glorot_uniform
-from cntk.utils import log_number_of_parameters, ProgressPrinter, debughelpers, one_hot
-from cntk.graph import plot
+from cntk.logging import log_number_of_parameters, ProgressPrinter
+from cntk.logging.graph import plot
 from cntk.layers import *
 from cntk.layers.sequence import *
-from cntk.models.attention import *
+from cntk.layers.models.attention import *
 from cntk.layers.typing import *
 
 ########################
@@ -315,7 +315,7 @@ def evaluate_decoding(reader, s2smodel, i2w):
 # TODO: replace by a proper such class once available
 def Evaluator(model, criterion):
     from cntk import Trainer
-    from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
     loss, metric = Trainer._get_loss_metric(criterion)
     parameters = set(loss.parameters)
     if model:
@@ -374,7 +374,7 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
         return []
 
     # convert to one_hot
-    query = one_hot([w], len(vdict))
+    query = Value.one_hot([w], len(vdict))
     pred = model_decoding(query)
     pred = pred[0] # first sequence (we only have one) -> [len, vocab size]
     if use_attention:
@@ -468,6 +468,7 @@ def debug_attention(model, input):
 #############################
 
 if __name__ == '__main__':
+    #try_set_default_device(cpu())
 
     from _cntk_py import set_fixed_random_seed
     set_fixed_random_seed(1)

@@ -24,6 +24,8 @@
 %rename(momentum_sgd_learner) CNTK::MomentumSGDLearner;
 %rename(gpu_device) CNTK::DeviceDescriptor::GPUDevice;
 %rename(cpu_device) CNTK::DeviceDescriptor::CPUDevice;
+%rename(GPUProperties) CNTK::GPUProperties;
+%rename(get_gpu_properties) CNTK::DeviceDescriptor::GetGPUProperties;
 %rename(times_transpose) CNTK::TransposeTimes;
 %rename(sequence_slice) CNTK::Sequence::Slice;
 %rename(sequence_reduce_sum) CNTK::Sequence::ReduceSum;
@@ -152,6 +154,9 @@
 %ignore CNTK::Internal::IsRenamingFunctionsAllowed;
 %ignore CNTK::Internal::IsAutomaticUnpackingOfPackedValuesDisabled;
 %ignore CNTK::Internal::GetComputationNetworkTraceLevel;
+%ignore CNTK::Internal::GetComputationNetworkTrackGapNans;
+%ignore CNTK::Internal::TensorBoardFileWriter::TensorBoardFileWriter(const std::wstring& dir, const ::Microsoft::MSR::CNTK::ComputationNetworkPtr& modelToVisualize = nullptr);
+%ignore CNTK::Internal::Convolution; 
 
 %ignore CNTK::Function::Function(const std::vector<Variable>& inputs, Dictionary&& functionConfig, const std::wstring& name = L"", const std::wstring& uid = Internal::GenerateUid(L"UserDefinedFunction"));
 
@@ -597,6 +602,7 @@ public:
 // Callback support
 %feature("director") CNTK::Function;
 %feature("nodirector") CNTK::Function::OnPlaceholdersReplaced;
+%feature("nodirector") CNTK::Function::OpName;
 
 %feature("director") CNTK::Learner;
 %feature("nodirector") CNTK::Learner::Parameters;
@@ -818,7 +824,9 @@ public:
     // we do not want. Therefor, we have to explicitly tell it for which ones it should do it.
     std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToFetch,
     std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputs,
-    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& gradients,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToEvaluate
 {
     if (!PyDict_Check($input)) {
         SWIG_exception(SWIG_TypeError, "dictionary expected");
@@ -847,7 +855,9 @@ public:
     // Swig would create this conversion for the 'const' variants as well, which
     // we do not want. Therefor, we have to explicitly tell it for which ones it should do it.
     std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputs,
-    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& backPropagatedGradientValuesForInputs,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& gradients,
+    std::unordered_map<CNTK::Variable, CNTK::ValuePtr>& outputsToEvaluate
 {
     // $1 is the C++ input that needs to be filled with the data from the PyDict
     for (auto it: $1)

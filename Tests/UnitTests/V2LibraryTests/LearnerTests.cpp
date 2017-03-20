@@ -20,7 +20,7 @@ static const size_t maxNumAxes = 3;
 static const size_t maxDimSize = 5;
 
 template <typename ElementType>
-void TestUpdate(LearnerPtr& learner, NDShape& shape, size_t numMinibatches, const DeviceDescriptor& device)
+void TestUpdate(LearnerPtr& learner, const NDShape& shape, size_t numMinibatches, const DeviceDescriptor& device)
 {
     auto seed = (unsigned long) rng();
     unordered_map<Parameter, NDArrayViewPtr> gradientValues;
@@ -93,7 +93,7 @@ void TestFSAdaGradLearner(size_t numParameters, size_t numMinibatches, bool unit
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum);
+    auto learner = FSAdaGradLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum);
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -102,7 +102,7 @@ void TestAdamLearner(size_t numParameters, size_t numMinibatches, bool unitGainM
 {
     NDShape shape = CreateShape(rng() % maxNumAxes + 1, maxDimSize);
     auto parameters = CreateParameters<ElementType>(shape, numParameters, device);
-    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99), false);
+    auto learner = AdamLearner(parameters, LearningRatePerSampleSchedule({ 0.5 }), MomentumAsTimeConstantSchedule({ 10.0, 100.0, 1000.0 }), unitGainMomentum, MomentumPerSampleSchedule(0.99));
     TestUpdate<ElementType>(learner, shape, numMinibatches, device);
 }
 
@@ -314,8 +314,9 @@ struct LearnerSuiteFixture
         : unitGain{ true, false }
     {
         srand(1);
-        devices.push_back(DeviceDescriptor::CPUDevice());
-        if (IsGPUAvailable())
+        if (ShouldRunOnCpu())
+            devices.push_back(DeviceDescriptor::CPUDevice());
+        if (ShouldRunOnGpu())
             devices.push_back(DeviceDescriptor::GPUDevice(0));
 
         numParameters = 1 + rand() % 5;
@@ -345,12 +346,12 @@ BOOST_AUTO_TEST_CASE(TrainingParametersSchedule)
 }
 
 BOOST_AUTO_TEST_CASE(CreateAndUpdateSGDLearner)
-    {
+{
     for (auto& device : devices)
     {
         TestSGDLearner<double>(numParameters, numMinibatches, device);
     }
-    }
+}
 
 BOOST_AUTO_TEST_CASE(CreateAndUpdateAdaGradLearner)
 {
@@ -410,6 +411,29 @@ BOOST_AUTO_TEST_CASE(CreateAndUpdateAdamLearner)
             TestAdamLearner<float>(numParameters, numMinibatches, gain, device);
             TestAdamLearner<double>(numParameters, numMinibatches, gain, device);
         }
+    }
+}
+
+BOOST_AUTO_TEST_CASE(TestResettingLearningRate)
+{
+    NDShape shape = { 1 };
+    auto numSamples = 1; numParameters = 1, numMinibatches = 1;
+    DeviceDescriptor device = DeviceDescriptor::CPUDevice();
+    auto parameters = CreateParameters<float>(shape, numParameters, device);
+    auto learner = SGDLearner(parameters, LearningRatePerSampleSchedule({ 0.1, 1, 2, 3, 4, 5 }, numSamples));
+    BOOST_TEST(learner->LearningRate() == 0.1);
+    for (int i = 1; i < 4; i++)
+    {
+        TestUpdate<float>(learner, shape, numMinibatches, device);
+        BOOST_TEST(learner->LearningRate() == float(i));
+    }
+
+    learner->ResetLearningRate(LearningRatePerSampleSchedule({ 9, 10, 20, 30, 40, 50 }, numSamples));
+    BOOST_TEST(learner->LearningRate() == 9.0);
+    for (int i = 1; i < 4; i++)
+    {
+        TestUpdate<float>(learner, shape, numMinibatches, device);
+        BOOST_TEST(learner->LearningRate() == float(i*10));
     }
 }
 

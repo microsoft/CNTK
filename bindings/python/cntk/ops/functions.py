@@ -1,12 +1,10 @@
 from cntk import cntk_py
-from cntk.device import DeviceDescriptor
-from cntk.utils import typemap, sanitize_var_map, sanitize_batch, \
-        sanitize_dtype_cntk, value_to_seq, _as_tuple, variable_value_to_seq, Record, \
+from cntk.device import DeviceDescriptor, cpu
+from cntk.utils import variable_value_to_seq, Record, \
         get_python_function_arguments, map_function_arguments
-from cntk.utils.swig_helper import map_if_possible
+from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple, sanitize_variable_value_dict
 from cntk.ops.variables import Variable
 from enum import Enum, unique
-import numpy as np
 
 
 @unique
@@ -67,9 +65,10 @@ class Function(cntk_py.Function):
         ``@Function`` constructs a Function from a Python lambda
         where the Function's input signature is defined by the lambda.
 
-        Use this as a decorator, e.g.:
-          ``@Function
-          def f(x): return x * x``
+        Use this as a decorator, e.g.::
+
+          @Function
+          def f(x): return x * x
 
         The above form creates a CNTK Function whose arguments are placeholder variables.
         Such a function can only be combined with others symbolic functions.
@@ -78,19 +77,21 @@ class Function(cntk_py.Function):
         of the arguments. In this case, the @Function decorator creates a CNTK Function
         whose arguments are input variables.
 
-        If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.:
-          ``@Function
-          def f(x:Tensor[13]):
-              return x * x``
+        If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.::
 
-        If you are still working with Python 2.7, use CNTK's @Signature decorator instead:
-          ``@Function
+          @Function
+          def f(x:Tensor[13]):
+              return x * x
+
+        If you are working with Python 2.7, use CNTK's @Signature decorator instead::
+
+          @Function
           @Signature(Tensor[13])
           def f(x):
-              return x * x``
+              return x * x
 
         ``make_block=True`` is used to implement @BlockFunction(). If given the result will be wrapped
-         in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
+        in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
         '''
         f_name = f.__name__ # (only used for debugging and error messages)
 
@@ -371,7 +372,7 @@ class Function(cntk_py.Function):
             # In case of multiple matches, we fail.
             # BUGBUG: That is a problem if, e.g., someone used a layer (=BlockFunction) twice
             # and then looks it up by name, as that will fail although both instances are identical.
-            from ..graph import find_by_name
+            from cntk.logging.graph import find_by_name
             root = self.block_root if self.is_block else self
             item = typemap(find_by_name)(root, name)
             if item:
@@ -473,6 +474,7 @@ class Function(cntk_py.Function):
                  input data.
                * any other type: if node has an unique input, arguments is
                  mapped to this input.
+
              For nodes with more than one input, only dict is allowed.
 
              In both cases, every sample in the data will be interpreted
@@ -513,11 +515,7 @@ class Function(cntk_py.Function):
         '''
 
         _, output_map = self.forward(arguments, self.outputs, device=device, as_numpy=as_numpy)
-
-        if len(output_map) > 1:
-            return output_map
-        else:
-            return list(output_map.values())[0]
+        return sanitize_variable_value_dict(output_map)
 
 
     @typemap
@@ -544,7 +542,7 @@ class Function(cntk_py.Function):
             >>> # 1st sequence: word 1
             >>> # 2nd sequence: words 2 and 4
             >>> batch = [[1],[2,4]]
-            >>> sparse_batch = C.one_hot(batch, vocab_size)
+            >>> sparse_batch = C.Value.one_hot(batch, vocab_size)
             >>> _, fv = f.forward({v:sparse_batch})
             >>> list(fv.values())[0]
             [array([[ 0.,  1.,  0.,  0.,  0.]], dtype=float32),
@@ -593,6 +591,7 @@ class Function(cntk_py.Function):
                  elements of the sequence are grouped along axis 0.
                * any other type: if node has an unique input, arguments is
                  mapped to this input.
+
              For nodes with more than one input, only dict is allowed.
 
              In both cases, every sample in the data will be interpreted
@@ -707,7 +706,7 @@ class Function(cntk_py.Function):
         return var_gradients
 
     @typemap
-    def grad(self, at, wrt=None, device=None, as_numpy=True):
+    def grad(self, at, wrt=None, outputs=None, device=None, as_numpy=True):
         '''
         Computes the gradient of this Function at location ``at`` with respect to ``wrt``.
         The Function must have a single output.
@@ -725,41 +724,55 @@ class Function(cntk_py.Function):
 
         Args:
             at (dict) : mapping of the Function's arguments to values
-            wrt (list optional): list of Variables with respect to which the
+            wrt (list, default `None`): list of Variables with respect to which the
              gradient will be computed. If omitted, the gradients with
-             respect to all arguments that need gradient will be computed. If a variable
-             is repeated in this list, the gradient will be repeated
-             in the output as a shallow copy.
-            as_numpy (bool): whether to return the gradients as a NumPy array. Default True.
+             respect to all arguments of this Function that need gradient will be computed.
+            outputs (iterable, optional): outputs (including intermediate outputs in the graph)
+             to fetch values for. If not specified, values for none of the outputs are fetched.
+            device (:class:`~cntk.device.DeviceDescriptor`, default `None`): the device
+             descriptor that contains the type and id of the device on which the
+             computation is performed. If `None`, the default device is used.
+            as_numpy (bool, default `True`): whether to return the gradients as a NumPy array. Default True.
              Specifying this as False returns a CNTK Value which avoids a
              costly conversion but returns a somewhat opaque object.
 
         Returns:
-            dict or NumPy Array: Dict with keys of ``wrt`` variables and gradient values of
-            ``wrt`` variables. A single NumPy array if there is only one gradient value.
-             Each element has the same shape as ``wrt`` including dynamic axes (such as the batch axis).
+            dict or NumPy Array or a tuple of these: Dict with keys of ``wrt`` variables and gradient values of
+             ``wrt`` variables. A single NumPy array if there is only one gradient value.
+             If ``outputs`` were specified (to fetch values for), this method returns a tuple where the 2nd element
+             of the tuple is the ``outputs`` values; a dict with keys of specified ``outputs`` variables and
+             values of computed ``outputs``, or a single NumPy array if there is only one output value.
+             Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes 
+             (such as the batch axis).
         '''
+        if device is None:
+            device = DeviceDescriptor.use_default_device()
 
-        if len(self.outputs) != 1 :
-            raise InvalidArgumentException('function must return a single tensor')
+        in_var_map = sanitize_var_map(self.arguments, at, None, device)
+
+        if outputs is None:
+            outputs = []
 
         if wrt is None:
             wrt = [arg for arg in self.arguments if arg.needs_gradient]
+            if len(wrt) == 0:
+                raise ValueError("None of the Function '%s' arguments have 'needs_gradient == True'" % str(self))
 
-        unique_wrt = set(wrt)
-        output = [self.output]
-        
-        # Since we do not return the computed results and use them only to determine the shape
-        # of the root gradients, we run the forward pass with as_numpy=False regardless of the
-        # actual as_numpy setting passed to this function
-        state, results = self.forward(at, output, set(output), device, as_numpy=False)
-        ones = {self.output: np.ones(v.shape, self.output.dtype) for v in results.values()}
-        grad_dict = self.backward(state, ones, unique_wrt, as_numpy)
+        output_map = {v: None for v in outputs}
+        wrt_map = {v: None for v in wrt}
 
-        if len(grad_dict) > 1:
-            return grad_dict
+        super(Function, self).gradients(in_var_map, wrt_map, output_map, device)
+
+        if as_numpy:
+            for k in output_map:
+                output_map[k] = variable_value_to_seq(output_map[k], k)
+            for k in wrt_map:
+                wrt_map[k] = variable_value_to_seq(wrt_map[k], k)
+
+        if len(output_map) == 0:
+            return sanitize_variable_value_dict(wrt_map)
         else:
-            return list(grad_dict.values())[0]
+            return sanitize_variable_value_dict(wrt_map), sanitize_variable_value_dict(output_map)
 
     @property
     @typemap
@@ -949,7 +962,7 @@ class Function(cntk_py.Function):
         See also:
             :func:`find_by_name`
         '''
-        from .. import graph
+        from cntk.logging import graph
         return graph.find_all_with_name(self, name)
 
     # TODO have a better name for combine() in this case
@@ -986,7 +999,7 @@ class Function(cntk_py.Function):
         See also:
             :func:`find_all_with_name`
         '''
-        from .. import graph
+        from cntk.logging import graph
         return graph.find_by_name(self, name)
 
     @typemap
@@ -1082,14 +1095,18 @@ class UserFunction(Function):
 
         # Since the state will frequently not be used, we cache the None-state
         # to speed up.
-        self._none_state =  cntk_py.UserBackPropState(self,
-                DeviceDescriptor.cpu_device(), None)
+        self._none_state =  cntk_py.UserBackPropState(self, cpu(), None)
 
         # Memory management for user defined functions has to be controlled by
         # the C++ side. For more information:
         # http://www.swig.org/Doc3.0/Python.html#Python_nn35
         self.__disown__()
 
+    def _get_none_state(self, device=cpu()):
+        if self._none_state.device() != device:
+            self._none_state =  cntk_py.UserBackPropState(self, device, None)
+
+        return self._none_state
 
     def _forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         '''
@@ -1126,7 +1143,7 @@ class UserFunction(Function):
             state = self.forward(args, outputs, device, outputs_to_retain)
 
         if state is None:
-            state = self._none_state
+            state = self._get_none_state(device)
         elif not isinstance(state, cntk_py.BackPropState):
             state = cntk_py.UserBackPropState(self, device, state)
 
@@ -1172,11 +1189,8 @@ class UserFunction(Function):
 
         else:
             if not isinstance(state, cntk_py.BackPropState):
-                if state is None:
-                    state = self._none_state
-                else:
-                    raise ValueError('if as_numpy=False, state must be of '
-                            'type BackPropState')
+                raise ValueError('if as_numpy=False, state must be of '
+                        'type BackPropState')
 
         map_if_possible(variables)
 
@@ -1184,7 +1198,7 @@ class UserFunction(Function):
             for rg in root_gradients.values():
                 break
             root_gradients = rg
-        
+
         possible_wrt = [input for input in self.inputs if input.needs_gradient]
         if len(possible_wrt) > 1:
             self.backward(state, root_gradients, variables)
@@ -1209,7 +1223,7 @@ class UserFunction(Function):
         outputs.
 
         Output variables are created by
-        :meth:`~cntk.ops.functions.output_variable`.
+        :meth:`~cntk.ops.output_variable`.
         '''
         raise NotImplementedError('infer_outputs has to be overwritten')
 
@@ -1225,9 +1239,3 @@ class UserFunction(Function):
             A cloned instance of this user-defined function.
         '''
         raise NotImplementedError('clone has to be overwritten')
-
-    def op_name(self):
-        '''
-        Returns the operator name.
-        '''
-        return 'UserFunction'

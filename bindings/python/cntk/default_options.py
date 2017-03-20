@@ -63,9 +63,12 @@ def get_default_override(function, **kwargs):
     Meant to be used inside functions that use this facility.
 
     Args:
-        function: the function that calls this, e.g.:
-         ``def Convolution(args, init=default_override_or(glorot_uniform()), activation=default_override_or(identity), pad=default_override_or(False)):
-             init = _get_default_override(Convolution, init=init) # pass default under the same name``
+        function: the function that calls this.
+          For example::
+
+            def Convolution(args, init=default_override_or(glorot_uniform()), activation=default_override_or(identity), pad=default_override_or(False)):
+            init = _get_default_override(Convolution, init=init) # pass default under the same name
+
     '''
     # parameter checking and casting
     if len(kwargs) != 1:

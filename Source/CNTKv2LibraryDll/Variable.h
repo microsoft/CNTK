@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include <fstream>
+#include "Utils.h"
 
 namespace CNTK
 {
@@ -18,7 +19,7 @@ namespace CNTK
         NDShape m_shape;
         VariableKind m_varKind;
         ::CNTK::DataType m_dataType;
-        Function* m_ownerFunction; // Variable does not keep the Function alive
+        std::weak_ptr<Function> m_ownerFunction;
         std::unique_ptr<std::once_flag> m_initValueFlag;
         NDArrayViewPtr m_value;
         std::unique_ptr<ParameterInitializer> m_valueInitializer;
@@ -31,11 +32,11 @@ namespace CNTK
         std::atomic<size_t> m_valueTimeStamp;
         Variable m_blockFunctionVariableMapping;
 
-        VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, Function* ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
+        VariableFields(const NDShape& shape, VariableKind varType, ::CNTK::DataType type, const std::weak_ptr<Function>& ownerFunction, const NDArrayViewPtr& value, bool needsGradient, const std::vector<Axis>& dynamicAxes, bool isSparse, const std::wstring& name, const std::wstring& uid)
             : m_shape(shape), m_varKind(varType), m_dataType(type), m_ownerFunction(ownerFunction), m_value(value), m_needsGradient(needsGradient), m_dynamicAxes(dynamicAxes), m_isSparse(isSparse), m_name(name), m_uid(uid), m_valueTimeStamp(0)
         {
             if (value && (type != value->GetDataType()))
-                InvalidArgument("The DataType of the Parameter/Constant Variable does not match the DataType of the associated Value");
+                InvalidArgument("The DataType of the Parameter/Constant Variable '%S' does not match the DataType of the associated Value", AsString().c_str());
 
             // Validate that each of the dynamic axes are unique
             std::unordered_set<Axis> uniqueDynamicAxis;
@@ -43,33 +44,22 @@ namespace CNTK
             {
                 auto retVal = uniqueDynamicAxis.insert(currentDynamicAxis);
                 if (!retVal.second)
-                    InvalidArgument("Dynamic axis named %S is specified more than once for Variable object", currentDynamicAxis.Name().c_str());
+                    InvalidArgument("Dynamic axis named %S is specified more than once for Variable '%S'", currentDynamicAxis.Name().c_str(), AsString().c_str());
+            }
+
+            if (m_varKind == VariableKind::Input)
+            {
+                for (auto dim : m_shape.Dimensions())
+                {
+                    if (dim == 0)
+                        InvalidArgument("Variable '%S' has invalid shape '%S'.", AsString().c_str(), m_shape.AsString().c_str());
+                }
             }
         }
 
-        std::shared_ptr<VariableFields> Clone() const
-        {
-            if (m_ownerFunction != nullptr)
-                InvalidArgument("Output variables cannot be cloned");
-
-            // Note: We do not clone m_blockFunctionVariableMapping
-
-            auto clone = MakeSharedObject<VariableFields>(m_shape,
-                m_varKind,
-                m_dataType,
-                m_ownerFunction,
-                (m_value) ? m_value->DeepClone() : nullptr,
-                m_needsGradient,
-                m_dynamicAxes,
-                m_isSparse,
-                m_name,
-                Internal::GenerateUid(m_varKind));
-
-            if (m_valueInitializer)
-                clone->SetValueInitialization(*m_valueInitializer, *m_valueInitializationDevice);
-
-            return clone;
-        }
+        std::wstring AsString() const;
+        std::shared_ptr<VariableFields> Clone() const;
+        FunctionPtr Owner() const;
 
         CNTK_API void SetValueInitialization(const ParameterInitializer& initializationConfig, const DeviceDescriptor& device);
 

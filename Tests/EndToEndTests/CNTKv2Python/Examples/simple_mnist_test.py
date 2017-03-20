@@ -7,7 +7,7 @@
 import os, sys
 import numpy as np
 import shutil
-from cntk.device import set_default_device
+from cntk.device import try_set_default_device
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "MLP", "Python"))
@@ -23,7 +23,7 @@ def test_simple_mnist_error(device_id):
         shutil.rmtree(tb_logdir)
 
     from cntk.ops.tests.ops_test_utils import cntk_device
-    set_default_device(cntk_device(device_id))
+    try_set_default_device(cntk_device(device_id))
 
     test_error = simple_mnist(tb_logdir)
     expected_test_error = 0.09

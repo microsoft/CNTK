@@ -6,6 +6,7 @@
 #include "stdafx.h"
 #include <functional>
 #include "Basics.h"
+#include "Constants.h"
 #include "MPIWrapper.h"
 #include "CNTKLibrary.h"
 #include "DistributedCommunicator.h"
@@ -13,6 +14,7 @@
 #include "MatrixQuantizerImpl.h"
 #include "GPUDataTransferer.h"
 #include <numeric>
+#include "Utils.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -28,9 +30,9 @@ namespace CNTK
         }
     }
 
-    DistributedCommunicatorPtr MPICommunicator()
+    DistributedCommunicatorPtr MPICommunicator(size_t packThresholdSizeInBytes)
     {
-        return std::make_shared<MPICommunicatorImpl>();
+        return std::make_shared<MPICommunicatorImpl>(packThresholdSizeInBytes);
     }
 
     void DistributedCommunicator::Finalize()
@@ -60,11 +62,12 @@ namespace CNTK
             return viewPtr->WritableDataBuffer<float>();
         if (viewPtr->GetDataType() == DataType::Double)
             return viewPtr->WritableDataBuffer<double>();
+        
         LogicError("Unknown DataType");
         return nullptr; // Make compiler happy.
     }
 
-    MPICommunicatorImpl::MPICommunicatorImpl()
+    MPICommunicatorImpl::MPICommunicatorImpl(size_t packThresholdSizeInBytes)
     {
         m_mpi = MPIWrapper::GetInstance();
         if (m_mpi == nullptr)
@@ -81,6 +84,7 @@ namespace CNTK
                 // TOOD: Nodes have to exchange their names.
                 m_workers.insert({ i,  L"" });
         }
+        m_packThresholdSizeInBytes = packThresholdSizeInBytes;
     }
 
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
@@ -96,25 +100,29 @@ namespace CNTK
 
             // Make sure none of the values are sparse - we currently do not support aggregation of sparse matrices
             if (view->GetStorageFormat() != StorageFormat::Dense)
-                RuntimeError("Aggregation for sparse matrices is currently not supported!");
+                RuntimeError("MPICommunicator: Aggregation for sparse matrices is currently not supported.");
 
             // TODO: device.Type should be called Kind.
-            if (device.Type() != DeviceKind::GPU)
+            if (device.Type() == DeviceKind::CPU)
             {
                 m_intermediateCPUBuffers[i] = Buffer();
                 m_gpuDataTransferers[i] = nullptr;
             }
-            else
+            else if (device.Type() == DeviceKind::GPU)
             {
                 if (lastGpuDevice.Type() == DeviceKind::CPU)
                     lastGpuDevice = device;
                 else if (device.Id() != lastGpuDevice.Id()) // For the time being, assume all devices have the same id.
-                    LogicError("Not all values are on the same GPU device id");
+                    LogicError("MPICommunicator: Not all values are on the same GPU device id");
 
                 auto requiredSize = GetBufferSize(view);
                 m_gpuDataTransferers[i] = std::make_shared<GPUDataTransferer>(device.Id(), true);
                 if (m_intermediateCPUBuffers[i].totalSize < requiredSize)
                     m_intermediateCPUBuffers[i] = AllocateIntermediateBuffer(device.Id(), requiredSize);
+            } 
+            else
+            {
+                LogicError("Invalid device type (%u).", (unsigned int)device.Type());
             }
         }
     }
@@ -150,7 +158,7 @@ namespace CNTK
         }
 
         auto device = GetNonCPUDevice(values);
-        if (device.Type() != DeviceKind::CPU)
+        if (device.Type() == DeviceKind::GPU)
         {
             // Since we will be copying the gradients asynchronously, let us
             // ensure that the gradient matrices have been computed before starting to aggregate
@@ -159,6 +167,10 @@ namespace CNTK
             // the gradient aggregation asynchronously on a separate stream
             std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(device.Id()));
             mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
+        }
+        else
+        {
+            LogicError("Invalid device type (%u).", (unsigned int)device.Type());
         }
         AggregateImpl(values, outputValues, sendToWorkers);
     }
@@ -231,7 +243,7 @@ namespace CNTK
         // Check inputs, currently we support only CPU
         auto nonCpu = std::find_if(input.begin(), input.end(), [](const NDArrayViewPtr& v) { return v->Device() != DeviceDescriptor::CPUDevice(); });
         if (nonCpu != input.end())
-            LogicError("Currently only CPU located buffers are supported for concatenation.");
+            LogicError("MPICommunicator: Currently only NDArrayViews located on CPU are supported for concatenation.");
 
         output.resize(input.size());
         // Currently we only support concatenation of input of the same size.
@@ -259,7 +271,7 @@ namespace CNTK
             else if (input[i]->GetDataType() == DataType::Double)
                 m_mpi->AllGatherAsync(in->DataBuffer<double>(), in->Shape().TotalSize(), out->WritableDataBuffer<double>(), in->Shape().TotalSize(), &allReduceRequests[i]);
             else
-                LogicError("Type is not supported.");
+                LogicError("MPICommunicator: input DataType is not supported.");
         }
 
         // Wait till all requests are finished.
@@ -270,17 +282,6 @@ namespace CNTK
         const std::vector<NDArrayViewPtr>& values,
         const std::unordered_set<DistributedWorkerDescriptor>& sendToWorkers)
     {
-        auto device = GetNonCPUDevice(values);
-        if (device.Type() != DeviceKind::CPU)
-        {
-            // Since we will be copying the gradients asynchronously, let us
-            // ensure that the gradient matrices have been computed before starting to aggregate
-            // them asynchronously on another thread. This essentially means that when we are using
-            // a GPU device, we will synchronize on the main GPU compute stream before starting
-            // the gradient aggregation asynchronously on a separate stream
-            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(device.Id()));
-            mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
-        }
         AggregateImpl(values, values, sendToWorkers);
     }
 
@@ -300,12 +301,63 @@ namespace CNTK
         if (numValues == 0)
             return;
 
-        Initialize(inputValues);
+        std::vector<NDArrayViewPtr> valuesToAggregate; // Corresponding to inputValues
+        std::vector<NDArrayViewPtr> valuesAfterAggregate; // Corresponding to outputValues
+        size_t packedFloatGradientsSizeInBytes = 0;
+        size_t packedDoubleGradientsSizeInBytes = 0;
+        std::vector<size_t> packedFloatGradientsIndex;
+        std::vector<size_t> packedDoubleGradientsIndex;
+        for (auto i = 0; i < numValues; i++)
+        {
+            // Push index to packing queue if the gradient's size is less than threshold size
+            if (GetBufferSize(inputValues[i]) < m_packThresholdSizeInBytes && (inputValues[i]->GetDataType() == DataType::Float))
+            {
+                packedFloatGradientsSizeInBytes += GetBufferSize(inputValues[i]);
+                packedFloatGradientsIndex.push_back(i);
+            }
+            else if (GetBufferSize(inputValues[i]) < m_packThresholdSizeInBytes && (inputValues[i]->GetDataType() == DataType::Double))
+            {
+                packedDoubleGradientsSizeInBytes += GetBufferSize(inputValues[i]);
+                packedDoubleGradientsIndex.push_back(i);
+            }
+            else
+            {
+                valuesToAggregate.push_back(inputValues[i]);
+                valuesAfterAggregate.push_back(outputValues[i]);
+            }
+        }
+
+        // Do the packing to reduce the number of MPI requests.
+        // Donot re-allocating the continous buffer is existing buffer size equals to required one.
+        m_aggregationBufferFloat = setContinousBuffer<float>(packedFloatGradientsIndex, packedFloatGradientsSizeInBytes, inputValues, outputValues,
+            valuesToAggregate, valuesAfterAggregate);
+        m_aggregationBufferDouble = setContinousBuffer<double>(packedDoubleGradientsIndex, packedDoubleGradientsSizeInBytes, inputValues, outputValues,
+            valuesToAggregate, valuesAfterAggregate);
+
+        packToContinousBuffer(m_aggregationBufferFloat.get(), packedFloatGradientsIndex, inputValues, outputValues, valuesToAggregate, valuesAfterAggregate);
+        packToContinousBuffer(m_aggregationBufferDouble.get(), packedDoubleGradientsIndex, inputValues, outputValues, valuesToAggregate, valuesAfterAggregate);
+
+        numValues = valuesToAggregate.size();
+
+        Initialize(valuesToAggregate);
+
+        // We need to make sure no compuatation happens on the main CUDA stream.
+        auto device = GetNonCPUDevice(valuesToAggregate);
+        if (device.Type() != DeviceKind::CPU)
+        {
+            // Since we will be copying the gradients asynchronously, let us
+            // ensure that the gradient matrices have been computed before starting to aggregate
+            // them asynchronously on another thread. This essentially means that when we are using
+            // a GPU device, we will synchronize on the main GPU compute stream before starting
+            // the gradient aggregation asynchronously on a separate stream
+            std::unique_ptr<MatrixComputeStreamEvent> mainStreamSyncEvent(MatrixComputeStreamEvent::Create(device.Id()));
+            mainStreamSyncEvent->SynchronizeDataTransferFetchStreamWithEvent<float>();
+        }
 
         // for all values residing on GPU initiate async transfer to CPU buffers.
         for (auto i = 0; i < numValues; ++i)
         {
-            auto view = inputValues[i];
+            auto view = valuesToAggregate[i];
             if (view->Device() != DeviceDescriptor::CPUDevice())
             {
                 auto& transferer = m_gpuDataTransferers[i];
@@ -317,7 +369,7 @@ namespace CNTK
         std::vector<MPI_Request> allReduceRequests(numValues);
         for (auto i = 0; i < numValues; ++i)
         {
-            auto inputValue = inputValues[i];
+            auto inputValue = valuesToAggregate[i];
 
             if (inputValue->Device() != DeviceDescriptor::CPUDevice())
             {
@@ -328,7 +380,7 @@ namespace CNTK
             auto numElements = inputValue->Shape().TotalSize();
             auto dataType = inputValue->GetDataType();
 
-            auto& outputValue = outputValues[i];
+            auto& outputValue = valuesAfterAggregate[i];
 
             assert(numElements == outputValue->Shape().TotalSize());
             assert(dataType == outputValue->GetDataType());
@@ -352,7 +404,7 @@ namespace CNTK
                     m_mpi->AllReduceAsync(static_cast<double*>(inputData), static_cast<double*>(outputData), numElements, &allReduceRequests[i]);
             }
             else
-                LogicError("Unknown DataType");
+                LogicError("MPICommunicator: Unknown DataType.");
         }
 
         // wait for async all reduce to complete. As soon as one of the requests is finished,
@@ -369,12 +421,12 @@ namespace CNTK
 
             numAllReduceRequestsCompleted++;
 
-            assert(idx < inputValues.size());
-            auto value = inputValues[idx];
+            assert(idx < valuesToAggregate.size());
+            auto value = valuesToAggregate[idx];
 
             if (value->Device() != DeviceDescriptor::CPUDevice())
             {
-                auto view = outputValues[idx];
+                auto view = valuesAfterAggregate[idx];
                 auto size = GetBufferSize(view);
                 auto& transferer = m_gpuDataTransferers[idx];
                 auto& buffer = m_intermediateCPUBuffers[idx];
@@ -385,13 +437,88 @@ namespace CNTK
         // TODO: Should not wait, simply publishing event on the compute stream should be sufficient.
         for (auto i = 0; i < numValues; ++i)
         {
-            if (inputValues[i]->Device() != DeviceDescriptor::CPUDevice())
+            if (valuesToAggregate[i]->Device() != DeviceDescriptor::CPUDevice())
                 m_gpuDataTransferers[i]->WaitForCopyCPUToGPUAsync();
         }
+
+
+        // Unpack the continuous buffer
+        unpackFromContinousBuffer(m_aggregationBufferFloat.get(), outputValues, packedFloatGradientsIndex);
+        unpackFromContinousBuffer(m_aggregationBufferDouble.get(), outputValues, packedDoubleGradientsIndex);
     }
 
     void  MPICommunicatorImpl::Barrier()
     {
         m_mpi->WaitAll();
     }
+
+    template <typename ElemType>
+    std::unique_ptr<Matrix<ElemType>> MPICommunicatorImpl::setContinousBuffer(std::vector<size_t>& packedGradientsIndex, size_t packedGradientsSizeInBytes,
+        const std::vector<NDArrayViewPtr>& inputValues, const std::vector<NDArrayViewPtr>& outputValues,
+        std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate)
+    {
+        if (packedGradientsIndex.size() > 1)
+        {
+            return std::unique_ptr<Matrix<ElemType>>{new (std::nothrow) Matrix<ElemType>(1, packedGradientsSizeInBytes / sizeof(ElemType),
+                AsCNTKImplDeviceId(inputValues[packedGradientsIndex[0]]->Device()))};
+        }
+        else if (packedGradientsIndex.size() == 1)
+        {
+            valuesToAggregate.push_back(inputValues[packedGradientsIndex.front()]);
+            valuesAfterAggregate.push_back(outputValues[packedGradientsIndex.front()]);
+            packedGradientsIndex.clear();
+        }
+        return std::unique_ptr<Matrix<ElemType>>{ nullptr };
+    }
+
+    template <typename ElemType>
+    void MPICommunicatorImpl::packToContinousBuffer(Matrix<ElemType>* aggregationBuffer, std::vector<size_t>& packedGradientsIndex,
+        const std::vector<NDArrayViewPtr>& inputValues, const std::vector<NDArrayViewPtr>& outputValues, std::vector<NDArrayViewPtr>& valuesToAggregate, std::vector<NDArrayViewPtr>& valuesAfterAggregate)
+    {
+        if (packedGradientsIndex.size() < 1)
+        {
+            return;
+        }
+
+        if (aggregationBuffer == nullptr || packedGradientsIndex.size() == 1)
+        {
+            for (size_t i : packedGradientsIndex)
+            {
+                valuesToAggregate.push_back(inputValues[i]);
+                valuesAfterAggregate.push_back(outputValues[i]);
+            }
+            packedGradientsIndex.clear();
+            return;
+        }
+
+        size_t offset = 0;
+        for (size_t i : packedGradientsIndex)
+        {
+            auto gradient = GetWritableMatrix<ElemType>(inputValues[i]);
+            aggregationBuffer->ColumnSlice(offset, gradient->GetNumElements()).AssignValuesOf(gradient->Reshaped(1, gradient->GetNumElements()));
+            offset += gradient->GetNumElements();
+        }
+        ::CNTK::NDShape shape{ aggregationBuffer->GetNumElements() };
+        auto data = ::CNTK::MakeSharedObject<::CNTK::NDArrayView>(inputValues[packedGradientsIndex[0]]->GetDataType(), shape, aggregationBuffer->Data(),
+            offset * sizeof(ElemType), inputValues[packedGradientsIndex[0]]->Device());
+        valuesToAggregate.push_back(data);
+        valuesAfterAggregate.push_back(data);
+    }
+
+    template <typename ElemType>
+    void MPICommunicatorImpl::unpackFromContinousBuffer(Matrix<ElemType>* aggregationBuffer, const std::vector<NDArrayViewPtr>& outputValues,
+        std::vector<size_t>& packedGradientsIndex)
+    {
+        if (packedGradientsIndex.size() != 0)
+        {
+            size_t offset = 0;
+            for (size_t i : packedGradientsIndex)
+            {
+                auto gradient = GetWritableMatrix<ElemType>(outputValues[i]);
+                gradient->AssignValuesOf(aggregationBuffer->ColumnSlice(offset, gradient->GetNumElements()).Reshaped(gradient->GetNumRows(), gradient->GetNumCols()));
+                offset += gradient->GetNumElements();
+            }
+        }
+    }
+
 }
