@@ -687,7 +687,7 @@ public:
     // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
 
 private:
-    FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc);
+    FARPROC LoadInternal(const std::wstring& plugin, const std::string& proc);
 };
 #else
 class Plugin
@@ -718,7 +718,7 @@ public:
     }
 
 private:
-    void *Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc);
+    void *LoadInternal(const std::wstring& plugin, const std::string& proc);
 };
 #endif
 
