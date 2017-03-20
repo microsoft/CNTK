@@ -39,7 +39,7 @@ the following learning algorithms:
 +------------------------+
 | Learning algorithms    |
 +========================+
-| AdaDelta                |
+| AdaDelta               |
 +------------------------+
 | AdaGrad                |
 +------------------------+
