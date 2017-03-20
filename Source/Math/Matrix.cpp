@@ -19,11 +19,9 @@
 #include <atomic>
 #include "Quantizers.h"
 #ifndef CPUONLY
-#ifdef DEBUG
-#pragma comment(lib, "Cntk.Math.Cuda-2.6d.lib") // built by CNTKMathCUDA project
-#else
-#endif
-#pragma comment(lib, "Cntk.Math.Cuda-2.6.lib") // built by CNTKMathCUDA project
+#define ANAMEFORLIB "Cntk.Math.Cuda-" ## CNTK_COMPONENT_VERSION ## ".lib"
+#pragma comment(lib, ANAMEFORLIB) // built by CNTKMathCUDA project
+#undef ANAMEFORLIB
 #endif
 
 #pragma warning(disable : 4127) // conditional expression is constant; "if (sizeof(ElemType)==sizeof(float))" triggers this
