@@ -6,9 +6,9 @@
 
 setlocal
 set allArgs=%*
-pushd "%~dp0"
-set psInstall="%~p0\ps\install.ps1"
-set PSModulePath=%PSModulePath%;%~dp0\ps\Modules
+set installBatchDir=%~dp0
+set psInstall="%installBatchDir%\ps\install.ps1"
+set PSModulePath=%PSModulePath%;%installBatchDir%\ps\Modules
 :loop
 if /I "%~1"=="-h" goto :helpMsg
 if /I "%~1"=="/h" goto :helpMsg
@@ -20,9 +20,7 @@ shift
 
 if not "%~1"=="" goto loop
 
-powershell -NoProfile -NoLogo -Command unblock-file ps\*.ps1
-powershell -NoProfile -NoLogo -Command unblock-file ps\Modules\Download\*.psm1
-popd
+powershell -NoProfile -NoLogo -Command "Get-ChildItem %installBatchDir% -Include *.psm1,*.ps1 -recurse | unblock-file"
 powershell -NoProfile -NoLogo -ExecutionPolicy RemoteSigned %psInstall% %allArgs%
 
 goto :EOF
