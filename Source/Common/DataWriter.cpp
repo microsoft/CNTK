@@ -35,6 +35,9 @@ void DataWriter::Destroy()
     m_dataWriter->Destroy();
 }
 
+
+extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap;
+
 // DataWriter Constructor
 // config - [in] configuration data for the data writer
 template <class ConfigRecordType>
@@ -45,25 +48,12 @@ DataWriter::DataWriter(const ConfigRecordType& config)
     // get the name for the writer we want to use, default to BinaryWriter (which is in BinaryReader.dll)
     // TODO: This seems like a find-replace operation?
     wstring writerType = config(L"writerType", L"Cntk.Reader.Binary.Deprecated");
-    if (writerType == L"Cntk.Writer.HTKMLF" || writerType == L"Cntk.Reader.HTKMLF")
+
+    // map legacy names to new naming scheme
+    auto entry = s_deprecatedReaderWriterNameMap.find(writerType);
+    if (entry != s_deprecatedReaderWriterNameMap.end())
     {
-        writerType = L"Cntk.Reader.HTKMLF";
-    }
-    else if (writerType == L"Cntk.Writer.Binary.Deprecated" || writerType == L"Cntk.Reader.Binary.Deprecated")
-    {
-        writerType = L"Cntk.Reader.Binary.Deprecated";
-    }
-    else if (writerType == L"Cntk.Writer.LUSequence" || writerType == L"Cntk.Reader.LUSequence")
-    {
-        writerType = L"Cntk.Reader.LUSequence";
-    }
-    else if (writerType == L"Cntk.Writer.LMSequence" || writerType == L"Cntk.Reader.LMSequence")
-    {
-        writerType = L"Cntk.Reader.LMSequence";
-    }
-    else if (writerType == L"Cntk.Writer.Kaldi" || writerType == L"Cntk.Reader.Kaldi")
-    {
-        writerType = L"Cntk.Reader.Kaldi";
+        writerType = entry->second;
     }
 
     string precision = config(L"precision", "float");

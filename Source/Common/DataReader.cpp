@@ -77,6 +77,8 @@ void DataReader::Destroy()
     }
 }
 
+extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap;
+
 // DataReader Constructor
 // options - [in] string  of options (i.e. "-windowsize:11 -addenergy") data reader specific
 #pragma optimize("", off) // TODO work around potential VS2015 code optimization bug, replacing virtual- by non-virtual call in Init() below
@@ -99,8 +101,17 @@ DataReader::DataReader(const ConfigRecordType& config)
         for (const auto& ioName : ioNames) // inputNames should map to node names
         {
             const ConfigRecordType& thisIO = config(ioName);
+            wstring readerType = thisIO(L"readerType", L"Cntk.Reader.TextFormat");
+
+            // map legacy names to new naming scheme
+            auto entry = s_deprecatedReaderWriterNameMap.find(readerType);
+            if (entry != s_deprecatedReaderWriterNameMap.end())
+            {
+                readerType = entry->second;
+            }
+
             // get the name for the reader we want to use, default to CNTKTextFormatReader
-            GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(thisIO(L"readerType", L"Cntk.Reader.TextFormat"), GetReaderName(precision));
+            GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(readerType, GetReaderName(precision));
             m_ioNames.push_back(ioName);
             assert(getReaderProc != nullptr);
             getReaderProc(&m_dataReaders[ioName]); // instantiates the reader with the default constructor (no config processed at this point)
@@ -108,20 +119,38 @@ DataReader::DataReader(const ConfigRecordType& config)
     }
     else if (hasDeserializers)
     {
+        wstring readerType = config(L"readerType", L"Cntk.Reader.CompositeData");
+
+        // map legacy names to new naming scheme
+        auto entry = s_deprecatedReaderWriterNameMap.find(readerType);
+        if (entry != s_deprecatedReaderWriterNameMap.end())
+        {
+            readerType = entry->second;
+        }
+
         // Creating Composite Data Reader that allow to combine deserializers.
         // This should be changed to link statically when SGD uses the new interfaces.
         wstring ioName = L"ioName";
-        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"Cntk.Reader.CompositeData"), GetReaderName(precision));
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(readerType, GetReaderName(precision));
         m_ioNames.push_back(ioName);
         assert(getReaderProc != nullptr);
         getReaderProc(&m_dataReaders[ioName]);
     }
     else
     {
+        wstring readerType = config(L"readerType", L"Cntk.Reader.TextFormat");
+
+        // map legacy names to new naming scheme
+        auto entry = s_deprecatedReaderWriterNameMap.find(readerType);
+        if (entry != s_deprecatedReaderWriterNameMap.end())
+        {
+            readerType = entry->second;
+        }
+
         wstring ioName = L"ioName";
         // backward support to use only one type of data reader
         // get the name for the reader we want to use, default to CNTKTextFormatReader
-        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(config(L"readerType", L"Cntk.Reader.TextFormat"), GetReaderName(precision));
+        GetReaderProc getReaderProc = (GetReaderProc)Plugin::Load(readerType, GetReaderName(precision));
         m_ioNames.push_back(ioName);
         assert(getReaderProc != nullptr);
         getReaderProc(&m_dataReaders[ioName]);
