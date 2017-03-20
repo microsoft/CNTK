@@ -4152,6 +4152,14 @@ namespace CNTK
                                        AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
+    /// Create an instance of the CNTK built-in AdaDelta learner.
+    ///
+    CNTK_API LearnerPtr AdaDeltaLearner(const std::vector<Parameter>& parameters,
+                                        double rho = 0.95,
+                                        double epsilon = 1e-8,
+                                        AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+    ///
     /// Distributed Learner.
     ///
     class DistributedLearner : public Learner
