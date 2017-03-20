@@ -15,6 +15,7 @@
 #include <string>
 #include <stdint.h>
 #include <locale>
+#include <unordered_map>
 #ifdef _WIN32
 #define NOMINMAX
 #include "Windows.h"
@@ -969,9 +970,19 @@ template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::str
 #endif
 
 #ifdef _WIN32
+extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap;
+
 FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc)
 {
     m_dllName = plugin;
+
+    // map legacy names to new naming scheme
+    auto entry = s_deprecatedReaderWriterNameMap.find(m_dllName);
+    if (entry != s_deprecatedReaderWriterNameMap.end())
+    {
+        m_dllName = entry->second;
+    }
+
     m_dllName += L"-" + msra::strfun::utf16(std::string(CNTK_COMPONENT_VERSION));
     m_dllName += L".dll";
     m_hModule = LoadLibrary(m_dllName.c_str());
@@ -984,6 +995,7 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
     return entryPoint;
 }
 #else
+extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap;
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -991,6 +1003,15 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
 void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc)
 {
     string soName = plugin;
+    wstring soNameW = wstring(plugin.begin(), plugin.end());
+
+    // map legacy names to new naming scheme
+    auto entry = s_deprecatedReaderWriterNameMap.find(soNameW);
+    if (entry != s_deprecatedReaderWriterNameMap.end())
+    {
+        soName = string(entry->second.begin(), entry->second.end());
+    }
+
     soName += std::string("-") + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
     soName = soName + ".so";
     void* handle = dlopen(soName.c_str(), RTLD_LAZY);
