@@ -80,7 +80,6 @@
     <Compile Include="SwigProxyClasses\SizeTVector.cs" />
     <Compile Include="SwigProxyClasses\SizeTVectorVector.cs" />
     <Compile Include="SwigProxyClasses\StorageFormat.cs" />
-    <Compile Include="SwigProxyClasses\SWIGTYPE_p_void.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableValuePtr.cs" />
     <Compile Include="SwigProxyClasses\UnorderedMapVariableVariable.cs" />
     <Compile Include="SwigProxyClasses\Value.cs" />
