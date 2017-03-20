@@ -61,10 +61,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
                             rank = C.Communicator.rank(),
                             gen_heartbeat = False)]
 
-    lr_schedule = C.learning_rate_schedule(training_config['lr'], C.UnitType.sample, 0)
-    momentum_time_constant = -minibatch_size/np.log(0.9)
-    mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
-    learner = C.adam(z.parameters, lr_schedule, mm_schedule, unit_gain=False) # should use adadelta
+    learner = C.adadelta(z.parameters, rho = 0.5)
 
     if C.Communicator.num_workers() > 1:
         learner = C.data_parallel_distributed_learner(learner, num_quantization_bits=32, distributed_after=0)
