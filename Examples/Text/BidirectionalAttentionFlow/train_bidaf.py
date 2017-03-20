@@ -59,8 +59,9 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             self.count += 1
             if self.count % training_config['cv_freq'] == 0:
                 cv_data = cv_source.next_minibatch(2048, cv_input_map)
-                f1_sum = C.reduce_sum(f1, C.Axis.all_axes()).eval(cv_data)
-                em_sum = C.reduce_sum(C.greater_equal(f1, 1), C.Axis.all_axes()).eval(cv_data)
+                f1_em = C.splice(C.reduce_sum(f1, C.Axis.all_axes()), C.reduce_sum(C.greater_equal(f1, 1), C.Axis.all_axes())).eval(cv_data)
+                f1_sum = f1_em[0]
+                em_sum = f1_em[1]
                 num_sequences = cv_data[argument_by_name(f1, 'ab')].num_sequences
                 print("F1 {:0.2f} EM {:0.2f} num_seq {}".format(f1_sum * 100 / num_sequences, em_sum * 100 / num_sequences, num_sequences))
 
@@ -80,9 +81,12 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     lr_schedule = C.learning_rate_schedule(training_config['lr'], C.UnitType.sample, 0)
     momentum_time_constant = -minibatch_size/np.log(0.9)
     mm_schedule = C.momentum_as_time_constant_schedule(momentum_time_constant)
-    optimizer = C.adam(z.parameters, lr_schedule, mm_schedule, unit_gain=False) # should use adadelta
-    
-    trainer = C.Trainer(z, (loss, None), optimizer, progress_writers)
+    learner = C.adam(z.parameters, lr_schedule, mm_schedule, unit_gain=False) # should use adadelta
+
+    if C.Communicator.num_workers() > 1:
+        learner = C.data_parallel_distributed_learner(learner, num_quantization_bits=32, distributed_after=0)
+
+    trainer = C.Trainer(z, (loss, None), learner, progress_writers)
 
     if profiling:
         C.start_profiler(sync_gpu=True)
@@ -122,7 +126,9 @@ if __name__=='__main__':
         data_path = args['datadir']
 
     try:
-        train(data_path, model_path, args['logdir'], args['config'], restore = not args['restart'], profiling = args['profile'])
+        train(data_path, model_path, args['logdir'], args['config'],
+            restore = not args['restart'],
+            profiling = args['profile'])
     finally:
         C.distributed.Communicator.finalize()
 

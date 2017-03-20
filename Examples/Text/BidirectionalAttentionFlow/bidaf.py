@@ -157,20 +157,14 @@ class Bidaf:
 
     def f1_score(self, ab, ae, oab, oae):
         answers = C.splice(ab, ae, oab, oae)
-        avw, _ = ValueWindow(self.max_context_len, C.Axis.new_leading_axis())(answers)
-        answer_indices = C.argmax(avw, 0)
-        #answer_indices = print_node(answer_indices)
-        gt_start = C.slice(answer_indices, 1, 0, 1)
-        gt_end = C.slice(answer_indices, 1, 1, 2)
-        test_id1 = C.slice(answer_indices, 1, 2, 3)
-        test_id2 = C.slice(answer_indices, 1, 3, 4)
-        test_start = C.element_min(test_id1, test_id2)
-        test_end = C.element_max(test_id1, test_id2)
-        common_start = C.element_max(test_start, gt_start)
-        common_end = C.element_max(C.element_min(test_end, gt_end), common_start - 1)
-        common_len = common_end - common_start + 1
-        test_len = test_end - test_start + 1
-        gt_len = gt_end - gt_start + 1
+        answers_prop = C.Recurrence(C.element_max, go_backwards=False)(answers)
+        ans_gt = C.slice(answers_prop, 0, 0, 1) - C.slice(answers_prop, 0, 1, 2)
+        ans_out = C.slice(answers_prop, 0, 2, 3) - C.slice(answers_prop, 0, 3, 4)
+        common = ans_gt * ans_out
+        metric = C.layers.Fold(C.plus)(C.splice(ans_gt, ans_out, common))
+        gt_len = C.slice(metric, 0, 0, 1)
+        test_len = C.slice(metric, 0, 1, 2)
+        common_len = C.slice(metric, 0, 2, 3)
         precision = common_len / test_len
         recall = common_len / gt_len
         return precision * recall * 2 / (precision + recall)
