@@ -20,5 +20,6 @@ training_config = {
     'log_freq'       : 10,  # in minibatchs
     'epoch_size'     : 1780, # in sequences
     'max_epochs'     : 20,
+    'rho'            : 0.5,
     'train_data'     : 'val.ctf',
 }
