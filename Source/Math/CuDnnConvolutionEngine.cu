@@ -404,11 +404,11 @@ private:
         // in initState, where memory allocation for nodes are not completed, we only run the algorithm with no workspace
         // or if alloc failed - usually means cuDNN runtime auto-tuner could not allocate workspace.
         // In such case, use static auto-tuner with no workspace.
-        if (algo.autotuningState == AutotuningState::Init || err == CUDNN_STATUS_ALLOC_FAILED)
+        if (algo.autotuningState == AutotuningState::Init || err == CUDNN_STATUS_ALLOC_FAILED || err == CUDNN_STATUS_MAPPING_ERROR)
         {
             decltype(CuDnnAlgoT::algo) noMemAlgo;
             CUDNN_CALL(staticFinder(noMemAlgo));
-            if (err == CUDNN_STATUS_ALLOC_FAILED && m_forceDeterministicAlgorithms)
+            if ((err == CUDNN_STATUS_ALLOC_FAILED || err == CUDNN_STATUS_MAPPING_ERROR) && m_forceDeterministicAlgorithms)
                 RuntimeError("cuDNN could not find a deterministic algorithm. Set 'forceDeterministicAlgorithms=false' in your configuration.");
 
             algo.MaxAllowedMBSizeForCurrentAlgo = batchSize;
