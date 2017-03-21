@@ -129,15 +129,7 @@ class Bidaf:
         att_context = C.splice(c_processed, utilde, c_processed * utilde,  c_processed * Htilde)
 
         #modeling layer
-        #todo replace with optimized_rnnstack for training purposes once it supports dropout
-        modeling_layer = C.layers.Sequential([
-            C.Dropout(self.dropout),
-            OptimizedRnnStack(self.hidden_dim, bidirectional=True),
-            C.Dropout(self.dropout),
-            OptimizedRnnStack(self.hidden_dim, bidirectional=True)
-        ])
-
-        mod_context = modeling_layer(att_context)
+        mod_context = OptimizedRnnStack(self.hidden_dim, num_layers=2, bidirectional=True)(att_context)
 
         #output layer
         start_logits = C.layers.Dense(1)(C.splice(mod_context, att_context))
