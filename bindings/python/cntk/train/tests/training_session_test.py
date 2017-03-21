@@ -81,11 +81,11 @@ def create_sample_model(device, writer=None):
 
 class MockProgressWriter(cntk_py.ProgressWriter):
 
-    def __init__(self, expected_cv=None, training_summary_counter=0):
+    def __init__(self, expected_test_summary=None, training_summary_counter=0):
         super(MockProgressWriter, self).__init__(1, 0, 1, 0)
         self.training_summary_counter = training_summary_counter
-        self.cv_summary_counter = 0
-        self.expected_cv = expected_cv
+        self.test_summary_counter = 0
+        self.expected_test_summary = expected_test_summary
         self.minibatch_info = []
 
     def on_write_training_update(self, samples, updates, aggregate_loss, aggregate_metric):
@@ -100,10 +100,10 @@ class MockProgressWriter(cntk_py.ProgressWriter):
         self.training_summary_counter += 1
 
     def on_write_test_summary(self, samples, updates, summaries, aggregate_metric, elapsed_milliseconds):
-        assert (self.expected_cv[self.cv_summary_counter][
+        assert (self.expected_test_summary[self.test_summary_counter][
                 0] == float(aggregate_metric / samples * 100.0))
-        assert (self.expected_cv[self.cv_summary_counter][1] == int(samples))
-        self.cv_summary_counter += 1
+        assert (self.expected_test_summary[self.test_summary_counter][1] == int(samples))
+        self.test_summary_counter += 1
 
 
 def test_session_sanity_check(tmpdir, device_id):
@@ -144,7 +144,7 @@ def test_session_max_samples(tmpdir, device_id):
 
 def test_session_cross_validation_at_end(tmpdir, device_id):
     device = cntk_device(device_id)
-    writer = MockProgressWriter(expected_cv=[[92, 25]])
+    writer = MockProgressWriter(expected_test_summary=[[92, 25]])
     t, feature, label = create_sample_model(device, writer)
     mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
@@ -162,12 +162,12 @@ def test_session_cross_validation_at_end(tmpdir, device_id):
     ).train(device)
 
     assert(t.total_number_of_samples_seen == 21)
-    assert(writer.cv_summary_counter == 1)
+    assert(writer.test_summary_counter == 1)
 
 
 def test_session_cross_validation_3_times(tmpdir, device_id):
     device = cntk_device(device_id)
-    writer = MockProgressWriter(expected_cv=[[92, 25], [92, 25], [92, 25]])
+    writer = MockProgressWriter(expected_test_summary=[[92, 25], [92, 25], [92, 25]])
     t, feature, label = create_sample_model(device, writer)
     mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
@@ -185,7 +185,7 @@ def test_session_cross_validation_3_times(tmpdir, device_id):
     ).train(device)
 
     assert(t.total_number_of_samples_seen == 61)
-    assert(writer.cv_summary_counter == 3)
+    assert(writer.test_summary_counter == 3)
 
 
 def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_id):
@@ -193,7 +193,7 @@ def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_
     from os.path import isfile, join
 
     device = cntk_device(device_id)
-    writer = MockProgressWriter(expected_cv=[[92, 25], [92, 25], [92, 25]])
+    writer = MockProgressWriter(expected_test_summary=[[92, 25], [92, 25], [92, 25]])
     t, feature, label = create_sample_model(device, writer)
     mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
@@ -226,7 +226,7 @@ def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_
     assert("checkpoint_save_all" in candidates)
     assert("checkpoint_save_all.ckp" in candidates)
 
-    assert(writer.cv_summary_counter == 3)
+    assert(writer.test_summary_counter == 3)
 
 
 def test_session_progress_print(tmpdir, device_id):
@@ -428,3 +428,27 @@ def test_session_cv_callback_early_exit(tmpdir, device_id):
         cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
     assert counter == [1]
+
+
+def test_session_with_test(tmpdir, device_id):
+    device = cntk_device(device_id)
+    writer = MockProgressWriter(expected_test_summary=[[92, 25]])
+    t, feature, label = create_sample_model(device, writer)
+    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs1 = mb_source(tmpdir, "test")
+
+    input_map = {
+        feature: mbs.streams.features,
+        label: mbs.streams.labels
+    }
+
+    training_session(
+        trainer=t, mb_source=mbs, 
+        mb_size=4, var_to_stream=input_map,
+        max_samples=60,
+        test_config = TestConfig(source=mbs1, mb_size=2),
+    ).train(device)
+
+    assert(t.total_number_of_samples_seen == 61)
+    assert(writer.test_summary_counter == 1)
+

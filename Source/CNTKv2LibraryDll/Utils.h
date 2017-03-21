@@ -530,6 +530,11 @@ namespace CNTK
         return var.IsConstant() && (var.Shape().TotalSize() == 1);
     }
 
+    inline Variable PlaceholderLike(const Variable& var)
+    {
+        return PlaceholderVariable(var.Shape(), var.GetDataType(), var.Name(), var.DynamicAxes());
+    }
+
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName);
 
     // Construct the dynamic axis name to be used internally for the CNTK InputNodes
