@@ -16,7 +16,7 @@ model_config = {
 }
 
 training_config = {
-    'minibatch_size' : 4096, # in samples
+    'minibatch_size' : 3500, # in samples
     'log_freq'       : 100,  # in minibatchs
     'epoch_size'     : 85540, # in sequences
     'max_epochs'     : 12,
