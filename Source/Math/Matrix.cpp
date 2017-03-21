@@ -2,7 +2,7 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
-// Matrix.cpp -- main CPP file that contains all Matrix functions exported by the CNTKMath.dll
+// Matrix.cpp -- main CPP file that contains all Matrix functions exported by the Cntk.Math.dll
 //
 #include "stdafx.h"
 #include "Basics.h"
@@ -20,7 +20,7 @@
 #include "Quantizers.h"
 #ifndef CPUONLY
 #define ANAMEFORLIB "Cntk.Math.Cuda-" ## CNTK_COMPONENT_VERSION ## ".lib"
-#pragma comment(lib, ANAMEFORLIB) // built by CNTKMathCUDA project
+#pragma comment(lib, ANAMEFORLIB) // built by MathCUDA project
 #undef ANAMEFORLIB
 #endif
 
