@@ -16,17 +16,21 @@ def argument_by_name(func, name):
     else:
         return found[0]
 
-def create_mb_and_map(func, data_file, bidaf, randomize):
-    mb_source = C.MinibatchSource(C.CTFDeserializer(data_file, C.StreamDefs(
-        context_g_words  = C.StreamDef('cgw', shape=bidaf.wg_dim, is_sparse=True),
-        query_g_words    = C.StreamDef('qgw', shape=bidaf.wg_dim, is_sparse=True),
-        context_ng_words = C.StreamDef('cnw', shape=bidaf.wn_dim, is_sparse=True),
-        query_ng_words   = C.StreamDef('qnw', shape=bidaf.wn_dim, is_sparse=True),
-        answer_begin     = C.StreamDef('ab',  shape=bidaf.a_dim,  is_sparse=False),
-        answer_end       = C.StreamDef('ae',  shape=bidaf.a_dim,  is_sparse=False),
-        context_chars    = C.StreamDef('cc',  shape=bidaf.c_dim,  is_sparse=True),
-        query_chars      = C.StreamDef('qc',  shape=bidaf.c_dim,  is_sparse=True)
-    )), randomize=randomize)
+def create_mb_and_map(func, data_file, bidaf, randomize=True, repeat=True):
+    mb_source = C.MinibatchSource(
+        C.CTFDeserializer(
+            data_file,
+            C.StreamDefs(
+                context_g_words  = C.StreamDef('cgw', shape=bidaf.wg_dim, is_sparse=True),
+                query_g_words    = C.StreamDef('qgw', shape=bidaf.wg_dim, is_sparse=True),
+                context_ng_words = C.StreamDef('cnw', shape=bidaf.wn_dim, is_sparse=True),
+                query_ng_words   = C.StreamDef('qnw', shape=bidaf.wn_dim, is_sparse=True),
+                answer_begin     = C.StreamDef('ab',  shape=bidaf.a_dim,  is_sparse=False),
+                answer_end       = C.StreamDef('ae',  shape=bidaf.a_dim,  is_sparse=False),
+                context_chars    = C.StreamDef('cc',  shape=bidaf.c_dim,  is_sparse=True),
+                query_chars      = C.StreamDef('qc',  shape=bidaf.c_dim,  is_sparse=True))),
+        randomize=randomize,
+        epoch_size=C.INFINITELY_REPEAT if repeat else C.FULL_DATA_SWEEP)
 
     input_map = {
         argument_by_name(func, 'cgw'): mb_source.streams.context_g_words,
@@ -44,10 +48,8 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     bidaf = Bidaf(config_file)
     z, loss = bidaf.model()
     training_config = importlib.import_module(config_file).training_config
-    mb_source, input_map = create_mb_and_map(loss, os.path.join(data_path, training_config['train_data']), bidaf, True)
+    mb_source, input_map = create_mb_and_map(loss, os.path.join(data_path, training_config['train_data']), bidaf)
     
-    f1 = bidaf.f1_score(argument_by_name(loss, 'ab'), argument_by_name(loss, 'ae'), z.outputs[0], z.outputs[1])
-
     max_epochs = training_config['max_epochs']
     log_freq = training_config['log_freq']
     minibatch_size = training_config['minibatch_size']
@@ -66,7 +68,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     if C.Communicator.num_workers() > 1:
         learner = C.data_parallel_distributed_learner(learner, num_quantization_bits=32, distributed_after=0)
 
-    trainer = C.Trainer(z, (loss, f1), learner, progress_writers)
+    trainer = C.Trainer(z, (loss, None), learner, progress_writers)
 
     if profiling:
         C.start_profiler(sync_gpu=True)
@@ -83,6 +85,40 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     
     if profiling:
         stop_profiler()
+        
+def test(test_data, model_path, config_file):
+    bidaf = Bidaf(config_file)
+    model = C.load_model(os.path.join(model_path, model_name))
+    ab = C.as_composite(model.outputs[0].owner)
+    ae = C.as_composite(model.outputs[1].owner)
+    loss = C.as_composite(model.outputs[2].owner)
+    mb_source, input_map = create_mb_and_map(loss, test_data, bidaf, False, False)
+    label_ab = argument_by_name(loss, 'ab')
+    label_ae = argument_by_name(loss, 'ae')
+    f1 = bidaf.f1_score(label_ab, label_ae, ab, ae)
+    em = C.greater_equal(f1, 1)
+    test_func = C.splice(
+        C.reduce_sum(loss, C.Axis.all_axes()),
+        C.reduce_sum(f1, C.Axis.all_axes()),
+        C.reduce_sum(em, C.Axis.all_axes()))
+    
+    # Evaluation parameters
+    minibatch_size = 2048
+    num_sequences = 0
+    loss_sum = 0
+    f1_sum = 0
+    em_sum = 0
+    while True:
+        data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
+        if not data or not (label_ab in data) or data[label_ab].num_sequences == 0:
+            break
+        test_results = test_func.eval(data)
+        loss_sum += test_results[0]
+        f1_sum += test_results[1]
+        em_sum += test_results[2]
+        num_sequences += data[label_ab].num_sequences
+
+    print("Tested {} sequences, loss {:.2f}, F1 {:.2f}, EM {:.2f}".format(num_sequences, loss_sum / num_sequences, f1_sum / num_sequences, em_sum / num_sequences))
 
 if __name__=='__main__':
     # default Paths relative to current python file.
@@ -97,6 +133,7 @@ if __name__=='__main__':
     parser.add_argument('-profile', '--profile', help="Turn on profiling", action='store_true', default=False)
     parser.add_argument('-config', '--config', help='Config file', required=False, default='config')
     parser.add_argument('-r', '--restart', help='Indicating whether to restart from scratch (instead of restart from checkpoint file by default)', action='store_true')
+    parser.add_argument('-test', '--test', help='Test data file', required=False, default=None)
 
     args = vars(parser.parse_args())
 
@@ -105,10 +142,14 @@ if __name__=='__main__':
     if args['datadir'] is not None:
         data_path = args['datadir']
 
-    try:
-        train(data_path, model_path, args['logdir'], args['config'],
-            restore = not args['restart'],
-            profiling = args['profile'])
-    finally:
-        C.distributed.Communicator.finalize()
-
+    test_data = args['test']
+    
+    if test_data == None:
+        try:
+            train(data_path, model_path, args['logdir'], args['config'],
+                restore = not args['restart'],
+                profiling = args['profile'])
+        finally:
+            C.distributed.Communicator.finalize()
+    else:
+        test(test_data, model_path, args['config'])
