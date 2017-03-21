@@ -30,6 +30,15 @@ namespace CNTK
             NOT_IMPLEMENTED;
     }
 
+    template <typename T>
+    inline bool IsObjectExpired(std::weak_ptr<T> ptrToObject)
+    {
+        if ((ptrToObject.owner_before(std::weak_ptr<T>{}) || std::weak_ptr<T>{}.owner_before(ptrToObject)) && ptrToObject.expired())
+            return true;
+        else
+            return false;
+    }
+
     inline DEVICEID_TYPE AsCNTKImplDeviceId(const DeviceDescriptor& device)
     {
         if (device.Type() == DeviceKind::CPU)
@@ -37,7 +46,7 @@ namespace CNTK
         if (device.Type() == DeviceKind::GPU)
             return device.Id();
 
-        LogicError("Invalid device type (%u).", device.Type());
+        LogicError("Invalid device type (%u).", (unsigned int)device.Type());
     }
 
     inline Microsoft::MSR::CNTK::MatrixFormat AsCNTKImplMatrixFormat(StorageFormat storageFormat)
@@ -519,6 +528,11 @@ namespace CNTK
     inline  bool IsConstantScalar(const Variable& var)
     {
         return var.IsConstant() && (var.Shape().TotalSize() == 1);
+    }
+
+    inline Variable PlaceholderLike(const Variable& var)
+    {
+        return PlaceholderVariable(var.Shape(), var.GetDataType(), var.Name(), var.DynamicAxes());
     }
 
     std::vector<Axis> DynamicAxesFromInternalDynamicAxisName(const std::wstring& internalDynamicAxisName);

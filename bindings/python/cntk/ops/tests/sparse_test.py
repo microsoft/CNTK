@@ -68,7 +68,8 @@ def test_times_2d_sparse_sequence_operand(device_id):
 
 
 def test_training_2d_sparse_sequence_operand(device_id):
-    from .. import times, cross_entropy_with_softmax
+    from .. import times
+    from cntk.losses import cross_entropy_with_softmax
 
     dev = cntk_device(device_id)
     vocab_size = 6
@@ -85,7 +86,7 @@ def test_training_2d_sparse_sequence_operand(device_id):
     
         l = C.input_variable(shape=label_shape, is_sparse=use_sparse, name='label')
         loss = cross_entropy_with_softmax(z, l, axis=-1)
-        trainer = C.Trainer(z, (loss, None), C.sgd(z.parameters, lr=C.learning_rate_schedule(0.007, C.UnitType.sample)))
+        trainer = C.Trainer(z, (loss, None), C.sgd(z.parameters, lr=C.learning_rate_schedule(0.7, C.UnitType.sample)))
         return (a, l, w, trainer)
 
     # Run with sparse inputs
@@ -115,7 +116,8 @@ def test_training_2d_sparse_sequence_operand(device_id):
 
 
 def test_training_3d_sparse_sequence_with_recurrence(device_id):
-    from .. import times, cross_entropy_with_softmax, times_transpose, reshape
+    from .. import times, times_transpose, reshape
+    from cntk.losses import cross_entropy_with_softmax
 
     dev = cntk_device(device_id)
     vocab_size = 3
@@ -142,7 +144,7 @@ def test_training_3d_sparse_sequence_with_recurrence(device_id):
 
         l = C.input_variable(shape=label_shape, is_sparse=use_sparse, name='label')
         loss = cross_entropy_with_softmax(z, l, axis=-1)
-        trainer = C.Trainer(z, (loss, None), C.sgd(z.parameters, lr=C.learning_rate_schedule(0.007, C.UnitType.sample)))
+        trainer = C.Trainer(z, (loss, None), C.sgd(z.parameters, lr=C.learning_rate_schedule(0.7, C.UnitType.sample)))
         return (a, l, w_i, w_h, trainer)
 
     # Run with sparse inputs

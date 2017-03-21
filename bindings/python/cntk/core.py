@@ -375,7 +375,7 @@ class Value(cntk_py.Value):
             >>> sparse_indices = [[1,5],[4]]
             >>> i0 = C.input_variable(shape=num_classes, is_sparse=True)
             >>> z = C.times(i0, np.eye(num_classes))
-            >>> value = C.one_hot(sparse_indices, num_classes)
+            >>> value = C.Value.one_hot(sparse_indices, num_classes)
             >>> z.eval({i0: value})
             [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
                     [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), 
@@ -386,7 +386,7 @@ class Value(cntk_py.Value):
             >>> sparse_indices = [[1,5,3,2],[4,1]]
             >>> i0 = C.input_variable(shape=sample_shape, is_sparse=True)
             >>> z = C.times(i0, np.eye(num_classes))
-            >>> value = C.one_hot(sparse_indices, sample_shape)
+            >>> value = C.Value.one_hot(sparse_indices, sample_shape)
             >>> z.eval({i0: value})
             [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
                      [ 0.,  0.,  0.,  0.,  0.,  1.]],

@@ -48,6 +48,7 @@ def train_cifar_resnet_for_eval(test_device, output_dir):
 from cntk.layers.typing import *
 from cntk import *
 from cntk.utils import Signature
+from cntk.logging import *
 def create_criterion_function(model):
     @Function
     @Signature(query = Sequence[Tensor[LanguageUnderstanding.vocab_size]], labels = Sequence[SparseTensor[LanguageUnderstanding.num_labels]])
@@ -67,12 +68,11 @@ def LanguageUnderstanding_train(reader, model, max_epochs):
     epoch_size = 36000
     minibatch_size = 70
 
-    learner = adam_sgd(criterion.parameters,
-                       lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
-                       momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
-                       low_memory = True,
-                       gradient_clipping_threshold_per_sample = 15,
-                       gradient_clipping_with_truncation = True)
+    learner = fsadagrad(criterion.parameters,
+                        lr         = learning_rate_schedule([0.003]*2+[0.0015]*12+[0.0003], UnitType.sample, epoch_size),
+                        momentum   = momentum_as_time_constant_schedule(minibatch_size / -math.log(0.9)),
+                        gradient_clipping_threshold_per_sample = 15,
+                        gradient_clipping_with_truncation = True)
 
     trainer = Trainer(None, criterion, learner)
     progress_printer = ProgressPrinter(freq=100, first=10, tag='Training') # more detailed logging

@@ -17,10 +17,11 @@ from cntk.layers.typing import *
 from cntk.utils import *
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer
-from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
-from cntk.ops import cross_entropy_with_softmax, classification_error, relu
+from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+from cntk import cross_entropy_with_softmax, classification_error, relu
 from cntk.ops import Function
-from _cntk_py import set_computation_network_trace_level
+from cntk.debugging import set_computation_network_trace_level
+from cntk.logging import *
 
 ########################
 # variables and paths  #
@@ -115,7 +116,7 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
     criterion = create_criterion_function(model, normalize=lambda x: x / 256)
     #debughelpers.dump_function(criterion, 'criterion')
 
-    #from cntk.graph import plot
+    #from cntk.logging.graph import plot
     #plot(criterion, filename=os.path.join(model_path, "ConvNet_CIFAR10_DataAug.pdf"))
 
     # iteration parameters
@@ -184,7 +185,7 @@ def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=
 # TODO: replace by a proper such class once available
 def Evaluator(model, criterion):
     from cntk import Trainer
-    from cntk.learner import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
+    from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
     loss, metric = Trainer._get_loss_metric(criterion)
     parameters = set(loss.parameters)
     if model:

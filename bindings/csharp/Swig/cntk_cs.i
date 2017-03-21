@@ -108,9 +108,6 @@
 %ignore_function CNTK::Function::Function;
 %ignore_function CNTK::Function::RestoreFromCheckpoint;
 %ignore_function CNTK::Function::Gradients;
-// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
-%ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice);
-%ignore CNTK::Function::LoadModel(std::istream& inputStream);
 
 %ignore_class CNTK::Parameter;
 %ignore_class CNTK::Constant;
@@ -523,6 +520,9 @@
         }
     }
 %}
+
+// Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
+%ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
 
 %rename (GetName) CNTK::Function::Name;
 %rename (GetUid) CNTK::Function::Uid;
@@ -1090,13 +1090,43 @@
         }
     }
 
-    // Create Value object from OneHotVector input: batch, sequence or batch of sequences
+    // Create Value object from OneHotVector input, for N-dimenstional tensor. Only Create() method for now.
+    private static Value Create<T>(NDShape sampleShape,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
+                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                  DeviceDescriptor device,
+                                  bool readOnly = false)
+    {
+        var seqFlags = new BoolVector(sequenceStartFlags);
+        var inputSeqVector = new SizeTVectorVector();
+        var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
+        foreach (var seq in sequences)
+        {
+            var s = new SizeTVector(seq);
+            sizeTVectorRefList.Add(s);
+            inputSeqVector.Add(s);
+        }
+        if (typeof(T).Equals(typeof(float)))
+        {
+            return Value.CreateOneHotFloat(sampleShape, inputSeqVector, seqFlags, device, readOnly);
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            return Value.CreateOneHotDouble(sampleShape, inputSeqVector, seqFlags, device, readOnly);
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
+    }
+
+    // Create Value object from OneHotVector input, for 1D tensor: batch, sequence or batch of sequences
     public static Value CreateBatch<T>(uint dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
     {
         // Is CreateBatch for OneHot really useful? 
         var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
         batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
-        
+
         return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
@@ -1135,6 +1165,36 @@
         return Create<T>(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
     }
 
+    private static Value Create<T>(uint dimension,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
+                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                  DeviceDescriptor device,
+                                  bool readOnly = false)
+    {
+        var seqFlags = new BoolVector(sequenceStartFlags);
+        var inputSeqVector = new SizeTVectorVector();
+        var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
+        foreach (var seq in sequences)
+        {
+            var s = new SizeTVector(seq);
+            sizeTVectorRefList.Add(s);
+            inputSeqVector.Add(s);
+        }
+        if (typeof(T).Equals(typeof(float)))
+        {
+            return Value.CreateOneHotFloat(dimension, inputSeqVector, seqFlags, device, readOnly);
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            return Value.CreateOneHotDouble(dimension, inputSeqVector, seqFlags, device, readOnly);
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
+    }
+
+    // Create Value object from sparse input, for N-dimensional tensor. Only CreateSequence() for now.
     public static Value CreateSequence<T>(NDShape sampleShape, uint sequenceLength,
                                           int[] colStarts, int[] rowIndices, T[] nonZeroValues, uint numNonZeroValues,
                                           bool sequenceStartFlag,
@@ -1163,6 +1223,7 @@
         return Value.CreateSequence<T>(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, true, device, readOnly);
     }
 
+    // Create Value object from sparse input, for 1D tensor. Only CreateSequence() for now.
     public static Value CreateSequence<T>(uint dimension, uint sequenceLength,
                                           int[] colStarts, int[] rowIndices, T[] nonZeroValues, uint numNonZeroValues,
                                           bool sequenceStartFlag,
@@ -1189,35 +1250,6 @@
                                           bool readOnly = false)
     {
         return Value.CreateSequence<T>(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, true, device, readOnly);
-    }
-
-    private static Value Create<T>(uint dimension,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
-                                  System.Collections.Generic.List<bool> sequenceStartFlags,
-                                  DeviceDescriptor device,
-                                  bool readOnly = false)
-    {
-        var seqFlags = new BoolVector(sequenceStartFlags);
-        var inputSeqVector = new SizeTVectorVector();
-        var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
-        foreach (var seq in sequences)
-        {
-            var s = new SizeTVector(seq);
-            sizeTVectorRefList.Add(s);
-            inputSeqVector.Add(s);
-        }
-        if (typeof(T).Equals(typeof(float)))
-        {
-            return Value.CreateOneHotFloat(dimension, inputSeqVector, seqFlags, device, readOnly);
-        }
-        else if (typeof(T).Equals(typeof(double)))
-        {
-            return Value.CreateOneHotDouble(dimension, inputSeqVector, seqFlags, device, readOnly);
-        }
-        else
-        {
-            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
-        }
     }
 
     // Create value object from NDArrayView
@@ -1320,31 +1352,17 @@
         }
         return;
     }
-
-
-
 %}
-
-%extend CNTK::Value {
-    void CNTK::Value::CopyVariableValueToFloat(const CNTK::Variable& outputVariable, std::vector<std::vector<float>>& sequences)
-    {
-        return self->CopyVariableValueTo<float>(outputVariable, sequences);
-    }
-
-    void CNTK::Value::CopyVariableValueToDouble(const CNTK::Variable& outputVariable, std::vector<std::vector<double>>& sequences)
-    {
-        return self->CopyVariableValueTo<double>(outputVariable, sequences);
-    }
-}
-
-%include "CNTKLibraryInternals.h"
-%include "CNTKLibrary.h"
 
 %include "CNTKValueExtend.i"
 
 //
 // NDArryView
 //
+%ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
+%ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device);
+%ignore CNTK::NDArrayView::NDArrayView(double value, DataType dataType = DataType::Float, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), bool readOnly = false);
+
 %extend CNTK::NDArrayView {
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
     {
@@ -1376,4 +1394,7 @@
         return (*self)[axisId];
     }
 }
+
+%include "CNTKLibraryInternals.h"
+%include "CNTKLibrary.h"
 

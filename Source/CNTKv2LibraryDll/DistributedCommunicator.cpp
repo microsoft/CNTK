@@ -122,7 +122,7 @@ namespace CNTK
             } 
             else
             {
-                LogicError("Invalid device type (%u).", device.Type());
+                LogicError("Invalid device type (%u).", (unsigned int)device.Type());
             }
         }
     }
@@ -170,7 +170,7 @@ namespace CNTK
         }
         else
         {
-            LogicError("Invalid device type (%u).", device.Type());
+            LogicError("Invalid device type (%u).", (unsigned int)device.Type());
         }
         AggregateImpl(values, outputValues, sendToWorkers);
     }

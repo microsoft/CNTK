@@ -379,7 +379,7 @@ void PrintUsageInfo()
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 }
 
-// print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; memory = 8192 MB)
+// print gpu info for current gpu devices (e.g. Device[0]: cores = 2496; computeCapability = 5.2; type = "Quadro M4000"; total memory = 8192 MB; free memory = 8192 MB)
 void PrintGpuInfo()
 {
 #ifndef CPUONLY
@@ -396,8 +396,8 @@ void PrintGpuInfo()
 
     for (GpuData& data : gpusData)
     {
-        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; memory = %lu MB\n",
-                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory);
+        LOGPRINTF(stderr, "\t\tDevice[%d]: cores = %d; computeCapability = %d.%d; type = \"%s\"; total memory = %lu MB; free memory = %lu MB\n",
+                  data.deviceId, data.cudaCores, data.versionMajor, data.versionMinor, data.name.c_str(), (unsigned long)data.totalMemory, (unsigned long)data.freeMemory);
     }
     LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
 #endif

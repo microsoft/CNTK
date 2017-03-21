@@ -9,8 +9,10 @@ import os
 from cntk import Trainer, Axis #, text_format_minibatch_source, StreamConfiguration
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, try_set_default_device
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.ops import input_variable, sequence
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "common"))

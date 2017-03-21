@@ -39,12 +39,11 @@ def test_htk_deserializers():
     ce = C.cross_entropy_with_softmax(z, labels)
     errs = C.classification_error    (z, labels)
 
-    learner = C.adam_sgd(z.parameters,
-                    lr=C.learning_rate_schedule(lr, C.UnitType.sample, epoch_size),
-                    momentum=C.momentum_as_time_constant_schedule(1000),
-                    low_memory=True,
-                    gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
-    progress_printer = C.ProgressPrinter(freq=0)
+    learner = C.fsadagrad(z.parameters,
+                          lr=C.learning_rate_schedule(lr, C.UnitType.sample, epoch_size),
+                          momentum=C.momentum_as_time_constant_schedule(1000),
+                          gradient_clipping_threshold_per_sample=15, gradient_clipping_with_truncation=True)
+    progress_printer = C.logging.ProgressPrinter(freq=0)
     trainer = C.Trainer(z, (ce, errs), learner, progress_printer)
 
     input_map={ features: reader.streams.amazing_features, labels: reader.streams.awesome_labels }

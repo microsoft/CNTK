@@ -630,11 +630,9 @@ GpuData GetGpuData(DEVICEID_TYPE deviceId)
     auto it = std::find_if(gpusData.begin(), gpusData.end(), [&deviceId](const GpuData& gpu){return gpu.deviceId == deviceId;});
 
     if (it != gpusData.end())
-    {
         return *it;
-    }
 
-    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0);
+    return GpuData(0, 0, deviceId, 0, GpuValidity::UnknownDevice, "", 0, 0);
 }
 
 // populate a vector with data (id, major/minor version, cuda cores, name and memory) for each gpu device in the machine
@@ -652,16 +650,13 @@ std::vector<GpuData> GetAllGpusData()
         GpuValidity validity = GpuValidity::UnknownDevice;
 
         if (pd->deviceProp.major < BestGpu::MininumCCMajorForGpu)
-        {
             validity = GpuValidity::ComputeCapabilityNotSupported;
-        }
         else
-        {
             validity = GpuValidity::Valid;
-        }
 
-        size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); //From bytes to MBytes
-        GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory);
+        size_t totalMemory = pd->deviceProp.totalGlobalMem/(1024*1024); // From bytes to MBytes
+        size_t freeMemory = pd->memory.free / (1024 * 1024); // From bytes to MBytes
+        GpuData gpuData = GpuData(pd->deviceProp.major, pd->deviceProp.minor, pd->deviceId, pd->cores, validity, string(pd->deviceProp.name), totalMemory, freeMemory);
         data.push_back(gpuData);
     }
 

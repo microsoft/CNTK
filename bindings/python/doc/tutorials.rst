@@ -35,14 +35,14 @@ Tutorials
      CNTK 205: `Artistic Style Transfer`_
 
 #.  *Produce realistic data (MNIST images) with no human input (unsupervised learning)*
-     CNTK 206 Part A: `MNIST data preparation`_ ,  Part B: `Basic Generative Adversarial Networks (GAN)`_
+     CNTK 206 Part A: `MNIST data preparation`_ ,  Part B: `Basic Generative Adversarial Networks (GAN)`_,  Part B: `Deep Convolutional GAN`_
 
 #.  *Training with Sampled Softmax*
      CNTK 207: `Training with Sampled Softmax`_
 
 Try these notebooks pre-installed on `CNTK Azure Notebooks`_ for free. 
 
-For our Japanese users, you can find some of the `tutorials in Japanese`_.
+For our Japanese users, you can find some of the `tutorials in Japanese`_ (unsupported).
 
 .. _`Logistic Regression`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_101_LogisticRegression.ipynb
 .. _`Feed Forward network`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_102_FeedForward.ipynb
@@ -57,7 +57,8 @@ For our Japanese users, you can find some of the `tutorials in Japanese`_.
 .. _`Reinforcement learning basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb
 .. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
 .. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
-.. _`Basic Generative Adversarial Networks (GAN)`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_206_Basic_GAN.ipynb
+.. _`Basic Generative Adversarial Networks (GAN)`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_206A_Basic_GAN.ipynb
+.. _`Deep Convolutional GAN`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_206B_DCGAN.ipynb
 .. _`Training with Sampled Softmax`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb
 
 .. _`CNTK Azure Notebooks`: https://notebooks.azure.com/cntk/libraries/tutorials

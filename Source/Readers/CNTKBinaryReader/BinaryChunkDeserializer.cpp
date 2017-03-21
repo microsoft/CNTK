@@ -129,7 +129,7 @@ void BinaryChunkDeserializer::Initialize(const std::map<std::wstring, std::wstri
         else if (type == MatrixEncodingType::sparse_csc)
             m_deserializers[i] = make_shared<SparseBinaryDataDeserializer>(m_file, precision);
         else
-            RuntimeError("Unknown encoding type %u requested.", type);
+            RuntimeError("Unknown encoding type %u requested.", (unsigned int)type);
 
         auto description = m_deserializers[i]->GetStreamDescription();
         description->m_id = i;

@@ -262,6 +262,9 @@ namespace CNTK
         CNTK_API void ForceDeterministicAlgorithms();
         CNTK_API bool ShouldForceDeterministicAlgorithms();
 
+        CNTK_API void EnableSynchronousGPUKernelExecution();
+        CNTK_API bool IsSynchronousGPUKernelExecutionEnabled();
+
         CNTK_API void SetFixedRandomSeed(unsigned long fixedRandomSeed);
 
         CNTK_API void EnableForwardValuesSharing();
