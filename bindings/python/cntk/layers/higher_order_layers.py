@@ -56,6 +56,11 @@ def Sequential(layers, name=''):
      ...                       splice])                                     # splice both on top of each other
 
      >>> # using function tuple to implement a ResNet block
+     >>> # The function tuple applies all items to the input, and emits a tuple with the results
+     >>> # that then act as the arguments to the next one.
+     >>> # Here we say (Convolution(), identity), which generates two arguments to the next function,
+     >>> # the first being the convolution, the second being the input passed through.
+     >>> # Following that with plus() implements the ResNet formula.
      >>> from cntk.ops import plus, relu
      >>> resnet_layer = Sequential([(Convolution((3,3), 64, activation=None), # first tuple entry
      ...                             identity),                               # second tuple entry is a pass-through
@@ -69,10 +74,9 @@ def Sequential(layers, name=''):
          array([[[ 4.,  2.]]], dtype=float32)
 
     Args:
-      layers (list of :class:`~cntk.ops.functions.Function`, equivalent Python functions, tuples of functions, or lists thereof):
-       the list of functions to apply in sequence.
-       A tuple aplies each of its items to the input and results in a tuple value.
-       An item that is a list will be flattened.
+      layers (list of :class:`~cntk.ops.functions.Function`, equivalent Python functions, tuples of functions, or lists thereof): the list of functions to apply in sequence.
+        A tuple aplies each of its items to the input and results in a tuple value.
+        An item that is a list will be flattened.
 
     Returns:
         cntk.ops.functions.Function: 
@@ -88,15 +92,15 @@ def Sequential(layers, name=''):
     return _inject_name(composed_function, name)
 
 
-def For(rng, constructor, name=''):
+def For(what_range, constructor, name=''):
     '''
-    For(rng, constructor, name='')
+    For(what_range, constructor, name='')
 
-    Layer factory function to create a composite that applies a sequence of layers constructed with a constructor lambda.
+    Layer factory function to create a composite through a pattern similar to Python's `for` statement.
 
     This layer factory loops over the given range and passes each value to the constructor function.
     It is equivalent to
-    ``Sequential([constructor(i) for i in rng])``.
+    ``Sequential([constructor(i) for i in what_range])``.
 
     It is acceptable that ``constructor`` takes no argument.
 
@@ -133,7 +137,7 @@ def For(rng, constructor, name=''):
          (128,)
 
     Args:
-     rng (range): a Python range to loop over
+     what_range (range): a Python range to loop over
      constructor (Python function/lambda with 1 or 0 arguments): lambda that constructs a layer
 
     Returns:
@@ -149,7 +153,7 @@ def For(rng, constructor, name=''):
             return constructor(i)  # takes an arg: pass it
         else:
             return constructor()   # takes no arg: call without, that's fine too
-    layers = [call(i) for i in rng]
+    layers = [call(i) for i in what_range]
     sequential = Sequential(layers)
 
     return _inject_name(sequential, name)

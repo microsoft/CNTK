@@ -90,7 +90,7 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
 
     Constructs a Parameter variable.
     Some operations, such as :func:`~cntk.ops.times`,
-    can update a parameter's shape depending on its data input. For those dimensions, pass ``InferredDimension``.
+    can update a parameter's shape depending on its data input. For those dimensions, pass :const:`~cntk.InferredDimension`.
 
     This is a wrapper around :func:`~cntk.ops.parameter` that allows to specify
     the ``dtype`` (float/double) per :class:`~cntk.default_options`.
@@ -101,7 +101,6 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
          (13, 42, 7)
 
      >>> # example with inferred dimensions
-     >>> from _cntk_py import InferredDimension
      >>> W = Parameter((InferredDimension, 42), init=glorot_uniform())
      >>> W.shape   # -1 indicates dimension yet to be inferred
          (-1, 42)
@@ -161,7 +160,7 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
 
     Constructs an Input variable.
     Input variables are used when explicitly constructing a graph.
-    In the context of the Layers library, however, the preferred method is to use the @Signature pattern.
+    In the context of the Layers library, however, the preferred method is to use the @:func:`cntk.utils.Signature` pattern.
     This is a wrapper around :func:`~cntk.ops.input_variable`.
 
     Example:
@@ -531,7 +530,7 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
         cell_shape (tuple, defaults to `None`): if given, then the output state is first computed at `cell_shape`
          and linearly projected to `shape`
-        activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
+        activation (:class:`~cntk.ops.functions.Function`, defaults to :func:`~cntk.ops.tanh`): function to apply at the end, e.g. `relu`
         use_peepholes (bool, defaults to `False`):
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
@@ -618,7 +617,7 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
         cell_shape (tuple, defaults to `None`): if given, then the output state is first computed at `cell_shape`
          and linearly projected to `shape`
-        activation (:class:`~cntk.ops.functions.Function`, defaults to tanh): function to apply at the end, e.g. `relu`
+        activation (:class:`~cntk.ops.functions.Function`, defaults to :func:`~cntk.ops.tanh`): function to apply at the end, e.g. `relu`
         init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
         init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
         enable_self_stabilization (bool, defaults to `False`): if `True` then add a :func:`~cntk.layers.blocks.Stabilizer`

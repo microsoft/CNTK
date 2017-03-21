@@ -70,7 +70,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
 # TODO: reconsider the name. Windowed()?
 def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name=''):
     '''
-    PastValueWindow(window_size, axis, go_backwards=default_override_or(False), name='')
+    PastValueWindow(window_size, axis, go_backwards=False, name='')
 
     Layer factory function to create a function that returns a static, maskable view for N past steps over a sequence along the given 'axis'.
     It returns two matrices: a value matrix, shape=(N,dim), and a valid window, shape=(N,1).
@@ -117,7 +117,7 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
         name (str, optional, keyword only): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function: 
+        :class:`~cntk.ops.functions.Function`: 
         A function that accepts one argument, which must be a sequence. It returns a fixed-size window of the last ``window_size`` items,
         spliced along ``axis``.
     '''
@@ -209,7 +209,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function: 
+        :class:`~cntk.ops.functions.Function`: 
         A function that accepts arguments ``(initial_state_1, initial_state_2, ..., input_sequence)``,
         where the number of initial state variables must match the step function's.
         The initial state can be a sequence, in which case its last (or first if ``go_backwards``) item is used.
@@ -295,6 +295,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     For example, a cumulative sum over a sequence can be computed as ``Recurrence(plus)``,
     or a GRU layer with projection could be realized as ``Recurrence(GRU(500) >> Dense(200))``;
     where the projection is applied to the hidden state as fed back to the next step.
+    ``F>>G`` is a short-hand for ``Sequential([F, G])``.
 
     Optionally, the recurrence can run backwards. This is useful for constructing bidirectional models.
 
@@ -326,8 +327,6 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      >>> x0 = np.array([[   3,    2],
      ...                [  13,   42],
      ...                [-100, +100]])
-     >>> #cum_sum = Recurrence(C.plus, initial_state=np.array([0, 0.5]))
-     >>> # BUGBUG: passing a NumPy array fails
      >>> cum_sum = Recurrence(C.plus, initial_state=Constant([0, 0.5]))
      >>> y = cum_sum(x)
      >>> y(x0)
@@ -350,9 +349,14 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function: 
+        :class:`~cntk.ops.functions.Function`: 
         A function that accepts one argument (which must be a sequence) and performs the recurrent operation on it
     '''
+
+    # BUGBUG: the cum_sum expression in the docstring should be this:
+    #cum_sum = Recurrence(C.plus, initial_state=np.array([0, 0.5]))
+    # BUGBUG: whereas passing a NumPy array fails with "TypeError: cannot convert value of dictionary"
+    #cum_sum = Recurrence(C.plus, initial_state=Constant([0, 0.5]))
 
     go_backwards  = get_default_override(Recurrence, go_backwards=go_backwards)
     initial_state = get_default_override(Recurrence, initial_state=initial_state)
@@ -386,6 +390,8 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
 
 def Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
+    Fold(folder_function, go_backwards=False, initial_state=0, return_full_state=False, name='')
+
     Layer factory function to create a function that runs a step function recurrently over an input sequence,
     and returns the final state.
     This is often used for embeddings of sequences, e.g. in a sequence-to-sequence model.
@@ -447,7 +453,7 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function: 
+        :class:`~cntk.ops.functions.Function`: 
         A function that accepts one argument (which must be a sequence) and performs the fold operation on it
     '''
 
@@ -522,7 +528,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        cntk.ops.functions.Function: 
+        :class:`~cntk.ops.functions.Function`: 
         A function that accepts one argument (which must be a sequence and provides
         a reference for the maximum length of the output sequence), and performs the unfold operation on it
     '''
