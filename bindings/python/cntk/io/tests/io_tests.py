@@ -9,7 +9,9 @@ import os
 import numpy as np
 import pytest
 
-from cntk.io import *
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDefs, StreamDef, \
+    ImageDeserializer, _ReaderConfig, FULL_DATA_SWEEP, \
+    sequence_to_cntk_text_format
 import cntk.io.transforms as xforms
 from cntk.cntk_py import to_dictionary
 from cntk.cntk_py import MinibatchSourceConfig
@@ -18,26 +20,17 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 
 AA = np.asarray
 
-def create_temp_file(tmpdir):
-    tmpfile = str(tmpdir/'mbtest.txt')
-    with open(tmpfile, 'w') as f:
-        f.write("|S0 1\n|S0 2\n|S0 3\n|S0 4")
-    return tmpfile
-
-def create_ctf_deserializer(tmpdir):
-    tmpfile = create_temp_file(tmpdir)
-    return CTFDeserializer(tmpfile, StreamDefs(features  = StreamDef(field='S0', shape=1)))
-
-def create_config(tmpdir):
-    tmpfile = create_temp_file(tmpdir)
-    return MinibatchSourceConfig() \
-        .add_deserializer(
-            CTFDeserializer(tmpfile, 
-                StreamDefs(features  = StreamDef(field='S0', shape=1))))
+MBDATA_DENSE = r'''0  |S0 0   |S1 0
+0   |S0 1   |S1 1
+0   |S0 2
+0   |S0 3   |S1 3
+1   |S0 4
+1   |S0 5   |S1 1
+1   |S0 6   |S1 2
+'''
 
 
-def test_text_format(tmpdir):
-    mbdata = r'''0	|x 560:1	|y 1 0 0 0 0
+MBDATA_SPARSE = r'''0	|x 560:1	|y 1 0 0 0 0
 0	|x 0:1
 0	|x 0:1
 1	|x 560:1	|y 0 1 0 0 0
@@ -45,17 +38,47 @@ def test_text_format(tmpdir):
 1	|x 0:1
 1	|x 424:1
 '''
-    tmpfile = str(tmpdir/'mbdata.txt')
+
+
+def create_temp_file(tmpdir):
+    tmpfile = str(tmpdir/'mbtest.txt')
     with open(tmpfile, 'w') as f:
-        f.write(mbdata)
+        f.write("|S0 1\n|S0 2\n|S0 3\n|S0 4")
+    return tmpfile
+
+
+def create_ctf_deserializer(tmpdir):
+    tmpfile = create_temp_file(tmpdir)
+    return CTFDeserializer(tmpfile, StreamDefs(features=StreamDef(field='S0', shape=1)))
+
+
+def create_config(tmpdir):
+    tmpfile = create_temp_file(tmpdir)
+    return MinibatchSourceConfig() \
+        .add_deserializer(
+            CTFDeserializer(tmpfile, 
+                StreamDefs(features=StreamDef(field='S0', shape=1))))
+
+
+def _write_data(tmpdir, data):
+    tmpfile = str(tmpdir / 'mbdata.txt')
+
+    with open(tmpfile, 'w') as f:
+        f.write(data)
+
+    return tmpfile
+
+
+def test_text_format(tmpdir):
+    tmpfile = _write_data(tmpdir, MBDATA_SPARSE)
 
     input_dim = 1000
     num_output_classes = 5
 
     mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
-         features  = StreamDef(field='x', shape=input_dim, is_sparse=True),
-         labels    = StreamDef(field='y', shape=num_output_classes, is_sparse=False)
-       )))
+        features=StreamDef(field='x', shape=input_dim, is_sparse=True),
+        labels=StreamDef(field='y', shape=num_output_classes, is_sparse=False)
+    )))
 
     assert isinstance(mb_source, MinibatchSource)
 
@@ -82,10 +105,10 @@ def test_text_format(tmpdir):
 
     label_data = labels.asarray()
     assert np.allclose(label_data,
-            np.asarray([
-                [[ 1.,  0.,  0.,  0.,  0.]],
-                [[ 0.,  1.,  0.,  0.,  0.]]
-                ]))
+                       np.asarray([
+                           [[1.,  0.,  0.,  0.,  0.]],
+                           [[0.,  1.,  0.,  0.,  0.]]
+                       ]))
 
     mb = mb_source.next_minibatch(1)
     features = mb[features_si]
@@ -96,13 +119,15 @@ def test_text_format(tmpdir):
     assert features.num_samples < 7
     assert labels.num_samples == 1
 
+
 def check_default_config_keys(d):
         assert 5 <= len(d.keys())
-        assert False == d['frameMode']
-        assert False == d['multiThreadedDeserialization']
+        assert d['frameMode'] is False
+        assert d['multiThreadedDeserialization'] is False
         assert TraceLevel.Warning == d['traceLevel']
         assert 'randomize' in d.keys()
         assert 'deserializers' in d.keys()
+
 
 def test_minibatch_source_config_constructor(tmpdir):
     ctf = create_ctf_deserializer(tmpdir)
@@ -111,14 +136,14 @@ def test_minibatch_source_config_constructor(tmpdir):
     dictionary = to_dictionary(config)
     check_default_config_keys(dictionary)
     assert 5 == len(dictionary.keys())
-    assert False == dictionary['randomize']
+    assert dictionary['randomize'] is False
 
     config = MinibatchSourceConfig([ctf], True)
     dictionary = to_dictionary(config)
     check_default_config_keys(dictionary)
 
     assert 7 == len(dictionary.keys())
-    assert True == dictionary['randomize']
+    assert dictionary['randomize'] is True
     assert DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS == dictionary['randomizationWindow']
     assert False == dictionary['sampleBasedRandomizationWindow']
 
@@ -127,9 +152,10 @@ def test_minibatch_source_config_constructor(tmpdir):
     check_default_config_keys(dictionary)
 
     assert 7 == len(dictionary.keys())
-    assert True == dictionary['randomize']
+    assert dictionary['randomize'] is True
     assert DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS == dictionary['randomizationWindow']
     assert False == dictionary['sampleBasedRandomizationWindow']
+
 
 def test_minibatch_source_config_sweeps_and_samples(tmpdir):
     ctf = create_ctf_deserializer(tmpdir)
@@ -157,19 +183,19 @@ def test_minibatch_source_config_randomization(tmpdir):
 
     dictionary = to_dictionary(config)
     check_default_config_keys(dictionary)
-    assert True == dictionary['randomize']
+    assert dictionary['randomize'] is True
 
     config.randomization_window_in_chunks = 0
     dictionary = to_dictionary(config)
     check_default_config_keys(dictionary)
-    assert False == dictionary['randomize']
+    assert dictionary['randomize'] is False 
 
     config.randomization_window_in_chunks = 10
     dictionary = to_dictionary(config)
     check_default_config_keys(dictionary)
-    assert True == dictionary['randomize']
+    assert dictionary['randomize'] is True
     assert 10 == dictionary['randomizationWindow']
-    assert False == dictionary['sampleBasedRandomizationWindow']
+    assert dictionary['sampleBasedRandomizationWindow'] is True
 
     config.randomization_window_in_samples = 100
     with pytest.raises(Exception):
@@ -179,9 +205,10 @@ def test_minibatch_source_config_randomization(tmpdir):
     config.randomization_window_in_chunks = 0
     dictionary = to_dictionary(config)
     check_default_config_keys(dictionary)
-    assert True == dictionary['randomize']
+    assert dictionary['randomize'] is True
     assert 100 == dictionary['randomizationWindow']
-    assert True == dictionary['sampleBasedRandomizationWindow']
+    assert dictionary['sampleBasedRandomizationWindow'] is True
+
     
 def test_minibatch_source_config_other_properties(tmpdir):
     ctf = create_ctf_deserializer(tmpdir)
@@ -194,8 +221,8 @@ def test_minibatch_source_config_other_properties(tmpdir):
     dictionary = to_dictionary(config)
     assert 7 == len(dictionary.keys())
     assert TraceLevel.Info == dictionary['traceLevel']
-    assert True == dictionary['frameMode']
-    assert True == dictionary['multiThreadedDeserialization']
+    assert dictionary['frameMode'] is True
+    assert dictionary['multiThreadedDeserialization'] is True
 
     config.is_multithreaded = False
     config.trace_level = 0
@@ -209,10 +236,11 @@ def test_minibatch_source_config_other_properties(tmpdir):
     dictionary = to_dictionary(config)
     assert 9 == len(dictionary.keys())
     assert 0 == dictionary['traceLevel']
-    assert False == dictionary['frameMode']
-    assert False == dictionary['multiThreadedDeserialization']
-    assert True == dictionary['truncated']
+    assert dictionary['frameMode'] is False
+    assert dictionary['multiThreadedDeserialization'] is False
+    assert dictionary['truncated'] is True
     assert 123 == dictionary['truncationLength']
+
 
 def test_image():
     map_file = "input.txt"
@@ -227,10 +255,15 @@ def test_image():
     label_name = "l"
     num_classes = 7
 
-    transforms = [xforms.crop(crop_type='randomside', side_ratio=0.5, jitter_type='uniratio'),
-        xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear'),
+    transforms = [
+        xforms.crop(crop_type='randomside', side_ratio=0.5,
+                    jitter_type='uniratio'),
+        xforms.scale(width=image_width, height=image_height,
+                     channels=num_channels, interpolations='linear'),
         xforms.mean(mean_file)]
-    image = ImageDeserializer(map_file, StreamDefs(f = StreamDef(field='image', transforms=transforms), l = StreamDef(field='label', shape=num_classes)))
+    defs = StreamDefs(f=StreamDef(field='image', transforms=transforms),
+                      l=StreamDef(field='label', shape=num_classes))
+    image = ImageDeserializer(map_file, defs)
 
     config = to_dictionary(MinibatchSourceConfig([image], randomize=False))
     
@@ -244,7 +277,7 @@ def test_image():
     assert l['labelDim'] == num_classes
 
     f = d['input'][feature_name]
-    assert set(f.keys()) == { 'transforms' }
+    assert set(f.keys()) == {'transforms'}
     t0, t1, t2, _ = f['transforms']
     assert t0['type'] == 'Crop'
     assert t1['type'] == 'Scale'
@@ -259,7 +292,6 @@ def test_image():
     assert t1['interpolations'] == 'linear'
     assert t2['meanFile'] == mean_file
 
-    
     config = to_dictionary(MinibatchSourceConfig([image, image]))
     assert len(config['deserializers']) == 2
 
@@ -273,20 +305,9 @@ def test_image():
     assert set(sis.keys()) == { feature_name, label_name }
     '''
 
+
 def test_full_sweep_minibatch(tmpdir):
-
-    mbdata = r'''0	|S0 0   |S1 0
-0	|S0 1 	|S1 1
-0	|S0 2
-0	|S0 3 	|S1 3
-1	|S0 4
-1	|S0 5 	|S1 1
-1	|S0 6	|S1 2
-'''
-
-    tmpfile = str(tmpdir/'mbtest.txt')
-    with open(tmpfile, 'w') as f:
-        f.write(mbdata)
+    tmpfile = _write_data(tmpdir, MBDATA_DENSE)
 
     mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
         features  = StreamDef(field='S0', shape=1),
@@ -305,10 +326,10 @@ def test_full_sweep_minibatch(tmpdir):
     assert features.end_of_sweep
     assert len(features.as_sequences()) == 2
     expected_features = \
-            [
-                [[0],[1],[2],[3]],
-                [[4],[5],[6]]
-            ]
+        [
+            [[0], [1], [2], [3]],
+            [[4], [5], [6]]
+        ]
 
     for res, exp in zip (features.as_sequences(), expected_features):
         assert np.allclose(res, exp)
@@ -416,8 +437,8 @@ def test_one_sweep(tmpdir):
 
         assert not mb
 
-def test_large_minibatch(tmpdir):
 
+def test_large_minibatch(tmpdir):
     mbdata = r'''0  |S0 0   |S1 0
 0   |S0 1   |S1 1
 0   |S0 2
@@ -426,10 +447,7 @@ def test_large_minibatch(tmpdir):
 0   |S0 5   |S1 1
 0   |S0 6   |S1 2
 '''
-
-    tmpfile = str(tmpdir/'mbtest.txt')
-    with open(tmpfile, 'w') as f:
-        f.write(mbdata)
+    tmpfile = _write_data(tmpdir, mbdata)
 
     mb_source = MinibatchSource(CTFDeserializer(tmpfile, StreamDefs(
         features  = StreamDef(field='S0', shape=1),
@@ -506,20 +524,25 @@ def test_create_two_image_deserializers(tmpdir):
 filename2	0
 '''
 
-    map_file = str(tmpdir/'mbdata.txt')
+    map_file = str(tmpdir / 'mbdata.txt')
     with open(map_file, 'w') as f:
         f.write(mbdata)
 
     image_width = 100
     image_height = 200
     num_channels = 3
-    num_classes = 7
 
-    transforms = [xforms.crop(crop_type='randomside', side_ratio=0.5, jitter_type='uniratio'),
-                  xforms.scale(width=image_width, height=image_height, channels=num_channels, interpolations='linear')]
-        
-    image1 = ImageDeserializer(map_file, StreamDefs(f1 = StreamDef(field='image', transforms=transforms)))
-    image2 = ImageDeserializer(map_file, StreamDefs(f2 = StreamDef(field='image', transforms=transforms)))
+    transforms = [xforms.crop(crop_type='randomside', side_ratio=0.5,
+                              jitter_type='uniratio'),
+                  xforms.scale(width=image_width, height=image_height,
+                               channels=num_channels, interpolations='linear')]
+
+    image1 = ImageDeserializer(
+        map_file, StreamDefs(f1=StreamDef(field='image',
+                             transforms=transforms)))
+    image2 = ImageDeserializer(
+        map_file, StreamDefs(f2=StreamDef(field='image',
+                             transforms=transforms)))
 
     mb_source = MinibatchSource([image1, image2])
     assert isinstance(mb_source, MinibatchSource)

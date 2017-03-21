@@ -4752,7 +4752,7 @@ namespace CNTK
 
         ///
         /// Reads a minibatch that contains data for all input streams.
-        /// The minibatch size is specified terms of #samples and/or #sequences for the primary input stream; value of 0 for #samples/#sequences means unspecified.
+        /// The minibatch size is specified in terms of #samples and/or #sequences for the primary input stream; value of 0 for #samples/#sequences means unspecified.
         /// In case the size is specified in terms of both #sequences and #samples, the smaller of the 2 is taken.
         /// An empty map is returned when the MinibatchSource has no more data to return.
         ///
@@ -4763,7 +4763,7 @@ namespace CNTK
 
         ///
         /// Same as above but allows to specify partition of data in a distributed environment.
-        /// Depending on the number of workers the data is splitted in different partitions,
+        /// Depending on the number of workers the data is split in different partitions,
         /// and depending on the worker rank, only a particular partition is read.
         ///
         CNTK_API virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(

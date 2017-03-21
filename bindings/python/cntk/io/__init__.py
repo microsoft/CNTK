@@ -10,6 +10,7 @@ from ..tensor import ArrayMixin
 from cntk.internal import typemap
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
+from cntk.utils import Record
 
 import numpy as np
 import uuid
@@ -20,7 +21,9 @@ INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
 FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
 DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS = cntk_py.MinibatchSource.default_randomization_window_in_chunks
 
+
 class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
+
     '''
     Holds a minibatch of input data. This is never directly created, but
     only returned by :class:`MinibatchSource` instances.
@@ -112,6 +115,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     def __len__(self):
         return self.num_sequences
 
+
 class MinibatchSource(cntk_py.MinibatchSource):
     '''
     MinibatchSource(deserializers, max_samples=cntk.io.INFINITELY_REPEAT, max_sweeps=cntk.io.INFINITELY_REPEAT, randomization_window_in_chunks=cntk.io.DEFAULT_RANDOMIZATION_WINDOW, randomization_window_in_samples=0, trace_level=cntk.logging.get_trace_level(), multithreaded_deserializer=False, frame_mode=False, truncation_length=0, randomize=None, randomization_window=None, sample_based_randomization_window=None, epoch_size=None)
@@ -191,7 +195,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         config.trace_level = trace_level
 
         # the following deals with deprecated parameters.
-        import warnings
         # TODO: 'randomize=False' is the only legacy option that still makes sense
         # (as a shortcut to randomization_window_in_chunks=0 and 
         # randomization_window_in_samples=0), maybe we should keep it? 
@@ -237,7 +240,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
         self.__dict__ = source.__dict__
         self._streams = None
 
-
     def stream_infos(self):
         '''
         Describes the streams 'this' minibatch source produces.
@@ -257,7 +259,6 @@ class MinibatchSource(cntk_py.MinibatchSource):
             :class:`~cntk.cntk_py.StreamInformation`
         '''
         if self._streams is None:
-            from cntk.variables import Record
             self._streams = Record(**dict((info.m_name, info) for info in  self.stream_infos()))
 
         return self._streams
@@ -272,20 +273,23 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
     def __getitem__(self, name):
         '''
-        Return the :class:`~cntk.cntk_py.StreamInformation` for the given stream name
+        Return the :class:`~cntk.cntk_py.StreamInformation` for the given
+        stream name.
 
         Args:
-            name (str): stream name to fetch :class:`~cntk.cntk_py.StreamInformation` for
+            name (str): stream name to fetch
+              :class:`~cntk.cntk_py.StreamInformation` for
         '''
         return self.stream_info(name)
 
     @typemap
     def next_minibatch(self, minibatch_size_in_samples,
-            input_map=None, device=None, num_data_partitions=None, partition_index=None):
+                       input_map=None, device=None, num_data_partitions=None,
+                       partition_index=None):
         '''
         Reads a minibatch that contains data for all input streams.  The
-        minibatch size is specified in terms of #samples and/or #sequences for the
-        primary input stream; value of 0 for #samples/#sequences means
+        minibatch size is specified in terms of #samples and/or #sequences for
+        the primary input stream; value of 0 for #samples/#sequences means
         unspecified.  In case the size is specified in terms of both #sequences
         and #samples, the smaller of the 2 is taken.  An empty map is returned
         when the MinibatchSource has no more data to return.
@@ -318,8 +322,11 @@ class MinibatchSource(cntk_py.MinibatchSource):
         if partition_index is None:
             partition_index = 0
 
-        mb = super(MinibatchSource, self).get_next_minibatch(0,
-                minibatch_size_in_samples, num_data_partitions, partition_index, device)
+        parent_inst = super(MinibatchSource, self)
+        mb = parent_inst.get_next_minibatch(0,
+                                            minibatch_size_in_samples,
+                                            num_data_partitions,
+                                            partition_index, device)
 
         if not mb:
             return mb
@@ -327,7 +334,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         if not input_map:
             return mb
 
-        return { key : mb[value] for (key, value) in input_map.items() }
+        return {key: mb[value] for (key, value) in input_map.items()}
 
     def get_checkpoint_state(self):
         '''
@@ -335,7 +342,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         Returns:
             cntk.cntk_py.Dictionary:
-            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state of the MinibatchSource
+            A :class:`~cntk.cntk_py.Dictionary` that has the checkpoint state
+            of the MinibatchSource
         '''
         return super(MinibatchSource, self).get_checkpoint_state()
 
@@ -361,7 +369,8 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Gets current position in the minibatch source.
 
         Returns:
-            Minibatch position :class:`~cntk.cntk_py.Dictionary` on the global timeline.
+            Minibatch position :class:`~cntk.cntk_py.Dictionary` on the global
+            timeline.
         '''
         return self.get_checkpoint_state()
 
@@ -371,14 +380,16 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Sets current position in the minibatch source.
 
         Args:
-            position (:class:`~cntk.cntk_py.Dictionary`): position returned from :func:`~get_current_position`.
+            position (:class:`~cntk.cntk_py.Dictionary`): position returned
+            from :func:`~get_current_position`.
         '''
         self.restore_from_checkpoint(position)
 
 
 def _py_dict_to_cntk_dict(py_dict):
     '''
-    Converts a Python dictionary into a CNTK Dictionary whose values are CNTK DictionaryValue instances.
+    Converts a Python dictionary into a CNTK Dictionary whose values are CNTK
+    DictionaryValue instances.
 
     Args:
         py_dict (dict): a dictionary to be converted.
@@ -393,7 +404,9 @@ def _py_dict_to_cntk_dict(py_dict):
             res[k] = cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(v))
         # TODO: add support to list of lists ?
         elif isinstance(v, list):
-            res[k] = cntk_py.DictionaryValue([cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e) if isinstance(e, dict) else e) for e in v])
+            dval = [cntk_py.DictionaryValueFromDict(_py_dict_to_cntk_dict(e)
+                    if isinstance(e, dict) else e) for e in v]
+            res[k] = cntk_py.DictionaryValue(dval)
         else:
             res[k] = cntk_py.DictionaryValue(v)
     return res
@@ -404,38 +417,55 @@ def HTKFeatureDeserializer(streams):
     Configures the HTK feature reader that reads speech data from scp files.
 
     Args:
-        streams: any dictionary-like object that contains a mapping from stream names
-            to :class:`StreamDef` objects. Each StreamDef object configures a feature stream.
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          a feature stream.
     '''
     feat = []
     for stream_name, stream in streams.items():
-        if stream.stream_alias is not None: raise ValueError("HTKFeatureDeserializer does not support steam names")
-        if 'scp' not in stream: raise ValueError("No scp files specified for HTKFeatureDeserializer")
+        if stream.stream_alias is not None:
+            raise ValueError(
+                "HTKFeatureDeserializer does not support steam names")
+        if 'scp' not in stream:
+            raise ValueError(
+                "No scp files specified for HTKFeatureDeserializer")
         dimension = stream.dim
         scp_file = stream['scp']
         broadcast = stream['broadcast'] if 'broadcast' in stream else False
-        left_context, right_context = stream.context if 'context' in stream else (0, 0)
-        feat.append(cntk_py.HTKFeatureConfiguration(stream_name, scp_file, dimension, left_context, right_context, broadcast))
+        left_context, right_context = stream.context if 'context' in stream\
+                                                     else (0, 0)
+        htk_config = cntk_py.HTKFeatureConfiguration(stream_name, scp_file,
+                                                     dimension, left_context,
+                                                     right_context, broadcast)
+        feat.append(htk_config)
+
     if len(feat) == 0:
         raise ValueError("no feature streams found")
     return cntk_py.htk_feature_deserializer(feat)
 
+
 def HTKMLFDeserializer(label_mapping_file, streams):
     '''
-    Configures an HTK label reader that reads speech HTK format MLF (Master Label File)
+    Configures an HTK label reader that reads speech HTK format MLF (Master
+    Label File)
 
     Args:
         label_mapping_file (str): path to the label mapping file
-        streams: any dictionary-like object that contains a mapping from stream names
-            to :class:`StreamDef` objects. Each StreamDef object configures a label stream.
+        streams: any dictionary-like object that contains a mapping from stream
+          names to :class:`StreamDef` objects. Each StreamDef object configures
+          a label stream.
     '''
-    if len(streams) != 1: raise ValueError("HTKMLFDeserializer only accepts a single stream")
+    if len(streams) != 1:
+        raise ValueError("HTKMLFDeserializer only accepts a single stream")
     for stream_name, stream in streams.items():
-        if stream.stream_alias is not None: raise ValueError("HTKMLFDeserializer does not support steam names")
+        if stream.stream_alias is not None:
+            raise ValueError("HTKMLFDeserializer does not support steam names")
         dimension = stream.dim
-        if 'mlf' not in stream: raise ValueError("No master label files specified for HTKMLFDeserializer")
+        if 'mlf' not in stream:
+            raise ValueError(
+                "No master label files specified for HTKMLFDeserializer")
         master_label_files = stream['mlf']
-        if not isinstance(master_label_files,list):
+        if not isinstance(master_label_files, list):
             master_label_files = [master_label_files]
         return cntk_py.htk_mlf_deserializer(stream_name, label_mapping_file, dimension, master_label_files)
 
@@ -460,7 +490,8 @@ def ImageDeserializer(filename, streams):
     '''
     image_stream_name = None
 
-    # streams with the same name are not allowed, make sure the default is unique.
+    # streams with the same name are not allowed, make sure the default is
+    # unique.
     label_stream_name = '_ignore_labels_' + str(uuid.uuid1())
     num_labels = 2
     transforms = []
@@ -474,14 +505,21 @@ def ImageDeserializer(filename, streams):
             label_stream_name = key
             num_labels = s.dim
         else:
-            raise ValueError("ImageDeserializer: invalid field name '{}', allowed are 'image' and 'label'".format(alias))
+            raise ValueError(
+                "ImageDeserializer: invalid field name '{}', allowed are "
+                "'image' and 'label'".format(alias))
     if image_stream_name is None:
-        raise ValueError("ImageDeserializer: stream name ('image' or 'label') must be specified")
-    return cntk_py.image_deserializer(filename, label_stream_name, num_labels, image_stream_name, transforms)
+        raise ValueError(
+            "ImageDeserializer: stream name ('image' or 'label') must be "
+            "specified")
+    return cntk_py.image_deserializer(filename, label_stream_name, num_labels,
+                                      image_stream_name, transforms)
+
 
 def CTFDeserializer(filename, streams):
     '''
-    Configures the CNTK text-format reader that reads text-based files with lines of the form::
+    Configures the CNTK text-format reader that reads text-based files with
+    lines of the form::
 
         [Sequence_Id] (Sample)+
 
@@ -495,14 +533,19 @@ def CTFDeserializer(filename, streams):
     See also:
         :cntkwiki:`CNTKTextReader format <BrainScript-CNTKTextFormat-Reader>`
     '''
-    for k,s in streams.items():
+    for k, s in streams.items():
         if s.stream_alias is None:
-            raise ValueError("CTFDeserializer: stream name for key %s must be specified"%(k))
-    sc = [cntk_py.StreamConfiguration(k, s.dim, s.is_sparse, s.stream_alias) for k,s in streams.items()]
+            raise ValueError("CTFDeserializer: stream name for key %s must be "
+                             "specified" % k)
+    sc = [cntk_py.StreamConfiguration(
+        k, s.dim, s.is_sparse, s.stream_alias) for k, s in streams.items()]
     return cntk_py.ctf_deserializer(filename, sc)
 
 # TODO: this should be a private class; use StreamDef instead
+
+
 class StreamConfiguration(cntk_py.StreamConfiguration):
+
     '''
     Configuration of a stream in a text format reader.
 
@@ -511,21 +554,24 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
         dim (int): dimensions of this stream. A text format reader reads data
           as flat arrays. If you need different shapes you can
           :func:`~cntk.ops.reshape` it later.
-        is_sparse (bool, defaults to `False`): whether the provided data is sparse
-          (`False` by default)
+        is_sparse (bool, defaults to `False`): whether the provided data is
+          sparse (`False` by default)
         stream_alias (str, defaults to ''): name of the stream in the file
     '''
+
     def __init__(self, name, dim, is_sparse=False, stream_alias=''):
-        return super(StreamConfiguration, self).__init__(name, dim, is_sparse, stream_alias)
+        return super(StreamConfiguration, self).__init__(name, dim, is_sparse,
+                                                         stream_alias)
 
 # stream definition for use in StreamDefs
 # returns a record { stream_alias, is_sparse, optional shape, optional transforms, optional context, optional scp, optional mlf }
-from cntk.variables import Record
-def StreamDef(field=None, shape=None, is_sparse=False, transforms=None, context=None, scp=None, mlf=None, broadcast=None):
+def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
+              context=None, scp=None, mlf=None, broadcast=None):
     '''
        Configuration of a stream for use with the builtin Deserializers.
        The meanings of some configuration keys have a mild dependency on the
-       exact deserializer, and certain keys are meaningless for certain deserializers.
+       exact deserializer, and certain keys are meaningless for certain
+       deserializers.
 
     Args:
         field (`str`, defaults to `None`): this is the name of the stream
@@ -535,20 +581,23 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None, context=
          * for HTKFeatureDeserializer and HTKMLFDeserializer only the default
            value of None is acceptable
 
-        shape (`int` or `tuple`, defaults to `None`): dimensions of this stream. HTKFeatureDeserializer,
-         HTKMLFDeserializer, and CTFDeserializer read data
-         as flat arrays. If you need different shapes you can
-         :func:`~cntk.ops.reshape` it later.
-        is_sparse (`bool`, defaults to `False`): whether the provided data is sparse.
-         `False` by default, unless mlf is provided.
-        transforms (`list`, defaults to `None`): list of transforms to be applied by the Deserializer.
-         Currently only ImageDeserializer supports transforms.
-        context (`tuple`, defaults to `None`): left and right context to consider when reading in HTK
-         data. Only supported by HTKFeatureDeserializer.
+        shape (`int` or `tuple`, defaults to `None`): dimensions of this
+          stream. HTKFeatureDeserializer, HTKMLFDeserializer, and
+          CTFDeserializer read data as flat arrays. If you need different
+          shapes you can :func:`~cntk.ops.reshape` it later.
+        is_sparse (`bool`, defaults to `False`): whether the provided data is
+          sparse. `False` by default, unless mlf is provided.
+        transforms (`list`, defaults to `None`): list of transforms to be
+          applied by the Deserializer. Currently only ImageDeserializer
+          supports transforms.
+        context (`tuple`, defaults to `None`): left and right context to
+          consider when reading in HTK data. Only supported by
+          HTKFeatureDeserializer.
         scp (`str` or `list`, defaults to `None`): scp files for HTK data
         mlf (`str` or `list`, defaults to `None`): mlf files for HTK data
-        broadcast (`bool`, defaults to `None`): whether the features in this stream should be
-         broadcast to the whole sequence (useful in e.g. ivectors with HTK)
+        broadcast (`bool`, defaults to `None`): whether the features in this
+          stream should be broadcast to the whole sequence (useful in e.g.
+          ivectors with HTK)
     '''
     config = dict(stream_alias=field, is_sparse=is_sparse)
     if shape is not None:
@@ -571,6 +620,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None, context=
 # StreamDefs for use in constructing deserializers
 # StreamDefs(query = StreamDef(...), labels = StreamDef(...), ...)
 StreamDefs = Record
+
 
 def _dense_to_str(data):
     return ' '.join(data.ravel(order='C').astype(np.str))
@@ -659,7 +709,8 @@ def sequence_to_cntk_text_format(seq_idx, alias_tensor_map):
                 to_str = _sparse_to_str
             else:
                 raise ValueError(
-                    'expected a tensor (dense) or list of dicts (sparse), but got "%s"' % type(tensor))
+                    'expected a tensor (dense) or list of dicts (sparse), but '
+                    'got "%s"' % type(tensor))
 
             line.append('%s %s' % (alias, to_str(tensor[elem_idx])))
 
