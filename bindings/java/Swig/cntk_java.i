@@ -1,5 +1,9 @@
+%{
+#undef UNUSED
+%}
 %include "std_unordered_map.i"
 %include "managed_language_base.i"
+
 
 %rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
 %rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
