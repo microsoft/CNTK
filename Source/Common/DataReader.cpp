@@ -77,8 +77,6 @@ void DataReader::Destroy()
     }
 }
 
-extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap;
-
 // DataReader Constructor
 // options - [in] string  of options (i.e. "-windowsize:11 -addenergy") data reader specific
 #pragma optimize("", off) // TODO work around potential VS2015 code optimization bug, replacing virtual- by non-virtual call in Init() below
@@ -103,13 +101,6 @@ DataReader::DataReader(const ConfigRecordType& config)
             const ConfigRecordType& thisIO = config(ioName);
             wstring readerType = thisIO(L"readerType", L"Cntk.Reader.TextFormat");
 
-            // map legacy names to new naming scheme
-            auto entry = s_deprecatedReaderWriterNameMap.find(readerType);
-            if (entry != s_deprecatedReaderWriterNameMap.end())
-            {
-                readerType = entry->second;
-            }
-
             // get the name for the reader we want to use, default to CNTKTextFormatReader
             GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(readerType, GetReaderName(precision));
             m_ioNames.push_back(ioName);
@@ -120,13 +111,6 @@ DataReader::DataReader(const ConfigRecordType& config)
     else if (hasDeserializers)
     {
         wstring readerType = config(L"readerType", L"Cntk.Reader.CompositeData");
-
-        // map legacy names to new naming scheme
-        auto entry = s_deprecatedReaderWriterNameMap.find(readerType);
-        if (entry != s_deprecatedReaderWriterNameMap.end())
-        {
-            readerType = entry->second;
-        }
 
         // Creating Composite Data Reader that allow to combine deserializers.
         // This should be changed to link statically when SGD uses the new interfaces.
@@ -139,14 +123,6 @@ DataReader::DataReader(const ConfigRecordType& config)
     else
     {
         wstring readerType = config(L"readerType", L"Cntk.Reader.TextFormat");
-
-        // map legacy names to new naming scheme
-        auto entry = s_deprecatedReaderWriterNameMap.find(readerType);
-        if (entry != s_deprecatedReaderWriterNameMap.end())
-        {
-            readerType = entry->second;
-        }
-
         wstring ioName = L"ioName";
         // backward support to use only one type of data reader
         // get the name for the reader we want to use, default to CNTKTextFormatReader

@@ -36,8 +36,6 @@ void DataWriter::Destroy()
 }
 
 
-extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap;
-
 // DataWriter Constructor
 // config - [in] configuration data for the data writer
 template <class ConfigRecordType>
@@ -48,13 +46,6 @@ DataWriter::DataWriter(const ConfigRecordType& config)
     // get the name for the writer we want to use, default to BinaryWriter (which is in BinaryReader.dll)
     // TODO: This seems like a find-replace operation?
     wstring writerType = config(L"writerType", L"Cntk.Reader.Binary.Deprecated");
-
-    // map legacy names to new naming scheme
-    auto entry = s_deprecatedReaderWriterNameMap.find(writerType);
-    if (entry != s_deprecatedReaderWriterNameMap.end())
-    {
-        writerType = entry->second;
-    }
 
     string precision = config(L"precision", "float");
 

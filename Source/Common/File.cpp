@@ -969,16 +969,17 @@ template vector<double> File::LoadMatrixFromStringLiteral<double>(const std::str
 #error CNTK_COMPONENT_VERSION must be set
 #endif
 
+extern std::unordered_map<std::wstring, std::wstring> g_deprecatedReaderWriterNameMap;
+
 #ifdef _WIN32
-extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap;
 
 FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc)
 {
     m_dllName = plugin;
 
     // map legacy names to new naming scheme
-    auto entry = s_deprecatedReaderWriterNameMap.find(m_dllName);
-    if (entry != s_deprecatedReaderWriterNameMap.end())
+    auto entry = g_deprecatedReaderWriterNameMap.find(m_dllName);
+    if (entry != g_deprecatedReaderWriterNameMap.end())
     {
         m_dllName = entry->second;
     }
@@ -994,8 +995,8 @@ FARPROC Plugin::LoadInternal(const std::wstring& plugin, const std::string& proc
         RuntimeError("Symbol '%s' not found in plugin '%ls'", proc.c_str(), m_dllName.c_str());
     return entryPoint;
 }
+
 #else
-extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNameMap;
 
 #define STRINGIFY(x) #x
 #define TOSTRING(x) STRINGIFY(x)
@@ -1003,17 +1004,17 @@ extern std::unordered_map<std::wstring, std::wstring> s_deprecatedReaderWriterNa
 void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc)
 {
     string soName = plugin;
-    wstring soNameW = wstring(plugin.begin(), plugin.end());
+    wstring soNameW = msra::strfun::utf16(plugin);
 
     // map legacy names to new naming scheme
-    auto entry = s_deprecatedReaderWriterNameMap.find(soNameW);
-    if (entry != s_deprecatedReaderWriterNameMap.end())
+    auto entry = g_deprecatedReaderWriterNameMap.find(soNameW);
+    if (entry != g_deprecatedReaderWriterNameMap.end())
     {
-        soName = string(entry->second.begin(), entry->second.end());
+        soName = msra::strfun::utf8(entry);
     }
 
-    soName += std::string("-") + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
-    soName = soName + ".so";
+    soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
+    soName += ".so";
     void* handle = dlopen(soName.c_str(), RTLD_LAZY);
     if (handle == NULL)
         RuntimeError("Plugin not found: '%s' (error: %s)", soName.c_str(), dlerror());
