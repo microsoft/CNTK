@@ -11,8 +11,8 @@ function ActionOperations(
     foreach ($item in $operationList) {
         
         foreach ($actionItem in $item.Action) {
-            $params = $downloadItem.Params
-            $expr = $downloadItem.Function +' @params' 
+            $params = $actionItem.Params
+            $expr = $actionItem.Function +' @params' 
         
             Write-Verbose "Calling Operation: [$expr]($params)"
             Invoke-Expression $expr
@@ -26,13 +26,13 @@ function ActionOperations(
 function RunDos(
     [Parameter(Mandatory = $true)][string] $cmd,
     [Parameter(Mandatory = $true)][string[]] $param,
-    [string] $workingDir = $null,
-    [integer] $maxErrorLevel = 0,
+    [string] $workingDir = $(Get-Location),
+    [int] $maxErrorLevel = 0,
     [string] $platform = $null,
     [string] $message= $null,
-    [switch] $SuppressOutput)
+    [switch] $noExecute)
 {
-    Write-Verbose "RunDos '$Command $Argument'"
+    Write-Verbose "RunDos '$cmd $param'"
     if ($platform) {
         $runningOn = ((Get-WmiObject -class Win32_OperatingSystem).Caption).ToUpper()
         $platform  = ($platform.ToString()).ToUpper()
@@ -46,47 +46,57 @@ function RunDos(
         Write-Host $message
     }
 
-    $dosParam = @{Command = $cmd; Argument = $param;
-                  WorkingDirectory = $workingDir; maxErrorLevel = $maxErrorLevel;
-                  SuppressOutput = $SuppressOutput; DontExecute = (-not $Execute) }
-    Invoke-DosCommand @dosParam
+    Start-DosProcess -command $cmd -argumentList $param -maxErrorLevel $maxErrorLevel -workingDir $workingDir -noExecute:$noExecute
 }
 
 function InstallYml(
     [Parameter(Mandatory = $true)][string] $basePath,
     [Parameter(Mandatory = $true)][string] $env,
     [Parameter(Mandatory = $true)][string] $ymlFile,
-    [Parameter(Mandatory = $true)][string] $pyVersion)
+    [Parameter(Mandatory = $true)][string] $pyVersion,
+    [string] $message= $null,
+    [switch] $noExecute)
 {
+    if ($message) {
+        Write-Host $message
+    }
     $envsDir = Join-Path $basePath envs
     $targetDir = Join-Path $envsDir $env
+    $scriptDir = Join-Path  $basePath Scripts
+    $condaExe = Join-Path $scriptDir "conda.exe"
 
     $condaOp = "create"
+    $targetDirParam = "--prefix"
     if (Test-Path -path $targetDir -PathType Container) {
         $condaOp = "update"
+        $targetDirParam = "--name"
     }
-    $dosParam = @{Command = "$basepath\Scripts\conda.exe"; Argument = (Write-Output env $condaOp --file `"$ymlFile`" --name `"$targetDir`");
-                  maxErrorLevel = 0;
-                  SuppressOutput = $false; DontExecute = (-not $Execute) }
-    Invoke-DosCommand  @dosParam
+
+    $param = (Write-Output env $condaOp --file $ymlFile $targetDirParam $targetDir)
+    Start-DosProcess -command $condaExe -argumentList $param -workingDir $scriptDir -noExecute:$noExecute
 }
 
 function InstallWheel(
     [Parameter(Mandatory = $true)][string] $basePath,
     [Parameter(Mandatory = $true)][string] $envName,
     [Parameter(Mandatory = $true)][string] $whlUrl,
-    [string] $message = $null)
+    [string] $message = $null,
+    [switch] $noExecute)
 {
     if ($message) {
         Write-Host $message
     }
+    if ($noExecute) {
+         Write-Host  "** Running in DEMOMODE - setting Exit Code **: 0"
+         return 
+    }
     $condaExe = Join-Path $basePath 'Scripts\conda.exe'
-    $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $envName)  -maxErrorLevel 0 -DontExecute:(-not $Execute)
+    $newPaths = Start-DosProcess -command $condaExe -argumentList (Write-Output ..activate cmd.exe $envName) -getOutput -noExecute:$noExecute
 
     $oldPath = $env:PATH
     $env:PATH = $newPaths + ';' + $env:PATH
 
-    Invoke-DosCommand pip (Write-Output install $whlUrl) -maxErrorLevel 0 -DontExecute:(-not $Execute)
+    Start-DosProcess -command "pip" -argumentList (Write-Output install $whlUrl) -noExecute:$noExecute
     $env:PATH = $oldPath 
 }
 
@@ -94,9 +104,10 @@ function CreateBatch(
     [Parameter(Mandatory = $true)][string] $filename,
     [Parameter(Mandatory = $true)][string] $pyVersion,
     [Parameter(Mandatory = $true)][string] $basePath,
-    [Parameter(Mandatory = $true)][string] $rootDir)
+    [Parameter(Mandatory = $true)][string] $rootDir,
+    [switch] $noExecute)
 {
-    if (-not $Execute) {
+    if ($noExecute) {
         Write-Host "Create-Batch [$filename]:No-Execute flag. No file created"
         return
     }
@@ -116,37 +127,6 @@ set PATH=$rootDir\cntk;%PATH%
 "@
 
     add-content -Path $filename -Encoding Ascii -Value $batchScript
-}
-
-function Invoke-DosCommand {
-  [CmdletBinding()]
-  Param(
-    [ValidateScript({ Get-Command $_ })]
-    [string] $Command,
-    [string[]] $Argument,
-    [string] [ValidateScript({ Test-Path -PathType Container $_ })] $WorkingDirectory,
-    [int] $maxErrorLevel,
-    [switch] $SuppressOutput,
-    [switch] $DontExecute
-  )
-    Write-Verbose "Invoke-DosCommand; Running '$Command $Argument'"
-    if ($DontExecute) {
-        Write-Host "Execute flag set to $false"
-    }
-    if ($WorkingDirectory) {
-        Push-Location $WorkingDirectory -ErrorAction Stop
-    }
-    if ($SuppressOutput) {
-        $null = & $Command $Argument 2>&1
-    } else {
-        & $Command $Argument
-    }
-    if ($WorkingDirectory) {
-        Pop-Location
-    }
-    if ($LASTEXITCODE -gt $maxErrorLevel) {
-        throw "Running '$Command $Argument' failed with exit code $LASTEXITCODE"
-    }
 }
 
 # vim:set expandtab shiftwidth=4 tabstop=4:

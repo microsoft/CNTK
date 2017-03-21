@@ -69,6 +69,8 @@ Param(
 Set-StrictMode -Version latest
 
 Import-Module Download -ErrorAction Stop
+Import-Module Disk -ErrorAction Stop
+Import-Module Process -ErrorAction Stop
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
 $ymlDir = Split-Path $MyDir
@@ -160,18 +162,19 @@ Function main
         }
 
         
-        $Script:operationList  = @()
         $Script:WinProduct = $null
+        $dontExecute = -not $execute
 
         $ops = @() 
-        $ops += OpScanPrograms
-        $ops += OpVs2015Runtime -rootDir $cntkRootDir
-        $ops += OpMSMPI -rootDir $cntkRootDir
-        $ops += OpAnaconda -localCache $localCache -anacondaBasePath $AnacondaBasePath
-        $ops += OpPythonEnvironment -pyVersion $PyVersion -ymlDirectory $ymlDir -anacondaBasePath $AnacondaBasePath
-        $ops += OpWhlInstall -pyVersion $PyVersion -whlUrl $whlUrl -anacondaBasePath $AnacondaBasePath
-        $ops += OpPythonBatch -pyVersion $PyVersion -rootDir $cntkRootDir  -anacondaBasePath $AnacondaBasePath
+        $ops += OpScanPrograms -noExecute:$dontExecute
+        $ops += OpVs2015Runtime -rootDir $cntkRootDir -noExecute:$dontExecute
+        $ops += OpMSMPI -rootDir $cntkRootDir -noExecute:$dontExecute
+        $ops += OpAnaconda -localCache $localCache -anacondaBasePath $AnacondaBasePath -noExecute:$dontExecute
+        $ops += OpPythonEnvironment -pyVersion $PyVersion -ymlDirectory $ymlDir -anacondaBasePath $AnacondaBasePath -noExecute:$dontExecute
+        $ops += OpWhlInstall -pyVersion $PyVersion -whlUrl $whlUrl -anacondaBasePath $AnacondaBasePath -noExecute:$dontExecute
+        $ops += OpPythonBatch -pyVersion $PyVersion -rootDir $cntkRootDir  -anacondaBasePath $AnacondaBasePath -noExecute:$dontExecute
 
+        $opList = @()
         $opList = VerifyOperations -operations $ops -NoConfirm $NoConfirm 
         if ($opList) {
             DownloadOperations -operationList $opList

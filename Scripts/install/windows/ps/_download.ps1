@@ -26,6 +26,13 @@ function Download(
     [Parameter(Mandatory = $true)][string] $source,
     [Parameter(Mandatory = $true)][string] $destination)
 {
+    if (test-path $destination) {
+        Write-Host Using existing file: $destination
+        return
+    }
+
+    Write-Host Downloading: $source
+        
     $downloadOk = Copy-FileWebRequest -SourceFile $source -OutFile $destination -maxtry 2
 
     if (-not $downloadOk) {

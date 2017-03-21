@@ -32,7 +32,7 @@ function VerifyOperations(
     if ($operationList) {
         Write-Host "The following operations will be performed:"
 
-        foreach ($item in $Script:operationList) {
+        foreach ($item in $operationList) {
             $info = $item.Info
             Write-Host " * $info"
         }
