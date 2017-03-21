@@ -319,8 +319,8 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      >>> bi_lstm_layer.update_signature(13)
      >>> bi_lstm_layer.shape   # shape reflects concatenation of both output states
      (500,)
-     >>> tuple(axis.name for axis in bi_lstm_layer.dynamic_axes)
-     ('defaultBatchAxis', 'defaultDynamicAxis')
+     >>> print(bi_lstm_layer.dynamic_axes[0].name, bi_lstm_layer.dynamic_axes[1].name)
+     defaultBatchAxis defaultDynamicAxis
 
      >>> # cumulative sum over inputs
      >>> x = Input(**Sequence[Tensor[2]])
