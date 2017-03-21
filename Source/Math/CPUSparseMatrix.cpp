@@ -1300,6 +1300,49 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
 }
 
 template <class ElemType>
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+{
+    size_t numColsNeeded = 2 * GetNumCols();
+
+    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    {
+        c.RequireSize(GetNumRows(), numColsNeeded);
+        c.SetValue(0.0);
+    }
+
+    if (GetNumRows() != GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
+
+    if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+        LogicError("Unsupported sparse format.");
+
+    size_t n = GetNumElements();
+    ElemType* grad = Data();
+    ElemType* smoothAda = c.Data();
+    ElemType* smoothX2 = c.Data() + n;
+    ElemType* val = functionValues.Data();
+
+#pragma omp parallel for
+    // TODO: Unroll 4-times for better performance leveraging vectorization
+    for (int j = 0; j < (int)GetBlockSize(); j++)
+    {
+        size_t i = GetBlockIds()[j] - GetBlockIdShift();
+        size_t len = GetNumRows();
+        size_t start = j * len;
+        for (size_t p = start; p < start + len; p++)
+        {
+            ElemType g = grad[p];
+            ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
+            smoothAda[i] = adaSqr;
+            ElemType x2 = smoothX2[i];
+            ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
+            smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
+            val[i] += deltaX;
+        }
+    }
+}
+
+template <class ElemType>
 CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::InplaceTruncateTop(const ElemType threshold)
 {
     if (!OwnBuffer())
