@@ -58,5 +58,5 @@ def test_slice_attributes():
     x = C.input_variable((2,3))
     f = C.slice(x, 0, 1, 2)
     d = f.root_function.attributes
-    expected = {'endIndex': 2, 'beginIndex': 1, 'axis': ('ordered', 'static', 1)}
+    expected = {'endIndex': [2], 'beginIndex': [1], 'axis': [('ordered', 'static', 1)]}
     _check(expected, d)

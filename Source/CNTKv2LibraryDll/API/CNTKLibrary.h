@@ -3351,7 +3351,7 @@ namespace CNTK
     ///
     /// Create an instance of the slice operation on specified tensor input operand
     ///
-    CNTK_API FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name = L"");
+    CNTK_API FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name = L"");
 
     ///
     /// Create an instance of the random_sample operation on specified sampling weights input vector

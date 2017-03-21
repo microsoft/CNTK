@@ -244,6 +244,7 @@ namespace CNTK
     inline std::vector<DictionaryValue> AsDictionaryValueVector(const std::vector<T>& elementVector)
     {
         static_assert(std::is_same<T, bool>::value ||
+                      std::is_same<T, int>::value ||
                       std::is_same<T, size_t>::value ||
                       std::is_same<T, float>::value ||
                       std::is_same<T, double>::value ||
@@ -262,6 +263,7 @@ namespace CNTK
     inline std::vector<T> AsVector(const std::vector<DictionaryValue>& dictionaryValueVector)
     {
         static_assert(std::is_same<T, bool>::value ||
+                      std::is_same<T, int>::value || 
                       std::is_same<T, size_t>::value ||
                       std::is_same<T, float>::value ||
                       std::is_same<T, double>::value ||
@@ -320,6 +322,14 @@ namespace CNTK
         return Axis(CNTKInternalAxisIdx - 1);
     }
 
+    inline std::vector<Axis> AsAxis(std::vector<int> CNTKInternalAxis)
+    {
+        std::vector<Axis> retAxisVec; 
+        for (auto& axisIdx : CNTKInternalAxis)
+            retAxisVec.push_back(AsAxis(axisIdx));
+        return retAxisVec;
+    }
+
     inline int AsCNTKInternalAxisIdx(const Axis& axis)
     {
         if (axis == Axis::AllStaticAxes())
@@ -335,6 +345,14 @@ namespace CNTK
             LogicError("Only Static Axes can be converted to a CNTK internal axis index");
 
         return (int)(axis.StaticAxisIndex() + 1);
+    }
+
+    inline std::vector<int> AsCNTKInternalAxisIdx(const std::vector<Axis>& axisVec)
+    {
+        std::vector<int> retAxisVec; 
+        for (auto& axis : axisVec)
+            retAxisVec.push_back(AsCNTKInternalAxisIdx(axis)); 
+        return retAxisVec; 
     }
 
     inline std::pair<NDShape, NDShape> GetConvolutionOutputMapCountAndKernelShape(const NDShape& convolutionMapShape, const NDShape& operandShape, bool transpose)

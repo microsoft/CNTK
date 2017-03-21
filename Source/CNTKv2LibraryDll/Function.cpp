@@ -1012,16 +1012,21 @@ namespace CNTK
         return TransposeAxes(operand, Axis(0), Axis(1), name);
     }
 
-    FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
+    FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
     {
-
-        if (axis.IsStaticAxis())
+        bool bAllStaticAxis = true; 
+        for (auto& a : axis)
+        {
+            if (!a.IsStaticAxis())
+            {
+                bAllStaticAxis = false;
+                break; 
+            }
+        }
+        if (bAllStaticAxis)
             return Internal::Slice(operand, axis, beginIndex, endIndex, name);
 
-        if (axis == Axis::DefaultBatchAxis())
-            LogicError("Slice along the dynamic batch axis is currently unsupported.");
-
-        LogicError("Slice: Invalid axis argument provided. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
+        LogicError("Slice: Invalid axis argument provided. Slice along the dynamic batch axis is currently unsupported. To slice a sequence along its ordered dynamic axis use Sequence::Slice.");
     }
 
     FunctionPtr RandomSample(const Variable& operand, size_t numSamples, bool allowDuplicates, const std::wstring& name)
@@ -1754,12 +1759,12 @@ namespace CNTK
             return Internal::ScatterPacked(operand, Internal::PackedIndex(/*layout of*/ condition, Where(condition, newDerivedSequenceAxisScalingAndAdditiveFactor)), /*layout of*/ condition, name);
         }
 
-        FunctionPtr Slice(const Variable& operand, const Axis& axis, int beginIndex, int endIndex, const std::wstring& name)
+        FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
         {
             auto additionalProperties = Dictionary();
-            additionalProperties[PrimitiveFunction::AttributeNameAxis] = axis;
-            additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = beginIndex;
-            additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = endIndex;
+            additionalProperties[PrimitiveFunction::AttributeNameAxis] = AsDictionaryValueVector(axis);
+            additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = AsDictionaryValueVector(beginIndex);
+            additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = AsDictionaryValueVector(endIndex);
 
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }
