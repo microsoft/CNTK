@@ -99,7 +99,7 @@ DataReader::DataReader(const ConfigRecordType& config)
         for (const auto& ioName : ioNames) // inputNames should map to node names
         {
             const ConfigRecordType& thisIO = config(ioName);
-            wstring readerType = thisIO(L"readerType", L"Cntk.Reader.TextFormat");
+            wstring readerType = thisIO(L"readerType", L"Cntk.Deserializers.TextFormat");
 
             // get the name for the reader we want to use, default to CNTKTextFormatReader
             GetReaderProc getReaderProc = (GetReaderProc) Plugin::Load(readerType, GetReaderName(precision));
@@ -110,7 +110,7 @@ DataReader::DataReader(const ConfigRecordType& config)
     }
     else if (hasDeserializers)
     {
-        wstring readerType = config(L"readerType", L"Cntk.Reader.CompositeData");
+        wstring readerType = config(L"readerType", L"Cntk.CompositeData");
 
         // Creating Composite Data Reader that allow to combine deserializers.
         // This should be changed to link statically when SGD uses the new interfaces.
@@ -122,7 +122,7 @@ DataReader::DataReader(const ConfigRecordType& config)
     }
     else
     {
-        wstring readerType = config(L"readerType", L"Cntk.Reader.TextFormat");
+        wstring readerType = config(L"readerType", L"Cntk.Deserializers.TextFormat");
         wstring ioName = L"ioName";
         // backward support to use only one type of data reader
         // get the name for the reader we want to use, default to CNTKTextFormatReader
