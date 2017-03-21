@@ -1010,7 +1010,7 @@ void* Plugin::LoadInternal(const std::string& plugin, const std::string& proc)
     auto entry = g_deprecatedReaderWriterNameMap.find(soNameW);
     if (entry != g_deprecatedReaderWriterNameMap.end())
     {
-        soName = msra::strfun::utf8(entry).c_str();
+        soName = msra::strfun::utf8(entry->second);
     }
 
     soName += "-" + std::string(TOSTRING(CNTK_COMPONENT_VERSION));
