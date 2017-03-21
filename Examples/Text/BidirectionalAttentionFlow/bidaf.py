@@ -106,7 +106,7 @@ class Bidaf:
         ws1 = C.parameter(shape=(2 * self.hidden_dim, 1), init=C.glorot_uniform())
         ws2 = C.parameter(shape=(2 * self.hidden_dim, 1), init=C.glorot_uniform())
         ws3 = C.parameter(shape=(1, 2 * self.hidden_dim), init=C.glorot_uniform())
-        att_bias = C.parameter(shape=(self.max_query_len,), init=0)
+        att_bias = C.parameter(shape=(), init=0)
 
         wh = C.times (c_processed, ws1)
         wu = C.reshape(C.times (qvw, ws2), (self.max_query_len,))
