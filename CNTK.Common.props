@@ -8,9 +8,6 @@
     <OutDir>$(RepoRootPath)$(Platform)\$(Configuration)\</OutDir>
     <IntDir>$(RepoRootPath)$(Platform)\.build\$(Configuration)\$(RelativeProjectPath)\</IntDir>
 
-    <CntkComponentVersion>2.0beta16</CntkComponentVersion>
-    <CntkComponentVersion Condition="$(Configuration.StartsWith('Debug'))">2.0beta16d</CntkComponentVersion>
-
     <DebugBuild>false</DebugBuild>
     <DebugBuild Condition="$(Configuration.StartsWith('Debug'))">true</DebugBuild>
 
@@ -28,6 +25,9 @@
 
     <HasSwig>false</HasSwig>
     <HasSwig Condition="Exists('$(SWIG_PATH)\swig.exe')">true</HasSwig>
+
+    <CntkComponentVersion>2.0beta16</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(DebugBuild)">2.0beta16d</CntkComponentVersion>
   </PropertyGroup>
   
 </Project>
