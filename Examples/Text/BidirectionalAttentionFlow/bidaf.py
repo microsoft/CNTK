@@ -132,9 +132,9 @@ class Bidaf:
 
         #output layer
         start_logits = C.layers.Dense(1)(C.splice(mod_context, att_context))
-        
         start_hardmax = seq_hardmax(start_logits)
-        att_mod_ctx = C.sequence.last(C.sequence.gather(mod_context, start_hardmax))
+        start_prob = C.softmax(start_logits)
+        att_mod_ctx = C.sequence.reduce_sum(mod_context * start_prob)
         att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
         end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
         m2 = OptimizedRnnStack(self.hidden_dim, bidirectional=True)(end_input)
