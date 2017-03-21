@@ -130,8 +130,16 @@
     {
         "category": ["Image"],
         "name":  "Generative Adversarial Networks (GAN)",
-        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206_Basic_GAN.ipynb",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206A_Basic_GAN.ipynb",
         "description":  "This tutorial is a basic implementation of GAN networks. This allows us generate realistic looking MNIST images with no human input (unsupervised learning).",
+        "language":  ["Python"],
+        "type":  ["Tutorial", "Recipe"]
+    },
+    {
+        "category": ["Image"],
+        "name":  "Deep Convolutional Generative Adversarial Networks (DCGAN)",
+        "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_206B_DCGAN.ipynb",
+        "description":  "This tutorial is an implementation of deep convolutional GAN (DCGAN) networks. This allows us generate realistic looking MNIST images with no human input (unsupervised learning).",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },

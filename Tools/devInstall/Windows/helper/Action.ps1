@@ -388,7 +388,7 @@ function ExtractAllFromTarGz(
 
     $location = ResolveApplicationName -name git.exe -usePath $true
     if (-not $location) {
-        throw "Unpacking the file [$targzFileName] requires extraction utility TAR.EXE.\n Make sure `"Git for Windows`" is installed on your machine."
+        throw "Unpacking the file [$targzFileName] requires extraction utility TAR.EXE.`n Make sure `"Git for Windows`" is installed on your machine."
     }
 
     $location = Split-Path $location -Parent
@@ -711,7 +711,7 @@ function CallGetCommand(
         return ""
     }
 
-    return $matches[0].Source
+    return $matches[0].Path
 }
 
 # vim:set expandtab shiftwidth=4 tabstop=4:
