@@ -110,7 +110,7 @@ DataReader::DataReader(const ConfigRecordType& config)
     }
     else if (hasDeserializers)
     {
-        wstring readerType = config(L"readerType", L"Cntk.CompositeData");
+        wstring readerType = config(L"readerType", L"Cntk.Composite");
 
         // Creating Composite Data Reader that allow to combine deserializers.
         // This should be changed to link statically when SGD uses the new interfaces.

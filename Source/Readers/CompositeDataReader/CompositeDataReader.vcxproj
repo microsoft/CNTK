@@ -47,7 +47,7 @@
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
   </PropertyGroup>
   <PropertyGroup>
-    <TargetName>Cntk.CompositeData-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Composite-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
