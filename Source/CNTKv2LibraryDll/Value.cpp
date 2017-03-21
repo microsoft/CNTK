@@ -585,25 +585,15 @@ namespace CNTK
     }
 
     template <typename ElementType>
-    std::tuple<size_t, size_t, size_t, size_t> Value::ValidateSparseCSCAndGetIndexSizes(const Variable& outputVariable)
+    std::pair<size_t, size_t> Value::ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable)
     {
         auto varShape = outputVariable.Shape();
         if (varShape == NDShape::Unknown || varShape.HasInferredDimension())
             InvalidArgument("The outputVariable '%S' shape '%S' is unknown shape or has inferred dimension for at least one axis.",
                 outputVariable.AsString().c_str(), varShape.AsString().c_str());
 
-        if (varShape[0] != varShape.TotalSize())
-            InvalidArgument("For sparse data, the variable shape '%S' %s axis dimensionality must equal the total size (%zu) of the variable.",
-                varShape.AsString().c_str(), Internal::IsReversingTensorShapesInErrorMessagesEnabled() ? "trailing" : "leading", varShape.TotalSize());
-
         if (!outputVariable.IsSparse())
             InvalidArgument("The outputVariable '%S' must be in the sparse format.");
-
-        if (!IsSparse() || GetStorageFormat() != StorageFormat::SparseCSC)
-            InvalidArgument("'this' Value must be saved in the sparse CSC storge format.");
-
-        if (sizeof(CPUSPARSE_INDEX_TYPE) != sizeof(SparseIndexType))
-            LogicError("Inconsistent data type for sparse index in 'this' Value and the underlying matrix.");
 
         size_t numOfSequences;
         size_t maxSequenceLen;
@@ -616,31 +606,12 @@ namespace CNTK
         if (MaskedCount() != 0)
             RuntimeError("There should not be any masks for a Value containing only one single sequence.");
 
-        NDArrayViewPtr cpuArrayView;
-        if (Device().Type() == DeviceKind::GPU)
-        {
-            cpuArrayView = MakeSharedObject<NDArrayView>(GetDataType(), Shape(), GetStorageFormat(), DeviceDescriptor::CPUDevice());
-            cpuArrayView->CopyFrom(*Data());
-        }
-        else
-            cpuArrayView = Data();
-
-        if (cpuArrayView == nullptr)
-            RuntimeError("No data contained in 'this' Value.");
-
-        std::shared_ptr<const Matrix<ElementType>> valueMatrix = cpuArrayView->GetMatrix<ElementType>();
-        if ((valueMatrix->GetMatrixType() != Microsoft::MSR::CNTK::MatrixType::SPARSE) || (valueMatrix->GetMatrixFormat() != Microsoft::MSR::CNTK::MatrixFormat::matrixFormatSparseCSC))
-            RuntimeError("The underlying matrix of 'this' Value is not in the sparse CSC format.");
-
-        shared_ptr<Microsoft::MSR::CNTK::CPUSparseMatrix<ElementType>> valueSparseMatrix = valueMatrix->m_CPUSparseMatrix;
-        size_t numNonZeroValues = valueSparseMatrix->NzCount();
-        size_t numColStarts = valueSparseMatrix->ColSize()/sizeof(CPUSPARSE_INDEX_TYPE);
-        size_t numRowIndices = valueSparseMatrix->RowSize()/sizeof(CPUSPARSE_INDEX_TYPE);
-        return std::tuple(maxSequenceLen, numColStarts, numRowIndices, numNonZeroValues);
+        auto numNonZeroValues = std::get<3>(Data()->SparseCSCDataBuffers());
+        return std::pair(maxSequenceLen, numNonZeroValues);
     }
 
     template <typename ElementType>
-    void CopyVariableValueToCSCSparse(const Variable& outputVaraible, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues)
+    void CopyVariableValueToCSCSparse(size_t sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues)
     {
         // All sanity check has been done in ValidateSparseCSCAndGetIndexSizes().
         NDArrayViewPtr cpuArrayView;
@@ -652,21 +623,15 @@ namespace CNTK
         else
             cpuArrayView = Data();
 
-        std::shared_ptr<const Matrix<ElementType>> valueMatrix = cpuArrayView->GetMatrix<ElementType>();
+        ElementType* rawNonZeroValues;
+        SparseIndexType* rawColStarts;
+        SparseIndexType* rawRowIndices;
 
-        shared_ptr<CPUSparseMatrix<ElementType>> valueSparseMatrix = valueMatrix->m_CPUSparseMatrix;
-        if ((valueSparseMatrix->NzCount() != nonZeroValues.size()) ||
-            (valueSparseMatrix->ColSize() != colStarts().size() * sizeof(SparseIndexType)) || 
-            (valueSparseMatrix->RowSize() != rowIndices().size() * sizeof(SparseIndexType)))
-            RuntimeError("The size of index vectors does not match that in 'this' Value.");
+        std::tie(rawNonZeroValues, rawColStarts, rawRowIndices, numNonZeroValues) = cpuArrayView->SparseCSCDataBuffers();
 
-        memcpy(nonZeroValues.data(), valueSparseMatrix->NzValues(), valueSparseMatrix->NzSize());
-        memcpy(colStarts.data(), valueSparseMatrix->ColLocation(), valueSparseMatrix->ColSize());
-        memcpy(rowIndices.data(), )
-        CPUSPARSE_INDEX_TYPE colStart = valueSparseMatrix->ColLocation();
-        size_t colSize = valueSparseMatrix->ColSize();
-        CPUSPARSE_INDEX_TYPE rowIndices = valueSparseMatrix->RowLocation();
-        size_t rowSize = valueSparseMatrix->RowSize();
+        memcpy(nonZeroValues.data(), rawNonZeroValues, numNonZeroValues * sizeof(ElementType));
+        memcpy(colStarts.data(), rawColStarts, numNonZeroValues * sizeof(SparseIndexType));
+        memcpy(rowIndices.data(), rawRowIndices, (sequenceLength + 1) * sizeof(SparseIndexType) )
     }
 
 

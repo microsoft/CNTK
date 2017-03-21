@@ -2729,17 +2729,14 @@ namespace CNTK
         template <typename ElementType>
         void CopyVariableValueTo(const Variable& outputVariable, size_t& sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues)
         {
-            size_t numColStarts;
-            size_t numRowIndices;
-            size_t sequenceLength;
-            std:tie(sequenceLength, numColStarts, numRowIndices, numNonZeroValues) = ValidateSparseCSCAndGetIndexSizes(outputVariable);
+            std::tie(sequenceLength, numNonZeroValues) = ValidateSparseCSCAndGetIndexBufferSizes(outputVariable);
 
             // resize output vectors.
-            colStarts.resize(numColStarts);
-            rowIndices.resize(numRowIncidies);
+            colStarts.resize(sequenceLength + 1);
+            rowIndices.resize(numNonZeroValues);
             nonZeroValues.resize(numNonZeroValues);
 
-            CopyVariableValueToCSCSparse(outputVariable, colStarts, rowIndices, nonZeroValues);
+            CopyVariableValueToCSCSparse(sequenceLength, colStarts, rowIndices, nonZeroValues);
         }
 
         ///
@@ -2788,10 +2785,10 @@ namespace CNTK
         CNTK_API std::pair<size_t, size_t> GetSequenceAndBatchLength(const Variable& outputVariable);
 
         template <typename ElementType>
-        std::tuple<size_t, size_t, size_t, size_t> ValidateSparseCSCAndGetIndexSizes(const Variable& outputVariable);
+        std::pair<size_t, size_t> ValidateSparseCSCAndGetIndexBufferSizes(const Variable& outputVariable);
 
         template <typename ElementType>
-        void CopyVariableValueToCSCSparse(const Variable& outputVaraible, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues);
+        void CopyVariableValueToCSCSparse(const Variable& outputVaraible, size_t sequenceLength, std::vector<SparseIndexType> colStarts, std::vector<SparseIndexType> rowIndices, std::vector<ElementType> nonZeroValues, size_t& numNonZeroValues);
 
         CNTK_API static void GetSequenceStartsAndLengths(const NDMaskPtr& mask, std::vector<ptrdiff_t>& sequenceBeginIndices, std::vector<size_t>& sequenceLengths, size_t numDynamicAxes);
 
