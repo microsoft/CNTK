@@ -538,22 +538,26 @@ namespace CNTK
                         case PrimitiveOpType::OneHot:
                         {
                             assert(m_inputs.size() == 1);
-                            auto inputShape = m_inputs[0].Shape();
                             auto num_class = m_attributes[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
-                            auto axis = m_attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>();
+
+                            auto inputShape = m_inputs[0].Shape();
+                            auto fakeShape = inputShape.AppendShape({num_class});
+                            auto axis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>(), fakeShape);
+                            if (!axis.IsStaticAxis())
+                                LogicError("Function '%S': Splice operation currently does not support splicing along dynamic axis", AsString().c_str());
+
                             size_t len = inputShape.Dimensions().size();
                             int axisIndex = axis.StaticAxisIndex();
-                            size_t offset = axisIndex < 0 ? (len + 1 + axisIndex) % (len + 1) : axisIndex % (len + 1);
 
                             outputShape = {};
-                            if (offset > 0)
+                            if (axisIndex > 0)
                             {
-                                outputShape = outputShape.AppendShape(inputShape.SubShape(0, offset));
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(0, axisIndex));
                             }
                             outputShape = outputShape.AppendShape({num_class});
-                            if (offset != len)
+                            if (axisIndex < len)
                             {
-                                outputShape = outputShape.AppendShape(inputShape.SubShape(offset, len));
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(axisIndex, len));
                             }
 
                             break;

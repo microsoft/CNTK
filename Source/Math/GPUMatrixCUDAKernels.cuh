@@ -5584,15 +5584,22 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
         }
     }
 
-    //running sum
     if (index  < num_columns)
     {
         secondaryIndices[index + 1] = 0;
         for (int i = 0; i < num_rows; i++)
         {
-            if (indices[index * num_rows + i ] >= 0 && indices[index * num_rows + i] < num_class)
-                secondaryIndices[index + 1] += 1
+            if (indices[index * num_rows + i] >= 0 && indices[index * num_rows + i] < num_class)
+                secondaryIndices[index + 1] += 1;
         }
+    }
+
+    //running sum
+    if (index == 0)
+    {
+        secondaryIndices[0] = 0;
+        for (int i = 0; i < num_columns; i++)
+            secondaryIndices[i + 1] += secondaryIndices[i];
     }
 }
 

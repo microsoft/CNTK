@@ -780,9 +780,8 @@ public:
         m_axis = axis;
     }
     //do we really need this?
-    OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : Base(deviceId, name)
+    OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : OneHotNode(deviceId, 0, false, -1, name)
     {
-        OneHotNode(deviceId, 0, false, -1, name);
     }
 
     OneHotNode(const ScriptableObjects::IConfigRecordPtr configp)
