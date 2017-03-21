@@ -16,7 +16,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CNTK</RootNamespace>
-    <AssemblyName>Cntk.Library.Managed-$(CntkComponentVersion)</AssemblyName>
+    <AssemblyName>Cntk.Core.Managed-$(CntkComponentVersion)</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

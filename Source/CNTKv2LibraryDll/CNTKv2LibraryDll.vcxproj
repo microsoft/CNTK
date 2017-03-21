@@ -47,10 +47,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>Cntk.Library-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Core-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
-    <TargetName>Cntk.Library-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Core-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

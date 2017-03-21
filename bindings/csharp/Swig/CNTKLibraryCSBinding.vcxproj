@@ -65,7 +65,7 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(OutDir)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>Cntk.Library-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Cntk.Core-$(CntkComponentVersion).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
     </Link>
   </ItemDefinitionGroup>
@@ -101,7 +101,7 @@
   </ItemDefinitionGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <TargetName>Cntk.Library.CSBinding-$(CntkComponentVersion)</TargetName>
+    <TargetName>Cntk.Core.CSBinding-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemGroup>
     <CustomBuild Include="cntk_cs.i">
