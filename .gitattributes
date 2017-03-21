@@ -71,6 +71,7 @@ Makefile text
 *.proto text
 
 *.cs text
+*.java text
 
 *.yml text
 *.yml.bak text
