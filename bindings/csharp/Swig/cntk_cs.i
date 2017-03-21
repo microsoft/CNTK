@@ -213,6 +213,7 @@
 %ignore_function CNTK::AdamLearner;
 %ignore_function CNTK::AdaGradLearner;
 %ignore_function CNTK::RMSPropLearner;
+%ignore_function CNTK::AdaDeltaLearner;
 
 %ignore_class CNTK::DistributedLearner;
 

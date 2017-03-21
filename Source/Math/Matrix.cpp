@@ -1792,9 +1792,9 @@ void Matrix<ElemType>::AdaDeltaUpdate(Matrix<ElemType>& gradients,
     DecideAndMoveToRightDevice(*this, gradients);
 
     DISPATCH_MATRIX_ON_FLAG(&gradients, &gradients,
-    { NOT_IMPLEMENTED; },
+    { return m_CPUMatrix->AdaDelta(*gradients.m_CPUMatrix, *functionValues.m_CPUMatrix, rho, epsilon); SetDataLocation(CPU); },
     { return m_GPUMatrix->AdaDelta(*gradients.m_GPUMatrix, *functionValues.m_GPUMatrix, rho, epsilon); SetDataLocation(GPU); },
-    { NOT_IMPLEMENTED; },
+    { return gradients.m_CPUSparseMatrix->AdaDelta(*m_CPUMatrix, *functionValues.m_CPUMatrix, rho, epsilon); SetDataLocation(CPU); },
     { return gradients.m_GPUSparseMatrix->AdaDelta(*m_GPUMatrix, *functionValues.m_GPUMatrix, rho, epsilon); SetDataLocation(GPU); });
 }
 
