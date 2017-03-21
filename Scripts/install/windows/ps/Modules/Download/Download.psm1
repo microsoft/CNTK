@@ -32,16 +32,16 @@ function DownloadFileWebClient(
         return $true
     } 
     catch {
-      Write-Verbose "$_.Exception"
-      if ($_.Exception.InnerException) {
-          Write-Verbose ("Inner exception: {0}" -f $_.Exception.InnerException)
-          if ($_.Exception.InnerException.InnerException) {
-              Write-Verbose ("Inner inner exception: {0}" -f $_.Exception.InnerException.InnerException)
-          }
-      }
+        Write-Verbose "$_.Exception"
+        if ($_.Exception.InnerException) {
+            Write-Verbose ("Inner exception: {0}" -f $_.Exception.InnerException)
+            if ($_.Exception.InnerException.InnerException) {
+                Write-Verbose ("Inner inner exception: {0}" -f $_.Exception.InnerException.InnerException)
+            }
+        }
 
-      Remove-Item -path $OutFile -ErrorAction SilentlyContinue
-      return $false
+        Remove-Item -path $OutFile -ErrorAction SilentlyContinue
+        return $false
     }
 }
 
@@ -56,21 +56,25 @@ function Copy-FileWebRequest(
         # if we can't create the target directory, we will stop
         New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction Stop
     }
+    $workFile = Join-Path $targetDir "download.tmp"
+    if (Test-Path -Path $OutFile) {
+        Remove-Item -path $OutFile -ErrorAction Stop
+    }
+    if (Test-Path -Path $workFile) {
+        Remove-Item -path $workFile -ErrorAction Stop
+    }
     for ($count=1; $count -le $maxtry; $count +=1) {
         Write-Verbose "Copy-FileWebRequest: Iteration [$count] of [$maxtry]"
         if ($count -gt 1) {
             start-sleep -Seconds $tryDelaySeconds
         }
-        if (Test-Path -Path $OutFile) {
-            Remove-Item -path $OutFile -ErrorAction Stop
-        }  
-        if (DownloadFileWebRequest -SourceFile $SourceFile -OutFile $OutFile) {
+        if (DownloadFileWebRequest -SourceFile $SourceFile -OutFile $workFile) {
+            Rename-Item $workFile $OutFile -ErrorAction Stop | Out-Null
             return $true
         }
     }
     return $false
 }
-  
 
 function Copy-FileWebClient(
     [Parameter(Mandatory=$True)][string] $SourceFile,
@@ -84,15 +88,21 @@ function Copy-FileWebClient(
         # if we can't create the target directory, we will stop
         New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction Stop
     }
+    $workFile = Join-Path $targetDir "download.tmp"
+    if (Test-Path -Path $OutFile) {
+        Remove-Item -path $OutFile -ErrorAction Stop
+    }
+    if (Test-Path -Path $workFile) {
+        Remove-Item -path $workFile -ErrorAction Stop
+    }
+
     for ($count=1; $count -le $maxtry; $count +=1) {
         Write-Verbose "Copy-FileWebClient: Iteration [$count] of [$maxtry]"
         if ($count -gt 1) {
             start-sleep -Seconds $tryDelaySeconds
         }
-        if (Test-Path -Path $OutFile) {
-            Remove-Item -path $OutFile -ErrorAction Stop
-        }  
-        if (DownloadFileWebClient -SourceFile $SourceFile -OutFile $OutFile -timeout $timeout) {
+        if (DownloadFileWebClient -SourceFile $SourceFile -OutFile $workFile -timeout $timeout) {
+            Rename-Item $workFile $OutFile -ErrorAction Stop | Out-Null
             return $true
         }
     }
