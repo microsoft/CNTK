@@ -1,3 +1,4 @@
+import numpy as np
 import cntk as C
 
 def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', init=C.glorot_uniform(), bidirectional=False, name=''):
@@ -8,11 +9,11 @@ def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', init=C.glor
     return func
 
 def HighwayBlock(dim, # ideally this should be inferred, but times does not allow inferred x inferred parameter for now
-                 transform_weight_initializer=C.glorot_uniform(),
-                 transform_bias_initializer=0,
-                 update_weight_initializer=C.glorot_uniform(),
-                 update_bias_initializer=0,
                  name=''):
+    transform_weight_initializer=C.normal(1 / np.sqrt(dim))
+    transform_bias_initializer=0
+    update_weight_initializer=C.normal(1 / np.sqrt(dim))
+    update_bias_initializer=0
     x  = C.placeholder_variable()
     WT = C.Parameter(C.blocks._INFERRED + (dim,), init=transform_weight_initializer, name=name+'_WT')
     bT = C.Parameter(dim,                         init=transform_bias_initializer,   name=name+'_bT')
