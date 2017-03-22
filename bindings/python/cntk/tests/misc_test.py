@@ -22,9 +22,9 @@ def is_locked(device):
     device_id = -1 if (device.type() == DeviceKind.CPU) else device.id();
     p = Process(target=is_locked_cross_process, args=(q,device_id))
     p.start()
-    locked = q.get()
     p.join()
-    return locked
+    assert p.exitcode == 0
+    return q.get()
 
 def test_callstack1():
     with pytest.raises(ValueError) as excinfo:
@@ -83,6 +83,7 @@ def test_use_default_device():
     p = Process(target=_use_default_device, args=(q,))
     p.start()
     p.join()
+    assert p.exitcode == 0
     assert q.get()
 
 def test_set_cpu_as_default_device():
