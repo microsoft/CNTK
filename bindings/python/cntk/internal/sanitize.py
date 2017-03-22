@@ -145,7 +145,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
 
     if seq_starts and len(var.dynamic_axes) <= 1:
         raise ValueError('you specified sequence begin markers, but your '
-                         'input_variable does not contain a sequence axis.')
+                         'input does not contain a sequence axis.')
 
     if device is None:
         from ..device import use_default_device

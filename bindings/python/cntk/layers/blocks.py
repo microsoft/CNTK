@@ -11,7 +11,7 @@ blocks -- basic building blocks that are semantically not layers (not used in a 
 
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, sequence
+from cntk import parameter, constant, input, placeholder, combine, alias, sequence
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
 from cntk.utils import Record, Signature
@@ -114,7 +114,6 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
         init (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `W`
         dtype (np.dtype, defaults to np.float32): data type
         name (str, defaults to ''): the name of the Function instance in the network
-
     Returns:
         a learnable parameter Variable
     '''
@@ -144,7 +143,6 @@ def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
         shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
         dtype (np.dtype, defaults to np.float32): data type
         name (str, defaults to ''): the name of the Function instance in the network
-
     Returns:
         a constant Variable
     '''
@@ -201,13 +199,13 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
         is_sparse (bool, defaults to `False`):
         dynamic_axes (object, `Axis.default_input_variable_dynamic_axes`):
         name (str, defaults to ''): the name of the Function instance in the network
-
+        
     Returns:
         an input Variable
     '''
 
     dtype = get_default_override(Input, dtype=dtype)
-    return input_variable(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
+    return input(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
                           dynamic_axes=dynamic_axes, name=name)
 
 def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder'):
@@ -229,7 +227,7 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
         dynamic_axes (object, defaults to `None`):
         is_sparse (bool, defaults to `False`):
         name (str, defaults to 'placeholder'): the name of the Function instance in the network
-
+        
     Returns:
         a placeholder Variable
     '''
@@ -237,11 +235,11 @@ def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholde
     if shape is not None or dynamic_axes is not None or is_sparse is not None:
         import warnings
         warnings.warn('Placeholder() no longer requires shapes, axes, or sparse to be specified. Please just remove the arguments.', DeprecationWarning)
-    return placeholder_variable(name=name)
+    return placeholder(name=name)
     # TODO: delete these vv once confirmed that this is indeed not used anymore
-    #p = placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
+    #p = placeholder(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
     # BUGBUG: placeholder does not know is_sparse
-    #return placeholder_variable(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
+    #return placeholder(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
 
 def ForwardDeclaration(name='forward_declaration'):
     '''
@@ -285,7 +283,6 @@ def ForwardDeclaration(name='forward_declaration'):
 def identity(keep):
     '''
     identity()
-
     Identity function.
     This is useful to pass to layers that accept, e.g., a non-linearity,
     but you wish to have none.
@@ -300,6 +297,7 @@ def identity(keep):
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True), name=''):
     '''
     Stabilizer(steepness=4, enable_self_stabilization=True, name='')
+
     Layer factory function to create a `Droppo self-stabilizer <https://www.microsoft.com/en-us/research/wp-content/uploads/2016/11/SelfLR.pdf>`_.
     It multiplies its input with a scalar that is learned.
 
@@ -310,7 +308,6 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
     to those layers. In conjunction with those, the rule is that an explicit ``Stabilizer()`` must be
     inserted by the user for the main data input, whereas the recurrent layer will own the stabilizer(s)
     for the internal recurrent connection(s).
-
     Note: Unlike the original paper, which proposed a linear or exponential scalar,
     CNTK uses a sharpened Softplus: 1/steepness ln(1+e^{steepness*beta}).
     The softplus behaves linear for weights around and above 1 (like the linear scalar) while guaranteeing

@@ -15,8 +15,8 @@ from __future__ import division
 import numpy as np
 import pytest
 from .ops_test_utils import _test_binary_op, AA, precision, PRECISION_TO_TYPE,\
-        unittest_helper, I, sanitize_dtype_cntk, cntk_device
-from .. import parameter
+        unittest_helper, sanitize_dtype_cntk, cntk_device
+from .. import parameter, sequence
 
 SEQUENCES = [
     # (shape of batch (sample size, seq size, rows, cols), time step, initial state)
@@ -48,10 +48,10 @@ def test_op_future_value(input_size, time_step, initial_state, device_id, precis
 
     expected_forward = AA(expected_forward_list, dtype=dt)
 
-    a = I(shape=elem_shape,
-      dtype=sanitize_dtype_cntk(precision),
-      needs_gradient=True,
-      name='a')
+    a = sequence.input(shape=elem_shape,
+                       dtype=sanitize_dtype_cntk(precision),
+                       needs_gradient=True,
+                       name='a')
 
     expected_backward = {
         a: AA(expected_backward_list, dtype=dt)
@@ -79,10 +79,10 @@ def test_op_past_value(input_size, time_step, initial_state, device_id, precisio
         expected_forward[seq_idx,0:time_step] = initial_state
 
     elem_shape = input_size[2:]
-    a = I(shape=elem_shape,
-      dtype=sanitize_dtype_cntk(precision),
-      needs_gradient=True,
-      name='a')
+    a = sequence.input(shape=elem_shape,
+                       dtype=sanitize_dtype_cntk(precision),
+                       needs_gradient=True,
+                       name='a')
 
     backward = np.ones_like(x, dtype=dt)
     for seq_idx in range(input_size[0]):
@@ -128,16 +128,16 @@ def test_op_delay_with_initial_state(input_size, time_step, initial_state_size, 
         else:
             expected_forward[seq_idx,time_step:] = initial_state[seq_idx,:1 if time_step == -1 else -time_step,...]
 
-    a = I(shape=input_size[2:],
-      dtype=sanitize_dtype_cntk(precision),
-      needs_gradient=True,
-      name='a')
+    a = sequence.input(shape=input_size[2:],
+                       dtype=sanitize_dtype_cntk(precision),
+                       needs_gradient=True,
+                       name='a')
     from ...axis import Axis
-    i = I(shape=initial_state_size[2:],
-      dtype=sanitize_dtype_cntk(precision),
-      needs_gradient=True,
-      dynamic_axes=[Axis.default_batch_axis(), Axis('initial_state_axis')],
-      name='i')
+    i = sequence.input(shape=initial_state_size[2:],
+                       dtype=sanitize_dtype_cntk(precision),
+                       needs_gradient=True,
+                       sequence_axis=Axis('initial_state_axis'),
+                       name='i')
 
     backward = np.ones_like(x, dtype=dt)
     initial_state_backward = np.zeros_like(initial_state, dtype=dt)
@@ -161,7 +161,6 @@ def test_op_delay_with_initial_state(input_size, time_step, initial_state_size, 
         i: initial_state_backward
     }
 
-    from .. import sequence
     input_op_input = sequence.delay(a, i, time_step)
 
     unittest_helper(input_op_input,

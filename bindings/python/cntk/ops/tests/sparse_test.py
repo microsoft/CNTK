@@ -25,7 +25,7 @@ def test_times_2d_sparse_operand(device_id):
     input_sparse_indices = [[1, 3], [2, 4], [0, 2]]
     input_data = C.Value.one_hot(input_sparse_indices, sample_shape, device=dev)
 
-    a = C.input_variable(shape=sample_shape, is_sparse=True, needs_gradient=True, name='a')
+    a = C.sequence.input(shape=sample_shape, is_sparse=True, needs_gradient=True, name='a')
     w_init = np.eye(vocab_size, dtype=np.float32)
     w = C.parameter(init=w_init, device=dev)
     a_dense = times(a, w)
@@ -36,7 +36,7 @@ def test_times_2d_sparse_operand(device_id):
     res = a_dense.eval({a : input_data}, device=dev)
     assert np.array_equal(res, [[w_init[input_sparse_indices[0]]], [w_init[input_sparse_indices[1]]], [w_init[input_sparse_indices[2]]]])
 
-    a_no_sequence = C.input_variable(shape=sample_shape, is_sparse=True, name='a', dynamic_axes=[C.Axis.default_batch_axis()])
+    a_no_sequence = C.input(shape=sample_shape, is_sparse=True, name='a')
     a_no_sequence_dense = times(a_no_sequence, w)
     res = a_no_sequence_dense.eval({a_no_sequence : input_data}, device=dev)
     assert np.array_equal(res, [w_init[input_sparse_indices[0]], w_init[input_sparse_indices[1]], w_init[input_sparse_indices[2]]])
@@ -52,7 +52,7 @@ def test_times_2d_sparse_sequence_operand(device_id):
     input_sparse_indices = [[1, 3, 4, 2, 0, 5], [2, 4], [0, 2]]
     input_data = C.Value.one_hot(input_sparse_indices, sample_shape, device=dev)
 
-    a = C.input_variable(shape=sample_shape, is_sparse=True, needs_gradient=True, name='a')
+    a = C.sequence.input(shape=sample_shape, is_sparse=True, needs_gradient=True, name='a')
     w_init = np.eye(vocab_size, dtype=np.float32)
     w = C.parameter(init=w_init, device=dev)
     a_dense = times(a, w)
@@ -80,11 +80,11 @@ def test_training_2d_sparse_sequence_operand(device_id):
     label_shape = (additional_axis_dim, out_dim)
 
     def create_trainer(use_sparse, device):
-        a = C.input_variable(shape=input_shape, is_sparse=use_sparse, name='input')
+        a = C.sequence.input(shape=input_shape, is_sparse=use_sparse, name='input')
         w = C.parameter(init=w_init, device=dev)
         z = times(a, w)
     
-        l = C.input_variable(shape=label_shape, is_sparse=use_sparse, name='label')
+        l = C.sequence.input(shape=label_shape, is_sparse=use_sparse, name='label')
         loss = cross_entropy_with_softmax(z, l, axis=-1)
         trainer = C.Trainer(z, (loss, None), C.sgd(z.parameters, lr=C.learning_rate_schedule(0.7, C.UnitType.sample)))
         return (a, l, w, trainer)
@@ -130,11 +130,11 @@ def test_training_3d_sparse_sequence_with_recurrence(device_id):
     label_shape = (additional_axis_dim1 * additional_axis_dim2, out_dim)
 
     def create_trainer(use_sparse, device):
-        a = C.input_variable(shape=input_shape, is_sparse=use_sparse, name='input')
+        a = C.sequence.input(shape=input_shape, is_sparse=use_sparse, name='input')
         w_i = C.parameter(init=w_init_i, device=dev)
         a_projection = times(a, w_i)
 
-        p_o = C.placeholder_variable()
+        p_o = C.placeholder()
         h = C.past_value(p_o)
         w_h = C.parameter(init=w_init_h, device=dev)
         h_projection = times(h, w_h)        
@@ -142,7 +142,7 @@ def test_training_3d_sparse_sequence_with_recurrence(device_id):
         z = z.replace_placeholder(z)
         z = reshape(z, label_shape)
 
-        l = C.input_variable(shape=label_shape, is_sparse=use_sparse, name='label')
+        l = C.sequence.input(shape=label_shape, is_sparse=use_sparse, name='label')
         loss = cross_entropy_with_softmax(z, l, axis=-1)
         trainer = C.Trainer(z, (loss, None), C.sgd(z.parameters, lr=C.learning_rate_schedule(0.7, C.UnitType.sample)))
         return (a, l, w_i, w_h, trainer)
@@ -186,7 +186,7 @@ def test_times_sparse_operand_reduce_multiple_axes():
     w_init = np.float32(np.random.rand(vocab_size, additional_axis_dim2, out_dim))
     input_shape = (additional_axis_dim1, additional_axis_dim2, vocab_size)
 
-    a = C.input_variable(shape=input_shape, is_sparse=True, name='input')
+    a = C.input(shape=input_shape, is_sparse=True, name='input')
     w = C.parameter(init=w_init)
     
     with pytest.raises(RuntimeError):

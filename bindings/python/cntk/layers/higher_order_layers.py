@@ -13,7 +13,7 @@ from ..utils import Record
 from .blocks import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED, _inject_name
 from .sequence import * # they are also higher-order functions
-
+from .typing import *
 
 # TODO: should we have a parameter to specify the arity of the input?
 #       Can it be automatically determined? (yes, unless the first function is a tuple, then we don't know whether to broadcast or not)
@@ -40,15 +40,15 @@ def Sequential(layers, name=''):
      >>> # The recurrence is a Fold(), meaning only the final hidden state is produced.
      >>> # The Label() layer allows to access the final hidden layer by name.
      >>> model = Sequential([Embedding(300), Fold(LSTM(500)), Label('hidden'), Dense(1, activation=sigmoid)])
-     >>> model.update_signature(30000)
+     >>> model.update_signature(Sequence[Tensor[30000]])
      >>> model.hidden.shape
          (500,)
 
      >>> # simple example that squares an input value
      >>> f = Sequential([log, lambda x: 2 * x, exp])  # the second function is a Python lambda
      >>> f.update_signature(1)
-     >>> f([np.array([[2]])])     # log, times 2, exp is the same as computing the square
-         array([[[ 4.]]], dtype=float32)
+     >>> f([np.array([2])])     # log, times 2, exp is the same as computing the square
+         array([[ 4.]], dtype=float32)
 
      >>> # using function tuples to implement a bidirectional LSTM
      >>> bi_lstm = Sequential([(Recurrence(LSTM(250)),                      # first tuple entry: forward pass
@@ -70,8 +70,8 @@ def Sequential(layers, name=''):
      >>> # simple function-tuples example with values
      >>> f = Sequential([(lambda x: x * x, identity), splice])  # computes tuple (x^2, x) and splices both values
      >>> f.update_signature(1)
-     >>> f([np.array([[2]])])
-         array([[[ 4.,  2.]]], dtype=float32)
+     >>> f([np.array([2])])
+         array([[ 4.,  2.]], dtype=float32)
 
     Args:
       layers (list of :class:`~cntk.ops.functions.Function`, equivalent Python functions, tuples of functions, or lists thereof): the list of functions to apply in sequence.

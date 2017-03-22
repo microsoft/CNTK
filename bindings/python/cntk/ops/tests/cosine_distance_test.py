@@ -13,14 +13,14 @@ import pytest
 from .. import *
 from cntk.losses import *
 from ...axis import Axis
-from ... import sequence
+from ... import sequence, input
 
 def test_cosine_distance():
   a = np.reshape(np.arange(25.0, dtype = np.float32), (5,5))
   b = np.reshape(np.arange(0, 5, dtype=np.float32), (1,5))
   
-  src = input_variable(shape=(5), dynamic_axes=[ Axis.default_batch_axis(), Axis("Seq")])
-  tgt = input_variable(shape=(5))
+  src = sequence.input(shape=(5), sequence_axis=Axis("Seq"))
+  tgt = input(shape=(5))
   tgt_br = sequence.broadcast_as(tgt, src)
   cos_seq = cosine_distance(src, tgt_br)
   assert len(cos_seq.dynamic_axes)==2
@@ -41,8 +41,8 @@ def test_cosine_distance_with_negative_samples():
                 [0., 0., 0., 1., 1.],
                 [1., 0., 0., 0., 1.]], dtype=np.float32)
 
-  qry = input_variable(shape=(5))
-  doc = input_variable(shape=(5))
+  qry = sequence.input(shape=(5))
+  doc = sequence.input(shape=(5))
   num_neg_samples = 2
   model = cosine_distance_with_negative_samples(qry, doc, shift=1, num_negative_samples=num_neg_samples)
   result = model.eval({qry:[a], doc:[b]})
@@ -57,8 +57,8 @@ def test_cosine_distance_with_negative_samples():
   np.allclose(result[0], np.tile([1, 0.5, 0.], (a.shape[0],1)))
 
 def test_rank0_output():
-  x = input_variable(shape=(768,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
-  y = input_variable(shape=(768,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
+  x = sequence.input(shape=(768,), sequence_axis=Axis("B"), needs_gradient=True)
+  y = sequence.input(shape=(768,), sequence_axis=Axis("B"), needs_gradient=True)
   z = cosine_distance(x, y)
   batch_num = 2
   batch_size = 30
@@ -90,8 +90,8 @@ class numpy_cos:
     return {'a':ga, 'b':gb}
 
 def test_cos_distane_backward():
-  x = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
-  y = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
+  x = sequence.input(shape=(2,), sequence_axis=Axis("B"), needs_gradient=True)
+  y = sequence.input(shape=(2,), sequence_axis=Axis("B"), needs_gradient=True)
   z = cosine_distance(x, y);
   a = np.reshape(np.float32([0.25,0.5,0.1,1]), (1,2,2))
   b = np.reshape(np.float32([-0.5,1.5,-0.3,-1]), (1,2,2))
@@ -106,8 +106,8 @@ def test_cos_distane_backward():
   assert (np.all(np.absolute(grad[y]-y_driv_expected) < 1e-6))
 
 def test_cos_distane_backward2():
-  x = input_variable(shape=(100,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
-  y = input_variable(shape=(100,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
+  x = sequence.input(shape=(100,), sequence_axis=Axis("B"), needs_gradient=True)
+  y = sequence.input(shape=(100,), sequence_axis=Axis("B"), needs_gradient=True)
   z = cosine_distance(x, y);
   np.random.seed(0)
   a = np.float32(np.random.rand(10,50,100))
@@ -125,7 +125,7 @@ def test_cos_distane_backward2():
   assert (np.all(np.absolute(grad[y]-y_driv_expected) < 1e-6))
 
 def test_cos_distane_backward3():
-  x = input_variable(shape=(100,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
+  x = sequence.input(shape=(100,), sequence_axis=Axis("B"), needs_gradient=True)
   z = cosine_distance(x, x);
   np.random.seed(0)
   a = np.float32(np.random.rand(10,50,100))

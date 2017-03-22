@@ -7,7 +7,7 @@
 from __future__ import division
 import numpy as np
 from ..learners import *
-from .. import parameter, input_variable
+from .. import parameter, input
 
 import pytest
 
@@ -53,9 +53,7 @@ def test_momentum_schedule_per_sample(params, expectation):
     assert [l[i] for i in range(len(expectation))] == expectation
 
 def test_learner_init():
-    i = input_variable(shape=(1,),
-                       needs_gradient=True,
-                       name='a')
+    i = input(shape=(1,), needs_gradient=True, name='a')
     w = parameter(shape=(1,))
 
     res = i * w
@@ -108,9 +106,7 @@ def test_learner_init():
     adadelta(res.parameters)
 
 def test_learner_update():
-    i = input_variable(shape=(1,),
-                       needs_gradient=True,
-                       name='a')
+    i = input(shape=(1,), needs_gradient=True, name='a')
     w_init = 1
     w = parameter(shape=(1,), init=w_init)
     res = i * w
@@ -137,7 +133,7 @@ def test_training_parameter_schedule():
 
 def test_sweep_based_schedule(tmpdir, device_id):
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
-    from .. import cross_entropy_with_softmax, classification_error, plus, reduce_sum
+    from .. import cross_entropy_with_softmax, classification_error, plus, reduce_sum, sequence
     from ..train.trainer import Trainer
 
     input_dim = 69
@@ -162,8 +158,8 @@ def test_sweep_based_schedule(tmpdir, device_id):
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
     )), randomize=False)
 
-    in1 = input_variable(shape=(input_dim,))
-    labels = input_variable(shape=(input_dim,))
+    in1 = sequence.input(shape=(input_dim,))
+    labels = sequence.input(shape=(input_dim,))
     p = parameter(shape=(input_dim,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)

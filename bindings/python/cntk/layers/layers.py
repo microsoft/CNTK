@@ -11,7 +11,7 @@ from __future__ import division
 import numpy as np
 from ..ops.functions import Function
 from ..ops.variables import Variable
-from ..ops import parameter, input_variable, placeholder_variable, combine
+from ..ops import parameter, input, placeholder, combine
 from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from ..utils import Record
 from cntk.internal import _as_tuple
@@ -865,8 +865,8 @@ def MaxPooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                  [1, 6, 4, 7],
                  [7, 3, 5, 9]]])
      >>> f([[im]])  # due to strides=2, this picks the max out of each 2x2 sub-block
-         array([[[[[ 5.,  8.],
-                   [ 7.,  9.]]]]], dtype=float32)
+         array([[[[ 5.,  8.],
+                  [ 7.,  9.]]]], dtype=float32)
 
     Args:
      filter_shape (`int` or `tuple` of `ints`): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
@@ -917,8 +917,8 @@ def AveragePooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                  [1, 6, 4, 7],
                  [7, 3, 5, 9]]])
      >>> f([[im]])  # due to strides=2, this computes the averages of each 2x2 sub-block
-         array([[[[[ 3.5 ,  4.75],
-                   [ 4.25,  6.25]]]]], dtype=float32)
+         array([[[[ 3.5 ,  4.75],
+                  [ 4.25,  6.25]]]], dtype=float32)
 
     Args:
      filter_shape (`int` or `tuple` of `ints`): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
@@ -955,7 +955,7 @@ def GlobalMaxPooling(name=''):
                  [1, 6, 4, 7],
                  [7, 3, 5, 9]]])
      >>> f([[im]])
-         array([[[[[ 9.]]]]], dtype=float32)
+         array([[[[ 9.]]]], dtype=float32)
 
     Args:
      name (str, defaults to ''): the name of the function instance in the network
@@ -985,7 +985,7 @@ def GlobalAveragePooling(name=''):
                  [1, 6, 4, 7],
                  [7, 3, 5, 9]]])
      >>> f([[im]])
-         array([[[[[ 4.6875]]]]], dtype=float32)
+         array([[[[ 4.6875]]]], dtype=float32)
 
     Args:
      name (str, defaults to ''): the name of the function instance in the network
@@ -1167,8 +1167,8 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     Example:
      >>> f = LayerNormalization(initial_scale=2, initial_bias=1)
      >>> f.update_signature(4)
-     >>> f([np.array([[4,0,0,4]])])  # result has mean 1 and standard deviation 2, reflecting the initial values for scale and bias
-         array([[[ 2.99999, -0.99999, -0.99999,  2.99999]]], dtype=float32)
+     >>> f([np.array([4,0,0,4])])  # result has mean 1 and standard deviation 2, reflecting the initial values for scale and bias
+         array([[ 2.99999, -0.99999, -0.99999,  2.99999]], dtype=float32)
 
     Args:
      initial_scale (float, default 1): initial value for the ``scale`` parameter
