@@ -598,7 +598,7 @@ namespace CNTK
             Variable clonedInput;
             if (replacements.find(cloneeInput) != replacements.end())
             {
-                clonedInput = PlaceholderVariable(cloneeInput.Shape(), cloneeInput.DynamicAxes());
+                clonedInput = PlaceholderLike(cloneeInput);
                 placeholderReplacements[clonedInput] = replacements.at(cloneeInput);
             }
             else
@@ -658,7 +658,7 @@ namespace CNTK
 
                             if (existingPlaceholderReplacement == placeholderReplacements.end())
                             {
-                                clonedInput = PlaceholderVariable(cloneeInput.Shape(), cloneeInput.DynamicAxes());
+                                clonedInput = PlaceholderLike(cloneeInput);
                                 placeholderReplacements[clonedInput] = cloneeInput;
                             }
                             else
@@ -689,29 +689,33 @@ namespace CNTK
             std::vector<std::pair<Variable, Variable>> clonedBlockCompositeArgumentsMap;
 
             // When cloning the block, we need to replace any Parameter/Constants inside the block with
-            // the correspondind replacements if any were specified
-            for (size_t i = 0; i < cloneeCompositeInputs.size(); ++i)
+            // the correspondind replacements if any
+            for (size_t i = 0; i < inputs.size(); ++i)
             {
-                auto cloneeCompositeInput = cloneeCompositeInputs[i];
-                if (replacements.find(cloneeCompositeInput) != replacements.end())
+                auto cloneeInput = cloneeInputs[i];
+                auto clonedInput = inputs[i];
+                if ((cloneeInput != clonedInput) && (cloneeInput.IsParameter() || cloneeInput.IsConstant()))
                 {
-                    if (IsArgument(cloneeCompositeInput))
+                    auto iter = std::find(cloneeCompositeInputs.begin(), cloneeCompositeInputs.end(), cloneeInput);
+                    if (iter != cloneeCompositeInputs.end())
                     {
-                        InvalidArgument("Function '%S': Illegal to replace internal variable '%S' of nested Block Function '%S'.",
-                                        clonee->AsString().c_str(),
-                                        cloneeCompositeInput.AsString().c_str(),
-                                        blockFunction->AsString().c_str());
-                    }
-                    else
-                    {
-                        auto replacement = PlaceholderVariable(cloneeCompositeInput.Shape(), cloneeCompositeInput.DynamicAxes());
+                        auto cloneeCompositeInput = *iter;
+                        Variable replacement = clonedInput;
+                        if (IsArgument(replacement))
+                        {
+                            replacement = PlaceholderLike(cloneeCompositeInput);
+                            clonedBlockCompositeArgumentsMap.push_back({ replacement, inputs[i] });
+                        }
+
                         cloneeCompositeReplacements.insert({ cloneeCompositeInput, replacement });
-                        clonedBlockCompositeArgumentsMap.push_back({ replacement, inputs[i]});
                     }
                 }
             }
 
-            auto clonedComposite = cloneeComposite->Clone(parameterCloneMethod, cloneeCompositeReplacements);
+            // We will not have the block's internal composite create new clones of Parameters/Constants since
+            // in the case we want to really clone, they have been cloned as part of cloning the inputs of the 
+            // block and will be handled through the replacements
+            auto clonedComposite = cloneeComposite->Clone(ParameterCloningMethod::Share, cloneeCompositeReplacements);
 
             auto clonedCompositeInputs = clonedComposite->Inputs();
             std::unordered_map<Variable, Variable> cloneeToClonedBlockCompositeArgumentsMap;
@@ -726,6 +730,12 @@ namespace CNTK
                 clonedBlockCompositeArgumentsMap.push_back({ cloneeToClonedBlockCompositeArgumentsMap.at(cloneeArgumentMapping.first), cloneeToClonedInputMap.at(cloneeArgumentMapping.second) });
 
             clonedFunction = MakeSharedObject<BlockFunction>(std::move(clonedComposite), clonedBlockCompositeArgumentsMap, blockFunction->OpName(), Dictionary(blockFunction->Attributes()), blockFunction->Name());
+            auto clonedFunctionInputs = clonedFunction->Inputs();
+            if (clonedFunctionInputs != inputs)
+                LogicError("Block Function '%S': Inputs '%S' of the new clone do not match the cloned inputs '%S' of the clonee Block Function.",
+                            clonedFunction->AsString().c_str(), 
+                            NamedListString(clonedFunctionInputs).c_str(),
+                            NamedListString(inputs).c_str());
         }
         else
             clonedFunction = clonee->Clone(inputs);

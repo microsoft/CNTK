@@ -166,7 +166,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size)
+        test_config = TestConfig(source=test_source, mb_size=minibatch_size)
     ).train()
 
 # Train and evaluate the network.

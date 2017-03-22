@@ -4244,6 +4244,14 @@ namespace CNTK
                                        AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
 
     ///
+    /// Create an instance of the CNTK built-in AdaDelta learner.
+    ///
+    CNTK_API LearnerPtr AdaDeltaLearner(const std::vector<Parameter>& parameters,
+                                        double rho = 0.95,
+                                        double epsilon = 1e-8,
+                                        AdditionalLearningOptions additionalOptions = AdditionalLearningOptions());
+
+    ///
     /// Distributed Learner.
     ///
     class DistributedLearner : public Learner
@@ -4938,7 +4946,7 @@ namespace CNTK
         /// crossValidationFrequencyInSamples: frequency in samples when to perform cross validation.
         ///
         CNTK_API CrossValidationConfig(const MinibatchSourcePtr& crossValidationSource,
-            const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(1),
+            const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(64),
             size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max());
 
     private:
@@ -4976,6 +4984,25 @@ namespace CNTK
     };
 
     ///
+    /// Test configuration
+    ///
+    struct TestConfig
+    {
+    public:
+        /// Test configuration.
+        /// source : a minibatch source that will be used for test
+        /// schedule : a minibatch size schedule
+        ///
+        CNTK_API TestConfig(const MinibatchSourcePtr& source,
+            const MinibatchSizeSchedule& schedule = MinibatchSizeSchedule(64));
+
+    private:
+        friend class TrainingSession;
+        const MinibatchSourcePtr m_source;
+        const MinibatchSizeSchedule m_mbSize;
+    };
+
+    ///
     /// Base abstract class that represents a training session.
     /// Derived classes can redefine different aspects of training, overriding base virtual methods (GetMinibatchSize, OnMinibatchStart, etc.)
     ///
@@ -5007,7 +5034,8 @@ namespace CNTK
             size_t maxNumTrainingSamples,
             size_t progressFrequency,
             const CheckpointConfig& checkpointing,
-            const CrossValidationConfig& crossValidation);
+            const CrossValidationConfig& crossValidation,
+            const TestConfig& test);
 
         /// !!! DEPRECATED !!!
         /// Constructor of the training session: 
@@ -5120,6 +5148,7 @@ namespace CNTK
 
         bool CrossValidate(size_t currentIndex, const DeviceDescriptor& computeDevice);
         void ReportProgress(size_t currentIndex);
+        void Test(const DeviceDescriptor& computeDevice);
 
         size_t m_parallelAfterSamples;
         size_t m_workerRank;
@@ -5138,6 +5167,7 @@ namespace CNTK
         // Additional configuration.
         CheckpointConfig m_checkpoint;
         CrossValidationConfig m_cv;
+        TestConfig m_test;
     };
 
     ///
@@ -5269,7 +5299,8 @@ namespace CNTK
         size_t maxNumTrainingSamples,
         size_t progressFrequency,
         const CheckpointConfig& checkpointing,
-        const CrossValidationConfig& crossValidation);
+        const CrossValidationConfig& crossValidation,
+        const TestConfig& test);
 }
 
 

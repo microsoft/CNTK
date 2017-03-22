@@ -140,12 +140,13 @@ def test_block_clone():
     dense_block = as_block(block_composite, [(operand_placeholder, x)], 'dense')
 
     w_new = parameter(shape=(1,1), init=3)
-    dense_block_clone = dense_block.clone('share', {w : w_new})
-    assert dense_block_clone.parameters[0].uid == b.uid
-    assert dense_block_clone.inputs[1].uid == w_new.uid
+    b_new = parameter(shape=(1,), init=4)
+    dense_block_clone = dense_block.clone('share', {w : w_new, b : b_new})
+    assert dense_block_clone.inputs[0].uid == w_new.uid
+    assert dense_block_clone.inputs[1].uid == b_new.uid
     
     result = dense_block_clone.eval({dense_block_clone.arguments[0] : [np.asarray([2.], dtype=np.float32)]})
-    assert np.array_equal(result, [[[8.]]])
+    assert np.array_equal(result, [[[10.]]])
 
 
 def test_root_block_clone():

@@ -51,7 +51,6 @@ class CheckpointConfig(cntk_py.CheckpointConfig):
         super(CheckpointConfig, self).__init__(filename, frequency,
                                                restore, preserve_all)
 
-
 class CrossValidationConfig(cntk_py.CrossValidationConfig):
     '''
     A cross validation configuration for the training session.
@@ -92,6 +91,29 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
         super(CrossValidationConfig, self).__init__(
             source, schedule, frequency)
 
+class TestConfig(cntk_py.TestConfig):
+    '''
+    A test configuration for the training session.
+
+    Args:
+        source (:class:`~cntk.io.MinibatchSource`): minibatch source used for testing
+        schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for testing
+    '''
+    def __init__(self, source, mb_size=None):
+        schedule = mb_size
+        if isinstance(mb_size, int):
+            schedule = minibatch_size_schedule(mb_size)
+
+        if schedule is None:
+            schedule = minibatch_size_schedule(1)
+
+        if not isinstance(schedule, cntk_py.minibatch_size_schedule):
+            raise ValueError('mb_size of type (%s) not supported. '
+                             'it must be an output of minibatch_size_schedule() function'
+                             % type(schedule))
+
+        super(TestConfig, self).__init__(source, schedule)
+
 class TrainingSession(cntk_py.TrainingSession):
     '''
     The instance of the class should be created by using :func:`~cntk.train.training_session.training_session` function.
@@ -109,12 +131,14 @@ class TrainingSession(cntk_py.TrainingSession):
         progress_frequency (int): frequency in samples for aggregated progress printing
         checkpoint_config (:class:`CheckpointConfig`): checkpoint configuration
         cv_config (:class:`CrossValidationConfig`): cross validation configuration
+        test_config (:class:`TestConfig`): test configuration
     '''
     def __init__(self, trainer, mb_source, mb_size,
                  var_to_stream, max_samples,
                  progress_frequency, 
                  checkpoint_config,
-                 cv_config):
+                 cv_config,
+                 test_config):
 
         if trainer is None:
             raise ValueError("Trainer must not be None.")
@@ -141,7 +165,7 @@ class TrainingSession(cntk_py.TrainingSession):
                              'it must be an output of minibatch_size_schedule() function'
                              % type(schedule))
 
-        self.cv_config = None
+        self.cv_callback = None
         if cv_config is not None:
             self.cv_callback = cv_config.callback
 
@@ -149,7 +173,8 @@ class TrainingSession(cntk_py.TrainingSession):
             var_to_stream, max_samples,  
             progress_frequency, 
             checkpoint_config,
-            cv_config)
+            cv_config,
+            test_config)
 
     @typemap
     def train(self, device=None):
@@ -250,7 +275,8 @@ def training_session(training_minibatch_source=None,        # deprecated, will b
                      training_config=None,
                      progress_config=None,
                      checkpoint_config=None,
-                     cv_config=None):
+                     cv_config=None,
+                     test_config=None):
     '''
     A factory function to create a training session object.
 
@@ -317,8 +343,11 @@ def training_session(training_minibatch_source=None,        # deprecated, will b
        cv_config = CrossValidationConfig(
                 cv_source, cv_mb_size_schedule, cv_frequency)
 
+    if test_config is None:
+       test_config = TestConfig(source=None)
+
     if progress_frequency != 0 and progress_printer is not None:
         cntk_py._add_progress_writers(trainer, [progress_printer])
 
     return TrainingSession(trainer, mb_source, mb_size, var_to_stream, max_samples,
-                           progress_frequency, checkpoint_config, cv_config)
+                           progress_frequency, checkpoint_config, cv_config, test_config)
