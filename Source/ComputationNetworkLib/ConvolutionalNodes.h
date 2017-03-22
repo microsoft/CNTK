@@ -120,7 +120,7 @@ public:
         {
             fstream >> m_ceilOutDim;
         }
-        if (modelVersion >= CNTK_MODEL_VERSION_22)
+        if (modelVersion >= CNTK_MODEL_VERSION_23)
         {
             fstream >> m_poolPadMode;
         }
