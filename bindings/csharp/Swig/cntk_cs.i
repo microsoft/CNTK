@@ -579,10 +579,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     // This is a reference to prevent premature garbage collection 
     // and resulting in dangling access to Variable.
-    private VariableVector argumentVector;
-    private VariableVector outputVector;
-    private System.Collections.Generic.List<Variable> argumentList;
-    private System.Collections.Generic.List<Variable> outputList;
     private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
 
     public static Function LoadModel(byte[] modelBuffer, DeviceDescriptor computeDevice)
@@ -608,15 +604,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public Function RootFunction
     {
-        get 
-        {
-            return GetRootFunction();
-        }
+        get { return GetRootFunction(); }
     }
 
     public System.Collections.Generic.IList<Variable> Outputs
     {
-        return GetOutputs();
+        get { return GetOutputs(); }
     }
 
     public Variable Output
@@ -646,13 +639,18 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public System.Collections.Generic.IList<Variable> Arguments
     {
-        return GetArguments();
+        get { return GetArguments(); }
     }
 
     // Todo: do we have a better place to put this function?
     public static Function Combine(System.Collections.Generic.IEnumerable<Variable> outputVariables)
     {
-        return CNTKLib.Combine(outputVariables);
+        var varVect = new VariableVector();
+        foreach (var v in outputVariables)
+        {
+            varVect.Add(v);
+        }
+        return CNTKLib.Combine(varVect);
     }
 
     public static Function AsComposite(Function rootFunction, string name = "")
@@ -841,16 +839,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         get { return GetRank(); }
     }
 
-    public System.Collections.Generic.List<uint> Dimensions
+    public System.Collections.Generic.IList<uint> Dimensions
     {
         get 
-        { 
-            var ret = new System.Collections.Generic.List<uint>((int)GetRank());
-            foreach (var dim in GetDimensions())
-            {
-                ret.Add((uint)dim);
-            }
-            return ret;
+        {
+            return GetDimensions();
         }
     }
 
