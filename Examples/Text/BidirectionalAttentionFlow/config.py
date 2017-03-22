@@ -13,6 +13,7 @@ model_config = {
     'char_emb_dim' : 8,
     'dropout' : 0.2,
     'highway_layers' : 2,
+    'two_step'       : True,
 }
 
 training_config = {

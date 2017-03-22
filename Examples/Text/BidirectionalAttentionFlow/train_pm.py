@@ -1,11 +1,11 @@
 import cntk as C
 import numpy as np
-from bidaf import Bidaf
+from polymath import PolyMath
 import os
 import argparse
 import importlib
 
-model_name = "bidaf.model"
+model_name = "pm.model"
 
 def argument_by_name(func, name):
     found = [arg for arg in func.arguments if arg.name == name]
@@ -16,19 +16,19 @@ def argument_by_name(func, name):
     else:
         return found[0]
 
-def create_mb_and_map(func, data_file, bidaf, randomize=True, repeat=True):
+def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     mb_source = C.MinibatchSource(
         C.CTFDeserializer(
             data_file,
             C.StreamDefs(
-                context_g_words  = C.StreamDef('cgw', shape=bidaf.wg_dim, is_sparse=True),
-                query_g_words    = C.StreamDef('qgw', shape=bidaf.wg_dim, is_sparse=True),
-                context_ng_words = C.StreamDef('cnw', shape=bidaf.wn_dim, is_sparse=True),
-                query_ng_words   = C.StreamDef('qnw', shape=bidaf.wn_dim, is_sparse=True),
-                answer_begin     = C.StreamDef('ab',  shape=bidaf.a_dim,  is_sparse=False),
-                answer_end       = C.StreamDef('ae',  shape=bidaf.a_dim,  is_sparse=False),
-                context_chars    = C.StreamDef('cc',  shape=bidaf.c_dim,  is_sparse=True),
-                query_chars      = C.StreamDef('qc',  shape=bidaf.c_dim,  is_sparse=True))),
+                context_g_words  = C.StreamDef('cgw', shape=polymath.wg_dim, is_sparse=True),
+                query_g_words    = C.StreamDef('qgw', shape=polymath.wg_dim, is_sparse=True),
+                context_ng_words = C.StreamDef('cnw', shape=polymath.wn_dim, is_sparse=True),
+                query_ng_words   = C.StreamDef('qnw', shape=polymath.wn_dim, is_sparse=True),
+                answer_begin     = C.StreamDef('ab',  shape=polymath.a_dim,  is_sparse=False),
+                answer_end       = C.StreamDef('ae',  shape=polymath.a_dim,  is_sparse=False),
+                context_chars    = C.StreamDef('cc',  shape=polymath.c_dim,  is_sparse=True),
+                query_chars      = C.StreamDef('qc',  shape=polymath.c_dim,  is_sparse=True))),
         randomize=randomize,
         epoch_size=C.INFINITELY_REPEAT if repeat else C.FULL_DATA_SWEEP)
 
@@ -45,10 +45,10 @@ def create_mb_and_map(func, data_file, bidaf, randomize=True, repeat=True):
     return mb_source, input_map
 
 def train(data_path, model_path, log_file, config_file, restore=False, profiling=False):
-    bidaf = Bidaf(config_file)
-    z, loss = bidaf.model()
+    polymath = PolyMath(config_file)
+    z, loss = polymath.model()
     training_config = importlib.import_module(config_file).training_config
-    mb_source, input_map = create_mb_and_map(loss, os.path.join(data_path, training_config['train_data']), bidaf)
+    mb_source, input_map = create_mb_and_map(loss, os.path.join(data_path, training_config['train_data']), polymath)
     
     max_epochs = training_config['max_epochs']
     log_freq = training_config['log_freq']
@@ -87,15 +87,15 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
         stop_profiler()
         
 def test(test_data, model_path, config_file):
-    bidaf = Bidaf(config_file)
+    polymath = polymath(config_file)
     model = C.load_model(os.path.join(model_path, model_name))
     ab = C.as_composite(model.outputs[0].owner)
     ae = C.as_composite(model.outputs[1].owner)
     loss = C.as_composite(model.outputs[2].owner)
-    mb_source, input_map = create_mb_and_map(loss, test_data, bidaf, False, False)
+    mb_source, input_map = create_mb_and_map(loss, test_data, polymath, False, False)
     label_ab = argument_by_name(loss, 'ab')
     label_ae = argument_by_name(loss, 'ae')
-    f1 = bidaf.f1_score(label_ab, label_ae, ab, ae)
+    f1 = polymath.f1_score(label_ab, label_ae, ab, ae)
     em = C.greater_equal(f1, 1)
     test_func = C.splice(
         C.reduce_sum(loss, C.Axis.all_axes()),
