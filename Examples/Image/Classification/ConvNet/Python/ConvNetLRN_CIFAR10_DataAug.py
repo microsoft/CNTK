@@ -70,8 +70,8 @@ def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_
     _cntk_py.set_computation_network_trace_level(1)
 
     # Input variables denoting the features and label data
-    input_var = cntk.input_variable((num_channels, image_height, image_width))
-    label_var = cntk.input_variable((num_classes))
+    input_var = cntk.input((num_channels, image_height, image_width))
+    label_var = cntk.input((num_classes))
 
     # apply model to input
     scaled_input = cntk.element_times(cntk.constant(0.00390625), input_var)

@@ -7,13 +7,13 @@
 import math
 import numpy as np
 import pytest
-from cntk import Function
+from cntk import Function, sequence
 from ..trainer import *
 from cntk.learners import *
 from .. import distributed
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk import parameter, input_variable, times, plus, reduce_sum
+from cntk import parameter, input, times, plus, reduce_sum
 
 def create_data_parallel_distributed_learner(learner, quantized, distributed_after):
     return distributed.data_parallel_distributed_learner(
@@ -37,8 +37,8 @@ def create_block_momentum_distributed_learner_with_time_constant(learner, distri
 
 def run_distributed_training(tmpdir, create_func):
 
-    in1 = input_variable(shape=1)
-    labels = input_variable(shape=1)
+    in1 = sequence.input(shape=1)
+    labels = sequence.input(shape=1)
     p = parameter(shape=2, init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
@@ -126,8 +126,8 @@ def test_distributed_mb_source(tmpdir):
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
         )), 
         randomize=False, epoch_size=36) # A bit more than a sweep
-    input = input_variable(shape=(input_dim,))
-    label = input_variable(shape=(input_dim,))
+    input = sequence.input(shape=(input_dim,))
+    label = sequence.input(shape=(input_dim,))
     input_map = {
         input : mb0.streams.features,
         label : mb0.streams.labels

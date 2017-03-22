@@ -14,8 +14,8 @@ from .. import *
 from ...axis import Axis
 
 def test_stop_gradient():
-  x = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
-  y = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis(), Axis("B")], needs_gradient=True)
+  x = sequence.input(shape=(2,), sequence_axis=Axis("B"), needs_gradient=True)
+  y = sequence.input(shape=(2,), sequence_axis=Axis("B"), needs_gradient=True)
   z = element_times(x, y);
   w = z + stop_gradient(z)
   a = np.reshape(np.float32([0.25,0.5,0.1,1]), (1,2,2))

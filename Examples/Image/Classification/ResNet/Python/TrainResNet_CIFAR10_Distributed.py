@@ -13,7 +13,7 @@ import numpy as np
 
 from cntk.logging import *
 from cntk.utils import *
-from cntk import input_variable, cross_entropy_with_softmax, classification_error
+from cntk import input, cross_entropy_with_softmax, classification_error
 from cntk import Trainer, cntk_py 
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.debugging import set_computation_network_trace_level
@@ -43,8 +43,8 @@ model_name   = "ResNet_CIFAR10_DataAug.model"
 # Create network
 def create_resnet_network(network_name):
     # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
+    input_var = input((num_channels, image_height, image_width))
+    label_var = input((num_classes))
 
     # create model, and configure learning parameters 
     if network_name == 'resnet20': 

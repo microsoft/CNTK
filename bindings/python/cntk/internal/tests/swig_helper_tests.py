@@ -62,7 +62,7 @@ def test_typemap():
         left_val = [[10,2]]
         right_val = [[2],[3]]
 
-        p = placeholder_variable(shape=(1,2))
+        p = placeholder(shape=(1,2))
         op = times(p, right_val)
         c = constant(left_val)
 

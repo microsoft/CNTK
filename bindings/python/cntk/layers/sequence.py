@@ -316,7 +316,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      >>> bi_lstm_layer = Sequential([(Recurrence(LSTM(250)),                      # first tuple entry: forward pass
      ...                              Recurrence(LSTM(250), go_backwards=True)),  # second: backward pass
      ...                             splice])                                     # splice both on top of each other
-     >>> bi_lstm_layer.update_signature(13)
+     >>> bi_lstm_layer.update_signature(Sequence[Tensor[13]])
      >>> bi_lstm_layer.shape   # shape reflects concatenation of both output states
      (500,)
      >>> tuple(str(axis.name) for axis in bi_lstm_layer.dynamic_axes)  # (note: str() needed only for Python 2.7)
