@@ -409,7 +409,7 @@ def test_layers_convolution_shape(device_id):
     np.testing.assert_array_equal(model_shape, expected_shape, \
         "Error in convolution with stride > 1 and padding")
 
-def  test_layers_convolution_value(device_id):
+def test_layers_convolution_value(device_id):
 
     # Common parameters
     inC, inH, inW = 1, 3, 3
@@ -500,7 +500,7 @@ def  test_layers_convolution_value(device_id):
 ##########################################################
 # Test convolutional 3D layer for correctness (p=False s = 1)
 ##########################################################
-def  test_layers_convolution_3d(device_id):
+def test_layers_convolution_3d(device_id):
     inC, inH, inW, inD = 1, 3, 3, 3
     y = Input((inC,inH, inW, inD))
     dat = np.ones([1, inC, inH, inW, inD], dtype = np.float32)
@@ -557,6 +557,13 @@ def test_sequential_convolution_without_reduction_dim(device_id):
     c = Convolution(3, init=np.array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
     c.update_signature(()) # input is a sequence of scalars
     data = [np.array([2, 6, 4, 8, 6])]   # like a short audio sequence, in the dynamic dimension
+    out = c(data)
+    exp = [[24, 40, 38]]
+    np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
+
+    c = Convolution(3, init=np.array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
+    c.update_signature((1)) # input is a sequence of dim-1 vectors
+    data = [np.array([[2], [6], [4], [8], [6]])]
     out = c(data)
     exp = [[24, 40, 38]]
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')

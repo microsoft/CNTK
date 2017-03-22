@@ -418,7 +418,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         num_inserted_axes = sequential + num_emulated_axes
         if num_inserted_axes != 0:
             # x: (in_depth, spatial_shape)
-            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-filter_rank_without_seq, end_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else None) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+            x = reshape(x, (1,) * num_inserted_axes,    # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+                        begin_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else Axis.new_leading_axis(),
+                        end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
             # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_filter_shape, spatial_shape)
         # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
         # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
@@ -441,7 +443,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         num_axes_to_remove = sequential + emulating_1D + emulating_output_depth
         if num_axes_to_remove > 0:
             # (out_depth, emulated axes, spatial_shape)
-            r = reshape(r, (), begin_axis=-filter_rank_without_seq - num_axes_to_remove, end_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else None) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+            r = reshape(r, (),    # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+                        begin_axis=-filter_rank_without_seq - num_axes_to_remove,  # no need for Axis.new_leading_axis() since expression < 0 guaranteed
+                        end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
             # (out_depth, spatial_shape)
         if activation is not None:
             r = activation(r)
