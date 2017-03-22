@@ -87,5 +87,16 @@ BOOST_FIXTURE_TEST_CASE(RmsPropSparse, MatrixLearnerFixture)
     BOOST_CHECK(fabsf(avg - avgSparse) < c_epsilonFloatE5);
 }
 
+// tests AdaDelta sparse vs. dense
+BOOST_FIXTURE_TEST_CASE(AdaDeltaSparse, MatrixLearnerFixture)
+{
+    // run learner
+    matSG.AdaDeltaUpdate(matG, matM, 0.95f, 1e-8f);
+    matSGsparse.AdaDeltaUpdate(matGsparseBSC, matMsparse, 0.95f, 1e-8f);
+
+    BOOST_CHECK(matSG.IsEqualTo(matSGsparse, c_epsilonFloatE4));
+    BOOST_CHECK(matM.IsEqualTo(matMsparse, c_epsilonFloatE4));
+}
+
 BOOST_AUTO_TEST_SUITE_END()
 }}}}

@@ -351,4 +351,4 @@ def test_udf_op_name():
     p = parameter(shape=(dim,), init=10, name='p')
     i = input_variable(dim, needs_gradient=True, name='i_var')
     m = user_function(MyPlus(i, constant(3)))
-    print(m.root_function)
+    assert str(m.root_function) != ''

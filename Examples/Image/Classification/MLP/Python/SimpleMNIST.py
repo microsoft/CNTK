@@ -11,7 +11,7 @@ import os
 from cntk.train import Trainer, minibatch_size_schedule 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, try_set_default_device
-from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.learners import adadelta, learning_rate_schedule, UnitType
 from cntk.ops import input_variable, relu, element_times, constant
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -84,8 +84,7 @@ def simple_mnist(tensorboard_logdir=None):
         progress_writers.append(TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z))
 
     # Instantiate the trainer object to drive the model training
-    lr_per_minibatch = learning_rate_schedule(0.2, UnitType.minibatch)
-    trainer = Trainer(z, (ce, pe), sgd(z.parameters, lr=lr_per_minibatch), progress_writers)
+    trainer = Trainer(z, (ce, pe), adadelta(z.parameters), progress_writers)
 
     training_session(
         trainer=trainer,

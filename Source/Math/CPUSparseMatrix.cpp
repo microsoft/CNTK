@@ -677,23 +677,27 @@ void CPUSparseMatrix<ElemType>::Allocate(const size_t numRows, const size_t numC
         LogicError("Error, calling allocate with dimensions (%d, %d), but the matrix has dimension (%d, %d).", (int)numRows, (int)numCols, (int)GetNumRows(), (int)GetNumCols());
 
     size_t numNZElemToReserve = max(numNZElemRequested, (size_t) 1);
-    size_t newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
+    size_t newCompIndexSize;
+    if (GetFormat() == MatrixFormat::matrixFormatSparseCSC)
+        newCompIndexSize = numCols + 1;
+    else if (GetFormat() == MatrixFormat::matrixFormatSparseCSR)
+        newCompIndexSize = numRows + 1;
+    else
+        newCompIndexSize = (numCols > numRows ? numCols : numRows) + 1;
+
     bool reallocate = (GetSizeAllocated() < numNZElemToReserve || (GetSizeAllocated() > numNZElemToReserve && !growOnly) || GetCompIndexSize() < newCompIndexSize);
 
     if (reallocate)
     {
         if (GetFormat() == MatrixFormat::matrixFormatSparseCSC || GetFormat() == MatrixFormat::matrixFormatSparseCSR)
         {
+            // The initialization of the following buffer is done by new []().
             auto* pArray      = new ElemType[numNZElemToReserve]();
             auto* unCompIndex = new CPUSPARSE_INDEX_TYPE[numNZElemToReserve]();
             auto* compIndex   = new CPUSPARSE_INDEX_TYPE[newCompIndexSize]();
 
             if (keepExistingValues && (NzCount() > numNZElemToReserve || GetCompIndexSize() > newCompIndexSize))
                 LogicError("Allocate: To keep values m_nz should <= numNZElemToReserve and m_compIndexSize <= newCompIndexSize");
-
-            memset(pArray, 0, sizeof(ElemType) * numNZElemToReserve);
-            memset(unCompIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * numNZElemToReserve);
-            memset(compIndex, 0, sizeof(CPUSPARSE_INDEX_TYPE) * newCompIndexSize);
 
             if (keepExistingValues && NzCount() > 0)
             {
@@ -1293,6 +1297,49 @@ ElemType CPUSparseMatrix<ElemType>::Adagrad(CPUMatrix<ElemType>& c, const bool n
         return aveMultiplier / nz;
     else
         return 1;
+}
+
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& c, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+{
+    size_t numColsNeeded = 2 * GetNumCols();
+
+    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    {
+        c.RequireSize(GetNumRows(), numColsNeeded);
+        c.SetValue(0.0);
+    }
+
+    if (GetNumRows() != GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
+
+    if (GetFormat() != MatrixFormat::matrixFormatSparseBlockCol)
+        LogicError("Unsupported sparse format.");
+
+    size_t n = GetNumElements();
+    ElemType* grad = Data();
+    ElemType* smoothAda = c.Data();
+    ElemType* smoothX2 = c.Data() + n;
+    ElemType* val = functionValues.Data();
+
+#pragma omp parallel for
+    // TODO: Unroll 4-times for better performance leveraging vectorization
+    for (int j = 0; j < (int)GetBlockSize(); j++)
+    {
+        size_t i = GetBlockIds()[j] - GetBlockIdShift();
+        size_t len = GetNumRows();
+        size_t start = j * len;
+        for (size_t p = start; p < start + len; p++)
+        {
+            ElemType g = grad[p];
+            ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
+            smoothAda[i] = adaSqr;
+            ElemType x2 = smoothX2[i];
+            ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
+            smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
+            val[i] += deltaX;
+        }
+    }
 }
 
 template <class ElemType>

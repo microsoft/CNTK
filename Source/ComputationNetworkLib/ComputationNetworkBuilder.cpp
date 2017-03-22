@@ -851,7 +851,10 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Futur
 template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::RowSlice(const ComputationNodePtr a, const size_t start_index, const size_t num_rows, const std::wstring nodeName)
 {
-    return net.AddNodeToNetAndAttachInputs(New<SliceNode<ElemType>>(net.GetDeviceId(), nodeName, (int)start_index, (int)(start_index + num_rows)), { a });
+    std::vector<int> startIndex, endIndex; 
+    startIndex.push_back((int)start_index); 
+    endIndex.push_back((int)(start_index + num_rows)); 
+    return net.AddNodeToNetAndAttachInputs(New<SliceNode<ElemType>>(net.GetDeviceId(), nodeName, startIndex, endIndex), { a });
 }
 
 template <class ElemType>

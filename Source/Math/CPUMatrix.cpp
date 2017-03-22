@@ -1390,6 +1390,39 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+{
+    size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    {
+        RequireSize(gradients.GetNumRows(), numColsNeeded);
+        SetValue(0.0);
+    }
+
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
+
+    size_t n = gradients.GetNumElements();
+    ElemType* grad = gradients.Data();
+    ElemType* smoothAda = Data();
+    ElemType* smoothX2 = Data() + n;
+    ElemType* val = functionValues.Data();
+#pragma omp parallel for
+    // TODO: Unroll 4-times for better performance leveraging vectorization
+    for (long i = 0; i < n; i++)
+    {
+        ElemType g = grad[i];
+        ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
+        smoothAda[i] = adaSqr;
+        ElemType x2 = smoothX2[i];
+        ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
+        smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
+        val[i] += deltaX;
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
     if (numRows * numCols != GetNumElements())
