@@ -4,9 +4,8 @@
 # for full license information.
 # ==============================================================================
 
-from .. import cntk_py
+from .. import cntk_py, Value
 from ..tensor import ArrayMixin
-from ..utils import value_to_seq
 from cntk.internal import typemap
 from cntk.device import use_default_device
 
@@ -44,7 +43,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         The value of the minibatch as a NumPy array.
         '''
-        return value_to_seq(self.data)
+        return Value.to_seq(self.data)
 
     @property
     def shape(self):

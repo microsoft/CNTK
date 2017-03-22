@@ -16,21 +16,6 @@ from ..axis import Axis
 from cntk.internal import typemap
 
 
-def _is_dense(batch):
-    if isinstance(batch, np.ndarray):
-        return True
-    elif sparse.issparse(batch):
-        return False
-
-    is_dense = True
-    b = batch
-    while isinstance(b, list):
-        b = b[0]
-        if sparse.issparse(b):
-            return False
-
-    return True
-
 
 def _ones_like(batch, precision):
     '''
@@ -42,50 +27,6 @@ def _ones_like(batch, precision):
     '''
     from cntk.internal import sanitize_precision
     return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
-
-
-# Obsolete: All usages should be replaced with the variable_value_to_seq
-# procedure below
-def value_to_seq(value):
-    '''
-    Convert a Value to a sequence of NumPy arrays that have their masked
-    entries removed.
-
-    Args:
-        value (:class:`~cntk.core.Value`): Value as it is returned by Swig
-
-    Returns:
-        a list of NumPy arrays
-    '''
-
-    np_data = np.asarray(value)
-    mask = value.mask()
-    if mask:
-        mask = np.asarray(mask)
-        np_data = [seq[mask[idx] != cntk_py.MaskKind_Invalid]
-                   for idx, seq in enumerate(np_data)]
-
-    return np_data
-
-
-def variable_value_to_seq(value, variable):
-    '''
-    Convert a Value to a sequence of NumPy arrays that have their masked
-    entries removed.
-
-    Args:
-        value (:class:`~cntk.core.Value`): Value as it is returned by Swig
-
-    Returns:
-        a list of NumPy arrays
-    '''
-
-    mask = value.mask()
-    if mask:
-        value_sequences = value.unpack_variable_value(variable, True, cpu())
-        return [np.asarray(seq) for seq in value_sequences[0]]
-    else:
-        return np.asarray(value)
 
 
 def eval(op, arguments=None, precision=None, device=None, backward_pass=False, expected_backward=None):
@@ -149,102 +90,3 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
         return forward_output, None
 
 
-def get_python_function_arguments(f):
-    '''
-    Helper to get the parameter names and annotations of a Python function.
-    '''
-    # Note that we only return non-optional arguments (we assume that any optional args are not specified).
-    # This allows to, e.g., accept max(a, b, *more, name='') as a binary function
-    import sys
-    if sys.version_info.major >= 3:
-        from inspect import getfullargspec
-    else:
-        def getfullargspec(f):
-            from inspect import getargspec
-            annotations = getattr(f, '__annotations__', {})
-            #f.__annotations__ = None  # needed when faking it under Python 3 for debugging purposes
-            a = getargspec(f)
-            #f.__annotations__ = annotations
-            return Record(args=a.args, varargs=a.varargs, varkw=a.keywords, defaults=a.defaults, kwonlyargs=[], kwonlydefaults=None, annotations=annotations)
-    param_specs = getfullargspec(f)
-    annotations = param_specs.annotations
-    arg_names = param_specs.args
-    defaults = param_specs.defaults # "if this tuple has n elements, they correspond to the last n elements listed in args"
-    if defaults:
-        arg_names = arg_names[:-len(defaults)] # we allow Function(functions with default arguments), but those args will always have default values since CNTK Functions do not support this
-    return (arg_names, annotations)
-
-def map_function_arguments(params, params_dict, *args, **kwargs):
-    '''
-    Helper to determine the argument map for use with various call operations.
-    Returns a dictionary from parameters to whatever arguments are passed.
-    Accepted are both positional and keyword arguments.
-    This mimics Python's argument interpretation, except that keyword arguments are not optional.
-    This does not require the arguments to be Variables or Functions. It is also called by train_minibatch() and @Signature.
-    '''
-    # start with positional arguments
-    arg_map = dict(zip(params, args))
-
-    # now look up keyword arguments
-    if len(kwargs) != 0:
-        for name, arg in kwargs.items():  # keyword args are matched by name
-            if name not in params_dict:
-                raise TypeError("got an unexpected keyword argument '%s'" % name)
-            param = params_dict[name]
-            if param in arg_map:
-                raise SyntaxError("got multiple values for argument '%s'" % name)
-            arg_map[param] = arg # add kw argument to dict
-    assert len(arg_map) == len(params)
-
-    return arg_map
-
-def Signature(*args, **kwargs):
-    '''
-    ``@Signature`` is a decorator to implement the function-argument annotations in Python-2.7,
-    as needed by the ``@Function`` decorator.
-    This is only needed when you have not yet migrated to Python 3.x.
-
-    Note: Although this is aimed at enabling ``@Function`` syntax with type annotations
-    in Python 2.7, ``@Signature`` is independent of CNTK and can be used for any argument annotation.
-
-    Args:
-        *args: types of arguments of the function that this decorator is applied to, in the same order.
-        **kwargs: types of arguments with optional names, e.g. `x=Tensor[42]`. Use this second form for
-           longer argument lists.
-
-    Example::
-
-     # Python 3:
-     @Function
-     def f(x: Tensor[42]):
-         return sigmoid(x)
-     # Python 2.7:
-     @Function
-     @Signature(Tensor[42])
-     def f(x):
-         return sigmoid(x)
-
-     # note that this:
-     @Function
-     @Signature(x:int)
-     def sqr(x):
-         return x*x
-     # is identical to:
-     def sqr(x):
-         return x*x
-     sqr.__annotations__ = {'x': int}``
-    '''
-    # this function returns another function which is the actual decorator applied to the def:
-    def add_annotations(f):
-        # prepare the signature
-        param_names, annotations = get_python_function_arguments(f)
-        if annotations:
-            raise ValueError('@Signature cannot be applied to functions that already have annotations')
-        annotations = {}
-        if len(args) + len(kwargs) != len(param_names):
-            raise TypeError("{} annotations provided for function to be decorated, but function has {} parameters".format(len(args) + len(kwargs), len(param_names)))
-        # implant anotations into f
-        params_dict = { name: name for name in param_names }
-        f.__annotations__ = map_function_arguments(param_names, params_dict, *args, **kwargs)
-        return f # and return the updated function
-    return add_annotations

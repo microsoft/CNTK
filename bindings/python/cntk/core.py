@@ -226,6 +226,16 @@ class Value(cntk_py.Value):
         else:
             super(Value, self).__init__(ndav)
 
+    def to_seq(self, variable=None):
+        '''
+        Convert a Value to a sequence of NumPy arrays that have their masked
+        entries removed.
+
+        Returns:
+            a list of NumPy arrays
+        '''
+        return Value.to_seq(self, variable)
+
     @staticmethod
     def _as_best_data_type(var, sample):
         convert_to_var_dtype = False
@@ -239,15 +249,15 @@ class Value(cntk_py.Value):
                     s = s[0]
                 if sparse.issparse(s):
                     raise ValueError('if you provide sparse data, every '
-                                     'sequence must be encoded as one '
-                                     'csr_matrix instance. Your sequence '
-                                     'was: \'%s\'' % str(sample))
+                                        'sequence must be encoded as one '
+                                        'csr_matrix instance. Your sequence '
+                                        'was: \'%s\'' % str(sample))
                 else:
                     raise
 
             if sample.dtype != var.dtype:
                 raise ValueError('could not convert sample data to '
-                                 'NumPy array')
+                                    'NumPy array')
 
         elif sample.dtype in (np.float32, np.float64):
             if sample.dtype != var.dtype:
@@ -258,13 +268,13 @@ class Value(cntk_py.Value):
 
         else:
             raise ValueError('only integer, float32 and float64 are '
-                             'supported, you gave %s' % sample.dtype)
+                                'supported, you gave %s' % sample.dtype)
 
         if convert_to_var_dtype:
             warnings.warn('your data is of type "%s", but your input '
-                          'variable (uid "%s") expects "%s". Please convert '
-                          'your data beforehand to speed up training.' %
-                          (sample.dtype, var.uid, str(var.dtype)))
+                            'variable (uid "%s") expects "%s". Please convert '
+                            'your data beforehand to speed up training.' %
+                            (sample.dtype, var.uid, str(var.dtype)))
             sample = sample.astype(var.dtype)
 
         return sample
@@ -433,6 +443,31 @@ class Value(cntk_py.Value):
             value = cntk_py.Value.create_one_hot_double(
                 sample_shape, batch, device, False)
         return value
+
+    @staticmethod
+    def to_seq(value, variable=None):
+        '''
+        Convert a Value to a sequence of NumPy arrays that have their masked
+        entries removed.
+
+        Args:
+            value (:class:`~cntk.core.Value`): Value as it is returned by Swig
+
+        Returns:
+            a list of NumPy arrays
+        '''
+
+        mask = value.mask()
+        if mask:
+            if variable is None: 
+                mask = np.asarray(mask)
+                return [seq[mask[idx] != cntk_py.MaskKind_Invalid]
+                           for idx, seq in enumerate(np.asarray(value))]
+            else:
+                value_sequences = value.unpack_variable_value(variable, True, cpu())
+                return [np.asarray(seq) for seq in value_sequences[0]]
+        else:
+            return np.asarray(value)
 
     @property
     def shape(self):
