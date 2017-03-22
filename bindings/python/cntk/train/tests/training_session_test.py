@@ -8,7 +8,7 @@ import os
 import math
 import re
 import numpy as np
-from cntk import Function
+from cntk import Function, sequence
 from cntk import times, sequence, as_block, element_select
 from cntk.ops.tests.ops_test_utils import cntk_device
 from ..trainer import *
@@ -16,7 +16,7 @@ from ..training_session import *
 from cntk.learners import *
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk import parameter, input_variable, times, plus, reduce_sum, Axis, cntk_py
+from cntk import parameter, input, times, plus, reduce_sum, Axis, cntk_py
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, FULL_DATA_SWEEP, INFINITELY_REPEAT
 import pytest
 
@@ -65,8 +65,8 @@ def mb_source(tmpdir, fileprefix, epoch_size=FULL_DATA_SWEEP):
 
 
 def create_sample_model(device, writer=None):
-    in1 = input_variable(shape=(input_dim,))
-    labels = input_variable(shape=(input_dim,))
+    in1 = sequence.input(shape=(input_dim,))
+    labels = sequence.input(shape=(input_dim,))
     p = parameter(shape=(input_dim,), init=10, device=device)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)

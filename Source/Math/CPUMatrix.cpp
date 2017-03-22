@@ -1390,6 +1390,39 @@ ElemType CPUMatrix<ElemType>::RmsProp(CPUMatrix<ElemType>& gradients,
 }
 
 template <class ElemType>
+void CPUMatrix<ElemType>::AdaDelta(CPUMatrix<ElemType>& gradients, CPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon)
+{
+    size_t numColsNeeded = 2 * gradients.GetNumCols();
+
+    if (IsEmpty() || (GetNumCols() < numColsNeeded))
+    {
+        RequireSize(gradients.GetNumRows(), numColsNeeded);
+        SetValue(0.0);
+    }
+
+    if (GetNumRows() != gradients.GetNumRows() || GetNumCols() != numColsNeeded)
+        LogicError("The matrix gradients does not have expected dimensions.");
+
+    size_t n = gradients.GetNumElements();
+    ElemType* grad = gradients.Data();
+    ElemType* smoothAda = Data();
+    ElemType* smoothX2 = Data() + n;
+    ElemType* val = functionValues.Data();
+#pragma omp parallel for
+    // TODO: Unroll 4-times for better performance leveraging vectorization
+    for (long i = 0; i < n; i++)
+    {
+        ElemType g = grad[i];
+        ElemType adaSqr = rho * smoothAda[i] + (1 - rho) * g * g;
+        smoothAda[i] = adaSqr;
+        ElemType x2 = smoothX2[i];
+        ElemType deltaX = -sqrt(x2 + epsilon) / sqrt(adaSqr + epsilon) * g;
+        smoothX2[i] = rho * smoothX2[i] + (1 - rho) * deltaX * deltaX;
+        val[i] += deltaX;
+    }
+}
+
+template <class ElemType>
 void CPUMatrix<ElemType>::Reshape(const size_t numRows, const size_t numCols)
 {
     if (numRows * numCols != GetNumElements())
@@ -4550,7 +4583,7 @@ void CPUMatrix<ElemType>::MaxUnpooling(const CPUMatrix<int>& mpRowCol, const CPU
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output) const
+void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& output, const bool poolPadMode) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)output.GetNumCols(); sample++)
@@ -4572,13 +4605,16 @@ void CPUMatrix<ElemType>::AveragePoolingForward(const CPUMatrix<int>& mpRowCol, 
                 sum += (*this)(colBase + dcol, sample);
             }
             // Note that we divide by size which is the number of actual elements (does not include padding).
+            // if poolPadMode == true, use avg_pool_include_pad
+            if (poolPadMode)
+                size = indices(0, 0);
             output(row, sample) = sum / size;
         }
     }
 }
 
 template <class ElemType>
-void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad) const
+void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol, const CPUMatrix<int>& mpRowIndices, const CPUMatrix<int>& indices, CPUMatrix<ElemType>& grad, const bool poolPadMode) const
 {
 #pragma omp parallel for
     for (int64_t sample = 0; sample < (int64_t)GetNumCols(); sample++)
@@ -4590,8 +4626,12 @@ void CPUMatrix<ElemType>::AveragePoolingBackward(const CPUMatrix<int>& mpRowCol,
 
             int i0 = mpRowIndices(row, 0);
             int size = indices(i0++, 0);
+            int tmp = size;
+            if (poolPadMode)
+                size = indices(0, 0);
             assert(size > 0);
             ElemType g = (*this)(row, sample) / size;
+            size = tmp;
             for (int i = 0; i < size; i++)
             {
                 int dcol = indices(i0 + i, 0);

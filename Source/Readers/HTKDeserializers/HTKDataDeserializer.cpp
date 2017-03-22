@@ -47,16 +47,17 @@ HTKDataDeserializer::HTKDataDeserializer(
     auto inputName = input.GetMemberIds().front();
     std::wstring precision = cfg(L"precision", L"float");
 
-    m_expandToPrimary = cfg(L"expandToUtterance", false);
-    if (m_expandToPrimary && m_primary)
-    {
-        InvalidArgument("Cannot expand utterances of the primary stream %ls, please change your configuration.", inputName.c_str());
-    }
 
     ConfigParameters streamConfig = input(inputName);
 
     ConfigHelper config(streamConfig);
     auto context = config.GetContextWindow();
+
+    m_expandToPrimary = streamConfig(L"expandToUtterance", false);
+    if (m_expandToPrimary && m_primary)
+    {
+        InvalidArgument("Cannot expand utterances of the primary stream %ls, please change your configuration.", inputName.c_str());
+    }
 
     m_elementType = AreEqualIgnoreCase(precision,  L"float") ? ElementType::tfloat : ElementType::tdouble;
     m_dimension = config.GetFeatureDimension();

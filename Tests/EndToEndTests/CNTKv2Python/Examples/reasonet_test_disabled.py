@@ -8,7 +8,7 @@ module_path = os.path.join(py_path, 'ReasoNet')
 import cntk.device as device
 import numpy as np
 from cntk.ops.tests.ops_test_utils import cntk_device
-from cntk.ops import input_variable, past_value, future_value
+from cntk.ops import input, past_value, future_value
 from cntk.io import MinibatchSource
 from cntk import Trainer, Axis, device, combine
 from cntk.layers import Recurrence, Convolution

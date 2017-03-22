@@ -29,8 +29,8 @@
     <HasMultiverso>false</HasMultiverso>
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
-    <!-- If an executable links ReaderLib.lib, it has dependency on Common.dll, Math.dll and PerformanceProfilerDll.dll -->
-    <ReaderLibs>ReaderLib.lib;Common.lib;Math.lib;PerformanceProfilerDll.lib</ReaderLibs>
+    <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
+    <ReaderLibs>Cntk.Reader-$(CntkComponentVersion).lib;Cntk.Common-$(CntkComponentVersion).lib;Cntk.Math-$(CntkComponentVersion).lib;Cntk.PerformanceProfiler-$(CntkComponentVersion).lib</ReaderLibs>
 
   </PropertyGroup>
 
@@ -121,7 +121,7 @@
 
   <ItemDefinitionGroup>
     <ClCompile>
-      <PreprocessorDefinitions>HAS_MPI=1</PreprocessorDefinitions>
+      <PreprocessorDefinitions>CNTK_COMPONENT_VERSION="$(CntkComponentVersion)";HAS_MPI=1</PreprocessorDefinitions>
     </ClCompile>
   </ItemDefinitionGroup>
 

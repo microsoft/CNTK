@@ -394,6 +394,8 @@ Test module "MathTests" has passed with:
     Test case "GPUMatrixSuite/GPUBlasInnerProduct" has passed with:
       2 assertions out of 2 passed
 
+    Test case "GPUMatrixSuite/MatrixCopyAssignAccrossDevices" has passed
+
     Test case "GPUMatrixSuite/GPUMatrixConstructorNoFlag" has passed with:
       6 assertions out of 6 passed
 
@@ -652,8 +654,8 @@ Test module "MathTests" has passed with:
     Test case "MatrixUnitTests/MatrixFSAdagradUpdate_WithAndWithout_UnitGain" has passed
 
   Test suite "MatrixLearnerSuite" has passed with:
-    2 test cases out of 2 passed
-    4 assertions out of 4 passed
+    3 test cases out of 3 passed
+    6 assertions out of 6 passed
 
     Test case "MatrixLearnerSuite/FSAdagradSparse" has passed with:
       2 assertions out of 2 passed
@@ -661,3 +663,5 @@ Test module "MathTests" has passed with:
     Test case "MatrixLearnerSuite/RmsPropSparse" has passed with:
       2 assertions out of 2 passed
 
+    Test case "MatrixLearnerSuite/AdaDeltaSparse" has passed with:
+      2 assertions out of 2 passed

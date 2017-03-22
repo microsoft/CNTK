@@ -55,8 +55,8 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
 def create_conv_network():
 
     # Input variables denoting the features and label data
-    feature_var = cntk.input_variable((num_channels, image_height, image_width))
-    label_var = cntk.input_variable((num_classes))
+    feature_var = cntk.input((num_channels, image_height, image_width))
+    label_var = cntk.input((num_classes))
 
     # apply model to input
     scaled_input = cntk.element_times(cntk.constant(0.00390625), feature_var)

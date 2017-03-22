@@ -117,14 +117,11 @@ def create_model(params : model_params):
   """
   logger.log("Create model: dropout_rate: {0}, init:{1}, embedding_init: {2}".format(params.dropout_rate, params.init, params.embedding_init))
   # Query and Doc/Context/Paragraph inputs to the model
-  batch_axis = Axis.default_batch_axis()
   query_seq_axis = Axis('sourceAxis')
   context_seq_axis = Axis('contextAxis')
-  query_dynamic_axes = [batch_axis, query_seq_axis]
-  query_sequence = input_variable(shape=(params.vocab_dim), is_sparse=True, dynamic_axes=query_dynamic_axes, name='query')
-  context_dynamic_axes = [batch_axis, context_seq_axis]
-  context_sequence = input_variable(shape=(params.vocab_dim), is_sparse=True, dynamic_axes=context_dynamic_axes, name='context')
-  entity_ids_mask = input_variable(shape=(1,), is_sparse=False, dynamic_axes=context_dynamic_axes, name='entity_ids_mask')
+  query_sequence = sequence.input(shape=(params.vocab_dim), is_sparse=True, sequence_axis=query_seq_axis, name='query')
+  context_sequence = sequence.input(shape=(params.vocab_dim), is_sparse=True, sequence_axis=context_seq_axis, name='context')
+  entity_ids_mask = sequence.input(shape=(1,), is_sparse=False, sequence_axis=context_seq_axis, name='entity_ids_mask')
   # embedding
   if params.embedding_init is None:
     embedding_init = create_random_matrix(params.vocab_dim, params.embedding_dim)
@@ -199,9 +196,9 @@ def loss(model, params:model_params):
   entity_ids_mask = model_args['entity_ids_mask']
   entity_condition = greater(entity_ids_mask, 0, name='condidion')
   entities_all = sequence.gather(entity_condition, entity_condition, name='entities_all')
-  entity_ids = input_variable(shape=(params.entity_dim), is_sparse=True, dynamic_axes=entities_all.dynamic_axes, name='entity_ids')
+  entity_ids = input(shape=(params.entity_dim), is_sparse=True, dynamic_axes=entities_all.dynamic_axes, name='entity_ids')
   wordvocab_dim = params.vocab_dim
-  labels_raw = input_variable(shape=(1,), is_sparse=False, dynamic_axes=context.dynamic_axes, name='labels')
+  labels_raw = input(shape=(1,), is_sparse=False, dynamic_axes=context.dynamic_axes, name='labels')
   answers = sequence.scatter(sequence.gather(model.outputs[-1], entity_condition), entities_all, name='Final_Ans')
   labels = sequence.scatter(sequence.gather(labels_raw, entity_condition), entities_all, name='EntityLabels')
   entity_id_matrix = ops.reshape(entity_ids, params.entity_dim)

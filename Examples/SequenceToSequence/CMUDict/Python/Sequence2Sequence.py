@@ -10,8 +10,8 @@ import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learners import momentum_sgd, adam_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
-from cntk import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
-                 element_select, alias, hardmax, placeholder_variable, combine, parameter, times, plus
+from cntk import input, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
+                 element_select, alias, hardmax, placeholder, combine, parameter, times, plus
 from cntk.ops.functions import CloneMethod, load_model, Function
 from cntk.initializer import glorot_uniform
 from cntk.logging import log_number_of_parameters, ProgressPrinter
