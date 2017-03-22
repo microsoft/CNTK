@@ -946,7 +946,6 @@ lMULTIVERSO:=-lmultiverso
 INCLUDEPATH += $(SOURCEDIR)/Multiverso/include
 COMMON_FLAGS += -DASGD_PARALLEL_SUPPORT
 
-# TODO: not touched nor renamed yet (different depot)
 MULTIVERSO_LIB:=$(LIBDIR)/libmultiverso.so
 
 ALL_LIBS+=$(MULTIVERSO_LIB)
