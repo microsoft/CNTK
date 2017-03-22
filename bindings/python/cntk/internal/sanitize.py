@@ -452,3 +452,19 @@ def sanitize_variable_value_dict(var_value_dict):
         return var_value_dict
     else:
         return list(var_value_dict.values())[0]
+
+def memoize(func):
+    class memodict(dict):
+        __slots__ = ()
+        def __missing__(self, key):
+            self[key] = ret = func(key)
+            return ret
+    return memodict().__getitem__
+
+@memoize
+def _sparse_to_dense_network_cache(input_shape):
+    from cntk.ops import times, input_variable
+
+    temp_input = input_variable(input_shape)
+    eye_shape = input_shape[-1]
+    return times(temp_input, np.eye(eye_shape))
