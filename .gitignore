@@ -261,6 +261,9 @@ Examples/Image/DataSets/Animals/Test
 Examples/Image/DataSets/Flowers/jpg
 Examples/Image/DataSets/Flowers/*.txt
 Examples/Image/PretrainedModels/*.model
+Examples/Image/Detection/FasterRCNN/*.png
+Examples/Image/Detection/FasterRCNN/*.pdf
+Examples/Image/Detection/FasterRCNN/*.model
 Examples/Image/FeatureExtraction/*.txt
 Examples/Image/GettingStarted/Output/
 Tests/EndToEndTests/CNTKv2Python/Examples/layerOutput.txt

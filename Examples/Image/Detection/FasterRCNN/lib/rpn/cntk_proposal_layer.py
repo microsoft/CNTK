@@ -15,8 +15,9 @@ from generate_anchors import generate_anchors
 from fast_rcnn.bbox_transform import bbox_transform_inv, clip_boxes
 from fast_rcnn.nms_wrapper import nms
 
-DEBUG = True
-debug_fwd = True
+DEBUG = False
+debug_fwd = False
+debug_bkw = False
 
 # rpn_rois = user_function(ProposalLayer(rpn_cls_prob, rpn_bbox_pred, im_info))
 class ProposalLayer(UserFunction):
@@ -54,10 +55,10 @@ class ProposalLayer(UserFunction):
         #if len(top) > 1:
         #    top[1].reshape(1, 1, 1, 1)
 
-        return [output_variable(proposalShape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+        return [output_variable(proposalShape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False)]
 
     def forward(self, arguments, device=None, outputs_to_retain=None):
-        if debug_fwd: print("---> Entering forward in {}".format(self.name))
+        if debug_fwd: print("--> Entering forward in {}".format(self.name))
         #rpn_cls_prob, rpn_bbox_pred, im_info = arguments
         bottom = arguments
 
@@ -138,8 +139,6 @@ class ProposalLayer(UserFunction):
         # Convert anchors into proposals via bbox transformations
         proposals = bbox_transform_inv(anchors, bbox_deltas)
 
-        import pdb; pdb.set_trace()
-
         # 2. clip predicted boxes to image
         proposals = clip_boxes(proposals, im_info[:2])
 
@@ -169,6 +168,7 @@ class ProposalLayer(UserFunction):
         # pad with zeros if too few rois were found
         num_found_proposals = proposals.shape[0]
         if num_found_proposals < self._rois_per_image:
+            print("Only {} proposals generated in ProposalLayer".format(num_found_proposals))
             proposals_padded = np.zeros(((self._rois_per_image,) + proposals.shape[1:]), dtype=np.float32)
             proposals_padded[:num_found_proposals, :] = proposals
             proposals = proposals_padded
@@ -194,20 +194,9 @@ class ProposalLayer(UserFunction):
         return None, proposals
 
     def backward(self, state, root_gradients, variables):
+        if debug_bkw: print("<-- Entering backward in {}".format(self.name))
         """This layer does not propagate gradients."""
-        # pass
-        # return np.asarray([])
-
-        dummy = [k for k in variables]
-        print("Entering backward in {} for {}".format(self.name, dummy[0]))
-
-        #import pdb; pdb.set_trace()
-
-        for var in variables:
-            dummy_grads = np.zeros(var.shape, dtype=np.float32)
-            dummy_grads.shape = (1,) + dummy_grads.shape
-            print ("PL assigning gradients {} for {} {}".format(dummy_grads.shape, var, var.shape))
-            variables[var] = dummy_grads
+        pass
 
 
 def _filter_boxes(boxes, min_size):

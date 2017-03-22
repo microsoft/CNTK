@@ -15,7 +15,9 @@ from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
 
-DEBUG = True
+DEBUG = False
+debug_fwd = False
+debug_bkw = False
 
 #class ProposalTargetLayer(caffe.Layer):
 class ProposalTargetLayer(UserFunction):
@@ -57,12 +59,12 @@ class ProposalTargetLayer(UserFunction):
         # bbox_outside_weights
         ##top[4].reshape(1, self._num_classes * 4)
 
-        return [output_variable(rois_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes),
-                output_variable(labels_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes),
-                output_variable(bbox_targets_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
+        return [output_variable(rois_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False),
+                output_variable(labels_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False),
+                output_variable(bbox_targets_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False)]
 
-    #def forward(self, bottom, top):
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
+        if debug_fwd: print("--> Entering forward in {}".format(self.name))
         bottom = arguments
 
         # Proposal ROIs (0, x1, y1, x2, y2) coming from RPN
@@ -164,25 +166,11 @@ class ProposalTargetLayer(UserFunction):
     # def backward(self, top, propagate_down, bottom):
         # """This layer does not propagate gradients."""
         # pass
+
     def backward(self, state, root_gradients, variables):
+        if debug_bkw: print("<-- Entering backward in {}".format(self.name))
         """This layer does not propagate gradients."""
-        # pass
-        # return np.asarray([])
-
-        dummy = [k for k in variables]
-        print("Entering backward in {} for {}".format(self.name, dummy[0]))
-
-        #import pdb; pdb.set_trace()
-
-        for var in variables:
-            dummy_grads = np.zeros(var.shape, dtype=np.float32)
-            dummy_grads.shape = (1,) + dummy_grads.shape
-            print ("PTL assigning gradients {} for {} {}".format(dummy_grads.shape, var, var.shape))
-            variables[var] = dummy_grads
-
-    #def reshape(self, bottom, top):
-    #    """Reshaping happens during the call to forward."""
-    #    pass
+        pass
 
 
 def _get_bbox_regression_labels(bbox_target_data, num_classes):
