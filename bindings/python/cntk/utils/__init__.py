@@ -6,7 +6,6 @@
 import sys
 import numbers
 import collections
-import copy
 import numpy as np
 from numbers import Number
 from scipy import sparse
@@ -15,71 +14,6 @@ from .. import cntk_py
 from ..device import use_default_device, cpu
 from ..axis import Axis
 from cntk.internal import typemap
-
-_VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
-
-
-def get_data_type(*args):
-    """
-    Calculates the highest precision numpy data type of the provided parameters.
-    If the parameter is a Function instance, it calculates it based on its
-    inputs. Placeholders are ignored in the type determination.
-
-    Args:
-        args (number, list, NumPy array, :class:`~cntk.ops.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
-
-    Returns:
-        np.float32, np.float64, or None
-    """
-    from ..ops.variables import Variable
-
-    cntk_dtypes = set()
-    numpy_dtypes = set()
-    if len(args) == 1 and isinstance(args, _VARIABLE_OR_FUNCTION):
-        args = [args]
-
-    for arg in args:
-        if isinstance(arg, Variable) and arg.is_placeholder == True:
-            continue
-        if isinstance(arg,
-                      (cntk_py.Variable, cntk_py.Value, cntk_py.NDArrayView)):
-            if cntk_py.DataType_Double == arg.get_data_type():
-                cntk_dtypes.add(np.float64)
-            elif cntk_py.DataType_Float == arg.get_data_type():
-                cntk_dtypes.add(np.float32)
-        elif isinstance(arg, np.ndarray):
-            if arg.dtype not in (np.float32, np.float64):
-                raise ValueError(
-                    'NumPy type "%s" is not supported' % arg.dtype)
-            numpy_dtypes.add(arg.dtype.type)
-        elif isinstance(arg, _VARIABLE_OR_FUNCTION):
-            var_outputs = arg.outputs
-            if len(var_outputs) > 1:
-                raise ValueError(
-                    'expected single output, but got %i' % len(var_outputs))
-
-            var_type = var_outputs[0].get_data_type()
-            if cntk_py.DataType_Double == var_type:
-                cntk_dtypes.add(np.float64)
-            else:
-                cntk_dtypes.add(np.float32)
-        else:
-            # We don't know anything so we convert everything to float32. If it
-            # works, we know the type.
-            # TODO figure out a better/faster way.
-            np.asarray(arg, dtype=np.float32)
-            numpy_dtypes.add(np.float32)
-
-    if cntk_dtypes:
-        if np.float64 in cntk_dtypes:
-            return np.float64
-        elif np.float32 in cntk_dtypes:
-            return np.float32
-    else:
-        if np.float64 in numpy_dtypes:
-            return np.float64
-        elif np.float32 in numpy_dtypes:
-            return np.float32
 
 
 def _is_dense(batch):
@@ -98,8 +32,6 @@ def _is_dense(batch):
     return True
 
 
-
-
 def _ones_like(batch, precision):
     '''
     Returns a new batch, which has the same format as ``batch`` but all values
@@ -110,34 +42,6 @@ def _ones_like(batch, precision):
     '''
     from cntk.internal import sanitize_precision
     return [np.ones_like(sample, dtype=sanitize_precision(precision)) for sample in batch]
-
-
-
-
-def get_train_loss(trainer):
-    '''
-    Fetch the train loss from the last minibatch and copy it to the CPU in case it is on the GPU.
-
-    Args:
-        trainer (:class:`~cntk.train.trainer.Trainer`): the trainer used.
-    Returns:
-        the loss value
-    '''
-    # we copy the value so swig does not destroy it when we leave the scope
-    return copy.copy(trainer.previous_minibatch_loss_average)
-
-
-def get_train_eval_criterion(trainer):
-    '''
-    Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
-
-    Args:
-        trainer (:class:`Trainer`): the trainer used.
-    Returns:
-        the criterion value
-    '''
-    # we copy the value so swig does not destroy it when we leave the scope
-    return copy.copy(trainer.previous_minibatch_evaluation_average)
 
 
 # Obsolete: All usages should be replaced with the variable_value_to_seq
@@ -244,41 +148,6 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
             arguments, op.outputs, None, device=device)
         return forward_output, None
 
-class Record(dict):
-    '''
-    Easy construction of a record (=immutable singleton class) from keyword arguments.
-    e.g. r = Record(x = 13, y = 42) ; x = r.x
-
-    Args:
-        kwargs: keyword arguments to turn into the record members
-
-    Returns:
-        A singleton class instance that has all passed kw args as immutable class members.
-    '''
-    def __init__(self, **args_dict):
-        super(Record, self).__init__(args_dict)
-        self.__dict__.update(args_dict)
-    def __getattr__(self, key):
-        if key not in self:
-            raise AttributeError("record has no attribute '{}'".format(key))
-        return self[key]
-
-    def __setattr__(self, key, value):
-        raise AttributeError('record is immutable')
-    def updated_with(self, **kwargs):
-        '''
-        Create a new Record from an existing one with members modified or added.
-        e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
-    
-        Args:
-            kwargs: keyword arguments to turn into the record members
-    
-        Returns:
-            A singleton class instance that has all passed kw args as immutable class members.
-        '''
-        d = dict(**self)   # make it mutable
-        d.update(kwargs)   # merge the new items
-        return Record(**d) # lock it up again
 
 def get_python_function_arguments(f):
     '''
@@ -379,43 +248,3 @@ def Signature(*args, **kwargs):
         f.__annotations__ = map_function_arguments(param_names, params_dict, *args, **kwargs)
         return f # and return the updated function
     return add_annotations
-
-
-
-
-def start_profiler(dir='profiler', sync_gpu=True, reserve_mem=cntk_py.default_profiler_buffer_size):
-    '''
-    Start profiler to prepare performance statistics gathering. Note that
-    the profiler is not enabled after start
-    (`example
-    <https://github.com/Microsoft/CNTK/wiki/Performance-Profiler#for-python>`_).
-
-    Args:
-        dir: directory for profiler output
-        sync_gpu: whether profiler syncs CPU with GPU when timing
-        reserve_mem: size in byte for profiler memory reserved
-    '''
-    cntk_py.start_profiler(dir, sync_gpu, reserve_mem)
-
-
-def stop_profiler():
-    '''
-    Stop profiler from gathering performance statistics and flush them to file
-    '''
-    cntk_py.stop_profiler()
-
-
-def enable_profiler():
-    '''
-    Enable profiler to gather data. Note that in training_session, profiler would be enabled automatically after the first check point
-    '''
-    cntk_py.enable_profiler()
-
-
-def disable_profiler():
-    '''
-    Disable profiler from gathering data.
-    '''
-    cntk_py.disable_profiler()
-
-

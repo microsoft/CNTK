@@ -1,9 +1,9 @@
 from cntk import cntk_py
 from cntk.device import DeviceDescriptor, cpu
-from cntk.utils import variable_value_to_seq, Record, \
+from cntk.utils import variable_value_to_seq, \
         get_python_function_arguments, map_function_arguments
 from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple, sanitize_variable_value_dict
-from cntk.ops.variables import Variable
+from ..variables import Record, Variable
 from enum import Enum, unique
 
 
@@ -101,7 +101,6 @@ class Function(cntk_py.Function):
         # Unannotated parameters will yield placeholder_variables instead.
         def make_arg_variable(name, annotations):
             from .. import placeholder_variable, input_variable
-            from .variables import Variable
             if isinstance(annotations.get(name, None), Variable.Type):
                 var_type = annotations[name]
                 return input_variable(name=name, **var_type)
@@ -236,7 +235,7 @@ class Function(cntk_py.Function):
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
         def to_input(arg_type, name):
             from cntk import input_variable
-            from .variables import Variable
+            from cntk.variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
                 return input_variable(shape=_as_tuple(arg_type), name=name)
             elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
@@ -926,7 +925,7 @@ class Function(cntk_py.Function):
         specified substitution.
 
         Args:
-            substitution (:class:`~cntk.ops.variables.Variable`): the variable
+            substitution (:class:`~cntk.variables.Variable`): the variable
              that will replace the placeholder
 
         Returns:

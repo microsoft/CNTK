@@ -69,6 +69,13 @@ if errorlevel 1 exit /b 1
 echo(
 popd
 
+pushd cntk\learners\tests
+echo RUNNING cntk\learners unit tests...
+pytest --deviceid gpu
+if errorlevel 1 exit /b 1
+echo(
+popd
+
 pushd cntk\utils\tests
 echo RUNNING cntk\utils unit tests...
 pytest --deviceid gpu

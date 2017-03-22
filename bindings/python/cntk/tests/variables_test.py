@@ -9,7 +9,7 @@ Unit tests for Variable and its descendents.
 """
 
 from ..variables import *
-from .. import times, placeholder_variable, constant, plus, input_variable, alias
+from ..ops import times, placeholder_variable, constant, plus, input_variable, alias
 import numpy as np
 
 import pytest

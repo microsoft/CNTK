@@ -17,7 +17,7 @@ from cntk.tests.test_utils import TOLERANCE_ABSOLUTE
 from cntk.utils import eval as cntk_eval
 from cntk.internal import sanitize_dtype_cntk
 from .. import constant
-from ..variables import Parameter, Constant
+from cntk.variables import Parameter, Constant
 
 EPS_IN_LOG = 1e-37        # 1e-37 is the highest guaranteed precision
 # the backward result returned by CNTK log() for epsilon

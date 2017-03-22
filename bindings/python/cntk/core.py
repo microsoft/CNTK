@@ -276,7 +276,7 @@ class Value(cntk_py.Value):
         Creates a :class:`~cntk.core.Value` object.
 
         Args:
-            var (:class:`~cntk.ops.variables.Variable`): variable into which
+            var (:class:`~cntk.variables.Variable`): variable into which
              ``data`` is passed
             data: data for `var`.
              It can be:

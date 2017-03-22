@@ -68,7 +68,7 @@ def sanitize_shape(shape):
 
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """sanitize_input(arg, fallback_dtype=np.float32, reshape=None)
-    Convert to :class:`~cntk.ops.variables.Variable` so that it can be passed
+    Convert to :class:`~cntk.variables.Variable` so that it can be passed
     as Variable to the CNTK operators. 
 
       * If ``arg`` is a NumPy array and its type is neither `np.float32` nor
@@ -77,7 +77,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
         will be returned. 
 
     Args:
-        arg (number, NumPy array, :class:`~cntk.ops.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
+        arg (number, NumPy array, :class:`~cntk.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
         fallback_dtype (NumPy dtype): fallback dtype in case ``arg`` is a list
 
     Returns:
@@ -86,7 +86,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
 
     from cntk.ops.functions import UserFunction
-    from cntk.ops.variables import Constant, Variable, Parameter
+    from cntk.variables import Constant, Variable, Parameter
     from cntk.ops.functions import Function
     from cntk.ops import constant
 
@@ -118,7 +118,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
     Convert to :class:`~cntk.core.Value`.
 
     Args:
-        var (:class:`~cntk.ops.variables.Variable`): input variable into which
+        var (:class:`~cntk.variables.Variable`): input variable into which
          ``batch`` is passed
         batch: batch input for `var`. It can be
 

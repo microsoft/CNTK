@@ -115,7 +115,7 @@ class Learner(cntk_py.Learner):
         Update the parameters associated with this learner.
 
         Args:
-            gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
+            gradient_values (dict): maps :class:`~cntk.variables.Parameter` to
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
             training_sample_count (int): number of samples in the minibatch
@@ -177,7 +177,7 @@ class UserLearner(cntk_py.Learner):
         Update the parameters and related state associated with this learner.
 
         Args:
-            gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter`
+            gradient_values (dict): maps :class:`~cntk.variables.Parameter`
              to a NumPy array containing the gradient for the Parameter w.r.t.
              the training objective.
             training_sample_count (int): number of samples in the minibatch
@@ -203,7 +203,7 @@ class UserLearner(cntk_py.Learner):
         Update the parameters associated with this learner.
 
         Args:
-            gradient_values (dict): maps :class:`~cntk.ops.variables.Parameter` to
+            gradient_values (dict): maps :class:`~cntk.variables.Parameter` to
              a NumPy array containing the first order gradient values for the
              Parameter w.r.t. the training objective.
             training_sample_count (int): number of samples in the minibatch
