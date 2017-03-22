@@ -12,7 +12,7 @@ and have an additional pair of ``()`` to pass construction parameters
 or attributes.
 
 For example, this is the network description for a simple 1-hidden layer
-model using the :class:`~cntk.layers.Dense` layer:
+model using the :func:`~cntk.layers.layers.Dense` layer:
 
 ::
 

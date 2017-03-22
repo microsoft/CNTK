@@ -17,7 +17,7 @@ from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
 import cntk.io.transforms as xforms
 from cntk.layers import Dense
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_schedule
-from cntk.ops import input_variable, combine, softmax
+from cntk.ops import input, combine, softmax
 from cntk.ops.functions import CloneMethod
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
@@ -99,8 +99,8 @@ def train_model(base_model_file, feature_node_name, last_hidden_node_name,
 
     # Create the minibatch source and input variables
     minibatch_source = create_mb_source(train_map_file, image_width, image_height, num_channels, num_classes)
-    image_input = input_variable((num_channels, image_height, image_width))
-    label_input = input_variable(num_classes)
+    image_input = input((num_channels, image_height, image_width))
+    label_input = input(num_classes)
 
     # Define mapping from reader streams to network inputs
     input_map = {

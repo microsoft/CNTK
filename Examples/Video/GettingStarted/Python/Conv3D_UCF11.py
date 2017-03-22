@@ -19,7 +19,7 @@ from cntk.utils import *
 from cntk.logging import *
 from cntk.layers import *
 from cntk.learners import sgd, momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType
-from cntk import input_variable, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
+from cntk import input, cross_entropy_with_softmax, classification_error, relu, minus, element_times, constant
 from cntk.debugging import set_computation_network_trace_level
 
 # Paths relative to current python file.
@@ -162,8 +162,8 @@ def conv3d_ucf11(train_reader, test_reader, max_epochs=30):
     num_output_classes = train_reader.label_count
 
     # Input variables denoting the features and label data
-    input_var = input_variable((num_channels, sequence_length, image_height, image_width), np.float32)
-    label_var = input_variable(num_output_classes, np.float32)
+    input_var = input((num_channels, sequence_length, image_height, image_width), np.float32)
+    label_var = input(num_output_classes, np.float32)
 
     # Instantiate simple 3D Convolution network inspired by VGG network 
     # and http://vlg.cs.dartmouth.edu/c3d/c3d_video.pdf

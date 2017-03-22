@@ -1,0 +1,36 @@
+﻿data = "$DataDir$/ImagesAndLabels_4Bad2Good.txt"
+
+precision = float
+deviceId = auto
+
+command = Output
+
+parallelTrain = false
+traceLevel = 1
+maxErrors = 30
+Output = {
+    action = write
+    writeSequenceKey = true
+    outputNodeNames = OutputNodes.z
+    outputPath = $RunDir$/OutputNodes
+    minibatchSize = 2
+    modelPath = "$EvalModelDir$/test_base64.model"
+
+    reader = {
+        verbosity = 0 ;  randomize = false
+        deserializers = ({
+            type = "Base64ImageDeserializer" ; module = "ImageReader"
+            file = "$data$"
+            input = {
+                features = {
+                    transforms = (
+                        { type = "Crop" ; cropType = "Center" ; cropRatio = 1.0 ; jitterType = "UniRatio" }:
+                        { type = "Scale" ; width = 224 ; height = 224 ; channels = 3 ; interpolations = "Linear" }:
+                        { type = "Transpose" }
+                    )
+                }
+                labels = { labelDim = 2 }
+            }
+        })
+    }
+}

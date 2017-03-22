@@ -529,6 +529,36 @@ namespace CNTK
         Matrix<ElementType>::ScaleAndAdd(ElementType(-learningRate / aveMultiplier), *gradientMatrix, *parameterMatrix);
     }
 
+    LearnerAdaDelta::LearnerAdaDelta(
+        const std::vector<Parameter>& parameters,
+        double rho, double epsilon,
+        AdditionalLearningOptions additionalOptions)
+        : LearnerBase(parameters, LearningRateSchedule(1, LearningRateSchedule::UnitType::Sample), additionalOptions, /*allocateSmoothGradients*/ false),
+        m_rho(rho), m_epsilon(epsilon)
+    {
+        for (const auto& parameter : parameters)
+        {
+            const auto shape = GetMatrixShape(parameter);
+            NDArrayViewPtr view = AllocateNDArrayView(parameter, { shape[0], 2 * shape[1] });
+            m_smoothedGradientValues.emplace(parameter, view);
+        }
+    }
+
+    /*virtual*/ void LearnerAdaDelta::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const /*override*/
+    {
+        DISPATCH_TO_TYPED_UPDATE_FUNCTION;
+    }
+
+    template <typename ElementType>
+    void LearnerAdaDelta::Update(const Parameter& parameter, const NDArrayViewPtr& gradientValue,
+        const NDArrayViewPtr& smoothedGradientValue, size_t trainingSampleCount) const
+    {
+        GET_WRITABLE_MATRICES
+
+        smoothedGradientMatrix->AdaDeltaUpdate(*gradientMatrix, *parameterMatrix, (ElementType)m_rho, (ElementType)m_epsilon);
+    }
+
     /*static*/ const double LearnerFSAdaGrad::s_targetAdagradAvDenom = 1.0;
 
     LearnerFSAdaGrad::LearnerFSAdaGrad(const vector<Parameter>& parameters,
@@ -727,5 +757,12 @@ namespace CNTK
                               AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
     {
         return MakeSharedObject<LearnerRMSProp>(parameters, learningRateSchedule, gamma, inc, dec, max, min, needAveMultiplier, additionalOptions);
+    }
+
+    LearnerPtr AdaDeltaLearner(const vector<Parameter>& parameters,
+                               double rho, double epsilon,
+                               AdditionalLearningOptions additionalOptions /*= AdditionalLearningOptions()*/)
+    {
+        return MakeSharedObject<LearnerAdaDelta>(parameters, rho, epsilon, additionalOptions);
     }
 }

@@ -1,0 +1,17 @@
+dataDir: ../Data
+tags:
+     - bvt-l (build_sku == 'gpu') and (flavor == 'release') 
+     - nightly-l (build_sku == 'gpu') and (flavor == 'release')
+
+testCases:
+  CNTK Run must be completed:
+    patterns:
+      - __COMPLETED__
+
+  Warnings should match:
+    patterns:
+      - "WARNING: Could not decompress sequence with id"
+
+  Total written samples must match:
+    patterns:
+      - Total Samples Evaluated = {{integer}}

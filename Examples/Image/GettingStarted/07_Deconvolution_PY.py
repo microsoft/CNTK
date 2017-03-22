@@ -32,7 +32,7 @@ def deconv_mnist(max_epochs=3):
     num_output_classes = 10
 
     # Input variable and normalization
-    input_var = cntk.ops.input_variable((num_channels, image_height, image_width), np.float32)
+    input_var = cntk.ops.input((num_channels, image_height, image_width), np.float32)
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)
 
     # Define the auto encoder model

@@ -12,10 +12,10 @@ the forward and the backward pass
 from __future__ import division
 import numpy as np
 import pytest
-from .ops_test_utils import _test_binary_op, AA, I, precision, PRECISION_TO_TYPE,\
+from .ops_test_utils import _test_binary_op, AA, precision, PRECISION_TO_TYPE,\
         unittest_helper
 
-from cntk import edit_distance_error, input_variable, dropout
+from cntk import edit_distance_error, input, dropout
 
 TARGET_OUT_PAIRS = [
     # (target_vector, output_vector)
@@ -36,15 +36,15 @@ def test_op_cross_entropy_with_soft_max(output_vector, target_vector, device_id,
     s_max = exp_x / np.sum(exp_x) # softmax function
 
     expected_forward = np.asarray(-np.sum(t * np.log(s_max, dtype=dt), dtype=dt))
-    expected_forward.shape = (1,1,1,1) + expected_forward.shape
+    expected_forward.shape = (1,1,1) + expected_forward.shape
 
     s = np.sum(t, dtype=dt)
     backward = np.subtract(s_max * s, t)
-    backward.shape = (1,1) + backward.shape
+    backward.shape = (1,) + backward.shape
 
     expected_backward = {
         'left_arg':  backward,
-        'right_arg': [[-1*o]]
+        'right_arg': [-1*o]
     }
 
     from cntk.losses import cross_entropy_with_softmax
@@ -94,12 +94,12 @@ def test_op_cross_entropy_with_soft_max_and_axis(output_vector, target_vector, a
         expected_backward_left.append(backward.tolist())
         expected_backward_right.append(-1*sample)
 
-    expected_forward = [[np.reshape(AA(expected_forward, dtype=dt), (x.shape[0], 1))]]
+    expected_forward = [np.reshape(AA(expected_forward, dtype=dt), (x.shape[0], 1))]
     expected_backward_left = AA(expected_backward_left, dtype=dt)
 
     expected_backward = {
-        'left_arg':  [[expected_backward_left]],
-        'right_arg': [[expected_backward_right]]
+        'left_arg':  [expected_backward_left],
+        'right_arg': [expected_backward_right]
     }
 
     from cntk.losses import cross_entropy_with_softmax
@@ -114,12 +114,12 @@ def test_op_squared_error(output_vector, target_vector, device_id, precision):
     o = AA(output_vector, dtype=dt)
     t = AA(target_vector, dtype=dt)
 
-    expected_forward = AA([[np.sum((t - o)**2)]])
+    expected_forward = AA([np.sum((t - o)**2)])
 
     backward = 2 * np.subtract(o, t)
     expected_backward = {
-        'left_arg':  [[backward]],
-        'right_arg': [[-1*backward]]
+        'left_arg':  [backward],
+        'right_arg': [-1*backward]
     }
 
     from cntk.losses import squared_error
@@ -142,7 +142,7 @@ def test_op_classification_error(output_vector, target_vector, device_id, precis
 
     different_position = np.argmax(t) != np.argmax(o)
 
-    expected_forward = [[AA([[int(different_position)]], dtype=dt)]]
+    expected_forward = [AA([[int(different_position)]], dtype=dt)]
 
     zero_backward = np.zeros_like(t, dtype=dt)
     left_backward = np.copy(zero_backward)
@@ -151,8 +151,8 @@ def test_op_classification_error(output_vector, target_vector, device_id, precis
     right_backward = zero_backward
 
     expected_backward = {
-        'left_arg':  [[left_backward]],
-        'right_arg': [[right_backward]]
+        'left_arg':  [left_backward],
+        'right_arg': [right_backward]
     }
 
     from cntk.metrics import classification_error
@@ -202,9 +202,9 @@ def test_op_classification_error_with_axis(output_vector, target_vector, axis, d
 
     forward = np.mean(forward)
 
-    expected_forward = AA([[forward]], dtype=dt)
-    expected_backward_left = AA([[expected_backward_left]], dtype=dt)
-    expected_backward_right = AA([[expected_backward_right]], dtype=dt)
+    expected_forward = AA([forward], dtype=dt)
+    expected_backward_left = AA([expected_backward_left], dtype=dt)
+    expected_backward_right = AA([expected_backward_right], dtype=dt)
 
     expected_backward = {
         'left_arg':  expected_backward_left,
@@ -218,8 +218,8 @@ def test_op_classification_error_with_axis(output_vector, target_vector, axis, d
 
 LAMBDA_RANK_GRADIENTS_VALUES_AND_INPUTS = [
     # (grad, value, output, gain)
-    ([[[-0.2121461]],  [[ 0.2121461]]],  58.038055419921875, [1, 2], [7, 1]),
-    ([[[-0.14861868]], [[ 0.14861868]]], 40.65847396850586,  [3, 4], [3, 1])
+    ([[-0.2121461],  [ 0.2121461]],  58.038055419921875, [1, 2], [7, 1]),
+    ([[-0.14861868], [ 0.14861868]], 40.65847396850586,  [3, 4], [3, 1])
 ]
 
 @pytest.mark.parametrize("grad, value, output, gain", LAMBDA_RANK_GRADIENTS_VALUES_AND_INPUTS)
@@ -235,9 +235,9 @@ def test_lambda_rank(grad, value, output, gain, device_id, precision):
 
     from cntk.losses import lambda_rank
 
-    g = I((1,))
-    s = I((1,), needs_gradient=True)
-    n = I((1,))
+    g = input((1,))
+    s = input((1,), needs_gradient=True)
+    n = input((1,))
     f = lambda_rank(s, n, g)
 
     actual_grad, actual_value = f.grad({s:score, n:gain, g:group}, [s], [f.output])
@@ -263,9 +263,9 @@ def test_ndcg(value, output, gain, device_id, precision):
 
     from cntk.metrics import ndcg_at_1
 
-    g = I((1,))
-    s = I((1,))
-    n = I((1,))
+    g = input((1,))
+    s = input((1,))
+    n = input((1,))
     f = ndcg_at_1(s, n, g)
 
     actual_value = f.eval({s:score, n:gain, g:group})
@@ -283,8 +283,8 @@ EDIT_DISTANCE_ERROR_TEST_CASES = [
 
 @pytest.mark.parametrize("left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result", EDIT_DISTANCE_ERROR_TEST_CASES)
 def test_edit_distance_error(left_input, right_input, subPen, delPen, insPen, squashInputs, tokensToIgnore, result, device_id, precision):
-    i1 = input_variable(shape=(2,))
-    i2 = input_variable(shape=(2,))
+    i1 = input(shape=(2,))
+    i2 = input(shape=(2,))
     arguments = {i1 : left_input, i2 : right_input}
     a = edit_distance_error(i1, i2, subPen, delPen, insPen, squashInputs, tokensToIgnore)
     assert np.allclose(result, a.eval(arguments))
@@ -292,7 +292,7 @@ def test_edit_distance_error(left_input, right_input, subPen, delPen, insPen, sq
 def test_sequence_grad_as_numpy_false(device_id, precision):
     from .. import sequence
 
-    a = I(shape=(1,), dtype=PRECISION_TO_TYPE[precision], needs_gradient=True, name='a')
+    a = sequence.input(shape=(1,), dtype=PRECISION_TO_TYPE[precision], needs_gradient=True, name='a')
 
     sequence_sum_a_plus_sequence_sum_a = sequence.reduce_sum(a) + sequence.reduce_sum(a)
 
@@ -307,7 +307,7 @@ def test_sequence_grad_as_numpy_false(device_id, precision):
     assert np.array_equal(result[2], np.asarray([[3.], [3.], [3.]]))
 
 def test_grad_with_no_arguments_needing_gradients():
-    x = input_variable(10)
+    x = input(10)
     z = dropout(x, .4)
     with pytest.raises(ValueError):
         _, result = z.grad({x: [np.array([5]*150, "float32").reshape(15, 10)]}, outputs=[z])

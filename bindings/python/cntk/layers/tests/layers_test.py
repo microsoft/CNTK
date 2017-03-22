@@ -13,8 +13,8 @@ from cntk.layers.typing import *
 # Forward outputs are tested to verify that the structure of the layer is as expected.
 
 def test_layers_name(device_id):
-    from cntk import placeholder_variable
-    I = placeholder_variable(name='input')
+    from cntk import placeholder
+    I = placeholder(name='input')
     p = Dense(10, name='dense10')(I)
     assert(I.name == 'input')
     assert(p.root_function.name == 'dense10')
@@ -152,7 +152,7 @@ def test_recurrence_fun(device_id):
     # Test 1: sum-reduction over sequence
     ####################################################
     r = Fold(plus)
-    r.update_signature(1)
+    r.update_signature(Sequence[Tensor[1]])
     data = [np.array([[2], [6], [4], [8], [6]])]   # simple sequence
     out = r(data)
     exp = [sum(data[0])]
@@ -162,7 +162,7 @@ def test_recurrence_fun(device_id):
     # Test 2: max-pool over sequence
     ####################################################
     r = Fold(element_max)
-    r.update_signature(2)
+    r.update_signature(Sequence[Tensor[2]])
     data = [np.array([[2,1], [6,3], [4,2], [8,1], [6,0]])]   # simple sequence
     out = r(data)
     exp = [np.max(data[0], axis=0)]
@@ -555,7 +555,7 @@ def test_layers_convolution_2d(device_id):
 
 def test_sequential_convolution_without_reduction_dim(device_id):
     c = Convolution(3, init=np.array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
-    c.update_signature(()) # input is a sequence of scalars
+    c.update_signature(Sequence[Tensor[()]]) # input is a sequence of scalars
     data = [np.array([2, 6, 4, 8, 6])]   # like a short audio sequence, in the dynamic dimension
     out = c(data)
     exp = [[24, 40, 38]]
@@ -571,7 +571,7 @@ def test_1D_convolution_without_reduction_dim(device_id):
     c.update_signature(5)
     data = [np.array([[2, 6, 4, 8, 6]])]   # like a audio sequence, in a static dimension
     out = c(data)
-    exp = [[[24, 40, 38]]]
+    exp = [[24, 40, 38]]
     np.testing.assert_array_equal(out, exp, err_msg='Error in 1D convolution without reduction dimension')
 
 ##########################################################

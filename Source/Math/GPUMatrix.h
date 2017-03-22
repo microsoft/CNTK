@@ -240,6 +240,8 @@ public:
                      ElemType RMS_WGT_MIN, 
                      const bool needAveMultiplier);
 
+    void AdaDelta(GPUMatrix<ElemType>& gradients, GPUMatrix<ElemType>& functionValues, ElemType rho, ElemType epsilon);
+
     void Reshape(const size_t numRows, const size_t numCols);
 
     // RequireSize is now the new preferred method of ensuring the correct size inside of the Matrix class. Since Resize will fail if the storage object has
