@@ -29,7 +29,7 @@
     <HasMultiverso>false</HasMultiverso>
     <HasMultiverso Condition="Exists('$(SolutionDir)\Source\Multiverso\include\multiverso')">true</HasMultiverso>
 
-    <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Common.dll, Math.dll and PerformanceProfilerDll.dll -->
+    <!-- If an executable links Cntk.Reader-$(CntkComponentVersion).lib, it has dependency on Cntk.Common.dll, Cntk.Math.dll and Cntk.PerformanceProfiler.dll -->
     <ReaderLibs>Cntk.Reader-$(CntkComponentVersion).lib;Cntk.Common-$(CntkComponentVersion).lib;Cntk.Math-$(CntkComponentVersion).lib;Cntk.PerformanceProfiler-$(CntkComponentVersion).lib</ReaderLibs>
 
   </PropertyGroup>

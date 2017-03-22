@@ -35,7 +35,6 @@ void DataWriter::Destroy()
     m_dataWriter->Destroy();
 }
 
-
 // DataWriter Constructor
 // config - [in] configuration data for the data writer
 template <class ConfigRecordType>
@@ -43,8 +42,7 @@ DataWriter::DataWriter(const ConfigRecordType& config)
 {
     typedef void (*GetWriterProc)(IDataWriter** pwriter);
 
-    // get the name for the writer we want to use, default to BinaryWriter (which is in BinaryReader.dll)
-    // TODO: This seems like a find-replace operation?
+    // get the name for the writer we want to use, default to BinaryWriter
     wstring writerType = config(L"writerType", L"Cntk.Reader.Binary.Deprecated");
 
     string precision = config(L"precision", "float");

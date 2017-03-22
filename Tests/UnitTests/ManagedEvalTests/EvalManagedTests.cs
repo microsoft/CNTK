@@ -460,7 +460,6 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             // search for "our" dll, ignoring the version number
             var names = Directory.EnumerateFiles(currentPath, "Cntk.Eval.Wrapper-*.dll");
             var dllpathname = names.FirstOrDefault();
-            //var path = Path.Combine(currentPath, dllname);
 
             var domain = AppDomain.CreateDomain("NewAppDomain");
             var t = typeof(CNTKException);
