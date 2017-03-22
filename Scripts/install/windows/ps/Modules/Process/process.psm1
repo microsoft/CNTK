@@ -3,8 +3,6 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
 
-Set-StrictMode -Version Latest
-
 function Start-DosProcess{
     [CmdletBinding()]
     Param(
@@ -88,7 +86,35 @@ function Start-DosProcess{
     return
 }
 
+function Start-DosProcessNoThrow{
+    [CmdletBinding()]
+    Param(
+        [Parameter(Mandatory=$true)][string] $command,
+        [string[]] $argumentList = @(),
+        [string] $workingDir = $(Get-Location),
+        [int] $maxErrorLevel = 0,
+        [switch] $runAs,
+        [switch] $suppressOutput,
+        [switch] $checkErrFile,
+        [switch] $getOutput,
+        [switch] $noExecute,
+        [switch] $displayException)
+    try {
+        Start-DosProcess -command $command -argumentList $argumentList -workingDir $workingDir -maxErrorLevel $maxErrorLevel `
+            -runAs:$runAs -suppressOutput:$suppressOutput -checkErrFile:$checkErrFile -getOutput:$getOutput -noExecute:$noExecute
+        return $true
+    }
+    catch [System.Exception] {
+        if ($displayException) {
+            Write-Host "`nStart-DosProcessNoThrow: Unexepected exception!"
+            Write-Host $error[0].exception
+        }
+        return $false
+    }
+}
+
 Export-ModuleMember -Function (Write-Output `
-    Start-DosProcess )
+    Start-DosProcess `
+    Start-DosProcessNoThrow )
 
 # vim: tabstop=4 shiftwidth=4 expandtab
