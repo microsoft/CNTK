@@ -163,7 +163,12 @@ void TestSlice(size_t sampleRank, const DeviceDescriptor& device)
             size_t numSequences = sequencesValue->Shape()[inputShape.Rank() + 1];
 
             auto inputVar = InputVariable(inputShape, DataType::Float, L"input");
-            auto sliceFunc = Slice(inputVar, Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis), beginOffset, endOffset);
+            std::vector<Axis> axis; 
+            std::vector<int> beginOffsetVec, endOffsetVec; 
+            axis.push_back(Axis(useNegativeAxisIndex ? (sliceAxis - (int)sampleRank) : sliceAxis)); 
+            beginOffsetVec.push_back(beginOffset); 
+            endOffsetVec.push_back(endOffset); 
+            auto sliceFunc = Slice(inputVar, axis, beginOffsetVec, endOffsetVec);
 
             NDShape outputShape = sliceFunc->Output().Shape();
             auto outputDataShape = outputShape.AppendShape({ maxActualSequenceLength, numSequences });
