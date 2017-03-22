@@ -452,13 +452,17 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             }
         }
 
-        // TODO: use the version tag to generate the correct evalwrapper dll name
-        [TestMethod, Ignore]
+        [TestMethod]
         public void EvalManagedCrossAppDomainExceptionTest()
         {
             var currentPath = Environment.CurrentDirectory;
+
+            // search for "our" dll, ignoring the version number
+            var names = Directory.EnumerateFiles(currentPath, "Cntk.Eval.Wrapper-*.dll");
+            var dllname = names.FirstOrDefault();
+
             var domain = AppDomain.CreateDomain("NewAppDomain");
-            var path = Path.Combine(currentPath, "EvalWrapper.dll");
+            var path = Path.Combine(currentPath, dllname);
             var t = typeof(CNTKException);
             var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(path, t.FullName);
             Assert.AreNotEqual(null, instance);
