@@ -452,7 +452,8 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             }
         }
 
-        [TestMethod]
+        // TODO: use the version tag to generate the correct evalwrapper dll name
+        [TestMethod, Ignore]
         public void EvalManagedCrossAppDomainExceptionTest()
         {
             var currentPath = Environment.CurrentDirectory;
