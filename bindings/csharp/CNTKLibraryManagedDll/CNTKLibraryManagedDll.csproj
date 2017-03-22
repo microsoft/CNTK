@@ -71,7 +71,6 @@
     <Compile Include="SwigProxyClasses\FloatVector.cs" />
     <Compile Include="SwigProxyClasses\FloatVectorVector.cs" />
     <Compile Include="SwigProxyClasses\Function.cs" />
-    <Compile Include="SwigProxyClasses\IntVector.cs" />
     <Compile Include="SwigProxyClasses\MaskKind.cs" />
     <Compile Include="SwigProxyClasses\NDArrayView.cs" />
     <Compile Include="SwigProxyClasses\NDArrayViewVector.cs" />

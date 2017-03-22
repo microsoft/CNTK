@@ -39,7 +39,6 @@
 %template(AxisVector) std::vector<CNTK::Axis>;
 %template(NDArrayViewVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 %template(BoolVector) std::vector<bool>;
-%template(IntVector) std::vector<int>; 
 %template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 %template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;
 %template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
@@ -56,16 +55,14 @@
 #define %ignore_variable %rename("$ignore", %$isvariable, fullname=1)
 // It seems that SWIG does not understand %$isstruct.
 #define %ignore_struct %rename("$ignore", fullname=1)
+#define %ignore_enum_class %rename("$ignore", fullname=1)
 
 // Ignore things in CNTKLibrary.h that are not exposed for C# Eval.
 %ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
 
-%ignore_function CNTK::Internal::GenerateUid;
-
 %ignore_function CNTK::PlaceholderVariable;
 %ignore_function CNTK::InputVariable;
 %ignore_function CNTK::OutputVariable;
-%ignore_function CNTK::Internal::AddProgressWriters;
 
 %ignore_class CNTK::Variable::CompositeFunction;
 %ignore_class CNTK::Variable::Trainer;
@@ -76,6 +73,13 @@
 %ignore_class CNTK::Dictionary;
 %ignore_class CNTK::ParameterInitializer;
 
+%ignore CNTK::SentinelValueForAutoSelectRandomSeed;
+%ignore CNTK::SentinelValueForInferParamInitRank;
+%ignore CNTK::DefaultParamInitScale;
+%ignore CNTK::DefaultParamInitOutputRank;
+%ignore CNTK::DefaultParamInitFilterRank;
+%ignore CNTK::TimesNoInferredInputRank;
+%ignore CNTK::TimesReduceSequenceAxisWithoutInferredInputRank;
 %ignore_function CNTK::ConstantInitializer;
 %ignore_function CNTK::UniformInitializer;
 %ignore_function CNTK::NormalInitializer;
@@ -114,7 +118,7 @@
 %ignore_class CNTK::Parameter;
 %ignore_class CNTK::Constant;
 %ignore_class CNTK::BackPropState;
-%ignore_class CNTK::PoolingType;
+%ignore_enum_class CNTK::PoolingType;
 
 %ignore_function CNTK::Negate;
 %ignore_function CNTK::operator-;
@@ -162,6 +166,9 @@
 %ignore_function CNTK::WeightedBinaryCrossEntropy;
 %ignore_function CNTK::SquaredError;
 %ignore_function CNTK::CrossEntropyWithSoftmax;
+%ignore_function CNTK::EditDistanceError;
+%ignore_function CNTK::ForwardBackward;
+%ignore_function CNTK::LabelsToGraph;
 %ignore_function CNTK::ClassificationError;
 %ignore_function CNTK::PastValue;
 %ignore_function CNTK::FutureValue;
@@ -170,9 +177,11 @@
 %ignore_function CNTK::ReduceMean;
 %ignore_function CNTK::ReduceMax;
 %ignore_function CNTK::ReduceMin;
+%ignore_function CNTK::ReduceProd;
 %ignore_function CNTK::PerDimMeanVarianceNormalize;
 %ignore_function CNTK::Convolution;
 %ignore_function CNTK::ROIPooling;
+%ignore_function CNTK::ConvolutionTranspose;
 %ignore_function CNTK::Pooling;
 %ignore_function CNTK::Unpooling;
 %ignore_function CNTK::LambdaRank;
@@ -182,6 +191,13 @@
 %ignore_function CNTK::Clip;
 %ignore_function CNTK::ElementSelect;
 %ignore_function CNTK::Splice;
+%ignore_function CNTK::StopGradient;
+%ignore_function CNTK::ELU;
+%ignore_function CNTK::LeakyReLU;
+%ignore_function CNTK::PReLU;
+%ignore_function CNTK::Softplus;
+%ignore_function CNTK::Argmax;
+%ignore_function CNTK::Argmin;
 %ignore_function CNTK::AsBlock;
 %ignore_function CNTK::ReaderCrop;
 %ignore_function CNTK::ReaderMean;
@@ -198,12 +214,19 @@
 %ignore_class CNTK::TrainingParameterPerUnitSchedule;
 %ignore_class CNTK::TrainingParameterPerSampleSchedule;
 %ignore_class CNTK::TrainingParameterPerMinibatchSchedule;
-%ignore_class CNTK::LearningRateSchedule;
 %ignore_class CNTK::LearningRatePerSampleSchedule;
 %ignore_class CNTK::LearningRatePerMinibatchSchedule;
+%ignore_class CNTK::MinibatchSizeSchedule;
+%ignore_class CNTK::LearningRateSchedule;
+%ignore_class CNTK::MomentumSchedule;
+%ignore_class CNTK::MomentumPerSampleSchedule;
+%ignore_class CNTK::MomentumPerMinibatchSchedule;
 %ignore_class CNTK::MomentumAsTimeConstantSchedule;
 %ignore_struct CNTK::AdditionalLearningOptions;
 %ignore_class CNTK::Learner;
+
+%ignore_function CNTK::DefaultUnitGainValue;
+%ignore_function CNTK::SetDefaultUnitGainValue;
 
 %ignore_function CNTK::SGDLearner;
 %ignore_function CNTK::MomentumSGDLearner;
@@ -229,11 +252,12 @@
 %ignore_struct std::hash<::CNTK::StreamInformation>;
 
 %ignore_struct CNTK::MinibatchData;
-%ignore_struct CNTK::MinibatchSource;
+%ignore_class CNTK::MinibatchSource;
 %ignore_struct CNTK::MinibatchInfo;
 
 %ignore_function CNTK::CreateCompositeMinibatchSource;
 %ignore_struct CNTK::StreamConfiguration;
+%ignore_struct CNTK::HTKFeatureConfiguration;
 %ignore_function CNTK::TextFormatMinibatchSource;
 %ignore_function CNTK::ComputeInputPerDimMeansAndInvStdDevs;
 %ignore_struct CNTK::DistributedWorkerDescriptor;
@@ -241,6 +265,9 @@
 %ignore_class CNTK::QuantizedDistributedCommunicator;
 %ignore_function CNTK::MPICommunicator;
 %ignore_function CNTK::QuantizedMPICommunicator;
+%ignore_struct CNTK::CrossValidationConfig;
+%ignore_struct CNTK::CheckpointConfig;
+%ignore_struct CNTK::TestConfig;
 
 %ignore_class CNTK::TrainingSession;
 %ignore_function CNTK::CreateBasicTrainingSession;
@@ -256,14 +283,17 @@
 %ignore_function CNTK::NDMask::DataBuffer;
 
 // Ignore things in CNTKLibraryInternals.h that are not exposed for C# Eval.
-%ignore_class CNTK::Internal::PrimitiveFunction;
+%ignore_function CNTK::Internal::GenerateUid;
+%ignore_enum_class CNTK::Internal::PrimitiveFunction;
 %ignore_class CNTK::Internal::CompositeFunction;
 %ignore_function CNTK::Internal::MaxNumCPUThreadsSet;
-%ignore_class CNTK::PrimitiveOpType;
+%ignore_class CNTK::Internal::PrimitiveOpType;
 %ignore_function CNTK::Internal::IsWithin;
 %ignore_function CNTK::Internal::PackedIndex;
 %ignore_function CNTK::Internal::GatherPacked;
 %ignore_function CNTK::Internal::ScatterPacked;
+%ignore_function CNTK::Internal::ReconcileDynamicAxis;
+%ignore_function CNTK::Internal::ReconcileDynamicAxes;
 %ignore_function CNTK::Internal::ZeroesWithDynamicAxesLike;
 %ignore_function CNTK::Internal::Where;
 %ignore_function CNTK::Internal::Gather;
@@ -271,6 +301,10 @@
 %ignore_function CNTK::Internal::Slice;
 %ignore_function CNTK::Internal::ReduceElements;
 %ignore_function CNTK::Internal::CosineDistanceWithNegativeSamples;
+%ignore_function CNTK::Internal::Convolution;
+%ignore_function CNTK::Internal::SaveAsLegacyModel;
+%ignore_function CNTK::Internal::AddProgressWriters;
+%ignore_function CNTK::Internal::NewUniqueId;
 
 %ignore_function CNTK::Internal::EnableReversingTensorShapesInErrorMessages;
 %ignore_function CNTK::Internal::IsReversingTensorShapesInErrorMessagesEnabled;
@@ -287,9 +321,14 @@
 %ignore_function CNTK::Internal::SetGPUMemoryAllocationTraceLevel;
 %ignore_function CNTK::Internal::ForceSynchronousCUDAKernelExecutions;
 %ignore_function CNTK::Internal::ForceDeterministicAlgorithms;
+%ignore_function CNTK::Internal::ShouldForceDeterministicAlgorithms;
+%ignore_function CNTK::Internal::EnableSynchronousGPUKernelExecution;
+%ignore_function CNTK::Internal::IsSynchronousGPUKernelExecutionEnabled;
 %ignore_function CNTK::Internal::SetFixedRandomSeed;
 %ignore_function CNTK::Internal::EnableForwardValuesSharing;
 %ignore_function CNTK::Internal::DisableForwardValuesSharing;
+%ignore_function CNTK::Internal::EnableGradientAccumulationOptimization;
+%ignore_function CNTK::Internal::DisableGradientAccumulationOptimization;
 %ignore CNTK::Internal::DefaultProfilerBufferSize;
 %ignore_function CNTK::Internal::StartProfiler;
 %ignore_function CNTK::Internal::StopProfiler;
@@ -298,6 +337,7 @@
 %ignore_function CNTK::Internal::AreEquivalent;
 %ignore_function CNTK::Internal::AreEqual;
 %ignore_function CNTK::PrintBuiltInfo;
+%ignore_function CNTK::Internal::DefaultPackThresholdSizeInBytes;
 
 %ignore_class CNTK::Internal::TensorBoardFileWriter;
 
@@ -654,6 +694,16 @@
             varVect.Add(v);
         }
         return CNTKLib.Combine(varVect);
+    }
+
+    public static Function AsComposite(Function rootFunction, string name = "")
+    {
+        return CNTKLib.AsComposite(rootFunction, name);
+    }
+
+    public static Function Alias(Variable operand, string name = "")
+    {
+        return CNTKLib.Alias(operand, name);
     }
 
     public void Evaluate(System.Collections.Generic.Dictionary<Variable, Value> arguments, System.Collections.Generic.Dictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
