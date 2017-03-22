@@ -46,7 +46,6 @@ def populate_dicts(files):
     _ = vocab[unk]
     _ = vocab[eos]
     _ = chars[unk]
-    _ = chars[pad]
 
     #finally add all words that are not in yet
     _  = [vocab[word] for word in wdcnt if word not in vocab and wdcnt[word] >= word_count_threshold]
@@ -80,8 +79,8 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
         atokens = answer.split(' ')
         cwids = [vocab.get(t.lower(), unk_w) for t in ctokens]
         qwids = [vocab.get(t.lower(), unk_w) for t in qtokens]
-        ccids = [[chars.get(c, unk_c) for c in pad_spec.format(t)] for t in ctokens]
-        qcids = [[chars.get(c, unk_c) for c in pad_spec.format(t)] for t in qtokens]
+        ccids = [[chars.get(c, unk_c) for c in t][:word_size] for t in ctokens] #clamp at word_size
+        qcids = [[chars.get(c, unk_c) for c in t][:word_size] for t in qtokens]
         
         ba, ea = int(begin_answer), int(end_answer) - 1 # the end from tsv is exclusive
         if ba > ea:

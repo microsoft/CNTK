@@ -115,8 +115,7 @@ class Bidaf:
         # mask out values outside of Query, and fill in gaps with -1e+30 as neutral value for both reduce_log_sum_exp and reduce_max
         qvw_mask_expanded = C.sequence.broadcast_as(C.reshape(qvw_mask, (self.max_query_len,)), c_processed)
         S = C.element_select(qvw_mask_expanded, S, C.constant(-1e+30, S.shape))
-        q_logZ = C.reshape(C.reduce_log_sum_exp(S),(1,))
-        q_attn = C.reshape(C.exp(S - q_logZ),(-1,1))
+        q_attn = C.reshape(C.softmax(S), (-1,1))
         #q_attn = print_node(q_attn)
         utilde = C.reshape(C.reduce_sum(C.sequence.broadcast_as(qvw, q_attn) * q_attn, axis=0),(-1))
 
