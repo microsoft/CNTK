@@ -35,6 +35,7 @@ class Bidaf:
     def charcnn(self, x):
         conv_out = C.models.Sequential([
             C.layers.Embedding(self.char_emb_dim),
+			C.Dropout(self.dropout),
             C.layers.Convolution1D((5,), self.convs, activation=C.relu, init=C.glorot_uniform(), pad=[True], strides=1, bias=True, init_bias=True)])(x)
         return C.reduce_max(conv_out, axis=1) # workaround cudnn failure in GlobalMaxPooling
 
@@ -75,7 +76,7 @@ class Bidaf:
         # todo GlobalPooling/reduce_max should have a keepdims default to False
         embedded = C.splice(
             self.embed()(input_glove_words, input_nonglove_words), 
-            C.reshape(self.charcnn(C.reshape(input_chars, (C.InferredDimension, self.word_size))), self.convs))
+            C.reshape(self.charcnn(C.reshape(input_chars, (self.word_size, C.InferredDimension))), self.convs))
 
         input_layers = C.layers.Sequential([
             HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
@@ -128,17 +129,22 @@ class Bidaf:
         att_context = C.splice(c_processed, utilde, c_processed * utilde,  c_processed * Htilde)
 
         #modeling layer
-        mod_context = OptimizedRnnStack(self.hidden_dim, num_layers=2, bidirectional=True)(att_context)
+		# todo: use dropout in optimized_rnn_stack from cudnn once API exposes it
+        mod_context = C.Sequential([
+            C.Dropout(self.dropout),
+            OptimizedRnnStack(self.hidden_dim, bidirectional=True),
+            C.Dropout(self.dropout),
+            OptimizedRnnStack(self.hidden_dim, bidirectional=True)])(att_context)
 
         #output layer
-        start_logits = C.layers.Dense(1)(C.splice(mod_context, att_context))
+        start_logits = C.layers.Dense(1)(C.dropout(C.splice(mod_context, att_context), self.dropout))
         start_hardmax = seq_hardmax(start_logits)
         start_prob = C.softmax(start_logits)
         att_mod_ctx = C.sequence.reduce_sum(mod_context * start_prob)
         att_mod_ctx_expanded = C.sequence.broadcast_as(att_mod_ctx, att_context)
         end_input = C.splice(att_context, mod_context, att_mod_ctx_expanded, mod_context * att_mod_ctx_expanded)
         m2 = OptimizedRnnStack(self.hidden_dim, bidirectional=True)(end_input)
-        end_logits = C.layers.Dense(1)(C.splice(att_context, m2))
+        end_logits = C.layers.Dense(1)(C.dropout(C.splice(att_context, m2), self.dropout))
 
         start_loss = seq_loss(start_logits, ab)
         end_loss = seq_loss(end_logits, ae)
