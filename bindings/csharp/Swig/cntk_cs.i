@@ -29,17 +29,27 @@
 %shared_ptr(CNTK::NDMask);
 %shared_ptr(std::vector<float>);
 
-%template(SizeTVector) std::vector<size_t>;
-%template(DoubleVector) std::vector<double>;
-%template(FloatVector) std::vector<float>;
 %template(SizeTVectorVector) std::vector<std::vector<size_t>>;
 %template(FloatVectorVector) std::vector<std::vector<float>>;
 %template(DoubleVectorVector) std::vector<std::vector<double>>;
+
+SWIG_STD_VECTOR_ENHANCED(size_t)
+%template(SizeTVector) std::vector<size_t>;
+SWIG_STD_VECTOR_ENHANCED(double)
+%template(DoubleVector) std::vector<double>;
+SWIG_STD_VECTOR_ENHANCED(float)
+%template(FloatVector) std::vector<float>;
+SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
 %template(VariableVector) std::vector<CNTK::Variable>;
+SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
 %template(AxisVector) std::vector<CNTK::Axis>;
+SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
 %template(NDArrayViewVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
+SWIG_STD_VECTOR_ENHANCED(bool)
 %template(BoolVector) std::vector<bool>;
+SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
+
 %template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;
 %template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
 %template(FunctionPtrVector) std::vector<std::shared_ptr<CNTK::Function>>;
@@ -359,13 +369,6 @@
 
 %typemap(cscode) CNTK::DeviceDescriptor %{
 
-    // Remove this for now, will be added back after we find a good solution here:
-    // This is a reference to prevent premature garbage collection 
-    // and resulting in dangling access to device.
-    // private static DeviceDescriptorVector deviceVector;
-    // private static System.Collections.Generic.List<DeviceDescriptor> deviceList;
-    // private static System.Object deviceVectorInitLock = new System.Object();
-
     public uint Id
     {
         get { return GetId(); }
@@ -381,23 +384,10 @@
         get { return GetCPUDevice(); }
     }
 
-    //public static System.Collections.Generic.List<DeviceDescriptor> AllDevices()
-    //{
-    //    lock (deviceVectorInitLock)
-    //    {
-    //        // TODO: support devices added/removed after creation. 
-    //        if (deviceVector == null)
-    //        {
-    //            deviceVector = GetAllDevices();
-    //            deviceList = new System.Collections.Generic.List<DeviceDescriptor>(deviceVector.Count);
-    //            foreach (var d in deviceVector)
-    //            {
-    //                deviceList.Add(d);
-    //            }
-    //        }
-    //    }
-    //    return deviceList;
-    //}
+    public static System.Collections.Generic.IList<DeviceDescriptor> AllDevices()
+    {
+        return GetAllDevices();
+    }
 
     public override bool Equals(System.Object obj)
     {
@@ -624,22 +614,9 @@
         }
     }
 
-    public System.Collections.Generic.List<Variable> Outputs
+    public System.Collections.Generic.IList<Variable> Outputs
     {
-        get 
-        {
-            // Assuming that outputs of Function can not be changed after creation.
-            if (outputVector == null)
-            {
-                outputVector = GetOutputs();
-                outputList = new System.Collections.Generic.List<Variable>(outputVector.Count);
-                foreach (var v in outputVector)
-                {
-                    outputList.Add(v);
-                }
-            }
-            return outputList;
-        }
+        return GetOutputs();
     }
 
     public Variable Output
@@ -667,33 +644,15 @@
         get { return _IsBlock(); }
     }
 
-    public System.Collections.Generic.List<Variable> Arguments
+    public System.Collections.Generic.IList<Variable> Arguments
     {
-        get
-        {
-            // Assuming that arguments of Function can not be changed after creation.
-            if (argumentVector == null)
-            {
-                argumentVector = GetArguments();
-                argumentList = new System.Collections.Generic.List<Variable>(argumentVector.Count);
-                foreach (var v in argumentVector)
-                {
-                    argumentList.Add(v);
-                }
-            }
-            return argumentList;
-        }
+        return GetArguments();
     }
 
     // Todo: do we have a better place to put this function?
-    public static Function Combine(System.Collections.Generic.IEnumerable<Variable> outputVariable)
+    public static Function Combine(System.Collections.Generic.IEnumerable<Variable> outputVariables)
     {
-        var varVect = new VariableVector();
-        foreach (var v in outputVariable)
-        {
-            varVect.Add(v);
-        }
-        return CNTKLib.Combine(varVect);
+        return CNTKLib.Combine(outputVariables);
     }
 
     public static Function AsComposite(Function rootFunction, string name = "")
@@ -765,15 +724,10 @@
         get { return GetDataType(); }
     }
 
-    public System.Collections.Generic.List<Axis> DynamicAxes
+    public System.Collections.Generic.IList<Axis> DynamicAxes
     {
         get {
-            var axes = new System.Collections.Generic.List<Axis>();
-            foreach (var axis in GetDynamicAxes())
-            {
-                axes.Add(axis);
-            }
-            return axes;
+            return GetDynamicAxes();
         }
     }
 
