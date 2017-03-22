@@ -11,7 +11,6 @@ import pytest
 
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
-from cntk.utils import *
 from cntk.internal import *
 from cntk import Value
 

@@ -108,9 +108,6 @@
     <None Include="cntk\ops\functions.py">
       <Filter>cntk\ops</Filter>
     </None>
-    <None Include="cntk\ops\variables.py">
-      <Filter>cntk\ops</Filter>
-    </None>
     <None Include="cntk\io\__init__.py">
       <Filter>cntk\io</Filter>
     </None>
@@ -176,9 +173,6 @@
     <None Include="cntk\ops\tests\kernel_test.py">
       <Filter>cntk\ops\tests</Filter>
     </None>
-    <None Include="cntk\tests\learner_test.py">
-      <Filter>cntk\tests</Filter>
-    </None>
     <None Include="cntk\ops\tests\linear_test.py">
       <Filter>cntk\ops\tests</Filter>
     </None>
@@ -217,12 +211,6 @@
     </None>
     <None Include="cntk\tests\test_utils.py">
       <Filter>cntk\tests</Filter>
-    </None>
-    <None Include="cntk\utils\tests\utils_test.py">
-      <Filter>cntk\utils\tests</Filter>
-    </None>
-    <None Include="cntk\ops\tests\variables_test.py">
-      <Filter>cntk\ops\tests</Filter>
     </None>
     <None Include="build.bat" />
     <None Include="README.md" />
@@ -346,6 +334,27 @@
     </None>
     <None Include="cntk\ops\tests\sparse_test.py">
       <Filter>cntk\ops\tests</Filter>
+    </None>
+    <None Include="cntk\variables.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\tests\variables_test.py">
+      <Filter>cntk\tests</Filter>
+    </None>
+    <None Include="cntk\debugging\profiler.py">
+      <Filter>cntk\debugging</Filter>
+    </None>
+    <None Include="cntk\default_options.py">
+      <Filter>cntk</Filter>
+    </None>
+    <None Include="cntk\learners\tests\learner_test.py">
+      <Filter>cntk\learners\tests</Filter>
+    </None>
+    <None Include="cntk\internal\utils.py">
+      <Filter>cntk\internal</Filter>
+    </None>
+    <None Include="cntk\internal\tests\utils_test.py">
+      <Filter>cntk\internal\tests</Filter>
     </None>
   </ItemGroup>
 </Project>

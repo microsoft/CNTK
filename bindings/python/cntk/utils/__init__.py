@@ -4,17 +4,7 @@
 # ==============================================================================
 
 import sys
-import numbers
-import collections
 import numpy as np
-from numbers import Number
-from scipy import sparse
-
-from .. import cntk_py
-from ..device import use_default_device, cpu
-from ..axis import Axis
-from cntk.internal import typemap
-
 
 
 def _ones_like(batch, precision):
