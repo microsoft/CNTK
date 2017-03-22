@@ -565,7 +565,7 @@ def test_sequential_convolution_without_reduction_dim(device_id):
     c.update_signature((1)) # input is a sequence of dim-1 vectors
     data = [np.array([[2], [6], [4], [8], [6]])]
     out = c(data)
-    exp = [[24, 40, 38]]
+    exp = [[[24], [40], [38]]] # not reducing; hence, output is also a sequence of dim-1 vectors
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
 
 ####################################
