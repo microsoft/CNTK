@@ -103,7 +103,7 @@ def test(test_data, model_path, config_file):
         C.reduce_sum(em, C.Axis.all_axes()))
     
     # Evaluation parameters
-    minibatch_size = 2048
+    minibatch_size = 8192
     num_sequences = 0
     loss_sum = 0
     f1_sum = 0

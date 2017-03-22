@@ -91,7 +91,7 @@ class Bidaf:
         c_processed = input_layers(c_emb) # synth_embedding for context
 
         #convert query's sequence axis to static
-        qvw, qvw_mask = ValueWindow(self.max_query_len, C.Axis.new_leading_axis())(q_processed)
+        qvw, qvw_mask = C.layers.PastValueWindow(self.max_query_len, C.Axis.new_leading_axis())(q_processed).outputs
 
         #qvw_c = C.reduce_sum(qvw, 1)
         #qvw_c = print_node(qvw_c)
