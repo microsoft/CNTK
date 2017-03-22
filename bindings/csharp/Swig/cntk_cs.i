@@ -39,12 +39,14 @@
 %template(AxisVector) std::vector<CNTK::Axis>;
 %template(NDArrayViewVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 %template(BoolVector) std::vector<bool>;
+%template(IntVector) std::vector<int>; 
 %template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 %template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;
 %template(UnorderedMapVariableVariable) std::unordered_map<CNTK::Variable, CNTK::Variable>;
 %template(FunctionPtrVector) std::vector<std::shared_ptr<CNTK::Function>>;
 
 %template() std::vector<bool>;
+%template() std::vector<int>;
 %template() std::pair<size_t, double>;
 %template() std::vector<std::pair<size_t, double>>;
 

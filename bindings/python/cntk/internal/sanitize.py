@@ -410,6 +410,32 @@ def sanitize_axis(axis):
     else:
         return axis
 
+def sanitize_axis_list(axes): 
+    '''
+    Sanitizes a list of axes.
+
+    Args:
+        axes (list of :class:`~cntk.axis.Axis` or int or None): the axes to be used.
+
+          * :class:`~cntk.axis.Axis`: use axis instance directly (will convert
+            row- to col-major in case of static axis).
+          * int: if positive, use it as static axis. If negative, count from
+            last to first axis
+          * None: denote all available axes
+    '''
+    if not type(axes) in (list, tuple):
+        axes = [axes]
+    retAxes = []
+    for ax in axes: 
+        if ax is None:
+            retAxes.append(Axis.all_static_axes()) 
+        elif isinstance(ax, numbers.Integral):
+            retAxes.append(Axis(-ax - 1))
+        elif ax.is_static_axis and (ax.static_axis_index() != Axis.new_leading_axis().static_axis_index()):
+            retAxes.append(Axis(-1 - axis.static_axis_index())) 
+        else: 
+            retAxes.append(ax)
+    return retAxes
 
 def sanitize_dynamic_axes(axes):
     if not type(axes) in (list, tuple):
