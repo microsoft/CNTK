@@ -456,10 +456,14 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
         public void EvalManagedCrossAppDomainExceptionTest()
         {
             var currentPath = Environment.CurrentDirectory;
+
+            // search for "our" dll, ignoring the version number
+            var names = Directory.EnumerateFiles(currentPath, "Cntk.Eval.Wrapper-*.dll");
+            var dllpathname = names.FirstOrDefault();
+
             var domain = AppDomain.CreateDomain("NewAppDomain");
-            var path = Path.Combine(currentPath, "EvalWrapper.dll");
             var t = typeof(CNTKException);
-            var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(path, t.FullName);
+            var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(dllpathname, t.FullName);
             Assert.AreNotEqual(null, instance);
         }
 

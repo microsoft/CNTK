@@ -25,6 +25,9 @@
 
     <HasSwig>false</HasSwig>
     <HasSwig Condition="Exists('$(SWIG_PATH)\swig.exe')">true</HasSwig>
+
+    <CntkComponentVersion>2.0beta16</CntkComponentVersion>
+    <CntkComponentVersion Condition="$(DebugBuild)">2.0beta16d</CntkComponentVersion>
   </PropertyGroup>
   
 </Project>

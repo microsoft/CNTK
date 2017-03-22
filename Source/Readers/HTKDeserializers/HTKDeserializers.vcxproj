@@ -46,6 +46,9 @@
   <PropertyGroup>
     <LinkIncremental>$(DebugBuild)</LinkIncremental>
   </PropertyGroup>
+  <PropertyGroup>
+    <TargetName>Cntk.Deserializers.HTK-$(CntkComponentVersion)</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
       <PrecompiledHeader>Use</PrecompiledHeader>
