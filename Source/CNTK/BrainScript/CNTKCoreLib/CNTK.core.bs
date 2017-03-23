@@ -481,7 +481,7 @@ CNTK2 = [
     Softmax(_, tag='') = new ComputationNode [ operation = 'Softmax' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     Dropout(_, tag='') = new ComputationNode [ operation = 'Dropout' ; inputs = _AsNodes (_) /*plus the function args*/ ]
     StochasticBinary(input, neuronST=true, RFAdjusted=false, passThrough=true, annealRate=1.0, tag='') = new ComputationNode [ operation = 'StochasticBinary' ; inputs = _AsNodes (input) /*plus the function args*/ ]
-	
+    
     // 11. Criterion nodes
     // No changes here - we said the default input would be the label sequence here, against which the 
     // empirical sequence is compared to. Keeping this for now.

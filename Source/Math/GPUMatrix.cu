@@ -3417,7 +3417,6 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     size_t n = a.GetNumCols();
     CUDA_LONG N = (CUDA_LONG)(m*n);
 
-
     auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
     /* generate uniform random floats bewteen 0.0 and 1.0 for each thread. */
     float *d_rands;
@@ -3426,7 +3425,7 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     CURAND_CALL(curandCreateGenerator(&gens, CURAND_RNG_PSEUDO_DEFAULT));
     CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, seed));
     CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
-
+    
     //float *d_rands;
     //CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
     //float* rands = new float[N];
@@ -3456,9 +3455,8 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     //cudaMalloc(&devStates, sizeof(curandState) * N);
     //auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
     //_generateRandomNumberNormalDistribution<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(d_rands, devStates, N, seed);
-    
     _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
-    
+ 
     //float* rands = new float[N];
     //CUDA_CALL(cudaMemcpy(rands, d_rands, N * sizeof(float), cudaMemcpyDeviceToHost));
     //fprintf(stderr, "\n");
