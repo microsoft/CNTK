@@ -11,7 +11,7 @@ blocks -- basic building blocks that are semantically not layers (not used in a 
 
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input_variable, placeholder_variable, combine, alias, sequence
+from cntk import parameter, constant, input, placeholder, combine, alias, sequence
 from cntk.variables import Record
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value

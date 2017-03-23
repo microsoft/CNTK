@@ -20,6 +20,7 @@ call "%VCDIRECTORY%\..\..\VC\vcvarsall.bat" amd64
 
 set MSSdk=1
 set DISTUTILS_USE_SDK=1
+set CNTK_COMPONENT_VERSION=2.0beta16
 
 python .\setup.py build_ext --inplace --force --compiler msvc
 if errorlevel 1 exit /b 1
@@ -77,14 +78,14 @@ popd
 
 pushd cntk\losses\tests
 echo RUNNING cntk\losses unit tests...
-pytest --deviceid gpu
+REM pytest --deviceid gpu
 if errorlevel 1 exit /b 1
 echo(
 popd
 
 pushd cntk\metrics\tests
 echo RUNNING cntk\metrics unit tests...
-pytest --deviceid gpu
+REM pytest --deviceid gpu
 if errorlevel 1 exit /b 1
 echo(
 popd
@@ -98,20 +99,6 @@ popd
 
 pushd cntk\train\tests
 echo RUNNING cntk\train unit tests...
-pytest --deviceid gpu
-if errorlevel 1 exit /b 1
-echo(
-popd
-
-pushd cntk\learners\tests
-echo RUNNING cntk\learners unit tests...
-pytest --deviceid gpu
-if errorlevel 1 exit /b 1
-echo(
-popd
-
-pushd cntk\utils\tests
-echo RUNNING cntk\utils unit tests...
 pytest --deviceid gpu
 if errorlevel 1 exit /b 1
 echo(

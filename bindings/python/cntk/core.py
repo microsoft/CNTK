@@ -451,16 +451,21 @@ class Value(cntk_py.Value):
         entries removed.
 
         Args:
-            value (:class:`~cntk.core.Value`): Value as it is returned by Swig
+            value (:class:`~cntk.cntk_py.Value` or :class:`~cntk.core.Value`): Value object
 
         Returns:
             a list of NumPy arrays
         '''
 
-        mask = value.mask()
-        if mask:
+        has_mask = None
+        if isinstance(value, Value):
+            has_mask = value.mask.any()
+        elif isinstance(value, cntk_py.Value):
+            has_mask = value.mask() is not None
+
+        if has_mask:
             if variable is None: 
-                mask = np.asarray(mask)
+                mask = np.asarray(value.mask())
                 return [seq[mask[idx] != cntk_py.MaskKind_Invalid]
                            for idx, seq in enumerate(np.asarray(value))]
             else:
@@ -537,8 +542,7 @@ def asarray(variable, value):
         array_to_return = [sparse.csr_matrix(seq) for seq in dense_data]
 
     else:
-        from cntk.utils import variable_value_to_seq
-        array_to_return = variable_value_to_seq(value, variable)
+        array_to_return = Value.to_seq(value, variable)
 
     return array_to_return
 

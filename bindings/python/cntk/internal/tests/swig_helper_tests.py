@@ -6,9 +6,8 @@
 import numpy
 import pytest
 
-from cntk.ops import *
-from cntk.utils import *
-from cntk import cntk_py
+from cntk import cntk_py, variables
+from cntk.internal import typename
 
 def _param():
     return cntk_py.Parameter((1,2), cntk_py.DataType_Float, 5.0)

@@ -100,7 +100,7 @@ class Function(cntk_py.Function):
         # Unannotated parameters will yield placeholder_variables instead.
         def make_arg_variable(name, annotations):
             from .. import placeholder, input
-            from .variables import Variable
+            from ..variables import Variable
             if isinstance(annotations.get(name, None), Variable.Type):
                 var_type = annotations[name]
                 return input(name=name, **var_type)
@@ -235,7 +235,7 @@ class Function(cntk_py.Function):
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
         def to_input(arg_type, name):
             from cntk import input
-            from .variables import Variable
+            from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
                 return input(shape=_as_tuple(arg_type), name=name)
             elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
