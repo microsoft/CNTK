@@ -54,7 +54,10 @@ def populate_dicts(files):
     # return as defaultdict(int) so that new keys will return 0 which is the value for <unknown>
     return known, defaultdict(int, vocab), defaultdict(int, chars)
     
-def tsv_iter(line, unk_w, unk_c, is_test=False):
+def tsv_iter(line, vocab, chars, is_test=False):
+    unk_w = vocab[unk]
+    unk_c = chars[unk]
+
     if is_test:
         uid, title, context, query, answer, other = line.split('\t')
         begin_answer, end_answer = '0', '1'
@@ -91,10 +94,8 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
     print("Known words: %d" % known)
     print("Vocab size: %d" % len(vocab))
     print("Char size: %d" % len(chars))
-    unk_w = vocab[unk]
-    unk_c = chars[unk]
     for lineno, line in enumerate(f):
-        ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv_iter(line, unk_w, unk_c, is_test)
+        ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv_iter(line, vocab, chars, is_test)
 
         for     ctoken,  qtoken,  atoken,  cwid,  qwid,   begin,   end,   ccid,  qcid in zip_longest(
                 ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids):

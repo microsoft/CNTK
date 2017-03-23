@@ -90,7 +90,16 @@ class PolyMath:
 
         q_processed = input_layers(q_emb) # synth_embedding for query
         c_processed = input_layers(c_emb) # synth_embedding for context
-
+        
+        #qce = C.reshape(qc, (self.word_size, C.InferredDimension))
+        #qce = C.argmax(qce, axis=1)
+        #qce = print_node(qce)
+        #q_processed *= C.reduce_sum(qce)
+        
+        #qgwe = C.argmax(C.times(1, qgw))
+        #qgwe = print_node(qgwe)
+        #q_processed *= C.reduce_sum(qgwe)
+        
         #convert query's sequence axis to static
         qvw, qvw_mask = C.layers.PastValueWindow(self.max_query_len, C.Axis.new_leading_axis(), go_backwards=True)(q_processed).outputs
 

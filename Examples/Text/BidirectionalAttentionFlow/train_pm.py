@@ -45,21 +45,45 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     }
     return mb_source, input_map
 
-def create_tsv_reader(func, tsv_file, polymath):
+def create_tsv_reader(func, tsv_file, polymath, seqs):
     with open(tsv_file, 'r', encoding='utf-8') as f:
-        for lineno, line in enumerate(f):
-            ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab[tsv2ctf.unk], polymath.vocab[tsv2ctf.unk_c], False)
-            context_g_words = C.one_hot([[ONE_HOT_SKIP if polymath.vocab[t] >= polymath.wg_dim else polymath.vocab[t] for t in ctokens]])
-            query_g_words   = C.one_hot([[ONE_HOT_SKIP if polymath.vocab[t] >= polymath.wg_dim else polymath.vocab[t] for t in qtokens]])
-            yield { argument_by_name(func, 'cgw'): context_g_words,
-                    argument_by_name(func, 'qgw'): query_g_words,
-                    argument_by_name(func, 'cnw'): context_ng_words,
-                    argument_by_name(func, 'qnw'): query_ng_words,
-                    argument_by_name(func, 'cc' ): context_chars,
-                    argument_by_name(func, 'qc' ): query_chars,
-                    argument_by_name(func, 'ab' ): answer_begin,
-                    argument_by_name(func, 'ae' ): answer_end
-                }
+        eof = False
+        while not eof:
+            batch={'cwids':[], 'qwids':[], 'baidx':[], 'eaidx':[], 'ccids':[], 'qcids':[]}
+            
+            while not eof and len(batch['cwids']) < seqs:
+                line = f.readline()
+                if not line:
+                    eof = True
+                    break
+                    
+                ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab, polymath.chars, False)
+
+                batch['cwids'].append(cwids)
+                batch['qwids'].append(qwids)
+                batch['baidx'].append(baidx)
+                batch['eaidx'].append(eaidx)
+                batch['ccids'].append(ccids)
+                batch['qcids'].append(qcids)
+            
+            if len(batch) > 0:
+                context_g_words  = C.one_hot([[C.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in cwids] for cwids in batch['cwids']], polymath.wg_dim)
+                context_ng_words = C.one_hot([[C.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in cwids] for cwids in batch['cwids']], polymath.wn_dim)
+                query_g_words    = C.one_hot([[C.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in qwids] for qwids in batch['qwids']], polymath.wg_dim)
+                query_ng_words   = C.one_hot([[C.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in qwids] for qwids in batch['qwids']], polymath.wn_dim)
+                context_chars = [[np.sum(np.eye(polymath.c_dim)[[i * len(polymath.chars) + c for i, c in enumerate(cc)]], axis=0) for cc in ccids] for ccids in batch['ccids']]
+                query_chars   = [[np.sum(np.eye(polymath.c_dim)[[i * len(polymath.chars) + c for i, c in enumerate(qc)]], axis=0) for qc in qcids] for qcids in batch['qcids']]
+                answer_begin = batch['baidx']
+                answer_end = batch['eaidx']
+
+                yield { argument_by_name(func, 'cgw'): context_g_words,
+                        argument_by_name(func, 'qgw'): query_g_words,
+                        argument_by_name(func, 'cnw'): context_ng_words,
+                        argument_by_name(func, 'qnw'): query_ng_words,
+                        argument_by_name(func, 'cc' ): context_chars,
+                        argument_by_name(func, 'qc' ): query_chars,
+                        argument_by_name(func, 'ab' ): answer_begin,
+                        argument_by_name(func, 'ae' ): answer_end }
             
 
 def train(data_path, model_path, log_file, config_file, restore=False, profiling=False):
@@ -93,7 +117,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     
     model_file = os.path.join(model_path, model_name)
     
-    if ext == 'ctf':    
+    if train_data_ext == '.ctf':    
         mb_source, input_map = create_mb_and_map(loss, train_data_file, polymath)
 
         minibatch_size = training_config['minibatch_size'] # number of samples
@@ -108,11 +132,14 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
             checkpoint_config = C.CheckpointConfig(filename = model_file, restore=restore),
             progress_frequency = epoch_size
         ).train()
-    else if ext == 'tsv':
-        minibatch_size = training_config['minibatch_size'] # number of sequences
+    else:
+        if train_data_ext != '.tsv':
+            raise Exception("Unsupported format")
+        
+        minibatch_seqs = training_config['minibatch_seqs'] # number of sequences
 
         for epoch in range(max_epochs):       # loop over epochs
-            tsv_reader = create_tsv_reader(loss, train_data_file, polymath)
+            tsv_reader = create_tsv_reader(loss, train_data_file, polymath, minibatch_seqs)
             for data in tsv_reader:
                 trainer.train_minibatch(data)                                   # update model with it
 

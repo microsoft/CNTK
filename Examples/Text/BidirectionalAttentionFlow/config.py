@@ -23,4 +23,6 @@ training_config = {
     'max_epochs'     : 3,
     'rho'            : 0.5,
     'train_data'     : 'val.ctf',
+    #'train_data'     : 'val.tsv',
+    #'minibatch_seqs' : 1, # in sequences
 }
