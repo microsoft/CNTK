@@ -1764,9 +1764,9 @@ namespace CNTK
         FunctionPtr Slice(const Variable& operand, const std::vector<Axis>& axis, const std::vector<int>& beginIndex, const std::vector<int>& endIndex, const std::wstring& name)
         {
             auto additionalProperties = Dictionary();
-            additionalProperties[PrimitiveFunction::AttributeNameAxis] = AsDictionaryValueVector(axis);
-            additionalProperties[PrimitiveFunction::AttributeNameBeginIndex] = AsDictionaryValueVector(beginIndex);
-            additionalProperties[PrimitiveFunction::AttributeNameEndIndex] = AsDictionaryValueVector(endIndex);
+            additionalProperties[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(axis);
+            additionalProperties[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(beginIndex);
+            additionalProperties[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(endIndex);
 
             return UnaryOp(PrimitiveOpType::Slice, operand, std::move(additionalProperties), name);
         }

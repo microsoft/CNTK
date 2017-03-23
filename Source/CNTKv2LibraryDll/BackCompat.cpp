@@ -184,9 +184,9 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(SliceNode))
                 {
                     auto sliceNode = node->As<SliceNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsDictionaryValueVector(AsAxis(sliceNode->Axis()));
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = AsDictionaryValueVector(sliceNode->BeginIndex());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = AsDictionaryValueVector(sliceNode->EndIndex());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxisVec] = AsDictionaryValueVector(AsAxis(sliceNode->Axis()));
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndexVec] = AsDictionaryValueVector(sliceNode->BeginIndex());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndexVec] = AsDictionaryValueVector(sliceNode->EndIndex());
 
                     opType = PrimitiveOpType::Slice;
                 }

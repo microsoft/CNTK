@@ -581,9 +581,9 @@ namespace CNTK
             }
             case PrimitiveOpType::Slice:
             {
-                auto axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<std::vector<DictionaryValue>>());
-                auto beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<std::vector<DictionaryValue>>());
-                auto endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<std::vector<DictionaryValue>>());
+                auto axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>());
+                auto beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
+                auto endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
 
                 // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
                 computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
