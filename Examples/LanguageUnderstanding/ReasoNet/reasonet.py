@@ -1,18 +1,19 @@
 """
 ReasoNet model in CNTK
+@ref ReasoNet: Learning to Stop Reading in Machine Comprehension, https://posenhuang.github.io/papers/reasonet_iclr_2017.pdf  
 @author penhe@microsoft.com
 """
 import sys
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 import cntk.ops as ops
 from cntk.layers.blocks import _INFERRED, Parameter
-#import cntk.internal.utils as utils
 from cntk.internal import _as_tuple, sanitize_input
-import cntk.learner as learner
-#import cntk.io as io
-#import cntk.cntk_py as cntk_py
-from .utils import *
-from .layers import *
+import cntk.learners as learners
+from cntk.layers import GRU
+try:
+  from utils import *
+except Exception:
+  from .utils import *
 
 def create_reader(path, vocab_dim, entity_dim, randomize):
   """
@@ -30,66 +31,6 @@ def create_reader(path, vocab_dim, entity_dim, randomize):
     label   = StreamDef(field='L', shape=1, is_sparse=False),
     entity_ids   = StreamDef(field='EID', shape=entity_dim, is_sparse=True)
     )), randomize=randomize)
-
-def attention_model(context_memory, query_memory, init_status, hidden_dim, att_dim, max_steps = 5, init = glorot_uniform()):
-  """
-  Create the attention model for reasonet
-  Args:
-    context_memory: Context memory
-    query_memory: Query memory
-    init_status: Intialize status
-    hidden_dim: The dimention of hidden state
-    att_dim: The dimention of attention
-    max_step: Maxuim number of step to revisit the context memory
-  """
-  gru = gru_cell((hidden_dim*2, ), name='control_status')
-  status = init_status
-  output = [None]*max_steps*2
-  sum_prob = None
-  context_cos_sim = project_cosine_sim(att_dim, name='context_attention')
-  query_cos_sim = project_cosine_sim(att_dim, name='query_attention')
-  ans_cos_sim = project_cosine_sim(att_dim, name='candidate_attention')
-  stop_gate = termination_gate(name='terminate_prob')
-  prev_stop = 0
-  for step in range(max_steps):
-    context_attention_weight = context_cos_sim(status, context_memory)
-    query_attention_weight = query_cos_sim(status, query_memory)
-    context_attention = sequence.reduce_sum(times(context_attention_weight, context_memory), name='C-Att')
-    query_attention = sequence.reduce_sum(times(query_attention_weight, query_memory), name='Q-Att')
-    attention = ops.splice(query_attention, context_attention, name='att-sp')
-    status = gru(attention, status).output
-    termination_prob = stop_gate(status)
-    ans_attention = ans_cos_sim(status, context_memory)
-    output[step*2] = ans_attention
-    if step < max_steps -1:
-      stop_prob = prev_stop + ops.log(termination_prob, name='log_stop')
-    else:
-      stop_prob = prev_stop
-    output[step*2+1] = sequence.broadcast_as(ops.exp(stop_prob, name='exp_log_stop'), output[step*2], name='Stop_{0}'.format(step))
-    prev_stop += ops.log(1-termination_prob, name='log_non_stop')
-
-  final_ans = None
-  for step in range(max_steps):
-    if final_ans is None:
-      final_ans = output[step*2] * output[step*2+1]
-    else:
-      final_ans += output[step*2] * output[step*2+1]
-  combine_func = combine(output + [ final_ans ], name='Attention_func')
-  return combine_func
-
-class model_params:
-  def __init__(self, vocab_dim, entity_dim, hidden_dim, embedding_dim=100, embedding_init=None, share_rnn_param=False, max_rl_steps=5, dropout_rate=None, init=glorot_uniform(), model_name='rsn'):
-    self.vocab_dim = vocab_dim
-    self.entity_dim = entity_dim
-    self.hidden_dim = hidden_dim
-    self.embedding_dim = embedding_dim
-    self.embedding_init = embedding_init
-    self.max_rl_steps = max_rl_steps
-    self.dropout_rate = dropout_rate
-    self.init = init
-    self.model_name = model_name
-    self.share_rnn_param = share_rnn_param
-    self.attention_dim = 384
 
 def bind_data(func, data):
   """
@@ -109,7 +50,73 @@ def bind_data(func, data):
       bind[arg] = data.streams.entity_ids
   return bind
 
-def create_model(params : model_params):
+def get_context_bind_stream(bind):
+  for key in bind.keys():
+    if key.name == 'context':
+      return key
+  return None
+
+def attention_model(context_memory, query_memory, init_status, hidden_dim, att_dim, max_steps = 5, init = glorot_uniform()):
+  """
+  Create the attention model for reasonet
+  Args:
+    context_memory: Context memory
+    query_memory: Query memory
+    init_status: Intialize status
+    hidden_dim: The dimention of hidden state
+    att_dim: The dimention of attention
+    max_step: Maxuim number of step to revisit the context memory
+  """
+  gru = GRU((hidden_dim*2, ), name='control_status')
+  status = init_status
+  output = [None]*max_steps*2
+  sum_prob = None
+  context_attention_score = attention_score(att_dim, name='context_attention')
+  query_attention_score = attention_score(att_dim, name='query_attention')
+  answer_attention_score = attention_score(att_dim, name='candidate_attention')
+  stop_gate = termination_gate(name='terminate_prob')
+  prev_stop = 0
+  for step in range(max_steps):
+    context_attention_weight = context_attention_score(status, context_memory)
+    query_attention_weight = query_attention_score(status, query_memory)
+    context_attention = sequence.reduce_sum(times(context_attention_weight, context_memory), name='C-Att')
+    query_attention = sequence.reduce_sum(times(query_attention_weight, query_memory), name='Q-Att')
+    attention = ops.splice(query_attention, context_attention, name='att-sp')
+    status = gru(status, attention).output
+    termination_prob = stop_gate(status)
+    ans_attention = answer_attention_score(status, context_memory)
+    output[step*2] = ans_attention
+    if step < max_steps -1:
+      stop_prob = prev_stop + ops.log(termination_prob, name='log_stop')
+    else:
+      stop_prob = prev_stop
+    output[step*2+1] = sequence.broadcast_as(ops.exp(stop_prob, name='exp_log_stop'), output[step*2], name='Stop_{0}'.format(step))
+    prev_stop += ops.log(1-termination_prob, name='log_non_stop')
+
+  final_ans = None
+  for step in range(max_steps):
+    if final_ans is None:
+      final_ans = output[step*2] * output[step*2+1]
+    else:
+      final_ans += output[step*2] * output[step*2+1]
+  results = combine(output + [ final_ans ], name='Attention_func')
+  return results
+
+class model_params:
+  def __init__(self, vocab_dim, entity_dim, hidden_dim, attention_dim, embedding_dim=100, embedding_init=None, share_rnn_param=False, max_rl_steps=5, dropout_rate=None, init=glorot_uniform(), model_name='rsn'):
+    self.vocab_dim = vocab_dim
+    self.entity_dim = entity_dim
+    self.hidden_dim = hidden_dim
+    self.embedding_dim = embedding_dim
+    self.embedding_init = embedding_init
+    self.max_rl_steps = max_rl_steps
+    self.dropout_rate = dropout_rate
+    self.init = init
+    self.model_name = model_name
+    self.share_rnn_param = share_rnn_param
+    self.attention_dim = attention_dim
+
+def create_model(params):
   """
   Create ReasoNet model
   Args:
@@ -129,37 +136,41 @@ def create_model(params : model_params):
     embedding_init = params.embedding_init
   embedding = parameter(shape=(params.vocab_dim, params.embedding_dim), init=None)
   embedding.value = embedding_init
-  embedding_matrix = constant(embedding_init, shape=(params.vocab_dim, params.embedding_dim))
+  constant_embedding = constant(embedding_init, shape=(params.vocab_dim, params.embedding_dim))
 
   if params.dropout_rate is not None:
-    query_embedding  = ops.dropout(times(query_sequence , embedding), params.dropout_rate, name='query_embedding')
-    context_embedding = ops.dropout(times(context_sequence, embedding), params.dropout_rate, name='context_embedding')
+    query_embedding  = ops.dropout(times(query_sequence , embedding), params.dropout_rate, 
+                                   name='query_embedding')
+    context_embedding = ops.dropout(times(context_sequence, embedding), params.dropout_rate, 
+                                    name='context_embedding')
   else:
     query_embedding  = times(query_sequence , embedding, name='query_embedding')
     context_embedding = times(context_sequence, embedding, name='context_embedding')
+
+  context_gru_weights = Parameter(_INFERRED + (params.hidden_dim,), init=glorot_uniform(), name='context_gru_params')
+  if params.share_rnn_param:
+    query_gru_weights = context_gru_weights
+  else:
+    query_gru_weights = Parameter(_INFERRED + (params.hidden_dim,), init=glorot_uniform(), name='query_gru_params')
+
+  # We use constant random vectors as the embedding of entities in the paragraph, 
+  # as we treat them as meaningless symbolic in the paragraph which is equal to entity shuffle
+  entity_embedding = ops.times(context_sequence, constant_embedding, name='constant_entity_embedding')
   
-  contextGruW = Parameter(_INFERRED +  _as_tuple(params.hidden_dim), init=glorot_uniform(), name='gru_params')
-  queryGruW = Parameter(_INFERRED +  _as_tuple(params.hidden_dim), init=glorot_uniform(), name='gru_params')
-
-  entity_embedding = ops.times(context_sequence, embedding_matrix, name='constant_entity_embedding')
-  # Unlike other words in the context, we keep the entity vectors fixed as a random vector so that each vector just means an identifier of different entities in the context and it has no semantic meaning
+  # Unlike other words in the context, 
+  # we keep the entity vectors fixed as a random vector so that each vector just means an identifier 
+  # of different entities in the context and it has no semantic meaning
   full_context_embedding = ops.element_select(entity_ids_mask, entity_embedding, context_embedding)
-  context_memory = ops.optimized_rnnstack(full_context_embedding, contextGruW, params.hidden_dim, 1, True, recurrent_op='gru', name='context_mem')
+  context_memory = ops.optimized_rnnstack(full_context_embedding, context_gru_weights, params.hidden_dim, 1, 
+                                          True, recurrent_op='gru', name='context_mem')
 
-  query_memory = ops.optimized_rnnstack(query_embedding, queryGruW, params.hidden_dim, 1, True, recurrent_op='gru', name='query_mem')
+  query_memory = ops.optimized_rnnstack(query_embedding, query_gru_weights, params.hidden_dim, 1, True, 
+                                        recurrent_op='gru', name='query_mem')
   qfwd = ops.slice(sequence.last(query_memory), -1, 0, params.hidden_dim, name='fwd')
   qbwd = ops.slice(sequence.first(query_memory), -1, params.hidden_dim, params.hidden_dim*2, name='bwd')
   init_status = ops.splice(qfwd, qbwd, name='Init_Status') # get last fwd status and first bwd status
-  return attention_model(context_memory, query_memory, init_status, params.hidden_dim, params.attention_dim, max_steps = params.max_rl_steps)
-
-def accuracy_func(prediction, label, name='accuracy'):
-  """
-  Compute the accuracy of the prediction
-  """
-  pred_max = ops.hardmax(prediction, name='pred_max')
-  norm_label = ops.equal(label, [1], name='norm_label')
-  acc = ops.times_transpose(pred_max, norm_label, name='accuracy')
-  return acc
+  return attention_model(context_memory, query_memory, init_status, params.hidden_dim, 
+                         params.attention_dim, max_steps = params.max_rl_steps)
 
 def contractive_reward(labels, predictions_and_stop_probabilities):
   """
@@ -187,7 +198,37 @@ def contractive_reward(labels, predictions_and_stop_probabilities):
   rewards = sequence.reduce_sum(normalized_contractive_rewards) + avg_rewards
   return rewards
 
-def loss(model, params:model_params):
+def accuracy_func(prediction, label, name='accuracy'):
+  """
+  Compute the accuracy of the prediction
+  """
+  pred_max = ops.hardmax(prediction, name='pred_max')
+  norm_label = ops.equal(label, [1], name='norm_label')
+  acc = ops.times_transpose(pred_max, norm_label, name='accuracy')
+  return acc
+
+def predict(model, params):
+  """
+  Compute the prediction result of the given model
+  """
+  model_args = {arg.name:arg for arg in model.arguments}
+  context = model_args['context']
+  entity_ids_mask = model_args['entity_ids_mask']
+  entity_condition = greater(entity_ids_mask, 0, name='condidion')
+  # Get all the enities in the paragraph via gather operator, which will create a new dynamic sequence axis 
+  entities_all = sequence.gather(entity_condition, entity_condition, name='entities_all')
+  # The generated dynamic axis has the same length as the input enity id sequence, 
+  # so we asign it as the entity id's dynamic axis.
+  entity_ids = input(shape=(params.entity_dim), is_sparse=True, 
+                              dynamic_axes=entities_all.dynamic_axes, name='entity_ids')
+  wordvocab_dim = params.vocab_dim
+  answers = sequence.scatter(sequence.gather(model.outputs[-1], entity_condition), entities_all, name='Final_Ans')
+  entity_id_matrix = ops.slice(ops.reshape(entity_ids, params.entity_dim), -1, 1, params.entity_dim)
+  expand_pred = sequence.reduce_sum(element_times(answers, entity_id_matrix))
+  pred_max = ops.hardmax(expand_pred, name='pred_max')
+  return pred_max
+
+def loss(model, params):
   """
   Compute the loss and accuracy of the model output
   """
@@ -195,16 +236,20 @@ def loss(model, params:model_params):
   context = model_args['context']
   entity_ids_mask = model_args['entity_ids_mask']
   entity_condition = greater(entity_ids_mask, 0, name='condidion')
+  # Get all the enities in the paragraph via gather operator, which will create a new dynamic sequence axis 
   entities_all = sequence.gather(entity_condition, entity_condition, name='entities_all')
-  entity_ids = input(shape=(params.entity_dim), is_sparse=True, dynamic_axes=entities_all.dynamic_axes, name='entity_ids')
+  # The generated dynamic axis has the same length as the input enity id sequence, 
+  # so we asign it as the entity id's dynamic axis.
+  entity_ids = input(shape=(params.entity_dim), is_sparse=True, 
+                              dynamic_axes=entities_all.dynamic_axes, name='entity_ids')
   wordvocab_dim = params.vocab_dim
-  labels_raw = input(shape=(1,), is_sparse=False, dynamic_axes=context.dynamic_axes, name='labels')
+  labels_raw = input(shape=(1,), is_sparse=False, dynamic_axes=context.dynamic_axes, 
+                              name='labels')
   answers = sequence.scatter(sequence.gather(model.outputs[-1], entity_condition), entities_all, name='Final_Ans')
   labels = sequence.scatter(sequence.gather(labels_raw, entity_condition), entities_all, name='EntityLabels')
   entity_id_matrix = ops.reshape(entity_ids, params.entity_dim)
   expand_pred = sequence.reduce_sum(element_times(answers, entity_id_matrix))
   expand_label = ops.greater_equal(sequence.reduce_sum(element_times(labels, entity_id_matrix)), 1)
-  expand_candidate_mask = ops.greater_equal(sequence.reduce_sum(entity_id_matrix), 1)
   predictions_and_stop_probabilities=[]
   for step in range(int((len(model.outputs)-1)/2)):
     predictions_and_stop_probabilities += [(model.outputs[step*2], model.outputs[step*2+1])]
@@ -217,13 +262,12 @@ def create_adam_learner(learn_params, learning_rate = 0.0005, gradient_clipping_
   """
   Create adam learner
   """
-  lr_schedule = learner.learning_rate_schedule(learning_rate, learner.UnitType.sample)
-  momentum = learner.momentum_schedule(0.90)
+  lr_schedule = learners.learning_rate_schedule(learning_rate, learners.UnitType.sample)
+  momentum = learners.momentum_schedule(0.90)
   gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
   gradient_clipping_with_truncation = True
-  momentum_var = learner.momentum_schedule(0.999)
-  lr = learner.adam_sgd(learn_params, lr_schedule, momentum, True, momentum_var,
-          low_memory = False,
+  momentum_var = learners.momentum_schedule(0.999)
+  lr = learners.adam(learn_params, lr_schedule, momentum, True, momentum_var,
           gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample,
           gradient_clipping_with_truncation = gradient_clipping_with_truncation)
   learner_desc = 'Alg: Adam, learning rage: {0}, momentum: {1}, gradient clip: {2}'.format(learning_rate, momentum[0], gradient_clipping_threshold_per_sample)
@@ -236,10 +280,7 @@ def __evaluation(trainer, data, bind, minibatch_size, epoch_size):
   """
   if epoch_size is None:
     epoch_size = 1
-  for key in bind.keys():
-    if key.name == 'labels':
-      label_arg = key
-      break
+  context_stream = get_context_bind_stream(bind)
   eval_acc = 0
   eval_s = 0
   k = 0
@@ -247,8 +288,8 @@ def __evaluation(trainer, data, bind, minibatch_size, epoch_size):
   while k < epoch_size:
     mbs = min(epoch_size - k, minibatch_size)
     mb = data.next_minibatch(mbs, input_map=bind)
-    k += mb[label_arg].num_samples
-    sm = mb[label_arg].num_sequences
+    k += mb[context_stream].num_samples
+    sm = mb[context_stream].num_sequences
     avg_acc = trainer.test_minibatch(mb)
     eval_acc += sm*avg_acc
     eval_s += sm
@@ -259,7 +300,7 @@ def __evaluation(trainer, data, bind, minibatch_size, epoch_size):
   logger.log("Evaluation Acc: {0}, samples: {1}".format(eval_acc, eval_s))
   return eval_acc
 
-def train(model, m_params:model_params, learner, train_data, max_epochs=1, save_model_flag=False, epoch_size=270000, eval_data=None, eval_size=None, check_point_freq=0.1, minibatch_size=50000, model_name='rsn'):
+def train(model, m_params, learner, train_data, max_epochs=1, save_model_flag=False, epoch_size=270000, eval_data=None, eval_size=None, check_point_freq=0.1, minibatch_size=50000, model_name='rsn'):
   """
   Train the model
   Args:
@@ -274,10 +315,7 @@ def train(model, m_params:model_params, learner, train_data, max_epochs=1, save_
   # Get minibatches of sequences to train with and perform model training
   # bind inputs to data from readers
   train_bind = bind_data(criterion_loss, train_data)
-  for k in train_bind.keys():
-    if k.name == 'labels':
-      label_key = k
-      break
+  context_stream = get_context_bind_stream(train_bind)
   eval_bind = bind_data(criterion_loss, eval_data)
 
   i = 0
@@ -300,7 +338,7 @@ def train(model, m_params:model_params, learner, train_data, max_epochs=1, save_
       # get next minibatch of training data
       mbs = min(minibatch_size, epoch_size - i)
       mb_train = train_data.next_minibatch(minibatch_size, input_map=train_bind)
-      i += mb_train[label_key].num_samples
+      i += mb_train[context_stream].num_samples
       trainer.train_minibatch(mb_train)
       minibatch_count += 1
       sys.stdout.write('.')
@@ -336,7 +374,7 @@ def train(model, m_params:model_params, learner, train_data, max_epochs=1, save_
           __evaluation(trainer, eval_data, eval_bind, minibatch_size, eval_size)
         if save_model_flag:
           # save the model every epoch
-          model_filename = os.path.join('model', "model_%s_%03d.dnn" % (model_name, check_point_id))
+          model_filename = os.path.join('model', "model_%s_%02d_%03d.dnn" % (model_name, epoch, check_point_id))
           model.save_model(model_filename)
           logger.log("Saved model to '%s'" % model_filename)
         chk_samples = 0
