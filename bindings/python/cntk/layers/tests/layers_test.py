@@ -554,18 +554,18 @@ def test_layers_convolution_2d(device_id):
 ####################################
 
 def test_sequential_convolution_without_reduction_dim(device_id):
-    c = Convolution(3, init=np.array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
+    c = Convolution(3, init=np.array([4., 2., 1.]), sequential=True, pad=False, reduction_rank=0, bias=False)
     c.update_signature(Sequence[Tensor[()]]) # input is a sequence of scalars
-    data = [np.array([2, 6, 4, 8, 6])]   # like a short audio sequence, in the dynamic dimension
+    data = [np.array([2., 6., 4., 8., 6.])]   # like a short audio sequence, in the dynamic dimension
     out = c(data)
-    exp = [[24, 40, 38]]
+    exp = [[24., 40., 38.]]
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
 
-    c = Convolution(3, init=np.array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
-    c.update_signature((1)) # input is a sequence of dim-1 vectors
-    data = [np.array([[2], [6], [4], [8], [6]])]
+    c = Convolution(3, init=np.array([4., 2., 1.]), sequential=True, pad=False, reduction_rank=0, bias=False)
+    c.update_signature(Sequence[Tensor[1]]) # input is a sequence of dim-1 vectors
+    data = [np.array([[2.], [6], [4.], [8.], [6.]])]
     out = c(data)
-    exp = [[[24], [40], [38]]] # not reducing; hence, output is also a sequence of dim-1 vectors
+    exp = [[[24.], [40.], [38]]] # not reducing; hence, output is also a sequence of dim-1 vectors
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
 
 ####################################
