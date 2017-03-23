@@ -385,7 +385,7 @@ namespace CNTK
                             }
                             else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
-                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndex))    // backward compatibilty 
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndex))
                             {
                                 axis.push_back(NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape()));
                                 beginIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
