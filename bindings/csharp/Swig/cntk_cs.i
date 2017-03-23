@@ -365,6 +365,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (GetCPUDevice) CNTK::DeviceDescriptor::CPUDevice;
 %rename (GetDeviceType) CNTK::DeviceDescriptor::Type;
 %rename (GetId) CNTK::DeviceDescriptor::Id;
+%rename (_SetExcludedDevices) CNTK::DeviceDescriptor::SetExcludedDevices;
 %rename (AreEqualDeviceDescriptor) CNTK::operator==(const DeviceDescriptor& left, const DeviceDescriptor& right);
 
 %typemap(cscode) CNTK::DeviceDescriptor %{
@@ -386,7 +387,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public static System.Collections.Generic.IList<DeviceDescriptor> AllDevices()
     {
-        return GetAllDevices();
+        var deviceVector = GetAllDevices();
+        var deviceArray = new DeviceDescriptor[deviceVector.Count];
+        deviceVector.CopyTo(deviceArray);
+        var deviceList = new System.Collections.Generic.List<DeviceDescriptor>(deviceArray);
+        return deviceList;
     }
 
     public override bool Equals(System.Object obj)
@@ -446,6 +451,16 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     public override int GetHashCode()
     {
         return this.GetDeviceType().GetHashCode();
+    }
+
+    public static void SetExcludedDevices(System.Collections.Generic.IList<DeviceDescriptor> excluded)
+    {
+        var excludeVector = new DeviceDescriptorVector(excluded.Count);
+        foreach (DeviceDescriptor element in excluded)
+        {
+            excludeVector.Add(element);
+        }
+        _SetExcludedDevices(excludeVector);
     }
 %}
 
@@ -734,12 +749,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     public System.Collections.Generic.IList<Axis> DynamicAxes
     {
         get {
-            var axes = new System.Collections.Generic.List<Axis>();
-            var axesVector = GetDynamicAxes();
-            var axisArray = new Axis[axesVector.Count];
-            axesVector.CopyTo(axisArray);
-            axes.AddRange(axisArray);
-            return axes;
+            var axisVector = GetDynamicAxes();
+            var axisArray = new Axis[axisVector.Count];
+            axisVector.CopyTo(axisArray);
+            var axisList = new System.Collections.Generic.List<Axis>(axisArray);
+            return axisList;
         }
     }
 
