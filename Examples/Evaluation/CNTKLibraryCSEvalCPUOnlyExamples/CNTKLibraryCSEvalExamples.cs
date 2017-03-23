@@ -18,6 +18,10 @@ namespace CNTKLibraryCSEvalExamples
 {
     public class CNTKLibraryManagedExamples
     {
+        public static DeviceDescriptor device1;
+        public static Axis dynAxis;
+        public static Variable gOutputVar;
+        public static Variable gOutputVar1;
         /// <summary>
         /// The example shows
         /// - how to load model.
@@ -32,6 +36,14 @@ namespace CNTKLibraryCSEvalExamples
             try
             {
                 Console.WriteLine("\n===== Evaluate single image =====");
+
+                var deviceList = DeviceDescriptor.AllDevices();
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                device1 = deviceList[0];
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                Console.WriteLine("device1 name: " + device1.AsString());
 
                 // Load the model.
                 // The model resnet20.dnn is trained by <CNTK>/Examples/Image/Classification/ResNet/Python/Models/TrainResNet_CIFAR10.py
@@ -55,6 +67,19 @@ namespace CNTKLibraryCSEvalExamples
                 // If the model have more than one output, use the following way to get output variable by name.
                 // Variable outputVar = modelFunc.Outputs.Where(variable => string.Equals(variable.Name, outputName)).Single();
                 Variable outputVar = modelFunc.Output;
+                gOutputVar = outputVar;
+                gOutputVar1 = modelFunc.Outputs[0];
+
+                var dynAxes = outputVar.DynamicAxes;
+                var dynAxis1 = outputVar.DynamicAxes[0];
+                dynAxis = outputVar.DynamicAxes[0];
+                Console.WriteLine("dynAxis1: " + dynAxis1.GetName());
+                Console.WriteLine("dynAxis: " + dynAxis.GetName());
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                Console.WriteLine("dynAxis1: " + dynAxis1.GetName());
+                Console.WriteLine("dynAxis: " + dynAxis.GetName());
+
 
                 var inputDataMap = new Dictionary<Variable, Value>();
                 var outputDataMap = new Dictionary<Variable, Value>();
@@ -79,12 +104,27 @@ namespace CNTKLibraryCSEvalExamples
                 // Start evaluation on the device
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                Console.WriteLine("dynAxis: " + dynAxis.GetName());
+
                 // Get evaluate result as dense output
                 var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
                 outputVal.CopyVariableValueTo(outputVar, outputBuffer);
 
                 PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+
+                outputVar = null;
+                var n = new int[6000000];
+                n = new int[10];
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                 Console.WriteLine("dynAxis: " + dynAxis.GetName());
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                Console.WriteLine("gOutput: " + gOutputVar.AsString());
+                Console.WriteLine("gOutput1: " + gOutputVar1.AsString());
             }
             catch (Exception ex)
             {

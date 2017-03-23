@@ -22,7 +22,17 @@ namespace CNTKLibraryCSEvalExamples
 
             if (ShouldRunOnCpu())
             {
+                // Console.WriteLine("device1 name:" + CNTKLibraryManagedExamples.device1.AsString());
                 CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.CPUDevice);
+                Console.WriteLine("After EvaluationSignleImage.");
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                // Console.WriteLine("device1 name:" + CNTKLibraryManagedExamples.device1.AsString());
+                Console.WriteLine("dynAxis: " + CNTKLibraryManagedExamples.dynAxis.GetName());
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                Console.WriteLine("gOutput: " + CNTKLibraryManagedExamples.gOutputVar.AsString());
+                Console.WriteLine("gOutput1: " + CNTKLibraryManagedExamples.gOutputVar1.AsString());
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
                 CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);

@@ -631,7 +631,13 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public System.Collections.Generic.IList<Variable> Outputs
     {
-        get { return GetOutputs(); }
+        get {
+            var varVector = GetOutputs();
+            var varArray = new Variable[varVector.Count];
+            varVector.CopyTo(varArray);
+            var varList = new System.Collections.Generic.List<Variable>(varArray);
+            return varList;
+        }
     }
 
     public Variable Output
