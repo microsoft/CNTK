@@ -578,12 +578,6 @@ shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::Pass(
 }
 
 template <class ElemType>
-shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::LabelsToGraph(const ComputationNodePtr a, const std::wstring& nodeName)
-{
-    return net.AddNodeToNetAndAttachInputs(New<LabelsToGraphNode<ElemType>>(net.GetDeviceId(), nodeName), { a });
-}
-
-template <class ElemType>
 shared_ptr<ComputationNode<ElemType>> ComputationNetworkBuilder<ElemType>::DynamicAxis(const ComputationNodePtr a, const std::wstring& nodeName)
 {
     return net.AddNodeToNetAndAttachInputs(New<DynamicAxisNode<ElemType>>(net.GetDeviceId(), nodeName), { a });

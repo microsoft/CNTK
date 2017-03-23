@@ -1,8 +1,8 @@
 #ifndef _BUILDINFO_H 
 #define _BUILDINFO_H 
 #define _GIT_EXIST 
-#define _BUILDBRANCH_  "HEAD"      
-#define _BUILDSHA1_    "417bf6f439cf3d152ce54ac05979d2cfc5dcac36 (modified)"
+#define _BUILDBRANCH_  "ruizhao/CTC_checkin2"      
+#define _BUILDSHA1_    "3f179aa4977312a878426d015401b24f22b931f1 (modified)"
 #define _MATHLIB_ "mkl"
 #define _BUILDER_ "vadimma"     
 #define _BUILDMACHINE_ "vadimma-pc"    

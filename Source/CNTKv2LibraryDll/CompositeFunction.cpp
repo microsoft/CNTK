@@ -826,9 +826,6 @@ namespace CNTK
             case PrimitiveOpType::Pass:
                 computationNodePtr = New<PassNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
-            case PrimitiveOpType::LabelsToGraph:
-                computationNodePtr = New<LabelsToGraphNode<ElementType>>(network->GetDeviceId(), internalNodeName);
-                break;
             case PrimitiveOpType::StopGradient:
                 computationNodePtr = New<StopGradientNode<ElementType>>(network->GetDeviceId(), internalNodeName);
                 break;
