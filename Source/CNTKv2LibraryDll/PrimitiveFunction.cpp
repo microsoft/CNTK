@@ -373,7 +373,7 @@ namespace CNTK
                             std::vector<Axis> axis;
                             std::vector<int> beginIndex, endIndex; 
                             if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
-                                m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) && 
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
                                 m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
                             {
                                 auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
