@@ -16,14 +16,14 @@ from cntk.learners import *
 from cntk.layers import *
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk import parameter, input_variable, times, plus, reduce_sum, Axis, cntk_py
+from cntk import parameter, input, times, plus, reduce_sum, Axis, cntk_py
 import pytest
 from scipy.sparse import csr_matrix as csr
 
 @pytest.mark.parametrize("no_eval_function", [True, False])
 def test_trainer(tmpdir, no_eval_function):
-    in1 = input_variable(shape=(1,))
-    labels = input_variable(shape=(1,))
+    in1 = input(shape=(1,))
+    labels = input(shape=(1,))
     p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
@@ -54,8 +54,8 @@ def test_trainer(tmpdir, no_eval_function):
     assert isinstance(trainer.parameter_learners[0], Learner)
 
 def test_output_to_retain():
-    in1 = input_variable(shape=(1,))
-    labels = input_variable(shape=(1,))
+    in1 = input(shape=(1,))
+    labels = input(shape=(1,))
     p = parameter(shape=(2,), init=10)
     z = plus(in1, reduce_sum(p), name='z')
     ce = cross_entropy_with_softmax(z, labels)
@@ -64,7 +64,7 @@ def test_output_to_retain():
     lr_per_sample = learning_rate_schedule(0.007, UnitType.sample)
     trainer = Trainer(z, (ce, errs),
             [momentum_sgd(z.parameters, lr_per_sample, momentum_time_constant, True)])
-    in1_value = [[[1]], [[2]]]
+    in1_value = [[1], [2]]
     label_value = [[0], [1]]
     arguments = {in1: in1_value, labels: label_value}
     z_output = z.output
@@ -74,7 +74,7 @@ def test_output_to_retain():
 def test_eval_sparse_dense(tmpdir, device_id):
     from cntk import Axis
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
-    from cntk.ops import input_variable, times
+    from cntk.ops import input, times
 
     input_vocab_dim = label_vocab_dim = 69
 
@@ -98,14 +98,7 @@ def test_eval_sparse_dense(tmpdir, device_id):
         labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
     )), randomize=False, epoch_size = 2)
 
-    batch_axis = Axis.default_batch_axis()
-    input_seq_axis = Axis('inputAxis')
-    label_seq_axis = Axis('labelAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    raw_input = input_variable(
-        shape=input_vocab_dim, dynamic_axes=input_dynamic_axes,
-        name='raw_input', is_sparse=True)
+    raw_input = sequence.input(shape=input_vocab_dim, sequence_axis=Axis('inputAxis'), name='raw_input', is_sparse=True)
 
     mb_valid = mbs.next_minibatch(minibatch_size_in_samples=100,
             input_map={raw_input : mbs.streams.features},
@@ -137,7 +130,7 @@ def test_eval_sparse_no_seq(batch_index_data, device_id):
     dim = 10
     multiplier = 2
     for var_is_sparse in [True, False]:
-        in1 = input_variable(shape=(dim,), is_sparse=var_is_sparse)
+        in1 = sequence.input(shape=(dim,), is_sparse=var_is_sparse)
         z = times(in1, multiplier*np.eye(dim))
         batch = np.eye(dim)[batch_index_data]
         expected = batch * multiplier
@@ -156,7 +149,7 @@ def test_eval_sparse_seq_1(batch, device_id):
     dim = 4
     multiplier = 2
     for var_is_sparse in [True, False]:
-        in1 = input_variable(shape=(dim,), is_sparse=var_is_sparse)
+        in1 = sequence.input(shape=(dim,), is_sparse=var_is_sparse)
         z = times(in1, multiplier*np.eye(dim))
         if isinstance(batch[0], list):
             expected = [np.vstack([m.todense() * multiplier for m in seq]) for seq in
@@ -181,7 +174,7 @@ def test_eval_one_hot_seq(one_hot_batch, device_id):
     multiplier = 2
 
     for var_is_sparse in [True, False]:
-        in1 = input_variable(shape=(dim,), is_sparse=var_is_sparse)
+        in1 = sequence.input(shape=(dim,), is_sparse=var_is_sparse)
         # Convert CNTK node value to dense so that we can compare it later
         z = times(in1, np.eye(dim)*multiplier)
         # Convert expectation to dense
@@ -203,16 +196,16 @@ def test_model_not_criterion_subset():
     proj_dim = 11
     model1_dim = 3
     model2_dim = 4
-    x = input_variable((input_dim,))
+    x = sequence.input((input_dim,))
 
     core = Embedding(proj_dim)
     model1 = Dense(model1_dim)(sequence.last(core(x)))
-    model1_label = input_variable((model1_dim,), dynamic_axes=[Axis.default_batch_axis()])
+    model1_label = input((model1_dim,))
     ce_model1 = cross_entropy_with_softmax(model1, model1_label)
     pe_model1 = classification_error(model1, model1_label)
     
     model2 = Dense(model2_dim)(core(x))
-    model2_label = input_variable((model2_dim,))
+    model2_label = sequence.input((model2_dim,))
     ce_model2 = cross_entropy_with_softmax(model2, model2_label)
     pe_model2 = classification_error(model2, model2_label)
 
@@ -226,21 +219,21 @@ def test_model_not_criterion_subset():
     model2_label_data = np.asarray([[0., 1., 0., 0.], [0., 0., 0., 1.]], np.float32)
     trainer_multitask.train_minibatch({x : [x_data], model1_label : [model1_label_data], model2_label : [model2_label_data]})
 
-# Tests the creation of a trainer when the model passed to teh Trainer is 
+# Tests the creation of a trainer when the model passed to the Trainer is 
 # one of the outputs of a multi-output Function
 def test_model_one_output_of_multi_output_function():
     input_dim = 2
     proj_dim = 11
-    x = input_variable((input_dim,))
+    x = input((input_dim,))
 
-    x_placeholder = placeholder_variable()
+    x_placeholder = placeholder()
     w = parameter((input_dim, proj_dim))
     b = parameter((proj_dim,))
     proj = times(x_placeholder, w)
     proj_plus_bias = proj + b
     combined_model = as_block(combine([proj, proj_plus_bias]), [(x_placeholder, x)], 'dense_op')
 
-    labels = input_variable((proj_dim,))
+    labels = input((proj_dim,))
     lr_schedule = learning_rate_schedule(0.003, UnitType.sample)
     ce = cross_entropy_with_softmax(combined_model.outputs[0], labels)
     pe = classification_error(combined_model.outputs[0], labels)
@@ -250,7 +243,7 @@ def test_model_one_output_of_multi_output_function():
 def test_trainer_with_some_params_not_learned():
     input_dim = 2
     proj_dim = 2
-    x = input_variable(shape=(input_dim,))
+    x = input(shape=(input_dim,))
     W = parameter(shape=(input_dim, proj_dim), init=glorot_uniform())
     B = parameter(shape=(proj_dim,), init=glorot_uniform())
     t = times(x, W)
@@ -259,7 +252,7 @@ def test_trainer_with_some_params_not_learned():
     W_orig_value = W.value
     B_orig_value = B.value
 
-    labels = input_variable(shape=(proj_dim,))
+    labels = input(shape=(proj_dim,))
     ce = cross_entropy_with_softmax(z, labels)
     pe = classification_error(z, labels)
 
@@ -283,7 +276,7 @@ def test_trainer_with_some_params_not_learned():
 def test_not_replaced_placeholders():
     
     def wrap_in_block(fun_args, name):
-        block_args = [placeholder_variable(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
+        block_args = [placeholder(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
         combined_block_args = combine(block_args)                               # the content of the BlockFunction
         arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
         combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=name)
@@ -291,9 +284,9 @@ def test_not_replaced_placeholders():
 
 
     input_dim = 2
-    x = input_variable(shape=(input_dim,))
-    p1 = placeholder_variable()
-    p2 = placeholder_variable()
+    x = sequence.input(shape=(input_dim,))
+    p1 = placeholder()
+    p2 = placeholder()
 
     a = abs(x)
     b = wrap_in_block(list(a.outputs) + [p1], "my_first_block")
@@ -310,7 +303,7 @@ def test_disallow_seq_starts_with_Value_objects():
     one_hot_batch = [[2,5], [0,1,6]]
     dim = 10
 
-    in1 = input_variable(shape=(dim,), is_sparse=True)
+    in1 = input(shape=(dim,), is_sparse=True)
     z = times(in1, np.eye(dim))
     batch = Value.one_hot(one_hot_batch, num_classes=dim)
 
@@ -321,7 +314,7 @@ def test_disallow_seq_starts_with_Value_objects():
         result = z.eval({in1: (batch, len(batch)*[True])})
 
 def test_scalar_input():
-    scalar = input_variable((1,), dtype=np.float32, name='tscalar')
+    scalar = input((1,), dtype=np.float32, name='tscalar')
     op = scalar + 1
 
     lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)

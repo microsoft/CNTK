@@ -431,16 +431,26 @@ class SliceNode : public ComputationNode<ElemType>, public NumInputs<1>
     static const std::wstring TypeName() { return L"Slice"; }
 
 public:
-    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, int beginIndex = 0, int endIndex = 0, int axis = 1)
+    SliceNode(DEVICEID_TYPE deviceId, const wstring& name, std::vector<int> beginIndex = { 0 }, std::vector<int> endIndex = { 0 }, std::vector<int> axis = { 1 })
         : Base(deviceId, name), m_beginIndex(beginIndex), m_endIndex(endIndex), m_axis(axis)
     {
+        if (m_beginIndex.size() != m_endIndex.size() || m_beginIndex.size() != m_axis.size())
+            InvalidArgument("%ls %ls operation: invalid size of beginIndex (%d), endIndx (%d) and axis (%d). They must agree.", NodeName().c_str(), OperationName().c_str(), (int)m_beginIndex.size(), (int)m_endIndex.size(), (int)m_axis.size());
     }
 
     SliceNode(const ScriptableObjects::IConfigRecordPtr configp)
-        : SliceNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"beginIndex"), configp->Get(L"endIndex"), configp->Get(L"axis"))
+        : SliceNode(configp->Get(L"deviceId"), L"<placeholder>", { configp->Get(L"beginIndex") }, { configp->Get(L"endIndex") }, { configp->Get(L"axis") })
     {
         AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
+    //SliceNode(const ScriptableObjects::IConfigRecordPtr configp)
+    //    : Base(configp->Get(L"deviceId"), L"<placeholder>")
+    //{
+    //    m_beginIndex.clear(); m_beginIndex.push_back((int)configp->Get(L"beginIndex"));
+    //    m_endIndex.clear(); m_endIndex.push_back((int)configp->Get(L"endIndex"));
+    //    m_axis.clear(); m_axis.push_back((int)configp->Get(L"axis"));
+    //    AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
+    //}
 
     virtual void CopyTo(ComputationNodeBasePtr nodeP, const std::wstring& newName, const CopyNodeFlags flags) const override
     {
@@ -454,27 +464,61 @@ public:
     virtual void Load(File& fstream, size_t modelVersion) override
     {
         Base::Load(fstream, modelVersion);
+        int num = 1, axis = 1;  // axis = 1 to emulate old RowSliceNode 
         ptrdiff_t beginIndex, height;
-        fstream >> beginIndex >> height; // legacy format stored (end-begin)
-        m_beginIndex = (int)beginIndex;
-        m_endIndex = (int)(beginIndex + height);
-        if (modelVersion >= CNTK_MODEL_VERSION_3)
-            fstream >> m_axis;
-        else
-            m_axis = 1; // emulate old RowSliceNode
+        if (modelVersion >= CNTK_MODEL_VERSION_22)
+            fstream >> num; 
+        if (num < 1)
+            InvalidArgument("Slice node number of axes (%d) invalid, must be >=1", num); 
+
+        m_beginIndex.clear(); 
+        m_endIndex.clear();
+        m_axis.clear(); 
+        for (int i = 0; i < num; i++)
+        {
+            fstream >> beginIndex >> height; // legacy format stored (end-begin)
+            m_beginIndex.push_back((int)beginIndex);
+            m_endIndex.push_back((int)(beginIndex + height));
+            if (modelVersion >= CNTK_MODEL_VERSION_3)
+                fstream >> axis;
+            m_axis.push_back(axis); 
+        }
     }
 
     virtual void Save(File& fstream) const override
     {
         Base::Save(fstream);
-        fstream << (ptrdiff_t)m_beginIndex << (ptrdiff_t)(m_endIndex - m_beginIndex); // legacy file format stores (end-begin), we keep it that way
-        fstream << m_axis;
+        int num = (int)m_axis.size(); 
+        fstream << num; 
+        for (auto i = 0; i < num; i++)
+        {
+            fstream << (ptrdiff_t)m_beginIndex[i] << (ptrdiff_t)(m_endIndex[i] - m_beginIndex[i]); // legacy file format stores (end-begin), we keep it that way
+            fstream << m_axis[i];
+        }
     }
 
     // these implement numpy-style negative bound values to index from the end
-    size_t BeginIndex() const { return m_beginIndex >= 0 ? (size_t)m_beginIndex : (size_t)(m_beginIndex + InputRef(0).GetSampleLayout()[m_axis - 1]); }
-    size_t EndIndex()   const { return m_endIndex   >  0 ? (size_t)m_endIndex : (size_t)(m_endIndex + InputRef(0).GetSampleLayout()[m_axis - 1]); }
-    int Axis() const { return m_axis; }
+    std::vector<int> BeginIndex() const { return m_beginIndex; }
+    size_t BeginIndex(int idx) const 
+    {
+        if (idx >= (int)m_axis.size())
+            InvalidArgument("Slice BeginIndex call with invalid index (%d) >= axis size (%d)", idx, (int)m_axis.size()); 
+        return m_beginIndex[idx] >= 0 ? (size_t)m_beginIndex[idx] : (size_t)(m_beginIndex[idx] + InputRef(0).GetSampleLayout()[m_axis[idx] - 1]); 
+    }
+    std::vector<int> EndIndex() const { return m_endIndex; }
+    size_t EndIndex(int idx)   const 
+    {
+        if (idx >= (int)m_axis.size())
+            InvalidArgument("Slice EndIndex call with invalid index (%d) >= axis size (%d)", idx, (int)m_axis.size());
+        return m_endIndex[idx]   >  0 ? (size_t)m_endIndex[idx] : (size_t)(m_endIndex[idx] + InputRef(0).GetSampleLayout()[m_axis[idx] - 1]); 
+    }
+    std::vector<int> Axis() const { return m_axis; }
+    int Axis(int idx) const 
+    { 
+        if (idx >= (int)m_axis.size())
+            InvalidArgument("Slice Axis call with invalid index (%d) >= axis size (%d)", idx, (int)m_axis.size());
+        return m_axis[idx]; 
+    }
 
 private:
 
@@ -482,7 +526,8 @@ private:
     TensorShape GetInputSlice(size_t rank, const FrameRange & fr) const
     {
         auto inputSlice = InputRef(0).GetTensorSliceFor(rank, fr);    // input must be narrowed down
-        inputSlice.NarrowTo(m_axis - 1, BeginIndex(), EndIndex());
+        for (int i = 0; i < (int)m_axis.size(); i++)  
+            inputSlice.NarrowTo(Axis(i)-1, BeginIndex(i), EndIndex(i));
         return inputSlice;
     }
 
@@ -491,7 +536,7 @@ public:
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        auto output =                                ValueTensorFor(           rank, fr);
+        auto output = ValueTensorFor(rank, fr);
         let   input = TensorView<ElemType>(InputRef(0).ValuePtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         output.AssignCopyOf(input);
     }
@@ -499,7 +544,7 @@ public:
     virtual void /*ComputationNode::*/ BackpropTo(const size_t /*inputIndex*/, const FrameRange& fr) override
     {
         size_t rank = DetermineElementwiseTensorRank();
-        let outputGrad =                                GradientTensorFor(           rank, fr);
+        let outputGrad = GradientTensorFor(rank, fr);
         auto inputGrad = TensorView<ElemType>(InputRef(0).GradientPtr(), GetInputSlice(rank, fr.AllowBroadcast()));
         inputGrad.AddCopyOf(outputGrad);
     }
@@ -510,26 +555,27 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
-
         InferMBLayoutFromInputsForStandardCase(isFinalValidationPass);
 
         auto sampleLayout = Input(0)->GetSampleLayout();
-        if (m_axis < 1 || (isFinalValidationPass && m_axis > sampleLayout.GetRank()))
-            RuntimeError("%ls %ls operation: axis parameter %d must be in range 1..rank of input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_axis, string(sampleLayout).c_str());
+        for (int i = 0; i < (int)m_axis.size(); i++)
+        {
+            if (m_axis[i] < 1 || (isFinalValidationPass && m_axis[i] > sampleLayout.GetRank()))
+                RuntimeError("%ls %ls operation: axis parameter %d (%d) must be in range 1..rank of input ([%s]).", NodeName().c_str(), OperationName().c_str(), i, m_axis[i], string(sampleLayout).c_str());
 
-        if (isFinalValidationPass && (sampleLayout[m_axis - 1] < EndIndex() || EndIndex() < BeginIndex() || BeginIndex() < 0))
-            RuntimeError("%ls %ls operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_beginIndex, m_endIndex, (int)BeginIndex(), (int)EndIndex(), string(sampleLayout).c_str());
+            if (isFinalValidationPass && (sampleLayout[m_axis[i] - 1] < EndIndex(i) || EndIndex(i) < BeginIndex(i) || BeginIndex(i) < 0))
+                RuntimeError("%ls %ls operation: Index range [%d,%d), interpreted as [%d,%d), is invalid for input ([%s]).", NodeName().c_str(), OperationName().c_str(), m_beginIndex[i], m_endIndex[i], (int)BeginIndex(i), (int)EndIndex(i), string(sampleLayout).c_str());
 
-        // propagate as much as we can
-        if (isFinalValidationPass || (m_axis - 1 < sampleLayout.GetRank() && 0 <= BeginIndex() && BeginIndex() <= EndIndex() && EndIndex() <= sampleLayout[m_axis - 1])) // (the second condition guards against failing an out-of-bounds error if not isFinalValidationPass)
-            sampleLayout.NarrowTo(m_axis - 1, BeginIndex(), EndIndex());
-
+            // propagate as much as we can
+            if (isFinalValidationPass || (m_axis[i] - 1 < sampleLayout.GetRank() && 0 <= BeginIndex(i) && BeginIndex(i) <= EndIndex(i) && EndIndex(i) <= sampleLayout[m_axis[i] - 1])) // (the second condition guards against failing an out-of-bounds error if not isFinalValidationPass)
+                sampleLayout.NarrowTo(m_axis[i] - 1, BeginIndex(i), EndIndex(i));
+        }
         SetDims(TensorShape(sampleLayout.GetDims()), HasMBLayout());
     }
 
 private:
-    int m_beginIndex, m_endIndex; // 'int' because negative indices are allowed, to index from end Python-style
-    int m_axis;                   // note: axes are 1-based
+    std::vector<int> m_beginIndex, m_endIndex; // 'int' because negative indices are allowed, to index from end Python-style
+    std::vector<int> m_axis;                   // note: axes are 1-based
 };
 
 template class SliceNode<float>;

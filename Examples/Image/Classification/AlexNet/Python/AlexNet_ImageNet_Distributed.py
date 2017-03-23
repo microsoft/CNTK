@@ -87,12 +87,12 @@ def LocalResponseNormalization(k, n, alpha, beta, name=''):
 def create_alexnet():
 
     # Input variables denoting the features and label data
-    feature_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
+    feature_var = input((num_channels, image_height, image_width))
+    label_var = input((num_classes))
 
     # apply model to input
     # remove mean value 
-    input = minus(feature_var, constant(114), name='mean_removed_input')
+    mean_removed_features = minus(feature_var, constant(114), name='mean_removed_input')
     
     with default_options(activation=None, pad=True, bias=True):
         z = Sequential([
@@ -122,7 +122,7 @@ def create_alexnet():
             Activation(activation=relu, name='relu7'),
             Dropout(0.5, name='drop7'),
             Dense(num_classes, init=normal(0.01), name='fc8')
-            ])(input)
+            ])(mean_removed_features)
 
     # loss and metric
     ce  = cross_entropy_with_softmax(z, label_var)

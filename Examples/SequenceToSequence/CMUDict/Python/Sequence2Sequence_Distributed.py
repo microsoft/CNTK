@@ -17,7 +17,7 @@ from cntk.device import try_set_default_device, gpu
 from cntk.train.distributed import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learners import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
-from cntk import input_variable, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
+from cntk import input, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
 from cntk.train.training_session import *
 from cntk.utils import *
@@ -68,17 +68,10 @@ def create_network(input_vocab_dim, label_vocab_dim):
     num_layers = 1
 
     # Source and target inputs to the model
-    batch_axis = Axis.default_batch_axis()
     input_seq_axis = Axis('inputAxis')
     label_seq_axis = Axis('labelAxis')
-
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-    raw_input = input_variable(
-        shape=(input_vocab_dim), dynamic_axes=input_dynamic_axes, name='raw_input')
-
-    label_dynamic_axes = [batch_axis, label_seq_axis]
-    raw_labels = input_variable(
-        shape=(label_vocab_dim), dynamic_axes=label_dynamic_axes, name='raw_labels')
+    raw_input = sequence.input(shape=(input_vocab_dim), sequence_axis=input_seq_axis, name='raw_input')
+    raw_labels = sequence.input(shape=(label_vocab_dim), sequence_axis=label_seq_axis, name='raw_labels')
 
     # Instantiate the sequence to sequence translation model
     input_sequence = raw_input

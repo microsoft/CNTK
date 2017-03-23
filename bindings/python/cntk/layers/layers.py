@@ -11,7 +11,7 @@ from __future__ import division
 import numpy as np
 from ..ops.functions import Function
 from ..ops.variables import Variable
-from ..ops import parameter, input_variable, placeholder_variable, combine
+from ..ops import parameter, input, placeholder, combine
 from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from ..utils import Record
 from cntk.internal import _as_tuple
@@ -51,7 +51,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
     Args:
      shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
      activation (:class:`~cntk.ops.functions.Function`, defaults to identity): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to :func:`~cntk.initializer.glorot_uniform` ): initial value of weights `W`
      input_rank (int, defaults to `None`): number of inferred axes to add to W (`map_rank` must not be given)
      map_rank (int, defaults to `None`): expand W to leave exactly `map_rank` axes (`input_rank` must not be given)
      bias (bool, optional, defaults to `True`): the layer will have no bias if `False` is passed here
@@ -169,7 +169,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
 
     Args:
      shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): (learnable embedding only) initial value of weights `E`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to :func:`~cntk.initializer.glorot_uniform` ): (learnable embedding only) initial value of weights `E`
      weights (NumPy array, mutually exclusive with ``init``, defuats to `None`): (user-supplied embedding only) the lookup table.
       The matrix rows are the embedding vectors, ``weights[i,:]`` being the embedding that corresponds to input category `i`.
      name (str, defaults to ''): the name of the function instance in the network
@@ -329,7 +329,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      num_filters (int, defaults to `None`): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      sequential (bool, defaults to `False`): if `True`, also convolve along the dynamic axis. ``filter_shape[0]`` corresponds to dynamic axis.
      activation (:class:`~cntk.ops.functions.Function`, defaults to `identity`): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to :func:`~cntk.initializer.glorot_uniform` ): initial value of weights `W`
      pad (`bool` or `tuple` of `bools`, defaults to `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
@@ -472,7 +472,7 @@ def Convolution1D(filter_shape,     # shape of receptive field, e.g. (3)
      filter_shape (`int` or `tuple` of `ints`): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      num_filters (int, defaults to `None`): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      activation (:class:`~cntk.ops.functions.Function`, defaults to `identity`): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to :func:`~cntk.initializer.glorot_uniform` ): initial value of weights `W`
      pad (`bool` or `tuple` of `bools`, defaults to `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
@@ -521,7 +521,7 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
      filter_shape (`int` or `tuple` of `ints`): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      num_filters (int, defaults to `None`): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      activation (:class:`~cntk.ops.functions.Function`, defaults to `identity`): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to :func:`~cntk.initializer.glorot_uniform` ): initial value of weights `W`
      pad (`bool` or `tuple` of `bools`, defaults to `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
@@ -571,7 +571,7 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
      filter_shape (`int` or `tuple` of `ints`): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      num_filters (int, defaults to `None`): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      activation (:class:`~cntk.ops.functions.Function`, defaults to `identity`): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to `glorot_uniform`): initial value of weights `W`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, defaults to :func:`~cntk.initializer.glorot_uniform` ): initial value of weights `W`
      pad (`bool` or `tuple` of `bools`, defaults to `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
@@ -657,7 +657,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
      filter_shape (`int` or tuple of `int`\ s): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
      num_filters (int): number of filters (output feature-map depth), or ``()`` to denote scalar output items (output shape will have no depth axis).
      activation (:class:`~cntk.ops.functions.Function`, optional): optional function to apply at the end, e.g. `relu`
-     init (scalar or NumPy array or :mod:`cntk.initializer`, default :func:`glorot_uniform`): initial value of weights `W`
+     init (scalar or NumPy array or :mod:`cntk.initializer`, default :func:`~cntk.initializer.glorot_uniform`): initial value of weights `W`
      pad (`bool` or tuple of `bool`\ s, default `False`): if `False`, then the filter will be shifted over the "valid"
       area of input, that is, no value outside the area is used. If ``pad=True`` on the other hand,
       the filter will be applied to all input positions, and positions outside the valid region will be considered containing zero.
@@ -865,8 +865,8 @@ def MaxPooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                  [1, 6, 4, 7],
                  [7, 3, 5, 9]]])
      >>> f([[im]])  # due to strides=2, this picks the max out of each 2x2 sub-block
-         array([[[[[ 5.,  8.],
-                   [ 7.,  9.]]]]], dtype=float32)
+         array([[[[ 5.,  8.],
+                  [ 7.,  9.]]]], dtype=float32)
 
     Args:
      filter_shape (`int` or `tuple` of `ints`): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
@@ -917,8 +917,8 @@ def AveragePooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                  [1, 6, 4, 7],
                  [7, 3, 5, 9]]])
      >>> f([[im]])  # due to strides=2, this computes the averages of each 2x2 sub-block
-         array([[[[[ 3.5 ,  4.75],
-                   [ 4.25,  6.25]]]]], dtype=float32)
+         array([[[[ 3.5 ,  4.75],
+                  [ 4.25,  6.25]]]], dtype=float32)
 
     Args:
      filter_shape (`int` or `tuple` of `ints`): shape (spatial extent) of the receptive field, *not* including the input feature-map depth. E.g. (3,3) for a 2D convolution.
@@ -955,7 +955,7 @@ def GlobalMaxPooling(name=''):
                  [1, 6, 4, 7],
                  [7, 3, 5, 9]]])
      >>> f([[im]])
-         array([[[[[ 9.]]]]], dtype=float32)
+         array([[[[ 9.]]]], dtype=float32)
 
     Args:
      name (str, defaults to ''): the name of the function instance in the network
@@ -985,7 +985,7 @@ def GlobalAveragePooling(name=''):
                  [1, 6, 4, 7],
                  [7, 3, 5, 9]]])
      >>> f([[im]])
-         array([[[[[ 4.6875]]]]], dtype=float32)
+         array([[[[ 4.6875]]]], dtype=float32)
 
     Args:
      name (str, defaults to ''): the name of the function instance in the network
@@ -1167,8 +1167,8 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
     Example:
      >>> f = LayerNormalization(initial_scale=2, initial_bias=1)
      >>> f.update_signature(4)
-     >>> f([np.array([[4,0,0,4]])])  # result has mean 1 and standard deviation 2, reflecting the initial values for scale and bias
-         array([[[ 2.99999, -0.99999, -0.99999,  2.99999]]], dtype=float32)
+     >>> f([np.array([4,0,0,4])])  # result has mean 1 and standard deviation 2, reflecting the initial values for scale and bias
+         array([[ 2.99999, -0.99999, -0.99999,  2.99999]], dtype=float32)
 
     Args:
      initial_scale (float, default 1): initial value for the ``scale`` parameter

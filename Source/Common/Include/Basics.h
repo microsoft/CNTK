@@ -678,22 +678,16 @@ public:
     template <class STRING> // accepts char (UTF-8) and wide string
     FARPROC Load(const STRING& plugin, const std::string& proc)
     {
-        m_dllName = msra::strfun::utf16(plugin);
-        m_dllName += L".dll";
-        m_hModule = LoadLibrary(m_dllName.c_str());
-        if (m_hModule == NULL)
-            RuntimeError("Plugin not found: '%ls'", m_dllName.c_str());
-        // create a variable of each type just to call the proper templated version
-        FARPROC entryPoint = GetProcAddress(m_hModule, proc.c_str());
-        if (entryPoint == nullptr)
-            RuntimeError("Symbol '%s' not found in plugin '%ls'", proc.c_str(), m_dllName.c_str());
-        return entryPoint;
+        return LoadInternal(msra::strfun::utf16(plugin), proc);
     }
     ~Plugin()
     {
     }
     // we do not unload because this causes the exception messages to be lost (exception vftables are unloaded when DLL is unloaded)
     // ~Plugin() { if (m_hModule) FreeLibrary(m_hModule); }
+
+private:
+    FARPROC LoadInternal(const std::wstring& plugin, const std::string& proc);
 };
 #else
 class Plugin
@@ -707,17 +701,9 @@ public:
     {
     }
     template <class STRING> // accepts char (UTF-8) and wide string
-    void* Load(const STRING& plugin, const std::string& proc)
+    void *Load(const STRING& plugin, const std::string& proc)
     {
-        string soName = msra::strfun::utf8(plugin);
-        soName = soName + ".so";
-        void* handle = dlopen(soName.c_str(), RTLD_LAZY);
-        if (handle == NULL)
-            RuntimeError("Plugin not found: '%s' (error: %s)", soName.c_str(), dlerror());
-        void* entryPoint = dlsym(handle, proc.c_str());
-        if (entryPoint == nullptr)
-            RuntimeError("Symbol '%s' not found in plugin '%s'", proc.c_str(), soName.c_str());
-        return entryPoint;
+        return LoadInternal(msra::strfun::utf8(plugin), proc);
     }
     ~Plugin()
     {
@@ -730,6 +716,9 @@ public:
             }
         }
     }
+
+private:
+    void *LoadInternal(const std::string& plugin, const std::string& proc);
 };
 #endif
 

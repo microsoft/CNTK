@@ -105,6 +105,7 @@
 %rename("%(utitle)s", %$isvariable) "";
 
 %template() std::vector<bool>;
+%template() std::vector<int>;
 %template() std::vector<size_t>;
 %template() std::vector<float>;
 %template() std::vector<double>;

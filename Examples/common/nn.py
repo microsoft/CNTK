@@ -170,9 +170,9 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
 
 
 def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurrence_hookH=past_value, recurrence_hookC=past_value):
-    dh = placeholder_variable(
+    dh = placeholder(
         shape=(output_dim), dynamic_axes=input.dynamic_axes)
-    dc = placeholder_variable(
+    dc = placeholder(
         shape=(cell_dim), dynamic_axes=input.dynamic_axes)
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)

@@ -23,8 +23,8 @@ def cosine_distance(x, y, name=''):
     Example:
         >>> a = np.asarray([-1, -1, -1, 1, 1, -1, 1, 1, -1, 1, 1, -1]).reshape(3,2,2)
         >>> b = np.asarray([1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, 1]).reshape(3,2,2)
-        >>> x = C.input_variable(shape=(2,))
-        >>> y = C.input_variable(shape=(2,))
+        >>> x = C.sequence.input(shape=(2,))
+        >>> y = C.sequence.input(shape=(2,))
         >>> np.round(C.cosine_distance(x,y).eval({x:a,y:b}),5)
         array([[-1.,  1.],
                [ 1.,  0.],
@@ -61,8 +61,8 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
     Example:
         >>> qry = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
         >>> doc = np.asarray([1., 1., 0., 0., 0., 1., 1., 0., 0., 0., 1., 1.], dtype=np.float32).reshape(3, 1, 4)
-        >>> x = C.input_variable(shape=(4,))
-        >>> y = C.input_variable(shape=(4,))
+        >>> x = C.sequence.input(shape=(4,))
+        >>> y = C.sequence.input(shape=(4,))
         >>> model = C.cosine_distance_with_negative_samples(x, y, shift=1, num_negative_samples=2)
         >>> np.round(model.eval({x: qry, y: doc}), decimals=4)
         array([[[ 1. ,  0.5,  0. ]],
@@ -180,13 +180,13 @@ def squared_error(output, target, name=''):
     This is often used as a training criterion.
 
     Example:
-        >>> i1 = C.input_variable((1,2))
-        >>> i2 = C.input_variable((1,2))
-        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[2., 1.]]]], dtype=np.float32), i2:np.asarray([[[[4., 6.]]]], dtype=np.float32)})
-        array([[ 29.]], dtype=float32)
+        >>> i1 = C.input((1,2))
+        >>> i2 = C.input((1,2))
+        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[2., 1.]]], dtype=np.float32), i2:np.asarray([[[4., 6.]]], dtype=np.float32)})
+        array([ 29.], dtype=float32)
 
-        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[[1., 2.]]]], dtype=np.float32), i2:np.asarray([[[[1., 2.]]]], dtype=np.float32)})
-        array([[ 0.]], dtype=float32)
+        >>> C.squared_error(i1,i2).eval({i1:np.asarray([[[1., 2.]]], dtype=np.float32), i2:np.asarray([[[1., 2.]]], dtype=np.float32)})
+        array([ 0.], dtype=float32)
 
     Args:
         output: the output values from the network
@@ -226,21 +226,21 @@ def lambda_rank(output, gain, group, name=''):
     In the backward direction it back-propagates LambdaRank gradients.
 
     Example:
-        >>> group = C.input_variable((1,))
-        >>> score = C.input_variable((1,), needs_gradient=True)
-        >>> gain  = C.input_variable((1,))
-        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
-        >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1,1)
-        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
+        >>> group = C.input((1,))
+        >>> score = C.input((1,), needs_gradient=True)
+        >>> gain  = C.input((1,))
+        >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1)
+        >>> s = np.array([1, 2, 3, 4], dtype=np.float32).reshape(4,1)
+        >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1)
         >>> f = C.lambda_rank(score, gain, group)
         >>> np.round(f.grad({score:s, gain:n, group: g}, wrt=[score]),4)
-        array([[[-0.2121]],
+        array([[-0.2121],
         <BLANKLINE>
-               [[ 0.2121]],
+               [ 0.2121],
         <BLANKLINE>
-               [[-0.1486]],
+               [-0.1486],
         <BLANKLINE>
-               [[ 0.1486]]], dtype=float32)
+               [ 0.1486]], dtype=float32)
 
     Args:
         output: score of each sample

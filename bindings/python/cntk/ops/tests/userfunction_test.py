@@ -48,7 +48,7 @@ class MyPlus(UserFunction):
 def test_ext_eval_1():
     dim = 4
     p = parameter(shape=(dim,), init=10, name='p')
-    i = input_variable(dim, needs_gradient=True, name='i_var')
+    i = sequence.input(dim, needs_gradient=True, name='i_var')
     m = user_function(MyPlus(i, constant(3)))
     z = m+p
 
@@ -59,7 +59,7 @@ def test_ext_eval_1():
 def test_ext_eval_2_only_param():
     dim = 4
     p = parameter(shape=(dim,), init=10, name='p')
-    i = input_variable(dim, needs_gradient=True, name='i_var')
+    i = sequence.input(dim, needs_gradient=True, name='i_var')
     m = user_function(MyPlus(p, constant(3)))
     # combine does not work
     # z = combine([m.output])
@@ -113,7 +113,7 @@ def test_ext_eval_5_times():
 
 def test_ext_eval_6_clone():
     dim = 4
-    i = input_variable(dim, needs_gradient=True, name='i_var')
+    i = sequence.input(dim, needs_gradient=True, name='i_var')
     m = i + 3
 
     p = parameter(shape=(dim,), init=10, name='p')
@@ -129,8 +129,8 @@ def test_ext_eval_6_clone():
 def test_ext_eval_7_placeholder():
     dim = 4
     p = parameter(shape=(dim,), init=10, name='p')
-    i = input_variable(dim, needs_gradient=True, name='i_var')
-    pl = placeholder_variable()
+    i = sequence.input(dim, needs_gradient=True, name='i_var')
+    pl = placeholder()
     m = user_function(MyPlus(pl, constant(3)))
     z = m+p
     z.replace_placeholder(i)
@@ -143,7 +143,7 @@ def test_ext_train():
     dim = 4
 
     p = parameter(shape=(dim,), init=10)
-    i = input_variable(dim, needs_gradient=True, name='i_var')
+    i = sequence.input(dim, needs_gradient=True, name='i_var')
     m = MyPlus(i, constant(3))
     # keeping m unwrapped since we need to access its member variables
     z = user_function(m)+p
@@ -164,7 +164,7 @@ def test_ext_train():
 
 def test_udf_clone():
     dim = 4
-    i = input_variable(dim, needs_gradient=True, name='i_var')
+    i = sequence.input(dim, needs_gradient=True, name='i_var')
     m_udf = user_function(MyPlus(i, constant(3)))
     p = parameter(shape=(dim,), init=10, name='p')
     z = m_udf + p
@@ -203,7 +203,7 @@ def test_ext_backpropstate(payload):
     dim = 4
 
     p = parameter(shape=(dim,), init=10)
-    in1 = input_variable(dim, needs_gradient=True, name='i_var')
+    in1 = input(dim, needs_gradient=True, name='i_var')
     m = user_function(TestBackPropState(in1, payload))
     z = m+p
 
@@ -249,7 +249,7 @@ def test_ext_lambdafunc():
     cb = CallbackCounter()
 
     p = parameter(shape=(dim,), init=1)
-    i = input_variable(dim, needs_gradient=True, name='i_var')
+    i = input(dim, needs_gradient=True, name='i_var')
     k = i*p
     m = LambdaFunc(k,
             when=lambda arg: np.sum(arg)>1,
@@ -276,8 +276,8 @@ class PlusAndLast(UserFunction):
     impl_func = None
 
     def __init__(self, arg1, arg2, name='f1'):
-        i1 = input_variable(arg1.shape, arg1.dtype, name='i1', dynamic_axes=arg1.dynamic_axes)
-        i2 = input_variable(arg2.shape, arg2.dtype, name='i2', dynamic_axes=arg2.dynamic_axes)
+        i1 = input(arg1.shape, arg1.dtype, name='i1', dynamic_axes=arg1.dynamic_axes)
+        i2 = input(arg2.shape, arg2.dtype, name='i2', dynamic_axes=arg2.dynamic_axes)
         self.impl_func = sequence.last(i1 + sequence.broadcast_as(i2, i1))
 
         super(PlusAndLast, self).__init__([arg1, arg2], name=name)
@@ -291,8 +291,8 @@ class PlusAndLast(UserFunction):
         return None, result[self.impl_func.output]
 
 def test_udf_plus_and_last():
-    x = input_variable(shape=(2,))
-    y = input_variable(shape=(2,), dynamic_axes=[Axis.default_batch_axis()])
+    x = sequence.input(shape=(2,))
+    y = input(shape=(2,))
 
     func = user_function(PlusAndLast(x, y))
 
@@ -331,8 +331,8 @@ class MultiOutputUserFunction(UserFunction):
 
 def test_multioutput_udf():
     dim = 2
-    x = input_variable(dim, needs_gradient=True, name='x')
-    y = input_variable(dim, needs_gradient=True, name='y')
+    x = sequence.input(dim, needs_gradient=True, name='x')
+    y = sequence.input(dim, needs_gradient=True, name='y')
     op = user_function(MultiOutputUserFunction(x, y))
 
     x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]
@@ -349,6 +349,6 @@ def test_multioutput_udf():
 def test_udf_op_name():
     dim = 4
     p = parameter(shape=(dim,), init=10, name='p')
-    i = input_variable(dim, needs_gradient=True, name='i_var')
+    i = input(dim, needs_gradient=True, name='i_var')
     m = user_function(MyPlus(i, constant(3)))
     assert str(m.root_function) != ''

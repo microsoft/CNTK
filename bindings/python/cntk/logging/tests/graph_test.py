@@ -14,12 +14,7 @@ def _graph_dict():
     # providing something to traverse.
     d = {}
 
-    batch_axis = Axis.default_batch_axis()
-    input_seq_axis = Axis('ia')
-    input_dynamic_axes = [batch_axis, input_seq_axis]
-
-    d['i1'] = input_variable(
-        shape=(2, 3), dynamic_axes=input_dynamic_axes, name='i1')
+    d['i1'] = sequence.input(shape=(2, 3), sequence_axis=Axis('ia'), name='i1')
     d['c1'] = constant(shape=(2, 3), value=6, name='c1')
     d['p1'] = parameter(shape=(3, 2), init=7, name='p1')
 
@@ -46,14 +41,14 @@ def _graph_dict():
 def _simple_dict():
     d = {}
 
-    d['i1'] = input_variable(shape=(2, 3), name='i1')
+    d['i1'] = input(shape=(2, 3), name='i1')
     d['c1'] = constant(shape=(2, 3), value=6, name='c1')
     d['p1'] = parameter(shape=(3, 2), init=7, name='p1')
     d['op1'] = plus(d['i1'], d['c1'], name='op1')
     d['op2'] = times(d['op1'], d['p1'], name='op2')
     d['root'] = d['op2']
 
-    d['target'] = input_variable((), name='label')
+    d['target'] = input((), name='label')
     d['all'] = combine([d['root'], minus(d['target'], constant(1, name='c2'), name='minus')], name='all')
 
     return d

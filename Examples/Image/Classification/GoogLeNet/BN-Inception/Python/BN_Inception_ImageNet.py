@@ -68,8 +68,8 @@ def create_image_mb_source(map_file, mean_file, is_training, total_number_of_sam
 def create_bn_inception():
 
     # Input variables denoting the features and label data
-    feature_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
+    feature_var = input((num_channels, image_height, image_width))
+    label_var = input((num_classes))
 
     bn_time_const = 4096
     z = bn_inception_model(feature_var, num_classes, bn_time_const)

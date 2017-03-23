@@ -96,17 +96,17 @@ class Function(cntk_py.Function):
         f_name = f.__name__ # (only used for debugging and error messages)
 
         # helper to create a CNTK placeholder or input for a given name
-        # An input_variable is created if the parameter is annotated with a Tensor(...) type.
+        # An input is created if the parameter is annotated with a Tensor(...) type.
         # In this case, CNTK will immediately trigger type inference.
         # Unannotated parameters will yield placeholder_variables instead.
         def make_arg_variable(name, annotations):
-            from .. import placeholder_variable, input_variable
+            from .. import placeholder, input
             from .variables import Variable
             if isinstance(annotations.get(name, None), Variable.Type):
                 var_type = annotations[name]
-                return input_variable(name=name, **var_type)
+                return input(name=name, **var_type)
             else:
-                return placeholder_variable(name=name)
+                return placeholder(name=name)
 
         from ..default_options import default_options
         # Parameter() creation inside code of a Function def is forbidden. Setting 'pure' blocks it in Parameter().
@@ -235,12 +235,12 @@ class Function(cntk_py.Function):
         '''
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
         def to_input(arg_type, name):
-            from cntk import input_variable
+            from cntk import input
             from .variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
-                return input_variable(shape=_as_tuple(arg_type), name=name)
+                return input(shape=_as_tuple(arg_type), name=name)
             elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
-                return input_variable(name=name, **arg_type)
+                return input(name=name, **arg_type)
             else:
                 raise TypeError("update_signature() expects arguments of type int, tuple of int, or Type.Variable")
         # map the given types:
@@ -266,8 +266,8 @@ class Function(cntk_py.Function):
             if isinstance(arg, cntk_py.Variable):
                 return arg
             else:
-                from cntk import input_variable
-                return input_variable(arg)
+                from cntk import input
+                return input(arg)
         args = [to_input(arg) for arg in arg_types]
         self.replace_placeholders(dict(zip(placeholders, args)))
 
@@ -527,16 +527,16 @@ class Function(cntk_py.Function):
 
         Example:
             >>> # Example of passing dense data
-            >>> v = C.input_variable(shape=(3,))
+            >>> v = C.input(shape=(3,))
             >>> f = C.reciprocal(v)
             >>> _, fv = f.forward({v:[[1, 2, 4]]})
             >>> list(fv.values())[0]
-            array([[[ 1.  ,  0.5 ,  0.25]]], dtype=float32)
+            array([[ 1.  ,  0.5 ,  0.25]], dtype=float32)
 
         Example:
             >>> # Passing sparse values as one-hot with a vocabulary size of 5
             >>> vocab_size = 5
-            >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
+            >>> v = C.sequence.input(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
             >>> # Passing a batch of two sequences:
             >>> # 1st sequence: word 1
@@ -552,7 +552,7 @@ class Function(cntk_py.Function):
             >>> # Doing the same, but with a CSR matrix from scipy.sparse
             >>> vocab_size = 5
             >>> from scipy.sparse import csr_matrix
-            >>> v = C.input_variable(shape=(vocab_size,), is_sparse=True)
+            >>> v = C.sequence.input(shape=(vocab_size,), is_sparse=True)
             >>> f = C.times(v, np.eye(vocab_size))
             >>> # Note that csr_matrix automatically uses a sparse representation underneath.
             >>> sparse_batch = [csr_matrix([[0,1,0,0,0]]), csr_matrix([[0,0,1,0,0], [0,0,0,0,1]])]
@@ -663,15 +663,15 @@ class Function(cntk_py.Function):
 
         Example:
             >>> # compute the value and the derivative of the sigmoid at 0
-            >>> v = C.input_variable(shape=(1,), needs_gradient=True)
+            >>> v = C.input(shape=(1,), needs_gradient=True)
             >>> f = C.sigmoid(v)
             >>> df, fv = f.forward({v:[[0]]}, [f.output], set([f.output]))
             >>> value = list(fv.values())[0]
             >>> grad = f.backward(df, {f.output: np.ones_like(value)}, set([v]))
             >>> value
-            array([[[ 0.5]]], dtype=float32)
+            array([[ 0.5]], dtype=float32)
             >>> list(grad.values())[0]
-            array([[[ 0.25]]], dtype=float32)
+            array([[ 0.25]], dtype=float32)
 
         Args:
             state (BackPropState): state obtained from a previous call to the
@@ -712,15 +712,15 @@ class Function(cntk_py.Function):
         The Function must have a single output.
 
         Example:
-            >>> x = C.input_variable(shape=(1,), needs_gradient=True)
+            >>> x = C.input(shape=(1,), needs_gradient=True)
             >>> y = C.sqrt(x)
-            >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1,1)
+            >>> a = np.asarray([1,4,16],dtype=np.float32).reshape(3,1)
             >>> y.grad({x:a})
-            array([[[ 0.5  ]],
+            array([[ 0.5  ],
             <BLANKLINE>
-                   [[ 0.25 ]],
+                   [ 0.25 ],
             <BLANKLINE>
-                   [[ 0.125]]], dtype=float32)
+                   [ 0.125]], dtype=float32)
 
         Args:
             at (dict) : mapping of the Function's arguments to values
@@ -945,8 +945,8 @@ class Function(cntk_py.Function):
         :func:`find_by_name`.
 
         Example:
-            >>> a = C.input_variable(shape=1, name='i')
-            >>> b = C.input_variable(shape=1, name='i')
+            >>> a = C.input(shape=1, name='i')
+            >>> b = C.input(shape=1, name='i')
             >>> c = C.plus(a, b, name='c')
             >>> len(c.find_all_with_name('i'))
             2
@@ -975,8 +975,8 @@ class Function(cntk_py.Function):
         :func:`find_all_with_name`.
 
         Example:
-            >>> a = C.input_variable(shape=1, name='a')
-            >>> b = C.input_variable(shape=1, name='b')
+            >>> a = C.input(shape=1, name='a')
+            >>> b = C.input(shape=1, name='b')
             >>> c = C.plus(a, b, name='c')
             >>> print(c.find_by_name('b').name)
             b
@@ -988,7 +988,7 @@ class Function(cntk_py.Function):
 
             >>> d = c * 5
             >>> C.combine([d.find_by_name('c')]).eval({a:[[1]], b:[[2]]})
-            array([[[ 3.]]], dtype=float32)
+            array([[ 3.]], dtype=float32)
 
         Args:
             name (str): names to look for

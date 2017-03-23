@@ -6,7 +6,7 @@
 import numpy as np
 
 from cntk import sgd, Trainer, learning_rate_schedule, parameter, \
-                 input_variable, times, cross_entropy_with_softmax, \
+                 input, times, cross_entropy_with_softmax, \
                  classification_error, UnitType, combine
 from cntk.debugging.debug import debug_model, _DebugNode
 
@@ -74,9 +74,7 @@ def test_debug_1():
     input_dim = 2
     num_output_classes = 2
 
-    f_input = input_variable(input_dim, np.float32,
-                             needs_gradient=True, name='features')
-
+    f_input = input(input_dim, np.float32, needs_gradient=True, name='features')
     p = parameter(shape=(input_dim,), init=10, name='p')
 
     ins = InStream(['n', 'n', 'n'])
@@ -85,7 +83,7 @@ def test_debug_1():
     z = times(f_input, p, name='z')
     z = debug_model(z, ins, outs)
 
-    l_input = input_variable(num_output_classes, np.float32, name='labels')
+    l_input = input(num_output_classes, np.float32, name='labels')
     loss = cross_entropy_with_softmax(z, l_input)
     eval_error = classification_error(z, l_input)
 
@@ -124,9 +122,7 @@ def test_debug_multi_output():
     input_dim = 2
     num_output_classes = 2
 
-    f_input = input_variable(input_dim, np.float32,
-                             needs_gradient=True, name='features')
-
+    f_input = input(input_dim, np.float32, needs_gradient=True, name='features')
     p = parameter(shape=(input_dim,), init=10, name='p')
 
     comb = combine([f_input, p])
@@ -137,7 +133,7 @@ def test_debug_multi_output():
     z = times(comb.outputs[0], comb.outputs[1], name='z')
     z = debug_model(z, ins, outs)
 
-    l_input = input_variable(num_output_classes, np.float32, name='labels')
+    l_input = input(num_output_classes, np.float32, name='labels')
     loss = cross_entropy_with_softmax(z, l_input)
     eval_error = classification_error(z, l_input)
 

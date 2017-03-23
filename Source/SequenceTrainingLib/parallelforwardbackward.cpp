@@ -20,7 +20,9 @@
 using namespace msra::cuda;
 
 #ifndef CPUONLY
-#pragma comment(lib, "MathCUDA.lib") // built by CNTKMathCUDA project
+#define ANAMEFORLIB "Cntk.Math.Cuda-" ## CNTK_COMPONENT_VERSION ## ".lib"
+#pragma comment(lib, ANAMEFORLIB) // built by CNTKMathCUDA project
+#undef ANAMEFORLIB
 #endif
 
 namespace msra { namespace lattices {
