@@ -581,10 +581,28 @@ namespace CNTK
             }
             case PrimitiveOpType::Slice:
             {
-                auto axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<std::vector<DictionaryValue>>());
-                auto beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<std::vector<DictionaryValue>>());
-                auto endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<std::vector<DictionaryValue>>());
-
+                std::vector<Axis> axis;
+                std::vector<int> beginIndex, endIndex;
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
+                    functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
+                    functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
+                {
+                    axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>()); 
+                    beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
+                    endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                }
+                else if (functionConfig.Contains(PrimitiveFunction::AttributeNameAxis) &&
+                    functionConfig.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
+                    functionConfig.Contains(PrimitiveFunction::AttributeNameEndIndex))
+                {
+                    axis.push_back(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>());
+                    beginIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
+                    endIndex.push_back(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
+                }
+                else
+                {
+                    RuntimeError("Failed to create computation node: Slice operation with inconsistent attributes");
+                }
                 // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
                 computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
                 break;
