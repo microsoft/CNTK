@@ -22,6 +22,9 @@ namespace CNTKLibraryCSEvalExamples
         public static Axis dynAxis;
         public static Variable gOutputVar;
         public static Variable gOutputVar1;
+        public static Variable gInput1;
+        public static Variable gArgument1;
+
         /// <summary>
         /// The example shows
         /// - how to load model.
@@ -55,6 +58,8 @@ namespace CNTKLibraryCSEvalExamples
                 // Get input variable. The model has only one single input.
                 // The same way described above for output variable can be used here to get input variable by name.
                 Variable inputVar = modelFunc.Arguments.Single();
+                gArgument1 = inputVar;
+                gInput1 = modelFunc.Inputs[0];
 
                 // Get shape data for the input variable
                 NDShape inputShape = inputVar.Shape;
@@ -125,6 +130,8 @@ namespace CNTKLibraryCSEvalExamples
                 GC.WaitForPendingFinalizers();
                 Console.WriteLine("gOutput: " + gOutputVar.AsString());
                 Console.WriteLine("gOutput1: " + gOutputVar1.AsString());
+                Console.WriteLine("gArgument1: " + gArgument1.AsString());
+                Console.WriteLine("gInput1: " + gInput1.AsString());
             }
             catch (Exception ex)
             {

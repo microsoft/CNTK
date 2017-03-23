@@ -33,6 +33,8 @@ namespace CNTKLibraryCSEvalExamples
                 GC.WaitForPendingFinalizers();
                 Console.WriteLine("gOutput: " + CNTKLibraryManagedExamples.gOutputVar.AsString());
                 Console.WriteLine("gOutput1: " + CNTKLibraryManagedExamples.gOutputVar1.AsString());
+                Console.WriteLine("gArgument1: " + CNTKLibraryManagedExamples.gArgument1.AsString());
+                Console.WriteLine("gInput1: " + CNTKLibraryManagedExamples.gInput1.AsString());
                 CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
                 CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);

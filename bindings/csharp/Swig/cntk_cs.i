@@ -578,7 +578,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 // Ignore exposing istream to C# for now. Todo: find a good solution to map C# System.IO.Stream to std::istream.
 %ignore CNTK::Function::LoadModel(std::istream& inputStream, const DeviceDescriptor& computeDevice= DeviceDescriptor::UseDefaultDevice());
-
+%ignore CNTK::Function::BlockArgumentsMapping;
 %rename (GetName) CNTK::Function::Name;
 %rename (GetUid) CNTK::Function::Uid;
 %rename (GetRootFunction) CNTK::Function::RootFunction;
@@ -667,7 +667,24 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public System.Collections.Generic.IList<Variable> Arguments
     {
-        get { return GetArguments(); }
+        get {
+            var varVector = GetArguments();
+            var varArray = new Variable[varVector.Count];
+            varVector.CopyTo(varArray);
+            var varList = new System.Collections.Generic.List<Variable>(varArray);
+            return varList;
+        }
+    }
+
+    public System.Collections.Generic.IList<Variable> Inputs
+    {
+        get {
+            var varVector = GetInputs();
+            var varArray = new Variable[varVector.Count];
+            varVector.CopyTo(varArray);
+            var varList = new System.Collections.Generic.List<Variable>(varArray);
+            return varList;
+        }
     }
 
     // Todo: do we have a better place to put this function?
