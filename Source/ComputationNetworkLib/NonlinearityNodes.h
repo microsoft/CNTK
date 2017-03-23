@@ -595,15 +595,10 @@ public:
 
 	virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
 	{
-		//probability = new Matrix<ElemType>(1, nLeafs, value, GetDeviceId());
-		//fprintf(stderr, "after neuronST %d RFAdjusted %d passThrough %d annealRate %f \n", m_neuronST, m_RFAdjusted, m_passThrough, m_annealRate);
+		if (!m_passThrough && m_neuronST && (m_annealSlope < 6.0)) m_annealSlope *= m_annealRate;
 		Matrix<ElemType> result = ValueFor(fr);
-		size_t rank = DetermineElementwiseTensorRank();
-		TensorView<ElemType> input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-		auto shape = input.GetShape();
-		shape.FlattenTo2DInPlace(1, "StochasticBinary Node Forward");
-		auto inputm = input.Reshaped(shape).AsMatrix();
-		Matrix<ElemType>::StochasticBinaryForward(*inputm, result);
+		Matrix<ElemType> inputm = InputRef(0).ValueFor(fr); 
+		Matrix<ElemType>::StochasticBinaryForward(inputm, result, m_annealSlope);
 	}
 
 	virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
@@ -611,21 +606,10 @@ public:
 		//NOT_IMPLEMENTED;
 		Matrix<ElemType> gradient = GradientFor(fr);
 		Matrix<ElemType> output = ValueFor(fr);
+		Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
 
-		size_t rank = DetermineElementwiseTensorRank();
-		TensorView<ElemType> input = InputRef(0).ValueTensorFor(rank, fr.AllowBroadcast());
-		auto shape = input.GetShape();
-		shape.FlattenTo2DInPlace(1, "StochasticBinary Node Backward");
-		auto inputm = input.Reshaped(shape).AsMatrix();
-
-		if (inputIndex == 0)
-		{
-			TensorView<ElemType> inputGradTensor = InputRef(inputIndex).GradientTensorFor(rank, fr.AllowBroadcast());
-			auto shapeGrad = inputGradTensor.GetShape();
-			shapeGrad.FlattenTo2DInPlace(1, "StochasticBinary Node Backward");
-			auto inputGrad = inputGradTensor.Reshaped(shapeGrad).AsMatrix();
-			Matrix<ElemType>::StochasticBinaryBackward(*inputm, output, gradient, *inputGrad, m_neuronST, m_RFAdjusted, m_passThrough, m_annealRate);
-		}
+		Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
+		Matrix<ElemType>::StochasticBinaryBackward(inputm, output, gradient, inputGrad, m_neuronST, m_RFAdjusted, m_passThrough, m_annealSlope);
 	}
 
 	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
@@ -633,11 +617,33 @@ public:
 		ValidateUnaryMap(isFinalValidationPass);
 	}
 
+
+	virtual void Save(File& fstream) const override
+	{
+		Base::Save(fstream);
+		fstream << m_neuronST;
+		fstream << m_RFAdjusted;
+		fstream << m_passThrough;
+		fstream << m_annealRate;
+		fstream << m_annealSlope;
+	}
+
+	virtual void Load(File& fstream, size_t modelVersion) override
+	{
+		Base::Load(fstream, modelVersion);
+		fstream >> m_neuronST;
+		fstream >> m_RFAdjusted;
+		fstream >> m_passThrough;
+		fstream >> m_annealRate;
+		fstream >> m_annealSlope;
+	}
+
 protected:
 	bool m_neuronST = true;
 	bool m_RFAdjusted = false;
 	bool m_passThrough = true; 
 	float m_annealRate = 1.0;
+	float m_annealSlope = 1.0;
 };
 
 template class StochasticBinaryNode<float>;
