@@ -37,7 +37,7 @@ class PolyMath:
         conv_out = C.models.Sequential([
             C.layers.Embedding(self.char_emb_dim),
 			C.Dropout(self.dropout),
-            C.layers.Convolution1D((5,), self.convs, activation=C.relu, init=C.glorot_uniform(), pad=[True], strides=1, bias=True, init_bias=True)])(x)
+            C.layers.Convolution1D((5,), self.convs, activation=C.relu, init=C.glorot_uniform(), pad=[True], strides=1, bias=True)])(x)
         return C.reduce_max(conv_out, axis=1) # workaround cudnn failure in GlobalMaxPooling
 
     def embed(self):

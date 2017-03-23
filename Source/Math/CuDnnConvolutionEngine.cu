@@ -388,10 +388,9 @@ private:
 
         // in initState, where memory allocation for nodes are not completed, we only run the algorithm with no workspace
         // In such case, use static auto-tuner with no workspace and get m_MaxWorkspaceSize needed for findEx
-        if (algo.autotuningState == AutotuningState::Init || err == CUDNN_STATUS_ALLOC_FAILED)
+        if (algo.autotuningState == AutotuningState::Init)
         {
             CUDNN_CALL(staticFinder(algo.selectedAlgo, true));
-            if (err == CUDNN_STATUS_ALLOC_FAILED && m_forceDeterministicAlgorithms)
             algo.MBSizeForCurrentAlgo = batchSize;
             algo.autotuningState = AutotuningState::PendingTuning;
             return;

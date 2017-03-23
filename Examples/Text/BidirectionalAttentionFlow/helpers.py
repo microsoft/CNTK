@@ -5,7 +5,7 @@ def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', init=C.glor
     W = C.Parameter(C.blocks._INFERRED + (hidden_dim,), init=init)
 
     def func(x):
-        return C.optimized_rnnstack(x, W, hidden_dim, num_layers, bidirectional, recurrent_op='lstm', name=name)
+        return C.optimized_rnnstack(x, W, hidden_dim, num_layers, bidirectional, recurrent_op=recurrent_op, name=name)
     return func
 
 def HighwayBlock(dim, # ideally this should be inferred, but times does not allow inferred x inferred parameter for now
