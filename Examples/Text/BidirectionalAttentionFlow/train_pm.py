@@ -87,38 +87,50 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
         stop_profiler()
         
 def test(test_data, model_path, config_file):
-    polymath = polymath(config_file)
+    polymath = PolyMath(config_file)
     model = C.load_model(os.path.join(model_path, model_name))
     ab = C.as_composite(model.outputs[0].owner)
     ae = C.as_composite(model.outputs[1].owner)
     loss = C.as_composite(model.outputs[2].owner)
-    mb_source, input_map = create_mb_and_map(loss, test_data, polymath, False, False)
+    mb_source, input_map = create_mb_and_map(loss, test_data, polymath, randomize=False, repeat=False)
     label_ab = argument_by_name(loss, 'ab')
     label_ae = argument_by_name(loss, 'ae')
-    f1 = polymath.f1_score(label_ab, label_ae, ab, ae)
+    f1, precision, recall, has_overlap, start_match, end_match = polymath.f1_score(label_ab, label_ae, ab, ae).outputs
     em = C.greater_equal(f1, 1)
     test_func = C.splice(
         C.reduce_sum(loss, C.Axis.all_axes()),
-        C.reduce_sum(f1, C.Axis.all_axes()),
-        C.reduce_sum(em, C.Axis.all_axes()))
+        C.reduce_sum(f1, C.Axis.all_axes()), # we should have reduction over batch axis but keep static axis
+        C.reduce_sum(em, C.Axis.all_axes()),
+        C.reduce_sum(precision, C.Axis.all_axes()),
+        C.reduce_sum(recall, C.Axis.all_axes()),
+        C.reduce_sum(has_overlap, C.Axis.all_axes()),
+        C.reduce_sum(start_match, C.Axis.all_axes()),
+        C.reduce_sum(end_match, C.Axis.all_axes()))
     
     # Evaluation parameters
     minibatch_size = 8192
     num_sequences = 0
-    loss_sum = 0
-    f1_sum = 0
-    em_sum = 0
+    stat_sum = np.zeros(test_func.shape)
     while True:
         data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
         if not data or not (label_ab in data) or data[label_ab].num_sequences == 0:
             break
         test_results = test_func.eval(data)
-        loss_sum += test_results[0]
-        f1_sum += test_results[1]
-        em_sum += test_results[2]
+        stat_sum += test_results
         num_sequences += data[label_ab].num_sequences
 
-    print("Tested {} sequences, loss {:.2f}, F1 {:.2f}, EM {:.2f}".format(num_sequences, loss_sum / num_sequences, f1_sum / num_sequences, em_sum / num_sequences))
+    stat_avg = stat_sum / num_sequences
+
+    print("Tested {} sequences, loss {:.4f}, F1 {:.4f}, EM {:.4f}, precision {:4f}, recall {:4f} hasOverlap {:4f}, start_match {:4f}, end_match {:4f}".format(
+            num_sequences,
+            stat_avg[0],
+            stat_avg[1],
+            stat_avg[2],
+            stat_avg[3],
+            stat_avg[4],
+            stat_avg[5],
+            stat_avg[6],
+            stat_avg[7]))
 
 if __name__=='__main__':
     # default Paths relative to current python file.

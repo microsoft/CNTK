@@ -92,7 +92,7 @@ class PolyMath:
         c_processed = input_layers(c_emb) # synth_embedding for context
 
         #convert query's sequence axis to static
-        qvw, qvw_mask = C.layers.PastValueWindow(self.max_query_len, C.Axis.new_leading_axis())(q_processed).outputs
+        qvw, qvw_mask = C.layers.PastValueWindow(self.max_query_len, C.Axis.new_leading_axis(), go_backwards=True)(q_processed).outputs
 
         #qvw_c = C.reduce_sum(qvw, 1)
         #qvw_c = print_node(qvw_c)
@@ -160,6 +160,8 @@ class PolyMath:
         answers_prop = C.Recurrence(C.element_max, go_backwards=False)(answers)
         ans_gt = C.element_min(C.slice(answers_prop, 0, 0, 1), (1 - C.slice(answers_prop, 0, 1, 2)))
         ans_out = C.element_min(C.slice(answers_prop, 0, 2, 3), (1 - C.slice(answers_prop, 0, 3, 4)))
+        start_match = C.sequence.reduce_sum(ab * oab)
+        end_match = C.sequence.reduce_sum(ae * oae)
         common = ans_gt * ans_out
         metric = C.layers.Fold(C.plus)(C.splice(ans_gt, ans_out, common))
         gt_len = C.slice(metric, 0, 0, 1)
@@ -167,4 +169,5 @@ class PolyMath:
         common_len = C.slice(metric, 0, 2, 3)
         precision = common_len / test_len
         recall = common_len / gt_len
-        return precision * recall * 2 / (precision + recall)
+        f1 = precision * recall * 2 / (precision + recall)
+        return C.combine([f1, precision, recall, C.greater(common_len, 0), start_match, end_match])
