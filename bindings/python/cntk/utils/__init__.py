@@ -23,6 +23,7 @@ from cntk.logging import *
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
 
+ONE_HOT_SKIP = cntk_py.Value.one_hot_skip
 
 # To __remove__
 def one_hot(batch, num_classes, dtype=None, device=None):
