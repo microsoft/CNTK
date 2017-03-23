@@ -1,18 +1,16 @@
 """
 ReasoNet model in CNTK
+@ref ReasoNet: Learning to Stop Reading in Machine Comprehension, https://posenhuang.github.io/papers/reasonet_iclr_2017.pdf  
 @author penhe@microsoft.com
 """
 import sys
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, DEFAULT_RANDOMIZATION_WINDOW
 import cntk.ops as ops
 from cntk.layers.blocks import _INFERRED, Parameter
-#import cntk.internal.utils as utils
 from cntk.internal import _as_tuple, sanitize_input
-import cntk.learner as learner
-#import cntk.io as io
-#import cntk.cntk_py as cntk_py
+import cntk.learners as learners
+from cntk.layers import GRU
 from .utils import *
-from .layers import *
 
 def create_reader(path, vocab_dim, entity_dim, randomize, rand_size= DEFAULT_RANDOMIZATION_WINDOW, size=INFINITELY_REPEAT):
   """
@@ -42,7 +40,7 @@ def attention_model(context_memory, query_memory, init_status, hidden_dim, att_d
     att_dim: The dimention of attention
     max_step: Maxuim number of step to revisit the context memory
   """
-  gru = gru_cell((hidden_dim*2, ), name='control_status')
+  gru = GRU((hidden_dim*2, ), name='control_status')
   status = init_status
   output = [None]*max_steps*2
   sum_prob = None
@@ -57,7 +55,7 @@ def attention_model(context_memory, query_memory, init_status, hidden_dim, att_d
     context_attention = sequence.reduce_sum(times(context_attention_weight, context_memory), name='C-Att')
     query_attention = sequence.reduce_sum(times(query_attention_weight, query_memory), name='Q-Att')
     attention = ops.splice(query_attention, context_attention, name='att-sp')
-    status = gru(attention, status).output
+    status = gru(status, attention).output
     termination_prob = stop_gate(status)
     ans_attention = ans_cos_sim(status, context_memory)
     output[step*2] = ans_attention
@@ -109,7 +107,7 @@ def bind_data(func, data):
       bind[arg] = data.streams.entity_ids
   return bind
 
-def create_model(params : model_params):
+def create_model(params):
   """
   Create ReasoNet model
   Args:
@@ -187,7 +185,7 @@ def contractive_reward(labels, predictions_and_stop_probabilities):
   rewards = sequence.reduce_sum(normalized_contractive_rewards) + avg_rewards
   return rewards
 
-def loss(model, params:model_params):
+def loss(model, params):
   """
   Compute the loss and accuracy of the model output
   """
@@ -217,13 +215,12 @@ def create_adam_learner(learn_params, learning_rate = 0.0005, gradient_clipping_
   """
   Create adam learner
   """
-  lr_schedule = learner.learning_rate_schedule(learning_rate, learner.UnitType.sample)
-  momentum = learner.momentum_schedule(0.90)
+  lr_schedule = learners.learning_rate_schedule(learning_rate, learners.UnitType.sample)
+  momentum = learners.momentum_schedule(0.90)
   gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
   gradient_clipping_with_truncation = True
-  momentum_var = learner.momentum_schedule(0.999)
-  lr = learner.adam_sgd(learn_params, lr_schedule, momentum, True, momentum_var,
-          low_memory = False,
+  momentum_var = learners.momentum_schedule(0.999)
+  lr = learners.adam(learn_params, lr_schedule, momentum, True, momentum_var,
           gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample,
           gradient_clipping_with_truncation = gradient_clipping_with_truncation)
   learner_desc = 'Alg: Adam, learning rage: {0}, momentum: {1}, gradient clip: {2}'.format(learning_rate, momentum[0], gradient_clipping_threshold_per_sample)
@@ -259,7 +256,7 @@ def __evaluation(trainer, data, bind, minibatch_size, epoch_size):
   logger.log("Evaluation Acc: {0}, samples: {1}".format(eval_acc, eval_s))
   return eval_acc
 
-def train(model, m_params:model_params, learner, train_data, max_epochs=1, save_model_flag=False, epoch_size=270000, eval_data=None, eval_size=None, check_point_freq=0.1, minibatch_size=50000, model_name='rsn'):
+def train(model, m_params, learner, train_data, max_epochs=1, save_model_flag=False, epoch_size=270000, eval_data=None, eval_size=None, check_point_freq=0.1, minibatch_size=50000, model_name='rsn'):
   """
   Train the model
   Args:
