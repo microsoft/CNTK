@@ -452,6 +452,13 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (GetName) CNTK::Axis::Name;
 %rename (IsOrderedAxis) CNTK::Axis::IsOrdered;
 %rename (AreEqualAxis) CNTK::operator==(const Axis& first, const Axis& second);
+%ignore_function CNTK::Axis::DefaultDynamicAxis();
+%ignore_function CNTK::Axis::OperandSequenceAxis();
+%ignore_function CNTK::Axis::DefaultBatchAxis();
+%ignore_function CNTK::Axis::AllStaticAxes();
+%ignore_function CNTK::Axis::AllAxes();
+%ignore_function CNTK::Axis::DefaultInputVariableDynamicAxes();
+%ignore_function CNTK::Axis::UnknownDynamicAxes();
 
 %typemap(cscode) CNTK::Axis %{
 
@@ -725,7 +732,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     public System.Collections.Generic.IList<Axis> DynamicAxes
     {
         get {
-            return GetDynamicAxes();
+            var axes = new System.Collections.Generic.List<Axis>();
+            var axesVector = GetDynamicAxes();
+            var axisArray = new Axis[axesVector.Count];
+            axesVector.CopyTo(axisArray);
+            axes.AddRange(axisArray);
+            return axes;
         }
     }
 
