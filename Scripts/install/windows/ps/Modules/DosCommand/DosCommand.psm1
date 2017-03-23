@@ -1,14 +1,71 @@
-﻿#
+#
 # Copyright (c) Microsoft. All rights reserved.
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
 
+# TODO prefix output with time-stamp.
+# TODO log time to execute
+# TODO redirect to verbose channel
+# TODO suppress output only on success
+# TODO working directory parameter
+
+Import-Module Disk -ErrorAction Stop
+
+function Invoke-DosCommand {
+    [CmdletBinding()]
+    Param(
+        [ValidateScript({ Get-Command $_ })]
+        [string]
+        $Command,
+
+        [string[]]
+        $Argument,
+
+        [string]
+        [ValidateScript({ Test-Path -PathType Container $_ })]
+        $WorkingDirectory,
+
+        [int]
+        [ValidateScript({ $_ -ge 0 })]
+        $MaxErrorLevel = 0,
+
+        [switch]
+        $IgnoreNonZeroExitCode,
+
+        [switch]
+        $SuppressOutput)
+
+    Write-Verbose "Running '$Command $Argument'"
+    if ($WorkingDirectory) {
+        Push-Location $WorkingDirectory -ErrorAction Stop
+    }
+    if ($SuppressOutput) {
+        $null = & $Command $Argument 2>&1
+    } else {
+        & $Command $Argument
+    }
+    if ($WorkingDirectory) {
+        Pop-Location
+    }
+
+    if ((-not $IgnoreNonZeroExitCode) -and ($LASTEXITCODE -gt $MaxErrorLevel)) {
+        throw "Running '$Command $Argument' failed with exit code $LASTEXITCODE"
+    }
+}
+
 function Start-DosProcess{
     [CmdletBinding()]
     Param(
-        [Parameter(Mandatory=$true)][string] $command,
+        [Parameter(Mandatory=$true)]
+        [ValidateScript({ Get-Command $_ })]
+        [string] $command,
+
         [string[]] $argumentList = @(),
-        [string] $workingDir = $(Get-Location),
+
+        [string] 
+        [ValidateScript({ Test-Path -PathType Container $_ })]
+        $workingDir = $(Get-Location),
+
         [int] $maxErrorLevel = 0,
         [switch] $runAs,
         [switch] $suppressOutput,
@@ -29,16 +86,7 @@ function Start-DosProcess{
          return
     }
 
-    if (-not (Test-Path $workingDir -PathType Container)) {
-        Throw "Start-DosProcess [$command]: not a directory [$workingDir]"
-    }
-
     Push-Location $workingDir -ErrorAction Stop
-    
-    if (-not (Get-Command $command)) {
-        Pop-Location
-        Throw "Start-DosProcess [$command]: Unknown command"
-    }
     
     if ($argumentList) {
         $params += @{ ArgumentList = $argumentList }
@@ -114,7 +162,9 @@ function Start-DosProcessNoThrow{
 }
 
 Export-ModuleMember -Function (Write-Output `
+    Invoke-DosCommand `
     Start-DosProcess `
     Start-DosProcessNoThrow )
+ 
 
 # vim: tabstop=4 shiftwidth=4 expandtab

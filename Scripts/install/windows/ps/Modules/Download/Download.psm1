@@ -3,6 +3,8 @@
 # Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 #
 
+Import-Module Disk -ErrorAction Stop
+
 Set-StrictMode -Version Latest
 
 function DownloadFileWebRequest (
@@ -45,6 +47,23 @@ function DownloadFileWebClient(
     }
 }
 
+function PrepareDownload(
+    [string] $targetDir,
+    [string] $targetFile)
+{
+    $tempPrefix = "_inst_"
+    if (-not (Test-Path -path $targetDir -PathType Container)) {
+        # if we can't create the target directory, we will stop
+        New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction Stop
+    }
+
+    if (Test-Path -Path $targetFile) {
+        Remove-Item -path $OutFile -force -ErrorAction Stop
+    }
+    remove-Item -path "$targetDir\$tempPrefix*" -ErrorAction SilentlyContinue
+    return Get-TempFileName -tempDir $targetDir -filePrefix $tempPrefix 
+}
+
 function Copy-FileWebRequest(
     [Parameter(Mandatory=$True)][string] $SourceFile,
     [Parameter(Mandatory=$True)][string] $OutFile,
@@ -52,24 +71,15 @@ function Copy-FileWebRequest(
     [int] $tryDelaySeconds = 60)
 {
     $targetDir = Split-Path $OutFile
-    if (-not (Test-Path -path $targetDir -PathType Container)) {
-        # if we can't create the target directory, we will stop
-        New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction Stop
-    }
-    $workFile = Join-Path $targetDir "download.tmp"
-    if (Test-Path -Path $OutFile) {
-        Remove-Item -path $OutFile -ErrorAction Stop
-    }
-    if (Test-Path -Path $workFile) {
-        Remove-Item -path $workFile -ErrorAction Stop
-    }
+    $workFile = PrepareDownload -targetDir $targetDir -targetFile $outFile
+
     for ($count=1; $count -le $maxtry; $count +=1) {
         Write-Verbose "Copy-FileWebRequest: Iteration [$count] of [$maxtry]"
         if ($count -gt 1) {
             start-sleep -Seconds $tryDelaySeconds
         }
         if (DownloadFileWebRequest -SourceFile $SourceFile -OutFile $workFile) {
-            Rename-Item $workFile $OutFile -ErrorAction Stop | Out-Null
+            Rename-Item $workFile $OutFile -Force -ErrorAction Stop | Out-Null
             return $true
         }
     }
@@ -84,17 +94,7 @@ function Copy-FileWebClient(
     [int] $tryDelaySeconds = 60)
 {
     $targetDir = Split-Path $OutFile
-    if (-not (Test-Path -path $targetDir -PathType Container)) {
-        # if we can't create the target directory, we will stop
-        New-Item -ItemType Directory -Force -Path $targetDir -ErrorAction Stop
-    }
-    $workFile = Join-Path $targetDir "download.tmp"
-    if (Test-Path -Path $OutFile) {
-        Remove-Item -path $OutFile -ErrorAction Stop
-    }
-    if (Test-Path -Path $workFile) {
-        Remove-Item -path $workFile -ErrorAction Stop
-    }
+    $workFile = PrepareDownload -targetDir $targetDir -targetFile $outFile
 
     for ($count=1; $count -le $maxtry; $count +=1) {
         Write-Verbose "Copy-FileWebClient: Iteration [$count] of [$maxtry]"
@@ -102,7 +102,7 @@ function Copy-FileWebClient(
             start-sleep -Seconds $tryDelaySeconds
         }
         if (DownloadFileWebClient -SourceFile $SourceFile -OutFile $workFile -timeout $timeout) {
-            Rename-Item $workFile $OutFile -ErrorAction Stop | Out-Null
+            Rename-Item $workFile $OutFile -Force -ErrorAction Stop | Out-Null
             return $true
         }
     }

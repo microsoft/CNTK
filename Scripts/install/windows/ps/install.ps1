@@ -70,7 +70,7 @@ Set-StrictMode -Version latest
 
 Import-Module Download -ErrorAction Stop
 Import-Module Disk -ErrorAction Stop
-Import-Module Process -ErrorAction Stop
+Import-Module DosCommand -ErrorAction Stop
 
 $MyDir = Split-Path $MyInvocation.MyCommand.Definition
 $ymlDir = Split-Path $MyDir

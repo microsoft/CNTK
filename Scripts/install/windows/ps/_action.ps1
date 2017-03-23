@@ -91,7 +91,7 @@ function InstallWheel(
          return 
     }
     $condaExe = Join-Path $basePath 'Scripts\conda.exe'
-    $newPaths = Start-DosProcess -command $condaExe -argumentList (Write-Output ..activate cmd.exe $envName) -getOutput -noExecute:$noExecute
+    $newPaths = Invoke-DosCommand $condaExe (Write-Output ..activate cmd.exe $envName) -maxErrorLevel 0
 
     $oldPath = $env:PATH
     $env:PATH = $newPaths + ';' + $env:PATH

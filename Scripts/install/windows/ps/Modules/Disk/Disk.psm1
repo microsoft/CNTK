@@ -55,8 +55,8 @@ function Compress-CacheDirectory(
 }
 
 function Get-TempFileName(
-    [string] $filePrefix = "",
-    [string] $tempDir = "")
+    [string] $filePrefix,
+    [string] $tempDir)
 {
     if (-not $tempDir) {
         $tempDir = [System.IO.Path]::GetTempPath()
