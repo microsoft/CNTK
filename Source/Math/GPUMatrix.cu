@@ -3407,99 +3407,99 @@ static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const double* al
 
 template <class ElemType>
 void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope) {
-	a.PrepareDevice();
-	if (a.GetComputeDeviceId() != b.GetComputeDeviceId()) // different GPUs
-		InvalidArgument("Matrices must be on the same GPU");
-	if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
-		RuntimeError("Matrices should be in the same shape");
+    a.PrepareDevice();
+    if (a.GetComputeDeviceId() != b.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("Matrices must be on the same GPU");
+    if (a.GetNumRows() != b.GetNumRows() || a.GetNumCols() != b.GetNumCols())
+        RuntimeError("Matrices should be in the same shape");
 
     size_t m = a.GetNumRows();
-	size_t n = a.GetNumCols();
-	CUDA_LONG N = (CUDA_LONG)(m*n);
+    size_t n = a.GetNumCols();
+    CUDA_LONG N = (CUDA_LONG)(m*n);
 
 
-	auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
-	/* generate uniform random floats bewteen 0.0 and 1.0 for each thread. */
-	float *d_rands;
-	curandGenerator_t gens;
-	CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
-	CURAND_CALL(curandCreateGenerator(&gens, CURAND_RNG_PSEUDO_DEFAULT));
-	CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, seed));
-	CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
+    auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+    /* generate uniform random floats bewteen 0.0 and 1.0 for each thread. */
+    float *d_rands;
+    curandGenerator_t gens;
+    CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
+    CURAND_CALL(curandCreateGenerator(&gens, CURAND_RNG_PSEUDO_DEFAULT));
+    CURAND_CALL(curandSetPseudoRandomGeneratorSeed(gens, seed));
+    CURAND_CALL(curandGenerateUniform(gens, d_rands, N));
 
-	//float *d_rands;
-	//CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
-	//float* rands = new float[N];
-	//std::random_device rd;
-	//std::mt19937 gen(rd());
-	//std::uniform_real_distribution<> dis(0, 1);
-	//for (int i = 0; i < N; i++) {
-	//	rands[i] = (float)dis(gen);
-	//}
-	//CUDA_CALL(cudaMemcpy(d_rands, rands, N * sizeof(float), cudaMemcpyHostToDevice));
-	//delete[] rands;
+    //float *d_rands;
+    //CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
+    //float* rands = new float[N];
+    //std::random_device rd;
+    //std::mt19937 gen(rd());
+    //std::uniform_real_distribution<> dis(0, 1);
+    //for (int i = 0; i < N; i++) {
+    //	rands[i] = (float)dis(gen);
+    //}
+    //CUDA_CALL(cudaMemcpy(d_rands, rands, N * sizeof(float), cudaMemcpyHostToDevice));
+    //delete[] rands;
 
-	//float* rands = new float[N];
-	//CUDA_CALL(cudaMemcpy(rands, d_rands, N * sizeof(float), cudaMemcpyDeviceToHost));
-	//fprintf(stderr, "\n");
-	//for (int i = 0; i < 10; i++)
-	//	fprintf(stderr, "%f ", rands[i]);
-	//fprintf(stderr, "\n");
-	//delete[] rands;
+    //float* rands = new float[N];
+    //CUDA_CALL(cudaMemcpy(rands, d_rands, N * sizeof(float), cudaMemcpyDeviceToHost));
+    //fprintf(stderr, "\n");
+    //for (int i = 0; i < 10; i++)
+    //	fprintf(stderr, "%f ", rands[i]);
+    //fprintf(stderr, "\n");
+    //delete[] rands;
 
-	size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
-	SyncGuard syncGuard;
+    size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
 
-	//float *d_rands;
-	//CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
-	//curandState *devStates;
-	//cudaMalloc(&devStates, sizeof(curandState) * N);
-	//auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
-	//_generateRandomNumberNormalDistribution<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(d_rands, devStates, N, seed);
-	
-	_stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
-	
-	//float* rands = new float[N];
-	//CUDA_CALL(cudaMemcpy(rands, d_rands, N * sizeof(float), cudaMemcpyDeviceToHost));
-	//fprintf(stderr, "\n");
-	//for (int i = 0; i < 10; i++)
-	//	fprintf(stderr, "%f ", rands[i]);
-	//fprintf(stderr, "\n");
-	//delete[] rands;
+    //float *d_rands;
+    //CUDA_CALL(cudaMalloc((void **)&d_rands, N * sizeof(float)));
+    //curandState *devStates;
+    //cudaMalloc(&devStates, sizeof(curandState) * N);
+    //auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
+    //_generateRandomNumberNormalDistribution<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(d_rands, devStates, N, seed);
+    
+    _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
+    
+    //float* rands = new float[N];
+    //CUDA_CALL(cudaMemcpy(rands, d_rands, N * sizeof(float), cudaMemcpyDeviceToHost));
+    //fprintf(stderr, "\n");
+    //for (int i = 0; i < 10; i++)
+    //	fprintf(stderr, "%f ", rands[i]);
+    //fprintf(stderr, "\n");
+    //delete[] rands;
 
-	//CUDA_CALL(cudaFree(devStates));
-	CUDA_CALL(cudaFree(d_rands));
-	CURAND_CALL(curandDestroyGenerator(gens));
+    //CUDA_CALL(cudaFree(devStates));
+    CUDA_CALL(cudaFree(d_rands));
+    CURAND_CALL(curandDestroyGenerator(gens));
 }
 
 template <class ElemType>
 void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a, const GPUMatrix<ElemType>& output, const GPUMatrix<ElemType>& outgrad, GPUMatrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope) {
-	a.PrepareDevice();
-	if (a.GetComputeDeviceId() != outgrad.GetComputeDeviceId()) // different GPUs
-		InvalidArgument("Matrices must be on the same GPU");
-	if (a.GetNumRows() != outgrad.GetNumRows() || a.GetNumCols() != outgrad.GetNumCols())
-		RuntimeError("Matrices should be in the same shape");
-	if (annealSlope < 0.0) RuntimeError("Anneal Rate should be a positive number.");
-	if (RFAdjusted) RuntimeError("not implemented.");
+    a.PrepareDevice();
+    if (a.GetComputeDeviceId() != outgrad.GetComputeDeviceId()) // different GPUs
+        InvalidArgument("Matrices must be on the same GPU");
+    if (a.GetNumRows() != outgrad.GetNumRows() || a.GetNumCols() != outgrad.GetNumCols())
+        RuntimeError("Matrices should be in the same shape");
+    if (annealSlope < 0.0) RuntimeError("Anneal Rate should be a positive number.");
+    if (RFAdjusted) RuntimeError("not implemented.");
 
-	size_t m = a.GetNumRows();
-	size_t n = a.GetNumCols();
-	CUDA_LONG N = (CUDA_LONG)(m*n);
+    size_t m = a.GetNumRows();
+    size_t n = a.GetNumCols();
+    CUDA_LONG N = (CUDA_LONG)(m*n);
 
-	size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
-	SyncGuard syncGuard;
-	assert((RFAdjusted || !RFAdjusted) && annealSlope > 0); 
+    size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    assert((RFAdjusted || !RFAdjusted) && annealSlope > 0); 
 
-	if (neuronST) {
-		if (passThrough) {
-			//fprintf(stderr, "pass through here!!!\n");
-			_stochasticbinaryBackward_PassThrough<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
-		}
-		else {
-			//fprintf(stderr, "here!!!\n");
-			_stochasticbinaryBackward_Anneal<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
-		}
-	} 
+    if (neuronST) {
+        if (passThrough) {
+            //fprintf(stderr, "pass through here!!!\n");
+            _stochasticbinaryBackward_PassThrough<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
+        }
+        else {
+            //fprintf(stderr, "here!!!\n");
+            _stochasticbinaryBackward_Anneal<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
+        }
+    } 
 }
 
 template <class ElemType>

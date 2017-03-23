@@ -579,71 +579,71 @@ template class ClipNode<double>;
 template <class ElemType>
 class StochasticBinaryNode : public ComputationNode<ElemType>, public NumInputs<1>
 {
-	typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
-	static const std::wstring TypeName() { return L"StochasticBinary"; }
+    typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
+    static const std::wstring TypeName() { return L"StochasticBinary"; }
 
 public:
-	StochasticBinaryNode(DEVICEID_TYPE deviceId, const wstring& name, bool neuronST = true, bool RFAdjusted = false, const bool passThrough = true, const float annealRate = 1.0)
-		: Base(deviceId, name), m_neuronST(neuronST), m_RFAdjusted(RFAdjusted), m_passThrough(passThrough), m_annealRate(annealRate)
-	{
-	}
+    StochasticBinaryNode(DEVICEID_TYPE deviceId, const wstring& name, bool neuronST = true, bool RFAdjusted = false, const bool passThrough = true, const float annealRate = 1.0)
+        : Base(deviceId, name), m_neuronST(neuronST), m_RFAdjusted(RFAdjusted), m_passThrough(passThrough), m_annealRate(annealRate)
+    {
+    }
 
-	StochasticBinaryNode(const ScriptableObjects::IConfigRecordPtr configp)
-		: StochasticBinaryNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"neuronST"), configp->Get(L"RFAdjusted"), configp->Get(L"passThrough"), configp->Get(L"annealRate"))
-	{
-	}
+    StochasticBinaryNode(const ScriptableObjects::IConfigRecordPtr configp)
+        : StochasticBinaryNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"neuronST"), configp->Get(L"RFAdjusted"), configp->Get(L"passThrough"), configp->Get(L"annealRate"))
+    {
+    }
 
-	virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
-	{
-		if (!m_passThrough && m_neuronST && (m_annealSlope < 6.0)) m_annealSlope *= m_annealRate;
-		Matrix<ElemType> result = ValueFor(fr);
-		Matrix<ElemType> inputm = InputRef(0).ValueFor(fr); 
-		Matrix<ElemType>::StochasticBinaryForward(inputm, result, m_annealSlope);
-	}
+    virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
+    {
+        if (!m_passThrough && m_neuronST && (m_annealSlope < 6.0)) m_annealSlope *= m_annealRate;
+        Matrix<ElemType> result = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr); 
+        Matrix<ElemType>::StochasticBinaryForward(inputm, result, m_annealSlope);
+    }
+    
+    virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
+    {
+        //NOT_IMPLEMENTED;
+        Matrix<ElemType> gradient = GradientFor(fr);
+        Matrix<ElemType> output = ValueFor(fr);
+        Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
 
-	virtual void /*ComputationNode::*/ BackpropTo(const size_t inputIndex, const FrameRange& fr) override
-	{
-		//NOT_IMPLEMENTED;
-		Matrix<ElemType> gradient = GradientFor(fr);
-		Matrix<ElemType> output = ValueFor(fr);
-		Matrix<ElemType> inputm = InputRef(0).ValueFor(fr);
+        Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
+        Matrix<ElemType>::StochasticBinaryBackward(inputm, output, gradient, inputGrad, m_neuronST, m_RFAdjusted, m_passThrough, m_annealSlope);
+    }
 
-		Matrix<ElemType> inputGrad = InputRef(inputIndex).GradientFor(fr);
-		Matrix<ElemType>::StochasticBinaryBackward(inputm, output, gradient, inputGrad, m_neuronST, m_RFAdjusted, m_passThrough, m_annealSlope);
-	}
-
-	virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
-	{
-		ValidateUnaryMap(isFinalValidationPass);
-	}
+    virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
+    {
+        ValidateUnaryMap(isFinalValidationPass);
+    }
 
 
-	virtual void Save(File& fstream) const override
-	{
-		Base::Save(fstream);
-		fstream << m_neuronST;
-		fstream << m_RFAdjusted;
-		fstream << m_passThrough;
-		fstream << m_annealRate;
-		fstream << m_annealSlope;
-	}
+    virtual void Save(File& fstream) const override
+    {
+        Base::Save(fstream);
+        fstream << m_neuronST;
+        fstream << m_RFAdjusted;
+        fstream << m_passThrough;
+        fstream << m_annealRate;
+        fstream << m_annealSlope;
+    }
 
-	virtual void Load(File& fstream, size_t modelVersion) override
-	{
-		Base::Load(fstream, modelVersion);
-		fstream >> m_neuronST;
-		fstream >> m_RFAdjusted;
-		fstream >> m_passThrough;
-		fstream >> m_annealRate;
-		fstream >> m_annealSlope;
-	}
+    virtual void Load(File& fstream, size_t modelVersion) override
+    {
+        Base::Load(fstream, modelVersion);
+        fstream >> m_neuronST;
+        fstream >> m_RFAdjusted;
+        fstream >> m_passThrough;
+        fstream >> m_annealRate;
+        fstream >> m_annealSlope;
+    }
 
 protected:
-	bool m_neuronST = true;
-	bool m_RFAdjusted = false;
-	bool m_passThrough = true; 
-	float m_annealRate = 1.0;
-	float m_annealSlope = 1.0;
+    bool m_neuronST = true;
+    bool m_RFAdjusted = false;
+    bool m_passThrough = true; 
+    float m_annealRate = 1.0;
+    float m_annealSlope = 1.0;
 };
 
 template class StochasticBinaryNode<float>;

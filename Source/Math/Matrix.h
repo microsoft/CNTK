@@ -552,9 +552,9 @@ public:
     ElemType LogAdd(ElemType x, ElemType y);
 
 public:
-	// stochastic binary node
-	static void StochasticBinaryForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope);
-	static void StochasticBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope);
+    // stochastic binary node
+    static void StochasticBinaryForward(const Matrix<ElemType>& a, Matrix<ElemType>& b, const float annealSlope);
+    static void StochasticBinaryBackward(const Matrix<ElemType>& a, const Matrix<ElemType>& output, const Matrix<ElemType>& outgrad, Matrix<ElemType>& ingrad, const bool neuronST, const bool RFAdjusted, const bool passThrough, const float annealSlope);
 
 public:
     // static BLAS functions
