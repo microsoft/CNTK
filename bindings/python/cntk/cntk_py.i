@@ -33,6 +33,9 @@
 %rename(ctf_deserializer) CNTK::CTFDeserializer;
 %rename(htk_feature_deserializer) CNTK::HTKFeatureDeserializer;
 %rename(htk_mlf_deserializer) CNTK::HTKMLFDeserializer;
+%rename(_infer_outputs) CNTK::Function::InferOutputs;
+%rename(_stream_infos) CNTK::SwigMinibatchSource::StreamInfos(PyObject*);
+%rename(_next_minibatch) CNTK::SwigMinibatchSource::_GetNextMinibatch;
 
 %rename(_none) CNTK::DictionaryValue::Type::None;
 
@@ -122,6 +125,7 @@
 %template() std::vector<CNTK::Axis>;
 %template() std::vector<CNTK::DeviceDescriptor>;
 %template() std::vector<CNTK::StreamConfiguration>;
+%template() std::vector<CNTK::StreamInformation>;
 %template() std::vector<CNTK::HTKFeatureConfiguration>;
 %template() std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 %template() std::vector<std::shared_ptr<CNTK::Value>>;
@@ -141,7 +145,6 @@
 %template() std::vector<CNTK::Dictionary>;
 %template() std::vector<std::wstring>;
 %template() std::pair<std::vector<std::shared_ptr<CNTK::NDArrayView>>, std::vector<bool>>;
-
 
 // They are defined twice under CNTK::Internal and under CNTK namespace
 %ignore CNTK::Internal::Combine;
@@ -615,6 +618,22 @@ public:
 %feature("nodirector") CNTK::Learner::Parameters;
 %feature("nodirector") CNTK::Learner::ResetLearningRate;
 
+%feature("director") CNTK::TrainingSession;
+%feature("nodirector") CNTK::TrainingSession::OnMinibatchStart;
+%feature("nodirector") CNTK::TrainingSession::OnCheckpointStart;
+%feature("nodirector") CNTK::TrainingSession::GetMinibatchSize;
+
+%feature("director") CNTK::ProgressWriter;
+%ignore CNTK::ProgressWriter::UpdateTraining;
+%ignore CNTK::ProgressWriter::UpdateTest;
+%ignore CNTK::ProgressWriter::UpdateDistributedSync;
+%ignore CNTK::ProgressWriter::WriteTrainingSummary;
+%ignore CNTK::ProgressWriter::WriteTestSummary;
+
+%feature("director") CNTK::SwigMinibatchSource;
+%feature("nodirector") CNTK::SwigMinibatchSource::StreamInfos();
+%feature("nodirector") CNTK::SwigMinibatchSource::GetNextMinibatch;//(size_t minibatchSizeInSamples, size_t minibatchSizeInSequences, size_t numberOfWorkers, size_t workerRank, const DeviceDescriptor&); 
+
 %{
     #include "CNTKLibrary.h"
     #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
@@ -634,19 +653,6 @@ public:
         throw Swig::DirectorMethodException();
     }
 }
-
-// Common directors
-%feature("director") CNTK::TrainingSession;
-%feature("nodirector") CNTK::TrainingSession::OnMinibatchStart;
-%feature("nodirector") CNTK::TrainingSession::OnCheckpointStart;
-%feature("nodirector") CNTK::TrainingSession::GetMinibatchSize;
-
-%feature("director") CNTK::ProgressWriter;
-%ignore CNTK::ProgressWriter::UpdateTraining;
-%ignore CNTK::ProgressWriter::UpdateTest;
-%ignore CNTK::ProgressWriter::UpdateDistributedSync;
-%ignore CNTK::ProgressWriter::WriteTrainingSummary;
-%ignore CNTK::ProgressWriter::WriteTestSummary;
 
 //
 // NDShape
@@ -794,7 +800,9 @@ public:
     $input = PyList_New(0);
 }
 
-%typemap(directorargout) std::vector<CNTK::Variable>& outputs
+%define %unordered_vector_ref_conversion_directorargout(DATA_TYPE)
+
+%typemap(directorargout) std::vector<DATA_TYPE>& outputs
 {
     if (!PyList_Check($input))
         RuntimeError("List expected");
@@ -807,21 +815,22 @@ public:
      while ((item = PyIter_Next(iterator.get())))
      {
          void *raw_var = nullptr;
-         int res = SWIG_ConvertPtr(item, &raw_var, swig::type_info<CNTK::Variable>(),  0);
+         int res = SWIG_ConvertPtr(item, &raw_var, swig::type_info<DATA_TYPE>(),  0);
          if (!SWIG_IsOK(res))
              RuntimeError("Cannot convert list element to CNTK::Variable");
 
          if (!raw_var)
              RuntimeError("Invalid null reference when converting a list element to CNTK::Variable");
 
-         auto var = reinterpret_cast<CNTK::Variable*>(raw_var);
+         auto var = reinterpret_cast<DATA_TYPE*>(raw_var);
          $1.push_back(*var);
          Py_DECREF(item);
      }
 
      if (PyErr_Occurred())
-         RuntimeError("Cannot convert list element to CNTK::Variable");
+         RuntimeError("Cannot convert list element");
 }
+%enddef
 
 // For the output dict (the non-const unordered_map) we need to get the
 // modified values and put them back into the dictionary. This is used, when
@@ -1144,7 +1153,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 // we need to define a hash function on SwigPyObject.
 //
 
-%define %unordered_set_ref_conversion_director(DATA_TYPE, _SWIG_TYPE)
+%define %unordered_set_ref_conversion_directorin(DATA_TYPE, _SWIG_TYPE)
 
 %typemap(directorin) std::unordered_set<DATA_TYPE>& {
     PyObject* container = PyList_New(0);
@@ -1268,7 +1277,7 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 %unordered_set_ref_conversion(CNTK::DistributedWorkerDescriptor, $descriptor(CNTK::DistributedWorkerDescriptor *))
 
 // Unordered map conversion
-%define %unordered_map_ref_conversion_director(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
+%define %unordered_map_ref_conversion_directorin(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
 
 %typemap(directorin) std::unordered_map<DATA_TYPE1, DATA_TYPE2>& {
     PyObject* container = PyDict_New();
@@ -1296,10 +1305,13 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
 
 %enddef
 
-%unordered_set_ref_conversion_director(CNTK::Variable,  $descriptor(CNTK::Variable *))
-%unordered_set_ref_conversion_director(CNTK::ValuePtr,  $descriptor(CNTK::ValuePtr *))
-%unordered_map_ref_conversion_director(CNTK::Variable,  $descriptor(CNTK::Variable *), CNTK::ValuePtr, $descriptor(CNTK::ValuePtr *))
-%unordered_map_ref_conversion_director(CNTK::Parameter, $descriptor(CNTK::Parameter *), CNTK::NDArrayViewPtr, $descriptor(CNTK::NDArrayViewPtr *))
+%unordered_set_ref_conversion_directorin(CNTK::Variable,  $descriptor(CNTK::Variable *))
+%unordered_set_ref_conversion_directorin(CNTK::ValuePtr,  $descriptor(CNTK::ValuePtr *))
+%unordered_map_ref_conversion_directorin(CNTK::Variable,  $descriptor(CNTK::Variable *), CNTK::ValuePtr, $descriptor(CNTK::ValuePtr *))
+%unordered_map_ref_conversion_directorin(CNTK::Parameter, $descriptor(CNTK::Parameter *), CNTK::NDArrayViewPtr, $descriptor(CNTK::NDArrayViewPtr *))
+
+%unordered_vector_ref_conversion_directorargout(CNTK::Variable)
+%unordered_vector_ref_conversion_directorargout(CNTK::StreamInformation)
 
 %define %unordered_map_ref_conversion(DATA_TYPE1, _SWIG_TYPE1, DATA_TYPE2, _SWIG_TYPE2)
 
@@ -1391,6 +1403,143 @@ std::unordered_map<CNTK::StreamInformation, std::pair<CNTK::NDArrayViewPtr, CNTK
     }
 %}
 
+// Support for extending MinibatchSource
+%inline %{
+    class SwigMinibatchSource;
+    typedef std::shared_ptr<SwigMinibatchSource> SwigMinibatchSourcePtr;
+%}
+
+%shared_ptr(CNTK::SwigMinibatchSource)
+
+
+%inline %{
+namespace CNTK
+{
+    //
+    // Python cannot return references so we need to provide functions that
+    // accept references as arguments.
+    //
+    class SwigMinibatchSource final : public CNTK::MinibatchSource
+    {
+    public:
+        SwigMinibatchSource() { }
+
+        virtual void StreamInfos(PyObject* streamInfos) { NOT_IMPLEMENTED }
+
+        virtual void _GetNextMinibatch(
+            PyObject* pyInfoMap,
+            size_t minibatchSizeInSamples,
+            size_t minibatchSizeInSequences,
+            size_t numberOfWorkers,
+            size_t workerRank,
+            const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) { NOT_IMPLEMENTED }
+
+    protected:
+        // Making these protected to prevent them to be caught by Swig's
+        // director support, because the "nodirector" feature has issues seperating
+        // based on signature.
+        CNTK_API const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(
+            size_t minibatchSizeInSequences,
+            size_t minibatchSizeInSamples,
+            const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice());
+
+        virtual const std::unordered_set<StreamInformation>& StreamInfos() override {
+            static std::vector<StreamInformation> streamInfoList;
+
+            PyObject *pylist = PyList_New(0);
+			Py_INCREF(pylist);
+            StreamInfos(pylist);
+
+            static std::unordered_set<StreamInformation> streamInfos;
+            streamInfos.clear();
+
+            PyObject *item;
+
+            PyObject *iterator = PyObject_GetIter(pylist);
+            if (iterator == NULL) {
+                SWIG_Error(SWIG_ValueError, "cannot convert list element to CNTK::StreamInformation");
+            }
+
+            while ((item = PyIter_Next(iterator))) {
+                void *raw_var = 0 ;
+                int res1 = SWIG_ConvertPtr(item, &raw_var, SWIGTYPE_p_CNTK__StreamInformation,  SWIG_POINTER_IMPLICIT_CONV);
+                if (!SWIG_IsOK(res1)) {
+                    SWIG_Error(SWIG_ArgError(res1), "cannot convert list element to CNTK::StreamInformation");
+                }
+                if (!raw_var) {
+                    SWIG_Error(SWIG_ValueError, "invalid null reference when converting a list element to CNTK::StreamInformation");
+                }
+
+                CNTK::StreamInformation* var = reinterpret_cast<CNTK::StreamInformation*>(raw_var);
+
+                streamInfos.insert(*var);
+
+                Py_DECREF(item);
+            }
+
+            Py_DECREF(iterator);
+			Py_DECREF(pylist);
+
+            return streamInfos;
+        }
+
+        virtual const std::unordered_map<StreamInformation, MinibatchData>& GetNextMinibatch(
+            size_t minibatchSizeInSamples,
+            size_t minibatchSizeInSequences,
+            size_t numberOfWorkers,
+            size_t workerRank,
+            const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice()) {
+
+            PyObject* pyInfoMap = PyDict_New();
+            _GetNextMinibatch(pyInfoMap, minibatchSizeInSamples, minibatchSizeInSequences, numberOfWorkers, workerRank, device);
+
+            static std::unordered_map<StreamInformation, MinibatchData> infoMap;
+            infoMap.clear();
+
+            PyObject *key, *value;
+            Py_ssize_t pos = 0;
+
+            while (PyDict_Next(pyInfoMap, &pos, &key, &value)) {
+                printf("key %lli\n", key->ob_refcnt);
+                printf("value %lli\n", value->ob_refcnt);
+                void *raw_key = 0 ;
+                int res = SWIG_ConvertPtr(key, &raw_key, SWIGTYPE_p_CNTK__StreamInformation,  0);
+                if (!SWIG_IsOK(res)) {
+                    SWIG_Error(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::StreamInformation");
+                }
+                if (!raw_key) {
+                    SWIG_Error(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::StreamInformation");
+                }
+
+                CNTK::StreamInformation* sinfo = reinterpret_cast<CNTK::StreamInformation*>(raw_key);
+
+                void *raw_value = 0 ;
+                res = SWIG_ConvertPtr(value, &raw_value, SWIGTYPE_p_CNTK__MinibatchData,  0);
+                if (!SWIG_IsOK(res)) {
+                    SWIG_Error(SWIG_ArgError(res), "cannot convert key of dictionary to CNTK::MinibatchData");
+                }
+                if (!raw_value) {
+                    SWIG_Error(SWIG_ValueError, "invalid null reference when converting key of dictionary to CNTK::MinibatchData");
+                }
+
+                CNTK::MinibatchData* mbdata = reinterpret_cast<CNTK::MinibatchData*>(raw_value);
+
+                printf("raw_key: %p\n", (void*)raw_key);
+                printf("raw_value: %p\n", (void*)raw_value);
+                printf("sinfo: %p\n", (void*)sinfo);
+                printf("mbdata: %p\n", (void*)mbdata);
+                auto p = std::make_pair(*sinfo, *mbdata);
+                printf("---\n");
+                infoMap.insert(p);
+            }
+
+            Py_DECREF(pyInfoMap);
+
+            return infoMap;
+        }
+    };
+}
+%}
 
 //
 // NDMask

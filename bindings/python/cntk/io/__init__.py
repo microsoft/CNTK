@@ -7,10 +7,10 @@
 import warnings
 from .. import cntk_py, Value
 from ..tensor import ArrayMixin
-from cntk.internal import typemap
+from cntk.internal import typemap, sanitize_dtype_cntk
 from cntk.device import use_default_device
 from cntk.logging import TraceLevel, get_trace_level
-from cntk.utils import Record
+from cntk.variables import Record
 
 import numpy as np
 import uuid
@@ -28,6 +28,10 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
     Holds a minibatch of input data. This is never directly created, but
     only returned by :class:`MinibatchSource` instances.
     '''
+
+    def __init__(self, value, num_sequences, num_samples, sweep_end):
+        super(MinibatchData, self).__init__(value, num_sequences, num_samples,
+                                            sweep_end)
 
     @property
     def num_sequences(self):
@@ -124,14 +128,14 @@ class MinibatchSource(cntk_py.MinibatchSource):
         deserializers (a single deserializer or a `list`): deserializers to be used in the composite reader
         max_samples (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of input samples 
           (not 'label samples') the reader can produce. After this number has been reached, the reader 
-          returns empty minibatches on subsequent calls to GetNextMinibatch(). `max_samples` and `max_sweeps`
+          returns empty minibatches on subsequent calls to next_minibatch(). `max_samples` and `max_sweeps`
           are mutually exclusive, an exception will be raised if both have non-default values.
           **Important:** 
           Click :cntkwiki:`here <BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`
           for a description of input and label samples.
         max_sweeps (`int`, defaults to :const:`cntk.io.INFINITELY_REPEAT`): The maximum number of of sweeps over 
           the input dataset After this number has been reached, the reader returns empty minibatches on 
-          subsequent calls to GetNextMinibatch(). `max_samples` and `max_sweeps` are mutually exclusive, 
+          subsequent calls to next_minibatch(). `max_samples` and `max_sweeps` are mutually exclusive, 
           an exception will be raised if both have non-default values.
         randomization_window_in_chunks (`int`, defaults to :const:`cntk.io.DEFAULT_RANDOMIZATION_WINDOW_IN_CHUNKS`): 
           size of the randomization window in chunks, non-zero value enables randomization. 
@@ -268,6 +272,13 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Gets the description of the stream with given name.
         Throws an exception if there are none or multiple streams with this
         same name.
+
+        Args:
+            name (str): stream name to fetch
+
+        Returns:
+            :class:`~cntk.cntk_py.StreamInformation`
+            The information for the given stream name.
         '''
         return super(MinibatchSource, self).stream_info(name)
 
@@ -381,7 +392,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
 
         Args:
             position (:class:`~cntk.cntk_py.Dictionary`): position returned
-            from :func:`~get_current_position`.
+             from :func:`~get_current_position`.
         '''
         self.restore_from_checkpoint(position)
 
@@ -412,6 +423,98 @@ def _py_dict_to_cntk_dict(py_dict):
     return res
 
 
+class StreamInformation(cntk_py.StreamInformation):
+    '''
+    Stream information container.
+
+    Args:
+        stream_name (str): name of the stream
+        stream_id (int): unique ID of the stream
+        storage_format (str): 'dense' or 'sparse'
+        dtype (NumPy type): data type
+        sample_layout (tuple): shape of the elements
+    '''
+
+    _storage = {'dense': cntk_py.StorageFormat_Dense,
+                'sparse': cntk_py.StorageFormat_SparseCSC}
+
+    def __init__(self, stream_name, stream_id, storage_format, dtype,
+                 sample_layout):
+        super(StreamInformation, self).__init__()
+        self.m_name = stream_name
+        self.m_id = stream_id
+        self.m_storage_format = StreamInformation._storage[storage_format]
+        self.m_element_type = sanitize_dtype_cntk(dtype)
+        self.m_sample_layout = cntk_py.NDShape(sample_layout)
+
+
+class UserMinibatchSource(cntk_py.SwigMinibatchSource):
+    '''
+    Base class of all user minibatch sources.
+    '''
+    def __init__(self):
+        super(UserMinibatchSource, self).__init__()
+
+        streams = {si.m_name: si for si in self.stream_infos()}
+        self.streams = Record(**streams)
+
+    def stream_infos(self):
+        '''
+        Function to be implemented by the user.
+
+        Returns:
+            list of :class:`StreamInformation' instances
+        '''
+        raise NotImplementedError
+
+    def _stream_infos(self, sinfos=None):
+        # sinfos is a list of stream information, which we need to fill in
+        # place, # because Swig demands it that way.
+        sinfos.extend(self.stream_infos())
+
+    def stream_info(self, name):
+        '''
+        Gets the description of the stream with given name.
+        Throws an exception if there are none or multiple streams with this
+        same name.
+        '''
+        return super(UserMinibatchSource, self).stream_info(name)
+
+    def next_minibatch(self, num_samples, device=None):
+        '''
+        Function to be implemented by the user.
+
+        Returns:
+            mapping of :class:`StreamInformation` to :class:`MinibatchData`
+        '''
+        return NotImplementedError
+
+    def _next_minibatch(self, info_map, mb_size_in_sequences,
+            mb_size_in_samples, number_of_workers, worker_rank, device):
+        # mbsize_in_sequences is ignored
+
+        # TODO support distribution
+        assert number_of_workers == 1
+        assert worker_rank == 0
+
+        # TODO workaround Swig' ownership issues
+        self.__temp_cache = []
+        for k, v in self.next_minibatch(mb_size_in_samples, device).items():
+            info_map[k] = v
+            self.__temp_cache.append(v)
+
+    def __getitem__(self, name):
+        '''
+        Return the :class:`~cntk.cntk_py.StreamInformation` for the given
+        stream name.
+
+        Args:
+            name (str): stream name to fetch
+              :class:`~cntk.cntk_py.StreamInformation` for
+        '''
+        return self.stream_info(name)
+
+
 def HTKFeatureDeserializer(streams):
     '''
     Configures the HTK feature reader that reads speech data from scp files.
@@ -424,11 +527,9 @@ def HTKFeatureDeserializer(streams):
     feat = []
     for stream_name, stream in streams.items():
         if stream.stream_alias is not None:
-            raise ValueError(
-                "HTKFeatureDeserializer does not support steam names")
+            raise ValueError("HTKFeatureDeserializer does not support steam names")
         if 'scp' not in stream:
-            raise ValueError(
-                "No scp files specified for HTKFeatureDeserializer")
+            raise ValueError("No scp files specified for HTKFeatureDeserializer")
         dimension = stream.dim
         scp_file = stream['scp']
         broadcast = stream['broadcast'] if 'broadcast' in stream else False
@@ -490,7 +591,7 @@ def ImageDeserializer(filename, streams):
     '''
     image_stream_name = None
 
-    # streams with the same name are not allowed, make sure the default is
+    # Streams with the same name are not allowed, make sure the default is
     # unique.
     label_stream_name = '_ignore_labels_' + str(uuid.uuid1())
     num_labels = 2
@@ -616,6 +717,7 @@ def StreamDef(field=None, shape=None, is_sparse=False, transforms=None,
     return Record(**config)
     # TODO: we should always use 'shape' unless it is always rank-1 or a single rank's dimension
     # TODO: dim should be inferred from the file, at least for dense
+
 
 # StreamDefs for use in constructing deserializers
 # StreamDefs(query = StreamDef(...), labels = StreamDef(...), ...)
