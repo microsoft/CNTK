@@ -78,14 +78,14 @@ popd
 
 pushd cntk\losses\tests
 echo RUNNING cntk\losses unit tests...
-REM pytest --deviceid gpu
+pytest --deviceid gpu
 if errorlevel 1 exit /b 1
 echo(
 popd
 
 pushd cntk\metrics\tests
 echo RUNNING cntk\metrics unit tests...
-REM pytest --deviceid gpu
+pytest --deviceid gpu
 if errorlevel 1 exit /b 1
 echo(
 popd

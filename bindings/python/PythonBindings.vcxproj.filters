@@ -245,9 +245,6 @@
     <None Include="cntk\ops\tests\combine_test.py">
       <Filter>cntk\ops\tests</Filter>
     </None>
-    <None Include="cntk\ops\tests\cosine_distance_test.py">
-      <Filter>cntk\ops\tests</Filter>
-    </None>
     <None Include="cntk\logging\progress_print.py">
       <Filter>cntk\logging</Filter>
     </None>
@@ -355,6 +352,15 @@
     </None>
     <None Include="cntk\internal\tests\utils_test.py">
       <Filter>cntk\internal\tests</Filter>
+    </None>
+    <None Include="cntk\losses\tests\losses_test.py">
+      <Filter>cntk\losses\tests</Filter>
+    </None>
+    <None Include="cntk\metrics\tests\metrics_test.py">
+      <Filter>cntk\metrics\tests</Filter>
+    </None>
+    <None Include="cntk\losses\tests\cosine_distance_test.py">
+      <Filter>cntk\losses\tests</Filter>
     </None>
   </ItemGroup>
 </Project>
