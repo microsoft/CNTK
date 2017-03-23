@@ -289,9 +289,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %ignore_struct std::hash<::CNTK::DistributedWorkerDescriptor>;
 
-// Todo: add correct typemap as they might be useful for C# in future.
-%ignore_function CNTK::NDMask::DataBuffer;
-
 // Ignore things in CNTKLibraryInternals.h that are not exposed for C# Eval.
 %ignore_function CNTK::Internal::GenerateUid;
 %ignore_enum_class CNTK::Internal::PrimitiveFunction;
@@ -994,7 +991,44 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         //Todo: another hash function??
         return this.GetDimensions().GetHashCode();
     }
+%}
 
+// Todo: add correct typemap as they might be useful for C# in future.
+%ignore_function CNTK::NDMask::DataBuffer;
+%rename (GetMaskedCount) CNTK::NDMask::MaskedCount;
+%rename (GetDevice) CNTK::NDMask::Device;
+%rename (GetShape) CNTK::NDMask::Shape;
+%rename (_InvalidateSection) CNTK::NDMask::InvalidateSection;
+%rename (_MarkSequenceBegin) CNTK::NDMask::MarkSequenceBegin;
+%rename (_InvalidateSection) CNTK::NDMask::InvalidateSection;
+
+%typemap(cscode) CNTK::NDMask %{
+    public void InvalidateSection(System.Collections.Generic.List<uint> sectionOffset, NDShape sectionShape) {
+        var offsetVector = new SizeTVector(sectionOffset);
+        _InvalidateSection(offsetVector, sectionShape);
+    }
+
+    public void MarkSequenceBegin(System.Collections.Generic.List<uint> offset) {
+        var offsetVector = new SizeTVector(offset);
+        _MarkSequenceBegin(offsetVector);
+    }
+
+    public void MarkSequenceBegin(System.Collections.Generic.List<uint> offset, NDShape sectionShape) {
+        var offsetVector = new SizeTVector(offset);
+        _MarkSequenceBegin(offsetVector, sectionShape);
+    }
+
+    public int MaskedCount {
+        get { return (int)GetmaskedCount(); }
+    }
+
+    public DeviceDescriptor Device {
+        get { return GetDevice(); }
+    }
+
+    public NDShape Shape {
+        get { return GetShape(); }
+    }
 %}
 
 %apply int INPUT[]  { int *colStarts }
@@ -1430,6 +1464,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device, bool readOnly = false);
 %ignore CNTK::NDArrayView::NDArrayView(::CNTK::DataType dataType, const NDShape& viewShape, const void* dataBuffer, size_t bufferSizeInBytes, const DeviceDescriptor& device);
 %ignore CNTK::NDArrayView::NDArrayView(double value, DataType dataType = DataType::Float, const NDShape& viewShape = { 1 }, const DeviceDescriptor& device = DeviceDescriptor::UseDefaultDevice(), bool readOnly = false);
+%igore_function CNTK::NDArrayView::SliceView;
 
 %extend CNTK::NDArrayView {
     NDArrayView(const NDShape& viewShape, float *dataBuffer, size_t numBufferElements, const DeviceDescriptor& device, bool readOnly = false)
