@@ -139,8 +139,6 @@
     <None Include="cntk\tests\tensor_test.py" />
     <None Include="cntk\tests\test_utils.py" />
     <None Include="cntk\tests\__init__.py" />
-    <None Include="cntk\utils\__init__.py" />
-    <None Include="cntk\utils\tests\__init__.py" />
     <None Include="README.md" />
     <None Include="setup.py" />
     <None Include="swig_install.sh" />
