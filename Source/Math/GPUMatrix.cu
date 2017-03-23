@@ -27,7 +27,6 @@
 #include "CntkBatchNormalization.cuh"
 #include "Convolution.cuh"
 #include "CuDnnRNN.h"
-#include <random>
 
 #pragma comment(lib, "cudart.lib") // instruct linker to reference these libs
 #pragma comment(lib, "cublas.lib")
@@ -3380,30 +3379,6 @@ void GPUMatrix<ElemType>::RNNBackwardWeights(const GPUMatrix<ElemType>& inputX, 
     m_rnnExecutor->BackwardWeightsCore(inputX, outputY, dw, rnnAttributes, reserve, workspace);
 }
 
-#pragma region Static BLAS Functions
-// float/double overloads of cublasSgemm()/cublasDgemm()
-static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float* A, int lda, const float* B, int ldb, const float* beta, float* C, int ldc)
-{
-    return cublasSgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-}
-static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const double* alpha, const double* A, int lda, const double* B, int ldb, const double* beta, double* C, int ldc)
-{
-    return cublasDgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
-}
-static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const float* alpha, const float* x, int incx, float* y, int incy)
-{
-    return cublasSaxpy(handle, n, alpha, x, incx, y, incy);
-}
-static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const double* alpha, const double* x, int incx, double* y, int incy)
-{
-    return cublasDaxpy(handle, n, alpha, x, incx, y, incy);
-}
-
-
-//__host__ static __inline__ float _rand() {
-//	return (0.0 + (float)(rand()) / ((float)(RAND_MAX / (1.0f - 0.0f))));
-//}
-
 template <class ElemType>
 void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, GPUMatrix<ElemType>& b, const float annealSlope) {
     a.PrepareDevice();
@@ -3452,8 +3427,8 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     //cudaMalloc(&devStates, sizeof(curandState) * N);
     //auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
     //_generateRandomNumberNormalDistribution<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(d_rands, devStates, N, seed);
-    _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
-    
+    _stochasticbinaryForward<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), b.Data(), d_rands, N, annealSlope);
+
     //float* rands = new float[N];
     //CUDA_CALL(cudaMemcpy(rands, d_rands, N * sizeof(float), cudaMemcpyDeviceToHost));
     //fprintf(stderr, "\n");
@@ -3461,7 +3436,7 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     //	fprintf(stderr, "%f ", rands[i]);
     //fprintf(stderr, "\n");
     //delete[] rands;
-    
+
     //CUDA_CALL(cudaFree(devStates));
     CUDA_CALL(cudaFree(d_rands));
     CURAND_CALL(curandDestroyGenerator(gens));
@@ -3483,7 +3458,7 @@ void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a,
 
     size_t blocksPerGrid = (size_t)ceil(1.0 * m * n / GridDim::maxThreadsPerBlock);
     SyncGuard syncGuard;
-    assert((RFAdjusted || !RFAdjusted) && annealSlope > 0); 
+    assert((RFAdjusted || !RFAdjusted) && annealSlope > 0);
 
     if (neuronST) {
         if (passThrough) {
@@ -3494,7 +3469,26 @@ void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a,
             //fprintf(stderr, "here!!!\n");
             _stochasticbinaryBackward_Anneal<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
         }
-    } 
+    }
+}
+
+#pragma region Static BLAS Functions
+// float/double overloads of cublasSgemm()/cublasDgemm()
+static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const float* alpha, const float* A, int lda, const float* B, int ldb, const float* beta, float* C, int ldc)
+{
+    return cublasSgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+}
+static cublasStatus_t cublas_gemm(cublasHandle_t handle, cublasOperation_t transa, cublasOperation_t transb, int m, int n, int k, const double* alpha, const double* A, int lda, const double* B, int ldb, const double* beta, double* C, int ldc)
+{
+    return cublasDgemm(handle, transa, transb, m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
+}
+static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const float* alpha, const float* x, int incx, float* y, int incy)
+{
+    return cublasSaxpy(handle, n, alpha, x, incx, y, incy);
+}
+static cublasStatus_t cublas_axpy(cublasHandle_t handle, int n, const double* alpha, const double* x, int incx, double* y, int incy)
+{
+    return cublasDaxpy(handle, n, alpha, x, incx, y, incy);
 }
 
 template <class ElemType>
