@@ -187,14 +187,14 @@ def test_op_dropout(shape, dropout_rate, device_id, precision):
            max_off)
 
 def test_op_dropout_with_explicit_seed(device_id, precision):
-    from cntk import combine, dropout
+    from cntk import combine, dropout, input
 
     value = np.ones(shape=(10,10), dtype=PRECISION_TO_TYPE[precision])
 
-    a = I(shape=value.shape,
-          dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
-          needs_gradient=True,
-          name='a')
+    a = input(shape=value.shape,
+              dtype=sanitize_dtype_cntk(PRECISION_TO_TYPE[precision]),
+              needs_gradient=True,
+              name='a')
 
     seed = 123;
 

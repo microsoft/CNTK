@@ -8,11 +8,21 @@
 #include "Utils.h"
 #include "Learner.h"
 #include "PerformanceProfiler.h"
+#include "CompositeFunction.h"
+#include "Serialization.h"
 
 namespace
 {
+    const std::wstring versionPropertyName = L"Version";
     const std::wstring learnersPropertyName = L"Learners";
     const std::wstring externalStatePropertyName = L"ExternalState";
+    const std::wstring distributedStatePropertyName = L"DistributedState";
+
+    // Version history:
+    // 0 -- a version number before the versioning was introduced for the trainer's checkpoints.
+    // 1 -- initial version: added a key-value pair for the checkpoint version info, added
+    //      distributed state key to save all local state collected from distributed workers.
+    static const size_t trainerCheckpointVersion = 1;
 }
 
 namespace CNTK
@@ -292,15 +302,22 @@ namespace CNTK
     void Trainer::SaveCheckpoint(const std::wstring& modelFilePath, Dictionary externalState)
     {
         auto learnersState = m_parameterLearners->CreateCheckpoint();
+
         if (!m_distributed)
             return Save(modelFilePath, learnersState, externalState);
+
+        auto compositeFunction = dynamic_cast<CompositeFunction*>(m_combinedTrainingFunction.get());
+
+        Dictionary state;
+        state[internalWorkerStateKey] = compositeFunction->GetInternalState(); // this is the local worker's state.
+        state[externalWorkerStateKey] = externalState;
 
         // Collect distrbuted external state.
         DistributedCommunicatorPtr communicator = MPICommunicator();
         communicator->Barrier();
 
         std::vector<DictionaryPtr> remoteState;
-        communicator->Gather(externalState, remoteState, communicator->Workers());
+        communicator->Gather(state, remoteState, communicator->Workers());
 
         Dictionary aggregatedState;
         for (const auto& w : communicator->Workers())
@@ -309,19 +326,21 @@ namespace CNTK
         }
 
         if (communicator->CurrentWorker().IsMain())
-            Save(modelFilePath, learnersState, aggregatedState);
+            Save(modelFilePath, learnersState, externalState, aggregatedState);
 
         // all workers need to sync up after saving model to avoid read-after-write hazard
         // i.e. one worker is in the middle of write while another tries to read
         communicator->Barrier();
     }
 
-    void Trainer::Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState)
+    void Trainer::Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState, const Dictionary& distributedState)
     {
         std::wstring tempModelFile = modelFilePath + L".tmp";
         Dictionary state;
+        state[versionPropertyName] = trainerCheckpointVersion;
         state[learnersPropertyName] = learnerState;
         state[externalStatePropertyName] = externalState;
+        state[distributedStatePropertyName] = distributedState;
 
         m_combinedTrainingFunction->SaveModel(tempModelFile);
         std::wstring trainerStateCheckpointFilePath = GetTrainerStateCheckpointFilePath(modelFilePath);
@@ -344,25 +363,57 @@ namespace CNTK
 
         Dictionary checkpoint = Dictionary::Load(GetTrainerStateCheckpointFilePath(modelFilePath));
 
+        size_t version = 0;
+
+        if (checkpoint.Contains(versionPropertyName))
+            version = checkpoint[versionPropertyName].Value<size_t>();
+        
         auto learnerState = checkpoint[learnersPropertyName].Value<std::vector<DictionaryValue>>();
         auto externalState = checkpoint[externalStatePropertyName].Value<Dictionary>();
 
+        m_parameterLearners->RestoreFromCheckpoint(learnerState);
+
         if (!m_distributed)
         {
-            m_parameterLearners->RestoreFromCheckpoint(learnerState);
             return externalState;
         }
 
-        m_parameterLearners->RestoreFromCheckpoint(learnerState);
+        // this ensures that nobody will start writing to the model/checkpoint files, until
+        // everybody is done reading them.
         DistributedCommunicatorPtr communicator = MPICommunicator();
         communicator->Barrier();
 
-        auto key = std::to_wstring(communicator->CurrentWorker().m_globalRank);
+        auto mainWorkerId = std::to_wstring(0);
+        auto localWorkerId = std::to_wstring(communicator->CurrentWorker().m_globalRank);
 
-        if (externalState.Contains(key))
+        // before version 1, there was no distributed state per se. Instead, the external state
+        // contained a dictionary of worker-specific external states.
+        if (version == 0)
+        {
+            auto key = externalState.Contains(localWorkerId) ? localWorkerId : mainWorkerId;
             return externalState[key].Value<Dictionary>();
-        else
-            return externalState[std::to_wstring(0)].Value<Dictionary>();
+        }
+
+        Dictionary distributedState = checkpoint[distributedStatePropertyName].Value<Dictionary>();
+
+        if (communicator->CurrentWorker().IsMain() || !distributedState.Contains(localWorkerId))
+        {
+            return externalState;
+        }
+        
+        // the checkpoint contains internal state for this worker.
+        Dictionary localState = distributedState[localWorkerId].Value<Dictionary>();
+
+        auto internalState = localState[internalWorkerStateKey].Value<Dictionary>();
+        auto compositeFunction = std::dynamic_pointer_cast<CompositeFunction>(m_combinedTrainingFunction);
+        if (compositeFunction == nullptr)
+            RuntimeError("Combined training function is not a CompositeFunction.");
+            
+        // this assumes the compositeFunction (restored form a checkpoint made by the main node) and 
+        // the internal worker state both have identical UIDs.
+        compositeFunction->SetInternalState(internalState);
+        
+        return localState[externalWorkerStateKey].Value<Dictionary>();
     }
 
     double Trainer::PreviousMinibatchLossAverage() const

@@ -8,6 +8,7 @@
 #include "PrimitiveFunction.h"
 #include "CompositeFunction.h"
 #include "BlockFunction.h"
+#include "Utils.h"
 
 using namespace Microsoft::MSR::CNTK;
 
@@ -1047,6 +1048,7 @@ namespace CNTK
             seed = Internal::GenerateRandomSeed();
         
         additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::RandomSample, operand, std::move(additionalProperties), name);
     }
@@ -1061,6 +1063,7 @@ namespace CNTK
             seed = Internal::GenerateRandomSeed();
 
         additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::RandomSampleInclusionFrequency, operand, std::move(additionalProperties), name);
     }
@@ -1074,6 +1077,7 @@ namespace CNTK
             seed = Internal::GenerateRandomSeed();
         
         additionalProperties[PrimitiveFunction::AttributeNameRngSeed] = size_t(seed);
+        additionalProperties[PrimitiveFunction::AttributeNameRngOffset] = size_t(0);
 
         return UnaryOp(PrimitiveOpType::Dropout, operand, std::move(additionalProperties), name);
     }

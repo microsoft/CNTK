@@ -8,10 +8,6 @@
 #include "stdafx.h"
 #include "CNTKLibrary.h"
 #include "PrimitiveOpType.h"
-#include "Utils.h"
-#include "ConvolveGeometry.h"
-#include "ConvolutionalNodes.h"
-#include "Variable.h"
 
 namespace std
 {
@@ -301,6 +297,10 @@ namespace CNTK
                    (OpType() == PrimitiveOpType::RandomSampleInclusionFrequency);
         }
 
+        Dictionary GetState() const;
+
+        void SetState(const Dictionary& state);
+
     private:
 
         // The following helper functions are used to determine the output shape for different 
@@ -425,24 +425,7 @@ namespace CNTK
         }
 
         // Returns a boolean indicating if any operand shape was updated
-        static bool UpdateOperandShapes(std::vector<std::pair<Variable, NDShape>>& newOperandShapes)
-        {
-            bool anyParameterOperandDimsInferred = false;
-            auto updateOperandShapeFunc = [](Variable& operand, const NDShape& newOperandShape) {
-                if ((operand.IsParameter() || operand.IsConstant()) && (operand.Shape() != newOperandShape))
-                {
-                    operand.m_dataFields->m_shape = newOperandShape;
-                    return true;
-                }
-
-                return false;
-            };
-
-            for (auto& newOperandShapePair : newOperandShapes)
-                anyParameterOperandDimsInferred = updateOperandShapeFunc(newOperandShapePair.first, newOperandShapePair.second) || anyParameterOperandDimsInferred;
-
-            return anyParameterOperandDimsInferred;
-        }
+        static bool UpdateOperandShapes(std::vector<std::pair<Variable, NDShape>>& newOperandShapes);
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
         /*static*/ NDShape BinaryElementwiseOpOutputShape(PrimitiveOpType op, Variable& leftOperand, Variable& rightOperand, bool broadcastAllowed, bool inferInputDimensions) const
@@ -493,6 +476,10 @@ namespace CNTK
                 }
             }
 
+            
+            UNUSED(broadcastAllowed);
+            // BUGBUG: if (broadcastAllowed) is missing here?
+
             // Broadcast in remaining axes
             for (size_t i = shapeWithSmallerNumAxes.Rank(); i < numOutputAxes; ++i)
                 outputDims[i] = shapeWithLargerNumAxes[i];
@@ -507,17 +494,7 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        /*static*/ NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions) const
-        {
-            assert(operands.size() > 1);
-
-            // TODO: Is this logic of transitively constructing the output shape from the operands correct?
-            Variable dummyOutputVariable = PlaceholderVariable(NDShape());
-            for (auto& operand : operands)
-                dummyOutputVariable.m_dataFields->m_shape = BinaryElementwiseOpOutputShape(op, dummyOutputVariable, operand, broadcastAllowed, inferInputDimensions);
-
-            return dummyOutputVariable.Shape();
-        }
+        /*static*/ NDShape NaryElementwiseOpOutputShape(PrimitiveOpType op, std::vector<Variable>& operands, bool broadcastAllowed, bool inferInputDimensions) const;
 
         // Returns a pair comprising of the output shape and boolean indicating if any input operand shape was modified
         /*static*/ NDShape TimesOpOutputShape(Variable& leftOperand, Variable& rightOperand, size_t outputRank, int inferInputRankToMap, bool inferInputDimensions) const
@@ -643,61 +620,11 @@ namespace CNTK
             return NDShape(std::move(outputDims));
         }
 
-        static void FixNDShape(size_t filterRank, size_t inputRank, NDShape& shape, size_t deflt, const NDShape& from = NDShape())
-        {
-            auto dims = shape.Dimensions();
-            Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(filterRank, inputRank, dims, deflt, from.Dimensions());
-            shape = NDShape(dims);
-        }
+        static void FixNDShape(size_t filterRank, size_t inputRank, NDShape& shape, size_t deflt, const NDShape& from = NDShape());
 
         /*static*/ NDShape ConvolutionOpOutputShape(PrimitiveOpType op, const NDShape& operandShape, NDShape& kernelShape, NDShape& outputMapCount, NDShape& strides,
-                                                std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
-                                                bool transpose, bool inferDimensions, bool ceilOutputDim = false) const
-        {
-            if (inferDimensions)
-            {
-                size_t inputRank = operandShape.Rank();
-
-                // Unknown kernel shape valid only for pooling, however, the shape should have expanded before
-                // this call.
-                if (kernelShape == NDShape::Unknown)
-                    RuntimeError("Convolution: Kernel shape can't be Unknown.");
-
-                // infer reduction dimensions if not given
-                // If kernel has a lower rank than the input then the remaining dimensions are to be reduced over.
-                size_t filterRank = kernelShape.Rank();
-
-                // If the trailing axis dimensionality of the kernel shape is NDShape::InferredDimension, we reduce over it by 
-                // picking the corresponding operand shape dimensionality
-                // This is done by shrinking the filter rank and let the dimensions be inferred from the operand's shape
-                // TODO: Should we do this for all of the axes in kernelShape that have a dimensionailty of NDShape::InferredDimension?
-                if (kernelShape[filterRank - 1] == NDShape::InferredDimension)
-                {
-                    filterRank--;
-                    kernelShape = kernelShape.SubShape(0, filterRank);
-                }
-
-                NDShape fromShape;
-                if (op == PrimitiveOpType::Convolution)
-                    fromShape = operandShape;
-
-                size_t fillRank = (!transpose)? filterRank : filterRank - 1; 
-                FixNDShape(fillRank, inputRank, kernelShape, 1, fromShape); // convolve over red dim; pool over 1
-                FixNDShape(fillRank, inputRank, strides, 1, fromShape); // stride for reduction dims is red dim or 1
-                FixNDShape(fillRank, inputRank, lowerPad, 0);
-                FixNDShape(fillRank, inputRank, upperPad, 0);
-                Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(fillRank, inputRank, sharing, true);
-                Microsoft::MSR::CNTK::ConvolutionNodeBase<float>::FixVectorShape(fillRank, inputRank, autoPad, false); // no padding for reduction dims
-            }
-
-            decltype(&Microsoft::MSR::CNTK::ConvolveGeometry::ComputeOutputShape) computeOutputShapeFunc;
-            if (!transpose)
-                computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeOutputShape;
-            else
-                computeOutputShapeFunc = &Microsoft::MSR::CNTK::ConvolveGeometry::ComputeInputShape;
-
-            return AsNDShape(computeOutputShapeFunc(AsTensorShape(operandShape), AsTensorShape(kernelShape), AsTensorShape(outputMapCount), AsTensorShape(strides), sharing, autoPad, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutputDim));
-        }
+            std::vector<bool>& sharing, std::vector<bool>& autoPad, NDShape& lowerPad, NDShape& upperPad,
+            bool transpose, bool inferDimensions, bool ceilOutputDim = false) const;
 
         /*static*/ NDShape BatchNormalizationOutputShape(std::vector<Variable>& operands, bool spatial, bool inferDimensions) const
         {

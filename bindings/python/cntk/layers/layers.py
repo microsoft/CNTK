@@ -14,6 +14,7 @@ from ..variables import Variable, Record, Constant
 from ..ops import parameter, input, placeholder, combine
 from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from cntk.internal import _as_tuple
+from cntk.cntk_py import sentinel_value_for_auto_select_random_seed as SentinelValueForAutoSelectRandomSeed
 from .blocks import *
 from .higher_order_layers import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
@@ -1023,7 +1024,10 @@ def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
 
 # TODO: should the rate(s) be default_options?
-def Dropout(dropout_rate=None, keep_prob=None, name=''):
+def Dropout(dropout_rate=None, 
+            keep_prob=None,
+            seed = SentinelValueForAutoSelectRandomSeed,
+            name=''):
     '''
     Layer factory function to create a drop-out layer.
 
@@ -1043,6 +1047,7 @@ def Dropout(dropout_rate=None, keep_prob=None, name=''):
     Args:
      dropout_rate (float): probability of dropping out an element, mutually exclusive with ``keep_prob``
      keep_prob (float): probability of keeping an element, mutually exclusive with ``dropout_rate``
+     seed (int): random seed.
      name (str, defaults to ''): the name of the function instance in the network
 
     Returns:
@@ -1057,7 +1062,7 @@ def Dropout(dropout_rate=None, keep_prob=None, name=''):
         dropout_rate = 1-keep_prob
     @BlockFunction('Dropout', name)
     def dropout_f(x):
-        return dropout(x, dropout_rate=dropout_rate)
+        return dropout(x, dropout_rate=dropout_rate, seed=seed)
     return dropout_f
 
 

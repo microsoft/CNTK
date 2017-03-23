@@ -36,16 +36,26 @@ namespace CNTK
 
         static std::atomic_ullong s_currentRandomSeed = ATOMIC_VAR_INIT(0);
 
+        // This is used to generate a default seed for stateful nodes (dropout, and both
+        // flavors of random sample). As a result, in distributed environment, each worker 
+        // ends up having a different seed.
+        
         size_t GenerateRandomSeed()
         {
-            DistributedCommunicatorPtr communicator = MPICommunicator();
-            auto numWorkers = communicator->Workers().size();
-            auto rank = communicator->CurrentWorker().m_globalRank;
+            static size_t numWorkers = 1, rank = 0;
+            static bool initialized = false;
+            if (MPIWrapper::GetTotalNumberOfMPINodes() != 0 && !initialized) 
+            {
+                DistributedCommunicatorPtr communicator = MPICommunicator();
+                numWorkers = communicator->Workers().size();
+                rank = communicator->CurrentWorker().m_globalRank;
 
-            if (numWorkers < 1)
-                numWorkers = 1;
+                if (numWorkers < 1)
+                    numWorkers = 1;   
+            }
 
-            return (numWorkers * ++s_currentRandomSeed) + rank;
+            initialized = true;
+            return (numWorkers * s_currentRandomSeed++) + rank;
         }
 
         std::atomic<bool> s_reverseTensorShapesInErrorMessages(false);
