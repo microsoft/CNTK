@@ -6,8 +6,8 @@
 import numpy
 import pytest
 
-from cntk import cntk_py, variables
-from cntk.internal import typename
+from cntk import cntk_py, variables, placeholder, constant, times, functions
+from ..swig_helper import typemap
 
 def _param():
     return cntk_py.Parameter((1,2), cntk_py.DataType_Float, 5.0)

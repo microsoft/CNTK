@@ -13,6 +13,7 @@ from . import cntk_py
 # Bubble the below namespaces to cntk root namespace.
 #
 from .core import *
+from .variables import *
 from .ops import *
 from .device import *
 from .train import *
@@ -20,15 +21,13 @@ from .learners import *
 from .losses import *
 from .metrics import *
 from .initializer import *
-from .sample_installer import install_samples
 
-#
-# Import the actual modules.
-#
 from . import debugging
 from . import logging
 from . import io
 from . import layers
+
+from .sample_installer import install_samples
 
 DATATYPE = np.float32
 InferredDimension = cntk_py.InferredDimension
