@@ -317,6 +317,13 @@ class Function(cntk_py.Function):
         else: # single value: return numpy array and that's it
             return list(output_map.values())[0]
 
+    # TODO: remove the parallel application; instead
+    #  - function tuples always operate on all inputs, just as if they were a single function
+    #  - parallel application would be done by nested Sequential or >> expressions
+    #  - we also need to rethink Sequential() for the case that the first function passed to
+    #    it accepts multiple arguments. That should just become the returned composite's signature.
+    #    It naturally would if we just passed it on to Function, but in case of a tuple, we'd need
+    #    to create intermediate placeholders so that all functions in the tuple get to share the inputs.
     def __rshift__(self, other):
         '''
         Forward function composition (G o F), same as Sequential([F, G]).
@@ -931,7 +938,7 @@ class Function(cntk_py.Function):
         Returns:
             :class:`Function`: itself
 
-        :raises ExceptionType: when the function has multiple placeholders.
+        :raises Exception: when the function has multiple placeholders.
         '''
         return super(Function, self).replace_placeholder(substitution)
 

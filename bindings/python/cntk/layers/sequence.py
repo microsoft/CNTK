@@ -164,6 +164,8 @@ def _sanitize_function(f):
 # TODO: allow to say sequential=False, axis=2, length=100, ... something like this
 def RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name=''):
     '''
+    RecurrenceFrom(step_function, go_backwards=False, return_full_state=False, name='')
+
     Layer factory function to create a function that runs a cell function recurrently over an input sequence, with initial state.
     This layer is very similar to :func:`~cntk.layers.sequence.Recurrence`,
     except that the initial state is data dependent, and thus passed to the layer function as a data input
@@ -275,6 +277,8 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
 # TODO: Can bidirectionality be an option of this? bidirectional=True?
 def Recurrence(step_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name=''):
     '''
+    Recurrence(step_function, go_backwards=False, initial_state=0, return_full_state=False, name='')
+
     Layer factory function to create a function that runs a step function recurrently over an input sequence.
     This implements the typical recurrent model.
 

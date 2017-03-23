@@ -329,7 +329,10 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
+'''int: constant used to specify maximum pooling'''
+
 AVG_POOLING = PoolingType_Average
+'''int: constant used to specify average pooling'''
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
@@ -358,8 +361,8 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         auto_padding (default [False,]): automatic padding flags for each input dimension.
         lower_pad (default (0,)): precise lower padding for each input dimension
         upper_pad (default (0,)): precise upper padding for each input dimension
-        ceil_out_dim (default false): ceiling while computing output size
-        include_pad(default false): include pad while average pooling
+        ceil_out_dim (default False): ceiling while computing output size
+        include_pad(default False): include pad while average pooling
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -375,6 +378,8 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
 
 MAX_UNPOOLING = PoolingType_Max
+'''int: constant used to specify maximum unpooling'''
+
 @typemap
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):
@@ -913,7 +918,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_NO_INFERRED_
         output_rank (int): in case we have tensors as arguments, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
-        infer_input_rank_to_map ('int'): meant for internal use only. Always use default value
+        infer_input_rank_to_map (int): meant for internal use only. Always use default value
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -1879,6 +1884,10 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     Args:
         x: tensor to be reshaped
         shape (tuple): a tuple defining the resulting shape
+        begin_axis (int or None): shape replacement begins at this axis. Negative values
+         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, pass `Axis.new_leading_axis()`
+        end_axis (int or None): shape replacement ends at this axis (excluding this axis).
+         Negative values are counting from the end. `None` refers to the end of the shape tuple.
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -1985,7 +1994,6 @@ def slice(x, axis, begin_index, end_index, name=''):
         array([[ 1.,  2.,  -3.]], dtype=float32)
         >>> x[0, [1,2]].eval()
         array([[ 2.,  -3.]], dtype=float32)
-
         <BLANKLINE>
         >>> x[1].eval()
         array([[ 4.,  5.,  6.]], dtype=float32)
@@ -2002,7 +2010,7 @@ def slice(x, axis, begin_index, end_index, name=''):
         name (str, optional): the name of the Function instance in the network
 
     See also:
-        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+        Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -2517,7 +2525,7 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (type, optional): np.float32 (default) or np.float64
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
@@ -2552,7 +2560,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (type, optional): np.float32 (default) or np.float64
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)

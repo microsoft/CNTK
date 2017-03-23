@@ -138,7 +138,7 @@ has to learn to map the words to these vectors effectively. For example, the vec
 representing the word "cat" may somehow be close, in some sense, to the vector for "dog". 
 In our task we will learn these word embeddings from scratch. However, it is also 
 possible to initialize with a pre-computed word embedding such as 
-`GloVe <http://nlp.stanford.edu/projects/glove/>`_ which has been trained on 
+`GloVe <https://nlp.stanford.edu/projects/glove/>`_ which has been trained on 
 corpora containing billions of words. 
 
 Now that we've decided on our word representation and the type of recurrent neural 

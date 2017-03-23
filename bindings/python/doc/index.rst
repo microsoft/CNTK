@@ -1,6 +1,6 @@
 
 .. some aliases
-.. _CNTK: http://cntk.ai/
+.. _CNTK: https://cntk.ai/
 
 Python API for CNTK (2.0.beta15.0)
 ==================================
@@ -27,7 +27,6 @@ them on sample data in real time. Please give feedback through these `channels`_
    Python API Reference <apireference>
    Readers, Multi-GPU, Profiling...<readersprofetc>
    Extending CNTK <extend>
-   Debugging models <debug>
    Known Issues <knownissues>
 
 Indices and tables

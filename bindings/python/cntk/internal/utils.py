@@ -138,7 +138,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
     mainly to explore the operators and for convenient unit testing.
 
     Args:
-        op (:class:`Function`): operation to evaluate
+        op (:class:`~cntk.ops.functions.Function`): operation to evaluate
         arguments: maps variables to their input data. The
          interpretation depends on the input type:
 

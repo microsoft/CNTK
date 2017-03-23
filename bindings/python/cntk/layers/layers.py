@@ -24,7 +24,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
           bias=default_override_or(True), init_bias=default_override_or(0),
           name=''):
     '''
-    Dense(shape, activation=identity, init=glorot_uniform(),input_rank=None, map_rank=None, bias=True, init_bias=0, name='')
+    Dense(shape, activation=identity, init=glorot_uniform(), input_rank=None, map_rank=None, bias=True, init_bias=0, name='')
 
     Layer factory function to create an instance of a fully-connected linear layer of the form
     `activation(input @ W + b)` with weights `W` and bias `b`, and `activation` and `b` being optional.
@@ -113,7 +113,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
 def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=None, name=''):
     '''
-    Embedding(shape=None, init=glorot_uniform(), weights=None, name=''):
+    Embedding(shape=None, init=glorot_uniform(), weights=None, name='')
 
     Layer factory function to create a embedding layer.
 
@@ -262,7 +262,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
                 max_temp_mem_size_in_samples=0,
                 op_name='Convolution', name=''):
     '''
-    Convolution(filter_shape, num_filters=None, sequential=False, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, reduction_rank=1, transpose=False, max_temp_mem_size_in_samples=0, op_name='Convolution', name='')
+    Convolution(filter_shape, num_filters=None, sequential=False, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, reduction_rank=1, transpose_weight=False, max_temp_mem_size_in_samples=0, op_name='Convolution', name='')
 
     Layer factory function to create a convolution layer.
 
@@ -417,7 +417,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         num_inserted_axes = sequential + num_emulated_axes
         if num_inserted_axes != 0:
             # x: (in_depth, spatial_shape)
-            x = reshape(x, (1,) * num_inserted_axes, begin_axis=-filter_rank_without_seq, end_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else None) # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+            x = reshape(x, (1,) * num_inserted_axes,    # e.g. (2000, 480, 640) -> (2000, 1, 480, 640)
+                        begin_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else Axis.new_leading_axis(),
+                        end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
             # x: (in_depth or emulated_in_depth, emulated_1D_extra, seq_filter_shape, spatial_shape)
         # sequential convolution is implemented through explicit stacking for now, since the C++ cannot handle it
         # TODO: if reduction_rank==0 and sequential, we don't need the fake reduction axis, just use the sequential axis instead
@@ -440,7 +442,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         num_axes_to_remove = sequential + emulating_1D + emulating_output_depth
         if num_axes_to_remove > 0:
             # (out_depth, emulated axes, spatial_shape)
-            r = reshape(r, (), begin_axis=-filter_rank_without_seq - num_axes_to_remove, end_axis=-filter_rank_without_seq if filter_rank_without_seq != 0 else None) # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+            r = reshape(r, (),    # e.g. (2000, 1, 480, 640) -> (2000, 480, 640)
+                        begin_axis=-filter_rank_without_seq - num_axes_to_remove,  # no need for Axis.new_leading_axis() since expression < 0 guaranteed
+                        end_axis  =-filter_rank_without_seq if filter_rank_without_seq != 0 else None)
             # (out_depth, spatial_shape)
         if activation is not None:
             r = activation(r)
@@ -616,6 +620,8 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
                          name=''):
 
     '''
+    ConvolutionTranspose(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, sharing=True, bias=True, init_bias=0, output_shape=None, reduction_rank=1, max_temp_mem_size_in_samples=0, name='')
+
     Layer factory function to create a convolution transpose layer.
 
     This implements a convolution_transpose operation over items arranged on an N-dimensional grid, such as pixels in an image.
@@ -738,6 +744,8 @@ def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3
                            output_shape=None, 
                            name=''):
     '''
+    ConvolutionTranspose1D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
+
     Layer factory function to create a 1D convolution transpose layer with optional non-linearity.
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 1-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.
@@ -764,6 +772,8 @@ def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3)
                            output_shape=None, 
                            name=''):
     '''
+    ConvolutionTranspose2D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
+
     Layer factory function to create a 2D convolution transpose layer with optional non-linearity.
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 2-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.
@@ -791,6 +801,8 @@ def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3)
                            output_shape=None, 
                            name=''):
     '''
+    ConvolutionTranspose3D(filter_shape, num_filters, activation=identity, init=glorot_uniform(), pad=False, strides=1, bias=True, init_bias=0, output_shape=None, name='')
+
     Layer factory function to create a 3D convolution transpose layer with optional non-linearity.
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 3-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.
