@@ -376,7 +376,7 @@ private:
             algo.autotuningState = AutotuningState::Init;
 
         // batchSize is bigger than the one when initialize current workspace, need free up space and go back to init
-        if (algo.autotuningState == AutotuningState::Running && batchSize > algo.MBSizeForCurrentWorkspace)
+        if (algo.autotuningState == AutotuningState::Running && batchSize > algo.maxMBSizeSeen)
         {
             algo.autotuningState = AutotuningState::Init;
             workspace.Resize(0,0,0,false);
@@ -391,13 +391,14 @@ private:
         if (algo.autotuningState == AutotuningState::Init)
         {
             CUDNN_CALL(staticFinder(algo.selectedAlgo, true));
+            algo.maxMBSizeSeen = batchSize;
             algo.MBSizeForCurrentAlgo = batchSize;
             algo.autotuningState = AutotuningState::PendingTuning;
             return;
         }
 
         // we allocate workspace and find algorithm if batchSize is higher than ever seen
-        if (batchSize > algo.MBSizeForCurrentWorkspace)
+        if (algo.MBSizeForCurrentWorkspace == 0)
         {
             // Reserve 100MB and give workspace size of m_MaxWorkspaceSize
             size_t free, total, resizeTo = 0;
@@ -409,7 +410,7 @@ private:
             // We don't need memory more than MAX
             if(resizeTo > algo.AlgoWorkspaceSize) resizeTo = algo.AlgoWorkspaceSize;
             if(resizeTo > 0) workspace.Resize(resizeTo/sizeof(ElemType), 1);
-            algo.MBSizeForCurrentWorkspace = algo.MBSizeForCurrentAlgo;
+            algo.MBSizeForCurrentWorkspace = batchSize;
 
             // Pending State now, let's do a find and get algorithm Perfs
             typename TAlgo::typeT algoPerf[MaxAlgoCount];
@@ -426,7 +427,6 @@ private:
                                     [=](const typename TAlgo::typeT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem; });
             if (res == algoPerf + calgo)
                 RuntimeError("During auto-tuning, cuDNN could not find suitable algorithm for the current convolution configuration.");
-
             algo.MBSizeForCurrentAlgo = batchSize;
             algo.selectedAlgo = (*res).algo;
             algo.maxAlgo = algo.selectedAlgo;
@@ -489,10 +489,11 @@ private:
     {
         typedef T typeT;
         ConvAlgoInfo()
-            : MBSizeForCurrentAlgo(0), MBSizeForCurrentWorkspace(0), autotuningState(AutotuningState::Init), AlgoWorkspaceSize(0)
+            : MBSizeForCurrentAlgo(0), MBSizeForCurrentWorkspace(0), maxMBSizeSeen(0),autotuningState(AutotuningState::Init), AlgoWorkspaceSize(0)
         {
         }
         // Current mini-batch size, needed for re-computing statistics in auto-tuner.
+        size_t maxMBSizeSeen;
         size_t MBSizeForCurrentAlgo;
         size_t MBSizeForCurrentWorkspace;
         size_t AlgoWorkspaceSize;
