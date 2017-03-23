@@ -55,7 +55,7 @@ class PolyMath:
         def func(wg, wn):
             return C.times(wg, glove) + C.times(wn, nonglove)
         return func
-
+        
     def model(self):
         c = C.Axis.new_unique_dynamic_axis('c')
         q = C.Axis.new_unique_dynamic_axis('q')
@@ -78,7 +78,7 @@ class PolyMath:
         embedded = C.splice(
             self.embed()(input_glove_words, input_nonglove_words), 
             C.reshape(self.charcnn(C.reshape(input_chars, (self.word_size, C.InferredDimension))), self.convs))
-
+            
         input_layers = C.layers.Sequential([
             HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
             C.Dropout(self.dropout),

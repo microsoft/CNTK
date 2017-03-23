@@ -53,6 +53,39 @@ def populate_dicts(files):
 
     # return as defaultdict(int) so that new keys will return 0 which is the value for <unknown>
     return known, defaultdict(int, vocab), defaultdict(int, chars)
+    
+def tsv_iter(line, unk_w, unk_c, is_test=False):
+    if is_test:
+        uid, title, context, query, answer, other = line.split('\t')
+        begin_answer, end_answer = '0', '1'
+    else:
+        uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
+
+    ctokens = context.split(' ')
+    #ctokens.append(eos) # polymath-1 does not generates this
+    if len(ctokens) > max_context_len:
+        raise ValueError('input context exceeds max_context_len: %d' % len(ctokens))
+
+    qtokens = query.split(' ')
+    if len(qtokens) > max_query_len:
+        raise ValueError('input query exceeds max_query_len: %d' % len(qtokens))
+
+    atokens = answer.split(' ')
+    cwids = [vocab.get(t.lower(), unk_w) for t in ctokens]
+    qwids = [vocab.get(t.lower(), unk_w) for t in qtokens]
+    ccids = [[chars.get(c, unk_c) for c in t][:word_size] for t in ctokens] #clamp at word_size
+    qcids = [[chars.get(c, unk_c) for c in t][:word_size] for t in qtokens]
+    
+    ba, ea = int(begin_answer), int(end_answer) - 1 # the end from tsv is exclusive
+    if ba > ea:
+        raise ValueError('answer problem with input line:\n%s' % line)
+    
+    baidx = [0 if i != ba else 1 for i,t in enumerate(ctokens)]
+    eaidx = [0 if i != ea else 1 for i,t in enumerate(ctokens)]
+    if sum(eaidx) == 0:
+        raise ValueError('problem with input line:\n%s' % line)
+
+    return ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids
 
 def tsv_to_ctf(f, g, vocab, chars, is_test):
     print("Known words: %d" % known)
@@ -61,35 +94,8 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
     unk_w = vocab[unk]
     unk_c = chars[unk]
     for lineno, line in enumerate(f):
-        if is_test:
-            uid, title, context, query, answer, other = line.split('\t')
-            begin_answer, end_answer = '0', '1'
-        else:
-            uid, title, context, query, begin_answer, end_answer, answer = line.split('\t')
+        ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv_iter(line, unk_w, unk_c, is_test)
 
-        ctokens = context.split(' ')
-        #ctokens.append(eos) # polymath-1 does not generates this
-        if len(ctokens) > max_context_len:
-            raise ValueError('input context exceeds max_context_len: %d' % len(ctokens))
-
-        qtokens = query.split(' ')
-        if len(qtokens) > max_query_len:
-            raise ValueError('input query exceeds max_query_len: %d' % len(qtokens))
-
-        atokens = answer.split(' ')
-        cwids = [vocab.get(t.lower(), unk_w) for t in ctokens]
-        qwids = [vocab.get(t.lower(), unk_w) for t in qtokens]
-        ccids = [[chars.get(c, unk_c) for c in t][:word_size] for t in ctokens] #clamp at word_size
-        qcids = [[chars.get(c, unk_c) for c in t][:word_size] for t in qtokens]
-        
-        ba, ea = int(begin_answer), int(end_answer) - 1 # the end from tsv is exclusive
-        if ba > ea:
-            raise ValueError('answer problem with input line:\n%s' % line)
-        
-        baidx = [0 if i != ba else 1 for i,t in enumerate(ctokens)]
-        eaidx = [0 if i != ea else 1 for i,t in enumerate(ctokens)]
-        if sum(eaidx) == 0:
-            raise ValueError('problem with input line:\n%s' % line)
         for     ctoken,  qtoken,  atoken,  cwid,  qwid,   begin,   end,   ccid,  qcid in zip_longest(
                 ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids):
             out = [str(lineno)]
@@ -126,15 +132,16 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
             g.write('\t'.join(out))
             g.write('\n')
 
-try:
-    known, vocab, chars = pickle.load(open('vocabs.pkl', 'rb'))
-except:
-    known, vocab, chars = populate_dicts((tsvs[0],))
-    f = open('vocabs.pkl', 'wb')
-    pickle.dump((known, vocab, chars), f)
-    f.close()
+if __name__=='__main__':
+    try:
+        known, vocab, chars = pickle.load(open('vocabs.pkl', 'rb'))
+    except:
+        known, vocab, chars = populate_dicts((tsvs[0],))
+        f = open('vocabs.pkl', 'wb')
+        pickle.dump((known, vocab, chars), f)
+        f.close()
 
-for tsv in tsvs:
-    with open('%s.tsv' % tsv, 'r', encoding='utf-8') as f:
-        with open('%s.ctf' % tsv, 'w', encoding='utf-8') as g:
-            tsv_to_ctf(f, g, vocab, chars, tsv == 'dev')
+    for tsv in tsvs:
+        with open('%s.tsv' % tsv, 'r', encoding='utf-8') as f:
+            with open('%s.ctf' % tsv, 'w', encoding='utf-8') as g:
+                tsv_to_ctf(f, g, vocab, chars, tsv == 'dev')

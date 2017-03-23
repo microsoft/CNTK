@@ -17,10 +17,10 @@ model_config = {
 }
 
 training_config = {
-    'minibatch_size' : 2048, # in samples
+    'minibatch_size' : 2500, # in samples
     'log_freq'       : 10,  # in minibatchs
     'epoch_size'     : 1780, # in sequences
-    'max_epochs'     : 100,
+    'max_epochs'     : 3,
     'rho'            : 0.5,
     'train_data'     : 'val.ctf',
 }

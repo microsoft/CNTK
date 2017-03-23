@@ -1,6 +1,7 @@
 import cntk as C
 import numpy as np
 from polymath import PolyMath
+import tsv2ctf
 import os
 import argparse
 import importlib
@@ -15,7 +16,7 @@ def argument_by_name(func, name):
         raise ValueError('multiple matching names in arguments')
     else:
         return found[0]
-
+        
 def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     mb_source = C.MinibatchSource(
         C.CTFDeserializer(
@@ -44,16 +45,30 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
     }
     return mb_source, input_map
 
+def create_tsv_reader(func, tsv_file, polymath):
+    with open(tsv_file, 'r', encoding='utf-8') as f:
+        for lineno, line in enumerate(f):
+            ctokens, qtokens, atokens, cwids, qwids,  baidx,   eaidx, ccids, qcids = tsv2ctf.tsv_iter(line, polymath.vocab[tsv2ctf.unk], polymath.vocab[tsv2ctf.unk_c], False)
+            context_g_words = C.one_hot([[ONE_HOT_SKIP if polymath.vocab[t] >= polymath.wg_dim else polymath.vocab[t] for t in ctokens]])
+            query_g_words   = C.one_hot([[ONE_HOT_SKIP if polymath.vocab[t] >= polymath.wg_dim else polymath.vocab[t] for t in qtokens]])
+            yield { argument_by_name(func, 'cgw'): context_g_words,
+                    argument_by_name(func, 'qgw'): query_g_words,
+                    argument_by_name(func, 'cnw'): context_ng_words,
+                    argument_by_name(func, 'qnw'): query_ng_words,
+                    argument_by_name(func, 'cc' ): context_chars,
+                    argument_by_name(func, 'qc' ): query_chars,
+                    argument_by_name(func, 'ab' ): answer_begin,
+                    argument_by_name(func, 'ae' ): answer_end
+                }
+            
+
 def train(data_path, model_path, log_file, config_file, restore=False, profiling=False):
     polymath = PolyMath(config_file)
     z, loss = polymath.model()
     training_config = importlib.import_module(config_file).training_config
-    mb_source, input_map = create_mb_and_map(loss, os.path.join(data_path, training_config['train_data']), polymath)
     
     max_epochs = training_config['max_epochs']
     log_freq = training_config['log_freq']
-    minibatch_size = training_config['minibatch_size']
-    epoch_size = training_config['epoch_size']
 
     progress_writers = [C.ProgressPrinter(
                             num_epochs = max_epochs,
@@ -73,15 +88,39 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     if profiling:
         C.start_profiler(sync_gpu=True)
 
-    C.training_session(
-        trainer=trainer,
-        mb_source = mb_source,
-        mb_size = minibatch_size,
-        var_to_stream = input_map,
-        max_samples = epoch_size * max_epochs,
-        checkpoint_config = C.CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        progress_frequency = epoch_size
-    ).train()
+    train_data_file = os.path.join(data_path, training_config['train_data'])
+    train_data_ext = os.path.splitext(train_data_file)[-1].lower()
+    
+    model_file = os.path.join(model_path, model_name)
+    
+    if ext == 'ctf':    
+        mb_source, input_map = create_mb_and_map(loss, train_data_file, polymath)
+
+        minibatch_size = training_config['minibatch_size'] # number of samples
+        epoch_size = training_config['epoch_size']
+
+        C.training_session(
+            trainer=trainer,
+            mb_source = mb_source,
+            mb_size = minibatch_size,
+            var_to_stream = input_map,
+            max_samples = epoch_size * max_epochs,
+            checkpoint_config = C.CheckpointConfig(filename = model_file, restore=restore),
+            progress_frequency = epoch_size
+        ).train()
+    else if ext == 'tsv':
+        minibatch_size = training_config['minibatch_size'] # number of sequences
+
+        for epoch in range(max_epochs):       # loop over epochs
+            tsv_reader = create_tsv_reader(loss, train_data_file, polymath)
+            for data in tsv_reader:
+                trainer.train_minibatch(data)                                   # update model with it
+
+            trainer.summarize_training_progress()
+            if profiling:
+                enable_profiler()
+
+        C.combine(z, loss).save(model_file)
     
     if profiling:
         stop_profiler()
