@@ -279,7 +279,7 @@ To deactivate the environment run
 ************************************************************
 FINALMESSAGE
 
-if [ "DOCKER_INSTALLATION" = "1" ]; then
+if [ "$DOCKER_INSTALLATION" = "1" ]; then
   # Docker Hub Image specific actions
 
   # Clean up
