@@ -312,7 +312,7 @@ class Value(cntk_py.Value):
             warnings.warn('you provided the minibatch data as a list, but '
                           'your corresponding input variable (uid "%s") has '
                           'only one dynamic axis (batch axis). To speed up '
-                          'graph executen, please convert the data '
+                          'graph execution, please convert the data '
                           'beforehand into one NumPy array to speed up '
                           ' training.' % var.uid)
 
@@ -485,3 +485,30 @@ def user_function(user_func):
     '''
     from . import as_composite
     return as_composite(user_func)
+
+from cntk.internal.sanitize import sanitize_batch, _sparse_to_dense_network_cache
+
+def asarray(variable, value):
+    '''
+    Converts a Value object to a sequence of NumPy arrays (if dense) or CSR arrays (if sparse).
+    '''
+    if value.is_sparse():
+        network = _sparse_to_dense_network_cache(variable.shape)
+
+        warnings.warn('converting Value object to CSR format might be very costly')
+
+        # TODO: Add direct conversion, since creating an intermediate array might be very slow
+        dense_data = network.eval(value, value.device())
+        array_to_return = [sparse.csr_matrix(seq) for seq in dense_data]
+
+    else:
+        from cntk.utils import variable_value_to_seq
+        array_to_return = variable_value_to_seq(value, variable)
+
+    return array_to_return
+
+def asvalue(variable, data_array):
+    '''
+    Converts a sequence of NumPy arrays or CSR arrays to a Value object.
+    '''
+    return sanitize_batch(variable, data_array)
