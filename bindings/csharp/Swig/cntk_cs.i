@@ -587,6 +587,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (GetOutputs) CNTK::Function::Outputs;
 %rename (GetArguments) CNTK::Function::Arguments;
 %rename (GetOpName) CNTK::Function::OpName;
+%rename (_Clone) CNTK::Function::Clone;
+%rename (_FindAllWithName) CNTK::Function::FindAllWithName;
 %rename (_IsComposite) CNTK::Function::IsComposite;
 %rename (_IsPrimitive) CNTK::Function::IsPrimitive;
 %rename (_IsBlock) CNTK::Function::IsBlock;
@@ -708,6 +710,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return CNTKLib.Alias(operand, name);
     }
 
+    // For C# Eval, default ParameterCloningMethod is share.
+    public Function Clone(ParameterCloningMethod parameterCloneMethod = ParameterCloningMethod.Share)
+    {
+        return _Clone(ParameterCloningMethod.Share);
+    }
+
     public void Evaluate(System.Collections.Generic.Dictionary<Variable, Value> arguments, System.Collections.Generic.Dictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
     {
         // Evaluate the rootFunction.
@@ -729,6 +737,15 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             outputs[p.Key] = p.Value;
         }
+    }
+
+    public System.Collections.Generic.IList<Function> FindAllWithName(string name, bool nestedSearchInsideBlockFunction = false)
+    {
+        var funcVector = _FindAllWithName(name, nestedSearchInsideBlockFunction);
+        var funcArray = new Function[funcVector.Count];
+        funcVector.CopyTo(funcArray);
+        var funcList = new System.Collections.Generic.List<Function>(funcArray);
+        return funcList;
     }
 %}
 
