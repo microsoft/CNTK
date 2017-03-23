@@ -568,7 +568,7 @@ def test_sequential_convolution_without_reduction_dim(device_id):
     exp = [[[24.], [40.], [38]]] # not reducing; hence, output is also a sequence of dim-1 vectors
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
 
-    # these two tests failed before
+    # these cases failed before
     emb_dim = 10
     x = Input(**Sequence[Tensor[20]])
     m = Embedding(emb_dim)(x)
@@ -579,6 +579,9 @@ def test_sequential_convolution_without_reduction_dim(device_id):
     #m = Embedding(emb_dim)(x)
     #m = reshape(m, (emb_dim,1))
     #m = Convolution(filter_shape=(3,1), num_filters=13, pad=True, sequential=True)(m)
+
+    m = Embedding(emb_dim)(x)
+    m = Convolution(filter_shape=3, pad=True, sequential=True)(m)
 
 
 ####################################
