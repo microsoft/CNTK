@@ -694,6 +694,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 %}
 
+%ignore CNTK::Variable::Variable;
+%rename ("%s") CNTK::Variable::Variable(const FunctionPtr& function);
 %rename (GetShape) CNTK::Variable::Shape;
 %rename (GetName) CNTK::Variable::Name;
 %rename (GetVariableKind) CNTK::Variable::Kind;
