@@ -3423,7 +3423,7 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     //cudaMalloc(&devStates, sizeof(curandState) * N);
     //auto seed = (unsigned)std::chrono::duration_cast<std::chrono::milliseconds>(chrono::steady_clock::now().time_since_epoch()).count();
     //_generateRandomNumberNormalDistribution<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(d_rands, devStates, N, seed);
-    _stochasticbinaryForward<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> >(a.Data(), b.Data(), d_rands, N, annealSlope);
+    _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
     //float* rands = new float[N];
     //CUDA_CALL(cudaMemcpy(rands, d_rands, N * sizeof(float), cudaMemcpyDeviceToHost));
     //fprintf(stderr, "\n");
@@ -3454,11 +3454,11 @@ void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a,
     if (neuronST) {
         if (passThrough) {
             //fprintf(stderr, "pass through here!!!\n");
-            _stochasticbinaryBackward_PassThrough<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
+            _stochasticbinaryBackward_PassThrough<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N);
         }
         else {
             //fprintf(stderr, "here!!!\n");
-            _stochasticbinaryBackward_Anneal<ElemType> << <blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream >> > (a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
+            _stochasticbinaryBackward_Anneal<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
         }
     }
 }
