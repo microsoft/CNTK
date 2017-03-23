@@ -32,8 +32,8 @@ def convnet_mnist(debug_output=False):
     num_output_classes = 10
 
     # Input variables denoting the features and label data
-    input_var = cntk.ops.input_variable((num_channels, image_height, image_width), np.float32)
-    label_var = cntk.ops.input_variable(num_output_classes, np.float32)
+    input_var = cntk.ops.input((num_channels, image_height, image_width), np.float32)
+    label_var = cntk.ops.input(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
     scaled_input = cntk.ops.element_times(cntk.ops.constant(0.00390625), input_var)

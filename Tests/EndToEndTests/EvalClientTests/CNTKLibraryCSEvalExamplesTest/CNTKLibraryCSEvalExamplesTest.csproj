@@ -51,7 +51,7 @@
     <Optimize>false</Optimize>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="CNTKLibraryManaged-2.0, Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64" />
+    <Reference Include="Cntk.Core.Managed-$(CntkComponentVersion), Version=1.0.0.0, Culture=neutral, processorArchitecture=AMD64" />
     <Reference Include="System" />
     <Reference Include="System.Drawing" />
   </ItemGroup>

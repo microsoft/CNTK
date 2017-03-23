@@ -15,6 +15,7 @@ from .. import cntk_py
 from ..device import use_default_device, cpu
 from ..axis import Axis
 from cntk.internal import typemap
+from cntk import core
 
 # To __remove__
 from cntk.logging import *
@@ -143,7 +144,7 @@ def get_train_eval_criterion(trainer):
     Fetch the train evaluation criterion (e.g., classification error) from the last minibatch and copy it to the CPU in case it is on the GPU.
 
     Args:
-        trainer (:class:`Trainer`): the trainer used.
+        trainer (:class:`~cntk.train.trainer.Trainer`): the trainer used.
     Returns:
         the criterion value
     '''
@@ -181,14 +182,18 @@ def variable_value_to_seq(value, variable):
     entries removed.
 
     Args:
-        value (:class:`~cntk.core.Value`): Value as it is returned by Swig
+        value (:class:`~cntk.cntk_py.Value` or :class:`~cntk.core.Value`): Value object
 
     Returns:
         a list of NumPy arrays
     '''
 
-    mask = value.mask()
-    if mask:
+    if isinstance(value, core.Value):
+        has_mask = value.mask.any()
+    elif isinstance(value, cntk_py.Value):
+        has_mask = value.mask() is not None
+
+    if has_mask:
         value_sequences = value.unpack_variable_value(variable, True, cpu())
         return [np.asarray(seq) for seq in value_sequences[0]]
     else:
@@ -201,7 +206,7 @@ def eval(op, arguments=None, precision=None, device=None, backward_pass=False, e
     mainly to explore the operators and for convenient unit testing.
 
     Args:
-        op (:class:`Function`): operation to evaluate
+        op (:class:`~cntk.ops.functions.Function`): operation to evaluate
         arguments: maps variables to their input data. The
          interpretation depends on the input type:
 

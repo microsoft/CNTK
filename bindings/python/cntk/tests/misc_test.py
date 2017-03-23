@@ -13,19 +13,18 @@ from multiprocessing import Process, Queue
 
 cntk_py.always_allow_setting_default_device()
 
-q = Queue()
-
 def is_locked_cross_process(queue, device_id):
     device = cpu() if device_id < 0 else gpu(device_id)
     queue.put(device.is_locked())
 
 def is_locked(device):
+    q = Queue()
     device_id = -1 if (device.type() == DeviceKind.CPU) else device.id();
     p = Process(target=is_locked_cross_process, args=(q,device_id))
     p.start()
-    locked = q.get()
     p.join()
-    return locked
+    assert p.exitcode == 0
+    return q.get()
 
 def test_callstack1():
     with pytest.raises(ValueError) as excinfo:
@@ -68,22 +67,24 @@ def test_gpu_properties():
         assert props.total_memory > 0
         assert props.version_major > 0
 
-def _use_default_device():
+def _use_default_device(queue):
     # use_default_device needs to be tested in isolation
     # in a freshly created process environment.
     device = use_default_device()
     if (device.type() != DeviceKind.GPU):
-        assert not is_locked(device)
+        queue.put(not is_locked(device))
     else:
-        assert is_locked(device)
+        queue.put(is_locked(device))
 
 def test_use_default_device():
     # this will release any previous held device locks
     try_set_default_device(cpu(), False)
-    p = Process(target=_use_default_device)
+    q = Queue()
+    p = Process(target=_use_default_device, args=(q,))
     p.start()
     p.join()
     assert p.exitcode == 0
+    assert q.get()
 
 def test_set_cpu_as_default_device():
     device = cpu()

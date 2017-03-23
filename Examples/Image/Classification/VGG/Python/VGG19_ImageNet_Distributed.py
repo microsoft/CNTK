@@ -66,8 +66,8 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
 def create_vgg19():
 
     # Input variables denoting the features and label data
-    feature_var = input_variable((num_channels, image_height, image_width))
-    label_var = input_variable((num_classes))
+    feature_var = input((num_channels, image_height, image_width))
+    label_var = input((num_classes))
 
     # apply model to input
     # remove mean value 
@@ -166,7 +166,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        cv_config = CrossValidationConfig(source=test_source, mb_size=minibatch_size)
+        test_config = TestConfig(source=test_source, mb_size=minibatch_size)
     ).train()
 
 # Train and evaluate the network.

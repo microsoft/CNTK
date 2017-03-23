@@ -27,7 +27,6 @@
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>CNTKv2LibraryDll</RootNamespace>
     <ProjectName>CNTKv2LibraryDll</ProjectName>
-    <LibraryVersion>2.0</LibraryVersion>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\CNTK.Cpp.props" />
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -48,10 +47,10 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
+    <TargetName>Cntk.Core-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
-    <TargetName>CNTKLibrary-$(LibraryVersion)</TargetName>
+    <TargetName>Cntk.Core-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -62,7 +61,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(SolutionDir)Source\ComputationNetworkLib;$(SolutionDir)Source\Math;$(MSMPI_LIB64);$(SolutionDir)$(Platform)\$(Configuration);$(NvmlLibPath);$(ProtobufLibPath)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(ReaderLibs);ComputationNetworkLib.lib;SequenceTrainingLib.lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(ReaderLibs);Cntk.Common-$(CntkComponentVersion).lib;Cntk.ComputationNetwork-$(CntkComponentVersion).lib;Cntk.SequenceTrainingLib-$(CntkComponentVersion).lib;$(ProtobufLib);%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
     <PreBuildEvent>
       <Command>prebuild.bat "$(Configuration)" "$(CNTK_MKL_SEQUENTIAL)" "$(CNTK_ENABLE_1BitSGD)" "$(CudaPath)" "$(CUDNN_PATH)" "$(CUB_PATH)" "$(CNTK_ENABLE_ASGD)"</Command>
@@ -81,7 +80,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; PerformanceProfilerDll.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(ReleaseBuild)">
@@ -98,7 +97,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <DelayLoadDLLs>Math.dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; PerformanceProfilerDll.dll</DelayLoadDLLs>
+      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; nvml.dll; $(CudaRuntimeDll); msmpi.dll; Cntk.PerformanceProfiler-$(CntkComponentVersion).dll</DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="$(CpuOnlyBuild)">
@@ -106,7 +105,7 @@
       <PreprocessorDefinitions>CPUONLY;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
-      <DelayLoadDLLs>Math.dll; msmpi.dll; PerformanceProfilerDll.dll </DelayLoadDLLs>
+      <DelayLoadDLLs>Cntk.Math-$(CntkComponentVersion).dll; msmpi.dll; Cntk.PerformanceProfiler-$(CntkComponentVersion).dll </DelayLoadDLLs>
       <OptimizeReferences Condition="'$(Configuration)|$(Platform)'=='Debug_CpuOnly|x64'">false</OptimizeReferences>
     </Link>
   </ItemDefinitionGroup>

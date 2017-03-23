@@ -52,7 +52,7 @@ def test_axes():
 def test_get_data_type():
     pa32 = parameter(init=np.asarray(2, dtype=np.float32))
     pa64 = parameter(init=np.asarray(2, dtype=np.float64))
-    pl = placeholder_variable(shape=(2))
+    pl = placeholder(shape=(2))
     c = constant(value=3.0)
     n32 = AA(1, dtype=np.float32)
     n64 = AA(1, dtype=np.float64)
@@ -74,7 +74,7 @@ def test_sanitize_batch_sparse():
     batch = [csr([[1,0,2],[2,3,0]]),
              csr([5,0,1])]
 
-    var = input_variable(3, is_sparse=True)
+    var = sequence.input(3, is_sparse=True)
     b = sanitize_batch(var, batch)
     # 2 sequences, with max seq len of 2 and dimension 3
     assert b.shape == (2,2,3)
@@ -98,7 +98,7 @@ def test_sanitize_batch_sparse():
 ])
 def test_mask(batch, seq_starts, expected):
     shape = ()
-    var = input_variable(shape)
+    var = sequence.input(shape)
     if type(expected) == type(ValueError):
         with pytest.raises(expected):
             s = sanitize_batch(var, batch, seq_starts)
@@ -115,7 +115,7 @@ def test_one_hot():
 def test_sanitize_batch_contiguity():
     a1 = AA([[1,2],[3,4]])
     a2 = AA([[5,6],[7,8]])
-    var = input_variable((2,2), is_sparse=True)
+    var = sequence.input((2,2), is_sparse=True)
 
     batch = [a1.T,a2.T]
     with pytest.warns(RuntimeWarning):

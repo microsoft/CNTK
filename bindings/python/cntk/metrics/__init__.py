@@ -35,9 +35,9 @@ def ndcg_at_1(output, gain, group, name=''):
     This is a forward-only operation, there is no gradient for it.
 
     Example:
-        >>> group = C.input_variable((1,))
-        >>> score = C.input_variable((1,))
-        >>> gain  = C.input_variable((1,))
+        >>> group = C.input((1,))
+        >>> score = C.input((1,))
+        >>> gain  = C.input((1,))
         >>> g = np.array([1, 1, 2, 2], dtype=np.float32).reshape(4,1,1)
         >>> s = np.array([2, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
         >>> n = np.array([7, 1, 3, 1], dtype=np.float32).reshape(4,1,1)
@@ -120,8 +120,8 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
     Sequence Data with Recurrent Neural Networks", http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 
     Example:
-        i1 = cntk.input_variable(shape=(2,))
-        i2 = cntk.input_variable(shape=(2,))
+        i1 = cntk.input(shape=(2,))
+        i2 = cntk.input(shape=(2,))
         arguments = {i1 : [[1, 3], [2, 0]], i2 : [[2, 0], [2, 0]]}
         a = edit_distance_error(i1, i2, 0, 1, 1, True, [1])
         print(a.eval(arguments))
@@ -129,7 +129,9 @@ def edit_distance_error(input_a, input_b, subPen=1, delPen=1, insPen=1, squashIn
     Args:
         input_a: first input sequence
         input_b: second input sequence
-        subPen, delPen, insPen: substitution, deletion and insertion penalties
+        subPen: substitution penalty
+        delPen: deletion penalty
+        insPen: insertion penalty
         squashInputs: whether to merge sequences of identical samples (in both input sequences). If true and tokensToIgnore contains label '-' then
                 given first input sequence as s1="a-ab-" and second as s2="-aa--abb" the edit distance will be computed against s1' = "aab" and s2' = "aab".
         tokensToIgnore: list of samples to ignore during edit distance evaluation (in both sequences)

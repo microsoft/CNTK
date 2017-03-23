@@ -15,5 +15,4 @@ Python API Reference
    Ops <cntk.ops.rst>
    Train <cntk.train>
    Utils <cntk.utils>
-   Debugging models <debug>
    Module reference <modules>

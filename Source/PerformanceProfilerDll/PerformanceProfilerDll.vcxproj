@@ -52,11 +52,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="$(DebugBuild)">
     <LinkIncremental>true</LinkIncremental>
-    <TargetName>PerformanceProfilerDll</TargetName>
+    <TargetName>Cntk.PerformanceProfiler-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="$(ReleaseBuild)">
     <LinkIncremental>false</LinkIncremental>
-    <TargetName>PerformanceProfilerDll</TargetName>
+    <TargetName>Cntk.PerformanceProfiler-$(CntkComponentVersion)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>
@@ -79,7 +79,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>kernel32.lib; user32.lib; shell32.lib; Common.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib; user32.lib; shell32.lib; Cntk.Common-$(CntkComponentVersion).lib; %(AdditionalDependencies)</AdditionalDependencies>
       <DelayLoadDLLs></DelayLoadDLLs>
     </Link>
   </ItemDefinitionGroup>
@@ -103,7 +103,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
-      <AdditionalDependencies>kernel32.lib; user32.lib; shell32.lib; Common.lib; %(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>kernel32.lib; user32.lib; shell32.lib; Cntk.Common-$(CntkComponentVersion).lib; %(AdditionalDependencies)</AdditionalDependencies>
       <Profile>true</Profile>
       <DelayLoadDLLs></DelayLoadDLLs>
     </Link>

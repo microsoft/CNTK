@@ -55,8 +55,8 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
 def create_conv_network():
 
     # Input variables denoting the features and label data
-    feature_var = cntk.input_variable((num_channels, image_height, image_width))
-    label_var = cntk.input_variable((num_classes))
+    feature_var = cntk.input((num_channels, image_height, image_width))
+    label_var = cntk.input((num_classes))
 
     # apply model to input
     scaled_input = cntk.element_times(cntk.constant(0.00390625), feature_var)
@@ -136,7 +136,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
         checkpoint_config = CheckpointConfig(frequency = epoch_size,
                                              filename = os.path.join(model_path, "ConvNet_CIFAR10_DataAug"),
                                              restore = restore),
-        cv_config = CrossValidationConfig(source = test_source, mb_size=minibatch_size)
+        test_config = TestConfig(source = test_source, mb_size=minibatch_size)
     ).train()
 
     if profiling:

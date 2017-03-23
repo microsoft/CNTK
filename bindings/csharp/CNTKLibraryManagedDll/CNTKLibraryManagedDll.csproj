@@ -16,7 +16,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>CNTK</RootNamespace>
-    <AssemblyName>CNTKLibraryManaged-2.0</AssemblyName>
+    <AssemblyName>Cntk.Core.Managed-$(CntkComponentVersion)</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -71,6 +71,7 @@
     <Compile Include="SwigProxyClasses\FloatVector.cs" />
     <Compile Include="SwigProxyClasses\FloatVectorVector.cs" />
     <Compile Include="SwigProxyClasses\Function.cs" />
+    <Compile Include="SwigProxyClasses\IntVector.cs" />
     <Compile Include="SwigProxyClasses\MaskKind.cs" />
     <Compile Include="SwigProxyClasses\NDArrayView.cs" />
     <Compile Include="SwigProxyClasses\NDArrayViewVector.cs" />

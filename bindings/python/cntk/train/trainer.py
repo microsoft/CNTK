@@ -12,7 +12,7 @@ from ..io import _py_dict_to_cntk_dict, MinibatchData
 
 __doc__= '''\
 A trainer encapsulates the overall training process and employs one or more
-:doc:`learners <cntk.learner>` to tune the parameters of a specified model
+:mod:`~cntk.learners` to tune the parameters of a specified model
 using gradients of parameters w.r.t. a training objective.
 '''
 

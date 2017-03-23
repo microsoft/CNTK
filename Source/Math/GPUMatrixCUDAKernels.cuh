@@ -5199,6 +5199,62 @@ __global__ void _adam4BlockSparseCol(CUDA_LONG size,
     }
 }
 
+template <class ElemType>
+__global__ void _adadelta(CUDA_LONG size, ElemType* grad, ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
+    ElemType rho, ElemType epsilon)
+{
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = grad[idx];
+        ElemType adaSqr = rho * smoothAda[idx] + (1.0f - rho) * g * g;
+        smoothAda[idx] = adaSqr;
+        ElemType x2 = smoothX2[idx];
+        ElemType deltaX;
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            deltaX = -sqrt(x2 + epsilon) * rsqrt(adaSqr + epsilon) * g;
+        }
+        else
+        {
+            deltaX = -sqrtf(x2 + epsilon) * rsqrtf(adaSqr + epsilon) * g;
+        }
+
+        smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
+        val[idx] += deltaX;
+    }
+}
+
+template <class ElemType>
+__global__ void _adadelta4BlockSparseCol(CUDA_LONG size,
+    ElemType* grad_bsc, const GPUSPARSE_INDEX_TYPE* colOrRow2blockId, const size_t len,
+    ElemType* smoothAda, ElemType* smoothX2, ElemType* val,
+    ElemType rho, ElemType epsilon)
+{
+    CUDA_LONG idx = blockIdx.x * blockDim.x + threadIdx.x;
+    CUDA_LONG stride = blockDim.x * gridDim.x;
+    for (; idx < size; idx += stride)
+    {
+        ElemType g = _getvalue4BlockSparseCol(grad_bsc, colOrRow2blockId, len, idx);
+        ElemType adaSqr = rho * smoothAda[idx] + (1.0f - rho) * g * g;
+        smoothAda[idx] = adaSqr;
+        ElemType x2 = smoothX2[idx];
+        ElemType deltaX;
+        if (sizeof(ElemType) == sizeof(double))
+        {
+            deltaX = -sqrt(x2 + epsilon) * rsqrt(adaSqr + epsilon) * g;
+        }
+        else
+        {
+            deltaX = -sqrtf(x2 + epsilon) * rsqrtf(adaSqr + epsilon) * g;
+        }
+
+        smoothX2[idx] = rho * smoothX2[idx] + (1.0f - rho) * deltaX * deltaX;
+        val[idx] += deltaX;
+    }
+}
+
 // Calculate alpha in forward-backward calculation. equation (6), (7) in http://machinelearning.wustl.edu/mlpapers/paper_files/icml2006_GravesFGS06.pdf
 // GPU x dimension corresponds to utterances, y dimension corresponds to phone sequence in each utterance
 // prob (input): the posterior output from the network

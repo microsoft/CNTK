@@ -84,7 +84,7 @@ class NDArrayView(cntk_py.NDArrayView):
         format.
 
         Args:
-            csr_array (scipy.sparse.csr.csr_matrix): SciPy sparse matrix in CSR
+            csr_array (scipy.sparse.csr_matrix): SciPy sparse matrix in CSR
              format
             device (:class:`~cntk.device.DeviceDescriptor`): device this value
              should be put on
@@ -115,7 +115,7 @@ class NDArrayView(cntk_py.NDArrayView):
         array in CSR format.
 
         Args:
-            data (numpy.ndarray or scipy.sparse.csr.csr_matrix): data
+            data (numpy.ndarray or scipy.sparse.csr_matrix): data
             device (:class:`~cntk.device.DeviceDescriptor`): device this value
              should be put on
             read_only (bool, optional): whether the data can be modified or
@@ -312,7 +312,7 @@ class Value(cntk_py.Value):
             warnings.warn('you provided the minibatch data as a list, but '
                           'your corresponding input variable (uid "%s") has '
                           'only one dynamic axis (batch axis). To speed up '
-                          'graph executen, please convert the data '
+                          'graph execution, please convert the data '
                           'beforehand into one NumPy array to speed up '
                           ' training.' % var.uid)
 
@@ -373,7 +373,7 @@ class Value(cntk_py.Value):
         Example:
             >>> num_classes = 6
             >>> sparse_indices = [[1,5],[4]]
-            >>> i0 = C.input_variable(shape=num_classes, is_sparse=True)
+            >>> i0 = C.sequence.input(shape=num_classes, is_sparse=True)
             >>> z = C.times(i0, np.eye(num_classes))
             >>> value = C.Value.one_hot(sparse_indices, num_classes)
             >>> z.eval({i0: value})
@@ -384,7 +384,7 @@ class Value(cntk_py.Value):
             >>> num_classes = 6
             >>> sample_shape = (2, num_classes)
             >>> sparse_indices = [[1,5,3,2],[4,1]]
-            >>> i0 = C.input_variable(shape=sample_shape, is_sparse=True)
+            >>> i0 = C.sequence.input(shape=sample_shape, is_sparse=True)
             >>> z = C.times(i0, np.eye(num_classes))
             >>> value = C.Value.one_hot(sparse_indices, sample_shape)
             >>> z.eval({i0: value})
@@ -397,7 +397,7 @@ class Value(cntk_py.Value):
 
         Args:
             batch (list of lists of integers): batch input data of indices
-            sample_shape (integer or tuple): number of classes or shape of each sample whose trailing axis is one_hot
+            sample_shape (int or tuple): number of classes or shape of each sample whose trailing axis is one_hot
             dtype (`np.float32`, `np.float64`, default None): data type
             device (:class:`~cntk.device.DeviceDescriptor`, default None): device
              this value should be put on
@@ -485,3 +485,30 @@ def user_function(user_func):
     '''
     from . import as_composite
     return as_composite(user_func)
+
+from cntk.internal.sanitize import sanitize_batch, _sparse_to_dense_network_cache
+
+def asarray(variable, value):
+    '''
+    Converts a Value object to a sequence of NumPy arrays (if dense) or CSR arrays (if sparse).
+    '''
+    if value.is_sparse():
+        network = _sparse_to_dense_network_cache(variable.shape)
+
+        warnings.warn('converting Value object to CSR format might be very costly')
+
+        # TODO: Add direct conversion, since creating an intermediate array might be very slow
+        dense_data = network.eval(value, value.device())
+        array_to_return = [sparse.csr_matrix(seq) for seq in dense_data]
+
+    else:
+        from cntk.utils import variable_value_to_seq
+        array_to_return = variable_value_to_seq(value, variable)
+
+    return array_to_return
+
+def asvalue(variable, data_array):
+    '''
+    Converts a sequence of NumPy arrays or CSR arrays to a Value object.
+    '''
+    return sanitize_batch(variable, data_array)

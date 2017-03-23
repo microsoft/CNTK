@@ -184,9 +184,9 @@ namespace CNTK
                 else if (node->OperationName() == OperationNameOf(SliceNode))
                 {
                     auto sliceNode = node->As<SliceNode<ElementType>>();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsAxis(sliceNode->Axis());
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = (int)sliceNode->BeginIndex();
-                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = (int)sliceNode->EndIndex();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameAxis] = AsDictionaryValueVector(AsAxis(sliceNode->Axis()));
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameBeginIndex] = AsDictionaryValueVector(sliceNode->BeginIndex());
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameEndIndex] = AsDictionaryValueVector(sliceNode->EndIndex());
 
                     opType = PrimitiveOpType::Slice;
                 }
@@ -385,6 +385,7 @@ namespace CNTK
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameLowerPad] = AsNDShape(poolingNode->LowerPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameUpperPad] = AsNDShape(poolingNode->UpperPad());
                     primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameCeilOutDim] = poolingNode->CeilOutDim();
+                    primitiveFunctionConfigParameters[PrimitiveFunction::AttributeNameIncludePad] = poolingNode->PoolPadMode();
 
                     opType = PrimitiveOpType::Pooling;
                 }

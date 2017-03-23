@@ -16,7 +16,7 @@ from cntk.io import MinibatchSource, HTKFeatureDeserializer, HTKMLFDeserializer,
 from cntk.layers import Recurrence, Dense, LSTM
 from cntk.learners import *
 from cntk.layers.models import Sequential, For
-from cntk import input_variable, cross_entropy_with_softmax, classification_error
+from cntk import input, cross_entropy_with_softmax, classification_error, sequence
 from cntk.train.training_session import *
 
 # default Paths relative to current python file.
@@ -44,8 +44,8 @@ def create_mb_source(features_file, labels_file, label_mapping_filem, total_numb
 
 def create_recurrent_network():
     # Input variables denoting the features and label data
-    features = input_variable(((2*context+1)*feature_dim))
-    labels = input_variable((num_classes))
+    features = sequence.input(((2*context+1)*feature_dim))
+    labels = sequence.input((num_classes))
 
     # create network
     model = Sequential([For(range(3), lambda : Recurrence(LSTM(256))),

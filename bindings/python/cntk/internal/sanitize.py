@@ -124,7 +124,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
 
            * a single NumPy array denoting the full minibatch
            * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
-           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
+           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`cntk.core.Value.one_hot`)
         seq_starts (list of bools or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans one for each sequence in the batch that tell whether a
@@ -145,7 +145,7 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
 
     if seq_starts and len(var.dynamic_axes) <= 1:
         raise ValueError('you specified sequence begin markers, but your '
-                         'input_variable does not contain a sequence axis.')
+                         'input does not contain a sequence axis.')
 
     if device is None:
         from ..device import use_default_device
@@ -410,6 +410,32 @@ def sanitize_axis(axis):
     else:
         return axis
 
+def sanitize_axis_list(axes): 
+    '''
+    Sanitizes a list of axes.
+
+    Args:
+        axes (list of :class:`~cntk.axis.Axis` or int or None): the axes to be used.
+
+          * :class:`~cntk.axis.Axis`: use axis instance directly (will convert
+            row- to col-major in case of static axis).
+          * int: if positive, use it as static axis. If negative, count from
+            last to first axis
+          * None: denote all available axes
+    '''
+    if not type(axes) in (list, tuple):
+        axes = [axes]
+    retAxes = []
+    for ax in axes: 
+        if ax is None:
+            retAxes.append(Axis.all_static_axes()) 
+        elif isinstance(ax, numbers.Integral):
+            retAxes.append(Axis(-ax - 1))
+        elif ax.is_static_axis and (ax.static_axis_index() != Axis.new_leading_axis().static_axis_index()):
+            retAxes.append(Axis(-1 - axis.static_axis_index())) 
+        else: 
+            retAxes.append(ax)
+    return retAxes
 
 def sanitize_dynamic_axes(axes):
     if not type(axes) in (list, tuple):
@@ -426,3 +452,19 @@ def sanitize_variable_value_dict(var_value_dict):
         return var_value_dict
     else:
         return list(var_value_dict.values())[0]
+
+def memoize(func):
+    class memodict(dict):
+        __slots__ = ()
+        def __missing__(self, key):
+            self[key] = ret = func(key)
+            return ret
+    return memodict().__getitem__
+
+@memoize
+def _sparse_to_dense_network_cache(input_shape):
+    from cntk.ops import times, input_variable
+
+    temp_input = input_variable(input_shape)
+    eye_shape = input_shape[-1]
+    return times(temp_input, np.eye(eye_shape))

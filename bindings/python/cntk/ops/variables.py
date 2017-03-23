@@ -289,7 +289,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
-    A Constant is a :class:`~cntk.ops.Variable` and therefore inherits all its methods.
+    A Constant is a :class:`~cntk.ops.variables.Variable` and therefore inherits all its methods.
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.

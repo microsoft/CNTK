@@ -12,7 +12,7 @@ from . import sequence
 from .functions import CloneMethod, Function, load_model
 from .variables import Variable, Parameter, Constant
 from ..utils import get_data_type
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_axis_list, sanitize_dynamic_axes
 from cntk.internal import typemap
 from ..axis import Axis
 from .. import cntk_py
@@ -36,8 +36,8 @@ def combine(operands, name=''):
      with 2 outputs; viz. CrossEntropy loss and ClassificationError output.
 
     Example:
-        >>> in1 = C.input_variable((4,))
-        >>> in2 = C.input_variable((4,))
+        >>> in1 = C.input((4,))
+        >>> in2 = C.input((4,))
 
         >>> in1_data = np.asarray([[1., 2., 3., 4.]], np.float32)
         >>> in2_data = np.asarray([[0., 5., -3., 2.]], np.float32)
@@ -133,7 +133,7 @@ def labels_to_graph(labels, name=''):
     This node's objective is to transform input labels into a graph representing exact forward-backward criterion.
     Example:
         num_classes = 2
-        labels = cntk.input_variable((num_classes))
+        labels = cntk.input((num_classes))
         graph = cntk.labels_to_graph(labels)
 
     Args:
@@ -198,14 +198,14 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
 
     Example:
         >>> img = np.reshape(np.arange(25.0, dtype = np.float32), (1, 5, 5))
-        >>> x = C.input_variable(img.shape)
+        >>> x = C.input(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
         >>> np.round(C.convolution(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
-        array([[[[[  6.,   8.,  10.,  12.],
+        array([[[[  6.,   8.,  10.,  12.],
                   [ 16.,  18.,  20.,  22.],
                   [ 26.,  28.,  30.,  32.],
-                  [ 36.,  38.,  40.,  42.]]]]], dtype=float32)
+                  [ 36.,  38.,  40.,  42.]]]], dtype=float32)
         
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
@@ -263,14 +263,14 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
 
     Example:
         >>> img = np.reshape(np.arange(9.0, dtype = np.float32), (1, 3, 3))
-        >>> x = C.input_variable(img.shape)
+        >>> x = C.input(img.shape)
         >>> filter = np.reshape(np.array([2, -1, -1, 2], dtype = np.float32), (1, 2, 2))
         >>> kernel = C.constant(value = filter)
         >>> np.round(C.convolution_transpose(kernel, x, auto_padding = [False]).eval({x: [img]}),5)
-        array([[[[[  0.,   2.,   3.,  -2.],
+        array([[[[  0.,   2.,   3.,  -2.],
                   [  6.,   4.,   6.,  -1.],
                   [  9.,  10.,  12.,   2.],
-                  [ -6.,   5.,   6.,  16.]]]]], dtype=float32)
+                  [ -6.,   5.,   6.,  16.]]]], dtype=float32)
 
     Args:
         convolution_map: convolution filter weights, stored as a tensor of dimensions :math:`[O \\times I \\times m_1 \\times m_2 \\times \\ldots \\times m_n]`,
@@ -335,11 +335,14 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
+'''int: constant used to specify maximum pooling'''
+
 AVG_POOLING = PoolingType_Average
+'''int: constant used to specify average pooling'''
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
-            lower_pad=(0,), upper_pad=(0,), ceil_out_dim=False, name=''):
+            lower_pad=(0,), upper_pad=(0,), ceil_out_dim=False, include_pad=False, name=''):
     '''
     The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
     In the case of average pooling with padding, the average is only over the valid region.
@@ -348,13 +351,13 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
 
     Example:
         >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-        >>> x = C.input_variable(img.shape)
+        >>> x = C.input(img.shape)
         >>> C.pooling(x, C.AVG_POOLING, (2,2), (2,2)).eval({x : [img]})
-        array([[[[[  2.5,   4.5],
-                  [ 10.5,  12.5]]]]], dtype=float32)
+        array([[[[  2.5,   4.5],
+                  [ 10.5,  12.5]]]], dtype=float32)
         >>> C.pooling(x, C.MAX_POOLING, (2,2), (2,2)).eval({x : [img]})
-        array([[[[[  5.,   7.],
-                  [ 13.,  15.]]]]], dtype=float32)
+        array([[[[  5.,   7.],
+                  [ 13.,  15.]]]], dtype=float32)
 
     Args:
         operand: pooling input
@@ -364,7 +367,8 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         auto_padding (default [False,]): automatic padding flags for each input dimension.
         lower_pad (default (0,)): precise lower padding for each input dimension
         upper_pad (default (0,)): precise upper padding for each input dimension
-        ceil_out_dim (default false): ceiling while computing output size
+        ceil_out_dim (default False): ceiling while computing output size
+        include_pad(default False): include pad while average pooling
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -376,10 +380,12 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     lower_pad = sanitize_shape(lower_pad)
     upper_pad = sanitize_shape(upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
-                   lower_pad, upper_pad, ceil_out_dim, name)
+                   lower_pad, upper_pad, ceil_out_dim, include_pad, name)
 
 
 MAX_UNPOOLING = PoolingType_Max
+'''int: constant used to specify maximum unpooling'''
+
 @typemap
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):
@@ -391,13 +397,13 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
 
     Example:
         >>> img = np.reshape(np.arange(16, dtype = np.float32), [1, 4, 4])
-        >>> x = C.input_variable(img.shape)
+        >>> x = C.input(img.shape)
         >>> y = C.pooling(x, C.MAX_POOLING, (2,2), (2,2))
         >>> C.unpooling(y, x, C.MAX_UNPOOLING, (2,2), (2,2)).eval({x : [img]})
-	array([[[[[  0.,   0.,   0.,   0.],
+	array([[[[  0.,   0.,   0.,   0.],
 		  [  0.,   5.,   0.,   7.],
 		  [  0.,   0.,   0.,   0.],
-		  [  0.,  13.,   0.,  15.]]]]], dtype=float32)
+		  [  0.,  13.,   0.,  15.]]]], dtype=float32)
 
     Args:
         operand: unpooling input
@@ -918,7 +924,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_NO_INFERRED_
         output_rank (int): in case we have tensors as arguments, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
-        infer_input_rank_to_map ('int'): meant for internal use only. Always use default value
+        infer_input_rank_to_map (int): meant for internal use only. Always use default value
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -1293,7 +1299,7 @@ def softplus(x, steepness=1, name=''):
     x = sanitize_input(x)
     if steepness == 1:
         return softplus(x, name)
-    xp = placeholder_variable()
+    xp = placeholder()
     f = typemap(softplus)(steepness * xp) / steepness
     return as_block(f, [(xp, x)], 'softplus', name)
 
@@ -1665,7 +1671,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
     or input data (which has a batch dimension, as needed for sequence-to-sequence models).
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> # Create one sequence with 4 tensors of shape (3, 2)
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> y = C.future_value(x) # using initial state of 0 by default
@@ -1832,7 +1838,7 @@ def optimized_rnnstack(operand, weights, hidden_size, num_layers,
     Example:
         >>> from _cntk_py import InferredDimension, constant_initializer
         >>> W = C.parameter((InferredDimension,4), constant_initializer(0.1))
-        >>> x = C.input_variable(shape=(4,))
+        >>> x = C.input(shape=(4,))
         >>> s = np.reshape(np.arange(20.0, dtype=np.float32), (5,4))
         >>> t = np.reshape(np.arange(12.0, dtype=np.float32), (3,4))
         >>> f = C.optimized_rnnstack(x, W, 8, 2) # doctest: +SKIP
@@ -1876,14 +1882,18 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     The output tensor has the shape specified by 'shape'.
 
     Example:
-        >>> i1 = C.input_variable(shape=(3,2))
+        >>> i1 = C.input(shape=(3,2))
         >>> C.reshape(i1, (2,3)).eval({i1:np.asarray([[[[0., 1.],[2., 3.],[4., 5.]]]], dtype=np.float32)})
-        array([[[[ 0.,  1.,  2.],
-                 [ 3.,  4.,  5.]]]], dtype=float32)
+        array([[[ 0.,  1.,  2.],
+                 [ 3.,  4.,  5.]]], dtype=float32)
 
     Args:
         x: tensor to be reshaped
         shape (tuple): a tuple defining the resulting shape
+        begin_axis (int or None): shape replacement begins at this axis. Negative values
+         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, pass `Axis.new_leading_axis()`
+        end_axis (int or None): shape replacement ends at this axis (excluding this axis).
+         Negative values are counting from the end. `None` refers to the end of the shape tuple.
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -1949,22 +1959,26 @@ def transpose(x, axis1=0, axis2=1, name=''):
 @typemap
 def slice(x, axis, begin_index, end_index, name=''):
     '''
-    Slice the input along an axis.
+    Slice the input along one or multiple axes.
 
     Example:
         >>> # slice using input variable
         >>> # create 2x3 matrix
-        >>> x1 = C.input_variable((2,3))
+        >>> x1 = C.input((2,3))
         >>> # slice index 1 (second) at first axis
-        >>> C.slice(x1, 0, 1, 2).eval({x1: np.asarray([[[[1,2,-3],
-        ...                                              [4, 5, 6]]]],dtype=np.float32)})
-        array([[[[ 4.,  5.,  6.]]]], dtype=float32)
+        >>> C.slice(x1, 0, 1, 2).eval({x1: np.asarray([[[1,2,-3],
+        ...                                             [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 4.,  5.,  6.]]], dtype=float32)
         <BLANKLINE>
         >>> # slice index 0 (first) at second axis
-        >>> C.slice(x1, 1, 0, 1).eval({x1: np.asarray([[[[1,2,-3],
-        ...                                              [4, 5, 6]]]],dtype=np.float32)})
-        array([[[[ 1.],
-                 [ 4.]]]], dtype=float32)
+        >>> C.slice(x1, 1, 0, 1).eval({x1: np.asarray([[[1,2,-3],
+        ...                                             [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 1.],
+                [ 4.]]], dtype=float32)
+        >>> # slice along multiple axes
+        >>> C.slice(x1, [0,1], [1,0], [2,1]).eval({x1: np.asarray([[[1, 2, -3],
+        ...                                                         [4, 5, 6]]],dtype=np.float32)})
+        array([[[ 4.]]], dtype=float32)
         <BLANKLINE>
         >>> # slice using constant
         >>> data = np.asarray([[1, 2, -3],
@@ -1975,6 +1989,8 @@ def slice(x, axis, begin_index, end_index, name=''):
         >>> C.slice(x, 1, 0, 1).eval()
         array([[ 1.],
                [ 4.]], dtype=float32)
+        >>> C.slice(x, [0,1], [1,0], [2,1]).eval()
+        array([[ 4.]], dtype=float32)
         <BLANKLINE>
         >>> # slice using the index overload
         >>> data = np.asarray([[1, 2, -3],
@@ -1984,14 +2000,12 @@ def slice(x, axis, begin_index, end_index, name=''):
         array([[ 1.,  2.,  -3.]], dtype=float32)
         >>> x[0, [1,2]].eval()
         array([[ 2.,  -3.]], dtype=float32)
-
-    Example:
-        #TODO: Make following lines work. Uncomment when done
-        #>>> x1[1].eval()
-        #array([[ 4.,  5.,  6.]], dtype=float32)
-        #>>> x1[:,:2,:].eval()
-        #array([[ 1.,  2.],
-        #         [ 4.,  5.]], dtype=float32)
+        <BLANKLINE>
+        >>> x[1].eval()
+        array([[ 4.,  5.,  6.]], dtype=float32)
+        >>> x[:,:2,:].eval()
+        array([[ 1.,  2.],
+               [ 4.,  5.]], dtype=float32)
 
     Args:
         x: input tensor
@@ -2002,14 +2016,16 @@ def slice(x, axis, begin_index, end_index, name=''):
         name (str, optional): the name of the Function instance in the network
 
     See also:
-        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+        Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import slice
     x = sanitize_input(x)
-    axis = sanitize_axis(axis)
+    axis = sanitize_axis_list(axis)
+    begin_index = sanitize_shape(begin_index)
+    end_index = sanitize_shape(end_index)
     return slice(x, axis, begin_index, end_index, name)
 
 # TODO: enable when it is exposed in c++
@@ -2075,7 +2091,7 @@ def reduce_sum(x, axis=None, name=''):
     elements in the minibatch.
 
     Example:
-        >>> x = C.input_variable((2,2))
+        >>> x = C.sequence.input((2,2))
         >>> # create a batch of 2 sequences each containing 2 2x2 matrices 
         >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
         >>> # reduce over all static axes
@@ -2137,11 +2153,11 @@ def reduce_log_sum_exp(x, axis=None, name=''):
     elements across the specified axis.
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.input(shape=(3,2))
         >>> val = np.reshape(np.arange(6.0, dtype=np.float32), (3,2))
         >>> lse = C.reduce_log_sum_exp(x)
         >>> lse.eval({x:[val]})
-        array([[ 5.456193]], dtype=float32)
+        array([ 5.456193], dtype=float32)
         >>> np.log(np.sum(np.exp(val)))
         5.4561934
 
@@ -2507,18 +2523,18 @@ from cntk.device import use_default_device
 from cntk.axis import Axis
 
 @typemap
-def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
-                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
+def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+          dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
     It creates an input in the network: a place where data,
     such as features and labels, should be provided.
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (type, optional): np.float32 (default) or np.float64
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
-        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
+        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -2538,6 +2554,34 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
     # TODO sparse for numpy arrays
 
     return input_variable(shape, is_sparse, dtype, needs_gradient, name, dynamic_axes)
+
+@typemap
+def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+                   dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
+    '''
+    DEPRECATED.
+
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
+
+    Args:
+        shape (tuple or int): the shape of the input tensor
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
+        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.variables.Variable`
+    '''
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'input() or sequence.input() instead.', DeprecationWarning)
+    if (type(dynamic_axes) in (list, tuple)) and (len(dynamic_axes) == 2):
+        return sequence.input(shape, dtype, needs_gradient, is_sparse, dynamic_axes[1], name)
+    else:
+        return input(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
 
 @typemap
 def output_variable(shape, dtype, dynamic_axes, name=''):
@@ -2568,7 +2612,7 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
     return output_variable(shape, dtype, dynamic_axes, name)
 
 @typemap
-def placeholder_variable(shape=None, dynamic_axes=None, name=''):
+def placeholder(shape=None, dynamic_axes=None, name=''):
     '''
     It creates a placeholder variable that has to be later bound to an actual variable.
     A common use of this is to serve as a placeholder for a later output variable in a
@@ -2578,6 +2622,7 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
     Args:
         shape (tuple or int): the shape of the variable tensor
         dynamic_axes (list): the list of dynamic axes that the actual variable uses
+        name (str, optional): the name of the placeholder variable in the network
 
     Returns:
         :class:`~cntk.ops.variables.Variable`
@@ -2594,6 +2639,27 @@ def placeholder_variable(shape=None, dynamic_axes=None, name=''):
 
     dynamic_axes = sanitize_dynamic_axes(dynamic_axes)
     return placeholder_variable(shape, name, dynamic_axes)
+
+@typemap
+def placeholder_variable(shape=None, dynamic_axes=None, name=''):
+    '''
+    DEPRECATED.
+
+    It creates a placeholder variable for recurrence networks, when the network's dynamic axes
+    are unfolded, the place holder will get assigned a variable along the correspondent dynamic axis.
+
+    Args:
+        shape (tuple or int): the shape of the variable tensor
+        dynamic_axes (list): the list of dynamic axes that the actual variable uses
+        name (str, optional): the name of the placeholder variable in the network
+
+    Returns:
+        :class:`~cntk.ops.variables.Variable`
+    '''
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'placeholder() instead.', DeprecationWarning)
+    return placeholder(shape, dynamic_axes, name)
 
 @typemap
 def parameter(shape=None, init=None, dtype=None, device=None, name=''):

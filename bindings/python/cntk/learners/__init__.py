@@ -39,6 +39,8 @@ the following learning algorithms:
 +------------------------+
 | Learning algorithms    |
 +========================+
+| AdaDelta               |
++------------------------+
 | AdaGrad                |
 +------------------------+
 | FSAdaGrad              |
@@ -432,7 +434,7 @@ def sgd(parameters, lr,
 
     See also:
         [1] L. Bottou. `Stochastic Gradient Descent Tricks
-        <http://research.microsoft.com/pubs/192769/tricks-2012.pdf>`_. Neural
+        <https://www.microsoft.com/en-us/research/publication/stochastic-gradient-tricks>`_. Neural
         Networks: Tricks of the Trade: Springer, 2012.
     '''
     _verify_learning_rate_type(lr)
@@ -558,7 +560,53 @@ def nesterov(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
     return cntk_py.nesterov_learner(parameters, lr, momentum, unit_gain,
                                     additional_options)
 
+@typemap
+def adadelta(parameters, rho=0.95, epsilon=1e-8,
+            l1_regularization_weight=0.0, l2_regularization_weight=0.0,
+            gaussian_noise_injection_std_dev=0.0, gradient_clipping_threshold_per_sample=np.inf,
+            gradient_clipping_with_truncation=True):
+    '''adadelta(parameters, rho, epsilon, l1_regularization_weight=0, l2_regularization_weight=0, gaussian_noise_injection_std_dev=0, gradient_clipping_threshold_per_sample=np.inf, gradient_clipping_with_truncation=True)
+    Creates an AdaDelta learner instance to learn the parameters. See [1] for
+    more information.
 
+    Args:
+        parameters (list of parameters): list of network parameters to tune.
+         These can be obtained by the root operator's ``parameters``.
+        rho (float): exponential smooth factor for each minibatch.
+        epsilon (float): epsilon for sqrt.
+        l1_regularization_weight (float, optional): the L1 regularization weight per sample,
+         defaults to 0.0
+        l2_regularization_weight (float, optional): the L2 regularization weight per sample,
+         defaults to 0.0
+        gaussian_noise_injection_std_dev (float, optional): the standard deviation
+         of the Gaussian noise added to parameters post update, defaults to 0.0
+        gradient_clipping_threshold_per_sample (float, optional): clipping threshold
+         per sample, defaults to infinity
+        gradient_clipping_with_truncation (bool, default ``True``): use gradient clipping
+         with truncation
+
+    Returns:
+        Instance of a :class:`~cntk.learners.Learner` that can be passed to the :class:`~cntk.train.trainer.Trainer`
+
+    See also:
+        [1]  Matthew D. Zeiler1, `ADADELTA: AN ADAPTIVE LEARNING RATE METHOD 
+        <https://arxiv.org/pdf/1212.5701.pdf>`_.
+    '''
+    gaussian_noise_injection_std_dev = \
+        training_parameter_schedule(
+            gaussian_noise_injection_std_dev, UnitType.minibatch)
+
+    additional_options = cntk_py.AdditionalLearningOptions()
+    additional_options.l1_regularization_weight = l1_regularization_weight
+    additional_options.l2_regularization_weight = l2_regularization_weight
+    additional_options.gaussian_noise_injection_std_dev = gaussian_noise_injection_std_dev
+    additional_options.gradient_clipping_threshold_per_sample = gradient_clipping_threshold_per_sample
+    additional_options.gradient_clipping_with_truncation = gradient_clipping_with_truncation
+
+    return cntk_py.ada_delta_learner(parameters, rho, epsilon,
+                                    additional_options)
+
+                                    
 @typemap
 def adagrad(parameters, lr, need_ave_multiplier=True,
             l1_regularization_weight=0.0, l2_regularization_weight=0.0,
@@ -699,7 +747,7 @@ def adam(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
-        <http://arxiv.org/abs/1412.6980>`_. International Conference for
+        <https://arxiv.org/abs/1412.6980>`_. International Conference for
         Learning Representations, 2015.
     '''
     _verify_learning_rate_type(lr)
@@ -761,7 +809,7 @@ def adam_sgd(parameters, lr, momentum, unit_gain=default_unit_gain_value(),
 
     See also:
         [1] D. Kingma, J. Ba. `Adam: A Method for Stochastic Optimization
-        <http://arxiv.org/abs/1412.6980>`_. International Conference for
+        <https://arxiv.org/abs/1412.6980>`_. International Conference for
         Learning Representations, 2015. 
     '''
     import warnings

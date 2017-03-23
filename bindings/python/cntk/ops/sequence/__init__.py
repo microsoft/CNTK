@@ -3,8 +3,36 @@
 # for full license information.
 # ==============================================================================
 
+import numpy as np
 from ...utils import get_data_type
 from cntk.internal import typemap, sanitize_input
+
+from ...axis import Axis
+
+##########################################################################
+# variable ops
+##########################################################################
+
+@typemap
+def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+          sequence_axis=Axis.default_dynamic_axis(), name=''):
+    '''
+    It creates an input in the network: a place where data,
+    such as features and labels, should be provided.
+
+    Args:
+        shape (tuple or int): the shape of the input tensor
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
+        needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
+        is_sparse (bool, optional): whether the variable is sparse (`False` by default)
+        dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.variables.Variable`
+    '''
+    from ... import input
+    return input(shape, dtype, needs_gradient, is_sparse, [Axis.default_batch_axis(), sequence_axis], name)
 
 ##########################################################################
 # sequence ops
@@ -12,8 +40,8 @@ from cntk.internal import typemap, sanitize_input
 
 def delay(x, initial_state=None, time_step=1, name=''):
     '''
-    This function combines ``past_value`` and ``future_value`` into a single function.
-    This is useful when the time_step can be specified as positive or negative.
+    This function combines :func:`~cntk.ops.past_value` and :func:`~cntk.ops.future_value` into a single function.
+    This is useful when the time_step is computed and can be positive, negative, or 0.
 
     Args:
         x: the tensor (or its name) from which the past value is obtained
@@ -40,7 +68,7 @@ def is_first(seq, name=''):
     first element of the sequence is 1 and all others are 0.
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> y = C.sequence.is_first(x)
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
@@ -66,7 +94,7 @@ def is_last(seq, name=''):
     last element of the sequence is 1 and all others are 0.
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> y = C.sequence.is_last(x)
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
@@ -99,7 +127,7 @@ def slice(seq, begin_index, end_index, name=''):
         name (`str`, optional): the name of the Function instance in the network
 
     See also:
-        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+        Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -115,7 +143,7 @@ def first(seq, name=''):
     Returns the first element of its symbolic input sequence ``seq``
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> y = C.sequence.first(x)
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
@@ -141,7 +169,7 @@ def last(seq, name=''):
     Returns the last element of its symbolic input sequence ``seq``
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> y = C.sequence.last(x)
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
@@ -173,7 +201,7 @@ def where(condition, name=''):
     next repeat factor.
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> z = C.greater(C.reduce_sum(x), 60)
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (1,4,3,2))
@@ -187,12 +215,12 @@ def where(condition, name=''):
         array([[ 2.,  3.]], dtype=float32)
 
         >>> # repeat frame[1] twice, frame[3] three times, and frame[4] twice
-        >>> C.sequence.where(C.input_variable(1)).eval([[[1], [2], [1], [3], [2]]])
+        >>> C.sequence.where(C.sequence.input(1)).eval([[[1], [2], [1], [3], [2]]])
         array([[ 0.,  1.,  1.,  2.,  3.,  3.,  3.,  4.,  4.]], dtype=float32)
         >>> # note that the above are the indices that are passed to 
 
         >>> # repeat frames with a fractional factor
-        >>> C.sequence.where(C.input_variable(1)).eval([[[1.2]]*10])
+        >>> C.sequence.where(C.sequence.input(1)).eval([[[1.2]]*10])
         array([[ 0.,  0.,  1.,  2.,  3.,  4.,  5.,  5.,  6.,  7.,  8.,  9.]], dtype=float32)
         >>> # as a result, a 1.2 times stretch is realized by duplicating frame[0] and frame[5]
 
@@ -218,7 +246,7 @@ def gather(seq, condition, new_sequence_axis_typeinfo=None, name=''):
     This operation is also known as stream compaction, or copy_if.
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> z = C.greater(C.reduce_sum(x),60)
         >>> y = C.sequence.gather(x,z)
         >>> # create one sequence of 4 tensors each with shape (3,2)
@@ -265,7 +293,7 @@ def scatter(seq, condition, new_sequence_axis_typeinfo=None, name=''):
     preserving their order.
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
         >>> y = C.sequence.scatter(t, b)
@@ -319,7 +347,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
     and broadcasting the value of the ``operand`` along those dynamic axes.
 
     Example:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> t = C.sequence.last(x)
         >>> b = C.sequence.is_first(x)
         >>> y = C.sequence.broadcast_as(t, b)
@@ -364,7 +392,7 @@ def reduce_sum(seq, name=''):
     Computes the sum of the input sequence's elements across the sequence axis.
 
     Examples:
-        >>> x = C.input_variable(shape=(3,2))
+        >>> x = C.sequence.input(shape=(3,2))
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y = C.sequence.reduce_sum(x)

@@ -13,6 +13,8 @@ import numpy as np
 import uuid
 
 INFINITELY_REPEAT = cntk_py.MinibatchSource.infinitely_repeat
+'''int: constant used to specify a minibatch scheduling unit to equal the size of the full data sweep.'''
+
 FULL_DATA_SWEEP = cntk_py.MinibatchSource.full_data_sweep
 INFINITE_SAMPLES = cntk_py.MinibatchSource.infinite_samples
 DEFAULT_RANDOMIZATION_WINDOW = cntk_py.MinibatchSource.default_randomization_window
@@ -99,12 +101,11 @@ class MinibatchSource(cntk_py.MinibatchSource):
         epoch_size (`int`, defaults to :const:`~cntk.io.INFINITELY_REPEAT`): number of samples as a scheduling unit.
           Parameters in the schedule change their values every `epoch_size`
           samples. If no `epoch_size` is provided, this parameter is substituted
-          by the size of the full data sweep with infinte repeat, in which case the scheduling unit is
+          by the size of the full data sweep with infinite repeat, in which case the scheduling unit is
           the entire data sweep (as indicated by the MinibatchSource) and parameters
           change their values on the sweep-by-sweep basis specified by the schedule.
           **Important:**
-          Click `here <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`_ for a full description of this parameter. 
-        distributed_after (int, defaults to cntk.io.INFINITE_SAMPLES): sample count after which minibatch source becomes distributed
+          Click `here <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`__ for a full description of this parameter.
         multithreaded_deserializer (`bool`, defaults to `None`): using multi threaded deserializer
         frame_mode (`bool`, defaults to `False`): Specifies if data should be randomized and returned at the frame
          or sequence level. When  true , input sequence are split into frames.
@@ -186,7 +187,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             minibatch_size_in_samples (int): number of samples to retrieve for
               the next minibatch. Must be > 0.
               **Important:**
-              Click `here <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`_ for a full description of this parameter. 
+              Click `here <https://github.com/Microsoft/CNTK/wiki/BrainScript-minibatchSize-and-Python-minibatch_size_in_samples-in-CNTK>`__ for a full description of this parameter. 
             input_map (dict): mapping of :class:`~cntk.ops.variables.Variable`
               to :class:`~cntk.cntk_py.StreamInformation` which will be used to convert the
               returned data.
@@ -236,7 +237,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         Restores the MinibatchSource state from the specified checkpoint.
 
         Args:
-            checkpoint (:class:`~cntk_py.Dictionary`): checkpoint to restore from
+            checkpoint (:class:`~cntk.cntk_py.Dictionary`): checkpoint to restore from
         '''
         super(MinibatchSource, self).restore_from_checkpoint(checkpoint)
 
@@ -323,9 +324,11 @@ class _ReaderConfig(dict):
         epoch_size (`int`, defaults to `cntk.io.INFINITELY_REPEAT`): number of samples as a scheduling unit.
           Parameters in the schedule change their values every `epoch_size`
           samples. If no `epoch_size` is provided, this parameter is substituted
-          by the size of the full data sweep with infinte repeat, in which case the scheduling unit is
+          by the size of the full data sweep with infinite repeat, in which case the scheduling unit is
           the entire data sweep (as indicated by the MinibatchSource) and parameters
-          change their values on the sweep-by-sweep basis specified by the schedule. **Important:** `click here <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`_ for a full description of this parameter. 
+          change their values on the sweep-by-sweep basis specified by the schedule.
+          **Important:**
+          Click `here <https://github.com/Microsoft/CNTK/wiki/BrainScript-epochSize-and-Python-epoch_size-in-CNTK>`__ for a full description of this parameter. 
         distributed_after (int, defaults to `cntk.io.INFINITE_SAMPLES`): sample count after which reader becomes distributed
         multithreaded_deserializer (`bool`, defaults to `None`): using multi threaded deserializer
         frame_mode (`bool`, defaults to `False`): Specifies if data should be randomized and returned at the frame
@@ -432,7 +435,7 @@ def ImageDeserializer(filename, streams):
          classes
 
     See also:
-        `Image reader definition <https://github.com/microsoft/cntk/wiki/Image-reader>`_
+        `Image reader definition <https://github.com/microsoft/cntk/wiki/BrainScript-Image-reader>`_
     '''
     image_stream_name = None
 

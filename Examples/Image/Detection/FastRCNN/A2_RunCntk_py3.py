@@ -11,7 +11,7 @@ from cntk.graph import find_by_name, plot
 from cntk.initializer import glorot_uniform
 from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer
 from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
-from cntk.ops import input_variable, parameter, cross_entropy_with_softmax, classification_error, times, combine
+from cntk.ops import input, parameter, cross_entropy_with_softmax, classification_error, times, combine
 from cntk.ops import roipooling
 from cntk.ops.functions import CloneMethod
 from cntk.utils import log_number_of_parameters, ProgressPrinter
@@ -133,9 +133,9 @@ def train_fast_rcnn(debug_output=False):
                                         num_classes, num_rois, base_path, "train")
 
     # Input variables denoting features, rois and label data
-    image_input = input_variable((num_channels, image_height, image_width))
-    roi_input   = input_variable((num_rois, 4))
-    label_input = input_variable((num_rois, num_classes))
+    image_input = input((num_channels, image_height, image_width))
+    roi_input   = input((num_rois, 4))
+    label_input = input((num_rois, num_classes))
 
     # define mapping from reader streams to network inputs
     input_map = {

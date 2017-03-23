@@ -11,8 +11,8 @@ import os
 from cntk.train import Trainer, minibatch_size_schedule 
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.device import cpu, try_set_default_device
-from cntk.learners import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, relu, element_times, constant
+from cntk.learners import adadelta, learning_rate_schedule, UnitType
+from cntk.ops import input, relu, element_times, constant
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
 from cntk.train.training_session import *
@@ -45,11 +45,11 @@ def simple_mnist(tensorboard_logdir=None):
     hidden_layers_dim = 200
 
     # Input variables denoting the features and label data
-    input = input_variable(input_dim, np.float32)
-    label = input_variable(num_output_classes, np.float32)
+    feature = input(input_dim, np.float32)
+    label = input(num_output_classes, np.float32)
 
     # Instantiate the feedforward classification model
-    scaled_input = element_times(constant(0.00390625), input)
+    scaled_input = element_times(constant(0.00390625), feature)
     z = fully_connected_classifier_net(
         scaled_input, num_output_classes, hidden_layers_dim, num_hidden_layers, relu)
 
@@ -64,7 +64,7 @@ def simple_mnist(tensorboard_logdir=None):
     reader_train = create_reader(path, True, input_dim, num_output_classes)
 
     input_map = {
-        input  : reader_train.streams.features,
+        feature  : reader_train.streams.features,
         label  : reader_train.streams.labels
     }
 
@@ -84,8 +84,7 @@ def simple_mnist(tensorboard_logdir=None):
         progress_writers.append(TensorBoardProgressWriter(freq=10, log_dir=tensorboard_logdir, model=z))
 
     # Instantiate the trainer object to drive the model training
-    lr_per_minibatch = learning_rate_schedule(0.2, UnitType.minibatch)
-    trainer = Trainer(z, (ce, pe), sgd(z.parameters, lr=lr_per_minibatch), progress_writers)
+    trainer = Trainer(z, (ce, pe), adadelta(z.parameters), progress_writers)
 
     training_session(
         trainer=trainer,
@@ -103,7 +102,7 @@ def simple_mnist(tensorboard_logdir=None):
     reader_test = create_reader(path, False, input_dim, num_output_classes)
 
     input_map = {
-        input  : reader_test.streams.features,
+        feature  : reader_test.streams.features,
         label  : reader_test.streams.labels
     }
 

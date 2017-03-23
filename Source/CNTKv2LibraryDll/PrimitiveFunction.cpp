@@ -54,6 +54,7 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameLowerPad = L"lowerPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameUpperPad = L"upperPad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameCeilOutDim = L"ceilOutDim";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameIncludePad = L"includePad";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTranspose = L"transpose";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameOutputShape = L"outputShape";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples = L"maxTempMemSizeInSamples";
@@ -365,34 +366,40 @@ namespace CNTK
                         case PrimitiveOpType::Slice:
                         {
                             assert(m_inputs.size() == 1);
-                            auto axis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape());
 
-                            auto beginIndex = m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                            auto endIndex = m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
-                            if (!axis.IsStaticAxis())
-                                LogicError("Function '%S': Built-in Slice operation currently does not support slicing along dynamic axis.", AsString().c_str());
+                            std::vector<Axis> axis; 
+                            auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxis].Value<std::vector<DictionaryValue>>(); 
+                            for (auto& value : axisDictionary)
+                                axis.push_back(NormalizeStaticAxis(value.Value<Axis>(), m_inputs[0].Shape())); 
 
-                            VerifyStaticAxis(axis, m_inputs[0].Shape());
-
-                            size_t sliceAxisDim = m_inputs[0].Shape()[axis.StaticAxisIndex()];
-                            int realBeginIndex = (beginIndex >= 0) ? beginIndex : beginIndex + sliceAxisDim;
-                            int realEndIndex = (endIndex > 0) ? endIndex : endIndex + sliceAxisDim;
-                            if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
-                                RuntimeError("Function '%S': Slice operation index range [%d,%d), interpreted as [%d,%d), is invalid for input '%S' shape '%S'.",
-                                    AsString().c_str(),
-                                    beginIndex,
-                                    endIndex,
-                                    realBeginIndex,
-                                    realEndIndex,
-                                    m_inputs[0].AsString().c_str(),
-                                    m_inputs[0].Shape().AsString().c_str());
+                            auto beginIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<std::vector<DictionaryValue>>());
+                            auto endIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<std::vector<DictionaryValue>>());
 
                             auto outputTensorShape = AsTensorShape(m_inputs[0].Shape());
+                            for (auto i = 0; i < axis.size(); i++)
+                            {
+                                auto& ax = axis[i];
+                                if (!ax.IsStaticAxis()) 
+                                    LogicError("Function '%S': Built-in Slice operation currently does not support slicing along dynamic axis.", AsString().c_str());
+                                VerifyStaticAxis(ax, m_inputs[0].Shape());
 
-                            // propagate as much as we can
-                            if ((axis.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim))
-                                outputTensorShape.NarrowTo(axis.StaticAxisIndex(), realBeginIndex, realEndIndex);
+                                size_t sliceAxisDim = m_inputs[0].Shape()[ax.StaticAxisIndex()];
+                                int realBeginIndex = (beginIndex[i] >= 0) ? beginIndex[i] : beginIndex[i] + sliceAxisDim;
+                                int realEndIndex = (endIndex[i] > 0) ? endIndex[i] : endIndex[i] + sliceAxisDim;
+                                if ((sliceAxisDim < realEndIndex) || (realEndIndex < realBeginIndex) || (realBeginIndex < 0))
+                                    RuntimeError("Function '%S': Slice operation index range [%d,%d), interpreted as [%d,%d), is invalid for input '%S' shape '%S'.",
+                                        AsString().c_str(),
+                                        beginIndex[i],
+                                        endIndex[i],
+                                        realBeginIndex,
+                                        realEndIndex,
+                                        m_inputs[0].AsString().c_str(),
+                                        m_inputs[0].Shape().AsString().c_str());
 
+                                // propagate as much as we can
+                                if ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim))
+                                    outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex);
+                            }
                             outputShape = AsNDShape(outputTensorShape, /*allowNonFlattenableTensorShapes = */ true);
                             break;
                         }

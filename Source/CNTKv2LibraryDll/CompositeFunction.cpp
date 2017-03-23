@@ -581,9 +581,9 @@ namespace CNTK
             }
             case PrimitiveOpType::Slice:
             {
-                auto axis = functionConfig[PrimitiveFunction::AttributeNameAxis].Value<Axis>();
-                auto beginIndex = functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<int>();
-                auto endIndex = functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<int>();
+                auto axis = AsVector<Axis>(functionConfig[PrimitiveFunction::AttributeNameAxis].Value<std::vector<DictionaryValue>>());
+                auto beginIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameBeginIndex].Value<std::vector<DictionaryValue>>());
+                auto endIndex = AsVector<int>(functionConfig[PrimitiveFunction::AttributeNameEndIndex].Value<std::vector<DictionaryValue>>());
 
                 // Internal CNTK SliceNode takes 1 based axis indices instead of 0 based
                 computationNodePtr = New<SliceNode<ElementType>>(network->GetDeviceId(), internalNodeName, beginIndex, endIndex, AsCNTKInternalAxisIdx(axis));
@@ -630,11 +630,16 @@ namespace CNTK
                 auto upperPad = functionConfig[PrimitiveFunction::AttributeNameUpperPad].Value<NDShape>();
                 auto autoPadding = AsVector<bool>(functionConfig[PrimitiveFunction::AttributeNameAutoPadding].Value<std::vector<DictionaryValue>>());
                 auto ceilOutDim = false;
+                auto includePad = false;
                 if (functionConfig.Contains(PrimitiveFunction::AttributeNameCeilOutDim))
                 {
                     ceilOutDim = functionConfig[PrimitiveFunction::AttributeNameCeilOutDim].Value<bool>();
                 }
-                computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutDim, ImageLayoutKind::CHW);
+                if (functionConfig.Contains(PrimitiveFunction::AttributeNameIncludePad))
+                {
+                    includePad = functionConfig[PrimitiveFunction::AttributeNameIncludePad].Value<bool>();
+                }
+                computationNodePtr = New<PoolingNode<ElementType>>(network->GetDeviceId(), internalNodeName, AsCNTKPoolKind(poolingType), AsTensorShape(poolingWindowsShape), AsTensorShape(strides), autoPadding, AsTensorShape(lowerPad), AsTensorShape(upperPad), ceilOutDim, includePad, ImageLayoutKind::CHW);
                 break;
             }
             case PrimitiveOpType::Unpooling:
