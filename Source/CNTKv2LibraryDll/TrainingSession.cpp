@@ -434,13 +434,13 @@ namespace CNTK
         wstring fileName;
         if (pos == wstring::npos)
         {
-            parent = L"..";
+            parent = L".";
             fileName = checkpoint;
         }
         else
         {
             parent = checkpoint.substr(0, pos);
-            fileName = checkpoint.substr(pos);
+            fileName = checkpoint.substr(pos + 1);
         }
 
         std::wstring restoreFile;
