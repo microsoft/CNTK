@@ -168,6 +168,9 @@ if [ "$BUILD_OPENMPI" = "1" ]; then
     make -j $(nproc) install
     cd ..
     rm -rf $OPENMPI
+    if [ "$DOCKER_INSTALLATION" = "1" ]; then
+      rm -rf $OPENMPI.tar.bz2
+    fi
   fi
 fi
 
@@ -185,6 +188,9 @@ else
   echo "$ANACONDA_SHA256  $ANACONDA" | sha256sum -c --strict -
   chmod a+x "$ANACONDA"
   "./$ANACONDA" -b -p "$ANACONDA_PREFIX"
+  if [ "$DOCKER_INSTALLATION" = "1" ]; then
+    rm -rf $ANACONDA
+  fi
 fi
 
 CONDA="$ANACONDA_PREFIX/bin/conda"
@@ -285,12 +291,11 @@ if [ "$DOCKER_INSTALLATION" = "1" ]; then
   # Clean up
   apt-get -y autoremove
   rm -rf /var/lib/apt/lists/*
-  "$ANACONDA_PREFIX"/bin/conda clean --all --yes
+  "$ANACONDA_PREFIX/bin/conda" clean --all --yes
   # Remove Python Wheels "just in case"
   # As of v2.0 Beta 15 they should not be a part of the Drop
-  rm -rf /cntk/cntk/python
+  rm -rf ./cntk/python
 
-  ###########################################
   # Add login Welcome message
   # and call CNTK activation on login
 
