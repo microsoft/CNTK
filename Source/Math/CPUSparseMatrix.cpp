@@ -189,7 +189,6 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatr
         item_size *= (int)shape[i];
 
     int num_class = (int)shape[axis];
-
     auto& us = *this;
     auto nCols = a.GetNumCols();
     auto nRows = num_class * a.GetNumRows();
@@ -206,15 +205,25 @@ CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatr
 #pragma omp parallel for
         for (long i = 0; i < a.GetNumElements(); i++)
         {
+            int block_id = i / item_size;
+            int item_id = i % item_size;
+            // for invalid indices, theorically they should not belong to nz elements.
+            // but if we scan the indices to count the valid indices number,
+            // it will be difficult for parallel calculation, especially on GPU.
+            // here we chose to keep those elements in nz element list, but with value 0
+            // it is tricky, but the data view is correct.
             if (indices[i] >= 0 && indices[i] < num_class)
             {
                 data[i] = 1;
-                size_t colIndex = i / a.GetNumRows();
-                int block_id = i / item_size;
-                int item_id = i % item_size;
                 majorIndices[i] = (block_id * num_class * item_size + item_id + item_size * (int)indices[i]) % nRows;
-                secondaryIndices[colIndex + 1]++;
             }
+            else
+            {
+                data[i] = 0;
+                majorIndices[i] = (block_id * num_class * item_size + item_id) % nRows;
+            }
+            size_t colIndex = i / a.GetNumRows();
+            secondaryIndices[colIndex + 1]++;
         }
 
         for (long i = 1; i < nCols + 1; i++)

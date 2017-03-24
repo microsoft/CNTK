@@ -5575,31 +5575,33 @@ __global__ void _assignOneHotAsSparse(ElemType *indices,
     const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
     if (index < num_elements)
     {
+        int block_id = index / num_item;
+        int item_id = index % num_item;
+        // for invalid indices, theorically they should not belong to nz elements.
+        // but if we scan the indices to count the valid indices number,
+        // it will be difficult for parallel calculation, especially on GPU.
+        // here we chose to keep those elements in nz element list, but with value 0
+        // it is tricky, but the data view is correct.
         if (indices[index] >= 0 && indices[index] < num_class)
         {
             targetBuffer[index] = 1;
-            int block_id = index / num_item;
-            int item_id = index % num_item;
             majorIndices[index] = (block_id * num_class * num_item + item_id + num_item * (int)indices[index]) % (num_rows * num_class);
+        }
+        else
+        {
+            targetBuffer[index] = 0;
+            majorIndices[index] = (block_id * num_class * num_item + item_id) % (num_rows * num_class);
         }
     }
 
     if (index  < num_columns)
     {
-        secondaryIndices[index + 1] = 0;
-        for (int i = 0; i < num_rows; i++)
-        {
-            if (indices[index * num_rows + i] >= 0 && indices[index * num_rows + i] < num_class)
-                secondaryIndices[index + 1] += 1;
-        }
+        secondaryIndices[index + 1] = num_rows * (index + 1);
     }
 
-    //running sum
     if (index == 0)
     {
         secondaryIndices[0] = 0;
-        for (int i = 0; i < num_columns; i++)
-            secondaryIndices[i + 1] += secondaryIndices[i];
     }
 }
 

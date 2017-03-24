@@ -778,6 +778,7 @@ public:
         m_num_class = num_class;
         m_sparse = is_sparse;
         m_axis = axis;
+        m_offset = -1;
     }
     //do we really need this?
     OneHotNode(DEVICEID_TYPE deviceId, const wstring& name) : OneHotNode(deviceId, 0, false, -1, name)
@@ -796,13 +797,13 @@ public:
         vector<size_t> shape;
         shape.assign(dims.begin(), dims.end());
         
-        const auto& inputSampleLayout = Input(0)->GetSampleLayout();
-        const auto& inputDims = inputSampleLayout.GetDims();
-        size_t len = inputDims.size();
-        size_t offset = m_axis < 0 ? (len + 1 + m_axis) % (len + 1) : m_axis % (len + 1);
+        if (m_offset < 0)
+        {
+            CalculateAxisOffset();
+        }
 
         auto& output = Value();
-        output.AssignOneHot(InputRef(0).Value(), shape, offset, m_sparse);
+        output.AssignOneHot(InputRef(0).Value(), shape, m_offset, m_sparse);
     }
 
     virtual void BackpropToNonLooping(size_t inputIndex) override
@@ -820,32 +821,45 @@ public:
     virtual void /*ComputationNodeBase::*/ Validate(bool isFinalValidationPass) override
     {
         Base::Validate(isFinalValidationPass);
+        if (m_offset < 0)
+        {
+            CalculateAxisOffset();
+        }
+
         const auto& inputSampleLayout = Input(0)->GetSampleLayout();
         const auto& inputDims = inputSampleLayout.GetDims();
-        size_t len = inputDims.size();
-        size_t offset = m_axis < 0 ? (len + 1 + m_axis) % (len + 1) : m_axis % (len + 1);
         SmallVector<size_t> dims;
-        if (offset > 0)
+        if (m_offset > 0)
         {
-            dims.append(inputDims.begin(), inputDims.begin() + offset);
+            dims.append(inputDims.begin(), inputDims.begin() + m_offset);
         }
         dims.push_back(m_num_class);
-        if (offset != len)
+        if (m_offset != inputDims.size())
         {
-            dims.append(inputDims.begin() + offset, inputDims.end());
+            dims.append(inputDims.begin() + m_offset, inputDims.end());
         }
 
         auto sampleLayout = TensorShape(dims);
 
         m_pMBLayout = Input(0)->GetMBLayout();
-        // that's it
         SetDims(sampleLayout, HasMBLayout());
     }
 
 protected:
+
+    void CalculateAxisOffset()
+    {
+        if (m_offset < 0)
+        {
+            size_t len = inputDims.size();
+            m_offset = m_axis < 0 ? (len + 1 + m_axis) % (len + 1) : m_axis % (len + 1);
+        }
+    }
+
     size_t m_num_class;
     bool m_sparse;
     int m_axis;
+    int m_offset;
 };
 
 template class OneHotNode<float>;

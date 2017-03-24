@@ -2062,7 +2062,7 @@ def splice(*inputs, **kw_axis_name):
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
 @typemap
-def to_one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
+def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     '''
     Create one hot tensor based on the input tensor
 
@@ -2071,7 +2071,7 @@ def to_one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
         ...                      [4, 5]]], dtype=np.float32)
 
         >>> x = C.input_variable((2,))
-        >>> C.to_one_hot(x, 6, False).eval({x:data})
+        >>> C.one_hot(x, 6, False).eval({x:data})
         array([[[[ 0.,  1.,  0.,  0.,  0.,  0.],
                  [ 0.,  0.,  1.,  0.,  0.,  0.]],
         <BLANKLINE>

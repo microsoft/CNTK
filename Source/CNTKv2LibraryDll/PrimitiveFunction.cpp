@@ -544,9 +544,9 @@ namespace CNTK
                             auto fakeShape = inputShape.AppendShape({num_class});
                             auto axis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>(), fakeShape);
                             if (!axis.IsStaticAxis())
-                                LogicError("Function '%S': Splice operation currently does not support splicing along dynamic axis", AsString().c_str());
+                                LogicError("Function '%S': one hot operation currently does not support on dynamic axis", AsString().c_str());
 
-                            size_t len = inputShape.Dimensions().size();
+                            size_t len = inputShape.Rank();
                             int axisIndex = axis.StaticAxisIndex();
 
                             outputShape = {};

@@ -759,6 +759,7 @@ namespace CNTK
         // version 4: added extra parameter (#6) for the running mean sample count in BatchNormalization.
         // Version 6: Add argmax and argmin to ReduceElement.
         // Version 8: Add ELU node.
-        static const size_t s_serializationVersion = 8;
+        // Version 9: Add OneHot node.
+        static const size_t s_serializationVersion = 9;
     };
 }
