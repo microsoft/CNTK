@@ -20,7 +20,7 @@ struct RandomizedSequenceDescription
     // Sequence id.
     size_t m_id;
     // Number of samples in sequence.
-    size_t m_numberOfSamples;
+    std::vector<size_t> m_numberOfSamples;
     // Randomized chunk this sequence belongs to.
     const RandomizedChunk* m_chunk;
 };
@@ -157,6 +157,9 @@ private:
 
     // Index of the last chunk in the window (exclusive).
     size_t m_chunkWindowEnd;
+
+    // Number of streams.
+    size_t m_numStreams;
 };
 
 typedef std::shared_ptr<SequenceRandomizer> SequenceRandomizerPtr;

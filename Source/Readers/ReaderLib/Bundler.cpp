@@ -72,6 +72,7 @@ void Bundler::CreateChunkDescriptions()
     std::vector<SequenceDescription> sequenceDescriptions;
     sequenceDescriptions.reserve(chunks.front()->m_numberOfSequences);
     SequenceDescription s;
+    bool allSequencesOfTheSameLength = true;
     for (size_t chunkIndex = 0; chunkIndex < chunks.size(); ++chunkIndex)
     {
         size_t numberOfSamples = 0;
@@ -93,6 +94,21 @@ void Bundler::CreateChunkDescriptions()
                     isValid = false;
                     invalid.insert(sequenceIndex);
                     break;
+                }
+
+                if (sequence.m_numberOfSamples.size() > 1)
+                {
+                    TODO:
+                }
+
+                if (s.m_numberOfSamples.size() > 1)
+                {
+                    TODO:
+                }
+
+                if (sequence.m_numberOfSamples.front() != s.m_numberOfSamples.front())
+                {
+                    allSequencesOfTheSameLength = false;
                 }
             }
 
@@ -149,6 +165,16 @@ void Bundler::GetSequencesForChunk(size_t chunkId, std::vector<SequenceDescripti
         result.push_back(sequences[sequenceIndex]);
     }
     std::swap(sequences, result);
+
+    bool allSequencesOfTheSameLength = true;
+    if (allSequencesOfTheSameLength)
+    {
+        return;
+    }
+    else
+    {
+        TODO collect information about other deserializers;
+    }
 }
 
 // Represents a chunk that has pointers to the underlying deserializer chunks.

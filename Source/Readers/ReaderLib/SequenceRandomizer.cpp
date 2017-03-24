@@ -12,6 +12,38 @@
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+static bool HaveFreeSpace(const std::vector<int>& slots)
+{
+    for (const auto size : slots)
+    {
+        if (size <= 0)
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool CanAdd(RandomizedSequenceDescription* sequence, const std::vector<int>& slots)
+{
+    for (size_t i = 0; i < slots.size(); ++i)
+    {
+        if (slots[i] < sequence->m_numberOfSamples[i])
+        {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void ConsumeFreeSpace(RandomizedSequenceDescription* sequence, std::vector<int>& slots)
+{
+    for (size_t i = 0; i < slots.size(); ++i)
+    {
+        slots[i] -= (int)sequence->m_numberOfSamples[i];
+    }
+}
+
     // NOTE: This is an old code, used for legacy randomization to make sure we preserve the same behavior for the tests.
     // TODO: Deprecate when the new randomizer is in place.
     static inline size_t rand(const size_t begin, const size_t end)
@@ -44,6 +76,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
 
         m_bufferOriginalSequences.reserve(max);
+        m_numStreams = m_deserializer->GetStreamDescriptions().size();
     }
 
     // Resets the current sweep according to the randomization seed provided.
@@ -71,23 +104,23 @@ namespace Microsoft { namespace MSR { namespace CNTK {
     // Gets next randomized sequence descriptions not exceeding the sample count.
     std::vector<RandomizedSequenceDescription> SequenceRandomizer::GetNextSequenceDescriptions(size_t sampleCount)
     {
-        int samples = (int)sampleCount;
-
         std::vector<RandomizedSequenceDescription> result;
         result.reserve(sampleCount);
 
+        std::vector<int> freeSlots(m_numStreams, (int)sampleCount);
+
         bool firstSequence = true;
-        while (samples > 0 && m_currentChunkCursor < m_randomizedChunks.size())
+        while (HaveFreeSpace(freeSlots) /*samples > 0*/ && m_currentChunkCursor < m_randomizedChunks.size())
         {
             size_t sequenceOffsetInsideChunk = m_currentSequenceCursor - m_randomizedChunks[m_currentChunkCursor].m_sequencePositionStart;
             RandomizedSequenceDescription* sequence = &m_sequenceWindow[m_currentChunkCursor - m_chunkWindowBegin][sequenceOffsetInsideChunk];
 
-            if (firstSequence || samples >= (int)sequence->m_numberOfSamples)
+            if (firstSequence || CanAdd(sequence, freeSlots))
             {
                 firstSequence = false;
                 result.push_back(*sequence);
                 m_currentSequenceCursor++;
-                m_currentSampleCursor += (int)sequence->m_numberOfSamples;
+                m_currentSampleCursor += (int)sequence->m_numberOfSamples.front();
 
                 if (sequenceOffsetInsideChunk + 1 >= m_randomizedChunks[m_currentChunkCursor].m_original->m_numberOfSequences)
                 {
@@ -97,7 +130,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             }
 
             // Always decrease the available number of samples.
-            samples -= (int)sequence->m_numberOfSamples;
+            ConsumeFreeSpace(sequence, freeSlots);
         }
 
         return result;
@@ -215,7 +248,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         size_t randomizedChunk = m_randomizedWindowEnd - m_chunkWindowBegin;
         for (size_t index = 0; index < m_sequenceWindow[randomizedChunk].size(); index++)
         {
-            sampleCount += m_sequenceWindow[randomizedChunk][index].m_numberOfSamples;
+            sampleCount += m_sequenceWindow[randomizedChunk][index].m_numberOfSamples.front();
         }
 
         // Save the sample information.
@@ -316,7 +349,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             RandomizedSequenceDescription s;
             s.m_id = m_bufferOriginalSequences[k].m_id;
-            s.m_numberOfSamples = m_bufferOriginalSequences[k].m_numberOfSamples.front();
+            s.m_numberOfSamples = std::move(m_bufferOriginalSequences[k].m_numberOfSamples);
             s.m_chunk = &chunk;
             chunkSequences.push_back(s);
         }

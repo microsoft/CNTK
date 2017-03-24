@@ -187,7 +187,7 @@ void BlockRandomizer::Decimate(const std::vector<RandomizedSequenceDescription>&
     // Moving the cursor to the end of read sequences.
     for (const auto& sequence : all)
     {
-        m_globalSamplePosition += sequence.m_numberOfSamples;
+        m_globalSamplePosition += sequence.m_numberOfSamples.front();
     }
 
     decimated.reserve(all.size());
