@@ -413,6 +413,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 	        {
                     commTimer.Restart();
                     m_nccl.AllReduce(mat);
+                    m_nccl.Sync();
                     commTimer.Stop();
                     secondsOnCommunication += (float)commTimer.ElapsedSeconds();
                 }
