@@ -36,8 +36,8 @@ class PolyMath:
     def charcnn(self, x):
         conv_out = C.models.Sequential([
             C.layers.Embedding(self.char_emb_dim),
-			C.Dropout(self.dropout),
-            C.layers.Convolution1D((5,), self.convs, activation=C.relu, init=C.glorot_uniform(), pad=[True], strides=1, bias=True)])(x)
+            C.Dropout(self.dropout),
+            C.layers.Convolution2D((5,self.char_emb_dim), self.convs, activation=C.relu, init=C.glorot_uniform(), bias=True, init_bias=0)])(x)
         return C.reduce_max(conv_out, axis=1) # workaround cudnn failure in GlobalMaxPooling
 
     def embed(self):
@@ -77,7 +77,7 @@ class PolyMath:
         # todo GlobalPooling/reduce_max should have a keepdims default to False
         embedded = C.splice(
             self.embed()(input_glove_words, input_nonglove_words), 
-            C.reshape(self.charcnn(C.reshape(input_chars, (self.word_size, C.InferredDimension))), self.convs))
+            C.reshape(self.charcnn(C.reshape(input_chars, (1, self.word_size, C.InferredDimension))), self.convs))
             
         input_layers = C.layers.Sequential([
             HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
