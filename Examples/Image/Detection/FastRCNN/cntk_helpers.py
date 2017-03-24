@@ -435,7 +435,7 @@ def visualizeResults(imgPath, roiLabels, roiScores, roiRelCoords, padWidth, padH
                 drawRectangles(imgDebug, [rect], color=color, thickness=thickness)
             elif iter == 2 and label > 0:
                 if not nmsKeepIndices or (roiIndex in nmsKeepIndices):
-                    font = ImageFont.truetype("arial.ttf", 18)
+                    font = ImageFont.truetype(available_font, 18)
                     text = classes[label]
                     if roiScores:
                         text += "(" + str(round(score, 2)) + ")"
@@ -755,12 +755,12 @@ def ptClip(pt, maxWidth, maxHeight):
     pt[1] = min(pt[1], maxHeight)
     return pt
 
-def drawText(img, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = ImageFont.truetype("arial.ttf", 16)):
+def drawText(img, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = ImageFont.truetype(available_font, 16)):
     pilImg = imconvertCv2Pil(img)
     pilImg = pilDrawText(pilImg,  pt, text, textWidth, color, colorBackground, font)
     return imconvertPil2Cv(pilImg)
 
-def pilDrawText(pilImg, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = ImageFont.truetype("arial.ttf", 16)):
+def pilDrawText(pilImg, pt, text, textWidth=None, color = (255,255,255), colorBackground = None, font = ImageFont.truetype(available_font, 16)):
     textY = pt[1]
     draw = ImageDraw.Draw(pilImg)
     if textWidth == None:
