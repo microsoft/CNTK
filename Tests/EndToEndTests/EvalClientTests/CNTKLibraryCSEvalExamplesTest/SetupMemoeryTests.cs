@@ -6,8 +6,12 @@ using CNTK;
 
 namespace CNTKLibraryCSEvalExamples
 {
-    public class SetupMemoeryTests
+    internal sealed class SetupMemoeryTests : IDisposable
     {
+        public void Dispose()
+        {
+        }
+
         public void SetupUsingResetModel(DeviceDescriptor device)
         {
             try

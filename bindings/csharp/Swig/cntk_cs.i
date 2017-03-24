@@ -385,6 +385,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     public static System.Collections.Generic.IList<DeviceDescriptor> AllDevices()
     {
         var deviceVector = GetAllDevices();
+        // The CopyTo is to ensure the elements in the deviceVector can live beyond deviceVector itself.
         var deviceArray = new DeviceDescriptor[deviceVector.Count];
         deviceVector.CopyTo(deviceArray);
         var deviceList = new System.Collections.Generic.List<DeviceDescriptor>(deviceArray);
@@ -450,9 +451,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return this.GetDeviceType().GetHashCode();
     }
 
-    public static void SetExcludedDevices(System.Collections.Generic.IList<DeviceDescriptor> excluded)
+    public static void SetExcludedDevices(System.Collections.Generic.IEnumerable<DeviceDescriptor> excluded)
     {
-        var excludeVector = new DeviceDescriptorVector(excluded.Count);
+        var excludeVector = new DeviceDescriptorVector();
         foreach (DeviceDescriptor element in excluded)
         {
             excludeVector.Add(element);

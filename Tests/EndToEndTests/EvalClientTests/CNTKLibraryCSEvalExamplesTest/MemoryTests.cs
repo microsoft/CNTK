@@ -4,7 +4,7 @@ using CNTK;
 
 namespace CNTKLibraryCSEvalExamples
 {
-    class MemoryTests
+    internal sealed class MemoryTests
     {
         public static DeviceDescriptor Device0;
         public static Axis Axis0;
@@ -15,8 +15,10 @@ namespace CNTKLibraryCSEvalExamples
 
         public static void ValidateObjectReferences(DeviceDescriptor device)
         {
-            var test = new SetupMemoeryTests();
-            test.SetupUsingResetModel(device);
+            using (var test = new SetupMemoeryTests())
+            {
+                test.SetupUsingResetModel(device);
+            }
 
             Console.WriteLine("\n1. Run: Test saved object references.\n");
             WriteOutputs();
