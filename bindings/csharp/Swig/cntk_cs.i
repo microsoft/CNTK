@@ -44,7 +44,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
 SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
 %template(AxisVector) std::vector<CNTK::Axis>;
 SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
-%template(NDArrayViewVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
+%template(NDArrayViewPtrVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
 SWIG_STD_VECTOR_ENHANCED(bool)
 %template(BoolVector) std::vector<bool>;
 SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
