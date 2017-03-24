@@ -16,6 +16,7 @@ import cntk.io.transforms as xforms
 from cntk.logging import *
 from cntk.ops import *
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
+from cntk.debugging import *
 
 from BN_Inception import bn_inception_cifar_model
 

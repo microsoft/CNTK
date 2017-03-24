@@ -19,7 +19,7 @@ from cntk.debugging import set_computation_network_trace_level
 from cntk.device import try_set_default_device, gpu
 from cntk import data_parallel_distributed_learner, block_momentum_distributed_learner, Communicator
 from cntk.train.training_session import *
-
+from cntk.debugging import *
 from resnet_models import *
 
 # Paths relative to current python file.
