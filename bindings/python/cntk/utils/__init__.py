@@ -378,7 +378,7 @@ def Signature(*args, **kwargs):
      # is identical to:
      def sqr(x):
          return x*x
-     sqr.__annotations__ = {'x': int}``
+     sqr.__annotations__ = {'x': int}
     '''
     # this function returns another function which is the actual decorator applied to the def:
     def add_annotations(f):

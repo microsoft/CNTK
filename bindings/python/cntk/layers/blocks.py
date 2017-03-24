@@ -158,7 +158,7 @@ def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_
 
     Constructs an Input variable.
     Input variables are used when explicitly constructing a graph.
-    In the context of the Layers library, however, the preferred method is to use the @:func:`cntk.utils.Signature` pattern.
+    In the context of the Layers library, however, the preferred method is to use the @\ :func:`~cntk.utils.Signature` pattern.
     This is a wrapper around :func:`~cntk.ops.input_variable`.
 
     Example:
