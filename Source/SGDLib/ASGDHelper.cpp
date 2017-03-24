@@ -449,11 +449,12 @@ namespace Microsoft {
                 {
                     // parameter server offer vary of updaters, we only use the SGD updater for this simple case.
                     //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
-                    multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
-
+                    //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
+                    multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("tree"));
+                    
                     //multiverso::SetCMDFlag<bool>(std::string("sync"), true);
-
-
+                    multiverso::SetCMDFlag("mix", true);
+                    
                     multiverso::MV_Init();
 
                     for (int i = 0; i < m_localBufferNum; i++)
