@@ -8,6 +8,8 @@ import os
 import zipfile
 from shutil import copyfile
 
+envvar = 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY'
+
 def prepare_CIFAR10_data(): 
     base_path = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                              *"../../../../Examples/Image/DataSets/CIFAR-10".split("/"))
@@ -79,3 +81,77 @@ def cmudict_dataset_directory():
 
     base_path = os.path.normpath(base_path)
     return base_path
+
+# Generic helper to read data from 'CNTK_EXTERNAL_TESTDATA_SOURCE_DIRECTORY' to local machine    
+def _data_copier(src_files, dst_files):
+    src_files = [os.path.normpath(os.path.join((os.environ[envvar]), \
+                    *src_file.split("/"))) for src_file in src_files]
+                    
+    dst_files = [os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(os.getcwd())), \
+                    *dst_file.split("/"))) for dst_file in dst_files]                
+    
+    if not len(src_files) == len(dst_files):
+        raise Exception('The length of src and dst should be same')
+        
+    for idx, dst in enumerate(dst_files):
+        if not os.path.isfile(dst):
+            # copy from backup location
+            print("Copying file from: ", src_files[idx])
+            print("Copying file to: ", dst)
+            copyfile( src_files[idx], dst)
+        else:
+            print("Reusing cached file", dst)    
+                    
+# Read the flower and animal data set file
+def prepare_resnet_v1_model():
+    src_file = "PreTrainedModels/ResNet/v1/ResNet_18.model"
+    dst_file = "Examples/Image/PretrainedModels/ResNet_18.model"
+    
+    _data_copier([src_file], [dst_file])
+    
+# Read the flower and animal data set file
+def prepare_flower_data():
+    src_files = ["Image/Flowers/102flowers.tgz", 
+                 "Image/Flowers/imagelabels.mat", 
+                 "Image/Flowers/imagelabels.mat"]
+
+    dst_files = ["Examples/Image/DataSets/Flowers/102flowers.tgz", 
+                 "Examples/Image/DataSets/Flowers/imagelabels.mat", 
+                 "Examples/Image/DataSets/Flowers/imagelabels.mat"]  
+    
+    _data_copier(src_files, dst_files)
+    
+def prepare_animals_data():
+    src_file = "Image/Animals/Animals.zip"
+    dst_file = "Examples/Image/DataSets/Animals/Animals.zip"
+    
+    _data_copier([src_file], [dst_file])
+    
+def prepare_ResNetmodel_and_Flower_Animals_data():
+    src_files = ["PreTrainedModels/ResNet/v1/ResNet_18.model",
+                 "Image/Flowers/102flowers.tgz", 
+                 "Image/Flowers/imagelabels.mat", 
+                 "Image/Flowers/imagelabels.mat",
+                 "Image/Animals/Animals.zip"]
+    
+    src_files = [os.path.normpath(os.path.join((os.environ[envvar]), \
+                         *src_file.split("/"))) for src_file in src_files]
+    
+    dst_files = ["Examples/Image/PretrainedModels/ResNet_18.model",
+                 "Examples/Image/DataSets/Flowers/102flowers.tgz", 
+                 "Examples/Image/DataSets/Flowers/imagelabels.mat", 
+                 "Examples/Image/DataSets/Flowers/imagelabels.mat",
+                 "Examples/Image/DataSets/Animals/Animals.zip"]
+    
+    dst_files = [os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(os.getcwd())), \
+                         *dst_file.split("/"))) for dst_file in dst_files]
+    
+    for idx, dst in enumerate(dst_files):
+        if not os.path.isfile(dst):
+            # copy from backup location
+            print("Copying file from: ", src_files[idx])
+            print("Copying file to: ", dst)
+            copyfile( src_files[idx], dst)
+        else:
+            print("Reusing cached file", dst)
+    
