@@ -8,6 +8,9 @@ import os
 import re
 import numpy as np
 
+from _cntk_py import force_deterministic_algorithms
+
+force_deterministic_algorithms()
 abs_path = os.path.dirname(os.path.abspath(__file__))
 notebook = os.path.join(abs_path, "..", "..", "..", "..", "Tutorials", "CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb")
 
@@ -22,8 +25,8 @@ def test_CNTK_301_Image_Recognition_with_Deep_Transfer_Learning_noErrors(nb):
     print(errors)
     assert errors == []
 
-expectedEvalError = 73.0
-expectedEvalErrorAtol = 8.0    
+expectedEvalError = 70.0
+expectedEvalErrorAtol = 10.0    
 
 def test_CNTK_301_Image_Recognition_with_Deep_Transfer_Learning_predictionerror(nb):
     testCell = [cell for cell in nb.cells
