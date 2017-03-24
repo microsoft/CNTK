@@ -30,7 +30,7 @@ namespace CNTK
           m_lossFunction(lossFunction),
           m_evaluationFunction(evaluationFunction),
           m_parameterLearners(std::make_shared<Learners>(parameterLearners)),
-          m_prevMinibatchNumSamples(1),
+          m_prevMinibatchNumSamples(0),
           m_distributed(false),
           m_aggregatedTrainingLossValue(std::make_shared<Accumulator>()),
           m_aggregatedTrainingEvalCriterionValue(),
@@ -214,7 +214,10 @@ namespace CNTK
     {
         bool emptyMinibatch = arguments.empty() || (arguments.begin()->second == nullptr);
         if (emptyMinibatch) // Nothing to train with.
+        {
+            m_prevMinibatchNumSamples = 0;
             return false;
+        }
 
         std::unordered_map<Variable, ValuePtr> parameterGradients;
         ExecuteForwardBackward(arguments, outputsToFetch, computeDevice, parameterGradients);
