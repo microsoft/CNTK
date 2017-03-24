@@ -180,13 +180,13 @@ BOOST_FIXTURE_TEST_CASE(CPUSparseMatrixOneHot, RandomSeedFixture)
     BOOST_CHECK(sm2(9, 1) == 1);
 
     DenseMatrix dirtyMatrix(2, 2);
-    m0(0, 0) = 1;
-    m0(0, 1) = -1;
-    m0(1, 0) = 7;
-    m0(1, 1) = 4;
+    dirtyMatrix(0, 0) = 1;
+    dirtyMatrix(0, 1) = -1;
+    dirtyMatrix(1, 0) = 7;
+    dirtyMatrix(1, 1) = 4;
     
     SparseMatrix sm3(MatrixFormat::matrixFormatSparseCSC);
-    sm3.AssignOneHot(m0, shape, 0);
+    sm3.AssignOneHot(dirtyMatrix, shape, 0);
 
     BOOST_CHECK(sm3.NzCount() == 4);
     BOOST_CHECK(sm3(1, 0) == 1);

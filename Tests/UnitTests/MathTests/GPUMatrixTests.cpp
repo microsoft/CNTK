@@ -661,6 +661,23 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixOneHot, RandomSeedFixture)
     BOOST_CHECK(result2.GetNumCols() == 2);
     BOOST_CHECK(result2.GetNumRows() == 12);
     BOOST_CHECK(result2.IsEqualTo(exp2, 1e-6));
+
+    double dirty_data[4] = {1,-1,7,4};
+    GPUMatrix<double> dirty_m(2, 2, c_deviceIdZero);
+    m0.SetValue(2, 2, c_deviceIdZero, dirty_data, matrixFormatRowMajor);
+
+    double dirty_exp_data[24];
+    memset(&dirty_exp_data[0], 0, sizeof(double) * 24);
+    dirty_exp_data[1] = dirty_exp_data[22] = 1;
+    GPUMatrix<double> dirty_exp(12, 2, c_deviceIdZero);
+    dirty_exp.SetValue(12, 2, c_deviceIdZero, dirty_exp_data, matrixFormatColMajor);
+
+    GPUMatrix<double> dirty_result(c_deviceIdZero);
+    dirty_result.AssignOneHot(m0, shape, 0);
+
+    BOOST_CHECK(dirty_result.GetNumCols() == 2);
+    BOOST_CHECK(dirty_result.GetNumRows() == 12);
+    BOOST_CHECK(dirty_result.IsEqualTo(dirty_exp, 1e-6));
 }
 
 #if 0 // Temporarily disabling
