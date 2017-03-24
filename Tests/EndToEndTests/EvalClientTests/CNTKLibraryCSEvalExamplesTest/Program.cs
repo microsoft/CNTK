@@ -37,6 +37,8 @@ namespace CNTKLibraryCSEvalExamples
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(device);
                 // It is sufficient to test loading model from memory buffer only on CPU.
                 CNTKLibraryManagedExamples.LoadModelFromMemory(device);
+
+                MemoryTests.WriteOutputs();
             }
 
             if (ShouldRunOnGpu())
@@ -54,6 +56,9 @@ namespace CNTKLibraryCSEvalExamples
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(device);
+
+                // Run memory tests again.
+                MemoryTests.WriteOutputs();
             }
 
             Console.WriteLine("======== Evaluation completes. ========");

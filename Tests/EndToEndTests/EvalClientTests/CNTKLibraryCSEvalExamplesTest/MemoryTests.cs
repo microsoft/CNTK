@@ -32,6 +32,7 @@ namespace CNTKLibraryCSEvalExamples
             // enforce GC.
             GC.Collect();
             GC.WaitForPendingFinalizers();
+            Console.WriteLine("\nPrint out saved object references.");
             try
             {
                 Console.WriteLine("Device0: " + Device0.AsString() + "Type: " + Device0.Type);
