@@ -13,7 +13,7 @@ import cntk
 import _cntk_py
 import cntk.io.transforms as xforms
 
-from cntk.utils import *
+from cntk.logging import *
 from cntk.ops import *
 from cntk.distributed import data_parallel_distributed_learner, Communicator
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP

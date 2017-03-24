@@ -12,7 +12,6 @@ import cntk
 import numpy as np
 
 from cntk.logging import *
-from cntk.utils import *
 from cntk import input, cross_entropy_with_softmax, classification_error
 from cntk import Trainer, cntk_py 
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
