@@ -231,7 +231,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
     # print out some useful training information
     log_number_of_parameters(model_train) ; print()
-    progress_printer = ProgressPrinter(freq=30, tag='Training')
+    progress_printer = ProgressPrinter(freq=30, tag='Training', num_epochs=max_epochs)
     #progress_printer = ProgressPrinter(freq=30, tag='Training', log_to_file=model_path_stem + ".log") # use this to log to file
 
     sparse_to_dense = create_sparse_to_dense(input_vocab_dim)
