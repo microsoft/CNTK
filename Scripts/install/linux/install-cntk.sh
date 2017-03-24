@@ -169,7 +169,7 @@ if [ "$BUILD_OPENMPI" = "1" ]; then
     cd ..
     rm -rf $OPENMPI
     if [ "$DOCKER_INSTALLATION" = "1" ]; then
-      rm -rf $OPENMPI.tar.bz2
+      rm -f $OPENMPI.tar.bz2
     fi
   fi
 fi
@@ -189,7 +189,7 @@ else
   chmod a+x "$ANACONDA"
   "./$ANACONDA" -b -p "$ANACONDA_PREFIX"
   if [ "$DOCKER_INSTALLATION" = "1" ]; then
-    rm -rf $ANACONDA
+    rm -f $ANACONDA
   fi
 fi
 
