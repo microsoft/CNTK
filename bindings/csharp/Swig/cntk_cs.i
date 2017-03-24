@@ -454,7 +454,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     public static void SetExcludedDevices(System.Collections.Generic.IEnumerable<DeviceDescriptor> excluded)
     {
         var excludeVector = new DeviceDescriptorVector();
-        foreach (DeviceDescriptor element in excluded)
+        foreach (var element in excluded)
         {
             excludeVector.Add(element);
         }
@@ -634,6 +634,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         get {
             var varVector = GetOutputs();
             var varArray = new Variable[varVector.Count];
+            // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
             varVector.CopyTo(varArray);
             var varList = new System.Collections.Generic.List<Variable>(varArray);
             return varList;
@@ -670,6 +671,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         get {
             var varVector = GetArguments();
             var varArray = new Variable[varVector.Count];
+            // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
             varVector.CopyTo(varArray);
             var varList = new System.Collections.Generic.List<Variable>(varArray);
             return varList;
@@ -681,6 +683,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         get {
             var varVector = GetInputs();
             var varArray = new Variable[varVector.Count];
+            // The CopyTo is to ensure that elements in varVector live beyond the lifecycle of varVector.
             varVector.CopyTo(varArray);
             var varList = new System.Collections.Generic.List<Variable>(varArray);
             return varList;
@@ -741,6 +744,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         var funcVector = _FindAllWithName(name, nestedSearchInsideBlockFunction);
         var funcArray = new Function[funcVector.Count];
+        // The CopyTo is to ensure that elements in funcVector live beyond the lifecycle of funcVector.
         funcVector.CopyTo(funcArray);
         var funcList = new System.Collections.Generic.List<Function>(funcArray);
         return funcList;
@@ -788,6 +792,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         get {
             var axisVector = GetDynamicAxes();
+            // The CopyTo is to ensure that elements in axisVector live beyond the lifecycle of axisVector.
             var axisArray = new Axis[axisVector.Count];
             axisVector.CopyTo(axisArray);
             var axisList = new System.Collections.Generic.List<Axis>(axisArray);
@@ -907,7 +912,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public System.Collections.Generic.IList<uint> Dimensions
     {
-        get 
+        get
         {
             return GetDimensions();
         }
@@ -1004,18 +1009,30 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (_InvalidateSection) CNTK::NDMask::InvalidateSection;
 
 %typemap(cscode) CNTK::NDMask %{
-    public void InvalidateSection(System.Collections.Generic.List<uint> sectionOffset, NDShape sectionShape) {
-        var offsetVector = new SizeTVector(sectionOffset);
+    public void InvalidateSection(System.Collections.Generic.IEnumerable<uint> sectionOffset, NDShape sectionShape) {
+        var offsetVector = new SizeTVector();
+        foreach (var element in sectionOffset)
+        {
+            offsetVector.Add(element);
+        }
         _InvalidateSection(offsetVector, sectionShape);
     }
 
-    public void MarkSequenceBegin(System.Collections.Generic.List<uint> offset) {
-        var offsetVector = new SizeTVector(offset);
+    public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<uint> offset) {
+        var offsetVector = new SizeTVector();
+        foreach (var element in offset)
+        {
+            offsetVector.Add(element);
+        }
         _MarkSequenceBegin(offsetVector);
     }
 
-    public void MarkSequenceBegin(System.Collections.Generic.List<uint> offset, NDShape sectionShape) {
-        var offsetVector = new SizeTVector(offset);
+    public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<uint> offset, NDShape sectionShape) {
+        var offsetVector = new SizeTVector();
+        foreach (var element in offset)
+        {
+            offsetVector.Add(element);
+        }
         _MarkSequenceBegin(offsetVector, sectionShape);
     }
 
