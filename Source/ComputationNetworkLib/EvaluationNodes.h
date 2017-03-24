@@ -851,6 +851,8 @@ protected:
     {
         if (m_offset < 0)
         {
+            const auto& inputSampleLayout = Input(0)->GetSampleLayout();
+            const auto& inputDims = inputSampleLayout.GetDims();
             size_t len = inputDims.size();
             m_offset = m_axis < 0 ? (len + 1 + m_axis) % (len + 1) : m_axis % (len + 1);
         }
