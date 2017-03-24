@@ -1,6 +1,6 @@
 from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
-from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple, sanitize_variable_value_dict
+from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple, sanitize_variable_value_dict, sanitize_Function_attributes
 from cntk.internal.utils import get_python_function_arguments, map_function_arguments
 from ..variables import Record, Variable
 from enum import Enum, unique
@@ -425,7 +425,7 @@ class Function(cntk_py.Function):
         '''
         List of the attributes of the function
         '''
-        return super(Function, self).attributes()
+        return sanitize_Function_attributes(super(Function, self).attributes())
 
     @typemap
     def clone(self, method, substitutions=None):

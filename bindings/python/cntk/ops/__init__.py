@@ -11,10 +11,11 @@ from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model
 from ..variables import Variable, Parameter, Constant
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
+
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
@@ -226,9 +227,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
+    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
     return convolution(convolution_map, operand, strides, sharing, auto_padding,
                        lower_pad, upper_pad, max_temp_mem_size_in_samples, name)
 
@@ -292,9 +291,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     '''
     from cntk.cntk_py import convolution_transpose
     operand = sanitize_input(operand)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
+    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
     if output_shape is None: 
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
@@ -369,10 +366,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     '''
     from cntk.cntk_py import pooling
     operand = sanitize_input(operand)
-    pooling_window_shape = sanitize_shape(pooling_window_shape)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
+    pooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(pooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
                    lower_pad, upper_pad, ceil_out_dim, include_pad, name)
 
@@ -415,10 +409,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
     from cntk.cntk_py import unpooling
     operand = sanitize_input(operand)
     pooling_input = sanitize_input(pooling_input)
-    unpooling_window_shape = sanitize_shape(unpooling_window_shape)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
+    unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
     return unpooling(operand, pooling_input, unpooling_type,
                      unpooling_window_shape, strides, auto_padding,
                      lower_pad, upper_pad, name)

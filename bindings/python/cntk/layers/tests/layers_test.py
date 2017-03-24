@@ -65,7 +65,7 @@ def test_Function(device_id):
     def f(x):
         return x * x
     assert f.shape == (-2,)
-    #assert f.op_name == 'Square'   # BUGBUG: op_name is 'CompositeFunctionOpName'
+    assert f.root_function.op_name == 'Square'
     assert f.name == 'block_name'
 
     ####################################################
@@ -574,11 +574,10 @@ def test_sequential_convolution_without_reduction_dim(device_id):
 
 def test_1D_convolution_without_reduction_dim(device_id):
     c = Convolution1D(3, init=np.array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
-    ## BUGBUG: pad seems ignored? It looks like auto_padding=(False, False, True) gets passed on as m_audoPad = { false, false, true }
     c.update_signature(5)
     data = [np.array([[2, 6, 4, 8, 6]])]   # like a audio sequence, in a static dimension
     out = c(data)
-    exp = [[24, 40, 38]]
+    exp = [[10, 24, 40, 38, 44]]
     np.testing.assert_array_equal(out, exp, err_msg='Error in 1D convolution without reduction dimension')
 
 ##########################################################
