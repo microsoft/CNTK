@@ -1111,11 +1111,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
     }
 
-    public uint MaskedCount
+    public int MaskedCount
     {
         get
         {
-            return _MaskedCount();
+            return (int)_MaskedCount();
         }
     }
 
@@ -1315,19 +1315,29 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     // Create Value object from sparse input, for N-dimensional tensor. Only CreateSequence() for now.
-    public static Value CreateSequence<T>(NDShape sampleShape, uint sequenceLength,
-                                          int[] colStarts, int[] rowIndices, T[] nonZeroValues, uint numNonZeroValues,
+    public static Value CreateSequence<T>(NDShape sampleShape, int sequenceLength,
+                                          int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                           bool sequenceStartFlag,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
+        if (nonZeroValues.Length != rowIndices.Length)
+        {
+            throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+        }
+        if (colStarts.Length != sequenceLength + 1)
+        {
+            throw new System.ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+        }
+        uint numNonZeroValues = (uint)nonZeroValues.Length;
+
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateSequenceFloat(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value.CreateSequenceFloat(sampleShape, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateSequenceDouble(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value.CreateSequenceDouble(sampleShape, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -1335,28 +1345,38 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
     }
 
-    public static Value CreateSequence<T>(NDShape sampleShape, uint sequenceLength,
-                                          int[] colStarts, int[] rowIndices, T[] nonZeroValues, uint numNonZeroValues,
+    public static Value CreateSequence<T>(NDShape sampleShape, int sequenceLength,
+                                          int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
-        return Value.CreateSequence<T>(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, true, device, readOnly);
+        return Value.CreateSequence<T>(sampleShape, sequenceLength, colStarts, rowIndices, nonZeroValues, true, device, readOnly);
     }
 
     // Create Value object from sparse input, for 1D tensor. Only CreateSequence() for now.
-    public static Value CreateSequence<T>(uint dimension, uint sequenceLength,
-                                          int[] colStarts, int[] rowIndices, T[] nonZeroValues, uint numNonZeroValues,
+    public static Value CreateSequence<T>(uint dimension, int sequenceLength,
+                                          int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                           bool sequenceStartFlag,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
+        if (nonZeroValues.Length != rowIndices.Length)
+        {
+            throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+        }
+        if (colStarts.Length != sequenceLength + 1)
+        {
+            throw new System.ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+        }
+        uint numNonZeroValues = (uint)nonZeroValues.Length;
+
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateSequenceFloat(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value.CreateSequenceFloat(dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateSequenceDouble(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value.CreateSequenceDouble(dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -1364,12 +1384,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
     }
 
-    public static Value CreateSequence<T>(uint dimension, uint sequenceLength,
-                                          int[] colStarts, int[] rowIndices, T[] nonZeroValues, uint numNonZeroValues,
+    public static Value CreateSequence<T>(uint dimension, int sequenceLength,
+                                          int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
-        return Value.CreateSequence<T>(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, numNonZeroValues, true, device, readOnly);
+        return Value.CreateSequence<T>(dimension, sequenceLength, colStarts, rowIndices, nonZeroValues, true, device, readOnly);
     }
 
     // Create value object from NDArrayView

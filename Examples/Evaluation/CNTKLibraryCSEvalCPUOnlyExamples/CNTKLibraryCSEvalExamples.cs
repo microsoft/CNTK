@@ -664,7 +664,7 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get the index of each word in the sentence.
                 string[] inputWords = inputSentence.Split(' ');
-                var seqLen = (uint)inputWords.Length;
+                var seqLen = inputWords.Length;
                 // For this example, only 1 non-zero value for each sample.
                 var numNonZeroValues = seqLen * 1;
                 var colStarts = new int[seqLen + 1];
@@ -681,10 +681,10 @@ namespace CNTKLibraryCSEvalExamples
                     rowIndices[count] = nonZeroValueIndex;
                     colStarts[count] = count;
                 }
-                colStarts[count] = (int)numNonZeroValues;
+                colStarts[count] = numNonZeroValues;
 
                 // Create input value using OneHot vector data.
-                var inputValue = Value.CreateSequence<float>(vocabSize, seqLen, colStarts, rowIndices, nonZeroValues, numNonZeroValues, device);
+                var inputValue = Value.CreateSequence<float>(vocabSize, seqLen, colStarts, rowIndices, nonZeroValues, device);
 
                 // Build input data map.
                 var inputDataMap = new Dictionary<Variable, Value>();
