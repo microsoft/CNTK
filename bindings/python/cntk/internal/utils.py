@@ -5,6 +5,7 @@
 # ==============================================================================
 
 from .. import cntk_py
+from ..variables import Record
 import numpy as np
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
