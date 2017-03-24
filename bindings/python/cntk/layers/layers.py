@@ -340,7 +340,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      init_bias (scalar or NumPy array or :mod:`cntk.initializer`, defaults to 0): initial value of weights `b`
      reduction_rank (`int`, defaults to 1): set to 0 if input items are scalars (input has no depth axis), e.g. an audio signal or a black-and-white image
       that is stored with tensor shape (H,W) instead of (1,H,W)
-     transpose (bool, defaults to `False`): When this is `True` this is deconvolution
+     transpose_weight (bool, defaults to `False`): When this is `True` this is convolution, otherwise this is correlation (which is common for most toolkits)
      max_temp_mem_size_in_samples (int, defaults to 0): Limits the amount of memory for intermiadate convolution results.  A value of 0 means, memory is automatically managed.
      name (str, defaults to ''): the name of the function instance in the network
 

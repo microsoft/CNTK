@@ -427,14 +427,7 @@ def sanitize_axis_list(axes):
         axes = [axes]
     retAxes = []
     for ax in axes: 
-        if ax is None:
-            retAxes.append(Axis.all_static_axes()) 
-        elif isinstance(ax, numbers.Integral):
-            retAxes.append(Axis(-ax - 1))
-        elif ax.is_static_axis and (ax.static_axis_index() != Axis.new_leading_axis().static_axis_index()):
-            retAxes.append(Axis(-1 - axis.static_axis_index())) 
-        else: 
-            retAxes.append(ax)
+        retAxes.append(sanitize_axis(ax))
     return retAxes
 
 def sanitize_dynamic_axes(axes):

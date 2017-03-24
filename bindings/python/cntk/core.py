@@ -361,6 +361,8 @@ class Value(cntk_py.Value):
             True)  # always create a copy in Value
 
         return value
+        
+    ONE_HOT_SKIP = cntk_py.Value.one_hot_skip
 
     @staticmethod
     @typemap
@@ -368,16 +370,17 @@ class Value(cntk_py.Value):
         '''
         Converts ``batch`` into a :class:`~cntk.core.Value` object of ``dtype``
         such that the integer data in ``batch`` is interpreted as the indices
-        representing one-hot vectors.
+        representing one-hot vectors. Use Value.ONE_HOT_SKIP for a zero vector
 
         Example:
             >>> num_classes = 6
-            >>> sparse_indices = [[1,5],[4]]
+            >>> sparse_indices = [[1,C.Value.ONE_HOT_SKIP,5],[4]]
             >>> i0 = C.sequence.input(shape=num_classes, is_sparse=True)
             >>> z = C.times(i0, np.eye(num_classes))
             >>> value = C.Value.one_hot(sparse_indices, num_classes)
             >>> z.eval({i0: value})
             [array([[ 0.,  1.,  0.,  0.,  0.,  0.],
+                    [ 0.,  0.,  0.,  0.,  0.,  0.],
                     [ 0.,  0.,  0.,  0.,  0.,  1.]], dtype=float32), 
              array([[ 0.,  0.,  0.,  0.,  1.,  0.]], dtype=float32)]
             <BLANKLINE>

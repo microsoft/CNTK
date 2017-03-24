@@ -37,6 +37,7 @@ namespace CNTK
 
     // Names of the various attributes of CNTK primitive Functions
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis = L"axis";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxisVec = L"axisVec"; 
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis1 = L"axis1";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAxis2 = L"axis2";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameAllowDuplicates = L"allowDuplicates";
@@ -70,7 +71,9 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewSequenceAxisLengthScalingFactor = L"newSequenceAxisLengthScalingFactor";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNewSequenceAxisLengthAdditiveFactor = L"newSequenceAxisLengthAdditiveFactor";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBeginIndex = L"beginIndex";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameBeginIndexVec = L"beginIndexVec";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameEndIndex = L"endIndex";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameEndIndexVec = L"endIndexVec";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameReductionOpName = L"reductionOpName";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBidirectional = L"bidirectional";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumLayers = L"numLayers";
@@ -367,19 +370,37 @@ namespace CNTK
                         {
                             assert(m_inputs.size() == 1);
 
-                            std::vector<Axis> axis; 
-                            auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxis].Value<std::vector<DictionaryValue>>(); 
-                            for (auto& value : axisDictionary)
-                                axis.push_back(NormalizeStaticAxis(value.Value<Axis>(), m_inputs[0].Shape())); 
+                            std::vector<Axis> axis;
+                            std::vector<int> beginIndex, endIndex; 
+                            if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxisVec) &&
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndexVec) &&
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndexVec))
+                            {
+                                auto &axisDictionary = m_attributes[PrimitiveFunction::AttributeNameAxisVec].Value<std::vector<DictionaryValue>>();
+                                for (auto& value : axisDictionary)
+                                    axis.push_back(NormalizeStaticAxis(value.Value<Axis>(), m_inputs[0].Shape())); 
 
-                            auto beginIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<std::vector<DictionaryValue>>());
-                            auto endIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<std::vector<DictionaryValue>>());
+                                beginIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameBeginIndexVec].Value<std::vector<DictionaryValue>>());
+                                endIndex = AsVector<int>(m_attributes[PrimitiveFunction::AttributeNameEndIndexVec].Value<std::vector<DictionaryValue>>());
+                            }
+                            else if (m_attributes.Contains(PrimitiveFunction::AttributeNameAxis) &&
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameBeginIndex) &&
+                                m_attributes.Contains(PrimitiveFunction::AttributeNameEndIndex))
+                            {
+                                axis.push_back(NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameAxis].Value<Axis>(), m_inputs[0].Shape()));
+                                beginIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameBeginIndex].Value<int>());
+                                endIndex.push_back(m_attributes[PrimitiveFunction::AttributeNameEndIndex].Value<int>());
+                            }
+                            else
+                            {
+                                RuntimeError("Function '%S': Slice operation with inconsistent attributes", AsString().c_str());
+                            }
 
                             auto outputTensorShape = AsTensorShape(m_inputs[0].Shape());
                             for (auto i = 0; i < axis.size(); i++)
                             {
                                 auto& ax = axis[i];
-                                if (!ax.IsStaticAxis()) 
+                                if (!ax.IsStaticAxis())
                                     LogicError("Function '%S': Built-in Slice operation currently does not support slicing along dynamic axis.", AsString().c_str());
                                 VerifyStaticAxis(ax, m_inputs[0].Shape());
 
@@ -395,7 +416,6 @@ namespace CNTK
                                         realEndIndex,
                                         m_inputs[0].AsString().c_str(),
                                         m_inputs[0].Shape().AsString().c_str());
-
                                 // propagate as much as we can
                                 if ((ax.StaticAxisIndex() < (int)outputTensorShape.GetRank()) && (0 <= realBeginIndex) && (realBeginIndex <= realEndIndex) && (realEndIndex <= sliceAxisDim))
                                     outputTensorShape.NarrowTo(ax.StaticAxisIndex(), realBeginIndex, realEndIndex);

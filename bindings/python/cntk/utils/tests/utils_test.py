@@ -14,6 +14,7 @@ from cntk.ops import *
 from cntk.utils import *
 from cntk.internal import *
 from cntk import Value
+from cntk import sequence
 
 AA = np.asarray
 
@@ -111,6 +112,15 @@ def test_one_hot():
         s = Value.one_hot([[1.0, 2.0], [3.]], 4)
     with pytest.raises(ValueError):
         s = Value.one_hot([1, 2], 4)
+        
+def test_one_hot_skip():
+    a = one_hot([[0,1,Value.ONE_HOT_SKIP]], 3)
+    i = sequence.input(shape=(3,))
+    b = i * 1
+    expected = [[[ 1.,  0.,  0.],
+                 [ 0.,  1.,  0.],
+                 [ 0.,  0.,  0.]]]
+    assert np.allclose(b.eval({i:a}), expected)
 
 def test_sanitize_batch_contiguity():
     a1 = AA([[1,2],[3,4]])
