@@ -15,10 +15,10 @@ Expand-Archive -Path BinaryDrop.zip
 $installCache = '.\BinaryDrop\cntk\Scripts\install\windows\InstallCache'
 Move-Item -Path InstallCache -Destination $installCache
 
-$fileList = get-childitem .\BinaryDrop\cntk\Scripts\install\windows\ps\ -recurse -file -include *.ps1,*.psm1
-foreach($fileItem in $fileList) {
-    Add-Content $fileItem -Str Zone.Identifier "[ZoneTransfer]`r`nZoneId=3`r`n"
-    }
+$fileList = get-childitem .\BinaryDrop\cntk\Scripts\install\windows\ps\ -recurse -file -include *.ps1, *.psm1
+foreach ($fileItem in $fileList) {
+  Add-Content $fileItem -Stream Zone.Identifier "[ZoneTransfer]`r`nZoneId=3`r`n"
+}
 
 .\BinaryDrop\cntk\Scripts\install\windows\install.bat -NoConfirm @PSBoundParameters
 if ($LASTEXITCODE -ne 0) {
