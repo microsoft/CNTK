@@ -38,10 +38,10 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get shape data for the input variable
                 NDShape inputShape = inputVar.Shape;
-                uint imageWidth = inputShape[0];
-                uint imageHeight = inputShape[1];
-                uint imageChannels = inputShape[2];
-                uint imageSize = inputShape.TotalSize;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
                 var inputDataMap = new Dictionary<Variable, Value>();
                 var outputDataMap = new Dictionary<Variable, Value>();
 

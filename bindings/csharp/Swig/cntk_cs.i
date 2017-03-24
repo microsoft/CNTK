@@ -67,9 +67,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 #define %ignore_struct %rename("$ignore", fullname=1)
 #define %ignore_enum_class %rename("$ignore", fullname=1)
 
-// Ignore things in CNTKLibrary.h that are not exposed for C# Eval.
-%ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
-
 %ignore_function CNTK::PlaceholderVariable;
 %ignore_function CNTK::InputVariable;
 %ignore_function CNTK::OutputVariable;
@@ -367,9 +364,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %typemap(cscode) CNTK::DeviceDescriptor %{
 
-    public uint Id
+    public int Id
     {
-        get { return GetId(); }
+        get { return (int)GetId(); }
     }
 
     public DeviceKind Type
@@ -903,18 +900,45 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (_IsUnknown) CNTK::NDShape::IsUnknown;
 %rename (_HasInferredDimension) CNTK::NDShape::HasInferredDimension;
 
+%ignore CNTK::NDShape::NDShape(const std::initializer_list<size_t>& dimensions);
+%ignore CNTK::NDShape::InferredDimension;
+
+//
+// NDShape
+//
+%extend CNTK::NDShape {
+    size_t GetDimensionSize(size_t axisId)
+    {
+        return (*self)[axisId];
+    }
+}
+
 %typemap(cscode) CNTK::NDShape %{
 
-    public uint Rank
+    public NDShape(int numAxes, int dimension) : this((uint)numAxes, (uint)dimension)
     {
-        get { return GetRank(); }
     }
 
-    public System.Collections.Generic.IList<uint> Dimensions
+    public NDShape(int numAxes) : this((uint)numAxes)
+    {
+    }
+
+    public int Rank
+    {
+        get { return (int)GetRank(); }
+    }
+
+    public System.Collections.Generic.IList<int> Dimensions
     {
         get
         {
-            return GetDimensions();
+            var dimList = GetDimensions();
+            var retList = new System.Collections.Generic.List<int>(dimList.Count);
+            foreach (var element in dimList)
+            {
+                retList.Add((int)element);
+            }
+            return retList;
         }
     }
 
@@ -928,14 +952,34 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         get { return _HasInferredDimension(); }
     }
 
-    public uint TotalSize
+    public int TotalSize
     {
-        get { return GetTotalSize(); }
+        get { return (int)GetTotalSize(); }
     }
 
-    public uint this[int key]
+    public int this[int key]
     {
-        get { return GetDimensionSize((uint)key); }
+        get { return (int)GetDimensionSize((uint)key); }
+    }
+
+    public NDShape SubShape(int beginAxisId, int endAxisId)
+    {
+        return SubShape((uint)beginAxisId, (uint)endAxisId);
+    }
+
+    public NDShape SubShape(int beginAxisId)
+    {
+        return SubShape((uint)beginAxisId);
+    }
+
+    public static NDShape CreateNDShape(System.Collections.Generic.IEnumerable<int> dimensions)
+    {
+        var dimVector = new SizeTVector();
+        foreach (var element in dimensions)
+        {
+            dimVector.Add((uint)element);
+        }
+        return new NDShape(dimVector);
     }
 
     public override bool Equals(System.Object obj)
@@ -997,6 +1041,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         //Todo: another hash function??
         return this.GetDimensions().GetHashCode();
     }
+
+    public static readonly int InferredDimension = -1;
 %}
 
 // Todo: add correct typemap as they might be useful for C# in future.
@@ -1009,29 +1055,29 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (_InvalidateSection) CNTK::NDMask::InvalidateSection;
 
 %typemap(cscode) CNTK::NDMask %{
-    public void InvalidateSection(System.Collections.Generic.IEnumerable<uint> sectionOffset, NDShape sectionShape) {
+    public void InvalidateSection(System.Collections.Generic.IEnumerable<int> sectionOffset, NDShape sectionShape) {
         var offsetVector = new SizeTVector();
         foreach (var element in sectionOffset)
         {
-            offsetVector.Add(element);
+            offsetVector.Add((uint)element);
         }
         _InvalidateSection(offsetVector, sectionShape);
     }
 
-    public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<uint> offset) {
+    public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<int> offset) {
         var offsetVector = new SizeTVector();
         foreach (var element in offset)
         {
-            offsetVector.Add(element);
+            offsetVector.Add((uint)element);
         }
         _MarkSequenceBegin(offsetVector);
     }
 
-    public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<uint> offset, NDShape sectionShape) {
+    public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<int> offset, NDShape sectionShape) {
         var offsetVector = new SizeTVector();
         foreach (var element in offset)
         {
-            offsetVector.Add(element);
+            offsetVector.Add((uint)element);
         }
         _MarkSequenceBegin(offsetVector, sectionShape);
     }
@@ -1059,7 +1105,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %rename (_IsSparse) CNTK::Value::IsSparse;
 %rename (_IsReadOnly) CNTK::Value::IsReadOnly;
 %rename (_MaskedCount) CNTK::Value::MaskedCount;
-
 
 %typemap(cscode) CNTK::Value %{
 
@@ -1241,7 +1286,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     // Create Value object from OneHotVector input, for 1D tensor: batch, sequence or batch of sequences
-    public static Value CreateBatch<T>(uint dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
+    public static Value CreateBatch<T>(int dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
     {
         // Is CreateBatch for OneHot really useful? 
         var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
@@ -1250,7 +1295,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
-    public static Value CreateSequence<T>(uint dimension,
+    public static Value CreateSequence<T>(int dimension,
                                           System.Collections.Generic.List<uint> sequence,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
@@ -1258,7 +1303,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return CreateSequence<T>(dimension, sequence, true, device, readOnly);
     }
 
-    public static Value CreateSequence<T>(uint dimension,
+    public static Value CreateSequence<T>(int dimension,
                                           System.Collections.Generic.List<uint> sequence,
                                           bool sequenceStartFlag,
                                           DeviceDescriptor device,
@@ -1268,7 +1313,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {sequenceStartFlag}, device, readOnly);
     }
 
-    public static Value CreateBatchOfSequences<T>(uint dimension,
+    public static Value CreateBatchOfSequences<T>(int dimension,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
@@ -1276,7 +1321,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return Create<T>(dimension, batchOfSequences, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
-    public static Value CreateBatchOfSequences<T>(uint dimension, 
+    public static Value CreateBatchOfSequences<T>(int dimension,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
                                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                                   DeviceDescriptor device,
@@ -1285,7 +1330,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return Create<T>(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
     }
 
-    private static Value Create<T>(uint dimension,
+    private static Value Create<T>(int dimension,
                                   System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
@@ -1302,11 +1347,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateOneHotFloat(dimension, inputSeqVector, seqFlags, device, readOnly);
+            return Value.CreateOneHotFloat((uint)dimension, inputSeqVector, seqFlags, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateOneHotDouble(dimension, inputSeqVector, seqFlags, device, readOnly);
+            return Value.CreateOneHotDouble((uint)dimension, inputSeqVector, seqFlags, device, readOnly);
         }
         else
         {
@@ -1354,7 +1399,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     // Create Value object from sparse input, for 1D tensor. Only CreateSequence() for now.
-    public static Value CreateSequence<T>(uint dimension, int sequenceLength,
+    public static Value CreateSequence<T>(int dimension, int sequenceLength,
                                           int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                           bool sequenceStartFlag,
                                           DeviceDescriptor device,
@@ -1372,11 +1417,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateSequenceFloat(dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value.CreateSequenceFloat((uint)dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as float[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateSequenceDouble(dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
+            return Value.CreateSequenceDouble((uint)dimension, (uint)sequenceLength, colStarts, rowIndices, nonZeroValues as double[], numNonZeroValues, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -1384,7 +1429,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
     }
 
-    public static Value CreateSequence<T>(uint dimension, int sequenceLength,
+    public static Value CreateSequence<T>(int dimension, int sequenceLength,
                                           int[] colStarts, int[] rowIndices, T[] nonZeroValues,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
@@ -1537,23 +1582,29 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, float[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.Length, device, readOnly)
     {
+        if (rowIndices.Length != nonZeroValues.Length)
+        {
+            throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+        }
+        if (viewShape[viewShape.Rank-1] + 1 != colStarts.Length)
+        {
+            throw new System.ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+        }
     }
 
     public NDArrayView(NDShape viewShape, int[] colStarts, int[] rowIndices, double[] nonZeroValues, DeviceDescriptor device, bool readOnly = false) : this(viewShape, colStarts, rowIndices, nonZeroValues, (uint)nonZeroValues.Length, device, readOnly)
     {
+        if (rowIndices.Length != nonZeroValues.Length)
+        {
+            throw new System.ArgumentException("The length of rowIndicies must be same as the length of nonZeroValues.");
+        }
+        if (viewShape[viewShape.Rank-1] + 1 != colStarts.Length)
+        {
+            throw new System.ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+        }
     }
 %}
 
-
-// 
-// NDShape
-//
-%extend CNTK::NDShape {
-    size_t GetDimensionSize(size_t axisId)
-    {
-        return (*self)[axisId];
-    }
-}
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"

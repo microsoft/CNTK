@@ -46,10 +46,10 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get shape data for the input variable
                 NDShape inputShape = inputVar.Shape;
-                uint imageWidth = inputShape[0];
-                uint imageHeight = inputShape[1];
-                uint imageChannels = inputShape[2];
-                uint imageSize = inputShape.TotalSize;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
 
                 // The model has only one output.
                 // If the model have more than one output, use the following way to get output variable by name.
@@ -129,10 +129,10 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get shape data for the input variable
                 NDShape inputShape = inputVar.Shape;
-                uint imageWidth = inputShape[0];
-                uint imageHeight = inputShape[1];
-                uint imageChannels = inputShape[2];
-                uint imageSize = inputShape.TotalSize;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
 
                 // The model has only one output.
                 // If the model have more than one output, use the following way to get output variable by name.
@@ -222,10 +222,10 @@ namespace CNTKLibraryCSEvalExamples
             // Get shape data for the input variable
             var input = rootFunc.Arguments.Single();
             NDShape inputShape = input.Shape;
-            uint imageWidth = inputShape[0];
-            uint imageHeight = inputShape[1];
-            uint imageChannels = inputShape[2];
-            uint imageSize = inputShape.TotalSize;
+            int imageWidth = inputShape[0];
+            int imageHeight = inputShape[1];
+            int imageChannels = inputShape[2];
+            int imageSize = inputShape.TotalSize;
             Object lockObj = new object();
 
             // Start to evaluate samples in parallel.
@@ -303,10 +303,10 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get shape data for the input variable
                 NDShape inputShape = inputVar.Shape;
-                uint imageWidth = inputShape[0];
-                uint imageHeight = inputShape[1];
-                uint imageChannels = inputShape[2];
-                uint imageSize = inputShape.TotalSize;
+                int imageWidth = inputShape[0];
+                int imageHeight = inputShape[1];
+                int imageChannels = inputShape[2];
+                int imageSize = inputShape.TotalSize;
 
                 // The model has only one output.
                 // If the model have more than one output, use the following way to get output variable by name.
@@ -356,11 +356,11 @@ namespace CNTKLibraryCSEvalExamples
         /// <typeparam name="T">The data value type</typeparam>
         /// <param name="sampleSize">The size of each sample.</param>
         /// <param name="outputBuffer">The evaluation result data.</param>
-        private static void PrintOutput<T>(uint sampleSize, List<List<T>> outputBuffer)
+        private static void PrintOutput<T>(int sampleSize, List<List<T>> outputBuffer)
         {
             Console.WriteLine("The number of sequences in the batch: " + outputBuffer.Count);
             int seqNo = 0;
-            uint outputSampleSize = sampleSize;
+            int outputSampleSize = sampleSize;
             foreach (var seq in outputBuffer)
             {
                 if (seq.Count % outputSampleSize != 0)
@@ -369,8 +369,8 @@ namespace CNTKLibraryCSEvalExamples
                 }
 
                 Console.WriteLine(String.Format("Sequence {0} contains {1} samples.", seqNo++, seq.Count / outputSampleSize));
-                uint i = 0;
-                uint sampleNo = 0;
+                int i = 0;
+                int sampleNo = 0;
                 foreach (var element in seq)
                 {
                     if (i++ % outputSampleSize == 0)
@@ -422,7 +422,7 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get input variable
                 var inputVar = modelFunc.Arguments.Single();
-                uint vocabSize = inputVar.Shape.TotalSize;
+                int vocabSize = inputVar.Shape.TotalSize;
 
                 var inputSentence = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
                 var seqData = new List<uint>();
@@ -531,7 +531,7 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get input variable
                 var inputVar = modelFunc.Arguments.Single();
-                uint vocabSize = inputVar.Shape.TotalSize;
+                int vocabSize = inputVar.Shape.TotalSize;
 
                 // Prepare the input data.
                 // Each sample is represented by an index to the onehot vector, so the index of the non-zero value of each sample is saved in the inner list.
@@ -658,7 +658,7 @@ namespace CNTKLibraryCSEvalExamples
 
                 // Get input variable
                 var inputVar = modelFunc.Arguments.Single();
-                uint vocabSize = inputVar.Shape.TotalSize;
+                int vocabSize = inputVar.Shape.TotalSize;
 
                 var inputSentence = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
 
