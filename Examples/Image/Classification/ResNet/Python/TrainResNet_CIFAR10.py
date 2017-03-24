@@ -8,6 +8,7 @@ from __future__ import print_function
 import os
 import argparse
 
+import numpy as np
 from cntk import input, cross_entropy_with_softmax, classification_error, reduce_mean
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
