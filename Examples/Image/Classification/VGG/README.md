@@ -12,7 +12,7 @@
 ## Running the example
 
 ### Getting the data
-We use the ILSVRC2012 datasets to demonstrate how to train the VGG model which was developed by the [Visual Geometry Group in University of Oxford](http://www.robots.ox.ac.uk/~vgg/research/very_deep/). It won the second place in the ILSVRC-2014 challenge. VGG has been a very popular model for its simple architect and high accuracy. 
+We use the ILSVRC2012 datasets to demonstrate how to train the VGG model which was developed by the [Visual Geometry Group in University of Oxford](http://www.robots.ox.ac.uk/~vgg/research/very_deep/). It won the second place in the ILSVRC-2014 challenge. VGG has been a very popular model for its simple architect and high accuracy.
 
 ILSVRC2012 datasets are not included in the CNTK distribution. You may obtain it through http://image-net.org.
 
@@ -23,3 +23,19 @@ We give examples for both Python and BrainScript.
 ### [Python](./Python)
 
 ### [BrainScript](./BrainScript)
+
+## Pre-trained Models
+
+### Caffe-Converted
+
+#### VGG16
+|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/VGG16_ImageNet.model
+|:---------|:---
+|Source Caffe model website | http://www.robots.ox.ac.uk/~vgg/research/very_deep/
+|Single crop top 5 error | 10.11%
+
+#### VGG19
+|CNTK model download path | https://www.cntk.ai/Models/Caffe_Converted/VGG19_ImageNet.model
+|:---------|:---
+|Source Caffe model website | http://www.robots.ox.ac.uk/~vgg/research/very_deep/ 
+|Single crop top 5 error | 10.18%

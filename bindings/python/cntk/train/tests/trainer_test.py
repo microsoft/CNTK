@@ -322,3 +322,10 @@ def test_scalar_input():
     trainer.train_minibatch({scalar: np.zeros((2,1), dtype=np.float32)})
 
     
+def test_empty_minibatch():
+    scalar = input((1,), dtype=np.float32, name='tscalar')
+    op = scalar + 1
+
+    lr_per_sample = learning_rate_schedule(0.1, UnitType.sample)
+    trainer = Trainer(op, (op, None), sgd(op.parameters, lr_per_sample))
+    trainer.train_minibatch({})

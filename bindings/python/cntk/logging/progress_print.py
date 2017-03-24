@@ -32,7 +32,7 @@ class ProgressPrinter(cntk_py.ProgressWriter):
         freq (`int` or `None`, default `None`):  determines how often printing of training progress will occur.
           A value of 0 means a geometric schedule (1,2,4,...).
           A value > 0 means an arithmetic schedule (print for minibatch number: ``freq``,
-          print for minibatch number: 2*``freq``, print for minibatch number: 3*``freq``,...).
+          print for minibatch number: ``2 * freq``, print for minibatch number: ``3 * freq``,...).
           A value of None means no per-minibatch log.
         first (`int`, default 0): Only start printing after the training minibatch number is greater or equal to
           ``first``.
@@ -413,10 +413,7 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
 
     Args:
         freq (`int` or `None`, default `None`): frequency at which training progress is written.
-          For example, the value of 2 will cause the progress to be logged every second time when
-          `:func:cntk.util.TensorBoardFileWriter.update_with_trainer` is invoked.
-          None indicates that progress is logged only when
-          `:func:cntk.util.TensorBoardFileWriter.summarize_progress` is invoked.
+          None indicates that progress is logged only at the end of training.
           Must be a positive integer otherwise.
         log_dir (`string`, default '.'): directory where to create a TensorBoard event file.
         rank (`int` or `None`, default `None`): rank of a worker when using distributed training, or `None` if

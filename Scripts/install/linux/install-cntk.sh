@@ -9,7 +9,7 @@
 SCRIPT_NAME="$(basename "${BASH_SOURCE[0]}")"
 SCRIPT_DIR="$(readlink -f "$(dirname "${BASH_SOURCE[0]}")")"
 
-PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath:,wheel-base-url: -n "$SCRIPT_NAME" -- "$@")
+PARSED_ARGS=$(getopt -o '' --long py-version:,anaconda-basepath:,wheel-base-url:,docker -n "$SCRIPT_NAME" -- "$@")
 
 function die {
   set +x
@@ -24,6 +24,7 @@ eval set -- "$PARSED_ARGS"
 PY_VERSION=35
 ANACONDA_PREFIX="$HOME/anaconda3"
 WHEEL_BASE_URL=https://cntk.ai/PythonWheel/
+DOCKER_INSTALLATION=0
 
 while true; do
   case "$1" in
@@ -41,6 +42,10 @@ while true; do
     --anaconda-basepath)
       ANACONDA_PREFIX="$2"
       shift 2
+      ;;
+    --docker) # use during Docker Hub image building, not documented
+      DOCKER_INSTALLATION=1
+      shift
       ;;
     --wheel-base-url) # intended for testing, not documented
       WHEEL_BASE_URL="$2"
@@ -163,6 +168,9 @@ if [ "$BUILD_OPENMPI" = "1" ]; then
     make -j $(nproc) install
     cd ..
     rm -rf $OPENMPI
+    if [ "$DOCKER_INSTALLATION" = "1" ]; then
+      rm -f $OPENMPI.tar.bz2
+    fi
   fi
 fi
 
@@ -180,6 +188,9 @@ else
   echo "$ANACONDA_SHA256  $ANACONDA" | sha256sum -c --strict -
   chmod a+x "$ANACONDA"
   "./$ANACONDA" -b -p "$ANACONDA_PREFIX"
+  if [ "$DOCKER_INSTALLATION" = "1" ]; then
+    rm -f $ANACONDA
+  fi
 fi
 
 CONDA="$ANACONDA_PREFIX/bin/conda"
@@ -243,6 +254,10 @@ Please checkout tutorials and examples here:
   $CNTK_TUTORIALS_PATH
   $CNTK_EXAMPLES_PATH
 
+To deactivate the environment run
+
+  source $PY_DEACTIVATE
+
 ************************************************************
 MESSAGE
 
@@ -263,7 +278,44 @@ Please checkout tutorials and examples here:
   $CNTK_TUTORIALS_PATH
   $CNTK_EXAMPLES_PATH
 
+To deactivate the environment run
+
+  source $PY_DEACTIVATE
+
 ************************************************************
 FINALMESSAGE
+
+if [ "$DOCKER_INSTALLATION" = "1" ]; then
+  # Docker Hub Image specific actions
+
+  # Clean up
+  apt-get -y autoremove
+  rm -rf /var/lib/apt/lists/*
+  "$ANACONDA_PREFIX/bin/conda" clean --all --yes
+  # Remove Python Wheels "just in case"
+  # As of v2.0 Beta 15 they should not be a part of the Drop
+  rm -rf ./cntk/python
+
+  # Add login Welcome message
+  # and call CNTK activation on login
+
+  cat >> /root/.bashrc <<WELCOMEACTIVATECNTK
+  # CNTK Welcome Message
+  cat <<MESSAGE
+
+************************************************************
+Welcome to Microsoft Cognitive Toolkit (CNTK) v. $CNTK_VERSION
+
+Activating CNTK environment...
+
+(Use command below to activate manually when needed)
+
+  source "$PWD/$ACTIVATE_SCRIPT_NAME"
+MESSAGE
+
+source "$PWD/$ACTIVATE_SCRIPT_NAME"
+WELCOMEACTIVATECNTK
+
+fi
 
 # vim:set expandtab shiftwidth=2 tabstop=2:
