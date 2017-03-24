@@ -18,11 +18,12 @@ def test_cntk_206B_dcgan_noErrors(nb):
               for output in cell['outputs'] if output.output_type == "error"]
     assert errors == []
 
-expectedEvalError = 5.00
+# TODO: Enable the test once the results can be deterministically determined    
+# expectedEvalError = 5.00
 
-def test_cntk_206B_dcgan_evalCorrect(nb):
-    testCell = [cell for cell in nb.cells
-                if cell.cell_type == 'code' and re.search('# Print the generator loss', cell.source)]
-    assert len(testCell) == 1
-    m = re.match(r"Training loss of the generator is: (?P<actualEvalError>\d+\.\d+)\r?$", testCell[0].outputs[0]['text'])
-    assert (float(m.group('actualEvalError')) > expectedEvalError) 
+#def test_cntk_206B_dcgan_evalCorrect(nb):
+#    testCell = [cell for cell in nb.cells
+#                if cell.cell_type == 'code' and re.search('# Print the generator loss', cell.source)]
+#    assert len(testCell) == 1
+#    m = re.match(r"Training loss of the generator is: (?P<actualEvalError>\d+\.\d+)\r?$", testCell[0].outputs[0]['text'])
+#    assert (float(m.group('actualEvalError')) > expectedEvalError) 
