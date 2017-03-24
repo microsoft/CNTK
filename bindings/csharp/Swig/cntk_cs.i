@@ -1019,7 +1019,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public int MaskedCount {
-        get { return (int)GetmaskedCount(); }
+        get { return (int)GetMaskedCount(); }
     }
 
     public DeviceDescriptor Device {
