@@ -1272,7 +1272,7 @@ def softplus(x, steepness=1, name=''):
     '''
     Softplus operation. Computes the element-wise softplus of ``x``:
 
-    :math:`\textrm{softplus}(x) = {\log(1+\exp(x))}`
+    :math:`\mathrm{softplus}(x) = {\log(1+\exp(x))}`
 
     The optional ``steepness`` allows to make the knee sharper (``steepness>1``) or softer, by computing
     ``softplus(x * steepness) / steepness``.
@@ -1398,7 +1398,7 @@ def cos(x, name=''):
 @typemap
 def softmax(x, axis=None, name=''):
     r'''
-    Computes the gradient of :math:`f(z)=\log\sum_i\exp(z_i)` at z=``x``. Concretely,
+    Computes the gradient of :math:`f(z)=\log\sum_i\exp(z_i)` at ``z = x``. Concretely,
 
     :math:`\mathrm{softmax}(x)=\left[\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\ldots\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\right]`
 
