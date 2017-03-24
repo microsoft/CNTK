@@ -10,7 +10,8 @@ typing -- basic CNTK type meta-classes for CNTK @Function type signatures
 
 from ..axis import Axis
 from ..variables import Variable, Record
-from cntk.internal import sanitize_shape, get_python_function_arguments, map_function_arguments
+from cntk.internal import sanitize_shape
+from cntk.internal.utils import get_python_function_arguments, map_function_arguments
 
 def _make_tensor_meta(cls_name, **kwargs):
     class TensorMeta(type):

@@ -11,8 +11,8 @@ from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model
 from ..variables import Variable, Parameter, Constant
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list
-from cntk.internal import typemap, get_data_type
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap
+from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
 

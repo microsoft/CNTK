@@ -13,7 +13,6 @@ from . import cntk_py
 # Bubble the below namespaces to cntk root namespace.
 #
 from .core import *
-from .variables import *
 from .ops import *
 from .device import *
 from .train import *
