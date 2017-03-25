@@ -1257,7 +1257,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     // Create Value object from OneHotVector input, for N-dimenstional tensor. Only Create() method for now.
     private static Value Create<T>(NDShape sampleShape,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
                                   bool readOnly = false)
@@ -1286,17 +1286,17 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     // Create Value object from OneHotVector input, for 1D tensor: batch, sequence or batch of sequences
-    public static Value CreateBatch<T>(int dimension, System.Collections.Generic.List<uint> batch, DeviceDescriptor device, bool readOnly = false)
+    public static Value CreateBatch<T>(int dimension, System.Collections.Generic.List<int> batch, DeviceDescriptor device, bool readOnly = false)
     {
         // Is CreateBatch for OneHot really useful? 
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>();
-        batch.ForEach(element => input.Add(new System.Collections.Generic.List<uint>(1) {element}));
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<int>>();
+        batch.ForEach(element => input.Add(new System.Collections.Generic.List<int>(1) {element}));
 
         return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
     }
 
     public static Value CreateSequence<T>(int dimension,
-                                          System.Collections.Generic.List<uint> sequence,
+                                          System.Collections.Generic.List<int> sequence,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
@@ -1304,17 +1304,17 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateSequence<T>(int dimension,
-                                          System.Collections.Generic.List<uint> sequence,
+                                          System.Collections.Generic.List<int> sequence,
                                           bool sequenceStartFlag,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<uint>>(1) {sequence};
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<int>>(1) {sequence};
         return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {sequenceStartFlag}, device, readOnly);
     }
 
     public static Value CreateBatchOfSequences<T>(int dimension,
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<int>> batchOfSequences,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
     {
@@ -1322,7 +1322,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateBatchOfSequences<T>(int dimension,
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> batchOfSequences,
+                                                  System.Collections.Generic.List<System.Collections.Generic.List<int>> batchOfSequences,
                                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
@@ -1331,7 +1331,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     private static Value Create<T>(int dimension,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences,
+                                  System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences,
                                   System.Collections.Generic.List<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
                                   bool readOnly = false)
@@ -1341,7 +1341,10 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
         foreach (var seq in sequences)
         {
-            var s = new SizeTVector(seq);
+            var s = new SizeTVector(seq.Count);
+            foreach (var element in seq) {
+                s.Add((uint)element);
+            }
             sizeTVectorRefList.Add(s);
             inputSeqVector.Add(s);
         }
@@ -1452,7 +1455,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
                                DeviceDescriptor device,
                                bool readOnly = false)
     {
-        var seqVector = new NDArrayViewVector(sequences);
+        var seqVector = new NDArrayViewPtrVector(sequences);
         var startVector = new BoolVector(sequenceStartFlags);
         return Create(sampleShape, seqVector, startVector, device, false);
     }
@@ -1516,11 +1519,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     // The 'sequences' is a list of sequences with variable length.
     // The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
     // Each element of the outer list represents a sequence.
-    // Each sequence, represented by List<uint>, contains a variable number of samples. 
+    // Each sequence, represented by List<int>, contains a variable number of samples.
     // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable. 
-    // The number of samples = the count of elements in List<uint>.
+    // The number of samples = the count of elements in List<int>.
     //
-    public void CopyVariableValueTo(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<uint>> sequences)
+    public void CopyVariableValueTo(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences)
     {
         if (outputVariable.Shape[0] != outputVariable.Shape.TotalSize)
         {
@@ -1533,7 +1536,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         sequences.Clear();
         foreach(var seq in seqVec)
         {
-            sequences.Add(new System.Collections.Generic.List<uint>(seq));
+            var seqList = new System.Collections.Generic.List<int>(seq.Count);
+            foreach (var element in seq)
+            {
+                seqList.Add((int)element);
+            }
+            sequences.Add(seqList);
         }
         return;
     }
