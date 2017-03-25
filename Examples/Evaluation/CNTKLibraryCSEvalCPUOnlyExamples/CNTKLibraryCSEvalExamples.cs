@@ -425,7 +425,7 @@ namespace CNTKLibraryCSEvalExamples
                 int vocabSize = inputVar.Shape.TotalSize;
 
                 var inputSentence = "BOS i would like to find a flight from charlotte to las vegas that makes a stop in st. louis EOS";
-                var seqData = new List<uint>();
+                var seqData = new List<int>();
                 // SeqStartFlagBatch is used to indicate whether this sequence is a new sequence (true) or concatenating the previous sequence (false).
                 var seqStartFlag = true;
                 // Get the index of each word in the sentence.
@@ -536,7 +536,7 @@ namespace CNTKLibraryCSEvalExamples
                 // Prepare the input data.
                 // Each sample is represented by an index to the onehot vector, so the index of the non-zero value of each sample is saved in the inner list.
                 // The outer list represents sequences contained in the batch.
-                var inputBatch = new List<List<uint>>();
+                var inputBatch = new List<List<int>>();
                 // SeqStartFlagBatch is used to indicate whether this sequence is a new sequence (true) or concatenating the previous sequence (false).
                 var seqStartFlagBatch = new List<bool>();
 
@@ -553,7 +553,7 @@ namespace CNTKLibraryCSEvalExamples
                     // Get the index of each word in the sentence.
                     var substring = inputSentences[seqIndex].Split(' ');
                     inputWords.Add(substring);
-                    var seqData = new List<uint>();
+                    var seqData = new List<int>();
                     foreach (var str in substring)
                     {
                         var index = vocabToIndex[str];
@@ -763,12 +763,12 @@ namespace CNTKLibraryCSEvalExamples
         }
 
 
-        private static Dictionary<string, uint> buildVocabIndex(string filePath)
+        private static Dictionary<string, int> buildVocabIndex(string filePath)
         {
-            var vocab = new Dictionary<string, uint>();
+            var vocab = new Dictionary<string, int>();
 
             string[] lines = File.ReadAllLines(filePath);
-            for (uint idx = 0; idx < (uint)lines.Count(); idx++)
+            for (int idx = 0; idx < lines.Count(); idx++)
                 vocab.Add(lines[idx], idx);
 
             return vocab;
