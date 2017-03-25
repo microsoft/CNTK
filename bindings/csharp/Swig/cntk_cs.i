@@ -1596,7 +1596,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
         if (viewShape[viewShape.Rank-1] + 1 != colStarts.Length)
         {
-            throw new System.ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+            throw new System.ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
         }
     }
 
@@ -1608,7 +1608,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
         if (viewShape[viewShape.Rank-1] + 1 != colStarts.Length)
         {
-            throw new System.ArgumentException("The length of colStarts must be equal to (sequenceLength + 1)");
+            throw new System.ArgumentException("The length of colStarts does not match the number of rows, i.e. the dimension size of the last rank of viewShape.");
         }
     }
 %}
