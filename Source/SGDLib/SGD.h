@@ -295,6 +295,7 @@ protected:
 
     double m_lambda;
     double m_momentum;
+    string m_mixtreeps;
 
     // sequence training
     double m_hSmoothingWeight;

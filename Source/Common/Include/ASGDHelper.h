@@ -63,6 +63,7 @@ namespace Microsoft {
                 AdjustLearningRateAtBeginning::None,                                     // Adjust learning per minibatches at very begining of training process
                 double adjustCoef = 0.2,                                                 // see in DecayCoefficient()
                 size_t adjustPerMinibatches = 600,                                       //
+                string mixtreeps = "0",
                 int traceLevel = 0,                                                      // log level
                 int syncPerfStats = 0);                                                  // shown perf data every syncPerfStats
 

@@ -93,6 +93,7 @@ namespace Microsoft {
                                                                                                     // this could be used to tackle the unstableness of ASGD
                     double adjustCoef = 0.2,                                                        // see in DecayCoefficient()
                     size_t adjustPerMinibatches = 600,                                              //
+                    string mixtreeps = "0",
                     int traceLevel = 0,                                                             // log level
                     int syncPerfStats = 0) :                                                        // shown perf data every syncPerfStats
                     m_parameterSyncCounter(0), m_adjustLearningRateAtBeginningType(adjusttype),
@@ -134,7 +135,7 @@ namespace Microsoft {
                     if (m_doesEveryNodesShouldSynced)
                         multiverso::SetCMDFlag("sync", true);
 
-                    MultiversoInit(learnableNodes);
+                    MultiversoInit(learnableNodes, mixtreeps);
                 }
 
                 ~MultiversoHelper()
@@ -445,12 +446,15 @@ namespace Microsoft {
                 }
 
             private:
-                void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes)
+                void MultiversoInit(const std::list<ComputationNodeBasePtr> & learnableNodes, string mixtreeps)
                 {
                     // parameter server offer vary of updaters, we only use the SGD updater for this simple case.
                     //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("sgd"));
                     //multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("dcasgd"));
                     multiverso::SetCMDFlag<std::string>(std::string("updater_type"), std::string("tree"));
+                    multiverso::SetCMDFlag<std::string>(std::string("treeps"), mixtreeps);
+                    multiverso::SetCMDFlag<std::string>(std::string("treeps_"), mixtreeps);
+
                     
                     //multiverso::SetCMDFlag<bool>(std::string("sync"), true);
                     multiverso::SetCMDFlag("mix", true);
@@ -637,6 +641,7 @@ namespace Microsoft {
                     AdjustLearningRateAtBeginning adjusttype = AdjustLearningRateAtBeginning::None,
                     double adjustcoef = 0.2,
                     size_t adjustnbmb = 600,
+                    string mixtreeps="0",
                     int traceLevel = 0,
                     int syncPerfStats = 0,
                     const MPIWrapperPtr& pMPI = nullptr) { }
@@ -663,15 +668,16 @@ namespace Microsoft {
                 AdjustLearningRateAtBeginning adjusttype,
                 double adjustCoef,
                 size_t adjustPerMinibatches,
+                string mixtreeps,
                 int traceLevel,
                 int syncPerfStats)
             {
 #ifdef ASGD_PARALLEL_SUPPORT
                 return new MultiversoHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffer, isSimulatedModelAveragingSGD,
-                    adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats);
+                    adjusttype, adjustCoef, adjustPerMinibatches, mixtreeps, traceLevel, syncPerfStats);
 #else
                 return new NoneASGDHelper<ElemType>(learnableNodes, nodeNumRanks, useAsyncBuffer, isSimulatedModelAveragingSGD,
-                    adjusttype, adjustCoef, adjustPerMinibatches, traceLevel, syncPerfStats);
+                    adjusttype, adjustCoef, adjustPerMinibatches, mixtreeps, traceLevel, syncPerfStats);
 #endif
             }
 
@@ -683,6 +689,7 @@ namespace Microsoft {
                 AdjustLearningRateAtBeginning adjusttype,
                 double adjustCoef,
                 size_t adjustPerMinibatches,
+                string mixtreeps,
                 int traceLevel,
                 int syncPerfStats);
 
@@ -694,6 +701,7 @@ namespace Microsoft {
                 AdjustLearningRateAtBeginning adjusttype,
                 double adjustCoef,
                 size_t adjustPerMinibatches,
+                string mixtreeps,
                 int traceLevel,
                 int syncPerfStats);
 
