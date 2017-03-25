@@ -170,8 +170,7 @@ def forward_backward(graph, features, blankTokenId, delayConstraint=-1, name='')
 
 @typemap
 def convolution(convolution_map, operand, strides=(1,), sharing=[True],
-                auto_padding=[True], lower_pad=(0,), upper_pad=(0,), 
-                max_temp_mem_size_in_samples=0, name=''):
+                auto_padding=[True], max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -214,8 +213,6 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
          pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
-        lower_pad: precise lower padding for each input dimension.
-        upper_pad : precise upper padding for each input dimension.
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
          performance. However, sometimes this may lead to higher memory utilization. Default is 0 which means the same as the input
@@ -227,15 +224,12 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
     strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
     return convolution(convolution_map, operand, strides, sharing, auto_padding,
-                       lower_pad, upper_pad, max_temp_mem_size_in_samples, name)
+                       max_temp_mem_size_in_samples, name)
 
 @typemap
 def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True],
-                          auto_padding=[True], lower_pad=(0,), upper_pad=(0,), output_shape=None, 
-                          max_temp_mem_size_in_samples=0, name=''):
+                          auto_padding=[True], output_shape=None, max_temp_mem_size_in_samples=0, name=''):
     '''
     Computes the transposed convolution of ``convolution_map`` (typically a tensor of learnable parameters) with
     ``operand`` (commonly an image or output of a previous convolution/pooling operation).
@@ -279,8 +273,6 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
          pixels outside the area are assumed zero ("padded with zeroes"). Without padding, the kernels are only shifted over
          positions where all inputs to the kernel still fall inside the area. In this case, the output dimension will be less than
          the input dimension. The last value that lines up with the number of input channels must be false.
-        lower_pad: precise lower padding for each input dimension.
-        upper_pad : precise upper padding for each input dimension.
         output_shape: user expected output shape after convolution transpose. 
         max_temp_mem_size_in_samples (int): maximum amount of auxiliary memory (in samples) that should be reserved to perform convolution
          operations. Some convolution engines (e.g. cuDNN and GEMM-based engines) can benefit from using workspace as it may improve
@@ -293,14 +285,11 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     from cntk.cntk_py import convolution_transpose
     operand = sanitize_input(operand)
     strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
     if output_shape is None: 
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
     return convolution_transpose(convolution_map, operand, strides, sharing, auto_padding,
-                                 lower_pad, upper_pad, output_shape, 
-                                 max_temp_mem_size_in_samples, name)
+                                 output_shape, max_temp_mem_size_in_samples, name)
 
 @typemap
 def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
@@ -336,7 +325,7 @@ AVG_POOLING = PoolingType_Average
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
-            lower_pad=(0,), upper_pad=(0,), ceil_out_dim=False, include_pad=False, name=''):
+            ceil_out_dim=False, include_pad=False, name=''):
     '''
     The pooling operations compute a new tensor by selecting the maximum or average value in the pooling input.
     In the case of average pooling with padding, the average is only over the valid region.
@@ -359,8 +348,6 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         pooling_window_shape: dimensions of the pooling window
         strides (default 1): strides.
         auto_padding (default [False,]): automatic padding flags for each input dimension.
-        lower_pad (default (0,)): precise lower padding for each input dimension
-        upper_pad (default (0,)): precise upper padding for each input dimension
         ceil_out_dim (default False): ceiling while computing output size
         include_pad(default False): include pad while average pooling
         name (str, optional): the name of the Function instance in the network
@@ -371,10 +358,8 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     operand = sanitize_input(operand)
     pooling_window_shape = sanitize_shape(pooling_window_shape)
     strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
-                   lower_pad, upper_pad, ceil_out_dim, include_pad, name)
+                   ceil_out_dim, include_pad, name)
 
 
 MAX_UNPOOLING = PoolingType_Max
@@ -382,7 +367,7 @@ MAX_UNPOOLING = PoolingType_Max
 
 @typemap
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
-            lower_pad=(0,), upper_pad=(0,), name=''):
+              name=''):
     '''
     Unpools the ``operand`` using information from ``pooling_input``. Unpooling mirrors the operations
     performed by pooling and depends on the values provided to the corresponding pooling operation. The output
@@ -406,8 +391,6 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
         unpooling_window_shape: dimensions of the unpooling window
         strides (default 1): strides.
         auto_padding: automatic padding flags for each input dimension.
-        lower_pad: precise lower padding for each input dimension
-        upper_pad: precise upper padding for each input dimension
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -417,11 +400,8 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
     pooling_input = sanitize_input(pooling_input)
     unpooling_window_shape = sanitize_shape(unpooling_window_shape)
     strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
     return unpooling(operand, pooling_input, unpooling_type,
-                     unpooling_window_shape, strides, auto_padding,
-                     lower_pad, upper_pad, name)
+                     unpooling_window_shape, strides, auto_padding, name)
 
 
 @typemap
