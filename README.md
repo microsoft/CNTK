@@ -2,6 +2,8 @@
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-03-24.* Important Note breaking changes**
+
 ***2017-03-16.* V 2.0 Beta 15 Release available at Docker Hub**  
 CNTK V 2.0 Beta 15 Runtime packages are now available as [Public Images at Docker Hub](https://hub.docker.com/r/microsoft/cntk/).  
 See more on CNTK as Docker Images in this [Wiki article](https://github.com/Microsoft/CNTK/wiki/CNTK-Docker-Containers).
