@@ -10,7 +10,6 @@ import argparse
 import math
 from cntk.layers import *  # Layers library
 from cntk.layers.typing import *
-from cntk.utils import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk import Trainer, Value
 from cntk.learners import fsadagrad, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType

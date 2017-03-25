@@ -15,7 +15,7 @@ def depth_first_search(root, visitor):
     returned.
 
     Args:
-        root (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the root to start the journey from
+        root (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the root to start the journey from
         visitor (Python function or lambda): function that takes a node as
          argument and returns ``True`` if that node should be returned.
     Returns:
@@ -75,7 +75,7 @@ def find_all_with_name(node, node_name):
     search.
 
     Args:
-        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the node to start the journey from
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
 
     Returns:
@@ -93,7 +93,7 @@ def find_by_name(node, node_name):
     search. It assumes that the name occurs only once.
 
     Args:
-        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.ops.variables.Variable`): the node to start the journey from
+        node (:class:`~cntk.ops.functions.Function` or :class:`~cntk.variables.Variable`): the node to start the journey from
         node_name (`str`): name for which we are search nodes
 
     Returns:

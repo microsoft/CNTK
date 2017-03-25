@@ -12,9 +12,10 @@ blocks -- basic building blocks that are semantically not layers (not used in a 
 from __future__ import division
 import numpy as np
 from cntk import parameter, constant, input, placeholder, combine, alias, sequence
+from cntk.variables import Record
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
-from cntk.utils import Record, Signature
+from .typing import Signature
 from cntk.internal import _as_tuple
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension

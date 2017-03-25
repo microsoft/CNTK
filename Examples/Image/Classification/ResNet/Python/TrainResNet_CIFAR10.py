@@ -8,7 +8,7 @@ from __future__ import print_function
 import os
 import argparse
 
-from cntk.utils import *
+import numpy as np
 from cntk import input, cross_entropy_with_softmax, classification_error, reduce_mean
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs
 import cntk.io.transforms as xforms
@@ -16,7 +16,7 @@ from cntk import Trainer, cntk_py
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule, UnitType
 from cntk.debugging import set_computation_network_trace_level
 from cntk.logging import *
-
+from cntk.debugging import *
 from resnet_models import *
 
 # Paths relative to current python file.

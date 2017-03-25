@@ -6,7 +6,7 @@ import sys
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, DEFAULT_RANDOMIZATION_WINDOW
 import cntk.ops as ops
 from cntk.layers.blocks import _INFERRED, Parameter
-#import cntk.utils as utils
+#import cntk.internal.utils as utils
 from cntk.internal import _as_tuple, sanitize_input
 import cntk.learner as learner
 #import cntk.io as io

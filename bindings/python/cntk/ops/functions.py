@@ -1,9 +1,8 @@
-from cntk import cntk_py
+from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
-from cntk.utils import variable_value_to_seq, Record, \
-        get_python_function_arguments, map_function_arguments
 from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple, sanitize_variable_value_dict
-from cntk.ops.variables import Variable
+from cntk.internal.utils import get_python_function_arguments, map_function_arguments
+from ..variables import Record, Variable
 from enum import Enum, unique
 
 
@@ -101,7 +100,7 @@ class Function(cntk_py.Function):
         # Unannotated parameters will yield placeholder_variables instead.
         def make_arg_variable(name, annotations):
             from .. import placeholder, input
-            from .variables import Variable
+            from ..variables import Variable
             if isinstance(annotations.get(name, None), Variable.Type):
                 var_type = annotations[name]
                 return input(name=name, **var_type)
@@ -236,7 +235,7 @@ class Function(cntk_py.Function):
         arg_map = self.argument_map(*arg_types, **kwarg_types) # map type specs to Function parameters
         def to_input(arg_type, name):
             from cntk import input
-            from .variables import Variable
+            from ..variables import Variable
             if isinstance(arg_type, (int, tuple)): # just passed a shape
                 return input(shape=_as_tuple(arg_type), name=name)
             elif isinstance(arg_type, Variable.Type): # full type given as Tensor(...)
@@ -655,7 +654,7 @@ class Function(cntk_py.Function):
                                              keep_for_backward)
         if as_numpy:
             for k in output_map:
-                output_map[k] = variable_value_to_seq(output_map[k], k)
+                output_map[k] = Value.to_seq(output_map[k], k)
 
         return state, output_map
 
@@ -708,7 +707,7 @@ class Function(cntk_py.Function):
 
         if as_numpy:
             for var, value in var_gradients.items():
-                var_gradients[var] = variable_value_to_seq(value, var)
+                var_gradients[var] = Value.to_seq(value, var)
 
         return var_gradients
 
@@ -772,9 +771,9 @@ class Function(cntk_py.Function):
 
         if as_numpy:
             for k in output_map:
-                output_map[k] = variable_value_to_seq(output_map[k], k)
+                output_map[k] = Value.to_seq(output_map[k], k)
             for k in wrt_map:
-                wrt_map[k] = variable_value_to_seq(wrt_map[k], k)
+                wrt_map[k] = Value.to_seq(wrt_map[k], k)
 
         if len(output_map) == 0:
             return sanitize_variable_value_dict(wrt_map)
@@ -933,7 +932,7 @@ class Function(cntk_py.Function):
         specified substitution.
 
         Args:
-            substitution (:class:`~cntk.ops.variables.Variable`): the variable
+            substitution (:class:`~cntk.variables.Variable`): the variable
              that will replace the placeholder
 
         Returns:
@@ -1135,7 +1134,7 @@ class UserFunction(Function):
              A BackPropState instance, which is used by :func:`backward`.
         '''
         if self.as_numpy:
-            arguments = tuple(variable_value_to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
+            arguments = tuple(Value.to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
 
         map_if_possible(outputs)
         map_if_possible(outputs_to_retain)
@@ -1190,7 +1189,7 @@ class UserFunction(Function):
 
         if self.as_numpy:
             for v in root_gradients:
-                root_gradients[v] = variable_value_to_seq(root_gradients[v], v)
+                root_gradients[v] = Value.to_seq(root_gradients[v], v)
 
             state = cntk_py.UserBackPropState.data(state)
 

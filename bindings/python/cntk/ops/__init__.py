@@ -10,17 +10,11 @@ import numbers
 from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model
-from .variables import Variable, Parameter, Constant
-from ..utils import get_data_type
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_axis_list, sanitize_dynamic_axes
-from cntk.internal import typemap
+from ..variables import Variable, Parameter, Constant
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap
+from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
-
-# To __remove__
-from cntk.losses import *
-from cntk.metrics import *
-# End to remove
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
@@ -1254,7 +1248,7 @@ def param_relu(alpha, x, name=''):
         array([[-0.5 , -0.25,  0.  ,  1.  ,  2.  ]], dtype=float32)
 
     Args:
-        alpha (:class:`~cntk.ops.variables.Parameter`): same shape as x
+        alpha (:class:`~cntk.variables.Parameter`): same shape as x
         x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
         name (`str`, default to ''): the name of the Function instance in the network
 
@@ -2538,7 +2532,7 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
         name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
@@ -2595,7 +2589,7 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
         name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable` that is of output type
+        :class:`~cntk.variables.Variable` that is of output type
     '''
     from cntk.cntk_py import output_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
@@ -2625,7 +2619,7 @@ def placeholder(shape=None, dynamic_axes=None, name=''):
         name (str, optional): the name of the placeholder variable in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
 
@@ -2688,10 +2682,10 @@ def parameter(shape=None, init=None, dtype=None, device=None, name=''):
         name (str, optional): the name of the Parameter instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Parameter`
+        :class:`~cntk.variables.Parameter`
     '''
 
-    from .variables import Parameter
+    from ..variables import Parameter
     return Parameter(shape, init, dtype, device, name)
 
 
@@ -2718,9 +2712,9 @@ def constant(value=None, shape=None, dtype=None, device=None, name=''):
         device (:class:`~cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
         name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`~cntk.ops.variables.Constant`
+        :class:`~cntk.variables.Constant`
     '''
-    from .variables import Constant
+    from ..variables import Constant
     return Constant(value, shape, dtype, device, name)
 
 ##########################################################################

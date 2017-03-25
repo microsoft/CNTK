@@ -6,7 +6,7 @@
 
 # sequence -- first/higher-order functions over sequences, like Recurrence()
 
-from ..utils import Record
+from ..variables import Record
 from ..ops import combine, past_value, future_value, splice, sequence
 from .blocks import *
 from .blocks import _get_initial_state_or_default, _inject_name

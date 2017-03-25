@@ -13,6 +13,8 @@ import cntk
 import _cntk_py
 import cntk.io.transforms as xforms
 from cntk.train.training_session import *
+from cntk.logging import *
+from cntk.debugging import *
 
 # default Paths relative to current python file.
 abs_path   = os.path.dirname(os.path.abspath(__file__))
@@ -126,7 +128,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
     # Train all minibatches
     if profiling:
-        cntk.start_profiler(sync_gpu=True)
+        start_profiler(sync_gpu=True)
 
     training_session(
         trainer=trainer, mb_source = train_source,
@@ -140,7 +142,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     ).train()
 
     if profiling:
-        cntk.stop_profiler()
+        stop_profiler()
 
 # Train and evaluate the network.
 def convnet_cifar10_dataaug(train_data, test_data, mean_data, minibatch_size=64, epoch_size=50000, num_quantization_bits=32,

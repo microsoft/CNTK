@@ -11,7 +11,6 @@ import pytest
 
 from cntk.tests.test_utils import precision, PRECISION_TO_TYPE
 from cntk.ops import *
-from cntk.utils import *
 from cntk.internal import *
 from cntk import Value
 from cntk import sequence
@@ -114,7 +113,7 @@ def test_one_hot():
         s = Value.one_hot([1, 2], 4)
         
 def test_one_hot_skip():
-    a = one_hot([[0,1,Value.ONE_HOT_SKIP]], 3)
+    a = Value.one_hot([[0,1,Value.ONE_HOT_SKIP]], 3)
     i = sequence.input(shape=(3,))
     b = i * 1
     expected = [[[ 1.,  0.,  0.],

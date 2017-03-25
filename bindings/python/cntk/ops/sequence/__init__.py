@@ -4,8 +4,8 @@
 # ==============================================================================
 
 import numpy as np
-from ...utils import get_data_type
 from cntk.internal import typemap, sanitize_input
+from cntk.internal.utils import get_data_type
 
 from ...axis import Axis
 

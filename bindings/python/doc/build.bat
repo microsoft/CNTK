@@ -16,8 +16,7 @@ sphinx-apidoc.exe ..\cntk -o . -f ^
   ..\cntk\losses\tests ^
   ..\cntk\metrics\tests ^
   ..\cntk\ops\tests ^
-  ..\cntk\train\tests ^
-  ..\cntk\utils\tests
+  ..\cntk\train\tests
 
 if errorlevel 1 exit /b 1
 

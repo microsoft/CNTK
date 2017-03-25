@@ -20,7 +20,6 @@ from cntk.learners import learning_rate_schedule, UnitType, momentum_sgd, moment
 from cntk import input, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
 from cntk.train.training_session import *
-from cntk.utils import *
 from cntk.logging import *
 
 abs_path = os.path.dirname(os.path.abspath(__file__))

@@ -226,6 +226,16 @@ class Value(cntk_py.Value):
         else:
             super(Value, self).__init__(ndav)
 
+    def to_seq(self, variable=None):
+        '''
+        Convert a Value to a sequence of NumPy arrays that have their masked
+        entries removed.
+
+        Returns:
+            a list of NumPy arrays
+        '''
+        return Value.to_seq(self, variable)
+
     @staticmethod
     def _as_best_data_type(var, sample):
         convert_to_var_dtype = False
@@ -239,15 +249,15 @@ class Value(cntk_py.Value):
                     s = s[0]
                 if sparse.issparse(s):
                     raise ValueError('if you provide sparse data, every '
-                                     'sequence must be encoded as one '
-                                     'csr_matrix instance. Your sequence '
-                                     'was: \'%s\'' % str(sample))
+                                        'sequence must be encoded as one '
+                                        'csr_matrix instance. Your sequence '
+                                        'was: \'%s\'' % str(sample))
                 else:
                     raise
 
             if sample.dtype != var.dtype:
                 raise ValueError('could not convert sample data to '
-                                 'NumPy array')
+                                    'NumPy array')
 
         elif sample.dtype in (np.float32, np.float64):
             if sample.dtype != var.dtype:
@@ -258,13 +268,13 @@ class Value(cntk_py.Value):
 
         else:
             raise ValueError('only integer, float32 and float64 are '
-                             'supported, you gave %s' % sample.dtype)
+                                'supported, you gave %s' % sample.dtype)
 
         if convert_to_var_dtype:
             warnings.warn('your data is of type "%s", but your input '
-                          'variable (uid "%s") expects "%s". Please convert '
-                          'your data beforehand to speed up training.' %
-                          (sample.dtype, var.uid, str(var.dtype)))
+                            'variable (uid "%s") expects "%s". Please convert '
+                            'your data beforehand to speed up training.' %
+                            (sample.dtype, var.uid, str(var.dtype)))
             sample = sample.astype(var.dtype)
 
         return sample
@@ -276,7 +286,7 @@ class Value(cntk_py.Value):
         Creates a :class:`~cntk.core.Value` object.
 
         Args:
-            var (:class:`~cntk.ops.variables.Variable`): variable into which
+            var (:class:`~cntk.variables.Variable`): variable into which
              ``data`` is passed
             data: data for `var`.
              It can be:
@@ -437,6 +447,36 @@ class Value(cntk_py.Value):
                 sample_shape, batch, device, False)
         return value
 
+    @staticmethod
+    def to_seq(value, variable=None):
+        '''
+        Convert a Value to a sequence of NumPy arrays that have their masked
+        entries removed.
+
+        Args:
+            value (:class:`~cntk.cntk_py.Value` or :class:`~cntk.core.Value`): Value object
+
+        Returns:
+            a list of NumPy arrays
+        '''
+
+        has_mask = None
+        if isinstance(value, Value):
+            has_mask = value.mask.any()
+        elif isinstance(value, cntk_py.Value):
+            has_mask = value.mask() is not None
+
+        if has_mask:
+            if variable is None: 
+                mask = np.asarray(value.mask())
+                return [seq[mask[idx] != cntk_py.MaskKind_Invalid]
+                           for idx, seq in enumerate(np.asarray(value))]
+            else:
+                value_sequences = value.unpack_variable_value(variable, True, cpu())
+                return [np.asarray(seq) for seq in value_sequences[0]]
+        else:
+            return np.asarray(value)
+
     @property
     def shape(self):
         '''
@@ -505,8 +545,7 @@ def asarray(variable, value):
         array_to_return = [sparse.csr_matrix(seq) for seq in dense_data]
 
     else:
-        from cntk.utils import variable_value_to_seq
-        array_to_return = variable_value_to_seq(value, variable)
+        array_to_return = Value.to_seq(value, variable)
 
     return array_to_return
 

@@ -9,7 +9,7 @@ import numpy as np
 import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.learners import momentum_sgd, adam_sgd, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
+from cntk.learners import momentum_sgd, fsadagrad, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk import input, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
                  element_select, alias, hardmax, placeholder, combine, parameter, times, plus
 from cntk.ops.functions import CloneMethod, load_model, Function
@@ -218,11 +218,11 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
     # Instantiate the trainer object to drive the model training
     minibatch_size = 72
     lr = 0.001 if use_attention else 0.005   # TODO: can we use the same value for both?
-    learner = adam_sgd(model_train.parameters,
-                       lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], UnitType.sample, epoch_size),
-                       momentum = momentum_as_time_constant_schedule(1100),
-                       gradient_clipping_threshold_per_sample=2.3,
-                       gradient_clipping_with_truncation=True)
+    learner = fsadagrad(model_train.parameters,
+                        lr       = learning_rate_schedule([lr]*2+[lr/2]*3+[lr/4], UnitType.sample, epoch_size),
+                        momentum = momentum_as_time_constant_schedule(1100),
+                        gradient_clipping_threshold_per_sample=2.3,
+                        gradient_clipping_with_truncation=True)
     trainer = Trainer(None, criterion, learner)
 
     # Get minibatches of sequences to train with and perform model training
