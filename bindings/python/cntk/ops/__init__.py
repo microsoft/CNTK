@@ -2569,7 +2569,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
         return input(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
 
 @typemap
-def output_variable(shape, dtype, dynamic_axes, name=''):
+def output_variable(shape, dtype, dynamic_axes, needs_gradient=True, name=''):
     '''
     It creates an output variable that is used to define a user defined function.
 
@@ -2594,7 +2594,7 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
             raise ValueError('axis in dynamic_axes attribute is not dynamic')
     dynamic_axes = list(reversed(dynamic_axes))
 
-    return output_variable(shape, dtype, dynamic_axes, name)
+    return output_variable(shape, dtype, dynamic_axes, needs_gradient, name)
 
 @typemap
 def placeholder(shape=None, dynamic_axes=None, name=''):

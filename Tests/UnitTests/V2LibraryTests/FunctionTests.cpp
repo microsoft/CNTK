@@ -310,7 +310,7 @@ void TestRecurrentFunctionCloning()
     CompareFunctions(clonedFunctionWithParametersCloned, clonedFunctionWithParametersShared, ParameterCloningMethod::Share, {}, visitedFunctions);
 
     visitedFunctions.clear();
-    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, false, L"input2");
+    auto replacementInputVar = InputVariable({ inputDim }, true, DataType::Float, true, L"input2");
     std::unordered_map<Variable, Variable> cloningReplacements = { { *(clonedFunctionWithParametersShared->Arguments().begin()), replacementInputVar } };
     auto clonedFunctionWithParametersFrozen = clonedFunctionWithParametersShared->Clone(ParameterCloningMethod::Freeze, cloningReplacements);
     CompareFunctions(clonedFunctionWithParametersShared, clonedFunctionWithParametersFrozen, ParameterCloningMethod::Freeze, cloningReplacements, visitedFunctions);

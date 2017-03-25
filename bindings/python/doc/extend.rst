@@ -75,10 +75,11 @@ In case, the operator is initialized with multiple inputs, ``forward()`` 's
             # result would actually look like (considering broadcasting, etc.).
             return [output_variable(self.inputs[0].shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes)]
 
-If more than one input requires gradient calculation, ``backward()`` is invoked
+If the UserFunction has more than one input, ``backward()`` is invoked
 with an additional ``variables`` argument, which contains a dictionary of
 Variable to the gradient data, whose values have to be set with the proper
-gradients::
+gradients. If the gradient is not to be propagated to a particular input,
+the value for that input's gradient can be left None::
 
     def backward(self, state, root_gradients, variables):
         for var in variables:
