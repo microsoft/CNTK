@@ -1058,29 +1058,17 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %typemap(cscode) CNTK::NDMask %{
     public void InvalidateSection(System.Collections.Generic.IEnumerable<int> sectionOffset, NDShape sectionShape) {
-        var offsetVector = new SizeTVector();
-        foreach (var element in sectionOffset)
-        {
-            offsetVector.Add((uint)element);
-        }
+        var offsetVector = AsSizeTVector(sectionOffset);
         _InvalidateSection(offsetVector, sectionShape);
     }
 
     public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<int> offset) {
-        var offsetVector = new SizeTVector();
-        foreach (var element in offset)
-        {
-            offsetVector.Add((uint)element);
-        }
+        var offsetVector = AsSizeTVector(offset);
         _MarkSequenceBegin(offsetVector);
     }
 
     public void MarkSequenceBegin(System.Collections.Generic.IEnumerable<int> offset, NDShape sectionShape) {
-        var offsetVector = new SizeTVector();
-        foreach (var element in offset)
-        {
-            offsetVector.Add((uint)element);
-        }
+        var offsetVector = AsSizeTVector(offset);
         _MarkSequenceBegin(offsetVector, sectionShape);
     }
 
@@ -1094,6 +1082,16 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public NDShape Shape {
         get { return GetShape(); }
+    }
+
+    private static SizeTVector AsSizeTVector(System.Collections.Generic.IEnumerable<int> input)
+    {
+        var inputVector = new SizeTVector();
+        foreach (var element in input)
+        {
+            inputVector.Add((uint)element);
+        }
+        return inputVector;
     }
 %}
 
@@ -1216,7 +1214,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateBatchOfSequences<T>(NDShape sampleShape,
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
+                                                  System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> batchOfSequences,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
     {
@@ -1224,7 +1222,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateBatchOfSequences<T>(NDShape sampleShape,
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
+                                                  System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> batchOfSequences,
                                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
@@ -1233,79 +1231,37 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value Create<T>(NDShape sampleShape,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
+                                  System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<T>> sequences,
                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
-        var seqFlags = new BoolVector();
-        foreach (var element in sequenceStartFlags)
-        {
-            seqFlags.Add(element);
-        }
+        var seqFlags = AsBoolVector(sequenceStartFlags);
         if (typeof(T).Equals(typeof(float)))
         {
-            var inputSeqVector = new FloatVectorVector();
-            var floatVectorRefList = new System.Collections.Generic.List<FloatVector>();
+            var inputAsSequencesVector = new FloatVectorVector();
+            var keepRefsLive = new System.Collections.Generic.List<FloatVector>();
             foreach (var seq in sequences)
             {
-                var seqFloatVector = new FloatVector(seq);
-                floatVectorRefList.Add(seqFloatVector);
-                inputSeqVector.Add(seqFloatVector);
+                var seqVector = AsFloatVector(seq);
+                // This is to make sure that seqVector not to be reclaimed until the Value object is created.
+                keepRefsLive.Add(seqVector);
+                inputAsSequencesVector.Add(seqVector);
             }
-            return Value.CreateDenseFloat(sampleShape, inputSeqVector, seqFlags, device, readOnly);
+            return Value.CreateDenseFloat(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            var inputSeqVector = new DoubleVectorVector();
-            var doubleVectorRefList = new System.Collections.Generic.List<DoubleVector>();
+            var inputAsSequencesVector = new DoubleVectorVector();
+            var keepRefsLive = new System.Collections.Generic.List<DoubleVector>();
             foreach (var seq in sequences)
             {
-                var seqDoubleVector = new DoubleVector(seq);
-                doubleVectorRefList.Add(seqDoubleVector);
-                inputSeqVector.Add(seqDoubleVector);
+                var seqVector = AsDoubleVector(seq);
+                // This is to make sure that seqVector not to be reclaimed until the Value object is created.
+                keepRefsLive.Add(seqVector);
+                inputAsSequencesVector.Add(seqVector);
             }
-            return Value.CreateDenseDouble(sampleShape, inputSeqVector, seqFlags, device, readOnly);
-        }
-        else
-        {
-            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
-        }
-    }
-
-    private static FloatVector AsFloatVector<T>(System.Collections.Generic.IEnumerable<T> sequence)
-    {
-        if (typeof(T).Equals(typeof(float)))
-        {
-            var inputVector = new FloatVector();
-            System.Collections.Generic.IEnumerable<float> sequenceInType = sequence as System.Collections.Generic.IEnumerable<float>;
-            if (sequenceInType == null)
-                throw new System.ArgumentNullException("The parameter sequence cannot be casted as IEnumerable<float>.");
-            foreach (var element in sequenceInType)
-            {
-                inputVector.Add(element);
-            }
-            return inputVector;
-        }
-        else
-        {
-            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
-        }
-    }
-
-    private static DoubleVector AsDoubleVector<T>(System.Collections.Generic.IEnumerable<T> sequence)
-    {
-        if (typeof(T).Equals(typeof(double)))
-        {
-            var inputVector = new DoubleVector();
-            System.Collections.Generic.IEnumerable<double> sequenceInType = sequence as System.Collections.Generic.IEnumerable<double>;
-            if (sequenceInType == null)
-                throw new System.ArgumentNullException("The parameter sequence cannot be casted as IEnumerable<double>.");
-            foreach (var element in sequenceInType)
-            {
-                inputVector.Add(element);
-            }
-            return inputVector;
+            return Value.CreateDenseDouble(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
         }
         else
         {
@@ -1315,22 +1271,19 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     // Create Value object from OneHotVector input, for N-dimenstional tensor. Only Create() method for now.
     public static Value Create<T>(NDShape sampleShape,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences,
+                                  System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> sequences,
                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
-        var seqFlags = new BoolVector();
-        foreach (var element in sequenceStartFlags)
-        {
-            seqFlags.Add(element);
-        }
+        var seqFlags = AsBoolVector(sequenceStartFlags);
         var inputSeqVector = new SizeTVectorVector();
-        var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
+        var keepRefsLive = new System.Collections.Generic.List<SizeTVector>();
         foreach (var seq in sequences)
         {
-            var s = new SizeTVector(seq);
-            sizeTVectorRefList.Add(s);
+            var s = AsSizeTVector(seq);
+            // This is to make sure that seqVector not to be reclaimed until the Value object is created.
+            keepRefsLive.Add(s);
             inputSeqVector.Add(s);
         }
         if (typeof(T).Equals(typeof(float)))
@@ -1350,11 +1303,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     // Create Value object from OneHotVector input, for 1D tensor: batch, sequence or batch of sequences
     public static Value CreateBatch<T>(int dimension, System.Collections.Generic.IEnumerable<int> batch, DeviceDescriptor device, bool readOnly = false)
     {
-        var inputVector = new SizeTVector();
-        foreach (var element in batch)
-        {
-            inputVector.Add((uint)element);
-        }
+        var inputVector = AsSizeTVector(batch);
         if (typeof(T).Equals(typeof(float)))
         {
             return Value.CreateBatchFloat((uint)dimension, inputVector, device, readOnly);
@@ -1383,11 +1332,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
-        var inputVector = new SizeTVector();
-        foreach (var element in sequence)
-        {
-            inputVector.Add((uint)element);
-        }
+        var inputVector = AsSizeTVector(sequence);
         if (typeof(T).Equals(typeof(float)))
         {
             return Value.CreateSequenceFloat((uint)dimension, inputVector, sequenceStartFlag, device, readOnly);
@@ -1403,7 +1348,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateBatchOfSequences<T>(int dimension,
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<int>> batchOfSequences,
+                                                  System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> batchOfSequences,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
     {
@@ -1411,7 +1356,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateBatchOfSequences<T>(int dimension,
-                                                  System.Collections.Generic.List<System.Collections.Generic.List<int>> batchOfSequences,
+                                                  System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> batchOfSequences,
                                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
@@ -1420,25 +1365,19 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     private static Value Create<T>(int dimension,
-                                  System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences,
+                                  System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> sequences,
                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
-        var seqFlags = new BoolVector();
-        foreach (var element in sequenceStartFlags)
-        {
-            seqFlags.Add(element);
-        }
+        var seqFlags = AsBoolVector(sequenceStartFlags);
         var inputSeqVector = new SizeTVectorVector();
-        var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
+        // This is to make sure that seqVector not to be reclaimed until the Value object is created.
+        var keepRefsLive = new System.Collections.Generic.List<SizeTVector>();
         foreach (var seq in sequences)
         {
-            var s = new SizeTVector(seq.Count);
-            foreach (var element in seq) {
-                s.Add((uint)element);
-            }
-            sizeTVectorRefList.Add(s);
+            var s = AsSizeTVector(seq);
+            keepRefsLive.Add(s);
             inputSeqVector.Add(s);
         }
         if (typeof(T).Equals(typeof(float)))
@@ -1553,11 +1492,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             seqVector.Add(element);
         }
-        var startFlags = new BoolVector();
-        foreach (var element in sequenceStartFlags)
-        {
-            startFlags.Add(element);
-        }
+        var startFlags = AsBoolVector(sequenceStartFlags);
         return Create(sampleShape, seqVector, startFlags, device, false);
     }
 
@@ -1645,6 +1580,66 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
             sequences.Add(seqList);
         }
         return;
+    }
+
+    private static FloatVector AsFloatVector<T>(System.Collections.Generic.IEnumerable<T> input)
+    {
+        if (typeof(T).Equals(typeof(float)))
+        {
+            var inputVector = new FloatVector();
+            System.Collections.Generic.IEnumerable<float> inputInType = input as System.Collections.Generic.IEnumerable<float>;
+            if (inputInType == null)
+                throw new System.ArgumentNullException("The parameter cannot be casted as IEnumerable<float>.");
+            foreach (var element in inputInType)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
+    }
+
+    private static DoubleVector AsDoubleVector<T>(System.Collections.Generic.IEnumerable<T> input)
+    {
+        if (typeof(T).Equals(typeof(double)))
+        {
+            var inputVector = new DoubleVector();
+            System.Collections.Generic.IEnumerable<double> inputInType = input as System.Collections.Generic.IEnumerable<double>;
+            if (inputInType == null)
+                throw new System.ArgumentNullException("The parameter cannot be casted as IEnumerable<double>.");
+            foreach (var element in inputInType)
+            {
+                inputVector.Add(element);
+            }
+            return inputVector;
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
+    }
+
+    private static SizeTVector AsSizeTVector(System.Collections.Generic.IEnumerable<int> input)
+    {
+        var inputVector = new SizeTVector();
+        foreach (var element in input)
+        {
+            inputVector.Add((uint)element);
+        }
+        return inputVector;
+    }
+
+    private static BoolVector AsBoolVector(System.Collections.Generic.IEnumerable<bool> input)
+    {
+        var inputVector = new BoolVector();
+        foreach (var element in input)
+        {
+            inputVector.Add(element);
+        }
+        return inputVector;
     }
 %}
 
