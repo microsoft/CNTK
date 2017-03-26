@@ -1302,13 +1302,25 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     // Create Value object from OneHotVector input, for 1D tensor: batch, sequence or batch of sequences
-    public static Value CreateBatch<T>(int dimension, System.Collections.Generic.List<int> batch, DeviceDescriptor device, bool readOnly = false)
+    public static Value CreateBatch<T>(int dimension, System.Collections.Generic.IEnumerable<int> batch, DeviceDescriptor device, bool readOnly = false)
     {
-        // Is CreateBatch for OneHot really useful? 
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<int>>();
-        batch.ForEach(element => input.Add(new System.Collections.Generic.List<int>(1) {element}));
-
-        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
+        var inputVector = new SizeTVector();
+        foreach (var element in batch)
+        {
+            inputVector.Add((uint)element);
+        }
+        if (typeof(T).Equals(typeof(float)))
+        {
+            return Value.CreateBatchFloat((uint)dimension, inputVector, device, readOnly);
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            return Value.CreateBatchDouble((uint)dimension, inputVector, device, readOnly);
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
     }
 
     public static Value CreateSequence<T>(int dimension,

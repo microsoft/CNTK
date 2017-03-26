@@ -77,6 +77,16 @@
         return CNTK::Value::Create<double>(CNTK::NDShape({dimension}), oneHotSequences, sequenceStartFlags, device, readOnly);
     }
 
+    static CNTK::ValuePtr CNTK::Value::CreateBatchFloat(size_t dimension, const std::vector<size_t>& batchData, 
+        const DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::CreateBatch<float>(dimension, batchData, device, false);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateBatchDouble(size_t dimension, const std::vector<size_t>& batchData, 
+        const DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::CreateBatch<double>(dimension, batchData, device, false);
+    }
+
     // Instantiation template functions: ND sparse input.
     static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(const CNTK::NDShape& sampleShape, size_t sequenceLength,
         const CNTK::SparseIndexType* colStarts, const CNTK::SparseIndexType* rowIndices, const float* nonZeroValues, size_t numNonZeroValues,
