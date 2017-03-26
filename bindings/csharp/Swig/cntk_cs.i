@@ -1174,11 +1174,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         if (batch.Count % shapeSize != 0)
             throw new System.ArgumentException("The number of elements in the batch must be a multiple of the size of the shape");
         var count = batch.Count / shapeSize;
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<T>>((int)count);
+        var input = new System.Collections.Generic.List<System.Collections.Generic.List<T>>(count);
         for (int i = 0; i < count; i++)
         {
             var seq = new System.Collections.Generic.List<T>();
-            seq.AddRange(batch.GetRange((int)(i * shapeSize), (int)shapeSize));
+            seq.AddRange(batch.GetRange(i * shapeSize, shapeSize));
             input.Add(seq);
         }
         // Pass the empty sequenceStartFlags means all sequences have the start flag with true.
