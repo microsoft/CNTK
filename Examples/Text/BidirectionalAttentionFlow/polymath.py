@@ -127,16 +127,15 @@ class PolyMath:
         S = C.element_select(qvw_mask_expanded, S, C.constant(-1e+30, S.shape))
         q_attn = C.reshape(C.softmax(S), (-1,1))
         #q_attn = print_node(q_attn)
-        utilde = C.reshape(C.reduce_sum(C.sequence.broadcast_as(qvw, q_attn) * q_attn, axis=0),(-1))
-
+        c2q = C.reshape(C.reduce_sum(C.sequence.broadcast_as(qvw, q_attn) * q_attn, axis=0),(-1))
+        
         max_col = C.reduce_max(S)
-        c_logZ = C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, max_col.shape))(max_col)
-        c_attn = C.exp(max_col - C.sequence.broadcast_as(c_logZ, max_col))
+        c_attn = seq_softmax(max_col)
         htilde = C.sequence.reduce_sum(c_processed * c_attn)
 
-        Htilde = C.sequence.broadcast_as(htilde, c_processed)
-        att_context = C.splice(c_processed, utilde, c_processed * utilde,  c_processed * Htilde)
-
+        q2c = C.sequence.broadcast_as(htilde, c_processed)
+        att_context = C.splice(c_processed, c2q, c_processed * c2q, c_processed * q2c)
+        
         #modeling layer
 		# todo: use dropout in optimized_rnn_stack from cudnn once API exposes it
         mod_context = C.Sequential([
@@ -147,9 +146,9 @@ class PolyMath:
 
         #output layer
         start_logits = C.layers.Dense(1)(C.dropout(C.splice(mod_context, att_context), self.dropout))
-        start_hardmax = seq_hardmax(start_logits)
         if self.two_step:
-            att_mod_ctx = C.sequence.last(C.sequence.gather(start_logits, start_hardmax))
+            start_hardmax = seq_hardmax(start_logits)
+            att_mod_ctx = C.sequence.last(C.sequence.gather(mod_context, start_hardmax))
         else:
             start_prob = C.softmax(start_logits)
             att_mod_ctx = C.sequence.reduce_sum(mod_context * start_prob)
@@ -160,23 +159,28 @@ class PolyMath:
 
         start_loss = seq_loss(start_logits, ab)
         end_loss = seq_loss(end_logits, ae)
-        end_hardmax = seq_hardmax(end_logits)
+        return C.combine([start_logits, end_logits]), start_loss + end_loss
 
-        return C.combine([start_hardmax, end_hardmax]), start_loss + end_loss
+    def f1_score(self, ab, ae, start_logits, end_logits):
+        start_end_prob = seq_softmax(C.splice(start_logits, end_logits))
+        vw, _ = C.layers.PastValueWindow(self.max_context_len, C.Axis.new_leading_axis(), go_backwards=True)(C.splice(start_end_prob,ab,ae)).outputs
+        start_prob = C.slice(vw,1,0,1)
+        end_prob = C.slice(vw,1,1,2)
+        joint_prob = C.times_transpose(start_prob, end_prob)
+        joint_prob_loc = C.equal(joint_prob, C.reduce_max(joint_prob))
+        idx0 = C.argmax(C.reduce_max(joint_prob_loc,0))
+        idx1 = C.argmax(C.reduce_max(joint_prob_loc,1))
+        start_pos = C.element_min(idx0,idx1)
+        end_pos = C.element_max(idx0,idx1)
 
-    def f1_score(self, ab, ae, oab, oae):
-        answers = C.splice(ab, C.sequence.delay(ae), oab, C.sequence.delay(oae)) # make end non-inclusive
-        answers_prop = C.Recurrence(C.element_max, go_backwards=False)(answers)
-        ans_gt = C.element_min(C.slice(answers_prop, 0, 0, 1), (1 - C.slice(answers_prop, 0, 1, 2)))
-        ans_out = C.element_min(C.slice(answers_prop, 0, 2, 3), (1 - C.slice(answers_prop, 0, 3, 4)))
-        start_match = C.sequence.reduce_sum(ab * oab)
-        end_match = C.sequence.reduce_sum(ae * oae)
-        common = ans_gt * ans_out
-        metric = C.layers.Fold(C.plus)(C.splice(ans_gt, ans_out, common))
-        gt_len = C.slice(metric, 0, 0, 1)
-        test_len = C.slice(metric, 0, 1, 2)
-        common_len = C.slice(metric, 0, 2, 3)
+        gt_start = C.argmax(C.slice(vw,1,2,3))
+        gt_end = C.argmax(C.slice(vw,1,3,4))
+        test_len = end_pos - start_pos + 1
+        gt_len = gt_end - gt_start + 1
+        common_end = C.element_max(C.element_min(gt_end, end_pos), start_pos - 1)
+        common_start = C.element_max(gt_start, start_pos)
+        common_len = common_end - common_start + 1
         precision = common_len / test_len
         recall = common_len / gt_len
         f1 = precision * recall * 2 / (precision + recall)
-        return C.combine([f1, precision, recall, C.greater(common_len, 0), start_match, end_match])
+        return C.combine([f1, precision, recall, C.greater(common_len, 0), C.equal(start_pos, gt_start), C.equal(end_pos, gt_end)])

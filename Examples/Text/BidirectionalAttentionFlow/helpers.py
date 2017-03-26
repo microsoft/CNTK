@@ -31,13 +31,19 @@ def seq_loss(logits, y):
 
 def seq_hardmax(logits):
     seq_max = C.layers.Fold(C.element_max, initial_state=C.constant(-1e+30, logits.shape))(logits)
-    return C.equal(logits, C.sequence.broadcast_as(seq_max, logits))
+    s = C.equal(logits, C.sequence.broadcast_as(seq_max, logits))
+    s_acc = C.Recurrence(C.plus)(s)
+    return s * C.equal(s_acc, 1) # only pick the first one
+
+def seq_softmax(logits):
+    log_sum = C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, logits.shape))(logits)
+    return C.exp(logits - C.sequence.broadcast_as(log_sum, logits))
 
 class LambdaFunc(C.ops.functions.UserFunction):
     def __init__(self,
             arg,
             when=lambda arg: True,
-            execute=lambda arg: print(arg),
+            execute=lambda arg: print(arg.shape, arg),
             name=''):
         self.when = when
         self.execute = execute
