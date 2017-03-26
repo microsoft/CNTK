@@ -125,11 +125,19 @@ namespace CNTK
             for (; j < currentSequenceNumCols; ++j)
             {
                 colStarts[(i * maxSequenceNumCols) + j] = (SparseIndexType)nonZeroValues.size();
-                nonZeroValues.push_back(1);
-                if (oneHotSequences[i][j] >= dimension)
-                    InvalidArgument("Value::Create: one-hot index value (%zu) exceeds vocabulary size (%zu).", oneHotSequences[i][j], dimension);
-
-                rowIndices.push_back((SparseIndexType)(oneHotSequences[i][j]));
+                size_t oneHotIdx = oneHotSequences[i][j];
+                if (oneHotIdx == OneHotSkip)
+                {
+                    nonZeroValues.push_back(0);
+                    rowIndices.push_back(0);
+                }
+                else
+                {
+                    nonZeroValues.push_back(1);
+                    if (oneHotIdx >= dimension)
+                        InvalidArgument("Value::Create: one-hot index value (%zu) exceeds vocabulary size (%zu).", oneHotSequences[i][j], dimension);
+                    rowIndices.push_back((SparseIndexType)(oneHotSequences[i][j]));
+                }
             }
 
             for (; j < maxSequenceNumCols; ++j)

@@ -9,9 +9,9 @@ typing -- basic CNTK type meta-classes for CNTK @Function type signatures
 '''
 
 from ..axis import Axis
-from ..ops.variables import Variable
-from ..utils import Record
+from ..variables import Variable, Record
 from cntk.internal import sanitize_shape
+from cntk.internal.utils import get_python_function_arguments, map_function_arguments
 
 def _make_tensor_meta(cls_name, **kwargs):
     class TensorMeta(type):
@@ -62,3 +62,55 @@ SequenceOver = SequenceOverMeta('SequenceOver', (), {})
 '''
 Meta-meta-meta class to denote a sequence of data tensors over a custom axis. Example: ``userAxis = Axis(); SequenceOver[userAxis][Tensor[13,42]]``
 '''
+
+
+def Signature(*args, **kwargs):
+    '''
+    ``@Signature`` is a decorator to implement the function-argument annotations in Python-2.7,
+    as needed by the ``@Function`` decorator.
+    This is only needed when you have not yet migrated to Python 3.x.
+
+    Note: Although this is aimed at enabling ``@Function`` syntax with type annotations
+    in Python 2.7, ``@Signature`` is independent of CNTK and can be used for any argument annotation.
+
+    Args:
+        *args: types of arguments of the function that this decorator is applied to, in the same order.
+        **kwargs: types of arguments with optional names, e.g. `x=Tensor[42]`. Use this second form for
+           longer argument lists.
+
+    Example::
+
+     # Python 3:
+     @Function
+     def f(x: Tensor[42]):
+         return sigmoid(x)
+     # Python 2.7:
+     @Function
+     @Signature(Tensor[42])
+     def f(x):
+         return sigmoid(x)
+
+     # note that this:
+     @Function
+     @Signature(x:int)
+     def sqr(x):
+         return x*x
+     # is identical to:
+     def sqr(x):
+         return x*x
+     sqr.__annotations__ = {'x': int}``
+    '''
+    # this function returns another function which is the actual decorator applied to the def:
+    def add_annotations(f):
+        # prepare the signature
+        param_names, annotations = get_python_function_arguments(f)
+        if annotations:
+            raise ValueError('@Signature cannot be applied to functions that already have annotations')
+        annotations = {}
+        if len(args) + len(kwargs) != len(param_names):
+            raise TypeError("{} annotations provided for function to be decorated, but function has {} parameters".format(len(args) + len(kwargs), len(param_names)))
+        # implant anotations into f
+        params_dict = { name: name for name in param_names }
+        f.__annotations__ = map_function_arguments(param_names, params_dict, *args, **kwargs)
+        return f # and return the updated function
+    return add_annotations

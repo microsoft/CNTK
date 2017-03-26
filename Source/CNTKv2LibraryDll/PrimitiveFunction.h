@@ -197,6 +197,7 @@ namespace CNTK
         static const std::wstring InternalArgminReductionOpName;
 
         static const std::wstring AttributeNameAxis;
+        static const std::wstring AttributeNameAxisVec;
         static const std::wstring AttributeNameAxis1;
         static const std::wstring AttributeNameAxis2;
         static const std::wstring AttributeNameAllowDuplicates;
@@ -230,7 +231,9 @@ namespace CNTK
         static const std::wstring AttributeNameNewSequenceAxisLengthScalingFactor;
         static const std::wstring AttributeNameNewSequenceAxisLengthAdditiveFactor;
         static const std::wstring AttributeNameBeginIndex;
+        static const std::wstring AttributeNameBeginIndexVec;
         static const std::wstring AttributeNameEndIndex;
+        static const std::wstring AttributeNameEndIndexVec;
         static const std::wstring AttributeNameReductionOpName;
         static const std::wstring AttributeNameRngSeed;
         static const std::wstring AttributeNameRngOffset;

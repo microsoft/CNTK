@@ -369,14 +369,14 @@ private:
         m_outT.UpdateBatchSize(batchSize);
 
         // keep running if nothing changes
-        if (!algo.NeedAutotuning(batchSize)) return;
+        if ((!algo.NeedAutotuning(batchSize)) && (workspace.BufferSize() >= algo.AlgoWorkspaceSize)) return;
 
-        // if batchsize changes again win just finish init, go back to init again
-        if (algo.autotuningState == AutotuningState::PendingTuning && batchSize != algo.MBSizeForCurrentAlgo)
+        // if batchsize changes again when just finish init, go back to init again
+        if (algo.autotuningState == AutotuningState::PendingTuning && batchSize > algo.MBSizeForCurrentAlgo)
             algo.autotuningState = AutotuningState::Init;
 
         // batchSize is bigger than the one when initialize current workspace, need free up space and go back to init
-        if (algo.autotuningState == AutotuningState::Running && batchSize > algo.MBSizeForCurrentWorkspace)
+        if (algo.autotuningState == AutotuningState::Running && batchSize > algo.maxMBSizeSeen)
         {
             algo.autotuningState = AutotuningState::Init;
             workspace.Resize(0,0,0,false);
@@ -391,19 +391,22 @@ private:
         if (algo.autotuningState == AutotuningState::Init)
         {
             CUDNN_CALL(staticFinder(algo.selectedAlgo, true));
+            algo.maxMBSizeSeen = batchSize;
             algo.MBSizeForCurrentAlgo = batchSize;
             algo.autotuningState = AutotuningState::PendingTuning;
             return;
         }
 
         // we allocate workspace and find algorithm if batchSize is higher than ever seen
-        if (batchSize > algo.MBSizeForCurrentWorkspace)
+        if (algo.MBSizeForCurrentWorkspace == 0)
         {
             // Reserve 100MB and give workspace size of m_MaxWorkspaceSize
             size_t free, total, resizeTo = 0;
+            size_t curSize = workspace.BufferSize();
             CUDA_CALL(cudaMemGetInfo(&free, &total));
+            free += workspace.BufferSize();
             // If we have more than 100MB, reserve that and assign rest to workspace
-            if(free > 100000000) resizeTo = free - 100000000 + sizeof(ElemType);
+            if(free > (total/50)) resizeTo = free - (total/50) + sizeof(ElemType);
             // We don't need memory more than MAX
             if(resizeTo > algo.AlgoWorkspaceSize) resizeTo = algo.AlgoWorkspaceSize;
             if(resizeTo > 0) workspace.Resize(resizeTo/sizeof(ElemType), 1);
@@ -424,13 +427,15 @@ private:
                                     [=](const typename TAlgo::typeT& cur) { return cur.status == CUDNN_STATUS_SUCCESS && cur.memory <= maxMem; });
             if (res == algoPerf + calgo)
                 RuntimeError("During auto-tuning, cuDNN could not find suitable algorithm for the current convolution configuration.");
-
             algo.MBSizeForCurrentAlgo = batchSize;
             algo.selectedAlgo = (*res).algo;
             algo.maxAlgo = algo.selectedAlgo;
             algo.autotuningState = AutotuningState::Running;
+            algo.AlgoWorkspaceSize = (*res).memory;
+            resizeTo = curSize > algo.AlgoWorkspaceSize ? curSize : algo.AlgoWorkspaceSize;
+            workspace.Resize(resizeTo/sizeof(ElemType), 1, 0, false);
         } // Use stored algo when batchsize go back to max. Likely happen when last batch in epoch lacking data
-        else if (batchSize == algo.MBSizeForCurrentWorkspace)
+        else if (batchSize == algo.MBSizeForCurrentWorkspace && workspace.BufferSize() >= algo.AlgoWorkspaceSize)
         {
             algo.selectedAlgo = algo.maxAlgo;
             algo.MBSizeForCurrentAlgo = batchSize;
@@ -457,6 +462,8 @@ private:
             algo.MBSizeForCurrentAlgo = batchSize;
             algo.selectedAlgo = (*res).algo;
             algo.autotuningState = AutotuningState::Running;
+            algo.AlgoWorkspaceSize = (*res).memory;
+            workspace.Resize(algo.AlgoWorkspaceSize/sizeof(ElemType), 1);
         } // use fast method to get algorithm when batchsize get smaller. Avoid severe slowdown when batchsize change frequently
         else
         {
@@ -482,10 +489,11 @@ private:
     {
         typedef T typeT;
         ConvAlgoInfo()
-            : MBSizeForCurrentAlgo(0), MBSizeForCurrentWorkspace(0), autotuningState(AutotuningState::Init), AlgoWorkspaceSize(0)
+            : MBSizeForCurrentAlgo(0), MBSizeForCurrentWorkspace(0), maxMBSizeSeen(0),autotuningState(AutotuningState::Init), AlgoWorkspaceSize(0)
         {
         }
         // Current mini-batch size, needed for re-computing statistics in auto-tuner.
+        size_t maxMBSizeSeen;
         size_t MBSizeForCurrentAlgo;
         size_t MBSizeForCurrentWorkspace;
         size_t AlgoWorkspaceSize;

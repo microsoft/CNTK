@@ -216,15 +216,16 @@ namespace CNTK
                     return true;
                 } });
 
-        if (m_cv.m_frequency != 0)
-            m_actions.push_back({ m_cv.m_frequency , 0, 0,
-                [this](size_t currentIndex, const DeviceDescriptor& d) { return CrossValidate(currentIndex, d); } });
-
+        // Report progress before we run cross validation if any.
         if (m_progressFrequency != 0)
         {
             m_actions.push_back({ m_progressFrequency, 0, 0,
                 [this](size_t currentIndex, const DeviceDescriptor&) { ReportProgress(currentIndex); return true; } });
         }
+
+        if (m_cv.m_frequency != 0)
+            m_actions.push_back({ m_cv.m_frequency , 0, 0,
+                [this](size_t currentIndex, const DeviceDescriptor& d) { return CrossValidate(currentIndex, d); } });
     }
 
     void TrainingSession::Train(const DeviceDescriptor& computeDevice)

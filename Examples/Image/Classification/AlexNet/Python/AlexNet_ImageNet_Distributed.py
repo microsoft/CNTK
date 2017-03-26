@@ -13,7 +13,6 @@ import cntk
 import _cntk_py
 
 from cntk.logging import *
-from cntk.utils import *
 from cntk.train.training_session import *
 from cntk import *
 from cntk.train.distributed import *

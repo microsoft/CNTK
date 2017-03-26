@@ -1,10 +1,47 @@
 import numpy as np
 from cntk import cntk_py, NDArrayView
 from cntk.device import DeviceDescriptor, use_default_device
-from ..tensor import TensorOpsMixin
-from ..utils import Record
+from .tensor import TensorOpsMixin
 from cntk.internal import typemap, sanitize_precision, sanitize_value, \
         sanitize_shape, sanitize_dtype_cntk
+
+
+class Record(dict):
+    '''
+    Easy construction of a record (=immutable singleton class) from keyword arguments.
+    e.g. r = Record(x = 13, y = 42) ; x = r.x
+
+    Args:
+        kwargs: keyword arguments to turn into the record members
+
+    Returns:
+        A singleton class instance that has all passed kw args as immutable class members.
+    '''
+    def __init__(self, **args_dict):
+        super(Record, self).__init__(args_dict)
+        self.__dict__.update(args_dict)
+    def __getattr__(self, key):
+        if key not in self:
+            raise AttributeError("record has no attribute '{}'".format(key))
+        return self[key]
+
+    def __setattr__(self, key, value):
+        raise AttributeError('record is immutable')
+    def updated_with(self, **kwargs):
+        '''
+        Create a new Record from an existing one with members modified or added.
+        e.g. r = Record(x = 13) ; print(r.x) ; r2 = r.updated_with(x = 42) ; print(r2.x)
+    
+        Args:
+            kwargs: keyword arguments to turn into the record members
+    
+        Returns:
+            A singleton class instance that has all passed kw args as immutable class members.
+        '''
+        d = dict(**self)   # make it mutable
+        d.update(kwargs)   # merge the new items
+        return Record(**d) # lock it up again
+
 
 class VariableMixin(object):
     '''

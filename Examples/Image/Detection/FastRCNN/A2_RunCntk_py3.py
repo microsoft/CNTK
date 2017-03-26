@@ -14,7 +14,7 @@ from cntk.learner import momentum_sgd, learning_rate_schedule, momentum_as_time_
 from cntk.ops import input, parameter, cross_entropy_with_softmax, classification_error, times, combine
 from cntk.ops import roipooling
 from cntk.ops.functions import CloneMethod
-from cntk.utils import log_number_of_parameters, ProgressPrinter
+from cntk.logging import log_number_of_parameters, ProgressPrinter
 from PARAMETERS import *
 import numpy as np
 import os, sys

@@ -19,8 +19,7 @@ import prepare_test_data
 import TrainResNet_CIFAR10
 import LanguageUnderstanding
 
-def train_cifar_resnet_for_eval(test_device, output_dir):
-
+def unzip_data(output_dir):
     output_dir = os.path.abspath(output_dir)
     if not os.path.isdir(output_dir):
         os.mkdir(output_dir)
@@ -33,7 +32,16 @@ def train_cifar_resnet_for_eval(test_device, output_dir):
     with zipfile.ZipFile(os.path.join(base_path, 'cifar-10-batches-py', 'data.zip')) as myzip:
         for fn in range(6):
             myzip.extract('data/train/%05d.png'%(fn), output_dir)
-  
+
+def train_cifar_resnet_for_eval(test_device, output_dir):
+    output_dir = os.path.abspath(output_dir)
+    if not os.path.isdir(output_dir):
+        os.mkdir(output_dir)
+    base_path = prepare_test_data.prepare_CIFAR10_data()
+
+    # change dir to locate data.zip correctly
+    os.chdir(base_path)
+
     if test_device == 'cpu':
         print('train cifar_resnet only on GPU device. Use pre-trained models.')
     else:
@@ -47,7 +55,6 @@ def train_cifar_resnet_for_eval(test_device, output_dir):
 # train() copied here from LanguageUnderstanding since we require to run on CPU
 from cntk.layers.typing import *
 from cntk import *
-from cntk.utils import Signature
 from cntk.logging import *
 def create_criterion_function(model):
     @Function
@@ -100,13 +107,19 @@ if __name__=='__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument('-d', '--test_device', help='the test device to run', required=True)
+    parser.add_argument('-u', '--unzip_only', action='store_true', help='only unzip data without training model')
 
     args = vars(parser.parse_args())
     test_device = args['test_device']
+    unzip_only = args['unzip_only']
+
 
     output_dir = os.path.dirname(os.path.abspath(__file__))
     print('the output_dir is {}.'.format(output_dir))
     print('the test_device is {}.'.format(test_device))
-    train_language_understanding_atis_for_eval(test_device, output_dir)
-    train_cifar_resnet_for_eval(test_device, output_dir)
+    print('unzip_only is {}'.format(unzip_only))
+    unzip_data(output_dir)
+    if not unzip_only:
+        train_language_understanding_atis_for_eval(test_device, output_dir)
+        train_cifar_resnet_for_eval(test_device, output_dir)
 

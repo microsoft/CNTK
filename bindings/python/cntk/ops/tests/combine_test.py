@@ -13,7 +13,7 @@ import numpy as np
 import pytest
 import cntk as C
 from .ops_test_utils import AA, precision, PRECISION_TO_TYPE, compare_lists_of_np_arrays, cntk_device
-from ...utils import eval as cntk_eval
+from cntk.internal.utils import eval as cntk_eval
 from cntk.internal import sanitize_dtype_cntk
 from .. import plus, minus
 from cntk.losses import cross_entropy_with_softmax

@@ -8,9 +8,9 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 from ..ops.functions import CloneMethod, Function, load_model
-from ..ops.variables import Variable, Parameter, Constant
-from ..utils import get_data_type
+from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
+from cntk.internal.utils import get_data_type
 from ..axis import Axis
 
 

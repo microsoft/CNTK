@@ -4,9 +4,9 @@
 # for full license information.
 # ==============================================================================
 
-from .. import cntk_py
+from .. import cntk_py, Value
 from ..tensor import ArrayMixin
-from ..utils import typemap, value_to_seq
+from cntk.internal import typemap
 from cntk.device import use_default_device
 
 import numpy as np
@@ -45,7 +45,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         The value of the minibatch as a NumPy array.
         '''
-        return value_to_seq(self.data)
+        return Value.to_seq(self.data)
 
     @property
     def shape(self):
@@ -142,7 +142,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
         streams = {}
         for si in self.stream_infos():
             streams[si.m_name] = si
-        from ..utils import Record
+        from ..variables import Record
         self.streams = Record(**streams)
 
     def stream_infos(self):
@@ -188,7 +188,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
               the next minibatch. Must be > 0.
               **Important:**
               Click `here <https://github.com/Microsoft/CNTK/wiki/BrainScript-minibatchSize-and-Python-minibatch_size_in_samples-in-CNTK>`__ for a full description of this parameter. 
-            input_map (dict): mapping of :class:`~cntk.ops.variables.Variable`
+            input_map (dict): mapping of :class:`~cntk.variables.Variable`
               to :class:`~cntk.cntk_py.StreamInformation` which will be used to convert the
               returned data.
             device (`DeviceDescriptor`, defaults to `None`): CNTK DeviceDescriptor
@@ -200,7 +200,7 @@ class MinibatchSource(cntk_py.MinibatchSource):
             cntk.io.MinibatchData:
             A mapping of :class:`~cntk.cntk_py.StreamInformation` to :class:`MinibatchData` if
             `input_map` was not specified. Otherwise, the returned value will
-            be a mapping of :class:`~cntk.ops.variables.Variable` to class:`MinibatchData`.
+            be a mapping of :class:`~cntk.variables.Variable` to class:`MinibatchData`.
         '''
         if device is None:
             device = use_default_device()
@@ -499,7 +499,7 @@ class StreamConfiguration(cntk_py.StreamConfiguration):
 
 # stream definition for use in StreamDefs
 # returns a record { stream_alias, is_sparse, optional shape, optional transforms, optional context, optional scp, optional mlf }
-from cntk.utils import Record
+from cntk.variables import Record
 def StreamDef(field=None, shape=None, is_sparse=False, transforms=None, context=None, scp=None, mlf=None, broadcast=None):
     '''
        Configuration of a stream for use with the builtin Deserializers.
