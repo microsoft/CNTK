@@ -55,7 +55,6 @@ def train_cifar_resnet_for_eval(test_device, output_dir):
 # train() copied here from LanguageUnderstanding since we require to run on CPU
 from cntk.layers.typing import *
 from cntk import *
-from cntk.utils import Signature
 from cntk.logging import *
 def create_criterion_function(model):
     @Function

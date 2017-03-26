@@ -901,7 +901,7 @@ public:
 
                 CNTK::ValuePtr* cpp_value = reinterpret_cast<CNTK::ValuePtr*>(cpp_val);
 
-                $1[it.first] = *cpp_value;
+                $1[it.first] = cpp_value ? *cpp_value : nullptr;
                 break;
             }
         }
@@ -1629,6 +1629,7 @@ namespace CNTK {
 
         const PyObject* Data() const
         {
+            Py_INCREF(m_userData);
             return m_userData;
         }
 

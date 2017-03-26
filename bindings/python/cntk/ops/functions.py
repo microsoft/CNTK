@@ -1,6 +1,6 @@
 from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
-from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple, sanitize_variable_value_dict
+from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple, sanitize_variable_value_dict, sanitize_Function_attributes
 from cntk.internal.utils import get_python_function_arguments, map_function_arguments
 from ..variables import Record, Variable
 from enum import Enum, unique
@@ -425,7 +425,7 @@ class Function(cntk_py.Function):
         '''
         List of the attributes of the function
         '''
-        return super(Function, self).attributes()
+        return sanitize_Function_attributes(super(Function, self).attributes())
 
     @typemap
     def clone(self, method, substitutions=None):
@@ -1205,8 +1205,7 @@ class UserFunction(Function):
                 break
             root_gradients = rg
 
-        possible_wrt = [input for input in self.inputs if input.needs_gradient]
-        if len(possible_wrt) > 1:
+        if len(self.inputs) > 1:
             self.backward(state, root_gradients, variables)
         else:
             result = self.backward(state, root_gradients)
@@ -1215,10 +1214,8 @@ class UserFunction(Function):
 
         if self.as_numpy:
             for k,v in variables.items():
-                if v is None:
-                    raise ValueError('gradients were not provided for all variables')
-
-                variables[k] = sanitize_batch(k, v, None, device)
+                if v is not None:
+                    variables[k] = sanitize_batch(k, v, None, device)
 
     def _infer_outputs(self, outputs):
         outputs.extend(self.infer_outputs())
