@@ -36,12 +36,12 @@
     }
 
     static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(const NDShape& sampleShape, const std::vector<float>& sequenceData,
-        bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false)
+        bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
         return CNTK::Value::CreateSequence<float>(sampleShape, sequenceData, sequenceStartFlag, device, readOnly);
     }
 
     static CNTK::ValuePtr CNTK::Value::CreateSequenceDouble(const NDShape& sampleShape, const std::vector<double>& sequenceData,
-        bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false)
+        bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
         return CNTK::Value::CreateSequence<double>(sampleShape, sequenceData, sequenceStartFlag, device, readOnly);
     }
 
@@ -99,12 +99,12 @@
 
     static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(size_t dimension, const std::vector<size_t>& sequenceData,
         bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
-        return CNTK::Value::CreateSequence<float>(dimension, sequenceData, seqeuncesStartFlag, device, false);
+        return CNTK::Value::CreateSequence<float>(dimension, sequenceData, sequenceStartFlag, device, false);
     }
 
     static CNTK::ValuePtr CNTK::Value::CreateSequenceDouble(size_t dimension, const std::vector<size_t>& sequenceData,
         bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
-        return CNTK::Value::CreateSequence<double>(dimension, sequenceData, seqeuncesStartFlag, device, false);
+        return CNTK::Value::CreateSequence<double>(dimension, sequenceData, sequenceStartFlag, device, false);
     }
 
     // Instantiation template functions: ND sparse input.

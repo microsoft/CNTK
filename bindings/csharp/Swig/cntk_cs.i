@@ -1199,7 +1199,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
     }
 
-     public static Value CreateSequence<T>(NDShape sampleShape,
+    public static Value CreateSequence<T>(NDShape sampleShape,
                                           System.Collections.Generic.IEnumerable<T> sequence,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
@@ -1235,7 +1235,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
             {
                 inputVector.Add(element);
             }
-            return Value.CreatesequenceDouble(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+            return Value.CreateSequenceDouble(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -1266,7 +1266,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
-        var seqFlags = new BoolVector(sequenceStartFlags);
+        var seqFlags = new BoolVector();
+        foreach (var element in sequenceStartFlags)
+        {
+            seqFlags.Add(element);
+        }
         if (typeof(T).Equals(typeof(float)))
         {
             var inputSeqVector = new FloatVectorVector();
@@ -1304,7 +1308,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
-        var seqFlags = new BoolVector(sequenceStartFlags);
+        var seqFlags = new BoolVector();
+        foreach (var element in sequenceStartFlags)
+        {
+            seqFlags.Add(element);
+        }
         var inputSeqVector = new SizeTVectorVector();
         var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
         foreach (var seq in sequences)
@@ -1370,11 +1378,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
         if (typeof(T).Equals(typeof(float)))
         {
-            return Value.CreateSequenceFloat((uint)dimension, inputVector, device, readOnly);
+            return Value.CreateSequenceFloat((uint)dimension, inputVector, sequenceStartFlag, device, readOnly);
         }
         else if (typeof(T).Equals(typeof(double)))
         {
-            return Value.CreateSequenceDouble((uint)dimension, inputVector, device, readOnly);
+            return Value.CreateSequenceDouble((uint)dimension, inputVector, sequenceStartFlag, device, readOnly);
         }
         else
         {
@@ -1405,7 +1413,11 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
-        var seqFlags = new BoolVector(sequenceStartFlags);
+        var seqFlags = new BoolVector();
+        foreach (var element in sequenceStartFlags)
+        {
+            seqFlags.Add(element);
+        }
         var inputSeqVector = new SizeTVectorVector();
         var sizeTVectorRefList = new System.Collections.Generic.List<SizeTVector>();
         foreach (var seq in sequences)
@@ -1524,9 +1536,17 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
                                DeviceDescriptor device,
                                bool readOnly = false)
     {
-        var seqVector = new NDArrayViewPtrVector(sequences);
-        var startVector = new BoolVector(sequenceStartFlags);
-        return Create(sampleShape, seqVector, startVector, device, false);
+        var seqVector = new NDArrayViewPtrVector();
+        foreach (var element in sequences)
+        {
+            seqVector.Add(element);
+        }
+        var startFlags = new BoolVector();
+        foreach (var element in sequenceStartFlags)
+        {
+            startFlags.Add(element);
+        }
+        return Create(sampleShape, seqVector, startFlags, device, false);
     }
 
     //
