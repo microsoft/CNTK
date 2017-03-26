@@ -25,6 +25,16 @@
         return CNTK::Value::Create<double>(sampleShape, sequences, sequenceStartFlags, device, readOnly);
     }
 
+    static CNTK::ValuePtr CNTK::Value::CreateBatchFloat(const NDShape& sampleShape, const std::vector<float>& batchData,
+        const DeviceDescriptor& device, bool readOnly = false ) {
+        return CNTK::Value::CreateBatch<float>(sampleShape, batchData, device, readOnly);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateBatchDouble(const NDShape& sampleShape, const std::vector<double>& batchData,
+        const DeviceDescriptor& device, bool readOnly = false ) {
+        return CNTK::Value::CreateBatch<double>(sampleShape, batchData, device, readOnly);
+    }
+
     // Instantiation template functions: ND onehot vector input.
     static CNTK::ValuePtr CNTK::Value::CreateOneHotFloat(const CNTK::NDShape& sampleShape, const std::vector<std::vector<size_t>>& oneHotSequences,
         const CNTK::DeviceDescriptor& device, bool readOnly = false) {

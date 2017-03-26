@@ -1167,22 +1167,36 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     // Create Value object from dense input: batch, sequence or batch of sequences.
-    public static Value CreateBatch<T>(NDShape sampleShape, System.Collections.Generic.List<T> batch, DeviceDescriptor device, bool readOnly = false)
+    public static Value CreateBatch<T>(NDShape sampleShape, System.Collections.Generic.IEnumerable<T> batch, DeviceDescriptor device, bool readOnly = false)
     {
-        var shapeSize = sampleShape.TotalSize;
-
-        if (batch.Count % shapeSize != 0)
-            throw new System.ArgumentException("The number of elements in the batch must be a multiple of the size of the shape");
-        var count = batch.Count / shapeSize;
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<T>>(count);
-        for (int i = 0; i < count; i++)
+        if (typeof(T).Equals(typeof(float)))
         {
-            var seq = new System.Collections.Generic.List<T>();
-            seq.AddRange(batch.GetRange(i * shapeSize, shapeSize));
-            input.Add(seq);
+            var inputVector = new FloatVector();
+            System.Collections.Generic.IEnumerable<float> batchInType = batch as System.Collections.Generic.IEnumerable<float>;
+            if (batchInType == null)
+                throw new System.ArgumentNullException("The parameter batch cannot be casted as IEnumerable<float>.");
+            foreach (var element in batchInType)
+            {
+                inputVector.Add(element);
+            }
+            return Value.CreateBatchFloat(sampleShape, inputVector, device, readOnly);
         }
-        // Pass the empty sequenceStartFlags means all sequences have the start flag with true.
-        return Create<T>(sampleShape, input, new System.Collections.Generic.List<bool>(0), device, readOnly);
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            var inputVector = new DoubleVector();
+            System.Collections.Generic.IEnumerable<double> batchInType = batch as System.Collections.Generic.IEnumerable<double>;
+            if (batchInType == null)
+                throw new System.ArgumentNullException("The parameter batch cannot be casted as IEnumerable<double>.");
+            foreach (var element in batchInType)
+            {
+                inputVector.Add(element);
+            }
+            return Value.CreateBatchDouble(sampleShape, inputVector, device, readOnly);
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
     }
 
      public static Value CreateSequence<T>(NDShape sampleShape,
