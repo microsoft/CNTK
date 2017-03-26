@@ -1200,7 +1200,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
      public static Value CreateSequence<T>(NDShape sampleShape,
-                                          System.Collections.Generic.List<T> sequence,
+                                          System.Collections.Generic.IEnumerable<T> sequence,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
@@ -1208,13 +1208,39 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateSequence<T>(NDShape sampleShape,
-                                          System.Collections.Generic.List<T> sequence,
+                                          System.Collections.Generic.IEnumerable<T> sequence,
                                           bool sequenceStartFlag,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<T>>(1) {sequence};
-        return Create(sampleShape, input, new System.Collections.Generic.List<bool>(1) {sequenceStartFlag}, device, readOnly);
+        if (typeof(T).Equals(typeof(float)))
+        {
+            var inputVector = new FloatVector();
+            System.Collections.Generic.IEnumerable<float> sequenceInType = sequence as System.Collections.Generic.IEnumerable<float>;
+            if (sequenceInType == null)
+                throw new System.ArgumentNullException("The parameter sequence cannot be casted as IEnumerable<float>.");
+            foreach (var element in sequenceInType)
+            {
+                inputVector.Add(element);
+            }
+            return Value.CreateSequenceFloat(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            var inputVector = new DoubleVector();
+            System.Collections.Generic.IEnumerable<double> sequenceInType = sequence as System.Collections.Generic.IEnumerable<double>;
+            if (sequenceInType == null)
+                throw new System.ArgumentNullException("The parameter sequence cannot be casted as IEnumerable<double>.");
+            foreach (var element in sequenceInType)
+            {
+                inputVector.Add(element);
+            }
+            return Value.CreatesequenceDouble(sampleShape, inputVector, sequenceStartFlag, device, readOnly);
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
     }
 
     public static Value CreateBatchOfSequences<T>(NDShape sampleShape,
@@ -1227,7 +1253,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public static Value CreateBatchOfSequences<T>(NDShape sampleShape,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> batchOfSequences,
-                                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                                  System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
     {
@@ -1236,7 +1262,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     private static Value Create<T>(NDShape sampleShape,
                                   System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences,
-                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                  System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
@@ -1274,7 +1300,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     // Create Value object from OneHotVector input, for N-dimenstional tensor. Only Create() method for now.
     private static Value Create<T>(NDShape sampleShape,
                                   System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences,
-                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                  System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
@@ -1324,7 +1350,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateSequence<T>(int dimension,
-                                          System.Collections.Generic.List<int> sequence,
+                                          System.Collections.Generic.IEnumerable<int> sequence,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
@@ -1332,13 +1358,28 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value CreateSequence<T>(int dimension,
-                                          System.Collections.Generic.List<int> sequence,
+                                          System.Collections.Generic.IEnumerable<int> sequence,
                                           bool sequenceStartFlag,
                                           DeviceDescriptor device,
                                           bool readOnly = false)
     {
-        var input = new System.Collections.Generic.List<System.Collections.Generic.List<int>>(1) {sequence};
-        return Create<T>(dimension, input, new System.Collections.Generic.List<bool>(1) {sequenceStartFlag}, device, readOnly);
+        var inputVector = new SizeTVector();
+        foreach (var element in sequence)
+        {
+            inputVector.Add((uint)element);
+        }
+        if (typeof(T).Equals(typeof(float)))
+        {
+            return Value.CreateSequenceFloat((uint)dimension, inputVector, device, readOnly);
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            return Value.CreateSequenceDouble((uint)dimension, inputVector, device, readOnly);
+        }
+        else
+        {
+            throw new System.ArgumentException("The data type " + typeof(T).ToString() + " is not supported. Only float or double is supported by CNTK.");
+        }
     }
 
     public static Value CreateBatchOfSequences<T>(int dimension,
@@ -1351,7 +1392,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public static Value CreateBatchOfSequences<T>(int dimension,
                                                   System.Collections.Generic.List<System.Collections.Generic.List<int>> batchOfSequences,
-                                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                                  System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                                   DeviceDescriptor device,
                                                   bool readOnly = false)
     {
@@ -1360,7 +1401,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     private static Value Create<T>(int dimension,
                                   System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences,
-                                  System.Collections.Generic.List<bool> sequenceStartFlags,
+                                  System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
                                   bool readOnly = false)
     {
@@ -1470,7 +1511,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     // Create value object from NDArrayView
     public static Value Create(NDShape sampleShape,
-                               System.Collections.Generic.List<NDArrayView> sequences,
+                               System.Collections.Generic.IEnumerable<NDArrayView> sequences,
                                DeviceDescriptor device,
                                bool readOnly = false)
     {
@@ -1478,8 +1519,8 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     public static Value Create(NDShape sampleShape,
-                               System.Collections.Generic.List<NDArrayView> sequences,
-                               System.Collections.Generic.List<bool> sequenceStartFlags,
+                               System.Collections.Generic.IEnumerable<NDArrayView> sequences,
+                               System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                DeviceDescriptor device,
                                bool readOnly = false)
     {
