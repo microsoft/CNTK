@@ -314,6 +314,9 @@ if __name__ == '__main__':
         action = agent.act(current_state)
         new_state, reward, done, _ = env.step(action)
 
+        # Clipping reward for training stability
+        reward = np.clip(reward, -1, 1)
+
         agent.observe(current_state, action, reward, done)
         agent.train()
 
