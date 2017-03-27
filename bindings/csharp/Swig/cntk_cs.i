@@ -1589,7 +1589,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
             var inputVector = new FloatVector();
             System.Collections.Generic.IEnumerable<float> inputInType = input as System.Collections.Generic.IEnumerable<float>;
             if (inputInType == null)
-                throw new System.ArgumentNullException("The parameter cannot be casted as IEnumerable<float>.");
+                throw new System.ArgumentNullException("The parameter cannot be cast as IEnumerable<float>.");
             foreach (var element in inputInType)
             {
                 inputVector.Add(element);
@@ -1609,7 +1609,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
             var inputVector = new DoubleVector();
             System.Collections.Generic.IEnumerable<double> inputInType = input as System.Collections.Generic.IEnumerable<double>;
             if (inputInType == null)
-                throw new System.ArgumentNullException("The parameter cannot be casted as IEnumerable<double>.");
+                throw new System.ArgumentNullException("The parameter cannot be cast as IEnumerable<double>.");
             foreach (var element in inputInType)
             {
                 inputVector.Add(element);
