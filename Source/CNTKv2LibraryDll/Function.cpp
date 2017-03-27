@@ -297,6 +297,12 @@ namespace CNTK
                 currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
             }
 
+            if (!newOutputVar.Shape().IsUnknown() && (currentOutputVar.NeedsGradient() != newOutputVar.NeedsGradient()))
+            {
+                updated = true;
+                currentOutputVar.m_dataFields->m_needsGradient = newOutputVar.NeedsGradient();
+            }
+
             if ((currentOutputVar.GetDataType() == DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType()))
             {
                 updated = true;
@@ -311,9 +317,10 @@ namespace CNTK
 
             if ((!newOutputVar.Shape().IsUnknown() && (currentOutputVar.Shape() != newOutputVar.Shape())) ||
                 ((newOutputVar.GetDataType() != DataType::Unknown) && (currentOutputVar.GetDataType() != newOutputVar.GetDataType())) ||
-                ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())))
+                ((newOutputVar.DynamicAxes() != Axis::UnknownDynamicAxes()) && (currentOutputVar.DynamicAxes() != newOutputVar.DynamicAxes())) ||
+                (!newOutputVar.Shape().IsUnknown() && (currentOutputVar.NeedsGradient() != newOutputVar.NeedsGradient())))
             {
-                InvalidArgument("New output Variable Shape, DataType or Dynamic axes after replaced placeholders does not match previous output Variable, for the Recurrent Function.\n"
+                InvalidArgument("New output Variable Shape, DataType, NeedsGradient, Dynamic axes after replaced placeholders does not match previous output Variable, for the Recurrent Function.\n"
                                 "New = %S\n"
                                 "Previous = %S\n",
                                 newOutputVar.AsString().c_str(), currentOutputVar.AsString().c_str());
@@ -323,6 +330,7 @@ namespace CNTK
         {
             currentOutputVar.m_dataFields->m_shape = newOutputVar.Shape();
             currentOutputVar.m_dataFields->m_dataType = newOutputVar.GetDataType();
+            currentOutputVar.m_dataFields->m_needsGradient = newOutputVar.NeedsGradient();
             currentOutputVar.m_dataFields->m_dynamicAxes = newOutputVar.DynamicAxes();
             updated = true;
         }
@@ -1277,6 +1285,15 @@ namespace CNTK
         auto additionalProperties = Dictionary();
         additionalProperties[PrimitiveFunction::AttributeNameOffset] = DictionaryValue(offset);
         return BinaryOp(PrimitiveOpType::FutureValue, operand, initialState, std::move(additionalProperties), name);
+    }
+
+    FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameNumClass] = numClass;
+        additionalProperties[PrimitiveFunction::AttributeNameOneHotOutputSparse] = outputSparse;
+        additionalProperties[PrimitiveFunction::AttributeNameOneHotAxis] = axis;
+        return UnaryOp(PrimitiveOpType::OneHot, operand, std::move(additionalProperties), name);
     }
 
     FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)

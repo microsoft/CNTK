@@ -446,6 +446,42 @@ def sanitize_variable_value_dict(var_value_dict):
     else:
         return list(var_value_dict.values())[0]
 
+def _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad):
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+
+    # Reverse the 'auto_padding' argument to account for the col-major tensor
+    # layout in core C++ implementation
+    auto_padding = list(reversed(auto_padding))
+
+    return strides, auto_padding, lower_pad, upper_pad
+    
+def sanitize_pooling_args(pooling_window_shape, strides, auto_padding, lower_pad, upper_pad):
+    pooling_window_shape = sanitize_shape(pooling_window_shape)
+    strides, auto_padding, lower_pad, upper_pad = _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad)
+    return pooling_window_shape, strides, auto_padding, lower_pad, upper_pad
+    
+def sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad):
+    strides, auto_padding, lower_pad, upper_pad = _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad)
+
+    # Reverse the 'sharing' argument to account for the col-major tensor layout
+    # in core C++ implementation
+    sharing = list(reversed(sharing))
+
+    return strides, sharing, auto_padding, lower_pad, upper_pad
+
+def sanitize_Function_attributes(attributes):
+    # Reverse the 'sharing' and 'auto_padding' attributes to account for the
+    # col-major tensor layout in core C++ implementation
+    if 'sharing' in attributes:
+        attributes['sharing'] = list(reversed(attributes['sharing']))
+
+    if 'autoPadding' in attributes:
+        attributes['autoPadding'] = list(reversed(attributes['autoPadding']))
+
+    return attributes
+
 def memoize(func):
     class memodict(dict):
         __slots__ = ()

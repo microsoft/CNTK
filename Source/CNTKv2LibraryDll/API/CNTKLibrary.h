@@ -1581,7 +1581,7 @@ namespace CNTK
     // Forward declarations
     inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::UnknownDynamicAxes());
     inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes = Axis::DefaultInputVariableDynamicAxes());
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"");
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name = L"");
 
     ///
     /// Denotes a symbolic entity corresponding to the inputs and outputs of a Function.
@@ -1607,7 +1607,7 @@ namespace CNTK
     private:
         friend inline Variable PlaceholderVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::wstring& name, const std::vector<Axis>& dynamicAxes);
         friend inline Variable InputVariable(const NDShape& shape, bool isSparse, ::CNTK::DataType dataType, bool needsGradient, const std::wstring& name, const std::vector<Axis>& dynamicAxes /*= Axis::DefaultInputVariableDynamicAxes()*/);
-        friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/);
+        friend inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/);
 #endif
 
     public:
@@ -1883,9 +1883,17 @@ private:
     ///
     /// Create an 'Output' variable
     ///
-    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name /*= L""*/)
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, const std::wstring& name = L"")
     {
-        return Variable(shape, VariableKind::Output, dataType, nullptr, /*needsGradient =*/ false, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
+        return OutputVariable(shape, dataType, dynamicAxes, /*needsGradient =*/ true, name);
+    }
+
+    ///
+    /// Create an 'Output' variable
+    ///
+    inline Variable OutputVariable(const NDShape& shape, ::CNTK::DataType dataType, const std::vector<Axis>& dynamicAxes, bool needsGradient, const std::wstring& name /*= L""*/)
+    {
+        return Variable(shape, VariableKind::Output, dataType, nullptr, needsGradient, dynamicAxes, /*isSparse =*/ false, name, Internal::GenerateUid(VariableKind::Output));
     }
 
     static const int SentinelValueForInferParamInitRank = std::numeric_limits<int>::max();
@@ -3640,6 +3648,8 @@ namespace CNTK
         return FutureValue(operand, defaultInitialState, offset, name);
     }
 
+    CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
     ///
@@ -4381,11 +4391,100 @@ namespace CNTK
     }
 
     ///
+    /// Evaluator is a top-level abstraction for evaluating a model's performance with specified error criterion.
+    ///
+    class Evaluator : public std::enable_shared_from_this<Evaluator>
+    {
+    public:
+        ///
+        /// Tests the model on the specified batch of samples using the evaluation Function specified during construction of the Evaluator
+        /// Returns the average evaluation criterion value per sample for the tested minibatch of samples
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// An overload of the TestMinibatch above that takes a map of variables and their values (as its first argument).
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// An overload of the TestMinibatch above that takes a map of output variables.
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// An overload of the TestMinibatch above that takes a map of output variables.
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// Evaluation Function that is used as for the criterion for evaluating the trained model's quality.
+        ///
+        FunctionPtr EvaluationFunction() const { return m_evaluationFunction; }
+
+        ///
+        /// Writes the summary of test progress and resets the accumulators.
+        ///
+        CNTK_API void SummarizeTestProgress();
+
+        CNTK_API virtual ~Evaluator() {}
+
+    private:
+        template <typename T1, typename ...CtorArgTypes>
+        friend std::shared_ptr<T1> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
+        friend class TrainingSession;
+
+        // Returns aggregated evaluation criterion value and sample count.
+        std::pair<ValuePtr, size_t> TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed);
+        std::pair<ValuePtr, size_t> TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, bool distributed);
+
+        std::pair<ValuePtr, size_t> TestLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice);
+
+        void UpdateTestProgress(size_t numSamples, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
+
+    protected:
+        Evaluator(const FunctionPtr& evaluationFunction, const std::vector<ProgressWriterPtr>& progressWriters = {}, bool initializeCombined = true);
+
+        // Helper functions.
+        std::vector<Variable> GetCombinedEvalFunctionArgs() const;
+        static size_t GetSampleCount(const Variable& var, const ValuePtr& value);
+        static std::unordered_map<Variable, ValuePtr> GetInputs(const std::unordered_map<Variable, MinibatchData>& arguments);
+
+
+        // The combined eval function can be reset by the derived classes.
+        void SetCombinedEvalFunction(FunctionPtr combinedEvalFunction)
+        {
+            if (m_combinedEvalFunction != nullptr)
+                LogicError("Combined eval function has already been initialized.");
+
+            if (!combinedEvalFunction)
+                InvalidArgument("Combined eval function is not allowed to be null.");
+
+            m_combinedEvalFunction = combinedEvalFunction;
+        }
+
+        FunctionPtr m_evaluationFunction;
+        FunctionPtr m_aggregatedEvaluationFunction;
+        std::unordered_set<ProgressWriterPtr> m_progressWriters;
+
+    private:
+        const AccumulatorPtr m_aggregatedTestEvalCriterionValue;
+        Variable             m_testSampleCountVar;
+        FunctionPtr          m_combinedEvalFunction;
+    };
+
+    ///
+    /// Construct an Evaluator for the specified eval function.
+    ///
+    CNTK_API EvaluatorPtr CreateEvaluator(const FunctionPtr& evaluationFunction, const std::vector<ProgressWriterPtr>& progressWriters = {});
+
+    ///
     /// Trainer is the top-level abstraction responsible for the orchestration of the training of a model
     /// using the specified learners and training data either explicitly supplied as Value objects or from
     /// a MinibatchSource object.
     ///
-    class Trainer : public std::enable_shared_from_this<Trainer>
+    class Trainer : public Evaluator
     {
     public:
         ///
@@ -4414,17 +4513,6 @@ namespace CNTK
         CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
-        /// Test the model on the specified batch of samples using the evaluation Function specified during construction of the Trainer
-        /// Returns the average evaluation criterion value per sample for the tested minibatch of samples
-        ///
-        CNTK_API double TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
-
-        ///
-        /// An overload of the TestMinibatch above that takes a map of variables and their values (as its first argument).
-        ///
-        CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
-
-        ///
         /// Checkpoint the model and other Trainer state at the specified file location
         ///
         CNTK_API void SaveCheckpoint(const std::wstring& filePath, Dictionary externalState = Dictionary());
@@ -4443,11 +4531,6 @@ namespace CNTK
         /// Loss Function that is used as the optimization criterion for learning the model's parameters.
         ///
         FunctionPtr LossFunction() const { return m_lossFunction; }
-
-        ///
-        /// Evaluation Function that is used as for the criterion for evaluating the trained model's quality.
-        ///
-        FunctionPtr EvaluationFunction() const { return m_evaluationFunction; }
 
         ///
         /// Returns the average training loss per sample for the last minibatch trained.
@@ -4479,20 +4562,11 @@ namespace CNTK
         ///
         CNTK_API void SummarizeTrainingProgress();
 
-        ///
-        /// Writes the summary of test progress and resets the accumulators.
-        ///
-        CNTK_API void SummarizeTestProgress();
-
     private:
         template <typename T1, typename ...CtorArgTypes>
         friend std::shared_ptr<T1> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
         friend class TrainingSession;
-
-        // Returns aggregated evaluation criterion value and sample count.
-        // TODO: change the public interface to return pair(error, sampleCount) instead of average error.
-        double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, size_t& sampleCount);
 
         Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners,
                 const std::vector<ProgressWriterPtr>& progressWriters = {});
@@ -4511,20 +4585,16 @@ namespace CNTK
         void Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState);
 
         void UpdateTrainingProgress(size_t numSamples, const ValuePtr& loss, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
-        void UpdateTestProgress(size_t numSamples, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
         void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters);
 
         // TODO: Workaround for back compat. Should not be used and will be removed in the next version.
         friend CNTK_API void ::CNTK::Internal::AddProgressWriters(const TrainerPtr&, const std::vector<ProgressWriterPtr>&);
 
-        FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
+        FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_lossFunction;
         FunctionPtr m_aggregatedLossFunction;
-        FunctionPtr m_evaluationFunction;
-        FunctionPtr m_aggregatedEvaluationFunction;
         Variable    m_trainingSampleCountVar;
-        Variable    m_testSampleCountVar;
         LearnersPtr m_parameterLearners;
         std::unordered_set<Parameter> m_learnerParameters;
         std::unordered_set<Variable> m_modelParametersNotCoveredByLearners;
@@ -4537,9 +4607,6 @@ namespace CNTK
 
         AccumulatorPtr m_aggregatedTrainingLossValue;
         AccumulatorPtr m_aggregatedTrainingEvalCriterionValue;
-        AccumulatorPtr m_aggregatedTestEvalCriterionValue;
-
-        std::unordered_set<ProgressWriterPtr> m_progressWriters;
     };
 
     ///

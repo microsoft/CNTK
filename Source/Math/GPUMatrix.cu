@@ -386,7 +386,7 @@ void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     // check to make sure we have something to copy (on init we often have zero sized allocations)
     if (GetSizeAllocated() > 0)
     {
-#ifdef WIN32
+#if 0 // see the backlog item # 1220
         // IOMMU DMAR needs to be disabled for CUDA P2P, otherwise it will silently hang.
         // Unfortunately, cudaDeviceCanAccessPeer returns true irrespective of the IOMMU settings.
         // More details: https://bugzilla.kernel.org/show_bug.cgi?id=188271
@@ -4243,6 +4243,37 @@ GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignElementProductOfWithShiftNeg(con
     _assignElementProductOfWithShiftNeg<ElemType><<<block_tail, thread_tail, 0, t_stream>>>(Data(), a.Data(), b.Data(), shift, nt + 1, BS);
     //      _assignElementProductOf<ElemType> << <block_tail, thread_tail, 0, t_stream >> >(Data(), a.Data(), b.Data(), nt);
 
+    return *this;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    if(a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+
+    size_t item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= shape[i];
+
+    size_t num_class = shape[axis];
+
+    auto nCols = a.GetNumCols();
+    auto nRows = num_class * a.GetNumRows();
+    this->RequireSize(nRows, nCols);
+    this->PrepareDevice();
+    
+    CUDA_CALL(cudaMemset(Data(), 0, nCols * nRows * sizeof(ElemType)));
+
+
+    CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
+    int blocksPerGrid = (int)ceil(((double)N) / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _assignOneHot<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(a.Data(), Data(), num_class, item_size, N);
+    
     return *this;
 }
 

@@ -164,7 +164,7 @@ template <class ElemType>
             // Let: f(x, y, z) = log(exp x + exp y + exp z)
             // For the derivative we get:
             // df / dx = exp(x)/exp(f)
-            //         = exp(x – f)
+            //         = exp(x - f)
             sliceInputGrad.AddElementwiseProductWithExpOfDiffOf(sliceOutputGrad, input, output);
         }
         break;
