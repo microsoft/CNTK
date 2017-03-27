@@ -5542,6 +5542,69 @@ __global__ void _assignTotalScore(ElemType *betaScore,
     }
 }
 
+template<class ElemType>
+__global__ void _assignOneHot(ElemType *indices,
+                                  ElemType *targetBuffer,
+                                  size_t num_class,
+                                  size_t num_item,
+                                  size_t num_element)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_element)
+    {
+        if (indices[index] >= 0 && indices[index] < num_class)
+        {
+            size_t block_id = index / num_item;
+            size_t item_id = index % num_item;
+            targetBuffer[block_id * num_class * num_item + item_id + num_item * (size_t)indices[index]] = 1;
+        }
+    }
+}
+
+template<class ElemType>
+__global__ void _assignOneHotAsSparse(ElemType *indices,
+                                      GPUSPARSE_INDEX_TYPE *secondaryIndices,
+                                      GPUSPARSE_INDEX_TYPE *majorIndices,
+                                      ElemType *targetBuffer,
+                                      size_t num_class,
+                                      int num_item,
+                                      size_t num_rows,
+                                      size_t num_columns,
+                                      size_t num_elements)
+{
+    const CUDA_LONG index = blockIdx.x * blockDim.x + threadIdx.x;
+    if (index < num_elements)
+    {
+        int block_id = index / num_item;
+        int item_id = index % num_item;
+        // for invalid indices, theorically they should not belong to nz elements.
+        // but if we scan the indices to count the valid indices number,
+        // it will be difficult for parallel calculation, especially on GPU.
+        // here we chose to keep those elements in nz element list, but with value 0
+        // it is tricky, but the data view is correct.
+        if (indices[index] >= 0 && indices[index] < num_class)
+        {
+            targetBuffer[index] = 1;
+            majorIndices[index] = (block_id * num_class * num_item + item_id + num_item * (int)indices[index]) % (num_rows * num_class);
+        }
+        else
+        {
+            targetBuffer[index] = 0;
+            majorIndices[index] = (block_id * num_class * num_item + item_id) % (num_rows * num_class);
+        }
+    }
+
+    if (index  < num_columns)
+    {
+        secondaryIndices[index + 1] = num_rows * (index + 1);
+    }
+
+    if (index == 0)
+    {
+        secondaryIndices[0] = 0;
+    }
+}
+
 }
 }
 }

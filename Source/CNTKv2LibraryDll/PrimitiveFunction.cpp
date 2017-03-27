@@ -89,6 +89,9 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTokensToIgnore = L"TokensToIgnore";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDelayConstraint = L"DelayConstraint";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlankTokenId = L"BlankTokenId";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumClass = L"numClass";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotOutputSparse = L"oneHotOutputSparse";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotAxis = L"onehotAxis";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -532,6 +535,33 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
                             outputShape = { 1 };
                             break;
+                        case PrimitiveOpType::OneHot:
+                        {
+                            assert(m_inputs.size() == 1);
+                            auto num_class = m_attributes[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
+
+                            auto inputShape = m_inputs[0].Shape();
+                            auto fakeShape = inputShape.AppendShape({num_class});
+                            auto axis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>(), fakeShape);
+                            if (!axis.IsStaticAxis())
+                                LogicError("Function '%S': one hot operation currently does not support on dynamic axis", AsString().c_str());
+
+                            size_t len = inputShape.Rank();
+                            int axisIndex = axis.StaticAxisIndex();
+
+                            outputShape = {};
+                            if (axisIndex > 0)
+                            {
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(0, axisIndex));
+                            }
+                            outputShape = outputShape.AppendShape({num_class});
+                            if (axisIndex < len)
+                            {
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(axisIndex, len));
+                            }
+
+                            break;
+                        }
                         case PrimitiveOpType::Times:
                         {
                             assert(m_inputs.size() == 2);

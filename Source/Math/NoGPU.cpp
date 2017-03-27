@@ -737,6 +737,12 @@ void GPUSparseMatrix<ElemType>::ConvertBuffer(OutType* outBuffer, const InType* 
 {
 }
 
+template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    return *this;
+}
+
 #pragma endregion Helper Functions
 
 template class MATH_API GPUSparseMatrix<short>;
@@ -2140,6 +2146,12 @@ GPUMatrix<ElemType> GPUMatrix<ElemType>::RandomUniform(const size_t rows, const 
 {
     GPUMatrix<ElemType> mat(0);
     return mat;
+}
+
+template <class ElemType>
+GPUMatrix<ElemType>& GPUMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    return *this;
 }
 
 template <class ElemType>
