@@ -36,7 +36,7 @@ def dump_function(root, tag=None):
     graph = depth_first_search(root.root_function,
                                lambda x: not isinstance(x, cntk_py.Variable)\
                                          or not x.is_output,
-                               dive_into_blocks=True)
+                               depth=-1)
     names = dict()
     def make_name(n): # come up with a letter sequence
         if n < 26:
