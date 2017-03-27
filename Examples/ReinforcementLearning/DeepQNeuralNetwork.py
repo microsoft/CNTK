@@ -452,6 +452,9 @@ if __name__ == '__main__':
         # Clipping reward for training stability
         reward = np.clip(reward, -1, 1)
 
+        # Clipping reward for training stability
+        reward = np.clip(reward, -1, 1)
+
         agent.observe(current_state, action, reward, done)
         agent.train()
 
