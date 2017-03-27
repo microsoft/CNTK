@@ -14,4 +14,5 @@ Python API Reference
    Metrics <cntk.metrics.rst>
    Ops <cntk.ops.rst>
    Train <cntk.train>
+   Eval <cntk.eval>
    Module reference <modules>
