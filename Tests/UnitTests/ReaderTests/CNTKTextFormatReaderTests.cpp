@@ -698,7 +698,30 @@ BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_no_trailing_newline_invalid_input)
                 " while reading the input file (no_trailing_newline.txt).") == ex.what();
         });;
     }
+};
 
+
+BOOST_AUTO_TEST_CASE(CNTKTextFormatReader_extra_input_should_be_ignored)
+{
+    vector<StreamDescriptor> streams(1);
+    streams[0].m_alias = "A";
+    streams[0].m_name = L"A";
+    streams[0].m_storageType = StorageType::dense;
+    streams[0].m_sampleDimension = 1;
+
+    string filename = "extra_input.txt";
+
+    for (auto& input : { "|A 1 |B 1 2 3", "|A 2 |this_input_is_supposed_to_be_also_ignored 1 2 3" })
+    {
+        {
+            boost::filesystem::remove(filename);
+            std::ofstream file;
+            file.open(filename, std::ofstream::out);
+            file << input;
+        }
+        CNTKTextFormatReaderTestRunner<double> testRunner(filename, streams, 0);
+        testRunner.LoadChunk();
+    }
 };
 
 // 100 sequences with N samples for each of 3 inputs, where N is chosen at random
