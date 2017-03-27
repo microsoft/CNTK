@@ -274,8 +274,7 @@ def training_parameter_schedule(schedule, unit, epoch_size=None):
 
     if isinstance(schedule, (int, float)):
         if epoch_size is not None:
-            warnings.warn('when providing the schedule as a number,'
-                          ' epoch_size is ignored', RuntimeWarning)
+            warnings.warn('When providing the schedule as a number, epoch_size is ignored', RuntimeWarning)
         if UnitType(unit) is UnitType.sample:
             return cntk_py.training_parameter_per_sample_schedule(schedule)
         else:
@@ -391,8 +390,7 @@ def momentum_as_time_constant_schedule(momentum, epoch_size=None):
 
     if isinstance(momentum, (int, float)):
         if epoch_size is not None:
-            warnings.warn('when providing the schedule as a number,'
-                          ' epoch_size is ignored', RuntimeWarning)
+            warnings.warn('When providing the schedule as a number, epoch_size is ignored', RuntimeWarning)
         return cntk_py.momentum_as_time_constant_schedule(momentum)
 
     if isinstance(momentum, list):

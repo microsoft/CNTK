@@ -6,6 +6,7 @@
 
 import os
 import math
+import warnings
 import numpy as np
 from cntk import Value
 from cntk import Function
@@ -70,6 +71,26 @@ def test_output_to_retain():
     z_output = z.output
     updated, var_map = trainer.train_minibatch(arguments, outputs=[z_output])
     assert np.allclose(var_map[z_output], np.asarray(in1_value)+20)
+
+def test_epochsize_wrn_for_momentum_time_constant():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        momentum_as_time_constant_schedule(1100, epoch_size=1000)
+
+        assert len(w) == 1
+        assert issubclass(w[-1].category, RuntimeWarning)
+        assert "epoch_size" in str(w[-1].message)
+
+def test_epochsize_wrn_for_parameter_schedule():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        training_parameter_schedule(0.01, UnitType.sample, epoch_size=1000)
+
+        assert len(w) == 1
+        assert issubclass(w[-1].category, RuntimeWarning)
+        assert "epoch_size" in str(w[-1].message)
 
 def test_eval_sparse_dense(tmpdir, device_id):
     from cntk import Axis
