@@ -15,8 +15,10 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
 static const wchar_t* ConstantInitializerTypeName =         L"constant";
-static const wchar_t* UniformInitializerTypeName =          L"uniform";
-static const wchar_t* GaussianInitializerTypeName =         L"gaussian";
+static const wchar_t* UniformBSInitializerTypeName =        L"uniform";     // for legacy reason, "uniform" is taken in BrainScript to represent uniform distribution [-0.05, 0.05]
+static const wchar_t* UniformInitializerTypeName =          L"uniform1";
+static const wchar_t* GaussianInitializerTypeName =         L"gaussian";    // legacy for BrainScript normal distribution pre-scaled by sqrt(0.04 / fanin)
+static const wchar_t* NormalInitializerTypeName =           L"normal";
 static const wchar_t* XavierInitializerTypeName =           L"xavier";
 static const wchar_t* GlorotUniformInitializerTypeName =    L"glorotUniform";
 static const wchar_t* GlorotNormalInitializerTypeName =     L"glorotNormal";
@@ -31,7 +33,7 @@ static const wchar_t* BilinearInitializerTypeName =         L"bilinear";
 // -----------------------------------------------------------------------
 
 template <class ElemType>
-class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>, public IFreezable
+class LearnableParameter : public ComputationNode<ElemType>, public NumInputs<0>, public IFreezable, public TransformerNode
 {
     typedef ComputationNode<ElemType> Base; UsingComputationNodeMembersBoilerplate;
     static const std::wstring TypeName() { return L"LearnableParameter"; }
@@ -150,6 +152,17 @@ public:
     }
     // called from SGD UpdateWeights, to adjust the reg for each node
     float GetRegMultiplier() const { return m_regMultiplier; }
+
+    virtual bool /*TransformerNode::*/SupportsTransformOnInput(size_t /*index*/) override
+    {
+        RuntimeError("LearnableParameter should not be asked for input transforms, since it has no inputs.");
+    }
+
+    // Has no inputs, hence does not support transforms on any input.
+    virtual void /*TransformerNode::*/ComputeTransforms() override
+    {
+        RuntimeError("LearnableParameter should not be asked for input transforms, since it has no inputs.");
+    }
 
 private:
     // init parameters for deferred initialization (which happens in Validate())
@@ -360,6 +373,25 @@ public:
         if (printMetadata)
         {
             fstream << "[" << string(GetSampleLayout()) << "]";
+        }
+    }
+
+private:
+    // determine the size that we should set our Matrix storage to
+    void DetermineDataSize(size_t& rows, size_t& cols) const override
+    {
+        if (!m_isSparse || !HasMBLayout())
+            Base::DetermineDataSize(rows, cols);
+        else
+        {
+            const auto& shape = GetSampleLayout();
+            size_t rank = shape.GetRank();
+            rows = rank > 0 ? shape[0] : 1;
+            cols = rank > 0 ? 1 : 1;
+            for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                cols *= shape[k];
+
+            cols *= GetMBLayout()->GetNumCols();
         }
     }
 

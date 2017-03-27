@@ -1,6 +1,6 @@
 dataDir: ./Data
 tags:
-     - bvt-s  (build_sku == 'gpu') and ((flavor=='debug') ^ (device=='cpu'))
+     - bvt-s (build_sku == 'gpu') and ((flavor == 'release') if (os == 'windows') else ((flavor == 'debug') ^ (device == 'cpu')))
      - nightly-s (build_sku == 'gpu')
 
 testCases:

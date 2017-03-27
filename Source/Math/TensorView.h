@@ -135,6 +135,11 @@ public:
     void DoTernaryOpOf(ElemType beta, const TensorView& a, const TensorView& b, const TensorView& c, ElemType alpha, ElementWiseOperator op, ElementWiseOperator reductionOp);
 
     // -------------------------------------------------------------------
+    // arg based operations
+    // -------------------------------------------------------------------
+    void DoArgReductionOpOf(const TensorView& a, ElementWiseOperator reductionOp);
+
+    // -------------------------------------------------------------------
     // matrix product -- GEMM for flattened tensors
     // Result goes into 'this', and can optionally be added to the existing value.
     // [I x J x K x L] * [K x L x M x N] -> [I x J x M x N] reducing over (K,L)

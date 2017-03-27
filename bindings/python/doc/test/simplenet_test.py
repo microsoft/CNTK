@@ -11,7 +11,7 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(abs_path, ".."))
 from simplenet import ffnet
 
-TOLERANCE_ABSOLUTE = 1E-1
+TOLERANCE_ABSOLUTE = 5E-2
 
 def test_ffnet_error(device_id):
     np.random.seed(98052)

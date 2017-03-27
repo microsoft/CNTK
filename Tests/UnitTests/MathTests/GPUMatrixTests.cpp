@@ -6,12 +6,70 @@
 //
 #include "stdafx.h"
 #include "../../../Source/Math/GPUMatrix.h"
+#include "../../../Source/Math/Matrix.h"
+#include "BestGpu.h"
 
 using namespace Microsoft::MSR::CNTK;
 
 namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
 
 BOOST_AUTO_TEST_SUITE(GPUMatrixSuite)
+
+BOOST_FIXTURE_TEST_CASE(MatrixCopyAssignAccrossDevices, RandomSeedFixture)
+{
+    bool hasTwoGpus = false;
+#ifndef CPUONLY
+    auto gpus = GetAllGpusData();
+    hasTwoGpus = (gpus.size() > 1);
+#endif
+    std::array<float, 6> array = { 1, 2, 3, 4, 5, 6 };
+
+    {
+        Matrix<float> m_gpu(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(m_gpu, c_deviceIdZero);
+        if (hasTwoGpus)
+            Matrix<float> m_copy_gpu_1(m_gpu, c_deviceIdZero + 1);
+        Matrix<float> m_copy_cpu(m_gpu, -1);
+    }
+
+    {
+        Matrix<float> m_cpu(2, 3, array.data(), -1, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(m_cpu, c_deviceIdZero);
+        if (hasTwoGpus)
+            Matrix<float> m_copy_gpu_1(m_cpu, c_deviceIdZero + 1);
+        Matrix<float> m_copy_cpu(m_cpu, -1);
+    }
+
+    {
+        Matrix<float> m_gpu(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_copy_gpu_0(c_deviceIdZero);
+        m_copy_gpu_0.AssignValuesOf(m_gpu);
+        if (hasTwoGpus)
+        {
+            Matrix<float> m_copy_gpu_1(c_deviceIdZero + 1);
+            m_copy_gpu_1.AssignValuesOf(m_gpu);
+        }
+        Matrix<float> m_copy_cpu(-1);
+        m_copy_cpu.AssignValuesOf(m_gpu);
+    }
+
+    if (hasTwoGpus)
+    {
+
+        Matrix<float> m_gpu_0(2, 3, array.data(), c_deviceIdZero, matrixFlagNormal);
+        Matrix<float> m_gpu_1(2, 3, c_deviceIdZero + 1, m_gpu_0.GetMatrixType(), m_gpu_0.GetFormat());
+        try
+        {
+            // TODO: fix this!
+            m_gpu_1.AssignValuesOf(m_gpu_0);
+            BOOST_TEST(false, "Expected AssignValuesOf to fail.");
+        }
+        catch (...)
+        {
+        }
+    }
+}
+
 
 BOOST_FIXTURE_TEST_CASE(GPUMatrixConstructorNoFlag, RandomSeedFixture)
 {
@@ -535,6 +593,34 @@ BOOST_FIXTURE_TEST_CASE(GPUMatrixCurandSeedingDouble, RandomSeedFixture)
     auto m2 = GPUMatrix<double>::RandomUniform(16, 16, c_deviceIdZero, low, high, seedIgnored);
 
     BOOST_CHECK(m1.IsEqualTo(m2));
+}
+
+BOOST_FIXTURE_TEST_CASE(GPUMatrixAdam, RandomSeedFixture)
+{
+    GPUMatrix<double> adamMatrix(c_deviceIdZero);
+    GPUMatrix<double> gradients(2, 1, c_deviceIdZero);
+    GPUMatrix<double> parameters(2, 1, c_deviceIdZero);
+    GPUMatrix<double> expectedParameters(2, 1, c_deviceIdZero);
+    GPUMatrix<double> expectedStates(2, 2, c_deviceIdZero);
+    double gradientValues[] = { 0.1, -0.1 };
+    double paramValues[] = { 0.1, 0.1 };
+    double expectedValues[] = { -0.05803489, 0.25803488 };
+    double expectedStateValues[] = { 1e-5, 0.01, 1e-5, -0.01 };
+    gradients.SetValue(2, 1, c_deviceIdZero, gradientValues, matrixFormatRowMajor);
+    parameters.SetValue(2, 1, c_deviceIdZero, paramValues, matrixFormatRowMajor);
+    expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, true);
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
+
+    double expectedValues2[] = { -0.27046135, 0.47046134 };
+    double expectedStateValues2[] = { 2e-05, 0.019, 2e-05, -0.019 };
+    expectedParameters.SetValue(2, 1, c_deviceIdZero, expectedValues2, matrixFormatRowMajor);
+    expectedStates.SetValue(2, 2, c_deviceIdZero, expectedStateValues2, matrixFormatRowMajor);
+    adamMatrix.Adam(gradients, parameters, 0.1, 0.9, 0.999, 0.5, true);
+    BOOST_CHECK(parameters.IsEqualTo(expectedParameters, 1e-6));
+    BOOST_CHECK(adamMatrix.IsEqualTo(expectedStates, 1e-6));
 }
 
 #if 0 // Temporarily disabling

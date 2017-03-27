@@ -210,6 +210,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
             Assert.AreEqual(bufferSize, vb.Buffer.Length);
             Assert.AreEqual(bufferSize, vb.Indices.Length);
             Assert.AreEqual(colIndicesSize, vb.ColIndices.Length);
+            Assert.AreEqual(colIndicesSize, vb.Size);
         }
 
         [TestMethod]
@@ -310,12 +311,12 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
         [TestMethod]
         public void EvalManagedSparseTimesTest()
         {
-            string modelDefinition = @"deviceId = -1 
+            string modelDefinition = @"deviceId = -1
                 precision = ""float"" traceLevel = 1
                 run=NDLNetworkBuilder
-                NDLNetworkBuilder=[ 
+                NDLNetworkBuilder=[
                 i1 = SparseInput(3)
-                o1 = Times(Constant(2, rows=1, cols=3), i1, tag=""output"") 
+                o1 = Times(Constant(2, rows=1, cols=3), i1, tag=""output"")
                 FeatureNodes = (i1)
                 ]";
 
@@ -345,6 +346,57 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                         Size = 4
                     }
                 };
+
+                // We can call the evaluate method and get back the results...
+                model.ForwardPass(inputBuffer, outputBuffer);
+
+                float[][] expected = { new float[] { 6, 0, 28 } };
+
+                Assert.AreEqual(expected.Length, outputBuffer.Length);
+                for (int idx = 0; idx < expected.Length; idx++)
+                {
+                    CollectionAssert.AreEqual(expected[idx], outputBuffer[idx].Buffer);
+                }
+            }
+        }
+
+        [TestMethod]
+        public void EvalManagedUsingSparseValueBufferTest()
+        {
+            string modelDefinition = @"deviceId = -1
+                precision = ""float"" traceLevel = 1
+                run=NDLNetworkBuilder
+                NDLNetworkBuilder=[
+                i1 = SparseInput(3)
+                o1 = Times(Constant(2, rows=1, cols=3), i1, tag=""output"")
+                FeatureNodes = (i1)
+                ]";
+
+            using (var model = new ModelEvaluationExtendedF())
+            {
+                model.CreateNetwork(modelDefinition);
+
+                VariableSchema outputSchema = model.GetOutputSchema();
+                model.StartForwardEvaluation(outputSchema.Select(s => s.Name).ToList<string>());
+
+                var outputDataLength = 3;
+                var outputBuffer = new[]
+                {
+                    new ValueBuffer<float>(outputDataLength)
+                };
+
+                var inputData = new float[] { 1, 2, 3, 5, 6 };
+                var inputIndices = new [] { 0, 2, 2, 1, 2 };
+                var inputColIndices = new [] { 0, 2, 2, 5 };
+
+                var inputBuffer = new[]
+                {
+                    new ValueBuffer<float>(inputData.Length, inputColIndices.Length)
+                };
+
+                inputData.CopyTo(inputBuffer[0].Buffer, 0);
+                inputIndices.CopyTo(inputBuffer[0].Indices, 0);
+                inputColIndices.CopyTo(inputBuffer[0].ColIndices, 0);
 
                 // We can call the evaluate method and get back the results...
                 model.ForwardPass(inputBuffer, outputBuffer);
@@ -404,10 +456,14 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
         public void EvalManagedCrossAppDomainExceptionTest()
         {
             var currentPath = Environment.CurrentDirectory;
+
+            // search for "our" dll, ignoring the version number
+            var names = Directory.EnumerateFiles(currentPath, "Cntk.Eval.Wrapper-*.dll");
+            var dllpathname = names.FirstOrDefault();
+
             var domain = AppDomain.CreateDomain("NewAppDomain");
-            var path = Path.Combine(currentPath, "EvalWrapper.dll");
             var t = typeof(CNTKException);
-            var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(path, t.FullName);
+            var instance = (CNTKException)domain.CreateInstanceFromAndUnwrap(dllpathname, t.FullName);
             Assert.AreNotEqual(null, instance);
         }
 
@@ -570,7 +626,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
 
                 int scaler = 100000;
                 var result = new int[labelDim];
-                int[] expected = { -67, 135, -58, 178 };
+                int[] expected = { 50, 10, 54, 55 };
 
                 // the first pass with reset
                 model.ForwardPass(inputBuffer, outputBuffer);
@@ -598,7 +654,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 for (var i = 0; i < labelDim; i++)
                     result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
 
-                expected = new int[] { -63, 126, -54, 166 };
+                expected = new int[] { 13, 2, 14, 14 };
                 CollectionAssert.AreEqual(expected, result);
 
                 // another pass w/o reset
@@ -606,7 +662,7 @@ namespace Microsoft.MSR.CNTK.Extensibility.Managed.Tests
                 for (var i = 0; i < labelDim; i++)
                     result[i] = (int)(outputBuffer[0].Buffer[i] * scaler);
 
-                expected = new int[] { -61, 122, -52, 161 };
+                expected = new int[] { -4, 0, -4, -4 };
                 CollectionAssert.AreEqual(expected, result);
             }
         }

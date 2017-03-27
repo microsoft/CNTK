@@ -4,6 +4,7 @@
 //
 
 #include "TrainingNodes.h"
+#include <boost/random/uniform_real_distribution.hpp>
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -79,7 +80,7 @@ void RandomSampleNodeBase<ElemType>::UpdateWeightsPrefixSum()
 template<class ElemType>
 const std::vector<size_t> RandomSampleNodeBase<ElemType>::RunSampling(size_t& nTries)
 {
-    std::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
+    boost::random::uniform_real_distribution<double> r(0, m_samplingWeightsPrefixSum.back());
     std::unordered_set<int> alreadySampled;
     std::vector<size_t> samples;
     CPURNGHandle* cpuRNGHandle = dynamic_cast<CPURNGHandle*>(&GetRNGHandle(CPUDEVICE));
@@ -277,7 +278,26 @@ void DropoutNode<ElemType>::Load(File& fstream, size_t modelVersion)
     RngUser::Load(fstream, modelVersion);
 }
 
+#if 0 // outdated version
+template<class ElemType>
+void BatchNormalizationNode<ElemType>::AttachInputs(const std::vector<ComputationNodeBasePtr>& inputs)
+{
+    Base::AttachInputs(inputs);
+
+    if (m_pre19SampleCount != 0)
+    {
+        // copy the sample count loaded from a pre-cntk-19 model into the input parameter.
+        Input(RUN_COUNT)->Value().SetValue(ElemType(m_pre19SampleCount));
+        // reset the legacy sample count.
+        m_pre19SampleCount = 0;
+    }
+}
+#endif
+
 template class DropoutNode<float>;
 template class DropoutNode<double>;
+
+template class BatchNormalizationNode<float>;
+template class BatchNormalizationNode<double>;
 
 }}}

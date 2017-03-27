@@ -42,11 +42,11 @@ def test_op_comparison(left_operand, right_operand, cntk_function, numpy_functio
     dt = PRECISION_TO_TYPE[precision]
 
     expected_forward = [numpy_function(
-        AA([left_operand], dtype=dt), AA([right_operand], dtype=dt))]
+        AA(left_operand, dtype=dt), AA(right_operand, dtype=dt))]
 
     expected_backward = {
-        'left_arg':  [[np.zeros_like(left_operand, dtype=dt)]],
-        'right_arg': [[np.zeros_like(left_operand, dtype=dt)]]
+        'left_arg':  [np.zeros_like(left_operand, dtype=dt)],
+        'right_arg': [np.zeros_like(left_operand, dtype=dt)]
     }
 
     _test_binary_op(precision, device_id, cntk_function, left_operand, right_operand,

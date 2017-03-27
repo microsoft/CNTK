@@ -31,6 +31,14 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
     class SequentialDeserializer : public IDataDeserializer
     {
     public:
+        struct SequenceInfo
+        {
+            size_t id;
+            size_t size;
+            size_t chunkId;
+            float startingValue;
+        };
+
         struct SequentialChunk : Chunk
         {
             std::vector<std::vector<float>> m_data;
@@ -38,8 +46,10 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             size_t m_sizeInSequences;
             const TensorShapePtr m_sampleLayout;
 
-            SequentialChunk() : m_sizeInSamples{ 0 }, m_sizeInSequences{ 0 }, m_sampleLayout(std::make_shared<TensorShape>(1))
-            {}
+            SequentialChunk(size_t approxSize) : m_sizeInSamples{ 0 }, m_sizeInSequences{ 0 }, m_sampleLayout(std::make_shared<TensorShape>(1))
+            {
+                m_data.reserve(approxSize);
+            }
 
             SequentialChunk(const SequentialChunk& other)
             {
@@ -86,12 +96,13 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             : m_sampleLayout(make_shared<TensorShape>(1))
         {
             std::mt19937_64 engine(seed);
-            std::uniform_int_distribution<int> length(1, maxSequenceLength);
+            boost::random::uniform_int_distribution<int> length(1, maxSequenceLength);
 
             // Let's generate our data.
             float currentValue = 0;
             size_t currentNumberOfSamples = 0;
-            SequentialChunkPtr currentChunk = std::make_shared<SequentialChunk>();
+            SequentialChunkPtr currentChunk = std::make_shared<SequentialChunk>(chunkSizeInSamples);
+            m_chunks.reserve(sweepNumberOfSamples / chunkSizeInSamples + 1);
             while (currentNumberOfSamples < sweepNumberOfSamples)
             {
                 size_t sequenceLength = 0;
@@ -111,11 +122,21 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
                     sequenceData.push_back(currentValue++);
                 }
 
-                if (currentChunk->SizeInSamples() > chunkSizeInSamples)
+                if (currentChunk->SizeInSamples() >= chunkSizeInSamples)
                 {
                     m_chunks.push_back(currentChunk);
-                    currentChunk = std::make_shared<SequentialChunk>();
+                    currentChunk = std::make_shared<SequentialChunk>(chunkSizeInSamples);
                 }
+
+                // Let's record information about the sequence.
+                SequenceInfo info
+                {
+                    currentChunk->m_data.size(),
+                    sequenceData.size(),
+                    m_chunks.size(),
+                    sequenceData.front()
+                };
+                m_sequenceInfos[(size_t)info.startingValue] = info;
 
                 currentChunk->AddSequence(std::move(sequenceData));
                 currentNumberOfSamples += sequenceLength;
@@ -154,7 +175,6 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         {
             // We cannot simply give a chunk, otherwise we do not test the case when the chunk gets released.
             // Let's create a new one.
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
             return std::make_shared<SequentialChunk>(*m_chunks[chunkId]);
         }
 
@@ -181,7 +201,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             {
                 KeyType key;
                 key.m_sample = 0;
-                key.m_sequence = (uint32_t)i;
+                key.m_sequence = (uint32_t)chunk->m_data[i][0];
                 descriptions.push_back(SequenceDescription{
                     i,
                     (uint32_t)(chunk->m_data[i].size()),
@@ -191,12 +211,50 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
             }
         }
 
+        size_t TotalSize() const
+        {
+            size_t size = 0;
+            for (auto& c : m_chunks)
+                size += c->m_sizeInSamples;
+            return size;
+        }
+
+        const std::map<size_t, SequenceInfo>& Corpus() const
+        {
+            return m_sequenceInfos;
+        }
+
     private:
         std::vector<SequentialChunkPtr> m_chunks;
+        std::map<size_t, SequenceInfo> m_sequenceInfos;
         TensorShapePtr m_sampleLayout;
 
         DISABLE_COPY_AND_MOVE(SequentialDeserializer);
     };
+
+    bool operator == (const SequentialDeserializer::SequenceInfo& a, const SequentialDeserializer::SequenceInfo& b)
+    {
+        return a.id == b.id && a.size == b.size && a.chunkId == b.chunkId && a.startingValue == b.startingValue;
+    }
+
+    bool operator != (const SequentialDeserializer::SequenceInfo& a, const SequentialDeserializer::SequenceInfo& b)
+    {
+        return !(a == b);
+    }
+
+    std::ostream& operator << (std::ostream& ostr, const SequentialDeserializer::SequenceInfo& a)
+    {
+        ostr << a.startingValue;
+        return ostr;
+    }
+
+    bool operator < (const SequentialDeserializer::SequenceInfo& a, const SequentialDeserializer::SequenceInfo& b)
+    {
+        return a.startingValue < b.startingValue;
+    }
+
+
+    typedef std::shared_ptr<SequentialDeserializer> SequentialDeserializerPtr;
 
     inline std::vector<float> ReadNextSamples(SequenceEnumeratorPtr sequenceEnumerator, size_t numSamples)
     {
@@ -211,7 +269,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         std::vector<float> result;
         while (result.size() < numSamples)
         {
-            auto sequences = sequenceEnumerator->GetNextSequences(mbSize);
+            auto sequences = sequenceEnumerator->GetNextSequences(mbSize, mbSize);
             assert(!sequences.m_endOfEpoch);
             assert(sequences.m_data.size() == 1 || sequences.m_data.size() == 0);
             if (sequences.m_data.empty())
@@ -245,7 +303,7 @@ namespace Microsoft { namespace MSR { namespace CNTK { namespace Test {
         std::vector<float> epoch;
         while (!shouldBreak)
         {
-            auto sequences = sequenceEnumerator->GetNextSequences(mbSize);
+            auto sequences = sequenceEnumerator->GetNextSequences(mbSize, mbSize);
             shouldBreak = sequences.m_endOfEpoch;
             assert(sequences.m_data.size() == 1 || sequences.m_data.size() == 0);
             if (sequences.m_data.size() == 0)

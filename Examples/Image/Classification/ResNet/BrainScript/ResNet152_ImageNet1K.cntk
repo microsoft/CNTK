@@ -1,4 +1,4 @@
-# Node: ResNet-50 with ImageNet -- 152 layers bottleneck ResNet for image classification
+# ResNet-152 with ImageNet -- 152 layers bottleneck ResNet for image classification
 # Reference: "Deep Residual Learning for Image Recognition" https://arxiv.org/abs/1512.03385
 
 command = TrainNetwork:BNStatistics:Eval
@@ -13,7 +13,6 @@ modelPath = "$outputDir$/Models/ResNet_152"
 stderr = "$outputDir$/ResNet_152_BS_out"
 
 parallelTrain = true
-hyperCompressMemory = true
 
 TrainNetwork = {
     action = "train"
@@ -111,9 +110,9 @@ TrainNetwork = {
             width = 224
             height = 224
             channels = 3
-            cropType = "Random"
+            cropType = "RandomSide"
             jitterType = "UniRatio"
-            cropRatio = 0.46666:0.875
+            sideRatio = 0.46666:0.875
             hflip = true
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
@@ -131,7 +130,7 @@ TrainNetwork = {
             height = 224
             channels = 3
             cropType = "Center"
-            cropRatio = 0.875
+            sideRatio = 0.875
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {
@@ -156,9 +155,9 @@ BNStatistics = {
             width = 224
             height = 224
             channels = 3
-            cropType = "Random"
+            cropType = "RandomSide"
             hflip = true
-            cropRatio = 0.46666:0.875
+            sideRatio = 0.46666:0.875
             jitterType = "UniRatio"
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
@@ -183,7 +182,7 @@ Eval = {
             height = 224
             channels = 3
             cropType = "Center"
-            cropRatio = 0.875
+            sideRatio = 0.875
             meanFile = "$meanDir$/ImageNet1K_mean.xml"
         }
         labels = {

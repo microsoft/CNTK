@@ -8,12 +8,14 @@ import sys
 import os
 from cntk import Trainer, Axis #, text_format_minibatch_source, StreamConfiguration
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
-from cntk.device import cpu, set_default_device
-from cntk.learner import sgd, learning_rate_schedule, UnitType
-from cntk.ops import input_variable, cross_entropy_with_softmax, classification_error, sequence
+from cntk.device import cpu, try_set_default_device
+from cntk.learners import sgd, learning_rate_schedule, UnitType
+from cntk.ops import input, sequence
+from cntk.losses import cross_entropy_with_softmax
+from cntk.metrics import classification_error
 
 abs_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(os.path.join(abs_path, "..", "..", "..", "_PyTests", "common"))
+sys.path.append(os.path.join(abs_path, "..", "..", "..", "common"))
 from nn import LSTMP_component_with_self_stabilization, embedding, linear_layer, print_training_progress
 
 # Creates the reader
@@ -24,8 +26,8 @@ def create_reader(path, is_training, input_dim, label_dim):
     )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
 
 # Defines the LSTM model for classifying sequences
-def LSTM_sequence_classifer_net(input, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
-    embedding_function = embedding(input, embedding_dim)
+def LSTM_sequence_classifer_net(feature, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
+    embedding_function = embedding(feature, embedding_dim)
     LSTM_function = LSTMP_component_with_self_stabilization(
         embedding_function.output, LSTM_dim, cell_dim)[0]
     thought_vector = sequence.last(LSTM_function)
@@ -41,9 +43,8 @@ def train_sequence_classifier(debug_output=False):
     num_output_classes = 5
 
     # Input variables denoting the features and label data
-    features = input_variable(shape=input_dim, is_sparse=True)
-    label = input_variable(num_output_classes, dynamic_axes=[
-                           Axis.default_batch_axis()])
+    features = sequence.input(shape=input_dim, is_sparse=True)
+    label = input(num_output_classes)
 
     # Instantiate the sequence classification model
     classifier_output = LSTM_sequence_classifer_net(
@@ -64,7 +65,7 @@ def train_sequence_classifier(debug_output=False):
 
     lr_per_sample = learning_rate_schedule(0.0005, UnitType.sample)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(classifier_output, ce, pe,
+    trainer = Trainer(classifier_output, (ce, pe),
                       sgd(classifier_output.parameters, lr=lr_per_sample))
 
     # Get minibatches of sequences to train with and perform model training
@@ -90,7 +91,7 @@ def train_sequence_classifier(debug_output=False):
 if __name__ == '__main__':
     # Specify the target device to be used for computing, if you do not want to
     # use the best available one, e.g.
-    # set_default_device(cpu())
+    # try_set_default_device(cpu())
 
     error, _ = train_sequence_classifier()
     print("Error: %f" % error)

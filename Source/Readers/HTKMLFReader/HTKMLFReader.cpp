@@ -82,7 +82,6 @@ void HTKMLFReader<ElemType>::InitFromConfig(const ConfigRecordType& readerConfig
 
     m_noData = false;
 
-    m_maxUtteranceLength = readerConfig(L"maxUtteranceLength", 10000);
     wstring command(readerConfig(L"action", L"")); // look up in the config for the master command to determine whether we're writing output (inputs only) or training/evaluating (inputs and outputs)
 
     if (readerConfig.Exists(L"legacyMode"))
@@ -816,7 +815,7 @@ void HTKMLFReader<ElemType>::StartMinibatchLoopToTrainOrTest(size_t mbSize, size
 
     m_mbiter.reset(new msra::dbn::minibatchiterator(*m_frameSource, epoch, requestedEpochSamples, mbSize, subsetNum, numSubsets, datapasses));
     // Advance the MB iterator until we find some data or reach the end of epoch
-    while ((m_mbiter->currentmbframes() == 0 || (!m_frameMode && m_mbiter->currentmbframes() > m_maxUtteranceLength)) && *m_mbiter)
+    while ((m_mbiter->currentmbframes() == 0) && *m_mbiter)
     {
         (*m_mbiter)++;
     }
@@ -1824,7 +1823,7 @@ bool HTKMLFReader<ElemType>::ReNewBufferForMultiIO(size_t i)
     do
     {
         (*m_mbiter)++;
-    } while ((m_mbiter->currentmbframes() == 0 || (!m_frameMode && m_mbiter->currentmbframes() > m_maxUtteranceLength)) && *m_mbiter);
+    } while ((m_mbiter->currentmbframes() == 0) && *m_mbiter);
 
     if (m_verbosity > 2)
     {

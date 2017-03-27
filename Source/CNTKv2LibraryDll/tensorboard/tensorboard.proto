@@ -1,0 +1,465 @@
+﻿syntax = "proto3";
+
+package tensorflow;
+option cc_enable_arenas = true;
+
+// LINT.IfChange
+enum DataType {
+  // Not a legal value for DataType.  Used to indicate a DataType field
+  // has not been set.
+  DT_INVALID = 0;
+
+  // Data types that all computation devices are expected to be
+  // capable to support.
+  DT_FLOAT = 1;
+  DT_DOUBLE = 2;
+  DT_INT32 = 3;
+  DT_UINT8 = 4;
+  DT_INT16 = 5;
+  DT_INT8 = 6;
+  DT_STRING = 7;
+  DT_COMPLEX64 = 8;  // Single-precision complex
+  DT_INT64 = 9;
+  DT_BOOL = 10;
+  DT_QINT8 = 11;     // Quantized int8
+  DT_QUINT8 = 12;    // Quantized uint8
+  DT_QINT32 = 13;    // Quantized int32
+  DT_BFLOAT16 = 14;  // Float32 truncated to 16 bits.  Only for cast ops.
+  DT_QINT16 = 15;    // Quantized int16
+  DT_QUINT16 = 16;   // Quantized uint16
+  DT_UINT16 = 17;
+  DT_COMPLEX128 = 18;  // Double-precision complex
+  DT_HALF = 19;
+  DT_RESOURCE = 20;
+
+  // TODO(josh11b): DT_GENERIC_PROTO = ??;
+  // TODO(jeff,josh11b): DT_UINT64?  DT_UINT32?
+
+  // Do not use!  These are only for parameters.  Every enum above
+  // should have a corresponding value below (verified by types_test).
+  DT_FLOAT_REF = 101;
+  DT_DOUBLE_REF = 102;
+  DT_INT32_REF = 103;
+  DT_UINT8_REF = 104;
+  DT_INT16_REF = 105;
+  DT_INT8_REF = 106;
+  DT_STRING_REF = 107;
+  DT_COMPLEX64_REF = 108;
+  DT_INT64_REF = 109;
+  DT_BOOL_REF = 110;
+  DT_QINT8_REF = 111;
+  DT_QUINT8_REF = 112;
+  DT_QINT32_REF = 113;
+  DT_BFLOAT16_REF = 114;
+  DT_QINT16_REF = 115;
+  DT_QUINT16_REF = 116;
+  DT_UINT16_REF = 117;
+  DT_COMPLEX128_REF = 118;
+  DT_HALF_REF = 119;
+  DT_RESOURCE_REF = 120;
+}
+// LINT.ThenChange(https://www.tensorflow.org/code/tensorflow/c/c_api.h,https://www.tensorflow.org/code/tensorflow/go/tensor.go)
+
+// Protocol buffer representing the shape of tensors.
+// Dimensions of a tensor.
+message TensorShapeProto {
+  // One dimension of the tensor.
+  message Dim {
+    // Size of the tensor in that dimension.
+    // This value must be >= -1, but values of -1 are reserved for "unknown"
+    // shapes (values of -1 mean "unknown" dimension).  Certain wrappers
+    // that work with TensorShapeProto may fail at runtime when deserializing
+    // a TensorShapeProto containing a dim value of -1.
+    int64 size = 1;
+
+    // Optional name of the tensor dimension.
+    string name = 2;
+  };
+
+  // Dimensions of the tensor, such as {"input", 30}, {"output", 40}
+  // for a 30 x 40 2D tensor.  If an entry has size -1, this
+  // corresponds to a dimension of unknown size. The names are
+  // optional.
+  //
+  // The order of entries in "dim" matters: It indicates the layout of the
+  // values in the tensor in-memory representation.
+  //
+  // The first entry in "dim" is the outermost dimension used to layout the
+  // values, the last entry is the innermost dimension.  This matches the
+  // in-memory layout of RowMajor Eigen tensors.
+  //
+  // If "dim.size()" > 0, "unknown_rank" must be false.
+  repeated Dim dim = 2;
+
+  // If true, the number of dimensions in the shape is unknown.
+  //
+  // If true, "dim.size()" must be 0.
+  bool unknown_rank = 3;
+};
+
+// Protocol buffer representing a tensor.
+message TensorProto {
+  DataType dtype = 1;
+
+  // Shape of the tensor.  TODO(touts): sort out the 0-rank issues.
+  TensorShapeProto tensor_shape = 2;
+
+  // Only one of the representations below is set, one of "tensor_contents" and
+  // the "xxx_val" attributes.  We are not using oneof because as oneofs cannot
+  // contain repeated fields it would require another extra set of messages.
+
+  // Version number.
+  //
+  // In version 0, if the "repeated xxx" representations contain only one
+  // element, that element is repeated to fill the shape.  This makes it easy
+  // to represent a constant Tensor with a single value.
+  int32 version_number = 3;
+
+  // Serialized content from Tensor::AsProtoTensorContent(). This representation
+  // can be used for all tensor types.
+  bytes tensor_content = 4;
+
+  // Type specific representations that make it easy to create tensor protos in
+  // all languages.  Only the representation corresponding to "dtype" can
+  // be set.  The values hold the flattened representation of the tensor in
+  // row major order.
+
+  // DT_HALF. Note that since protobuf has no int16 type, we'll have some
+  // pointless zero padding for each value here.
+  repeated int32 half_val = 13 [packed = true];
+
+  // DT_FLOAT.
+  repeated float float_val = 5 [packed = true];
+
+  // DT_DOUBLE.
+  repeated double double_val = 6 [packed = true];
+
+  // DT_INT32, DT_INT16, DT_INT8, DT_UINT8.
+  repeated int32 int_val = 7 [packed = true];
+
+  // DT_STRING
+  repeated bytes string_val = 8;
+
+  // DT_COMPLEX64. scomplex_val(2*i) and scomplex_val(2*i+1) are real
+  // and imaginary parts of i-th single precision complex.
+  repeated float scomplex_val = 9 [packed = true];
+
+  // DT_INT64
+  repeated int64 int64_val = 10 [packed = true];
+
+  // DT_BOOL
+  repeated bool bool_val = 11 [packed = true];
+
+  // DT_COMPLEX128. dcomplex_val(2*i) and dcomplex_val(2*i+1) are real
+  // and imaginary parts of i-th double precision complex.
+  repeated double dcomplex_val = 12 [packed = true];
+};
+
+// Version information for a piece of serialized data
+//
+// There are different types of versions for each type of data
+// (GraphDef, etc.), but they all have the same common shape
+// described here.
+//
+// Each consumer has "consumer" and "min_producer" versions (specified
+// elsewhere).  A consumer is allowed to consume this data if
+//
+//   producer >= min_producer
+//   consumer >= min_consumer
+//   consumer not in bad_consumers
+//
+message VersionDef {
+  // The version of the code that produced this data.
+  int32 producer = 1;
+
+  // Any consumer below this version is not allowed to consume this data.
+  int32 min_consumer = 2;
+
+  // Specific consumer versions which are disallowed (e.g. due to bugs).
+  repeated int32 bad_consumers = 3;
+};
+
+// Metadata associated with a series of Summary data
+message SummaryDescription {
+  // Hint on how plugins should process the data in this series.
+  // Supported values include "scalar", "histogram", "image", "audio"
+  string type_hint = 1;
+}
+
+// Serialization format for histogram module in
+// core/lib/histogram/histogram.h
+message HistogramProto {
+  double min = 1;
+  double max = 2;
+  double num = 3;
+  double sum = 4;
+  double sum_squares = 5;
+
+  // Parallel arrays encoding the bucket boundaries and the bucket values.
+  // bucket(i) is the count for the bucket i.  The range for
+  // a bucket is:
+  //   i == 0:  -DBL_MAX .. bucket_limit(0)
+  //   i != 0:  bucket_limit(i-1) .. bucket_limit(i)
+  repeated double bucket_limit = 6 [packed = true];
+  repeated double bucket = 7 [packed = true];
+};
+
+// A Summary is a set of named values to be displayed by the
+// visualizer.
+//
+// Summaries are produced regularly during training, as controlled by
+// the "summary_interval_secs" attribute of the training operation.
+// Summaries are also produced at the end of an evaluation.
+message Summary {
+  message Image {
+    // Dimensions of the image.
+    int32 height = 1;
+    int32 width = 2;
+    // Valid colorspace values are
+    //   1 - grayscale
+    //   2 - grayscale + alpha
+    //   3 - RGB
+    //   4 - RGBA
+    //   5 - DIGITAL_YUV
+    //   6 - BGRA
+    int32 colorspace = 3;
+    // Image data in encoded format.  All image formats supported by
+    // image_codec::CoderUtil can be stored here.
+    bytes encoded_image_string = 4;
+  }
+
+  message Audio {
+    // Sample rate of the audio in Hz.
+    float sample_rate = 1;
+    // Number of channels of audio.
+    int64 num_channels = 2;
+    // Length of the audio in frames (samples per channel).
+    int64 length_frames = 3;
+    // Encoded audio data and its associated RFC 2045 content type (e.g.
+    // "audio/wav").
+    bytes encoded_audio_string = 4;
+    string content_type = 5;
+  }
+
+  message Value {
+    // Name of the node that output this summary; in general, the name of a
+    // TensorSummary node. If the node in question has multiple outputs, then
+    // a ":\d+" suffix will be appended, like "some_op:13".
+    // Might not be set for legacy summaries (i.e. those not using the tensor
+    // value field)
+    string node_name = 7;
+
+    // Tag name for the data.  Will only be used by legacy summaries
+    // (ie. those not using the tensor value field)
+    // For legacy summaries, will be used as the title of the graph
+    // in the visualizer.
+    //
+    // Tag is usually "op_name:value_name", where "op_name" itself can have
+    // structure to indicate grouping.
+    string tag = 1;
+
+    // Value associated with the tag.
+    oneof value {
+      float simple_value = 2;
+      bytes obsolete_old_style_histogram = 3;
+      Image image = 4;
+      HistogramProto histo = 5;
+      Audio audio = 6;
+      TensorProto tensor = 8;
+    }
+  }
+
+  // Set of values for the summary.
+  repeated Value value = 1;
+}
+
+// Protocol buffer representing the value for an attr used to configure an Op.
+// Comment indicates the corresponding attr type.  Only the field matching the
+// attr type may be filled.
+message AttrValue {
+  // LINT.IfChange
+  message ListValue {
+    repeated bytes s = 2;                        // "list(string)"
+    repeated int64 i = 3 [packed = true];        // "list(int)"
+    repeated float f = 4 [packed = true];        // "list(float)"
+    repeated bool b = 5 [packed = true];         // "list(bool)"
+    repeated DataType type = 6 [packed = true];  // "list(type)"
+    repeated TensorShapeProto shape = 7;         // "list(shape)"
+    repeated TensorProto tensor = 8;             // "list(tensor)"
+    // TODO(zhifengc/josh11b): implements list(func) if needed.
+  }
+  // LINT.ThenChange(https://www.tensorflow.org/code/tensorflow/c/c_api.cc)
+
+  oneof value {
+    bytes s = 2;                 // "string"
+    int64 i = 3;                 // "int"
+    float f = 4;                 // "float"
+    bool b = 5;                  // "bool"
+    DataType type = 6;           // "type"
+    TensorShapeProto shape = 7;  // "shape"
+    TensorProto tensor = 8;      // "tensor"
+    ListValue list = 1;          // any "list(...)"
+
+    // "func" represents a function. func.name is a function's name or
+    // a primitive op's name. func.attr.first is the name of an attr
+    // defined for that function. func.attr.second is the value for
+    // that attr in the instantiation.
+    NameAttrList func = 10;
+
+    // This is a placeholder only used in nodes defined inside a
+    // function.  It indicates the attr value will be supplied when
+    // the function is instantiated.  For example, let us suppose a
+    // node "N" in function "FN". "N" has an attr "A" with value
+    // placeholder = "foo". When FN is instantiated with attr "foo"
+    // set to "bar", the instantiated node N's attr A will have been
+    // given the value "bar".
+    string placeholder = 9;
+  }
+}
+
+// A list of attr names and their values. The whole list is attached
+// with a string name.  E.g., MatMul[T=float].
+message NameAttrList {
+  string name = 1;
+  map<string, AttrValue> attr = 2;
+}
+
+message NodeDef {
+  // The name given to this operator. Used for naming inputs,
+  // logging, visualization, etc.  Unique within a single GraphDef.
+  // Must match the regexp "[A-Za-z0-9.][A-Za-z0-9_./]*".
+  string name = 1;
+
+  // The operation name.  There may be custom parameters in attrs.
+  // Op names starting with an underscore are reserved for internal use.
+  string op = 2;
+
+  // Each input is "node:src_output" with "node" being a string name and
+  // "src_output" indicating which output tensor to use from "node". If
+  // "src_output" is 0 the ":0" suffix can be omitted.  Regular inputs
+  // may optionally be followed by control inputs that have the format
+  // "^node".
+  repeated string input = 3;
+
+  // A (possibly partial) specification for the device on which this
+  // node should be placed.
+  // The expected syntax for this string is as follows:
+  //
+  // DEVICE_SPEC ::= COLOCATED_NODE | PARTIAL_SPEC
+  //
+  // COLOCATED_NODE ::= "@" NODE_NAME  // See NodeDef.name above.
+  // PARTIAL_SPEC ::= ("/" CONSTRAINT) *
+  // CONSTRAINT ::= ("job:" JOB_NAME)
+  //              | ("replica:" [1-9][0-9]*)
+  //              | ("task:" [1-9][0-9]*)
+  //              | ( ("gpu" | "cpu") ":" ([1-9][0-9]* | "*") )
+  //
+  // Valid values for this string include:
+  // * "@other/node"                         (colocate with "other/node")
+  // * "/job:worker/replica:0/task:1/gpu:3"  (full specification)
+  // * "/job:worker/gpu:3"                   (partial specification)
+  // * ""                                    (no specification)
+  //
+  // If the constraints do not resolve to a single device (or if this
+  // field is empty or not present), the runtime will attempt to
+  // choose a device automatically.
+  string device = 4;
+
+  // Operation-specific graph-construction-time configuration.
+  // Note that this should include all attrs defined in the
+  // corresponding OpDef, including those with a value matching
+  // the default -- this allows the default to change and makes
+  // NodeDefs easier to interpret on their own.  However, if
+  // an attr with a default is not specified in this list, the
+  // default will be used.
+  // The "names" (keys) must match the regexp "[a-z][a-z0-9_]+" (and
+  // one of the names from the corresponding OpDef's attr field).
+  // The values must have a type matching the corresponding OpDef
+  // attr's type field.
+  // TODO(josh11b): Add some examples here showing best practices.
+  map<string, AttrValue> attr = 5;
+};
+
+// Represents the graph of operations
+message GraphDef {
+  repeated NodeDef node = 1;
+
+  // Compatibility versions of the graph.  See core/public/version.h for version
+  // history.  The GraphDef version is distinct from the TensorFlow version, and
+  // each release of TensorFlow will support a range of GraphDef versions.
+  VersionDef versions = 4;
+
+  // Deprecated single version field; use versions above instead.  Since all
+  // GraphDef changes before "versions" was introduced were forward
+  // compatible, this field is entirely ignored.
+  int32 version = 3 [deprecated = true];
+};
+
+// Protocol buffer representing an event that happened during
+// the execution of a Brain model.
+message Event {
+  // Timestamp of the event.
+  double wall_time = 1;
+
+  // Global step of the event.
+  int64 step = 2;
+
+  oneof what {
+    // An event file was started, with the specified version.
+    // This is use to identify the contents of the record IO files
+    // easily.  Current version is "brain.Event:2".  All versions
+    // start with "brain.Event:".
+    string file_version = 3;
+    // An encoded version of a GraphDef.
+    bytes graph_def = 4;
+    // A summary was generated.
+    Summary summary = 5;
+    // The user output a log message. Not all messages are logged, only ones
+    // generated via the Python tensorboard_logging module.
+    LogMessage log_message = 6;
+    // The state of the session which can be used for restarting after crashes.
+    SessionLog session_log = 7;
+    // The metadata returned by running a session.run() call.
+    TaggedRunMetadata tagged_run_metadata = 8;
+    // An encoded version of a MetaGraphDef.
+    bytes meta_graph_def = 9;
+  }
+}
+
+// Protocol buffer used for logging messages to the events file.
+message LogMessage {
+  enum Level {
+    UNKNOWN = 0;
+    DEBUG = 10;
+    INFO = 20;
+    WARN = 30;
+    ERROR = 40;
+    FATAL = 50;
+  }
+  Level level = 1;
+  string message = 2;
+}
+
+// Protocol buffer used for logging session state.
+message SessionLog {
+  enum SessionStatus {
+    STATUS_UNSPECIFIED = 0;
+    START = 1;
+    STOP = 2;
+    CHECKPOINT = 3;
+  }
+
+  SessionStatus status = 1;
+  // This checkpoint_path contains both the path and filename.
+  string checkpoint_path = 2;
+  string msg = 3;
+}
+
+// For logging the metadata output for a single session.run() call.
+message TaggedRunMetadata {
+  // Tag name associated with this metadata.
+  string tag = 1;
+  // Byte-encoded version of the `RunMetadata` proto in order to allow lazy
+  // deserialization.
+  bytes run_metadata = 2;
+}

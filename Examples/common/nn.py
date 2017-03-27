@@ -8,7 +8,6 @@
 
 import numpy as np
 from cntk.ops import *
-from cntk.utils import get_train_eval_criterion, get_train_loss
 from cntk.initializer import glorot_uniform, he_normal
 
 
@@ -50,7 +49,9 @@ def conv_bn_layer(input, out_feature_map_count, kernel_shape, strides, bn_time_c
     scale_params = parameter(shape=(out_feature_map_count), init=sc_value)
     running_mean = constant(0., (out_feature_map_count))
     running_invstd = constant(0., (out_feature_map_count))
-    return batch_normalization(conv_func, scale_params, bias_params, running_mean, running_invstd, True, bn_time_const, use_cudnn_engine=True)
+    running_count = constant(0., (1))
+    return batch_normalization(conv_func, scale_params, bias_params, running_mean, running_invstd, running_count=running_count, spatial=True,
+        normalization_time_constant=bn_time_const, use_cudnn_engine=True)
 
 
 def conv_bn_relu_layer(input, out_feature_map_count, kernel_shape, strides, bn_time_const, b_value=0, sc_value=1):
@@ -168,9 +169,9 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
 
 
 def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurrence_hookH=past_value, recurrence_hookC=past_value):
-    dh = placeholder_variable(
+    dh = placeholder(
         shape=(output_dim), dynamic_axes=input.dynamic_axes)
-    dc = placeholder_variable(
+    dc = placeholder(
         shape=(cell_dim), dynamic_axes=input.dynamic_axes)
 
     LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
@@ -188,7 +189,7 @@ def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurre
 def print_training_progress(trainer, mb, frequency):
 
     if mb % frequency == 0:
-        training_loss = get_train_loss(trainer)
-        eval_crit = get_train_eval_criterion(trainer)
+        training_loss = trainer.previous_minibatch_loss_average
+        eval_crit = trainer.previous_minibatch_evaluation_average
         print("Minibatch: {}, Train Loss: {}, Train Evaluation Criterion: {}".format(
             mb, training_loss, eval_crit))

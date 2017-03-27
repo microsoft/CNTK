@@ -144,9 +144,6 @@ template <class ElemType>
 double LatticeFreeMMINode<ElemType>::CalculateNumeratorsWithCE(const Matrix<ElemType>& labelMatrix, const size_t nf)
 {
     if (nf == 0) return 0;
-#ifdef _DEBUG
-    fprintf(stderr, "nf %d\n", nf);
-#endif
 
     // Temp, hardalignment
     if (m_alignmentWindow == 0)

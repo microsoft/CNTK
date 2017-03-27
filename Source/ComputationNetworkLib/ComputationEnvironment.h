@@ -42,8 +42,12 @@ struct ComputationEnvironment
         return oldMode;
     }
 
+    bool trackGapNans = false;
+
     // traceLevel
     int traceLevel = 0;
+
+    bool ShouldDumpNode() const { return traceLevel >= 1000; }
 
     // Extreme tracing of node outputs. Make space on your disk.
     bool IsLogLevelNodeTrace() const { return traceLevel >= 1000000; }

@@ -14,8 +14,15 @@
 #include <thread>
 #include "GPUMatrix.h"
 #include "Globals.h"
+#include "PerformanceProfiler.h"
+#include "MPIWrapper.h"
+#include "Basics.h"
+#include "ProgressTracing.h"
+#include "buildinfo.h"
+#include "Constants.h"
 
 extern bool g_shareNodeValueMatrices;
+using namespace Microsoft::MSR::CNTK;
 
 namespace CNTK
 {
@@ -49,6 +56,17 @@ namespace CNTK
             return s_alwaysAllowSettingDefaultDevice.load();
         }
 
+        std::atomic<bool> s_allowRenamingFunctions(false);
+        void AllowRenamingFunctions()
+        {
+            s_allowRenamingFunctions.store(true);
+        }
+
+        bool IsRenamingFunctionsAllowed()
+        {
+            return s_allowRenamingFunctions.load();
+        }
+
         std::atomic<bool> s_disableAutomaticUnpackingOfPackedValues(false);
         void SetAutomaticUnpackingOfPackedValues(bool disable)
         {
@@ -62,22 +80,53 @@ namespace CNTK
 
         void EnableForwardValuesSharing()
         {
-            Microsoft::MSR::CNTK::Globals::EnableShareNodeValueMatrices();
+            Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ true);
         }
 
-        void EnableHyperMemoryCompress()
+        void DisableForwardValuesSharing()
         {
-            Microsoft::MSR::CNTK::Globals::EnableHyperCompressMemory();
+            Microsoft::MSR::CNTK::Globals::SetShareNodeValueMatrices(/* enable = */ false);
         }
 
         void EnableGradientAccumulationOptimization()
         {
-            Microsoft::MSR::CNTK::Globals::EnableGradientAccumulationOptimization();
+            Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ true);
         }
 
         void DisableGradientAccumulationOptimization()
         {
-            Microsoft::MSR::CNTK::Globals::DisableGradientAccumulationOptimization();
+            Microsoft::MSR::CNTK::Globals::SetGradientAccumulationOptimization(/* enable = */ false);
+        }
+
+        void StartProfiler(const wstring& profilerDir, bool profilerSyncGpu, size_t profilerBufferSize)
+        {
+            std::wstring logSuffix = L"";
+            auto mpi = Microsoft::MSR::CNTK::MPIWrapper::GetInstance();
+            if (mpi)
+            {
+                logSuffix = std::to_wstring(mpi->CurrentNodeRank());
+            }
+
+            Microsoft::MSR::CNTK::ProfilerInit(
+                profilerDir,
+                profilerBufferSize,
+                logSuffix,
+                profilerSyncGpu);
+        }
+
+        void EnableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(true);
+        }
+
+        void DisableProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerEnable(false);
+        }
+
+        void StopProfiler()
+        {
+            Microsoft::MSR::CNTK::ProfilerClose();
         }
 
         bool AreEquivalent(const Variable& var1, const Variable& var2, bool allowParameterAndConstantsEquivalence)
@@ -117,11 +166,6 @@ namespace CNTK
             else
             {
                 uids.insert(f1->Uid());
-            }
-
-            if((f1->RootFunction() == nullptr) != (f2->RootFunction() == nullptr))
-            {
-                return false;
             }
 
             if (f1->Name() != f2->Name())
@@ -198,13 +242,18 @@ namespace CNTK
         template <typename ElementType>
         std::pair<ElementType*, NDArrayViewPtr> GetCPUDataPtr(const NDArrayView& view) 
         {
-            if (view.Device().Type() == DeviceKind::CPU)
+            auto deviceType = view.Device().Type();
+
+            if (deviceType == DeviceKind::CPU)
                 return{ const_cast<ElementType*>(view.DataBuffer<ElementType>()), nullptr };
-            else
+            
+            if (deviceType == DeviceKind::GPU) 
             {
                 auto tempCPUDataView = view.DeepClone(DeviceDescriptor::CPUDevice());
                 return{ tempCPUDataView->WritableDataBuffer<ElementType>(), tempCPUDataView };
             }
+            
+            LogicError("Invalid device type (%u).", (unsigned int)deviceType);
         }
 
         template <typename ElementType> 
@@ -239,7 +288,7 @@ namespace CNTK
             if (view1.GetDataType() == DataType::Double)
                 return AreEqual<double>(view1, view2, relativeTolerance, absoluteTolerance);
 
-            LogicError("Unknown DataType");
+            LogicError("AreEqual(NDArrayView): Unknown DataType.");
         }
 
         std::pair<const MaskKind*, NDMaskPtr> GetCPUDataPtr(const NDMask& mask)
@@ -323,7 +372,7 @@ namespace CNTK
             if (value1.GetDataType() == DataType::Double)
                 return AreEqual<double>(value1, value2, relativeTolerance, absoluteTolerance);
 
-            LogicError("Unknown DataType");
+            LogicError("AreEqual(Value): Unknown DataType.");
         }
 
         std::atomic<int> s_computationNetworkTraceLevel(0);
@@ -337,14 +386,20 @@ namespace CNTK
             return s_computationNetworkTraceLevel.load();
         }
 
+        std::atomic<bool> s_computationNetworkTrackGapNans(false);
+        void SetComputationNetworkTrackGapNans(bool enable)
+        {
+            s_computationNetworkTrackGapNans.store(enable);
+        }
+
+        bool GetComputationNetworkTrackGapNans()
+        {
+            return s_computationNetworkTrackGapNans.load();
+        }
+
         void SetGPUMemoryAllocationTraceLevel(int traceLevel)
         {
             Microsoft::MSR::CNTK::TracingGPUMemoryAllocator::SetTraceLevel(traceLevel);
-        }
-
-        void ForceSynchronousCUDAKernelExecutions()
-        {
-            Microsoft::MSR::CNTK::SyncGuard::EnableSync();
         }
 
         void ForceDeterministicAlgorithms()
@@ -357,74 +412,114 @@ namespace CNTK
             return Microsoft::MSR::CNTK::Globals::ShouldForceDeterministicAlgorithms();
         }
 
+        void EnableSynchronousGPUKernelExecution()
+        {
+            SyncGuard::EnableSync();
+        }
+
+        bool IsSynchronousGPUKernelExecutionEnabled()
+        {
+            return SyncGuard::IsSyncEnabled();
+        }
+
         static std::atomic<bool> s_threadsAreSet(false);
         bool MaxNumCPUThreadsSet()
         {
             return s_threadsAreSet;
         }
+
+        size_t DefaultPackThresholdSizeInBytes()
+        {
+            return DEFAULT_PACK_THRESHOLD_SIZE_IN_BYTES;
+        }
     }
 
     /*static*/ const NDShape NDShape::Unknown(1, SentinelDimValueForUnknownShape);
 
-    /*static*/ std::atomic<bool> DeviceDescriptor::s_defaultDeviceFrozen(false);
-    /*static*/ std::shared_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice;
-    /*static*/ std::shared_ptr<std::vector<DeviceDescriptor>> DeviceDescriptor::s_allDevices;
+    /*static*/ std::mutex DeviceDescriptor::s_mutex;
+    /*static*/ bool DeviceDescriptor::s_defaultDeviceFrozen(false);
+    /*static*/ std::unique_ptr<DeviceDescriptor> DeviceDescriptor::s_defaultDevice(nullptr);
+    /*static*/ std::vector<DeviceDescriptor> DeviceDescriptor::s_excludedDevices;
+    /*static*/ std::vector<DeviceDescriptor> DeviceDescriptor::s_allDevices;
+    /*static*/ std::vector<GPUProperties> DeviceDescriptor::s_gpuProperties;
 
-    static std::once_flag s_initDefaultDeviceFlag, s_initAllDevicesFlag;
+    static std::once_flag s_initAllDevicesFlag;
 
-    /*static*/ DeviceDescriptor DeviceDescriptor::DefaultDevice()
+    /*static*/ void DeviceDescriptor::Reset()
     {
-        std::call_once(s_initDefaultDeviceFlag, []
-        {
-            s_defaultDevice.reset(new DeviceDescriptor(DeviceDescriptor::BestDevice()));
-        });
-        return *s_defaultDevice;
+        DeviceDescriptor::s_defaultDevice.reset(nullptr);
+        DeviceDescriptor::s_defaultDeviceFrozen = false;
+        DeviceDescriptor::s_excludedDevices.clear();
+    }
+
+    bool DeviceDescriptor::IsLocked() const
+    {
+        return Microsoft::MSR::CNTK::IsLocked(AsCNTKImplDeviceId(*this));
     }
 
     /*static*/ DeviceDescriptor DeviceDescriptor::UseDefaultDevice()
     {
-        bool alreadyFrozen = s_defaultDeviceFrozen.exchange(true);
-        auto selectedDevice = DefaultDevice();
-        if (!alreadyFrozen)
+        std::unique_lock<std::mutex> lock(s_mutex);
+
+        if (!s_defaultDeviceFrozen && s_defaultDevice == nullptr)
         {
-            Microsoft::MSR::CNTK::OnDeviceSelected(AsCNTKImplDeviceId(selectedDevice));
+            vector<int> excludedIds;
+            for (auto device : s_excludedDevices)
+            {
+                excludedIds.push_back(AsCNTKImplDeviceId(device));
+            }
+            auto id = Microsoft::MSR::CNTK::GetBestDevice(excludedIds);
+            auto selectedDevice = id >= 0 ? DeviceDescriptor::GPUDevice(id) : DeviceDescriptor::CPUDevice();
+            s_defaultDevice.reset(new DeviceDescriptor(selectedDevice));
         }
-        return selectedDevice;
+
+        s_defaultDeviceFrozen = true;
+
+        return *s_defaultDevice;
     }
 
-    /*static*/ void DeviceDescriptor::SetDefaultDevice(const DeviceDescriptor& newDefaultDevice)
+    /*static*/ bool DeviceDescriptor::TrySetDefaultDevice(const DeviceDescriptor& newDefaultDevice, bool acquireDeviceLock)
     {
-        if (newDefaultDevice == DefaultDevice())
-            return;
+        std::unique_lock<std::mutex> lock(s_mutex);
+
+        if (s_defaultDevice != nullptr && newDefaultDevice == *s_defaultDevice)
+            return !acquireDeviceLock || Microsoft::MSR::CNTK::TryLock(AsCNTKImplDeviceId(newDefaultDevice));
 
         // As a testing backdoor we allow changing the default device even after being "used/frozen"
-        if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen.load())
-            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used as the default device in a CNTK API call");
-
-        std::call_once(s_initDefaultDeviceFlag, []
+        if (!Internal::IsSettingDefaultDeviceAlwaysAllowed() && s_defaultDeviceFrozen)
+            // TODO: alternatively, print a warning and return false.
         {
-            // do nothing. This will set the flag above, in case when DefaultDevice() was never called before.
-        });
+            RuntimeError("Process wide default device cannot be changed since it has been frozen by being implicitly used "
+                         "as the default device in a CNTK API call; Current default = %S, New default = %S.",
+                         s_defaultDevice->AsString().c_str(), newDefaultDevice.AsString().c_str());
+        }
+
+        if (std::find(s_excludedDevices.begin(), s_excludedDevices.end(), newDefaultDevice) != s_excludedDevices.end())
+            return false;
+
+        if (acquireDeviceLock && !Microsoft::MSR::CNTK::TryLock(AsCNTKImplDeviceId(newDefaultDevice)))
+            return false;
 
         s_defaultDevice.reset(new DeviceDescriptor(newDefaultDevice));
-    }
-    
-    /*static*/ DeviceDescriptor DeviceDescriptor::BestDevice()
-    {
-        //TODO: BestDevice remains locked if UseDefaultDevice is never executed
-        // or if BestDevice() is invoked after UseDefaultDevice(). 
-        // Should we do anything about it?
-        auto id = Microsoft::MSR::CNTK::GetBestDevice();
-        return id >= 0 ? DeviceDescriptor::GPUDevice(id) : DeviceDescriptor::CPUDevice();
+
+        if (!acquireDeviceLock)
+            Microsoft::MSR::CNTK::ReleaseLock();
+
+        return true;
     }
 
+    /*static*/ void DeviceDescriptor::SetExcludedDevices(const std::vector<DeviceDescriptor>& excluded)
+    {
+        std::unique_lock<std::mutex> lock(s_mutex);
+        s_excludedDevices = excluded;
+    }
+    
     /*static*/ const std::vector<DeviceDescriptor>& DeviceDescriptor::AllDevices()
     {
         using namespace Microsoft::MSR::CNTK;
 
-        std::call_once(s_initAllDevicesFlag, []
+        std::call_once(s_initAllDevicesFlag, [&]
         {
-           s_allDevices.reset(new std::vector<DeviceDescriptor>());
 #ifndef CPUONLY
            auto allGpusData = GetAllGpusData();
 
@@ -432,14 +527,23 @@ namespace CNTK
             {
                 if (gpuData.validity == GpuValidity::Valid)
                 {
-                    s_allDevices->push_back(DeviceDescriptor((unsigned int) gpuData.deviceId, DeviceKind::GPU));
+                    s_allDevices.push_back(DeviceDescriptor((unsigned int) gpuData.deviceId, DeviceKind::GPU));
+                    s_gpuProperties.push_back(
+                    {
+                        (unsigned int)gpuData.deviceId, 
+                        gpuData.versionMajor,
+                        gpuData.versionMinor,
+                        gpuData.cudaCores,
+                        gpuData.name,
+                        gpuData.totalMemory,
+                    });
                 }
             }
 #endif
-            s_allDevices->push_back(DeviceDescriptor::CPUDevice());
+            s_allDevices.push_back(DeviceDescriptor::CPUDevice());
         });
 
-        return *s_allDevices;
+        return s_allDevices;
     }
 
     /*static*/ DeviceDescriptor DeviceDescriptor::GPUDevice(unsigned int deviceId) 
@@ -454,14 +558,59 @@ namespace CNTK
         return { deviceId, DeviceKind::GPU };
     }
 
+    /*static*/ const GPUProperties& DeviceDescriptor::GetGPUProperties(const DeviceDescriptor& device)
+    {
+        if (device.Type() == DeviceKind::CPU) 
+            InvalidArgument("GPU properties cannot be obtained for a CPU device.");
+
+        // Now, make sure that the device vectores are initialized.
+        const auto& allDevices = AllDevices();
+        UNUSED(allDevices);
+
+        auto result = std::find_if(s_gpuProperties.begin(), s_gpuProperties.end(),
+            [&device](const GPUProperties& props) { return device.Id() == props.deviceId; });
+
+        if (result == s_gpuProperties.end())
+            InvalidArgument("Could not find properties for the specified GPU device (id=%u).", device.Id());
+
+        return *result;
+    }
+
     /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
 
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForDynamicAxes = std::numeric_limits<int>::max();
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForUnknownAxes = std::numeric_limits<int>::max() - 2;
     /*static*/ const int Axis::SentinelEndStaticAxisIndexValue = std::numeric_limits<int>::max() - 3;
+    /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllAxes = std::numeric_limits<int>::max() - 4;
     
     /*static*/ Axis::UniqueDynamicAxesNames Axis::s_uniqueDynamicAxisNames;
+
+    bool Axis::UniqueDynamicAxesNames::RegisterAxisName(const std::wstring& axisName)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        return m_allKnownDynamicAxisNames.insert(axisName).second;
+    }
+
+    const std::wstring& Axis::UniqueDynamicAxesNames::NewUniqueDynamicAxisName(const std::wstring& axisNamePrefix)
+    {
+        std::unique_lock<std::mutex> lock(m_mutex);
+        if (m_allKnownDynamicAxisNames.find(axisNamePrefix) == m_allKnownDynamicAxisNames.end())
+        {
+            m_allKnownDynamicAxisNames.insert(axisNamePrefix);
+            return axisNamePrefix;
+        }
+
+        for (size_t i = 1;; i++)
+        {
+            auto newDynamicAxisName = axisNamePrefix + std::to_wstring(i);
+            if (m_allKnownDynamicAxisNames.find(newDynamicAxisName) == m_allKnownDynamicAxisNames.end())
+            {
+                m_allKnownDynamicAxisNames.insert(newDynamicAxisName);
+                return *m_allKnownDynamicAxisNames.find(newDynamicAxisName);
+            }
+        }
+    }
 
     static std::shared_ptr<std::vector<Axis>> s_defaultInputVariableDynamicAxes, s_unknownDynamicAxes;
     static std::once_flag s_initDefaultInputVariableDynamicAxesFlag, s_initUnknownDynamicAxesFlag;
@@ -490,6 +639,12 @@ namespace CNTK
         return s_defaultDynamicAxis;
     }
 
+    /*static*/ const Axis& Axis::OperandSequenceAxis()
+    {
+        static const Axis s_operandSequenceAxis(L"__operandSequenceAxis");
+        return s_operandSequenceAxis;
+    }
+
     /*static*/ const Axis& Axis::DefaultBatchAxis()
     {
         static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
@@ -500,6 +655,12 @@ namespace CNTK
     {
         static const Axis s_allStaticAxes(SentinelStaticAxisIndexValueForAllStaticAxes);
         return s_allStaticAxes;
+    }
+
+    /*static*/ const Axis& Axis::AllAxes()
+    {
+        static const Axis s_allAxes(SentinelStaticAxisIndexValueForAllAxes);
+        return s_allAxes;
     }
 
     void Axis::RegisterAxisName(const std::wstring& axisName)
@@ -517,4 +678,80 @@ namespace CNTK
     {
         return Microsoft::MSR::CNTK::CPUMatrix<float>::GetMaxNumThreads();
     }
+
+    static std::atomic<bool> s_defaultUnitGainValue(true);
+
+    bool DefaultUnitGainValue() 
+    {
+        return s_defaultUnitGainValue;
+    }
+
+    void SetDefaultUnitGainValue(bool value) 
+    {
+        s_defaultUnitGainValue.store(value);
+    }
+
+    template <class E>
+    __declspec_noreturn void ThrowFormatted(const char* format, ...)
+    {
+        va_list args;
+        va_start(args, format);
+        Microsoft::MSR::CNTK::ThrowFormattedVA<E>(format, args);
+        va_end(args);
+    }
+
+
+    void PrintBuiltInfo()
+    {
+        LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+        LOGPRINTF(stderr, "Build info: \n\n");
+        LOGPRINTF(stderr, "\t\tBuilt time: %s %s\n", __DATE__, __TIME__);
+        LOGPRINTF(stderr, "\t\tLast modified date: %s\n", __TIMESTAMP__);
+#ifdef _BUILDTYPE_
+        LOGPRINTF(stderr, "\t\tBuild type: %s\n", _BUILDTYPE_);
+#endif
+#ifdef _BUILDTARGET_
+        LOGPRINTF(stderr, "\t\tBuild target: %s\n", _BUILDTARGET_);
+#endif
+#ifdef _WITH_1BITSGD_
+        LOGPRINTF(stderr, "\t\tWith 1bit-SGD: %s\n", _WITH_1BITSGD_);
+#endif
+#ifdef _WITH_ASGD_
+        LOGPRINTF(stderr, "\t\tWith ASGD: %s\n", _WITH_ASGD_);
+#endif
+#ifdef _MATHLIB_
+        LOGPRINTF(stderr, "\t\tMath lib: %s\n", _MATHLIB_);
+#endif
+#ifdef _CUDA_PATH_
+        LOGPRINTF(stderr, "\t\tCUDA_PATH: %s\n", _CUDA_PATH_);
+#endif
+#ifdef _CUB_PATH_
+        LOGPRINTF(stderr, "\t\tCUB_PATH: %s\n", _CUB_PATH_);
+#endif
+#ifdef _CUDNN_PATH_
+        LOGPRINTF(stderr, "\t\tCUDNN_PATH: %s\n", _CUDNN_PATH_);
+#endif
+#ifdef _GIT_EXIST
+        LOGPRINTF(stderr, "\t\tBuild Branch: %s\n", _BUILDBRANCH_);
+        LOGPRINTF(stderr, "\t\tBuild SHA1: %s\n", _BUILDSHA1_);
+#endif
+#ifdef _BUILDER_
+        LOGPRINTF(stderr, "\t\tBuilt by %s on %s\n", _BUILDER_, _BUILDMACHINE_);
+#endif
+#ifdef _BUILDPATH_
+        LOGPRINTF(stderr, "\t\tBuild Path: %s\n", _BUILDPATH_);
+#endif
+#ifdef _MPI_NAME_
+        LOGPRINTF(stderr, "\t\tMPI distribution: %s\n", _MPI_NAME_);
+#endif
+#ifdef _MPI_VERSION_
+        LOGPRINTF(stderr, "\t\tMPI version: %s\n", _MPI_VERSION_);
+#endif
+        LOGPRINTF(stderr, "-------------------------------------------------------------------\n");
+    }
+
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::runtime_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::logic_error>(const char* format, ...);
+    template CNTK_API __declspec_noreturn void ThrowFormatted<std::invalid_argument>(const char* format, ...);
 }
+

@@ -1,0 +1,530 @@
+CPU info:
+    CPU Model Name: Intel(R) Xeon(R) CPU E5-2650 0 @ 2.00GHz
+    Hardware threads: 32
+    Total Memory: 41866988 kB
+-------------------------------------------------------------------
+=== Running /cygdrive/c/jenkins/workspace/CNTK-Test-Windows-W1/x64/release/cntk.exe configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM_CTC/lstm.bs currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM_CTC OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu DeviceId=-1 timestamping=true forceDeterministicAlgorithms=true makeMode=false
+CNTK 2.0.beta11.0 (HEAD 5e7975, Feb 22 2017 20:58:50) on Philly-Pool3 at 2017/02/22 21:20:35
+
+C:\jenkins\workspace\CNTK-Test-Windows-W1\x64\release\cntk.exe  configFile=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM_CTC/lstm.bs  currentDirectory=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  RunDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu  DataDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data  ConfigDir=C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\LSTM_CTC  OutputDir=C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu  DeviceId=-1  timestamping=true  forceDeterministicAlgorithms=true  makeMode=false
+Changed current directory to C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data
+-------------------------------------------------------------------
+Build info: 
+
+		Built time: Feb 22 2017 20:53:28
+		Last modified date: Wed Feb 22 13:17:43 2017
+		Build type: Release
+		Build target: GPU
+		With 1bit-SGD: no
+		With ASGD: yes
+		Math lib: mkl
+		CUDA_PATH: C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0
+		CUB_PATH: c:\local\cub-1.4.1
+		CUDNN_PATH: C:\local\cudnn-8.0-windows10-x64-v5.1
+		Build Branch: HEAD
+		Build SHA1: 5e797580d1c05c6698349a8b791e88fffec76fc0
+		Built by svcphil on DPHAIM-25
+		Build Path: C:\jenkins\workspace\CNTK-Build-Windows\Source\CNTKv2LibraryDll\
+		MPI distribution: Microsoft MPI
+		MPI version: 7.0.12437.6
+-------------------------------------------------------------------
+02/22/2017 21:20:35: No GPUs found
+02/22/2017 21:20:35: WARNING: forceDeterministicAlgorithms flag is specified. Using 1 CPU thread for processing.
+
+02/22/2017 21:20:35: ##############################################################################
+02/22/2017 21:20:35: #                                                                            #
+02/22/2017 21:20:35: # speechTrain command (train action)                                         #
+02/22/2017 21:20:35: #                                                                            #
+02/22/2017 21:20:35: ##############################################################################
+
+parallelTrain option is not enabled. ParallelTrain config will be ignored.
+02/22/2017 21:20:35: 
+Creating virgin network.
+
+Post-processing network...
+
+6 roots:
+	Err = EditDistanceError()
+	ScaledLogLikelihood = Minus()
+	cr = ForwardBackward()
+	featNorm.invStdDev = InvStdDev()
+	featNorm.mean = Mean()
+	logPrior._ = Mean()
+
+Loop[0] --> Loop_LSTMoutput[1].output -> 35 nodes
+
+	LSTMoutput[1].dh	LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1]	LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[1].ot._.PlusArgs[0]	LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1]	LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[1].ft._.PlusArgs[0]	LSTMoutput[1].dc	LSTMoutput[1].ft._.PlusArgs[1].matrix
+	LSTMoutput[1].ft._.PlusArgs[1]	LSTMoutput[1].ft._	LSTMoutput[1].ft
+	LSTMoutput[1].bft	LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1]	LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1]
+	LSTMoutput[1].it._.PlusArgs[0]	LSTMoutput[1].it._.PlusArgs[1].matrix	LSTMoutput[1].it._.PlusArgs[1]
+	LSTMoutput[1].it._	LSTMoutput[1].it	LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1]
+	LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0]	LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1]	LSTMoutput[1].bit.ElementTimesArgs[1].z
+	LSTMoutput[1].bit.ElementTimesArgs[1]	LSTMoutput[1].bit	LSTMoutput[1].ct
+	LSTMoutput[1].ot._.PlusArgs[1].matrix	LSTMoutput[1].ot._.PlusArgs[1]	LSTMoutput[1].ot._
+	LSTMoutput[1].ot	LSTMoutput[1].mt.ElementTimesArgs[1]	LSTMoutput[1].mt
+	LSTMoutput[1].output.TimesArgs[1]	LSTMoutput[1].output
+
+Validating network. 106 nodes to process in pass 1.
+
+Validating --> labels = InputValue() :  -> [132 x *]
+Validating --> LSTMoutputW.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [132 x 256]
+Validating --> LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].Wmr = LearnableParameter() :  -> [256 x 1024]
+Validating --> LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 33]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> features = InputValue() :  -> [363 x *]
+Validating --> feashift = Slice (features) : [363 x *] -> [33 x *]
+Validating --> featNorm.mean = Mean (feashift) : [33 x *] -> [33]
+Validating --> featNorm.ElementTimesArgs[0] = Minus (feashift, featNorm.mean) : [33 x *], [33] -> [33 x *]
+Validating --> featNorm.invStdDev = InvStdDev (feashift) : [33 x *] -> [33]
+Validating --> featNorm = ElementTimes (featNorm.ElementTimesArgs[0], featNorm.invStdDev) : [33 x *], [33] -> [33 x *]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] = ElementTimes (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor, featNorm) : [1 x 1], [33 x *] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1]) : [1024 x 33], [33 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[1].diagonalMatrixAsColumnVector = LearnableParameter() :  -> [1024 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor = Exp (LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 33]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] = ElementTimes (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor, featNorm) : [1 x 1], [33 x *] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1]) : [1024 x 33], [33 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[1].diagonalMatrixAsColumnVector = LearnableParameter() :  -> [1024 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor = Exp (LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 33]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] = ElementTimes (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor, featNorm) : [1 x 1], [33 x *] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] = Times (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0], LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1]) : [1024 x 33], [33 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] = LearnableParameter() :  -> [1024 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0] = Plus (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0], LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[1].diagonalMatrixAsColumnVector = LearnableParameter() :  -> [1024 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor = Exp (LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 33]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1] = ElementTimes (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor, featNorm) : [1 x 1], [33 x *] -> [33 x 1 x *]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0] = Times (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0], LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1]) : [1024 x 33], [33 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] = LearnableParameter() :  -> [1024 x 256]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ = LearnableParameter() :  -> [1 x 1]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor = Exp (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor._) : [1 x 1] -> [1 x 1]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] = LearnableParameter() :  -> [1024 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1] = ElementTimes (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].dh) : [1 x 1], [256] -> [256 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1]) : [1024 x 256], [256 x 1] -> [1024 x 1]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0] = Plus (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0], LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1] = ElementTimes (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].dh) : [1 x 1], [256] -> [256 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1]) : [1024 x 256], [256 x 1] -> [1024 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0] = Plus (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0], LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[1].matrix = ElementTimes (LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor, LSTMoutput[1].dc) : [1 x 1], [1024] -> [1024 x 1]
+Validating --> LSTMoutput[1].ft._.PlusArgs[1] = DiagTimes (LSTMoutput[1].ft._.PlusArgs[1].diagonalMatrixAsColumnVector, LSTMoutput[1].ft._.PlusArgs[1].matrix) : [1024 x 1], [1024 x 1] -> [1024 x 1]
+Validating --> LSTMoutput[1].ft._ = Plus (LSTMoutput[1].ft._.PlusArgs[0], LSTMoutput[1].ft._.PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ft = Sigmoid (LSTMoutput[1].ft._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].bft = ElementTimes (LSTMoutput[1].ft, LSTMoutput[1].dc) : [1024 x 1 x *], [1024] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1] = ElementTimes (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].dh) : [1 x 1], [256] -> [256 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1]) : [1024 x 256], [256 x 1] -> [1024 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[0] = Plus (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0], LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[1].matrix = ElementTimes (LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor, LSTMoutput[1].dc) : [1 x 1], [1024] -> [1024 x 1]
+Validating --> LSTMoutput[1].it._.PlusArgs[1] = DiagTimes (LSTMoutput[1].it._.PlusArgs[1].diagonalMatrixAsColumnVector, LSTMoutput[1].it._.PlusArgs[1].matrix) : [1024 x 1], [1024 x 1] -> [1024 x 1]
+Validating --> LSTMoutput[1].it._ = Plus (LSTMoutput[1].it._.PlusArgs[0], LSTMoutput[1].it._.PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].it = Sigmoid (LSTMoutput[1].it._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1] = ElementTimes (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].dh) : [1 x 1], [256] -> [256 x 1]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1]) : [1024 x 256], [256 x 1] -> [1024 x 1]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [1024 x 1], [1024 x 1] -> [1024 x 1]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z = Plus (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0], LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1] = Tanh (LSTMoutput[1].bit.ElementTimesArgs[1].z) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].bit = ElementTimes (LSTMoutput[1].it, LSTMoutput[1].bit.ElementTimesArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ct = Plus (LSTMoutput[1].bft, LSTMoutput[1].bit) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ot._.PlusArgs[1].matrix = ElementTimes (LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor, LSTMoutput[1].ct) : [1 x 1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ot._.PlusArgs[1] = DiagTimes (LSTMoutput[1].ot._.PlusArgs[1].diagonalMatrixAsColumnVector, LSTMoutput[1].ot._.PlusArgs[1].matrix) : [1024 x 1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ot._ = Plus (LSTMoutput[1].ot._.PlusArgs[0], LSTMoutput[1].ot._.PlusArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ot = Sigmoid (LSTMoutput[1].ot._) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].mt.ElementTimesArgs[1] = Tanh (LSTMoutput[1].ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].mt = ElementTimes (LSTMoutput[1].ot, LSTMoutput[1].mt.ElementTimesArgs[1]) : [1024 x 1 x *], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].output.TimesArgs[1] = ElementTimes (LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor, LSTMoutput[1].mt) : [1 x 1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].output = Times (LSTMoutput[1].Wmr, LSTMoutput[1].output.TimesArgs[1]) : [256 x 1024], [1024 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutputW.PlusArgs[0].TimesArgs[1] = ElementTimes (LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].output) : [1 x 1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutputW.PlusArgs[0] = Times (LSTMoutputW.PlusArgs[0].TimesArgs[0], LSTMoutputW.PlusArgs[0].TimesArgs[1]) : [132 x 256], [256 x 1 x *] -> [132 x 1 x *]
+Validating --> B = LearnableParameter() :  -> [132 x 1]
+Validating --> LSTMoutputW = Plus (LSTMoutputW.PlusArgs[0], B) : [132 x 1 x *], [132 x 1] -> [132 x 1 x *]
+Validating --> Err = EditDistanceError (labels, LSTMoutputW) : [132 x *], [132 x 1 x *] -> [1]
+Validating --> logPrior._ = Mean (labels) : [132 x *] -> [132]
+Validating --> logPrior = Log (logPrior._) : [132] -> [132]
+Validating --> ScaledLogLikelihood = Minus (LSTMoutputW, logPrior) : [132 x 1 x *], [132] -> [132 x 1 x *]
+Validating --> graph = LabelsToGraph (labels) : [132 x *] -> [132 x *]
+Validating --> cr = ForwardBackward (graph, LSTMoutputW) : [132 x *], [132 x 1 x *] -> [1]
+
+Validating network. 73 nodes to process in pass 2.
+
+Validating --> LSTMoutput[1].dh = PastValue (LSTMoutput[1].output) : [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1] = ElementTimes (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].dh) : [1 x 1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1]) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1] = ElementTimes (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].dh) : [1 x 1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1]) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].dc = PastValue (LSTMoutput[1].ct) : [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[1].matrix = ElementTimes (LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor, LSTMoutput[1].dc) : [1 x 1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].ft._.PlusArgs[1] = DiagTimes (LSTMoutput[1].ft._.PlusArgs[1].diagonalMatrixAsColumnVector, LSTMoutput[1].ft._.PlusArgs[1].matrix) : [1024 x 1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1] = ElementTimes (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].dh) : [1 x 1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1] = Times (LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[0], LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1]) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[1].matrix = ElementTimes (LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor, LSTMoutput[1].dc) : [1 x 1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].it._.PlusArgs[1] = DiagTimes (LSTMoutput[1].it._.PlusArgs[1].diagonalMatrixAsColumnVector, LSTMoutput[1].it._.PlusArgs[1].matrix) : [1024 x 1], [1024 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1] = ElementTimes (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor, LSTMoutput[1].dh) : [1 x 1], [256 x 1 x *] -> [256 x 1 x *]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] = Times (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0], LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1]) : [1024 x 256], [256 x 1 x *] -> [1024 x 1 x *]
+Validating --> LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1] = Plus (LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0], LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]) : [1024 x 1 x *], [1024 x 1] -> [1024 x 1 x *]
+
+Validating network. 15 nodes to process in pass 3.
+
+
+Validating network, final pass.
+
+
+
+
+Post-processing network complete.
+
+Reading script file C:\jenkins\workspace\CNTK-Test-Windows-W1\Tests\EndToEndTests\Speech\Data/ctc_glob_0000.scp ... 70 entries
+HTKDataDeserializer::HTKDataDeserializer: selected 70 utterances grouped into 1 chunks, average chunk size: 70.0 utterances, 20300.0 frames (for I/O: 70.0 utterances, 20300.0 frames)
+HTKDataDeserializer::HTKDataDeserializer: determined feature kind as 33-dimensional 'USER' with frame shift 10.0 ms
+02/22/2017 21:20:36: 
+Model has 106 nodes. Using CPU.
+
+02/22/2017 21:20:36: Training criterion:   cr = ForwardBackward
+02/22/2017 21:20:36: Evaluation criterion: Err = EditDistanceError
+
+
+Allocating matrices for forward and/or backward propagation.
+
+Memory Sharing: Out of 200 matrices, 76 are shared as 30, and 124 are not shared.
+
+Here are the ones that share memory:
+	{ LSTMoutputW.PlusArgs[0].TimesArgs[1] : [256 x 1 x *] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1] : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient)
+	  LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient)
+	  LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient) }
+	{ LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient)
+	  LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient) }
+	{ LSTMoutputW : [132 x 1 x *] (gradient)
+	  LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1] : [256 x 1 x *] (gradient) }
+	{ LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient) }
+	{ LSTMoutputW : [132 x 1 x *]
+	  LSTMoutput[1].output : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] : [33 x 1 x *]
+	  featNorm.ElementTimesArgs[0] : [33 x *] }
+	{ LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient)
+	  LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient) }
+	{ LSTMoutputW.PlusArgs[0] : [132 x 1 x *]
+	  LSTMoutputW.PlusArgs[0] : [132 x 1 x *] (gradient)
+	  LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1] : [33 x 1 x *] (gradient)
+	  LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] : [33 x 1 x *] (gradient)
+	  LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] : [33 x 1 x *] (gradient)
+	  LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1] : [256 x 1 x *] (gradient) }
+	{ LSTMoutputW.PlusArgs[0].TimesArgs[1] : [256 x 1 x *]
+	  LSTMoutput[1].dh : [256 x 1 x *] (gradient) }
+	{ LSTMoutput[1].it._.PlusArgs[1].matrix : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].dc : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] : [33 x 1 x *]
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] : [33 x 1 x *] (gradient)
+	  feashift : [33 x *] }
+	{ LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient)
+	  LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor : [1 x 1] (gradient) }
+	{ LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient)
+	  LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor : [1 x 1] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor._ : [1 x 1] (gradient) }
+	{ LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor._ : [1 x 1] (gradient)
+	  LSTMoutput[1].mt.ElementTimesArgs[1] : [1024 x 1 x *] }
+	{ LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024 x 1] (gradient)
+	  LSTMoutput[1].ft._.PlusArgs[1].matrix : [1024 x 1 x *] }
+	{ LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[1].ot._ : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33] (gradient) }
+	{ LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] : [1024 x 33] (gradient)
+	  LSTMoutput[1].it._ : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] }
+	{ LSTMoutput[1].ft : [1024 x 1 x *]
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024 x 1] (gradient) }
+	{ LSTMoutput[1].bit.ElementTimesArgs[1] : [1024 x 1 x *]
+	  LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient) }
+	{ LSTMoutput[1].ct : [1024 x 1 x *]
+	  LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024 x 1] (gradient) }
+	{ LSTMoutput[1].it._.PlusArgs[1].matrix : [1024 x 1 x *]
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient)
+	  LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient) }
+	{ LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *]
+	  LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33] (gradient)
+	  LSTMoutput[1].it._.PlusArgs[1] : [1024 x 1 x *] (gradient) }
+	{ LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient)
+	  LSTMoutput[1].ot._.PlusArgs[1].matrix : [1024 x 1 x *] }
+	{ LSTMoutput[1].it : [1024 x 1 x *]
+	  LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor._ : [1 x 1] (gradient) }
+	{ LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33] (gradient)
+	  LSTMoutput[1].it._.PlusArgs[0] : [1024 x 1 x *] (gradient)
+	  LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] }
+	{ LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient)
+	  LSTMoutput[1].ot : [1024 x 1 x *] }
+	{ LSTMoutput[1].mt : [1024 x 1 x *]
+	  LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ : [1 x 1] (gradient) }
+
+Here are the ones that don't share memory:
+	{ScaledLogLikelihood : [132 x 1 x *]}
+	{LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{labels : [132 x *]}
+	{B : [132 x 1]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024 x 1]}
+	{LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].Wmr : [256 x 1024]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256]}
+	{LSTMoutputW.PlusArgs[0].TimesArgs[0] : [132 x 256]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33]}
+	{LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].dh : [256 x 1 x *]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor : [1 x 1]}
+	{featNorm.invStdDev : [33]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{featNorm.mean : [33]}
+	{Err : [1]}
+	{cr : [1]}
+	{features : [363 x *]}
+	{LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].ot._.PlusArgs[1].diagonalMatrixAsColumnVector : [1024 x 1]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256]}
+	{logPrior._ : [132]}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024 x 1]}
+	{LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].dc : [1024 x 1 x *]}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256]}
+	{LSTMoutput[1].ft._.PlusArgs[1].diagonalMatrixAsColumnVector : [1024 x 1]}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1] : [1024 x 1]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0] : [1024 x 33]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0] : [1024 x 33]}
+	{LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{logPrior : [132]}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor._ : [1 x 1]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] : [1024 x 256]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] : [1024 x 1]}
+	{LSTMoutput[1].it._.PlusArgs[1].diagonalMatrixAsColumnVector : [1024 x 1]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ft._.PlusArgs[0] : [1024 x 1 x *]}
+	{cr : [1] (gradient)}
+	{LSTMoutput[1].it._.PlusArgs[1].diagonalMatrixAsColumnVector : [1024 x 1] (gradient)}
+	{LSTMoutput[1].Wmr : [256 x 1024] (gradient)}
+	{LSTMoutput[1].ft._.PlusArgs[1].matrix : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ft : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor : [1 x 1] (gradient)}
+	{featNorm : [33 x *]}
+	{LSTMoutput[1].ft._.PlusArgs[0] : [1024 x 1 x *] (gradient)}
+	{graph : [132 x *]}
+	{LSTMoutput[1].ft._.PlusArgs[1].diagonalMatrixAsColumnVector : [1024 x 1] (gradient)}
+	{LSTMoutput[1].output : [256 x 1 x *]}
+	{LSTMoutput[1].ct : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0] : [1024 x 256] (gradient)}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ft._ : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1] : [33 x 1 x *]}
+	{LSTMoutput[1].ot._.PlusArgs[1].diagonalMatrixAsColumnVector : [1024 x 1] (gradient)}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1] : [256 x 1 x *]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ft._.PlusArgs[1] : [1024 x 1 x *] (gradient)}
+	{B : [132 x 1] (gradient)}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256] (gradient)}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256] (gradient)}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1] : [256 x 1 x *]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1] : [256 x 1 x *]}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0] : [1024 x 256] (gradient)}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1] : [256 x 1 x *] (gradient)}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1] : [1024 x 1] (gradient)}
+	{LSTMoutputW.PlusArgs[0].TimesArgs[0] : [132 x 256] (gradient)}
+	{LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient)}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1] : [256 x 1 x *]}
+	{LSTMoutput[1].output.TimesArgs[1] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor : [1 x 1] (gradient)}
+	{LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *]}
+	{LSTMoutput[1].bft : [1024 x 1 x *]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1] : [1024 x 1 x *]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ot._.PlusArgs[1] : [1024 x 1 x *]}
+	{LSTMoutput[1].it._.PlusArgs[0] : [1024 x 1 x *]}
+	{LSTMoutput[1].ot._.PlusArgs[1].matrix : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ot._.PlusArgs[1] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1] : [33 x 1 x *]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ot._.PlusArgs[0] : [1024 x 1 x *]}
+	{LSTMoutput[1].bit : [1024 x 1 x *]}
+	{LSTMoutput[1].ft._.PlusArgs[1] : [1024 x 1 x *]}
+	{LSTMoutput[1].output.TimesArgs[1] : [1024 x 1 x *]}
+	{LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ft._ : [1024 x 1 x *]}
+	{LSTMoutput[1].bft : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ot._ : [1024 x 1 x *]}
+	{LSTMoutput[1].it : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].it._.PlusArgs[1] : [1024 x 1 x *]}
+	{LSTMoutput[1].it._ : [1024 x 1 x *]}
+	{LSTMoutput[1].ot : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].mt.ElementTimesArgs[1] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].bit : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].bit.ElementTimesArgs[1] : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1] : [1024 x 1 x *]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z : [1024 x 1 x *]}
+	{LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0] : [1024 x 1 x *]}
+	{LSTMoutput[1].mt : [1024 x 1 x *] (gradient)}
+	{LSTMoutput[1].ot._.PlusArgs[0] : [1024 x 1 x *] (gradient)}
+
+
+02/22/2017 21:20:36: Training 1486993 parameters in 31 out of 31 parameter tensors and 94 nodes with gradient:
+
+02/22/2017 21:20:36: 	Node 'B' (LearnableParameter operation) : [132 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutputW.PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [132 x 256]
+02/22/2017 21:20:36: 	Node 'LSTMoutputW.PlusArgs[0].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].Wmr' (LearnableParameter operation) : [256 x 1024]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[0].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[0].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].bit.ElementTimesArgs[1].z.PlusArgs[1].PlusArgs[1]' (LearnableParameter operation) : [1024 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ft._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ft._.PlusArgs[1].diagonalMatrixAsColumnVector' (LearnableParameter operation) : [1024 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ft._.PlusArgs[1].matrix.scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].it._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].it._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].it._.PlusArgs[1].diagonalMatrixAsColumnVector' (LearnableParameter operation) : [1024 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].it._.PlusArgs[1].matrix.scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[0]' (LearnableParameter operation) : [1024 x 33]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[0].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[0].PlusArgs[1]' (LearnableParameter operation) : [1024 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[0]' (LearnableParameter operation) : [1024 x 256]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ot._.PlusArgs[0].PlusArgs[1].TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ot._.PlusArgs[1].diagonalMatrixAsColumnVector' (LearnableParameter operation) : [1024 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].ot._.PlusArgs[1].matrix.scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+02/22/2017 21:20:36: 	Node 'LSTMoutput[1].output.TimesArgs[1].scalarScalingFactor._' (LearnableParameter operation) : [1 x 1]
+
+
+02/22/2017 21:20:36: Precomputing --> 3 PreCompute nodes found.
+
+02/22/2017 21:20:36: 	featNorm.mean = Mean()
+02/22/2017 21:20:36: 	featNorm.invStdDev = InvStdDev()
+02/22/2017 21:20:36: 	logPrior._ = Mean()
+
+02/22/2017 21:20:36: Precomputing --> Completed.
+
+
+02/22/2017 21:20:37: Starting Epoch 1: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:37: Starting minibatch loop.
+02/22/2017 21:20:38: Finished Epoch[ 1 of 10]: [Training] cr = 4.16290018 * 368; Err = 2.36764709 * 368; totalSamplesSeen = 368; learningRatePerSample = 0.0049999999; epochTime=0.963661s
+02/22/2017 21:20:38: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.1'
+
+02/22/2017 21:20:38: Starting Epoch 2: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:38: Starting minibatch loop.
+02/22/2017 21:20:40: Finished Epoch[ 2 of 10]: [Training] cr = 3.68804096 * 438; Err = 1.00000000 * 438; totalSamplesSeen = 806; learningRatePerSample = 0.0049999999; epochTime=1.07618s
+02/22/2017 21:20:40: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.2'
+
+02/22/2017 21:20:40: Starting Epoch 3: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:40: Starting minibatch loop.
+02/22/2017 21:20:40: Finished Epoch[ 3 of 10]: [Training] cr = 0.00000000 * 0; Err = 0.00000000 * 0; totalSamplesSeen = 806; learningRatePerSample = 0.0049999999; epochTime=0.000579955s
+02/22/2017 21:20:40: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.3'
+
+02/22/2017 21:20:40: Starting Epoch 4: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:40: Starting minibatch loop.
+02/22/2017 21:20:41: Finished Epoch[ 4 of 10]: [Training] cr = 2.16659612 * 368; Err = 1.00000000 * 368; totalSamplesSeen = 1174; learningRatePerSample = 0.0049999999; epochTime=0.749923s
+02/22/2017 21:20:41: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.4'
+
+02/22/2017 21:20:41: Starting Epoch 5: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:41: Starting minibatch loop.
+02/22/2017 21:20:41: Finished Epoch[ 5 of 10]: [Training] cr = 343.30178931 * 248; Err = 1.00000000 * 248; totalSamplesSeen = 1422; learningRatePerSample = 0.0049999999; epochTime=0.369816s
+02/22/2017 21:20:43: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.5'
+
+02/22/2017 21:20:43: Starting Epoch 6: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:43: Starting minibatch loop.
+02/22/2017 21:20:43: Finished Epoch[ 6 of 10]: [Training] cr = 1.81731132 * 248; Err = 1.00000000 * 248; totalSamplesSeen = 1670; learningRatePerSample = 0.0049999999; epochTime=0.626039s
+02/22/2017 21:20:43: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.6'
+
+02/22/2017 21:20:44: Starting Epoch 7: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:44: Starting minibatch loop.
+02/22/2017 21:20:44: Finished Epoch[ 7 of 10]: [Training] cr = 1.70217435 * 358; Err = 1.00000000 * 358; totalSamplesSeen = 2028; learningRatePerSample = 0.0049999999; epochTime=0.607594s
+02/22/2017 21:20:44: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.7'
+
+02/22/2017 21:20:44: Starting Epoch 8: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:44: Starting minibatch loop.
+02/22/2017 21:20:44: Finished Epoch[ 8 of 10]: [Training] cr = 0.00000000 * 0; Err = 0.00000000 * 0; totalSamplesSeen = 2028; learningRatePerSample = 0.0049999999; epochTime=0.000275094s
+02/22/2017 21:20:45: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.8'
+
+02/22/2017 21:20:45: Starting Epoch 9: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:45: Starting minibatch loop.
+02/22/2017 21:20:46: Finished Epoch[ 9 of 10]: [Training] cr = 1.19612221 * 308; Err = 1.00000000 * 308; totalSamplesSeen = 2336; learningRatePerSample = 0.0049999999; epochTime=0.754015s
+02/22/2017 21:20:46: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn.9'
+
+02/22/2017 21:20:46: Starting Epoch 10: learning rate per sample = 0.005000  effective momentum = 0.900000  momentum as time constant = 189.8 samples
+
+02/22/2017 21:20:46: Starting minibatch loop.
+02/22/2017 21:20:47: Finished Epoch[10 of 10]: [Training] cr = 1.33511985 * 608; Err = 1.00000000 * 608; totalSamplesSeen = 2944; learningRatePerSample = 0.0049999999; epochTime=1.0302s
+02/22/2017 21:20:47: SGD: Saving checkpoint model 'C:\Users\svcphil\AppData\Local\Temp\cntk-test-20170222211959.232036\Speech_LSTM_CTC@release_cpu/models/simple.dnn'
+
+02/22/2017 21:20:48: Action "train" complete.
+
+02/22/2017 21:20:48: __COMPLETED__
+=== Deleting last epoch data

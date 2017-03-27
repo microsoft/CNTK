@@ -42,7 +42,7 @@ private:
     std::vector<IDataDeserializerPtr> m_deserializers;
 
     // Driving deserializer that defines chunks.
-    IDataDeserializerPtr m_driver;
+    IDataDeserializerPtr m_primaryDeserializer;
 
     // Chunk descriptions.
     std::vector<BundlerChunkDescriptionPtr> m_chunks;

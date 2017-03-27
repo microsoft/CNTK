@@ -130,20 +130,6 @@ public:
         return false;
     }
 
-#ifdef _DEBUG
-    void SaveMatrix(wchar_t *fileName, const Matrix<ElemType>& m) const
-    {
-        FILE *fin = _wfopen(fileName, L"w");
-        fprintf(fin, "%d %d\n", m.GetNumRows(), m.GetNumCols());
-        for (int i = 0; i < m.GetNumRows(); i++){
-            for (int j = 0; j < m.GetNumCols(); j++){
-                fprintf(fin, "%e\n", m.GetValue(i, j));
-            }
-        }
-        fclose(fin);
-    }
-#endif
-
     void GetLabelSequence(const Matrix<ElemType>& labelMatrix)
     {
         labelMatrix.VectorMax(*m_maxLabelIndexes, *m_maxLabelValues, true);
