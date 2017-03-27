@@ -293,7 +293,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_enum_class CNTK::Internal::PrimitiveFunction;
 %ignore_class CNTK::Internal::CompositeFunction;
 %ignore_function CNTK::Internal::MaxNumCPUThreadsSet;
-%ignore_enum_class CNTK::Internal::PrimitiveOpType;
+%ignore_enum_class CNTK::PrimitiveOpType;
 %ignore_function CNTK::Internal::IsWithin;
 %ignore_function CNTK::Internal::PackedIndex;
 %ignore_function CNTK::Internal::GatherPacked;
