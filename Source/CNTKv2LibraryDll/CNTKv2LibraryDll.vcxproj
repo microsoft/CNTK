@@ -156,6 +156,7 @@
       <PrecompiledHeader>
       </PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="Evaluator.cpp" />
     <ClCompile Include="Function.cpp" />
     <ClCompile Include="Learner.cpp" />
     <ClCompile Include="MinibatchSource.cpp" />
