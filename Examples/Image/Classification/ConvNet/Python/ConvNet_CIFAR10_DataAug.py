@@ -14,7 +14,7 @@ import cntk.io.transforms as xforms
 
 from cntk.layers import Convolution2D, MaxPooling, AveragePooling, Dropout, BatchNormalization, Dense, default_options, Placeholder, identity, Sequential, For
 from cntk.layers.typing import *
-from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, ImageDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk import Trainer
 from cntk.learners import momentum_sgd, learning_rate_schedule, UnitType, momentum_as_time_constant_schedule
 from cntk import cross_entropy_with_softmax, classification_error, relu
@@ -60,7 +60,7 @@ def create_reader(map_file, mean_file, is_training):
     return MinibatchSource(ImageDeserializer(map_file, StreamDefs(
         features = StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
         labels   = StreamDef(field='label', shape=num_classes))),   # and second as 'label'
-        randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+        randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 ########################
 # define the model     #

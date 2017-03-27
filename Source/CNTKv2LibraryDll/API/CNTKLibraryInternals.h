@@ -212,6 +212,8 @@ namespace CNTK
     class Accumulator;
     typedef std::shared_ptr<Accumulator> AccumulatorPtr;
 
+    struct MinibatchSourceConfig;
+
     namespace Internal
     {
         CNTK_API FunctionPtr IsWithin(const Variable& operand, int offset, const std::wstring& name = L"");
@@ -289,6 +291,9 @@ namespace CNTK
         CNTK_API bool AreEqual(const ::CNTK::Value& value1, const ::CNTK::Value& value2, double relativeTolerance = 0.0, double absoluteTolerance = 0.0);
 
         CNTK_API size_t DefaultPackThresholdSizeInBytes();
+
+        // This is an internal API, needed for testing.
+        CNTK_API Dictionary ToDictionary(const MinibatchSourceConfig& dict);
 
         class VariableResolver;
 

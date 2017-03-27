@@ -108,7 +108,7 @@ def test_distributed_mb_source(tmpdir):
 9	|S0 61:1 |# A	|S1 32:1 |# ~AH
 10	|S0 61:1 |# A	|S1 32:1 |# ~AH
 '''
-    from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, FULL_DATA_SWEEP
+    from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 
     ctf_file = str(tmpdir/'2seqtest.txt')
     with open(ctf_file, 'w') as f:
@@ -120,12 +120,12 @@ def test_distributed_mb_source(tmpdir):
         features  = StreamDef(field='S0', shape=input_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
         )), 
-        randomize=False, epoch_size=36) # A bit more than a sweep
+        randomize=False, max_samples=36) # A bit more than a sweep
     mb1 = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
         )), 
-        randomize=False, epoch_size=36) # A bit more than a sweep
+        randomize=False, max_samples=36) # A bit more than a sweep
     input = sequence.input(shape=(input_dim,))
     label = sequence.input(shape=(input_dim,))
     input_map = {
@@ -170,14 +170,12 @@ def test_distributed_mb_source(tmpdir):
     mb3 = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
-        )), 
-        randomize=True, epoch_size=FULL_DATA_SWEEP)
+        )), max_sweeps=1)
 
     mb4 = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=input_dim,  is_sparse=True)
-        )), 
-        randomize=True, epoch_size=FULL_DATA_SWEEP)
+        )), max_sweeps=1)
 
     data = mb3.next_minibatch(minibatch_size_in_samples=10, input_map=input_map, num_data_partitions=2, partition_index=0)
     assert(data[input].num_samples == 5)
