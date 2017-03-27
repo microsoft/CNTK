@@ -60,8 +60,8 @@
     <Compile Include="SwigProxyClasses\Axis.cs" />
     <Compile Include="SwigProxyClasses\AxisVector.cs" />
     <Compile Include="SwigProxyClasses\BoolVector.cs" />
-    <Compile Include="SwigProxyClasses\CNTKLib.cs" />
-    <Compile Include="SwigProxyClasses\CNTKLibPINVOKE.cs" />
+    <Compile Include="SwigProxyClasses\Common.cs" />
+    <Compile Include="SwigProxyClasses\CommonPINVOKE.cs" />
     <Compile Include="SwigProxyClasses\DataType.cs" />
     <Compile Include="SwigProxyClasses\DeviceDescriptor.cs" />
     <Compile Include="SwigProxyClasses\DeviceDescriptorVector.cs" />

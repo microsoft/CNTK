@@ -1,4 +1,4 @@
-%module(directors="1") CNTKLib
+%module(directors="1") Common
 //%feature("autodoc", "1");
 
 %include <stl.i>
@@ -293,7 +293,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_enum_class CNTK::Internal::PrimitiveFunction;
 %ignore_class CNTK::Internal::CompositeFunction;
 %ignore_function CNTK::Internal::MaxNumCPUThreadsSet;
-%ignore_class CNTK::Internal::PrimitiveOpType;
+%ignore_enum_class CNTK::Internal::PrimitiveOpType;
 %ignore_function CNTK::Internal::IsWithin;
 %ignore_function CNTK::Internal::PackedIndex;
 %ignore_function CNTK::Internal::GatherPacked;
@@ -407,7 +407,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return Common.AreEqualDeviceDescriptor(this, p);
     }
 
     public bool Equals(DeviceDescriptor p)
@@ -419,7 +419,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(this, p);
+        return Common.AreEqualDeviceDescriptor(this, p);
     }
 
     public static bool operator ==(DeviceDescriptor first, DeviceDescriptor second)
@@ -437,7 +437,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualDeviceDescriptor(first, second);
+        return Common.AreEqualDeviceDescriptor(first, second);
     }
 
     public static bool operator !=(DeviceDescriptor first, DeviceDescriptor second)
@@ -522,7 +522,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(this, p);
+        return Common.AreEqualAxis(this, p);
     }
 
     public bool Equals(Axis p)
@@ -534,7 +534,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(this, p);
+        return Common.AreEqualAxis(this, p);
     }
 
     public static bool operator ==(Axis first, Axis second)
@@ -552,7 +552,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualAxis(first, second);
+        return Common.AreEqualAxis(first, second);
     }
 
     public static bool operator !=(Axis first, Axis second)
@@ -697,17 +697,17 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         {
             varVect.Add(v);
         }
-        return CNTKLib.Combine(varVect);
+        return Common.Combine(varVect);
     }
 
     public static Function AsComposite(Function rootFunction, string name = "")
     {
-        return CNTKLib.AsComposite(rootFunction, name);
+        return Common.AsComposite(rootFunction, name);
     }
 
     public static Function Alias(Variable operand, string name = "")
     {
-        return CNTKLib.Alias(operand, name);
+        return Common.Alias(operand, name);
     }
 
     // For C# Eval, default ParameterCloningMethod is share.
@@ -850,7 +850,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(this, p);
+        return Common.AreEqualVariable(this, p);
     }
 
     public bool Equals(Variable p)
@@ -862,7 +862,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(this, p);
+        return Common.AreEqualVariable(this, p);
     }
 
     public static bool operator ==(Variable first, Variable second)
@@ -880,7 +880,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualVariable(first, second);
+        return Common.AreEqualVariable(first, second);
     }
 
     public static bool operator !=(Variable first, Variable second)
@@ -1000,7 +1000,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualShape(this, p);
+        return Common.AreEqualShape(this, p);
     }
 
     public bool Equals(NDShape p)
@@ -1012,7 +1012,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualShape(this, p);
+        return Common.AreEqualShape(this, p);
     }
 
     public static bool operator ==(NDShape first, NDShape second)
@@ -1030,7 +1030,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
 
         // Return true if the fields match:
-        return CNTKLib.AreEqualShape(first, second);
+        return Common.AreEqualShape(first, second);
     }
 
     public static bool operator !=(NDShape first, NDShape second)
