@@ -224,7 +224,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
+    strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     return convolution(convolution_map, operand, strides, sharing, auto_padding,
                        max_temp_mem_size_in_samples, name)
 
@@ -285,7 +285,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     '''
     from cntk.cntk_py import convolution_transpose
     operand = sanitize_input(operand)
-    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
+    strides, sharing, auto_padding = sanitize_convolution_args(strides, sharing, auto_padding)
     if output_shape is None: 
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
@@ -357,7 +357,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     '''
     from cntk.cntk_py import pooling
     operand = sanitize_input(operand)
-    pooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(pooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
+    pooling_window_shape, strides, auto_padding = sanitize_pooling_args(pooling_window_shape, strides, auto_padding)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
                    ceil_out_dim, include_pad, name)
 
@@ -398,7 +398,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
     from cntk.cntk_py import unpooling
     operand = sanitize_input(operand)
     pooling_input = sanitize_input(pooling_input)
-    unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
+    unpooling_window_shape, strides, auto_padding = sanitize_pooling_args(unpooling_window_shape, strides, auto_padding)
     return unpooling(operand, pooling_input, unpooling_type,
                      unpooling_window_shape, strides, auto_padding, name)
 
