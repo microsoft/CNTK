@@ -73,7 +73,7 @@
     <Compile Include="SwigProxyClasses\Function.cs" />
     <Compile Include="SwigProxyClasses\MaskKind.cs" />
     <Compile Include="SwigProxyClasses\NDArrayView.cs" />
-    <Compile Include="SwigProxyClasses\NDArrayViewVector.cs" />
+    <Compile Include="SwigProxyClasses\NDArrayViewPtrVector.cs" />
     <Compile Include="SwigProxyClasses\NDMask.cs" />
     <Compile Include="SwigProxyClasses\NDShape.cs" />
     <Compile Include="SwigProxyClasses\ParameterCloningMethod.cs" />
