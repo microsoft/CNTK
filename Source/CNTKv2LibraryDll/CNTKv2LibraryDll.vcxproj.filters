@@ -35,6 +35,7 @@
       <Filter>tensorboard</Filter>
     </ClCompile>
     <ClCompile Include="ProgressWriter.cpp" />
+    <ClCompile Include="Evaluator.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />

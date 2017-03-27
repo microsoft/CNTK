@@ -22,25 +22,43 @@ namespace CNTKLibraryCSEvalExamples
 
             if (ShouldRunOnCpu())
             {
-                CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.CPUDevice);
-                CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.CPUDevice);
-                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.CPUDevice);
-                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.CPUDevice);
-                CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.CPUDevice);
-                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(DeviceDescriptor.CPUDevice);
+                var device = DeviceDescriptor.CPUDevice;
+
+                CNTKLibraryManagedExamples.EvaluationSingleImage(device);
+                // Run memory tests.
+                MemoryTests.ValidateObjectReferences(device);
+                CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
+                // Run memory tests again.
+                MemoryTests.ValidateObjectReferences(device);
+
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
+                CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(device);
                 // It is sufficient to test loading model from memory buffer only on CPU.
-                CNTKLibraryManagedExamples.LoadModelFromMemory(DeviceDescriptor.CPUDevice);
+                CNTKLibraryManagedExamples.LoadModelFromMemory(device);
+
+                MemoryTests.WriteOutputs();
             }
 
             if (ShouldRunOnGpu())
             {
                 Console.WriteLine(" ====== Evaluate model on GPU =====");
-                CNTKLibraryManagedExamples.EvaluationSingleImage(DeviceDescriptor.GPUDevice(0));
-                CNTKLibraryManagedExamples.EvaluationBatchOfImages(DeviceDescriptor.GPUDevice(0));
-                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(DeviceDescriptor.GPUDevice(0));
-                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(DeviceDescriptor.GPUDevice(0));
-                CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(DeviceDescriptor.GPUDevice(0));
-                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(DeviceDescriptor.GPUDevice(0));
+                var device = DeviceDescriptor.GPUDevice(0);
+                // Run memory tests.
+                MemoryTests.ValidateObjectReferences(device);
+                CNTKLibraryManagedExamples.EvaluationSingleImage(device);
+                CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
+                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
+                // Run memory tests.
+                MemoryTests.ValidateObjectReferences(device);
+
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
+                CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);
+                CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingSparse(device);
+
+                // Run memory tests again.
+                MemoryTests.WriteOutputs();
             }
 
             Console.WriteLine("======== Evaluation completes. ========");

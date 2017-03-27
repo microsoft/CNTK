@@ -309,7 +309,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      >>> x = Input((480,640))
      >>> h = f(x)
      >>> h.shape
-         (128, 480, 319)
+         (128, 480, 320)
      >>> f.W.shape
          (128, 1, 3, 3)
 

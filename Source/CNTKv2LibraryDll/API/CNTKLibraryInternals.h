@@ -200,6 +200,9 @@ namespace CNTK
     class TrainingSession;
     typedef std::shared_ptr<TrainingSession> TrainingSessionPtr;
 
+    class Evaluator;
+    typedef std::shared_ptr<Evaluator> EvaluatorPtr;
+
     class Trainer;
     typedef std::shared_ptr<Trainer> TrainerPtr;
 

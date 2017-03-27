@@ -89,6 +89,9 @@ namespace CNTK
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameTokensToIgnore = L"TokensToIgnore";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameDelayConstraint = L"DelayConstraint";
     /*static*/ const std::wstring PrimitiveFunction::AttributeNameBlankTokenId = L"BlankTokenId";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameNumClass = L"numClass";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotOutputSparse = L"oneHotOutputSparse";
+    /*static*/ const std::wstring PrimitiveFunction::AttributeNameOneHotAxis = L"onehotAxis";
 
     /*static*/ DataType PrimitiveFunction::GetOutputDataType(PrimitiveOpType op, std::vector<Variable>& inputs, bool inferDimensions)
     {
@@ -254,11 +257,12 @@ namespace CNTK
         if (m_op == PrimitiveOpType::Combine)
             outputs.assign(m_inputs.begin(), m_inputs.end());
         else if (m_op == PrimitiveOpType::NoOp)
-            outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), Name()));
+            outputs.push_back(OutputVariable(m_inputs[0].Shape(), m_inputs[0].GetDataType(), m_inputs[0].DynamicAxes(), m_inputs[0].NeedsGradient(), Name()));
         else
         {
             DataType outputDataType = GetOutputDataType(m_op, m_inputs, true);
             std::vector<Axis> outputDynamicAxes = GetOutputDynamicAxes(m_op, m_inputs, this, m_attributes);
+            bool needsGradient = std::any_of(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return input.NeedsGradient(); });
 
             NDShape outputShape = NDShape::Unknown;
             bool allInputShapesUnknown = (std::find_if(m_inputs.begin(), m_inputs.end(), [](const Variable& input) { return !input.Shape().IsUnknown(); }) == m_inputs.end());
@@ -531,6 +535,33 @@ namespace CNTK
                             assert(m_inputs.size() == 1);
                             outputShape = { 1 };
                             break;
+                        case PrimitiveOpType::OneHot:
+                        {
+                            assert(m_inputs.size() == 1);
+                            auto num_class = m_attributes[PrimitiveFunction::AttributeNameNumClass].Value<size_t>();
+
+                            auto inputShape = m_inputs[0].Shape();
+                            auto fakeShape = inputShape.AppendShape({num_class});
+                            auto axis = NormalizeStaticAxis(m_attributes[PrimitiveFunction::AttributeNameOneHotAxis].Value<Axis>(), fakeShape);
+                            if (!axis.IsStaticAxis())
+                                LogicError("Function '%S': one hot operation currently does not support on dynamic axis", AsString().c_str());
+
+                            size_t len = inputShape.Rank();
+                            int axisIndex = axis.StaticAxisIndex();
+
+                            outputShape = {};
+                            if (axisIndex > 0)
+                            {
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(0, axisIndex));
+                            }
+                            outputShape = outputShape.AppendShape({num_class});
+                            if (axisIndex < len)
+                            {
+                                outputShape = outputShape.AppendShape(inputShape.SubShape(axisIndex, len));
+                            }
+
+                            break;
+                        }
                         case PrimitiveOpType::Times:
                         {
                             assert(m_inputs.size() == 2);
@@ -799,7 +830,7 @@ namespace CNTK
                 }
             }
 
-            outputs.push_back({ OutputVariable(outputShape, outputDataType, outputDynamicAxes, Name().empty() ? L"" : Name()) });
+            outputs.push_back({ OutputVariable(outputShape, outputDataType, outputDynamicAxes, needsGradient, Name().empty() ? L"" : Name()) });
         }
     }
 

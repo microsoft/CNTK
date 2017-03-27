@@ -11,10 +11,11 @@ from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model
 from ..variables import Variable, Parameter, Constant
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
+
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
@@ -223,7 +224,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    strides = sanitize_shape(strides)
+    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
     return convolution(convolution_map, operand, strides, sharing, auto_padding,
                        max_temp_mem_size_in_samples, name)
 
@@ -284,7 +285,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     '''
     from cntk.cntk_py import convolution_transpose
     operand = sanitize_input(operand)
-    strides = sanitize_shape(strides)
+    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
     if output_shape is None: 
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
@@ -356,8 +357,7 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
     '''
     from cntk.cntk_py import pooling
     operand = sanitize_input(operand)
-    pooling_window_shape = sanitize_shape(pooling_window_shape)
-    strides = sanitize_shape(strides)
+    pooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(pooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
                    ceil_out_dim, include_pad, name)
 
@@ -398,8 +398,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
     from cntk.cntk_py import unpooling
     operand = sanitize_input(operand)
     pooling_input = sanitize_input(pooling_input)
-    unpooling_window_shape = sanitize_shape(unpooling_window_shape)
-    strides = sanitize_shape(strides)
+    unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
     return unpooling(operand, pooling_input, unpooling_type,
                      unpooling_window_shape, strides, auto_padding, name)
 
@@ -2050,6 +2049,38 @@ def splice(*inputs, **kw_axis_name):
 
     return splice(inputs, axis, name) # C++ projection expects inputs as a list
 
+@typemap
+def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
+    '''
+    Create one hot tensor based on the input tensor
+
+    Example:
+        >>> data = np.asarray([[[1, 2],
+        ...                      [4, 5]]], dtype=np.float32)
+
+        >>> x = C.input_variable((2,))
+        >>> C.one_hot(x, 6, False).eval({x:data})
+        array([[[[ 0.,  1.,  0.,  0.,  0.,  0.],
+                 [ 0.,  0.,  1.,  0.,  0.,  0.]],
+        <BLANKLINE>
+                [[ 0.,  0.,  0.,  0.,  1.,  0.],
+                 [ 0.,  0.,  0.,  0.,  0.,  1.]]]], dtype=float32)
+
+    Args:
+        x: input tensor, the value must be positive integer and less than num_class
+        num_classes: the number of class in one hot tensor
+        sparse_output: if set as True, we will create the one hot tensor as sparse.
+		axis: The axis to fill (default: -1, a new inner-most axis).
+        name (str, optional, keyword only): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+    from cntk.cntk_py import one_hot_op
+    x = sanitize_input(x)
+    axis = sanitize_axis(axis)
+    return one_hot_op(x, num_classes, sparse_output, axis, name)
+
 ##########################################################################
 # reduction ops
 ##########################################################################
@@ -2558,7 +2589,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
         return input(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
 
 @typemap
-def output_variable(shape, dtype, dynamic_axes, name=''):
+def output_variable(shape, dtype, dynamic_axes, needs_gradient=True, name=''):
     '''
     It creates an output variable that is used to define a user defined function.
 
@@ -2583,7 +2614,7 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
             raise ValueError('axis in dynamic_axes attribute is not dynamic')
     dynamic_axes = list(reversed(dynamic_axes))
 
-    return output_variable(shape, dtype, dynamic_axes, name)
+    return output_variable(shape, dtype, dynamic_axes, needs_gradient, name)
 
 @typemap
 def placeholder(shape=None, dynamic_axes=None, name=''):
