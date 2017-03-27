@@ -10,17 +10,12 @@ import numbers
 from numbers import Number
 from . import sequence
 from .functions import CloneMethod, Function, load_model
-from .variables import Variable, Parameter, Constant
-from ..utils import get_data_type
-from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_axis_list, sanitize_dynamic_axes
-from cntk.internal import typemap
+from ..variables import Variable, Parameter, Constant
+from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, sanitize_axis_list, typemap, sanitize_pooling_args, sanitize_convolution_args
+from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
 
-# To __remove__
-from cntk.losses import *
-from cntk.metrics import *
-# End to remove
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
@@ -232,9 +227,7 @@ def convolution(convolution_map, operand, strides=(1,), sharing=[True],
     '''
     from cntk.cntk_py import convolution
     operand = sanitize_input(operand)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
+    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
     return convolution(convolution_map, operand, strides, sharing, auto_padding,
                        lower_pad, upper_pad, max_temp_mem_size_in_samples, name)
 
@@ -298,9 +291,7 @@ def convolution_transpose(convolution_map, operand, strides=(1,), sharing=[True]
     '''
     from cntk.cntk_py import convolution_transpose
     operand = sanitize_input(operand)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
+    strides, sharing, auto_padding, lower_pad, upper_pad = sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad)
     if output_shape is None: 
         output_shape = (0,)
     output_shape = sanitize_shape(output_shape)
@@ -335,7 +326,10 @@ def roipooling(conv_feature_map, rois, roi_output_shape, name=''):
 
 from cntk.cntk_py import PoolingType_Max, PoolingType_Average
 MAX_POOLING = PoolingType_Max
+'''int: constant used to specify maximum pooling'''
+
 AVG_POOLING = PoolingType_Average
+'''int: constant used to specify average pooling'''
 
 @typemap
 def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padding=[False],
@@ -364,23 +358,22 @@ def pooling(operand, pooling_type, pooling_window_shape, strides=(1,), auto_padd
         auto_padding (default [False,]): automatic padding flags for each input dimension.
         lower_pad (default (0,)): precise lower padding for each input dimension
         upper_pad (default (0,)): precise upper padding for each input dimension
-        ceil_out_dim (default false): ceiling while computing output size
-        include_pad(default false): include pad while average pooling
+        ceil_out_dim (default False): ceiling while computing output size
+        include_pad(default False): include pad while average pooling
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
     '''
     from cntk.cntk_py import pooling
     operand = sanitize_input(operand)
-    pooling_window_shape = sanitize_shape(pooling_window_shape)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
+    pooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(pooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
     return pooling(operand, pooling_type, pooling_window_shape, strides, auto_padding,
                    lower_pad, upper_pad, ceil_out_dim, include_pad, name)
 
 
 MAX_UNPOOLING = PoolingType_Max
+'''int: constant used to specify maximum unpooling'''
+
 @typemap
 def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, strides=(1,), auto_padding=[False],
             lower_pad=(0,), upper_pad=(0,), name=''):
@@ -416,10 +409,7 @@ def unpooling(operand, pooling_input, unpooling_type, unpooling_window_shape, st
     from cntk.cntk_py import unpooling
     operand = sanitize_input(operand)
     pooling_input = sanitize_input(pooling_input)
-    unpooling_window_shape = sanitize_shape(unpooling_window_shape)
-    strides = sanitize_shape(strides)
-    lower_pad = sanitize_shape(lower_pad)
-    upper_pad = sanitize_shape(upper_pad)
+    unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad = sanitize_pooling_args(unpooling_window_shape, strides, auto_padding, lower_pad, upper_pad)
     return unpooling(operand, pooling_input, unpooling_type,
                      unpooling_window_shape, strides, auto_padding,
                      lower_pad, upper_pad, name)
@@ -919,7 +909,7 @@ def times(left, right, output_rank=1, infer_input_rank_to_map=TIMES_NO_INFERRED_
         output_rank (int): in case we have tensors as arguments, output_rank represents
             the number of axes to be collapsed in order to transform the tensors
             into matrices, perform the operation and then reshape back (explode the axes)
-        infer_input_rank_to_map ('int'): meant for internal use only. Always use default value
+        infer_input_rank_to_map (int): meant for internal use only. Always use default value
         name (str, optional): the name of the Function instance in the network
 
     Returns:
@@ -1249,7 +1239,7 @@ def param_relu(alpha, x, name=''):
         array([[-0.5 , -0.25,  0.  ,  1.  ,  2.  ]], dtype=float32)
 
     Args:
-        alpha (:class:`~cntk.ops.variables.Parameter`): same shape as x
+        alpha (:class:`~cntk.variables.Parameter`): same shape as x
         x (`numpy.array` or :class:`~cntk.ops.functions.Function`): any :class:`~cntk.ops.functions.Function` that outputs a tensor.
         name (`str`, default to ''): the name of the Function instance in the network
 
@@ -1267,7 +1257,7 @@ def softplus(x, steepness=1, name=''):
     '''
     Softplus operation. Computes the element-wise softplus of ``x``:
 
-    :math:`\textrm{softplus}(x) = {\log(1+\exp(x))}`
+    :math:`\mathrm{softplus}(x) = {\log(1+\exp(x))}`
 
     The optional ``steepness`` allows to make the knee sharper (``steepness>1``) or softer, by computing
     ``softplus(x * steepness) / steepness``.
@@ -1393,7 +1383,7 @@ def cos(x, name=''):
 @typemap
 def softmax(x, axis=None, name=''):
     r'''
-    Computes the gradient of :math:`f(z)=\log\sum_i\exp(z_i)` at z=``x``. Concretely,
+    Computes the gradient of :math:`f(z)=\log\sum_i\exp(z_i)` at ``z = x``. Concretely,
 
     :math:`\mathrm{softmax}(x)=\left[\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\quad\ldots\quad\frac{\exp(x_1)}{\sum_i\exp(x_i)}\right]`
 
@@ -1885,6 +1875,10 @@ def reshape(x, shape, begin_axis=None, end_axis=None, name=''):
     Args:
         x: tensor to be reshaped
         shape (tuple): a tuple defining the resulting shape
+        begin_axis (int or None): shape replacement begins at this axis. Negative values
+         are counting from the end. `None` is the same as 0. To refer to the end of the shape tuple, pass `Axis.new_leading_axis()`
+        end_axis (int or None): shape replacement ends at this axis (excluding this axis).
+         Negative values are counting from the end. `None` refers to the end of the shape tuple.
         name (str, optional): the name of the Function instance in the network
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -1991,7 +1985,6 @@ def slice(x, axis, begin_index, end_index, name=''):
         array([[ 1.,  2.,  -3.]], dtype=float32)
         >>> x[0, [1,2]].eval()
         array([[ 2.,  -3.]], dtype=float32)
-
         <BLANKLINE>
         >>> x[1].eval()
         array([[ 4.,  5.,  6.]], dtype=float32)
@@ -2008,7 +2001,7 @@ def slice(x, axis, begin_index, end_index, name=''):
         name (str, optional): the name of the Function instance in the network
 
     See also:
-        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+        Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
         :class:`~cntk.ops.functions.Function`
@@ -2523,14 +2516,14 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (type, optional): np.float32 (default) or np.float64
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, sequence axis)
         name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     from cntk.cntk_py import input_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
@@ -2558,7 +2551,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (type, optional): np.float32 (default) or np.float64
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
@@ -2576,7 +2569,7 @@ def input_variable(shape, dtype=np.float32, needs_gradient=False, is_sparse=Fals
         return input(shape, dtype, needs_gradient, is_sparse, dynamic_axes, name)
 
 @typemap
-def output_variable(shape, dtype, dynamic_axes, name=''):
+def output_variable(shape, dtype, dynamic_axes, needs_gradient=True, name=''):
     '''
     It creates an output variable that is used to define a user defined function.
 
@@ -2587,7 +2580,7 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
         name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable` that is of output type
+        :class:`~cntk.variables.Variable` that is of output type
     '''
     from cntk.cntk_py import output_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
@@ -2601,7 +2594,7 @@ def output_variable(shape, dtype, dynamic_axes, name=''):
             raise ValueError('axis in dynamic_axes attribute is not dynamic')
     dynamic_axes = list(reversed(dynamic_axes))
 
-    return output_variable(shape, dtype, dynamic_axes, name)
+    return output_variable(shape, dtype, dynamic_axes, needs_gradient, name)
 
 @typemap
 def placeholder(shape=None, dynamic_axes=None, name=''):
@@ -2617,7 +2610,7 @@ def placeholder(shape=None, dynamic_axes=None, name=''):
         name (str, optional): the name of the placeholder variable in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     from cntk.cntk_py import placeholder_variable, NDShape, Axis
 
@@ -2680,10 +2673,10 @@ def parameter(shape=None, init=None, dtype=None, device=None, name=''):
         name (str, optional): the name of the Parameter instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Parameter`
+        :class:`~cntk.variables.Parameter`
     '''
 
-    from .variables import Parameter
+    from ..variables import Parameter
     return Parameter(shape, init, dtype, device, name)
 
 
@@ -2710,9 +2703,9 @@ def constant(value=None, shape=None, dtype=None, device=None, name=''):
         device (:class:`~cntk.device.DeviceDescriptor`): instance of DeviceDescriptor
         name (str, optional): the name of the Function instance in the network
     Returns:
-        :class:`~cntk.ops.variables.Constant`
+        :class:`~cntk.variables.Constant`
     '''
-    from .variables import Constant
+    from ..variables import Constant
     return Constant(value, shape, dtype, device, name)
 
 ##########################################################################

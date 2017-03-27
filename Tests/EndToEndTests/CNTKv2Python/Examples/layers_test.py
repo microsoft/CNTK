@@ -14,7 +14,7 @@ from __future__ import print_function
 import os
 import math
 from cntk.layers import *  # CNTK Layers library
-from cntk.utils import *
+from cntk.internal.utils import *
 
 # helper to create float32 arrays, to work around a bug that Function.eval() does not know how to cast its inputs
 def array(vals):
@@ -30,11 +30,11 @@ if __name__=='__main__':
 
     from cntk.layers import Recurrence
     from cntk.ops import plus
-    from cntk.utils import debughelpers
+    from cntk.debugging import *
     r = Recurrence(plus)
-    debughelpers.dump_function(r)
+    dump_function(r)
     r.update_signature(1)
-    debughelpers.dump_function(r)
+    dump_function(r)
     data = [   # simple sequence
         array([[2], [6], [4], [8], [6]])
     ]
@@ -48,9 +48,9 @@ if __name__=='__main__':
 
     from cntk.layers import Convolution
     c = Convolution(3, init=array([4, 2, 1]), sequential=True, pad=False, reduction_rank=0, bias=False)
-    debughelpers.dump_function(c)
+    dump_function(c)
     c.update_signature(1)
-    debughelpers.dump_function(c)
+    dump_function(c)
     data = [   # audio sequence
         array([[2], [6], [4], [8], [6]])
     ]
@@ -65,9 +65,9 @@ if __name__=='__main__':
     from cntk.layers import Convolution
     c = Convolution(3, init=array([4, 2, 1]), pad=True, reduction_rank=0, bias=False)
     # BUGBUG: pad seems ignored??
-    debughelpers.dump_function(c)
+    dump_function(c)
     c.update_signature(5)
-    debughelpers.dump_function(c)
+    dump_function(c)
     data = [   # audio sequence
         array([[2, 6, 4, 8, 6]])
     ]

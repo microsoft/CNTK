@@ -6,12 +6,11 @@
 import sys
 from .. import cntk_py
 from ..device import use_default_device
-from ..utils import value_to_seq
 from cntk.internal import sanitize_var_map, sanitize_function, typemap
 from ..io import _py_dict_to_cntk_dict
 
 __doc__ = '''\
-A training session encapsulates a typical training loop and binds together a minibatch source that is used for training, a :doc:`trainer <cntk.train.trainer>` and an optional cross validation minibatch source. A training session takes care of consistent checkpointing and progress printing with specified frequencies. 
+A training session encapsulates a typical training loop and binds together a minibatch source that is used for training, a :class:`~cntk.train.trainer.Trainer` and an optional cross validation minibatch source. A training session takes care of consistent checkpointing and progress printing with specified frequencies.
 '''
 class CheckpointConfig(cntk_py.CheckpointConfig):
     '''
@@ -60,7 +59,7 @@ class CrossValidationConfig(cntk_py.CrossValidationConfig):
         frequency (int): frequency in samples for cross validation
           If ``sys.maxsize``, a single cross validation is performed at the end of training.
         schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for cross validation
-        callback (func (index, avarage_error, cv_num_samples, cv_num_minibatches)): Callback that will 
+        callback (func (index, average_error, cv_num_samples, cv_num_minibatches)): Callback that will
           be called with frequency which can implement custom cross validation logic,
           returns False if training should be stopped.
     '''
@@ -212,7 +211,7 @@ class TrainingSession(cntk_py.TrainingSession):
 @typemap
 def minibatch_size_schedule(schedule, epoch_size=1):
     '''
-    Create a minibatch size schedule
+    Creates a minibatch size schedule.
 
     Examples:
         >>> # Use a fixed value 32 for all minibatches
@@ -232,7 +231,7 @@ def minibatch_size_schedule(schedule, epoch_size=1):
         (32, 32, 64, 64, 128, 128)
 
     Args:
-        schedule (integer or list): if integer, it this minibatch size will be used for the whole training.
+        schedule (int or list): if integer, this minibatch size will be used for the whole training.
          In case of list of integers, the elements are used as the values for ``epoch_size`` samples. 
          If list contains pair, the second element is used as a value for (``epoch_size`` x first element) samples
         epoch_size (int): number of samples as a scheduling unit.

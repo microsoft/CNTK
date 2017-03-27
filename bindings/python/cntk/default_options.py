@@ -8,7 +8,7 @@
 default_options: ``with default_options():`` and ``with default_options_for():`` patterns
 '''
 
-from cntk.utils import Record
+from cntk.variables import Record
 
 # context manager for overriding defaults, use through default_options() or default_options_for() below
 class _OptionsContextManager: # implement Python's 'with' protocol

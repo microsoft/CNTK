@@ -20,6 +20,8 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
                    go_backwards=default_override_or(False),
                    enable_self_stabilization=default_override_or(True), name=''):
     '''
+    AttentionModel(attention_dim, attention_span=None, attention_axis=None, init=glorot_uniform(), go_backwards=False, enable_self_stabilization=True, name='')
+
     Layer factory function to create a function object that implements an attention model
     as described in Bahdanau, et al., "Neural machine translation by jointly learning to align and translate."
     '''

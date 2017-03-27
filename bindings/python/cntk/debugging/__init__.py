@@ -8,6 +8,7 @@ from __future__ import division
 from __future__ import print_function
 
 from .debug import *
+from .profiler import *
 
 '''
 Helper functions for debugging graphs.

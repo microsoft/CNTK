@@ -68,7 +68,7 @@ def sanitize_shape(shape):
 
 def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """sanitize_input(arg, fallback_dtype=np.float32, reshape=None)
-    Convert to :class:`~cntk.ops.variables.Variable` so that it can be passed
+    Convert to :class:`~cntk.variables.Variable` so that it can be passed
     as Variable to the CNTK operators. 
 
       * If ``arg`` is a NumPy array and its type is neither `np.float32` nor
@@ -77,7 +77,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
         will be returned. 
 
     Args:
-        arg (number, NumPy array, :class:`~cntk.ops.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
+        arg (number, NumPy array, :class:`~cntk.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
         fallback_dtype (NumPy dtype): fallback dtype in case ``arg`` is a list
 
     Returns:
@@ -86,7 +86,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     """
 
     from cntk.ops.functions import UserFunction
-    from cntk.ops.variables import Constant, Variable, Parameter
+    from cntk.variables import Constant, Variable, Parameter
     from cntk.ops.functions import Function
     from cntk.ops import constant
 
@@ -118,13 +118,13 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
     Convert to :class:`~cntk.core.Value`.
 
     Args:
-        var (:class:`~cntk.ops.variables.Variable`): input variable into which
+        var (:class:`~cntk.variables.Variable`): input variable into which
          ``batch`` is passed
         batch: batch input for `var`. It can be
 
            * a single NumPy array denoting the full minibatch
            * a list of NumPy arrays or SciPy sparse CSR matrices each representing a sequence
-           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`one_hot`)
+           * a :class:`~cntk.core.Value` object (e.g. returned by :func:`cntk.core.Value.one_hot`)
         seq_starts (list of bools or None): if None, every sequence is
          treated as a new sequence. Otherwise, it is interpreted as a list of
          Booleans one for each sequence in the batch that tell whether a
@@ -427,14 +427,7 @@ def sanitize_axis_list(axes):
         axes = [axes]
     retAxes = []
     for ax in axes: 
-        if ax is None:
-            retAxes.append(Axis.all_static_axes()) 
-        elif isinstance(ax, numbers.Integral):
-            retAxes.append(Axis(-ax - 1))
-        elif ax.is_static_axis and (ax.static_axis_index() != Axis.new_leading_axis().static_axis_index()):
-            retAxes.append(Axis(-1 - axis.static_axis_index())) 
-        else: 
-            retAxes.append(ax)
+        retAxes.append(sanitize_axis(ax))
     return retAxes
 
 def sanitize_dynamic_axes(axes):
@@ -452,6 +445,42 @@ def sanitize_variable_value_dict(var_value_dict):
         return var_value_dict
     else:
         return list(var_value_dict.values())[0]
+
+def _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad):
+    strides = sanitize_shape(strides)
+    lower_pad = sanitize_shape(lower_pad)
+    upper_pad = sanitize_shape(upper_pad)
+
+    # Reverse the 'auto_padding' argument to account for the col-major tensor
+    # layout in core C++ implementation
+    auto_padding = list(reversed(auto_padding))
+
+    return strides, auto_padding, lower_pad, upper_pad
+    
+def sanitize_pooling_args(pooling_window_shape, strides, auto_padding, lower_pad, upper_pad):
+    pooling_window_shape = sanitize_shape(pooling_window_shape)
+    strides, auto_padding, lower_pad, upper_pad = _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad)
+    return pooling_window_shape, strides, auto_padding, lower_pad, upper_pad
+    
+def sanitize_convolution_args(strides, sharing, auto_padding, lower_pad, upper_pad):
+    strides, auto_padding, lower_pad, upper_pad = _sanitize_common_conv_args(strides, auto_padding, lower_pad, upper_pad)
+
+    # Reverse the 'sharing' argument to account for the col-major tensor layout
+    # in core C++ implementation
+    sharing = list(reversed(sharing))
+
+    return strides, sharing, auto_padding, lower_pad, upper_pad
+
+def sanitize_Function_attributes(attributes):
+    # Reverse the 'sharing' and 'auto_padding' attributes to account for the
+    # col-major tensor layout in core C++ implementation
+    if 'sharing' in attributes:
+        attributes['sharing'] = list(reversed(attributes['sharing']))
+
+    if 'autoPadding' in attributes:
+        attributes['autoPadding'] = list(reversed(attributes['autoPadding']))
+
+    return attributes
 
 def memoize(func):
     class memodict(dict):

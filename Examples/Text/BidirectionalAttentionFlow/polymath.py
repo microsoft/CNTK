@@ -34,9 +34,9 @@ class PolyMath:
         self.two_step = model_config['two_step']
 
     def charcnn(self, x):
-        conv_out = C.models.Sequential([
+        conv_out = C.layers.Sequential([
             C.layers.Embedding(self.char_emb_dim),
-            C.Dropout(self.dropout),
+            C.layers.Dropout(self.dropout),
             C.layers.Convolution2D((5,self.char_emb_dim), self.convs, activation=C.relu, init=C.glorot_uniform(), bias=True, init_bias=0)])(x)
         return C.reduce_max(conv_out, axis=1) # workaround cudnn failure in GlobalMaxPooling
 
@@ -56,50 +56,10 @@ class PolyMath:
             return C.times(wg, glove) + C.times(wn, nonglove)
         return func
         
-    def model(self):
-        c = C.Axis.new_unique_dynamic_axis('c')
-        q = C.Axis.new_unique_dynamic_axis('q')
-        b = C.Axis.default_batch_axis()
-        cgw = C.input_variable(self.wg_dim, dynamic_axes=[b,c], is_sparse=True, name='cgw')
-        cnw = C.input_variable(self.wn_dim, dynamic_axes=[b,c], is_sparse=True, name='cnw')
-        qgw = C.input_variable(self.wg_dim, dynamic_axes=[b,q], is_sparse=True, name='qgw')
-        qnw = C.input_variable(self.wn_dim, dynamic_axes=[b,q], is_sparse=True, name='qnw')
-        cc = C.input_variable(self.c_dim, dynamic_axes=[b,c], name='cc')
-        qc = C.input_variable(self.c_dim, dynamic_axes=[b,q], name='qc')
-        ab = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ab')
-        ae = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ae')
+    def attention_layer(self, context, query):
+        q_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
+        c_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
 
-        input_chars = C.placeholder_variable(shape=(self.c_dim,))
-        input_glove_words = C.placeholder_variable(shape=(self.wg_dim,))
-        input_nonglove_words = C.placeholder_variable(shape=(self.wn_dim,))
-
-        # we need to reshape because GlobalMaxPooling/reduce_max is retaining a trailing singleton dimension
-        # todo GlobalPooling/reduce_max should have a keepdims default to False
-        embedded = C.splice(
-            self.embed()(input_glove_words, input_nonglove_words), 
-            C.reshape(self.charcnn(C.reshape(input_chars, (1, self.word_size, C.InferredDimension))), self.convs))
-            
-        input_layers = C.layers.Sequential([
-            HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
-            C.Dropout(self.dropout),
-            OptimizedRnnStack(self.hidden_dim, bidirectional=True),
-        ])
-        
-        q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qgw,qnw,qc])))
-        c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cgw,cnw,cc])))
-
-        q_processed = input_layers(q_emb) # synth_embedding for query
-        c_processed = input_layers(c_emb) # synth_embedding for context
-        
-        #qce = C.reshape(qc, (self.word_size, C.InferredDimension))
-        #qce = C.argmax(qce, axis=1)
-        #qce = print_node(qce)
-        #q_processed *= C.reduce_sum(qce)
-        
-        #qgwe = C.argmax(C.times(1, qgw))
-        #qgwe = print_node(qgwe)
-        #q_processed *= C.reduce_sum(qgwe)
-        
         #convert query's sequence axis to static
         qvw, qvw_mask = C.layers.PastValueWindow(self.max_query_len, C.Axis.new_leading_axis(), go_backwards=True)(q_processed).outputs
 
@@ -136,14 +96,31 @@ class PolyMath:
         q2c = C.sequence.broadcast_as(htilde, c_processed)
         att_context = C.splice(c_processed, c2q, c_processed * c2q, c_processed * q2c)
         
+        return C.as_block(
+            att_context,
+            [(c_processed, context), (q_processed, query)],
+            'attention_layer',
+            'attention_layer')
+            
+    def modeling_layer(self, attention_context):
+        att_context = C.placeholder_variable(shape=(8*self.hidden_dim,))
         #modeling layer
 		# todo: use dropout in optimized_rnn_stack from cudnn once API exposes it
-        mod_context = C.Sequential([
-            C.Dropout(self.dropout),
+        mod_context = C.layers.Sequential([
+            C.layers.Dropout(self.dropout),
             OptimizedRnnStack(self.hidden_dim, bidirectional=True),
-            C.Dropout(self.dropout),
+            C.layers.Dropout(self.dropout),
             OptimizedRnnStack(self.hidden_dim, bidirectional=True)])(att_context)
-
+    
+        return C.as_block(
+            mod_context,
+            [(att_context, attention_context)],
+            'modeling_layer',
+            'modeling_layer')
+    
+    def output_layer(self, attention_context, modeling_context):
+        att_context = C.placeholder_variable(shape=(8*self.hidden_dim,))
+        mod_context = C.placeholder_variable(shape=(2*self.hidden_dim,))
         #output layer
         start_logits = C.layers.Dense(1)(C.dropout(C.splice(mod_context, att_context), self.dropout))
         if self.two_step:
@@ -157,10 +134,80 @@ class PolyMath:
         m2 = OptimizedRnnStack(self.hidden_dim, bidirectional=True)(end_input)
         end_logits = C.layers.Dense(1)(C.dropout(C.splice(att_context, m2), self.dropout))
 
+        return C.as_block(
+            C.combine([start_logits, end_logits]),
+            [(att_context, attention_context), (mod_context, modeling_context)],
+            'output_layer',
+            'output_layer')
+
+    def model(self):
+        c = C.Axis.new_unique_dynamic_axis('c')
+        q = C.Axis.new_unique_dynamic_axis('q')
+        b = C.Axis.default_batch_axis()
+        cgw = C.input_variable(self.wg_dim, dynamic_axes=[b,c], is_sparse=True, name='cgw')
+        cnw = C.input_variable(self.wn_dim, dynamic_axes=[b,c], is_sparse=True, name='cnw')
+        qgw = C.input_variable(self.wg_dim, dynamic_axes=[b,q], is_sparse=True, name='qgw')
+        qnw = C.input_variable(self.wn_dim, dynamic_axes=[b,q], is_sparse=True, name='qnw')
+        cc = C.input_variable(self.c_dim, dynamic_axes=[b,c], name='cc')
+        qc = C.input_variable(self.c_dim, dynamic_axes=[b,q], name='qc')
+        ab = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ab')
+        ae = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ae')
+
+        input_chars = C.placeholder_variable(shape=(self.c_dim,))
+        input_glove_words = C.placeholder_variable(shape=(self.wg_dim,))
+        input_nonglove_words = C.placeholder_variable(shape=(self.wn_dim,))
+
+        # we need to reshape because GlobalMaxPooling/reduce_max is retaining a trailing singleton dimension
+        # todo GlobalPooling/reduce_max should have a keepdims default to False
+        embedded = C.splice(
+            self.embed()(input_glove_words, input_nonglove_words), 
+            C.reshape(self.charcnn(C.reshape(input_chars, (1, self.word_size, C.InferredDimension))), self.convs))
+            
+        input_layers = C.layers.Sequential([
+            HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
+            C.layers.Dropout(self.dropout),
+            OptimizedRnnStack(self.hidden_dim, bidirectional=True),
+        ])
+        
+        q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qgw,qnw,qc])))
+        c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cgw,cnw,cc])))
+
+        q_processed = input_layers(q_emb) # synth_embedding for query
+        c_processed = input_layers(c_emb) # synth_embedding for context
+        
+        # attention layer
+        att_context = self.attention_layer(c_processed, q_processed)
+        
+        # modeling layer
+        mod_context = self.modeling_layer(att_context)
+
+        # output layer
+        start_logits, end_logits = self.output_layer(att_context, mod_context).outputs
+
+        # loss
         start_loss = seq_loss(start_logits, ab)
         end_loss = seq_loss(end_logits, ae)
         return C.combine([start_logits, end_logits]), start_loss + end_loss
 
+    def f1_score_naive(self, ab, ae, start_logits, end_logits):
+        oab = seq_hardmax(start_logits)
+        oae = seq_hardmax(end_logits)
+        answers = C.splice(ab, C.sequence.delay(ae), oab, C.sequence.delay(oae)) # make end non-inclusive
+        answers_prop = C.layers.Recurrence(C.element_max, go_backwards=False)(answers)
+        ans_gt = C.element_min(C.slice(answers_prop, 0, 0, 1), (1 - C.slice(answers_prop, 0, 1, 2)))
+        ans_out = C.element_min(C.slice(answers_prop, 0, 2, 3), (1 - C.slice(answers_prop, 0, 3, 4)))
+        start_match = C.sequence.reduce_sum(ab * oab)
+        end_match = C.sequence.reduce_sum(ae * oae)
+        common = ans_gt * ans_out
+        metric = C.layers.Fold(C.plus)(C.splice(ans_gt, ans_out, common))
+        gt_len = C.slice(metric, 0, 0, 1)
+        test_len = C.slice(metric, 0, 1, 2)
+        common_len = C.slice(metric, 0, 2, 3)
+        precision = common_len / test_len
+        recall = common_len / gt_len
+        f1 = precision * recall * 2 / (precision + recall)
+        return C.combine([f1, precision, recall, C.greater(common_len, 0), start_match, end_match])
+ 
     def f1_score(self, ab, ae, start_logits, end_logits):
         start_end_prob = seq_softmax(C.splice(start_logits, end_logits))
         vw, _ = C.layers.PastValueWindow(self.max_context_len, C.Axis.new_leading_axis(), go_backwards=True)(C.splice(start_end_prob,ab,ae)).outputs
@@ -168,13 +215,14 @@ class PolyMath:
         end_prob = C.slice(vw,1,1,2)
         joint_prob = C.times_transpose(start_prob, end_prob)
         joint_prob_loc = C.equal(joint_prob, C.reduce_max(joint_prob))
-        idx0 = C.argmax(C.reduce_max(joint_prob_loc,0))
-        idx1 = C.argmax(C.reduce_max(joint_prob_loc,1))
+        idx0 = C.argmax(C.reduce_max(joint_prob_loc,0),0)
+        idx1 = C.argmax(C.reduce_max(joint_prob_loc,1),0)
         start_pos = C.element_min(idx0,idx1)
         end_pos = C.element_max(idx0,idx1)
 
-        gt_start = C.argmax(C.slice(vw,1,2,3))
-        gt_end = C.argmax(C.slice(vw,1,3,4))
+        gt_start = C.argmax(C.slice(vw,1,2,3),0)
+        gt_end = C.argmax(C.slice(vw,1,3,4),0)
+        
         test_len = end_pos - start_pos + 1
         gt_len = gt_end - gt_start + 1
         common_end = C.element_max(C.element_min(gt_end, end_pos), start_pos - 1)

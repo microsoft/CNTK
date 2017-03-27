@@ -18,20 +18,20 @@ def argument_by_name(func, name):
         return found[0]
         
 def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
-    mb_source = C.MinibatchSource(
-        C.CTFDeserializer(
+    mb_source = C.io.MinibatchSource(
+        C.io.CTFDeserializer(
             data_file,
-            C.StreamDefs(
-                context_g_words  = C.StreamDef('cgw', shape=polymath.wg_dim, is_sparse=True),
-                query_g_words    = C.StreamDef('qgw', shape=polymath.wg_dim, is_sparse=True),
-                context_ng_words = C.StreamDef('cnw', shape=polymath.wn_dim, is_sparse=True),
-                query_ng_words   = C.StreamDef('qnw', shape=polymath.wn_dim, is_sparse=True),
-                answer_begin     = C.StreamDef('ab',  shape=polymath.a_dim,  is_sparse=False),
-                answer_end       = C.StreamDef('ae',  shape=polymath.a_dim,  is_sparse=False),
-                context_chars    = C.StreamDef('cc',  shape=polymath.c_dim,  is_sparse=True),
-                query_chars      = C.StreamDef('qc',  shape=polymath.c_dim,  is_sparse=True))),
+            C.io.StreamDefs(
+                context_g_words  = C.io.StreamDef('cgw', shape=polymath.wg_dim, is_sparse=True),
+                query_g_words    = C.io.StreamDef('qgw', shape=polymath.wg_dim, is_sparse=True),
+                context_ng_words = C.io.StreamDef('cnw', shape=polymath.wn_dim, is_sparse=True),
+                query_ng_words   = C.io.StreamDef('qnw', shape=polymath.wn_dim, is_sparse=True),
+                answer_begin     = C.io.StreamDef('ab',  shape=polymath.a_dim,  is_sparse=False),
+                answer_end       = C.io.StreamDef('ae',  shape=polymath.a_dim,  is_sparse=False),
+                context_chars    = C.io.StreamDef('cc',  shape=polymath.c_dim,  is_sparse=True),
+                query_chars      = C.io.StreamDef('qc',  shape=polymath.c_dim,  is_sparse=True))),
         randomize=randomize,
-        epoch_size=C.INFINITELY_REPEAT if repeat else C.FULL_DATA_SWEEP)
+        epoch_size=C.io.INFINITELY_REPEAT if repeat else C.io.FULL_DATA_SWEEP)
 
     input_map = {
         argument_by_name(func, 'cgw'): mb_source.streams.context_g_words,
@@ -94,7 +94,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     max_epochs = training_config['max_epochs']
     log_freq = training_config['log_freq']
 
-    progress_writers = [C.ProgressPrinter(
+    progress_writers = [C.logging.ProgressPrinter(
                             num_epochs = max_epochs,
                             freq = log_freq,
                             tag = 'Training',
@@ -155,13 +155,14 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 def test(test_data, model_path, config_file):
     polymath = PolyMath(config_file)
     model = C.load_model(os.path.join(model_path, model_name))
-    ab = C.as_composite(model.outputs[0].owner)
-    ae = C.as_composite(model.outputs[1].owner)
+    ab = model.outputs[0]
+    ae = model.outputs[1]
     loss = C.as_composite(model.outputs[2].owner)
     mb_source, input_map = create_mb_and_map(loss, test_data, polymath, randomize=False, repeat=False)
     label_ab = argument_by_name(loss, 'ab')
     label_ae = argument_by_name(loss, 'ae')
-    f1, precision, recall, has_overlap, start_match, end_match = polymath.f1_score(label_ab, label_ae, ab, ae).outputs
+    f1_func = polymath.f1_score(label_ab, label_ae, ab, ae)
+    f1, precision, recall, has_overlap, start_match, end_match = f1_func.outputs
     em = C.greater_equal(f1, 1)
     test_func = C.splice(
         C.reduce_sum(loss, C.Axis.all_axes()),
@@ -177,6 +178,10 @@ def test(test_data, model_path, config_file):
     minibatch_size = 8192
     num_sequences = 0
     stat_sum = np.zeros(test_func.shape)
+
+    C.debugging.start_profiler()
+    C.debugging.enable_profiler()
+
     while True:
         data = mb_source.next_minibatch(minibatch_size, input_map=input_map)
         if not data or not (label_ab in data) or data[label_ab].num_sequences == 0:
@@ -184,6 +189,8 @@ def test(test_data, model_path, config_file):
         test_results = test_func.eval(data)
         stat_sum += test_results
         num_sequences += data[label_ab].num_sequences
+        
+    C.debugging.stop_profiler()
 
     stat_avg = stat_sum / num_sequences
 

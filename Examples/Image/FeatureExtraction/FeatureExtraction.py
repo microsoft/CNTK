@@ -7,8 +7,8 @@
 from __future__ import print_function
 import os
 import numpy as np
-from cntk import load_model, graph
-from cntk.ops import combine
+from cntk import load_model, combine
+from cntk.logging import graph
 from cntk.logging.graph import get_node_outputs
 import cntk.io.transforms as xforms
 

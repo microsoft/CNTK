@@ -4,8 +4,8 @@
 # ==============================================================================
 
 import numpy as np
-from ...utils import get_data_type
 from cntk.internal import typemap, sanitize_input
+from cntk.internal.utils import get_data_type
 
 from ...axis import Axis
 
@@ -22,7 +22,7 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
 
     Args:
         shape (tuple or int): the shape of the input tensor
-        dtype (type, optional): np.float32 (default) or np.float64
+        dtype (np.float32 or np.float64): data type. Default is np.float32.
         needs_gradients (bool, optional): whether to back-propagates to it or not. False by default.
         is_sparse (bool, optional): whether the variable is sparse (`False` by default)
         dynamic_axes (list or tuple, default): a list of dynamic axis (e.g., batch axis, time axis)
@@ -127,7 +127,7 @@ def slice(seq, begin_index, end_index, name=''):
         name (`str`, optional): the name of the Function instance in the network
 
     See also:
-        Indexing in NumPy: http://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
+        Indexing in NumPy: https://docs.scipy.org/doc/numpy/reference/arrays.indexing.html
 
     Returns:
         :class:`~cntk.ops.functions.Function`

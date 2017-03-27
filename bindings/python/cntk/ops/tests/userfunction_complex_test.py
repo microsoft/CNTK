@@ -16,8 +16,6 @@ from cntk.ops import *
 from cntk.ops.tests.ops_test_utils import cntk_device
 from cntk.ops.functions import UserFunction
 
-from cntk.utils import get_train_eval_criterion, get_train_loss
-
 np.random.seed(0)
 
 input_dim = 2
@@ -64,8 +62,8 @@ def print_training_progress(trainer, mb, frequency):
     eval_error = "NA"
 
     if mb%frequency == 0:
-        training_loss = get_train_loss(trainer)
-        eval_error = get_train_eval_criterion(trainer)
+        training_loss = trainer.previous_minibatch_loss_average
+        eval_error = trainer.previous_minibatch_evaluation_average
 
     return mb, training_loss, eval_error
 

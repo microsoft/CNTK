@@ -9,9 +9,9 @@ from __future__ import division
 from __future__ import print_function
 import numpy as np
 from ..ops.functions import CloneMethod, Function, load_model
-from ..ops.variables import Variable, Parameter, Constant
-from ..utils import get_data_type
+from ..variables import Variable, Parameter, Constant
 from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitize_dynamic_axes, typemap
+from cntk.internal.utils import get_data_type
 from ..axis import Axis
 
 
@@ -72,7 +72,8 @@ def cosine_distance_with_negative_samples(x, y, shift, num_negative_samples, nam
                [[ 1. ,  0. ,  0.5]]], dtype=float32)
 
     Args:
-        x, y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        x: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
+        y: numpy array or any :class:`~cntk.ops.functions.Function` that outputs a tensor
         shift: non-zero positive integer representing number of shift to generate a negative sample
         num_negative_samples: number of negative samples to generate, a non-zero positive integer 
         name (str, optional): the name of the Function instance in the network

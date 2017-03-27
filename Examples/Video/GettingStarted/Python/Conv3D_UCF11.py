@@ -15,7 +15,6 @@ from PIL import Image
 import imageio
 
 from cntk import Trainer
-from cntk.utils import *
 from cntk.logging import *
 from cntk.layers import *
 from cntk.learners import sgd, momentum_sgd, learning_rate_schedule, momentum_schedule, momentum_as_time_constant_schedule, UnitType

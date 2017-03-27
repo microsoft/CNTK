@@ -66,7 +66,7 @@ def convnet_mnist(debug_output=False):
 
     # Instantiate the trainer object to drive the model training
     learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule)
-    progress_printer = cntk.utils.ProgressPrinter(tag='Training', num_epochs=max_epochs)
+    progress_printer = cntk.logging.ProgressPrinter(tag='Training', num_epochs=max_epochs)
     trainer = cntk.Trainer(z, (ce, pe), learner, progress_printer)
 
     # define mapping from reader streams to network inputs
@@ -75,7 +75,7 @@ def convnet_mnist(debug_output=False):
         label_var : reader_train.streams.labels
     }
 
-    cntk.utils.log_number_of_parameters(z) ; print()
+    cntk.logging.log_number_of_parameters(z) ; print()
 
     # Get minibatches of images to train with and perform model training
     for epoch in range(max_epochs):       # loop over epochs

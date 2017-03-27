@@ -13,7 +13,7 @@ from cntk import DeviceDescriptor
 TOLERANCE_ABSOLUTE = 1E-1  # TODO: Once set_fixed_random_seed(1) is honored, this must be tightened a lot.
 
 from cntk.layers import *
-from cntk.utils import *
+from cntk.internal.utils import *
 from cntk.logging import *
 from cntk.ops import splice
 

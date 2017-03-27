@@ -106,9 +106,32 @@ public:
         }
     }
 
-    virtual void BackpropToNonLooping(size_t inputIndex) override
+    virtual void BackpropToNonLooping(size_t /*inputIndex*/) override
     {
+        if (m_currentBackpropStatePtr == nullptr)
+            return;
+
         m_gradients[0] = m_gradient;
+
+        std::unordered_map<::CNTK::Variable, ::CNTK::ValuePtr> outputGradientValues;
+        auto outputs = m_externalFunction->Outputs();
+        bool noOutputNeedsGradient = std::all_of(outputs.begin(), outputs.end(), [](const ::CNTK::Variable& outVar) { return !outVar.NeedsGradient(); });
+        if (noOutputNeedsGradient)
+            return;
+
+        for (size_t i = 0; i < outputs.size(); ++i)
+        {
+            auto output = outputs[i];
+
+            // TODO: We unpack the same output gradients each time this method is called for a different input.
+            // We should be able to cache the unpacked values during backpropagation of gradients to the first
+            // input, and reuse them for subsequence inputs.
+            ::CNTK::ValuePtr gradientValue;
+            if (output.NeedsGradient())
+                gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(output, *m_gradients[i], m_MBLayouts[i]);
+
+            outputGradientValues.insert({ output, gradientValue });
+        }
 
         std::vector<::CNTK::Variable> externalFunctionUniqueInputs;
         auto externalFunctionInputs = m_externalFunction->Inputs();
@@ -118,32 +141,38 @@ public:
                 externalFunctionUniqueInputs.push_back(input);
         }
 
-        auto input = externalFunctionUniqueInputs[inputIndex];
-
-        std::unordered_map<::CNTK::Variable, ::CNTK::ValuePtr> outputGradientValues;
-        auto outputs = m_externalFunction->Outputs();
-        for (size_t i = 0; i < outputs.size(); ++i)
+        std::unordered_map<::CNTK::Variable, ::CNTK::ValuePtr> inputGradientValues;
+        for (size_t i = 0; i < externalFunctionUniqueInputs.size(); ++i)
         {
-            auto output = outputs[i];
-
-            // TODO: We unpack the same output gradients each time this method is called for a different input.
-            // We should be able to cache the unpacked values during backpropagation of gradients to the first
-            // input, and reuse them for subsequence inputs.
-            auto gradientValue = ::CNTK::Utils::GetValueObjectFromCNTKImplMatrixAndMBLayout(output, *m_gradients[i], m_MBLayouts[i]);
-            outputGradientValues.insert({ output, gradientValue });
+            if (InputRef(i).NeedsGradient())
+                inputGradientValues.insert({ externalFunctionUniqueInputs[i], nullptr });
         }
 
-        std::unordered_map<::CNTK::Variable, ::CNTK::ValuePtr> inputGradientValue = { { input, nullptr } };
-        m_externalFunction->Backward(m_currentBackpropStatePtr, outputGradientValues, inputGradientValue);
+        m_externalFunction->Backward(m_currentBackpropStatePtr, outputGradientValues, inputGradientValues);
 
         // Accumulate the computed input gradient value into the existing input gradient value
         // TODO: We should directly pass the actual input gradient tensor to the Backward method 
         // instead of allocating a new value and accumulating it ourselves
-        auto newInputGradientMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElemType>(inputGradientValue.begin()->first, inputGradientValue.begin()->second);
-        InputRef(inputIndex).Gradient() += *newInputGradientMatrixAndLayout.first;
+        for (size_t i = 0; i < externalFunctionUniqueInputs.size(); ++i)
+        {
+            if (!InputRef(i).NeedsGradient())
+                continue;
 
-        if (*InputRef(inputIndex).GetMBLayout() != *newInputGradientMatrixAndLayout.second)
-            LogicError("The MBLayout of the input (%lu) gradient computed by the external function (%S) does not match the expected MBLayout", (unsigned long)inputIndex, this->GetName().c_str());
+            InputRef(i).LazyZeroGradient(); // set gradient to 0 if this is the first time
+
+            auto input = externalFunctionUniqueInputs[i];
+            auto inputGradientValue = inputGradientValues[input];
+            if (!inputGradientValue)
+                continue;
+
+            auto newInputGradientMatrixAndLayout = ::CNTK::Utils::GetCNTKImplMatrixAndMBLayoutFromValueObject<ElemType>(input, inputGradientValue);
+            InputRef(i).Gradient() += *newInputGradientMatrixAndLayout.first;
+
+            if (*InputRef(i).GetMBLayout() != *newInputGradientMatrixAndLayout.second)
+                LogicError("The MBLayout of the input (%lu) gradient computed by the external function (%S) does not match the expected MBLayout", (unsigned long)i, this->GetName().c_str());
+        }
+
+        m_currentBackpropStatePtr = nullptr;
     }
 
     virtual void Validate(bool isFinalValidationPass) override
