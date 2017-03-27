@@ -284,6 +284,10 @@ class DeepQAgent(object):
                 self._q_targets: q_value_targets
             })
 
+            if (self._action_taken % self._target_update_interval) == 0:
+                self._target_net = \
+                    self._action_value_net.clone(CloneMethod.freeze, {self._environment: self._environment})
+
     def _compute_q(self, actions, rewards, post_states, dones):
         q_hat = self._target_net.evaluate({self._environment: post_states})
         q_hat_eval = q_hat[np.arange(len(actions)), q_hat.argmax(axis=1)]
