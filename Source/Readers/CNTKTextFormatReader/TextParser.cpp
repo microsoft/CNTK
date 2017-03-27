@@ -697,13 +697,16 @@ bool TextParser<ElemType>::TryGetInputId(size_t& id, size_t& bytesToRead)
         {
             // the current string length is already equal to the maximum expected length,
             // yet it's not followed by a delimiter.
-            if (ShouldWarn())
+            if (m_traceLevel >= Info)
             {
+                string namePrefix(m_scratch.get(), m_maxAliasLength);
                 fprintf(stderr,
-                    "WARNING: Did not find a valid input name %ls.\n",
-                    GetFileInfo().c_str());
+                    "INFO: Skipping unknown input %ls. "
+                    "Input name (with the %" PRIu64 "-character prefix '%s') "
+                    "exceeds the maximum expected length (%" PRIu64 ").\n",
+                    GetFileInfo().c_str(), m_maxAliasLength, namePrefix.c_str(), m_maxAliasLength);
             }
-            break;
+            return false;
         }
 
         ++m_pos;
