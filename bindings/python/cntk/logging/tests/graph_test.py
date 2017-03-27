@@ -49,7 +49,8 @@ def _simple_dict():
     d['root'] = d['op2']
 
     d['target'] = input((), name='label')
-    d['all'] = combine([d['root'], minus(d['target'], constant(1, name='c2'), name='minus')], name='all')
+    d['all'] = combine([d['root'], minus(
+        d['target'], constant(1, name='c2'), name='minus')], name='all')
 
     return d
 
@@ -82,16 +83,17 @@ def test_find_nodes():
 
     assert find_by_name(d['root'], 'none') is None
 
+
 def test_find_nodes_returning_proper_types():
     d = _graph_dict()
 
     c1 = find_by_name(d['root'], 'c1')
     assert isinstance(c1, Constant)
-    assert np.allclose(c1.value, np.zeros((2,3))+6)
+    assert np.allclose(c1.value, np.zeros((2, 3)) + 6)
 
     p1 = find_by_name(d['root'], 'p1')
     assert isinstance(p1, Parameter)
-    assert np.allclose(p1.value, np.zeros((3,2))+7)
+    assert np.allclose(p1.value, np.zeros((3, 2)) + 7)
 
 
 def test_plot():
@@ -106,9 +108,11 @@ def test_plot():
     assert t in m
     assert m.find(p) < m.find(t)
 
+
 def test_depth_first_search():
     d = _simple_dict()
 
-    found = depth_first_search(d['all'], lambda x:True)
+    found = depth_first_search(d['all'], lambda x: True)
     found_names = [v.name for v in found]
-    assert found_names == ['all', 'op2', 'op1', 'i1', 'c1', 'p1', 'minus', 'label', 'c2']
+    assert found_names == ['all', 'op2', 'op1',
+                           'i1', 'c1', 'p1', 'minus', 'label', 'c2']
