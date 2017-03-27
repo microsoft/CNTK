@@ -386,7 +386,7 @@ void GPUMatrix<ElemType>::ChangeDeviceTo(DEVICEID_TYPE to_id)
     // check to make sure we have something to copy (on init we often have zero sized allocations)
     if (GetSizeAllocated() > 0)
     {
-#ifdef WIN32
+#if 0 // see the backlog item # 1220
         // IOMMU DMAR needs to be disabled for CUDA P2P, otherwise it will silently hang.
         // Unfortunately, cudaDeviceCanAccessPeer returns true irrespective of the IOMMU settings.
         // More details: https://bugzilla.kernel.org/show_bug.cgi?id=188271
