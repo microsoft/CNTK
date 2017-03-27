@@ -854,7 +854,7 @@ static shared_ptr<ElemType> GetReductionBuffer(size_t N)
         return AllocateReductionBuffer<ElemType>(N); // out of bounds: don't cache
 
     static std::once_flag initializedFlag[_countof(reductionBuffersCache)];
-    std::call_once(initializedFlag[deviceId], [&deviceId, &N]
+    std::call_once(initializedFlag[deviceId], [deviceId, N]
     {
         reductionBuffersCache[deviceId] = AllocateReductionBuffer<ElemType>(N);
         reductionBuffersCacheSize[deviceId] = N;
