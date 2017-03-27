@@ -132,7 +132,7 @@ class History(object):
         self._buffer.fill(0)
 
 
-class LinearEspilonAnnealingExplorer(object):
+class LinearEpsilonAnnealingExplorer(object):
     """
     Exploration policy using Linear Epsilon Greedy
     """
@@ -187,7 +187,7 @@ class DeepQAgent(object):
         return reduce_sum(loss_per_sample, name='loss')
 
     def __init__(self, input_shape, nb_actions,
-                 gamma=0.99, explorer=LinearEspilonAnnealingExplorer(1, 0.1, 1000000),
+                 gamma=0.99, explorer=LinearEpsilonAnnealingExplorer(1, 0.1, 1000000),
                  learning_rate=0.00025, momentum=0.95, minibatch_size=32, device_id=-1,
                  train_after=200000, train_interval=4, target_update_interval=10000):
         self.input_shape = input_shape
