@@ -39,8 +39,6 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug_CpuOnly|x64'">
     <DefineConstants>TRACE;DEBUG;CPUONLY</DefineConstants>
-    <NoWarn>
-    </NoWarn>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <Optimize>true</Optimize>
