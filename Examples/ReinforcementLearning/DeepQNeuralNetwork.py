@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 import gym
 import numpy as np
 import six
-from cntk import Signature
+from cntk import Signature, TensorBoardProgressWriter
 from cntk.core import Value
 from cntk.device import set_default_device, cpu, gpu
 from cntk.initializer import he_uniform
@@ -205,6 +205,9 @@ class DeepQAgent(object):
         self._memory = ReplayMemory(1000000, input_shape, 4)
         self._action_taken = 0
 
+        # Metrics accumulator
+        self._episode_rewards, self._episode_q_means, self._episode_q_stddev = [], [], []
+
         # CNTK Device setup
         set_default_device(cpu() if device_id == -1 else gpu(device_id))
 
@@ -243,8 +246,9 @@ class DeepQAgent(object):
             # Define the trainer with Huber Loss function
             return DeepQAgent.huber_loss(q_targets, q_acted, 1.0)
 
+        self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir='metrics', model=criterion)
         self._learner = l_sgd
-        self._trainer = Trainer(self._action_value_net, (criterion, None), l_sgd)
+        self._trainer = Trainer(self._action_value_net, (criterion, None), l_sgd, [self._metrics_writer])
 
     def act(self, state):
         # Append the state to the short term memory (ie. History)
@@ -259,6 +263,10 @@ class DeepQAgent(object):
             q_values = self._action_value_net.eval(
                 env_with_history.reshape((1,) + state.shape)  # Append batch axis with only one sample to evaluate
             )
+
+            self._episode_q_means.append(np.mean(self._episode_q_means))
+            self._episode_q_stddev.append(np.std(self._episode_q_means))
+
             action = q_values.argmax()
 
         # Keep track of interval action counter
@@ -266,8 +274,15 @@ class DeepQAgent(object):
         return action
 
     def observe(self, old_state, action, reward, done):
+        self._episode_rewards.append(reward)
+
         # If done, reset short term memory (ie. History)
         if done:
+            # Plot the metrics through Tensorboard and reset buffers
+            self._plot_metrics()
+            self._episode_rewards, self._episode_q_means, self._episode_q_stddev = [], [], []
+
+            # Reset the short term memory
             self._history.reset()
 
         # Append to long term memory
@@ -295,6 +310,20 @@ class DeepQAgent(object):
         q_targets = (1 - dones) * (self.gamma * q_hat_eval) + rewards
 
         return np.array(q_targets, dtype=np.float32)
+
+    def _plot_metrics(self):
+        """
+        Plot current buffers accumulated values to visualize agent learning 
+        :return: None
+        """
+
+        mean_q = 0 if len(self._episode_q_means) == 0 else np.asscalar(np.mean(self._episode_q_means))
+        std_q = 0 if len(self._episode_q_stddev) == 0 else np.asscalar(np.mean(self._episode_q_stddev))
+        sum_rewards = sum(self._episode_rewards)
+
+        self._metrics_writer.write_value('Mean Q per ep.', mean_q, self._action_taken)
+        self._metrics_writer.write_value('Mean Std Q per ep.', std_q, self._action_taken)
+        self._metrics_writer.write_value('Sum rewards per ep.', sum_rewards, self._action_taken)
 
 
 if __name__ == '__main__':
