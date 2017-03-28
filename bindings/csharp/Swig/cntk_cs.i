@@ -727,7 +727,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return _Clone(ParameterCloningMethod.Share);
     }
 
-    public void Evaluate(System.Collections.Generic.Dictionary<Variable, Value> arguments, System.Collections.Generic.Dictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
+    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> arguments, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
     {
         // Evaluate the rootFunction.
         var argMap = new UnorderedMapVariableValuePtr();
