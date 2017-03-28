@@ -7,7 +7,7 @@ from enum import Enum, unique
 import warnings
 import numpy as np
 
-from .. import cntk_py, NDArrayView
+from .. import cntk_py, NDArrayView, asarray
 from cntk.internal import typemap
 from ..internal.swig_helper import map_if_possible
 
@@ -194,7 +194,7 @@ class UserLearner(cntk_py.Learner):
         map_if_possible(gradient_values)
 
         if self.as_numpy:
-            var_nd_map = {var: np.asarray(gradient_values[var]) \
+            var_nd_map = {var: asarray(gradient_values[var]) \
                           for var, val in gradient_values.items()}
         else:
             var_nd_map = gradient_values

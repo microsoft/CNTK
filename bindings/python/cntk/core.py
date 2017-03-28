@@ -11,6 +11,7 @@ from scipy import sparse
 from . import cntk_py
 from .device import use_default_device, cpu, DeviceKind
 from cntk.internal import typemap
+from cntk.internal.sanitize import sanitize_batch, _sparse_to_dense_network_cache
 
 
 def _is_c_contiguous(data):
@@ -161,7 +162,7 @@ class NDArrayView(cntk_py.NDArrayView):
                                       dtype=np.float32)
             >>> nd = NDArrayView.from_dense(np_array)
             >>> sliced = nd.slice_view([0, 0, 0, 0], [2, 3])
-            >>> np_sliced = np.asarray(sliced)
+            >>> np_sliced = sliced.asarray()
             >>> # Result is an array of shape (2, 3)
             >>> print(np_sliced)
             [[ 10.  20.  30.]
@@ -234,7 +235,29 @@ class Value(cntk_py.Value):
         Returns:
             a list of NumPy arrays
         '''
-        return Value.to_seq(self, variable)
+        if self.is_sparse():
+            network = _sparse_to_dense_network_cache(variable.shape)
+
+            warnings.warn('converting Value object to CSR format might be very costly')
+
+            # TODO: Add direct conversion, since creating an intermediate array might be very slow
+            dense_data = network.eval(self, self.device())
+            return [sparse.csr_matrix(seq) for seq in dense_data]
+
+        else:
+            # Just checking for mask without retrieving
+            has_mask = super(Value, self).mask() is not None
+
+            if has_mask:
+                if variable is None:
+                    mask = self.mask
+                    return [seq[mask[idx] != cntk_py.MaskKind_Invalid]
+                               for idx, seq in enumerate(self.data.asarray())]
+                else:
+                    value_sequences = self.unpack_variable_value(variable, True, cpu())
+                    return [seq.asarray() for seq in value_sequences[0]]
+            else:
+                return self.asarray()
 
     @staticmethod
     def _as_best_data_type(var, sample):
@@ -242,7 +265,7 @@ class Value(cntk_py.Value):
 
         if isinstance(sample, list):
             try:
-                sample = np.asarray(sample, dtype=var.dtype)
+                sample = asarray(sample, dtype=var.dtype)
             except ValueError:
                 s = sample
                 while isinstance(s, list) and len(s) > 0:
@@ -371,7 +394,7 @@ class Value(cntk_py.Value):
             True)  # always create a copy in Value
 
         return value
-        
+
     ONE_HOT_SKIP = cntk_py.Value.one_hot_skip
 
     @staticmethod
@@ -450,35 +473,6 @@ class Value(cntk_py.Value):
                 sample_shape, batch, device, False)
         return value
 
-    @staticmethod
-    def to_seq(value, variable=None):
-        '''
-        Convert a Value to a sequence of NumPy arrays that have their masked
-        entries removed.
-
-        Args:
-            value (:class:`~cntk.cntk_py.Value` or :class:`~cntk.core.Value`): Value object
-
-        Returns:
-            a list of NumPy arrays
-        '''
-
-        has_mask = None
-        if isinstance(value, Value):
-            has_mask = value.mask.any()
-        elif isinstance(value, cntk_py.Value):
-            has_mask = value.mask() is not None
-
-        if has_mask:
-            if variable is None: 
-                mask = np.asarray(value.mask())
-                return [seq[mask[idx] != cntk_py.MaskKind_Invalid]
-                           for idx, seq in enumerate(np.asarray(value))]
-            else:
-                value_sequences = value.unpack_variable_value(variable, True, cpu())
-                return [np.asarray(seq) for seq in value_sequences[0]]
-        else:
-            return np.asarray(value)
 
     @property
     def shape(self):
@@ -507,7 +501,7 @@ class Value(cntk_py.Value):
           (1), it is a continuation of the 2nd sequence in the previous
           minibatch.
         '''
-        return np.asarray(super(Value, self).mask())
+        return super(Value, self).mask().asarray()
 
     @property
     @typemap
@@ -532,25 +526,22 @@ def user_function(user_func):
     from . import as_composite
     return as_composite(user_func)
 
-from cntk.internal.sanitize import sanitize_batch, _sparse_to_dense_network_cache
 
-def asarray(variable, value):
+def asarray(value, dtype=None):
     '''
     Converts a Value object to a sequence of NumPy arrays (if dense) or CSR arrays (if sparse).
     '''
-    if value.is_sparse():
-        network = _sparse_to_dense_network_cache(variable.shape)
-
-        warnings.warn('converting Value object to CSR format might be very costly')
-
-        # TODO: Add direct conversion, since creating an intermediate array might be very slow
-        dense_data = network.eval(value, device=value.device())
-        array_to_return = [sparse.csr_matrix(seq) for seq in dense_data]
-
+    if hasattr(value, 'asarray'):
+        value = value.asarray()
     else:
-        array_to_return = Value.to_seq(value, variable)
+        orig_type = type(value)
+        value = np.asarray(value)
+        if value.dtype == object:
+            raise ValueError('could not convert instance of type %s to '
+                             'an array'%orig_type)
+    if dtype is not None:
+        return value.astype(dtype)
 
-    return array_to_return
 
 def asvalue(variable, data_array):
     '''

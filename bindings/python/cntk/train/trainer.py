@@ -6,7 +6,8 @@
 
 from .. import cntk_py, Value
 from ..device import use_default_device
-from cntk.internal import sanitize_var_map, sanitize_function, typemap
+from cntk.internal import sanitize_var_map, sanitize_function, typemap, \
+                          map_if_possible
 from ..io import _py_dict_to_cntk_dict, MinibatchData
 
 __doc__= '''\
@@ -156,7 +157,8 @@ class Trainer(cntk_py.Trainer):
                     output_map, device)
 
             for k,v in output_map.items():
-                output_map[k] = Value.to_seq(v, k)
+                map_if_possible(v)
+                output_map[k] = v.to_seq(k)
 
             return updated, output_map
         else:

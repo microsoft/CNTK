@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+import warnings
 
 class TensorOpsMixin(object):
     '''
@@ -156,39 +157,50 @@ def _add_tensor_ops(klass):
 
 
 class ArrayMixin(object):
-    @property
-    def __array_interface__(self):
+    def asarray(self):
+        '''
+        Converts the instance's data to a NumPy array.
+        '''
         import cntk
-        if isinstance(self, (cntk.cntk_py.Constant, cntk.cntk_py.Parameter, cntk.cntk_py.MinibatchData)):
-            np_array = self.value
-        elif isinstance(self, cntk.core.Value):
-            np_array = self.data.to_ndarray()
-        elif isinstance(self, cntk.cntk_py.Value):
-            np_array = self.data().to_ndarray()
+        if isinstance(self, (cntk.Constant, cntk.Parameter)):
+            return self.value
+        elif isinstance(self, (cntk.cntk_py.Constant, cntk.cntk_py.Parameter)):
+            return self.value().to_ndarray()
+
         elif isinstance(self, (cntk.cntk_py.NDArrayView, cntk.cntk_py.NDMask)):
-            np_array = self.to_ndarray()
-        else:
-            # Ideally an exception would be raised here, but getattr would swallow it
-            # so we return None
-            return None
+            return self.to_ndarray()
 
-        interface_copy = np_array.__array_interface__
+        # Value and MinibatchData have a mask, which means that we need the
+        # corresponding Variable to do the proper conversion. For easy
+        # discoverability, we nevertheless add asarray() to those classes as
+        # well, but issue a warning.
+        elif isinstance(self, cntk.cntk_py.Value) or isinstance(self, cntk.cntk_py.MinibatchData):
 
-        # for np arrays (other than 0-d arrays) data entry in __array_interface__ dict
-        # must be replaced with data member of array
-        if len(np_array.shape):
-            interface_copy["data"] = np_array.data
-        else:
-            # save a reference to np_array so that it does not disappear
-            self.np_array = np_array
+            if isinstance(self, cntk.cntk_py.MinibatchData):
+                value = self.data
+            else:
+                value = self
 
-        return interface_copy
+            if isinstance(value, cntk.Value):
+                has_mask = super(cntk.Value, value).mask() is not None
+                arr = value.data
+            elif isinstance(value, cntk.cntk_py.Value):
+                has_mask = value.mask() is not None
+                arr = value.data()
 
-def _add_array_interface(klass):
-    array_interface_name = '__array_interface__'
+            if has_mask:
+                warnings.warn('asarray() will ignore the mask information. '
+                              'Please use to_seq() to do the proper '
+                              'conversion.')
 
-    if getattr(klass, array_interface_name, None):
+            return arr.to_ndarray()
+
+
+def _add_asarray(klass):
+    member_name = 'asarray'
+
+    if getattr(klass, member_name, None):
         raise ValueError('class "%s" has already an attribute "%s"' %
-                         (klass, array_interface_name))
+                         (klass, member_name))
 
-    setattr(klass, array_interface_name, getattr(ArrayMixin, array_interface_name))
+    setattr(klass, member_name, getattr(ArrayMixin, member_name))

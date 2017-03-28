@@ -39,19 +39,27 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         return self.number_of_samples
 
-    @property
-    def value(self):
+    def to_seq(self, variable=None):
         '''
-        The value of the minibatch as a NumPy array.
+        Convert the value of this minibatch instance to a sequence of NumPy
+        arrays that have their masked entries removed.
         '''
-        return Value.to_seq(self.data)
+        return self.data.to_seq(variable)
 
     @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
         '''
-        return self.data.shape().dimensions()
+        return self.data.shape
+
+    @property
+    @typemap
+    def data(self):
+        '''
+        Retrieves the underlying :class:`~cntk.core.Value` instance.
+        '''
+        return super(MinibatchData, self).data
 
     @property
     def mask(self):

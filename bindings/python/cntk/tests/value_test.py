@@ -31,7 +31,7 @@ def _dense_value_to_ndarray_test(data, num_of_dynamic_axes, expected_value_shape
     assert val.shape == expected_value_shape
 
     # conversion value -> array
-    dense_result = asarray(var, val)
+    dense_result = val.to_seq(var)
 
     if isinstance(data, list):
         result_shapes = [AA(v).shape for v in dense_result]
@@ -56,7 +56,7 @@ def _sparse_value_to_csr_test(data, num_of_dynamic_axes, expected_value_shape, e
     assert val.shape == expected_value_shape
 
     # conversion value -> csr array
-    csr_result = asarray(var, val)
+    csr_result = val.to_seq(var)
 
     csr_result_shapes = [v.shape for v in csr_result]
 

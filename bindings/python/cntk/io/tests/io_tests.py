@@ -71,11 +71,6 @@ def test_text_format(tmpdir):
     assert features.num_sequences == 2
     assert features.num_samples == 7
     assert features.is_sparse
-    # TODO features is sparse and cannot be accessed right now:
-    # *** RuntimeError: DataBuffer/WritableDataBuffer methods can only be called for NDArrayiew objects with dense storage format
-    # 2 samples, max seq len 4, 1000 dim
-    #assert features.data().shape().dimensions() == (2, 4, input_dim)
-    #assert features.data().is_sparse()
 
     labels = mb[labels_si]
     # 2 samples, max seq len 1, 5 dim
@@ -85,7 +80,7 @@ def test_text_format(tmpdir):
     assert labels.num_samples == 2
     assert not labels.is_sparse
 
-    label_data = np.asarray(labels)
+    label_data = labels.asarray()
     assert np.allclose(label_data,
             np.asarray([
                 [[ 1.,  0.,  0.,  0.,  0.]],
@@ -308,32 +303,32 @@ def test_full_sweep_minibatch(tmpdir):
 
     features = mb[features_si]
     assert features.end_of_sweep
-    assert len(features.value) == 2
+    assert len(features.to_seq()) == 2
     expected_features = \
             [
                 [[0],[1],[2],[3]],
                 [[4],[5],[6]]
             ]
 
-    for res, exp in zip (features.value, expected_features):
+    for res, exp in zip (features.to_seq(), expected_features):
         assert np.allclose(res, exp)
 
-    assert np.allclose(features.mask,
+    assert np.allclose(features.data.mask,
             [[2, 1, 1, 1],
              [2, 1, 1, 0]])
 
     labels = mb[labels_si]
     assert labels.end_of_sweep
-    assert len(labels.value) == 2
+    assert len(labels.to_seq()) == 2
     expected_labels = \
             [
                 [[0],[1],[3]],
                 [[1],[2]]
             ]
-    for res, exp in zip (labels.value, expected_labels):
+    for res, exp in zip (labels.to_seq(), expected_labels):
         assert np.allclose(res, exp)
 
-    assert np.allclose(labels.mask,
+    assert np.allclose(labels.data.mask,
             [[2, 1, 1],
              [2, 1, 0]])
 

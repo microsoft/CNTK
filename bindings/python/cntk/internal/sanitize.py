@@ -89,6 +89,7 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
     from cntk.variables import Constant, Variable, Parameter
     from cntk.ops.functions import Function
     from cntk.ops import constant
+    from ..core import asarray
 
     # is it a Variable or a Function?
     if isinstance(arg,
@@ -103,7 +104,9 @@ def sanitize_input(arg, fallback_dtype=np.float32, reshape=None):
         raise ValueError('input is empty')
 
     if not isinstance(arg, np.ndarray) or arg.dtype != fallback_dtype:
-        arg = np.asarray(arg, dtype=fallback_dtype)
+        # TODO: check whether Values can be ingested directly
+        arg = asarray(arg, fallback_dtype)
+
         if arg.shape == ():
             arg.shape = (1,)
 
@@ -157,8 +160,8 @@ def sanitize_batch(var, batch, seq_starts=None, device=None):
 
 def sanitize_value(shape, value, dtype, device):
     '''
-    Converts a given ``value`` to an :class:`~cntk.core.NDArrayView` object that can be passed to
-    the CNTK core.
+    Converts a given ``value`` to an :class:`~cntk.core.NDArrayView` object
+    that can be passed to the CNTK core.
 
     Args:
         shape (tuple): shape of the value
@@ -172,6 +175,7 @@ def sanitize_value(shape, value, dtype, device):
         :class:`~cntk.core.NDArrayView` object representing ``value``
     '''
     from .. import NDArrayView
+    from ..core import asarray
     if value is None:
         if shape is None:
             raise ValueError('you need to specify at least shape or value')
@@ -179,11 +183,14 @@ def sanitize_value(shape, value, dtype, device):
         ndav = NDArrayView(shape, cntk_dtype, device)
     else:
         np_dtype = sanitize_dtype_numpy(dtype)
-        if not isinstance(value, np.ndarray) or value.dtype != np_dtype:
+        is_numpy = isinstance(value, np.ndarray)
+        if is_numpy and value.dtype != np_dtype:
+            value = value.astype(np_dtype)
+        elif not is_numpy:
             if np.isscalar(value) and shape:
                 value = np.full(shape, value, dtype=np_dtype)
             else:
-                value = np.asarray(value, dtype=np_dtype)
+                value = asarray(value, np_dtype)
 
         ndav = NDArrayView.from_dense(value, device)
 

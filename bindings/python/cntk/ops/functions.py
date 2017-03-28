@@ -658,8 +658,9 @@ class Function(cntk_py.Function):
         state = super(Function, self)._forward(in_var_map, output_map, device,
                                              keep_for_backward)
         if as_numpy:
-            for k in output_map:
-                output_map[k] = Value.to_seq(output_map[k], k)
+            for k, val in output_map.items():
+                map_if_possible(val)
+                output_map[k] = val.to_seq(variable=k)
 
         return state, output_map
 
@@ -712,7 +713,8 @@ class Function(cntk_py.Function):
 
         if as_numpy:
             for var, value in var_gradients.items():
-                var_gradients[var] = Value.to_seq(value, var)
+                map_if_possible(value)
+                var_gradients[var] = value.to_seq(var)
 
         return var_gradients
 
@@ -776,9 +778,13 @@ class Function(cntk_py.Function):
 
         if as_numpy:
             for k in output_map:
-                output_map[k] = Value.to_seq(output_map[k], k)
+                val = output_map[k]
+                map_if_possible(val)
+                output_map[k] = val.to_seq(k)
             for k in wrt_map:
-                wrt_map[k] = Value.to_seq(wrt_map[k], k)
+                val = wrt_map[k]
+                map_if_possible(val)
+                wrt_map[k] = val.to_seq(k)
 
         if len(output_map) == 0:
             return sanitize_variable_value_dict(wrt_map)
@@ -1143,7 +1149,9 @@ class UserFunction(Function):
              A BackPropState instance, which is used by :func:`backward`.
         '''
         if self.as_numpy:
-            arguments = tuple(Value.to_seq(v, self.inputs[i]) for i, v in enumerate(arguments))
+            map_if_possible(arguments)
+            inputs = self.inputs
+            arguments = tuple(v.to_seq(inputs[i]) for i, v in enumerate(arguments))
 
         map_if_possible(outputs)
         map_if_possible(outputs_to_retain)
@@ -1197,8 +1205,9 @@ class UserFunction(Function):
         device = state.device()
 
         if self.as_numpy:
+            map_if_possible(root_gradients)
             for v in root_gradients:
-                root_gradients[v] = Value.to_seq(root_gradients[v], v)
+                root_gradients[v] = root_gradients[v].to_seq(v)
 
             state = cntk_py.UserBackPropState.data(state)
 

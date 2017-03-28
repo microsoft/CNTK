@@ -1735,12 +1735,12 @@ StreamInformation.__eq__ = lambda a,b: a.m_name==b.m_name and a.m_id==b.m_id and
 }
 
 %pythoncode %{
-from .tensor import _add_tensor_ops, _add_array_interface
+from .tensor import _add_tensor_ops, _add_asarray
 for klass in [Function, Variable]:
     _add_tensor_ops(klass)
 
-for klass in [Variable, Value, NDArrayView, NDMask]:
-    _add_array_interface(klass)
+for klass in [Variable, Value, NDArrayView, NDMask, MinibatchData]:
+    _add_asarray(klass)
 
 enable_reversing_tensor_shapes_in_error_messages()
 %}
