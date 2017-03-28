@@ -97,7 +97,7 @@ def create_criterion_function(model, normalize=identity):
         z = model(normalize(x))
         ce   = cross_entropy_with_softmax(z, y)
         errs = classification_error      (z, y)
-        return (Function.NamedOutput(loss=ce), Function.NamedOutput(metric=errs))
+        return (ce, errs)
     return criterion
 
 ########################
