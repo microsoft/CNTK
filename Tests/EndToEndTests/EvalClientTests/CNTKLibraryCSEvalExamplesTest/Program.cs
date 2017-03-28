@@ -24,13 +24,13 @@ namespace CNTKLibraryCSEvalExamples
             {
                 var device = DeviceDescriptor.CPUDevice;
 
-                CNTKLibraryManagedExamples.EvaluationSingleImage(device);
-                // Run memory tests.
-                MemoryTests.ValidateObjectReferences(device);
-                CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
-                CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
-                // Run memory tests again.
-                MemoryTests.ValidateObjectReferences(device);
+                //CNTKLibraryManagedExamples.EvaluationSingleImage(device);
+                //// Run memory tests.
+                //MemoryTests.ValidateObjectReferences(device);
+                //CNTKLibraryManagedExamples.EvaluationBatchOfImages(device);
+                //CNTKLibraryManagedExamples.EvaluateMultipleImagesInParallel(device);
+                //// Run memory tests again.
+                //MemoryTests.ValidateObjectReferences(device);
 
                 CNTKLibraryManagedExamples.EvaluationSingleSequenceUsingOneHot(device);
                 CNTKLibraryManagedExamples.EvaluationBatchOfSequencesUsingOneHot(device);

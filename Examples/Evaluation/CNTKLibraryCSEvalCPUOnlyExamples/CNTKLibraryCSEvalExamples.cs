@@ -83,6 +83,21 @@ namespace CNTKLibraryCSEvalExamples
                 var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
                 outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
+                var numSeqs = outputData.Count;
+                if (numSeqs != outputBuffer.Count)
+                    throw new Exception("Number mismatch.");
+                for (int i = 0; i < numSeqs; i++)
+                {
+                    var s1 = outputData[i];
+                    var s2 = outputBuffer[i];
+                    if (s1.Count != s2.Count)
+                        throw new Exception("Length mismatch");
+                    var len = s1.Count;
+                    for (int j = 0; j < len; j++)
+                        if (s1[j] != s2[j])
+                            throw new Exception("Data mismatch");
+                }
 
                 PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
             }
@@ -170,6 +185,21 @@ namespace CNTKLibraryCSEvalExamples
                 var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
                 outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
+                var numSeqs = outputData.Count;
+                if (numSeqs != outputBuffer.Count)
+                    throw new Exception("Number mismatch.");
+                for (int i = 0; i < numSeqs; i++)
+                {
+                    var s1 = outputData[i];
+                    var s2 = outputBuffer[i];
+                    if (s1.Count != s2.Count)
+                        throw new Exception("Length mismatch");
+                    var len = s1.Count;
+                    for (int j = 0; j < len; j++)
+                        if (s1[j] != s2[j])
+                            throw new Exception("Data mismatch");
+                }
 
                 // Output result
                 PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
@@ -261,6 +291,21 @@ namespace CNTKLibraryCSEvalExamples
                     var outputBuffer = new List<List<float>>();
                     var outputVal = outputDataMap[outputVar];
                     outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                    var outputData = outputVal.GetDenseData<float>(outputVar);
+                    var numSeqs = outputData.Count;
+                    if (numSeqs != outputBuffer.Count)
+                        throw new Exception("Number mismatch.");
+                    for (int i = 0; i < numSeqs; i++)
+                    {
+                        var s1 = outputData[i];
+                        var s2 = outputBuffer[i];
+                        if (s1.Count != s2.Count)
+                            throw new Exception("Length mismatch");
+                        var len = s1.Count;
+                        for (int j = 0; j < len; j++)
+                            if (s1[j] != s2[j])
+                                throw new Exception("Data mismatch");
+                    }
 
                     // Serialize output
                     lock (lockObj)
@@ -340,6 +385,21 @@ namespace CNTKLibraryCSEvalExamples
                 var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
                 outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
+                var numSeqs = outputData.Count;
+                if (numSeqs != outputBuffer.Count)
+                    throw new Exception("Number mismatch.");
+                for (int i = 0; i < numSeqs; i++)
+                {
+                    var s1 = outputData[i];
+                    var s2 = outputBuffer[i];
+                    if (s1.Count != s2.Count)
+                        throw new Exception("Length mismatch");
+                    var len = s1.Count;
+                    for (int j = 0; j < len; j++)
+                        if (s1[j] != s2[j])
+                            throw new Exception("Data mismatch");
+                }
 
                 PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
             }
@@ -459,6 +519,22 @@ namespace CNTKLibraryCSEvalExamples
                 var outputData = new List<List<float>>();
                 Value outputVal = outputDataMap[outputVar];
                 outputVal.CopyVariableValueTo(outputVar, outputData);
+                var outputBuffer = outputVal.GetDenseData<float>(outputVar);
+                var numSeqs = outputData.Count;
+                if (numSeqs != outputBuffer.Count)
+                    throw new Exception("Number mismatch.");
+                for (int i = 0; i < numSeqs; i++)
+                {
+                    var s1 = outputData[i];
+                    var s2 = outputBuffer[i];
+                    if (s1.Count != s2.Count)
+                        throw new Exception("Length mismatch");
+                    var len = s1.Count;
+                    for (int j = 0; j < len; j++)
+                        if (s1[j] != s2[j])
+                            throw new Exception("Data mismatch");
+                }
+
 
                 // output the result
                 var outputSampleSize = (int)outputVar.Shape.TotalSize;
