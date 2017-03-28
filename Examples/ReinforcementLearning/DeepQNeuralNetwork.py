@@ -1,17 +1,18 @@
+from argparse import ArgumentParser
+
 import gym
 import numpy as np
 import six
-
-from argparse import ArgumentParser
-from cntk.axis import Axis
+from cntk import Signature
 from cntk.core import Value
 from cntk.device import set_default_device, cpu, gpu
 from cntk.initializer import he_uniform
-from cntk.layers import Input, Convolution2D, Dense, default_options
+from cntk.layers import Convolution2D, Dense, default_options
+from cntk.layers.typing import Tensor
 from cntk.learners import adam, learning_rate_schedule, momentum_schedule, UnitType
 from cntk.models import Sequential
 from cntk.ops import abs, element_select, less, relu, reduce_sum, square
-from cntk.ops.functions import CloneMethod
+from cntk.ops.functions import CloneMethod, Function
 from cntk.trainer import Trainer
 
 
@@ -207,11 +208,6 @@ class DeepQAgent(object):
         # CNTK Device setup
         set_default_device(cpu() if device_id == -1 else gpu(device_id))
 
-        # Model & Loss inputs
-        self._environment = Input(input_shape, dynamic_axes=(Axis.default_batch_axis()), name='environment')
-        self._actions = Input(input_shape, dynamic_axes=(Axis.default_batch_axis()), name='actions')
-        self._q_targets = Input(input_shape, dynamic_axes=(Axis.default_batch_axis()), name='q_targets')
-
         # Action Value model (used by agent to interact with the environment)
         with default_options(activation=relu, init=he_uniform()):
             self._action_value_net = Sequential([
@@ -220,10 +216,11 @@ class DeepQAgent(object):
                 Convolution2D((3, 3), 32, strides=1),
                 Dense(256, init=he_uniform(scale=0.01)),
                 Dense(nb_actions, activation=None, init=he_uniform(scale=0.01))
-            ])(self._environment)
+            ])
+        self._action_value_net.update_signature(Tensor(input_shape))
 
         # Target model (used to compute target QValues in training process, updated less frequently)
-        self._target_net = self._action_value_net.clone(CloneMethod.freeze, {self._environment: self._environment})
+        self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
         # Define the learning rate (w.r.t to unit_gain=True)
         lr_per_sample = learning_rate / minibatch_size / (1 - momentum)
@@ -236,11 +233,15 @@ class DeepQAgent(object):
                      momentum=m_schedule, unit_gain=True, variance_momentum=vm_schedule)
 
         # Define the loss, using Huber Loss (More robust to outliers)
-        # self._actions is a sparse One Hot encoding of the action done by the agent
-        q_acted = reduce_sum(self._action_value_net * self._actions, axis=0)
+        @Function
+        @Signature(environment=Tensor(input_shape), actions=Tensor(input_shape), q_targets=Tensor(input_shape))
+        def criterion(environment, actions, q_targets):
+            # Define the loss, using Huber Loss (More robust to outliers)
+            # actions is a sparse One Hot encoding of the action done by the agent
+            q_acted = reduce_sum(self._action_value_net(environment) * actions, axis=0)
 
-        # Define the trainer with Huber Loss function
-        criterion = DeepQAgent.huber_loss(self._q_targets, q_acted, 1.0)
+            # Define the trainer with Huber Loss function
+            return DeepQAgent.huber_loss(q_targets, q_acted, 1.0)
 
         self._learner = l_sgd
         self._trainer = Trainer(self._action_value_net, (criterion, None), l_sgd)
@@ -256,8 +257,7 @@ class DeepQAgent(object):
             # Use the network to output the best action
             env_with_history = self._history.value
             q_values = self._action_value_net.eval(
-                # Append batch axis with only one sample to evaluate
-                {self._environment: env_with_history.reshape((1,) + state.shape)}
+                env_with_history.reshape((1,) + state.shape)  # Append batch axis with only one sample to evaluate
             )
             action = q_values.argmax()
 
@@ -278,21 +278,22 @@ class DeepQAgent(object):
             pre_states, actions, rewards, post_states, dones = self._memory.minibatch(self._minibatch_size)
             q_value_targets = self._compute_q(actions, rewards, post_states, dones)
 
-            self._trainer.train_minibatch({
-                self._environment: pre_states,
-                self._actions: Value.one_hot(actions, self.nb_actions),
-                self._q_targets: q_value_targets
-            })
+            self._trainer.train_minibatch(
+                self._action_value_net.argument_map(
+                    environment=pre_states,
+                    actions=Value.one_hot(actions, self.nb_actions),
+                    q_targets=q_value_targets
+                )
+            )
 
-            if (self._action_taken % self._target_update_interval) == 0:
-                self._target_net = \
-                    self._action_value_net.clone(CloneMethod.freeze, {self._environment: self._environment})
+        if (self._action_taken % self._target_update_interval) == 0:
+            self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
     def _compute_q(self, actions, rewards, post_states, dones):
-        q_hat = self._target_net.evaluate({self._environment: post_states})
-        q_hat_eval = q_hat[np.arange(len(actions)), q_hat.argmax(axis=1)]
-
+        q_hat = self._target_net.evaluate(post_states)
+        q_hat_eval = q_hat.max(axis=1)
         q_targets = (1 - dones) * (self.gamma * q_hat_eval) + rewards
+
         return np.array(q_targets, dtype=np.float32)
 
 
