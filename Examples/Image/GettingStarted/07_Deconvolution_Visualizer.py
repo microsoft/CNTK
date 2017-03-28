@@ -9,7 +9,7 @@ import os
 import numpy as np
 from cntk import load_model
 from cntk.ops import combine
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 from PIL import Image
 from cntk import graph
 
@@ -81,7 +81,7 @@ if __name__ == '__main__':
     minibatch_source = MinibatchSource(CTFDeserializer(data_file, StreamDefs(
         features  = StreamDef(field='features', shape=(28*28)),
         labels    = StreamDef(field='labels',   shape=10)
-    )), randomize=False, epoch_size = FULL_DATA_SWEEP)
+    )), randomize=False, max_sweeps = 1)
 
     # use this to print all node names in the model
     # print_all_node_names(model_file, use_brain_script_model)

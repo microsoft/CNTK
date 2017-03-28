@@ -1455,7 +1455,7 @@ namespace CNTK
     ///
     /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed).
     ///
-    class Dictionary final
+    class Dictionary
     {
         friend inline void AddConfigString(std::wstringstream& s, const DictionaryValue& value, size_t numIndentationSpaces);
         friend class CompositeMinibatchSource;
@@ -1507,11 +1507,12 @@ namespace CNTK
         CNTK_API bool operator==(const Dictionary& other) const;
         CNTK_API bool operator!=(const Dictionary& other) const;
 
+        typedef std::unordered_map<std::wstring, DictionaryValue>::iterator DictionaryIterator;
         typedef std::unordered_map<std::wstring, DictionaryValue>::const_iterator ConstDictionaryIterator;
 
-        ConstDictionaryIterator begin() const { return m_dictionaryData->begin(); }
+        DictionaryIterator begin() const { return m_dictionaryData->begin(); }
         ConstDictionaryIterator cbegin() const { return m_dictionaryData->cbegin(); }
-        ConstDictionaryIterator end() const { return m_dictionaryData->end(); }
+        DictionaryIterator end() const { return m_dictionaryData->end(); }
         ConstDictionaryIterator cend() const { return m_dictionaryData->cend(); }
 
         size_t Size() { return m_dictionaryData->size();  }
@@ -3699,8 +3700,6 @@ namespace CNTK
                                      const NDShape& strides = { 1 },
                                      const std::vector<bool>& sharing = { true },
                                      const std::vector<bool>& autoPadding = { true },
-                                     const NDShape& lowerPad = { 0 },
-                                     const NDShape& upperPad = { 0 },
                                      size_t maxTempMemSizeInSamples = 0, 
                                      const std::wstring& name = L"");
 
@@ -3712,8 +3711,6 @@ namespace CNTK
         const NDShape& strides = { 1 },
         const std::vector<bool>& sharing = { true },
         const std::vector<bool>& autoPadding = { true },
-        const NDShape& lowerPad = { 0 },
-        const NDShape& upperPad = { 0 },
         const NDShape& outputShape = { 0 },
         size_t maxTempMemSizeInSamples = 0,
         const std::wstring& name = L"");
@@ -3740,8 +3737,6 @@ namespace CNTK
                                  const NDShape& poolingWindowShape,
                                  const NDShape& strides = {1},
                                  const std::vector<bool>& autoPadding = {false},
-                                 const NDShape& lowerPad = {0},
-                                 const NDShape& upperPad = {0},
                                  const bool ceilOutDim = false,
                                  const bool includePad = false,
                                  const std::wstring& name = L"");
@@ -3755,8 +3750,6 @@ namespace CNTK
                                    const NDShape& UnpoolingWindowShape,
                                    const NDShape& strides = { 1 },
                                    const std::vector<bool>& autoPadding = { false },
-                                   const NDShape& lowerPad = { 0 },
-                                   const NDShape& upperPad = { 0 },
                                    const std::wstring& name = L"");
 
     ///
@@ -4673,11 +4666,8 @@ namespace CNTK
     class MinibatchSource : public std::enable_shared_from_this<MinibatchSource>
     {
     public:
-        static const size_t InfinitelyRepeat = SIZE_MAX;
-        static const size_t FullDataSweep    = SIZE_MAX - 2; // An arbitrary sentinel value
-        static const size_t InfiniteSamples  = SIZE_MAX;
-        static const size_t DefaultRandomizationWindow = SIZE_MAX - 2;
-
+        CNTK_API static const size_t InfinitelyRepeat;
+        CNTK_API static const size_t FullDataSweep;
         CNTK_API static const size_t DefaultRandomizationWindowInChunks;
 
     public:
@@ -4754,10 +4744,93 @@ namespace CNTK
         MinibatchSource() {}
     };
 
+    typedef Dictionary Deserializer;
+    
+    ///
+    /// A configuration required to instantiate the CNTK built-in composite minibatch source.
+    /// 
+    struct MinibatchSourceConfig
+    {
+        // TODO: This is general enough and be hoisted out once there are specific use-cases outside of
+        // configuring a MinibatchSource.
+        enum TraceLevel : unsigned int
+        {
+            Error = 0,
+            Warning = 1,
+            Info = 2
+        };
+
+        ///
+        /// Creates a new minibatch source configuration, with enabled randomization and
+        /// the randomization window set to DefaultRandomizationWindowInChunks when 'randomize' is
+        /// 'true' (default).
+        ///
+        CNTK_API MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize = true);
+
+        /// 
+        /// The maximum number of input samples (not 'label samples') the reader can produce 
+        /// (the default value is InfinitelyRepeat). After this number has been reached, the reader 
+        /// returns empty minibatches on subsequent calls to GetNextMinibatch(). 'maxSweeps' and 'maxSamples' 
+        /// are mutually exclusive, an exception will be raised if both have non-default values.
+        /// 
+        size_t maxSamples { MinibatchSource::InfinitelyRepeat };
+
+        ///
+        /// The maximum allowed number of sweeps over the input dataset. After this number has been reached, 
+        /// the reader returns empty minibatches on subsequent calls to GetNextMinibatch().
+        /// 'maxSweeps' and 'maxSamples' are mutually exclusive, an exception will be raised if both have 
+        /// non-default values.
+        /// 
+        size_t maxSweeps { MinibatchSource::InfinitelyRepeat };
+
+        ///
+        /// Size of the randomization window in chunks, non-zero value enables randomization. 
+        /// 'randomizationWindowInChunks' and 'randomizationWindowInSamples' are mutually exclusive,
+        /// an exception will be raised if both have non-zero values.
+        ///
+        size_t randomizationWindowInChunks { MinibatchSource::DefaultRandomizationWindowInChunks };
+
+        ///
+        /// Size of the randomization window in samples, non-zero value enables randomization. 
+        /// 'randomizationWindowInChunks' and 'randomizationWindowInSamples' are mutually exclusive,
+        /// an exception will be raised if both have non-zero values.
+        ///
+        size_t randomizationWindowInSamples { 0 };
+
+        ///
+        /// Output verbosity level.
+        ///
+        TraceLevel traceLevel { TraceLevel::Warning };
+
+        ///
+        /// Truncation length in samples, non-zero value enables the truncation (only applicable for BPTT,
+        /// cannot be used in frame mode, an exception will be raised if frame mode is enabled and the 
+        /// truncation length is non-zero).
+        ///
+        size_t truncationLength { 0 };
+
+        ///
+        /// Switches the frame mode on and off. If the frame mode is enabled the input data will be processed
+        /// as individual frames ignoring all sequence information (this option cannot be used for BPTT,
+        /// an exception will be raised if frame mode is enabled and the truncation length is non-zero).
+        ///
+        bool isFrameModeEnabled { false };
+
+        ///
+        /// Specifies if the deserialization should be done on a single or multiple threads.
+        ///
+        bool isMultithreaded { false };
+
+        ///
+        /// Deserializers to be used in the composite reader.
+        ///
+        std::vector<Deserializer> deserializers;
+    };
+
     ///
     /// Instantiate the CNTK built-in composite minibatch source.
     ///
-    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration);
+    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const MinibatchSourceConfig& configuration);
 
     struct StreamConfiguration
     {
@@ -4784,51 +4857,6 @@ namespace CNTK
         size_t m_right;
         bool m_broadcast;
     };
-
-    /// 
-    /// Instantiate the CNTK built-in text format minibatch source
-    ///
-    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs,
-                                                        size_t epochSize = MinibatchSource::InfinitelyRepeat, 
-                                                        bool randomize = true,
-                                                        size_t randomizationWindow = MinibatchSource::DefaultRandomizationWindowInChunks,
-                                                        bool sampleBasedRandomizationWindow = false)
-    {
-        ::CNTK::Dictionary minibatchSourceConfiguration;
-        minibatchSourceConfiguration[L"epochSize"] = epochSize;
-
-        if (randomize)
-        {
-            minibatchSourceConfiguration[L"randomize"] = true;
-            minibatchSourceConfiguration[L"randomizationWindow"] = randomizationWindow;
-            minibatchSourceConfiguration[L"sampleBasedRandomizationWindow"] = sampleBasedRandomizationWindow;
-        }
-
-        ::CNTK::Dictionary deserializerConfiguration;
-        deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-        deserializerConfiguration[L"file"] = dataFilePath;
-
-        ::CNTK::Dictionary inputStreamsConfig;
-        for (auto streamConfig : streamConfigs)
-        {
-            std::wstring streamName = streamConfig.m_streamName;
-            size_t streamDim = streamConfig.m_dim;
-            bool isSparse = streamConfig.m_isSparse;
-            std::wstring streamAlias = streamConfig.m_streamAlias;
-
-            ::CNTK::Dictionary inputStreamConfig;
-            inputStreamConfig[L"dim"] = streamDim;
-            inputStreamConfig[L"format"] = isSparse ? L"sparse" : L"dense";
-            if (!streamAlias.empty())
-                inputStreamConfig[L"alias"] = streamAlias;
-
-            inputStreamsConfig[streamName] = inputStreamConfig;
-        }
-
-        deserializerConfiguration[L"input"] = inputStreamsConfig;
-        minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
-        return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
-    }
 
     typedef Dictionary ImageTransform;
 
@@ -4857,9 +4885,6 @@ namespace CNTK
     CNTK_API ImageTransform ReaderColor(float brightnessRadius = 0.0f,
         float contrastRadius = 0.0f, float saturationRadius = 0.0f);
 
-
-    typedef Dictionary Deserializer;
-
     /// 
     /// Create an ImageDeserializer with the specified options
     /// 
@@ -4879,6 +4904,29 @@ namespace CNTK
     /// Create an HTKMLFDeserializer with the specified options
     /// 
     CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles);
+
+    /// 
+    /// Instantiate the CNTK built-in text format minibatch source
+    ///
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs,
+        size_t epochSize = MinibatchSource::InfinitelyRepeat,
+        bool randomize = true,
+        size_t randomizationWindow = MinibatchSource::DefaultRandomizationWindowInChunks,
+        bool sampleBasedRandomizationWindow = false)
+    {
+        MinibatchSourceConfig config({ CTFDeserializer(dataFilePath, streamConfigs) }, randomize);
+        config.maxSamples = epochSize;
+
+        if (randomize)
+        {
+            if (sampleBasedRandomizationWindow)
+                config.randomizationWindowInSamples = randomizationWindow;
+            else
+                config.randomizationWindowInChunks = randomizationWindow;
+        }
+
+        return CreateCompositeMinibatchSource(config);
+    }
 
     ///
     /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.

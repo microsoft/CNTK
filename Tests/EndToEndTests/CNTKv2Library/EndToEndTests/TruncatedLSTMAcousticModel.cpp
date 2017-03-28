@@ -33,9 +33,11 @@ void TrainTruncatedLSTMAcousticModelClassifier(const DeviceDescriptor& device, b
     auto labels = InputVariable({ numOutputClasses }, DataType::Float, L"labels");
 
     const size_t numSamplesForFeatureStatistics = MinibatchSource::FullDataSweep;
-    Dictionary frameModeConfig;
-    frameModeConfig[L"frameMode"] = true;
-    auto minibatchSource = CreateHTKMinibatchSource(baseFeaturesDim, numOutputClasses, frameModeConfig, numSamplesForFeatureStatistics, false);
+    
+    auto config = GetHTKMinibatchSourceConfig(baseFeaturesDim, numOutputClasses, numSamplesForFeatureStatistics, false);
+    config.isFrameModeEnabled = true;
+    auto minibatchSource = CreateCompositeMinibatchSource(config);
+
     auto featureStreamInfo = minibatchSource->StreamInfo(features);
     std::unordered_map<StreamInformation, std::pair<NDArrayViewPtr, NDArrayViewPtr>> featureMeansAndInvStdDevs = { { featureStreamInfo, { nullptr, nullptr } } };
     ComputeInputPerDimMeansAndInvStdDevs(minibatchSource, featureMeansAndInvStdDevs);
@@ -61,10 +63,10 @@ void TrainTruncatedLSTMAcousticModelClassifier(const DeviceDescriptor& device, b
 
     const size_t numTrainingSamples = 81920;
     const size_t truncationLength = 20;
-    Dictionary truncatedModeConfig;
-    truncatedModeConfig[L"truncated"] = true;
-    truncatedModeConfig[L"truncationLength"] = truncationLength;
-    minibatchSource = CreateHTKMinibatchSource(baseFeaturesDim, numOutputClasses, truncatedModeConfig, numTrainingSamples);
+
+    config = GetHTKMinibatchSourceConfig(baseFeaturesDim, numOutputClasses, numTrainingSamples);
+    config.truncationLength = truncationLength;
+    minibatchSource = CreateCompositeMinibatchSource(config);
 
     const size_t numberParallelSequencesPerMB1 = 16;
     const size_t numberParallelSequencesPerMB2 = 32;

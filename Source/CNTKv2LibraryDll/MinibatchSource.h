@@ -20,7 +20,7 @@ namespace CNTK
         static const std::wstring DistributedAfterSampleCountAttributeName;
 
     public:
-        CompositeMinibatchSource(const Dictionary& configuration);
+        CompositeMinibatchSource(const MinibatchSourceConfig& configuration);
 
         virtual const std::unordered_set<StreamInformation>& StreamInfos() override { return m_streamInfos; }
 
@@ -51,7 +51,7 @@ namespace CNTK
         size_t m_workerRank;
         size_t m_prevMinibatchSize;
         size_t m_maxNumSamplesToRead;
-        size_t m_randomizedWindow;
+        size_t m_maxNumSweepsToRead;
         size_t m_truncationLength;
         std::unordered_map<StreamInformation, MinibatchData> m_minibatchData;
         std::vector<Microsoft::MSR::CNTK::StreamDescriptionPtr> m_compositeDataReaderStreamDescs;

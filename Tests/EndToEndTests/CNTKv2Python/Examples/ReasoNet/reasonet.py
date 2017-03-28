@@ -3,7 +3,7 @@ ReasoNet model in CNTK
 @author penhe@microsoft.com
 """
 import sys
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, DEFAULT_RANDOMIZATION_WINDOW
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
 import cntk.ops as ops
 from cntk.layers.blocks import _INFERRED, Parameter
 #import cntk.internal.utils as utils
@@ -14,7 +14,7 @@ import cntk.learner as learner
 from .utils import *
 from .layers import *
 
-def create_reader(path, vocab_dim, entity_dim, randomize, rand_size= DEFAULT_RANDOMIZATION_WINDOW, size=INFINITELY_REPEAT):
+def create_reader(path, vocab_dim, entity_dim, randomize):
   """
   Create data reader for the model
   Args:
