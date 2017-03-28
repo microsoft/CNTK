@@ -1960,7 +1960,7 @@ std::vector<std::wstring> msra::files::get_all_files_from_directory(const std::w
     std::vector<std::wstring> result;
 #ifdef _WIN32
     WIN32_FIND_DATA ffd = {};
-    HANDLE hFind = FindFirstFile(directory.c_str(), &ffd);
+    HANDLE hFind = FindFirstFile((directory + L"/*").c_str(), &ffd);
     if (INVALID_HANDLE_VALUE == hFind)
         RuntimeError("Cannot get information about directory '%ls'.", directory.c_str());
 
