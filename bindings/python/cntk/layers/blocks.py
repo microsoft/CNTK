@@ -451,7 +451,8 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        return (Function.NamedOutput(h=h), Function.NamedOutput(c=c))
+        #return (Function.NamedOutput(h=h), Function.NamedOutput(c=c))
+        return (h, c)
 
     # GRU model function
     # in this case:
@@ -489,14 +490,16 @@ def _RecurrentBlock(type, shape, cell_shape, activation, use_peepholes,
             ht
 
         # returns the new state as a tuple with names but order matters
-        return Function.NamedOutput(h=h)
+        #return Function.NamedOutput(h=h)
+        return h
 
     def rnn(dh, x):
         dhs = Sdh(dh)  # previous value, stabilized
         ht = activation (times(x, W) + times(dhs, H) + b)
         h = times(Sht(ht), Wmr) if has_projection else \
             ht
-        return Function.NamedOutput(h=h)
+        #return Function.NamedOutput(h=h)
+        return h
 
     function = {
         'RNNUnit': rnn,

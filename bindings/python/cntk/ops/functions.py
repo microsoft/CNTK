@@ -50,11 +50,12 @@ class Function(cntk_py.Function):
             return
         super(Function, self).__init__(*args, **kwargs)
 
-    class NamedOutput:
-        def __init__(self, **kwargs):
-            for kw in kwargs: # TODO: only allow one arg
-                self.name = kw
-                self.arg = kwargs[kw]
+    # TODO: bring this back once we have a design for name-accessible .outputs etc.
+    #class NamedOutput:
+    #    def __init__(self, **kwargs):
+    #        for kw in kwargs: # TODO: only allow one arg
+    #            self.name = kw
+    #            self.arg = kwargs[kw]
 
     _placeholders_under_construction = set()
 
@@ -147,10 +148,12 @@ class Function(cntk_py.Function):
                         Function._placeholders_under_construction.remove(arg)
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
-                    if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                        output = alias(output.arg, name=output.name)
-                    elif isinstance(output, cntk_py.Variable):
+                    #if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                    #    output = alias(output.arg, name=output.name)
+                    # ^^ TODO: Complete the design for name-accessible .outputs, then bring this back.
+                    if isinstance(output, cntk_py.Variable):
                         output = combine([output]) # workaround: wrap in another combine() call
+                    # TODO: ^^ is this still necessary? Or is this a sanitize() call we need here?
                     return output
                 if isinstance(out, tuple): # multi-valued function, returned as a tuple
                     out = [resolve_named(output) for output in out]
