@@ -220,7 +220,17 @@ class DeepQAgent(object):
                 Dense(256, init=he_uniform(scale=0.01)),
                 Dense(nb_actions, activation=None, init=he_uniform(scale=0.01))
             ])
-        self._action_value_net.update_signature(input_shape)
+
+        # Define the loss, using Huber Loss (More robust to outliers)
+        @Function
+        @Signature(environment=Tensor[input_shape], actions=Tensor[nb_actions], q_targets=Tensor[1])
+        def criterion(environment, actions, q_targets):
+            # Define the loss, using Huber Loss (More robust to outliers)
+            # actions is a sparse One Hot encoding of the action done by the agent
+            q_acted = reduce_sum(self._action_value_net(environment) * actions, axis=0)
+
+            # Define the trainer with Huber Loss function
+            return DeepQAgent.huber_loss(q_targets, q_acted, 1.0)
 
         # Target model (used to compute target QValues in training process, updated less frequently)
         self._target_net = self._action_value_net.clone(CloneMethod.freeze)
@@ -234,17 +244,6 @@ class DeepQAgent(object):
         vm_schedule = momentum_schedule(0.999)
         l_sgd = adam(self._action_value_net.parameters, lr_schedule,
                      momentum=m_schedule, unit_gain=True, variance_momentum=vm_schedule)
-
-        # Define the loss, using Huber Loss (More robust to outliers)
-        @Function
-        @Signature(environment=Tensor[input_shape], actions=Tensor[nb_actions], q_targets=Tensor[1])
-        def criterion(environment, actions, q_targets):
-            # Define the loss, using Huber Loss (More robust to outliers)
-            # actions is a sparse One Hot encoding of the action done by the agent
-            q_acted = reduce_sum(self._action_value_net(environment) * actions, axis=0)
-
-            # Define the trainer with Huber Loss function
-            return DeepQAgent.huber_loss(q_targets, q_acted, 1.0)
 
         self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir='metrics', model=criterion)
         self._learner = l_sgd
