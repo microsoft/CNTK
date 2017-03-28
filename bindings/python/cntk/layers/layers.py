@@ -1013,8 +1013,6 @@ def GlobalAveragePooling(name=''):
 def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                  strides=1,
                  pad=False,
-                 lower_pad=0,
-                 upper_pad=0, 
                  name=''):
 
     strides     = _pad_to_shape(filter_shape, strides, 'strides')
@@ -1022,8 +1020,7 @@ def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     @BlockFunction('MaxUnpooling', name)
     def maxunpool(x, y):
-        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad,
-                         lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
+        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad)
     return maxunpool
 
 

@@ -1455,7 +1455,7 @@ namespace CNTK
     ///
     /// A type denoting a dictionary (keyed by Unicode strings) of serializable values (dynamically typed).
     ///
-    class Dictionary final
+    class Dictionary
     {
         friend inline void AddConfigString(std::wstringstream& s, const DictionaryValue& value, size_t numIndentationSpaces);
         friend class CompositeMinibatchSource;
@@ -1507,11 +1507,12 @@ namespace CNTK
         CNTK_API bool operator==(const Dictionary& other) const;
         CNTK_API bool operator!=(const Dictionary& other) const;
 
+        typedef std::unordered_map<std::wstring, DictionaryValue>::iterator DictionaryIterator;
         typedef std::unordered_map<std::wstring, DictionaryValue>::const_iterator ConstDictionaryIterator;
 
-        ConstDictionaryIterator begin() const { return m_dictionaryData->begin(); }
+        DictionaryIterator begin() const { return m_dictionaryData->begin(); }
         ConstDictionaryIterator cbegin() const { return m_dictionaryData->cbegin(); }
-        ConstDictionaryIterator end() const { return m_dictionaryData->end(); }
+        DictionaryIterator end() const { return m_dictionaryData->end(); }
         ConstDictionaryIterator cend() const { return m_dictionaryData->cend(); }
 
         size_t Size() { return m_dictionaryData->size();  }
@@ -3648,6 +3649,8 @@ namespace CNTK
         return FutureValue(operand, defaultInitialState, offset, name);
     }
 
+    CNTK_API FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name = L"");
+
     ///
     /// Create an instance of the CNTK built-in sum reduction operation on specified tensor input operand along all the axes
     ///
@@ -3697,8 +3700,6 @@ namespace CNTK
                                      const NDShape& strides = { 1 },
                                      const std::vector<bool>& sharing = { true },
                                      const std::vector<bool>& autoPadding = { true },
-                                     const NDShape& lowerPad = { 0 },
-                                     const NDShape& upperPad = { 0 },
                                      size_t maxTempMemSizeInSamples = 0, 
                                      const std::wstring& name = L"");
 
@@ -3710,8 +3711,6 @@ namespace CNTK
         const NDShape& strides = { 1 },
         const std::vector<bool>& sharing = { true },
         const std::vector<bool>& autoPadding = { true },
-        const NDShape& lowerPad = { 0 },
-        const NDShape& upperPad = { 0 },
         const NDShape& outputShape = { 0 },
         size_t maxTempMemSizeInSamples = 0,
         const std::wstring& name = L"");
@@ -3738,8 +3737,6 @@ namespace CNTK
                                  const NDShape& poolingWindowShape,
                                  const NDShape& strides = {1},
                                  const std::vector<bool>& autoPadding = {false},
-                                 const NDShape& lowerPad = {0},
-                                 const NDShape& upperPad = {0},
                                  const bool ceilOutDim = false,
                                  const bool includePad = false,
                                  const std::wstring& name = L"");
@@ -3753,8 +3750,6 @@ namespace CNTK
                                    const NDShape& UnpoolingWindowShape,
                                    const NDShape& strides = { 1 },
                                    const std::vector<bool>& autoPadding = { false },
-                                   const NDShape& lowerPad = { 0 },
-                                   const NDShape& upperPad = { 0 },
                                    const std::wstring& name = L"");
 
     ///
@@ -4389,11 +4384,100 @@ namespace CNTK
     }
 
     ///
+    /// Evaluator is a top-level abstraction for evaluating a model's performance with specified error criterion.
+    ///
+    class Evaluator : public std::enable_shared_from_this<Evaluator>
+    {
+    public:
+        ///
+        /// Tests the model on the specified batch of samples using the evaluation Function specified during construction of the Evaluator
+        /// Returns the average evaluation criterion value per sample for the tested minibatch of samples
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// An overload of the TestMinibatch above that takes a map of variables and their values (as its first argument).
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// An overload of the TestMinibatch above that takes a map of output variables.
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// An overload of the TestMinibatch above that takes a map of output variables.
+        ///
+        CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
+
+        ///
+        /// Evaluation Function that is used as for the criterion for evaluating the trained model's quality.
+        ///
+        FunctionPtr EvaluationFunction() const { return m_evaluationFunction; }
+
+        ///
+        /// Writes the summary of test progress and resets the accumulators.
+        ///
+        CNTK_API void SummarizeTestProgress();
+
+        CNTK_API virtual ~Evaluator() {}
+
+    private:
+        template <typename T1, typename ...CtorArgTypes>
+        friend std::shared_ptr<T1> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
+
+        friend class TrainingSession;
+
+        // Returns aggregated evaluation criterion value and sample count.
+        std::pair<ValuePtr, size_t> TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice, bool distributed);
+        std::pair<ValuePtr, size_t> TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, bool distributed);
+
+        std::pair<ValuePtr, size_t> TestLocalMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice);
+
+        void UpdateTestProgress(size_t numSamples, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
+
+    protected:
+        Evaluator(const FunctionPtr& evaluationFunction, const std::vector<ProgressWriterPtr>& progressWriters = {}, bool initializeCombined = true);
+
+        // Helper functions.
+        std::vector<Variable> GetCombinedEvalFunctionArgs() const;
+        static size_t GetSampleCount(const Variable& var, const ValuePtr& value);
+        static std::unordered_map<Variable, ValuePtr> GetInputs(const std::unordered_map<Variable, MinibatchData>& arguments);
+
+
+        // The combined eval function can be reset by the derived classes.
+        void SetCombinedEvalFunction(FunctionPtr combinedEvalFunction)
+        {
+            if (m_combinedEvalFunction != nullptr)
+                LogicError("Combined eval function has already been initialized.");
+
+            if (!combinedEvalFunction)
+                InvalidArgument("Combined eval function is not allowed to be null.");
+
+            m_combinedEvalFunction = combinedEvalFunction;
+        }
+
+        FunctionPtr m_evaluationFunction;
+        FunctionPtr m_aggregatedEvaluationFunction;
+        std::unordered_set<ProgressWriterPtr> m_progressWriters;
+
+    private:
+        const AccumulatorPtr m_aggregatedTestEvalCriterionValue;
+        Variable             m_testSampleCountVar;
+        FunctionPtr          m_combinedEvalFunction;
+    };
+
+    ///
+    /// Construct an Evaluator for the specified eval function.
+    ///
+    CNTK_API EvaluatorPtr CreateEvaluator(const FunctionPtr& evaluationFunction, const std::vector<ProgressWriterPtr>& progressWriters = {});
+
+    ///
     /// Trainer is the top-level abstraction responsible for the orchestration of the training of a model
     /// using the specified learners and training data either explicitly supplied as Value objects or from
     /// a MinibatchSource object.
     ///
-    class Trainer : public std::enable_shared_from_this<Trainer>
+    class Trainer : public Evaluator
     {
     public:
         ///
@@ -4422,17 +4506,6 @@ namespace CNTK
         CNTK_API bool TrainMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, std::unordered_map<Variable, ValuePtr>& outputsToFetch, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
 
         ///
-        /// Test the model on the specified batch of samples using the evaluation Function specified during construction of the Trainer
-        /// Returns the average evaluation criterion value per sample for the tested minibatch of samples
-        ///
-        CNTK_API double TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
-
-        ///
-        /// An overload of the TestMinibatch above that takes a map of variables and their values (as its first argument).
-        ///
-        CNTK_API double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice = DeviceDescriptor::UseDefaultDevice());
-
-        ///
         /// Checkpoint the model and other Trainer state at the specified file location
         ///
         CNTK_API void SaveCheckpoint(const std::wstring& filePath, Dictionary externalState = Dictionary());
@@ -4451,11 +4524,6 @@ namespace CNTK
         /// Loss Function that is used as the optimization criterion for learning the model's parameters.
         ///
         FunctionPtr LossFunction() const { return m_lossFunction; }
-
-        ///
-        /// Evaluation Function that is used as for the criterion for evaluating the trained model's quality.
-        ///
-        FunctionPtr EvaluationFunction() const { return m_evaluationFunction; }
 
         ///
         /// Returns the average training loss per sample for the last minibatch trained.
@@ -4487,20 +4555,11 @@ namespace CNTK
         ///
         CNTK_API void SummarizeTrainingProgress();
 
-        ///
-        /// Writes the summary of test progress and resets the accumulators.
-        ///
-        CNTK_API void SummarizeTestProgress();
-
     private:
         template <typename T1, typename ...CtorArgTypes>
         friend std::shared_ptr<T1> MakeSharedObject(CtorArgTypes&& ...ctorArgs);
 
         friend class TrainingSession;
-
-        // Returns aggregated evaluation criterion value and sample count.
-        // TODO: change the public interface to return pair(error, sampleCount) instead of average error.
-        double TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, size_t& sampleCount);
 
         Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const std::vector<LearnerPtr>& parameterLearners,
                 const std::vector<ProgressWriterPtr>& progressWriters = {});
@@ -4519,20 +4578,16 @@ namespace CNTK
         void Save(const std::wstring& modelFilePath, const std::vector<DictionaryValue>& learnerState, const Dictionary& externalState);
 
         void UpdateTrainingProgress(size_t numSamples, const ValuePtr& loss, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
-        void UpdateTestProgress(size_t numSamples, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
         void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters);
 
         // TODO: Workaround for back compat. Should not be used and will be removed in the next version.
         friend CNTK_API void ::CNTK::Internal::AddProgressWriters(const TrainerPtr&, const std::vector<ProgressWriterPtr>&);
 
-        FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_model;
+        FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_lossFunction;
         FunctionPtr m_aggregatedLossFunction;
-        FunctionPtr m_evaluationFunction;
-        FunctionPtr m_aggregatedEvaluationFunction;
         Variable    m_trainingSampleCountVar;
-        Variable    m_testSampleCountVar;
         LearnersPtr m_parameterLearners;
         std::unordered_set<Parameter> m_learnerParameters;
         std::unordered_set<Variable> m_modelParametersNotCoveredByLearners;
@@ -4545,9 +4600,6 @@ namespace CNTK
 
         AccumulatorPtr m_aggregatedTrainingLossValue;
         AccumulatorPtr m_aggregatedTrainingEvalCriterionValue;
-        AccumulatorPtr m_aggregatedTestEvalCriterionValue;
-
-        std::unordered_set<ProgressWriterPtr> m_progressWriters;
     };
 
     ///
@@ -4614,11 +4666,8 @@ namespace CNTK
     class MinibatchSource : public std::enable_shared_from_this<MinibatchSource>
     {
     public:
-        static const size_t InfinitelyRepeat = SIZE_MAX;
-        static const size_t FullDataSweep    = SIZE_MAX - 2; // An arbitrary sentinel value
-        static const size_t InfiniteSamples  = SIZE_MAX;
-        static const size_t DefaultRandomizationWindow = SIZE_MAX - 2;
-
+        CNTK_API static const size_t InfinitelyRepeat;
+        CNTK_API static const size_t FullDataSweep;
         CNTK_API static const size_t DefaultRandomizationWindowInChunks;
 
     public:
@@ -4695,10 +4744,93 @@ namespace CNTK
         MinibatchSource() {}
     };
 
+    typedef Dictionary Deserializer;
+    
+    ///
+    /// A configuration required to instantiate the CNTK built-in composite minibatch source.
+    /// 
+    struct MinibatchSourceConfig
+    {
+        // TODO: This is general enough and be hoisted out once there are specific use-cases outside of
+        // configuring a MinibatchSource.
+        enum TraceLevel : unsigned int
+        {
+            Error = 0,
+            Warning = 1,
+            Info = 2
+        };
+
+        ///
+        /// Creates a new minibatch source configuration, with enabled randomization and
+        /// the randomization window set to DefaultRandomizationWindowInChunks when 'randomize' is
+        /// 'true' (default).
+        ///
+        CNTK_API MinibatchSourceConfig(const std::vector<Deserializer>& deserializers, bool randomize = true);
+
+        /// 
+        /// The maximum number of input samples (not 'label samples') the reader can produce 
+        /// (the default value is InfinitelyRepeat). After this number has been reached, the reader 
+        /// returns empty minibatches on subsequent calls to GetNextMinibatch(). 'maxSweeps' and 'maxSamples' 
+        /// are mutually exclusive, an exception will be raised if both have non-default values.
+        /// 
+        size_t maxSamples { MinibatchSource::InfinitelyRepeat };
+
+        ///
+        /// The maximum allowed number of sweeps over the input dataset. After this number has been reached, 
+        /// the reader returns empty minibatches on subsequent calls to GetNextMinibatch().
+        /// 'maxSweeps' and 'maxSamples' are mutually exclusive, an exception will be raised if both have 
+        /// non-default values.
+        /// 
+        size_t maxSweeps { MinibatchSource::InfinitelyRepeat };
+
+        ///
+        /// Size of the randomization window in chunks, non-zero value enables randomization. 
+        /// 'randomizationWindowInChunks' and 'randomizationWindowInSamples' are mutually exclusive,
+        /// an exception will be raised if both have non-zero values.
+        ///
+        size_t randomizationWindowInChunks { MinibatchSource::DefaultRandomizationWindowInChunks };
+
+        ///
+        /// Size of the randomization window in samples, non-zero value enables randomization. 
+        /// 'randomizationWindowInChunks' and 'randomizationWindowInSamples' are mutually exclusive,
+        /// an exception will be raised if both have non-zero values.
+        ///
+        size_t randomizationWindowInSamples { 0 };
+
+        ///
+        /// Output verbosity level.
+        ///
+        TraceLevel traceLevel { TraceLevel::Warning };
+
+        ///
+        /// Truncation length in samples, non-zero value enables the truncation (only applicable for BPTT,
+        /// cannot be used in frame mode, an exception will be raised if frame mode is enabled and the 
+        /// truncation length is non-zero).
+        ///
+        size_t truncationLength { 0 };
+
+        ///
+        /// Switches the frame mode on and off. If the frame mode is enabled the input data will be processed
+        /// as individual frames ignoring all sequence information (this option cannot be used for BPTT,
+        /// an exception will be raised if frame mode is enabled and the truncation length is non-zero).
+        ///
+        bool isFrameModeEnabled { false };
+
+        ///
+        /// Specifies if the deserialization should be done on a single or multiple threads.
+        ///
+        bool isMultithreaded { false };
+
+        ///
+        /// Deserializers to be used in the composite reader.
+        ///
+        std::vector<Deserializer> deserializers;
+    };
+
     ///
     /// Instantiate the CNTK built-in composite minibatch source.
     ///
-    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const Dictionary& configuration);
+    CNTK_API MinibatchSourcePtr CreateCompositeMinibatchSource(const MinibatchSourceConfig& configuration);
 
     struct StreamConfiguration
     {
@@ -4725,51 +4857,6 @@ namespace CNTK
         size_t m_right;
         bool m_broadcast;
     };
-
-    /// 
-    /// Instantiate the CNTK built-in text format minibatch source
-    ///
-    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs,
-                                                        size_t epochSize = MinibatchSource::InfinitelyRepeat, 
-                                                        bool randomize = true,
-                                                        size_t randomizationWindow = MinibatchSource::DefaultRandomizationWindowInChunks,
-                                                        bool sampleBasedRandomizationWindow = false)
-    {
-        ::CNTK::Dictionary minibatchSourceConfiguration;
-        minibatchSourceConfiguration[L"epochSize"] = epochSize;
-
-        if (randomize)
-        {
-            minibatchSourceConfiguration[L"randomize"] = true;
-            minibatchSourceConfiguration[L"randomizationWindow"] = randomizationWindow;
-            minibatchSourceConfiguration[L"sampleBasedRandomizationWindow"] = sampleBasedRandomizationWindow;
-        }
-
-        ::CNTK::Dictionary deserializerConfiguration;
-        deserializerConfiguration[L"type"] = L"CNTKTextFormatDeserializer";
-        deserializerConfiguration[L"file"] = dataFilePath;
-
-        ::CNTK::Dictionary inputStreamsConfig;
-        for (auto streamConfig : streamConfigs)
-        {
-            std::wstring streamName = streamConfig.m_streamName;
-            size_t streamDim = streamConfig.m_dim;
-            bool isSparse = streamConfig.m_isSparse;
-            std::wstring streamAlias = streamConfig.m_streamAlias;
-
-            ::CNTK::Dictionary inputStreamConfig;
-            inputStreamConfig[L"dim"] = streamDim;
-            inputStreamConfig[L"format"] = isSparse ? L"sparse" : L"dense";
-            if (!streamAlias.empty())
-                inputStreamConfig[L"alias"] = streamAlias;
-
-            inputStreamsConfig[streamName] = inputStreamConfig;
-        }
-
-        deserializerConfiguration[L"input"] = inputStreamsConfig;
-        minibatchSourceConfiguration[L"deserializers"] = std::vector<::CNTK::DictionaryValue>({ deserializerConfiguration });
-        return CreateCompositeMinibatchSource(minibatchSourceConfiguration);
-    }
 
     typedef Dictionary ImageTransform;
 
@@ -4798,9 +4885,6 @@ namespace CNTK
     CNTK_API ImageTransform ReaderColor(float brightnessRadius = 0.0f,
         float contrastRadius = 0.0f, float saturationRadius = 0.0f);
 
-
-    typedef Dictionary Deserializer;
-
     /// 
     /// Create an ImageDeserializer with the specified options
     /// 
@@ -4820,6 +4904,29 @@ namespace CNTK
     /// Create an HTKMLFDeserializer with the specified options
     /// 
     CNTK_API  Deserializer HTKMLFDeserializer(const std::wstring& streamName, const std::wstring& labelMappingFile, size_t dimension, const std::vector<std::wstring>& mlfFiles);
+
+    /// 
+    /// Instantiate the CNTK built-in text format minibatch source
+    ///
+    inline MinibatchSourcePtr TextFormatMinibatchSource(const std::wstring& dataFilePath, const std::vector<StreamConfiguration>& streamConfigs,
+        size_t epochSize = MinibatchSource::InfinitelyRepeat,
+        bool randomize = true,
+        size_t randomizationWindow = MinibatchSource::DefaultRandomizationWindowInChunks,
+        bool sampleBasedRandomizationWindow = false)
+    {
+        MinibatchSourceConfig config({ CTFDeserializer(dataFilePath, streamConfigs) }, randomize);
+        config.maxSamples = epochSize;
+
+        if (randomize)
+        {
+            if (sampleBasedRandomizationWindow)
+                config.randomizationWindowInSamples = randomizationWindow;
+            else
+                config.randomizationWindowInChunks = randomizationWindow;
+        }
+
+        return CreateCompositeMinibatchSource(config);
+    }
 
     ///
     /// Compute the per dimension means and variances for each of the specified streams using data from the specified minibatchSource.

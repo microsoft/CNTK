@@ -2879,6 +2879,60 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::InplaceTruncateTop(const E
 }
 
 template <class ElemType>
+GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (GetFormat() != matrixFormatSparseCSC)
+    {
+        LogicError("AssignOneHot: Matrix format is not supported.");
+    }
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+
+    int item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= (int)shape[i];
+
+    int num_class = (int)shape[axis];
+
+    auto nCols = a.GetNumCols();
+    auto nRows = num_class * a.GetNumRows();
+    this->RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
+    this->PrepareDevice();
+
+    ElemType* indices = a.Data();
+    GPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    GPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* targetData = NzValues();
+    CUDA_LONG N = (CUDA_LONG)a.GetNumElements();
+    int blocksPerGrid = (int) ceil(N * 1.0 / GridDim::maxThreadsPerBlock);
+    SyncGuard syncGuard;
+    _assignOneHotAsSparse<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock>>>(indices, 
+                                                                                      secondaryIndices,
+                                                                                      majorIndices,
+                                                                                      targetData,
+                                                                                      num_class,
+                                                                                      item_size,
+                                                                                      a.GetNumRows(),
+                                                                                      a.GetNumCols(),
+                                                                                      N);
+    
+    GPUSPARSE_INDEX_TYPE second[3];
+    CUDA_CALL(cudaMemcpy(&second, secondaryIndices, sizeof(GPUSPARSE_INDEX_TYPE) * 3, cudaMemcpyDeviceToHost));
+
+    GPUSPARSE_INDEX_TYPE major[4];
+    CUDA_CALL(cudaMemcpy(&major, majorIndices, sizeof(GPUSPARSE_INDEX_TYPE) * 4, cudaMemcpyDeviceToHost));
+
+    ElemType value[4];
+    CUDA_CALL(cudaMemcpy(&value, targetData, sizeof(ElemType) * 4, cudaMemcpyDeviceToHost));
+
+    return *this;
+}
+
+template <class ElemType>
 GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignTruncateTopOf(const GPUSparseMatrix<ElemType>& a, const ElemType threshold)
 {
     VerifyWritable(__FUNCTION__);

@@ -6,6 +6,7 @@
 
 import os
 import math
+import warnings
 import numpy as np
 from cntk import Value
 from cntk import Function
@@ -71,6 +72,26 @@ def test_output_to_retain():
     updated, var_map = trainer.train_minibatch(arguments, outputs=[z_output])
     assert np.allclose(var_map[z_output], np.asarray(in1_value)+20)
 
+def test_epochsize_wrn_for_momentum_time_constant():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        momentum_as_time_constant_schedule(1100, epoch_size=1000)
+
+        assert len(w) == 1
+        assert issubclass(w[-1].category, RuntimeWarning)
+        assert "epoch_size" in str(w[-1].message)
+
+def test_epochsize_wrn_for_parameter_schedule():
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+
+        training_parameter_schedule(0.01, UnitType.sample, epoch_size=1000)
+
+        assert len(w) == 1
+        assert issubclass(w[-1].category, RuntimeWarning)
+        assert "epoch_size" in str(w[-1].message)
+
 def test_eval_sparse_dense(tmpdir, device_id):
     from cntk import Axis
     from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs
@@ -96,7 +117,7 @@ def test_eval_sparse_dense(tmpdir, device_id):
     mbs = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_vocab_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
-    )), randomize=False, epoch_size = 2)
+    )), randomize=False, max_samples = 2)
 
     raw_input = sequence.input(shape=input_vocab_dim, sequence_axis=Axis('inputAxis'), name='raw_input', is_sparse=True)
 

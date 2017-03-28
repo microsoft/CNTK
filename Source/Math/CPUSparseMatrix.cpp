@@ -175,6 +175,70 @@ CPUSparseMatrix<ElemType>::~CPUSparseMatrix()
     ZeroValues();
 }
 
+template <class ElemType>
+CPUSparseMatrix<ElemType>& CPUSparseMatrix<ElemType>::AssignOneHot(const CPUMatrix<ElemType>& a, vector<size_t>& shape, size_t axis)
+{
+    if (a.IsEmpty())
+        LogicError("AssignOneHot: Matrix a is empty.");
+
+    if (axis >= shape.size())
+        LogicError("AssignOneHot: axis is not correct");
+
+    int item_size = 1;
+    for (size_t i = 0; i < shape.size() && i < axis; i++)
+        item_size *= (int)shape[i];
+
+    int num_class = (int)shape[axis];
+    auto& us = *this;
+    auto nCols = a.GetNumCols();
+    auto nRows = num_class * a.GetNumRows();
+    us.RequireSize(nRows, nCols);
+    RequireSizeAndAllocate(nRows, nCols, a.GetNumElements());
+
+    CPUSPARSE_INDEX_TYPE* secondaryIndices = SecondaryIndexLocation();
+    CPUSPARSE_INDEX_TYPE* majorIndices = MajorIndexLocation();
+    ElemType* data = NzValues();
+    ElemType* indices = a.Data();
+    //only support CSC now
+    if (GetFormat() == matrixFormatSparseCSC)
+    {
+#pragma omp parallel for
+        for (long i = 0; i < a.GetNumElements(); i++)
+        {
+            int block_id = i / item_size;
+            int item_id = i % item_size;
+            // for invalid indices, theorically they should not belong to nz elements.
+            // but if we scan the indices to count the valid indices number,
+            // it will be difficult for parallel calculation, especially on GPU.
+            // here we chose to keep those elements in nz element list, but with value 0
+            // it is tricky, but the data view is correct.
+            if (indices[i] >= 0 && indices[i] < num_class)
+            {
+                data[i] = 1;
+                majorIndices[i] = (block_id * num_class * item_size + item_id + item_size * (int)indices[i]) % nRows;
+            }
+            else
+            {
+                data[i] = 0;
+                majorIndices[i] = (block_id * num_class * item_size + item_id) % nRows;
+            }
+            size_t colIndex = i / a.GetNumRows();
+            secondaryIndices[colIndex + 1]++;
+        }
+
+        for (long i = 1; i < nCols + 1; i++)
+        {
+            secondaryIndices[i] += secondaryIndices[i - 1];
+        }
+    }
+    else
+    {
+        LogicError("AssignOneHot: Matrix format is not supported.");
+    }
+
+    return *this;
+}
+
 #pragma endregion Constructors and Destructor
 
 #pragma region Basic Operators

@@ -20,7 +20,7 @@ def create_reader(path, is_training, input_dim, label_dim):
     return cntk.io.MinibatchSource(cntk.io.CTFDeserializer(path, cntk.io.StreamDefs(
         features  = cntk.io.StreamDef(field='features', shape=input_dim),
         labels    = cntk.io.StreamDef(field='labels',   shape=label_dim)
-    )), randomize=is_training, epoch_size = cntk.io.INFINITELY_REPEAT if is_training else cntk.io.FULL_DATA_SWEEP)
+    )), randomize=is_training, max_sweeps = cntk.io.INFINITELY_REPEAT if is_training else 1)
 
 
 # Trains and tests a simple auto encoder for MNIST images using deconvolution

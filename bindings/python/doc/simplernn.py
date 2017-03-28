@@ -2,7 +2,7 @@ import sys
 import os
 from cntk import Trainer, Axis
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs,\
-        INFINITELY_REPEAT, FULL_DATA_SWEEP
+        INFINITELY_REPEAT
 from cntk.learners import sgd, learning_rate_schedule, UnitType
 from cntk import input, cross_entropy_with_softmax, \
         classification_error, sequence
@@ -20,7 +20,7 @@ def create_reader(path, is_training, input_dim, label_dim):
         features=StreamDef(field='x', shape=input_dim, is_sparse=True),
         labels=StreamDef(field='y', shape=label_dim, is_sparse=False)
         )), randomize=is_training,
-        epoch_size=INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+        max_sweeps=INFINITELY_REPEAT if is_training else 1)
 
 
 # Defines the LSTM model for classifying sequences

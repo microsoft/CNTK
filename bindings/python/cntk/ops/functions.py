@@ -380,7 +380,7 @@ class Function(cntk_py.Function):
             # and then looks it up by name, as that will fail although both instances are identical.
             from cntk.logging.graph import find_by_name
             root = self.block_root if self.is_block else self
-            item = typemap(find_by_name)(root, name)
+            item = typemap(find_by_name)(root, name, depth=1)
             if item:
                 return item
 
@@ -467,9 +467,9 @@ class Function(cntk_py.Function):
         '''
         return super(Function, self).constants()
 
-    def eval(self, arguments=None, device=None, as_numpy=True):
+    def eval(self, arguments=None, outputs=None, device=None, as_numpy=True):
         '''
-        Evaluate the node using the specified ``arguments`` as input.
+        Evaluate the Function's outputs using the specified ``arguments`` as input.
 
         Args:
             arguments: maps variables to their input data. The interpretation depends on
@@ -504,6 +504,8 @@ class Function(cntk_py.Function):
 
              Data should be either NumPy arrays or a
              :class:`~cntk.io.MinibatchData` instance.
+            outputs (iterable, optional): outputs to fetch values for. If not
+             set, all outputs of the function will be fetched.
             device (:class:`~cntk.device.DeviceDescriptor`): the device descriptor that
              contains the type and id of the device on which the computation is
              to be performed.
@@ -519,10 +521,11 @@ class Function(cntk_py.Function):
            dict or NumPy Array: Dict with keys of ouput variable names and values of
            output variable. A single NumPy array if there is only one output value.
         '''
+        if outputs is None:
+            outputs = self.outputs
 
-        _, output_map = self.forward(arguments, self.outputs, device=device, as_numpy=as_numpy)
+        _, output_map = self.forward(arguments, outputs, device=device, as_numpy=as_numpy)
         return sanitize_variable_value_dict(output_map)
-
 
     @typemap
     def forward(self, arguments, outputs=None, keep_for_backward=None, device=None, as_numpy=True):
@@ -943,7 +946,7 @@ class Function(cntk_py.Function):
         return super(Function, self).replace_placeholder(substitution)
 
     @typemap
-    def find_all_with_name(self, name):
+    def find_all_with_name(self, name, depth=0):
         '''
         Returns a list of primitive function with ``name`` in the graph
         starting from this node. Throws an exception if ``name`` occurs
@@ -961,6 +964,8 @@ class Function(cntk_py.Function):
 
         Args:
             name (str): names to look for
+            depth (int, default 0): how deep into the block hierarchy the DFS
+             algorithm should go into. Set to -1 for infinite depth.
 
         Returns:
             list of :class:`Function` objects matching ``name``
@@ -969,11 +974,11 @@ class Function(cntk_py.Function):
             :func:`find_by_name`
         '''
         from cntk.logging import graph
-        return graph.find_all_with_name(self, name)
+        return graph.find_all_with_name(self, name, depth)
 
     # TODO have a better name for combine() in this case
     @typemap
-    def find_by_name(self, name):
+    def find_by_name(self, name, depth=0):
         '''
         Returns a primitive function with ``name`` in the graph starting from
         this node. Throws an exception if ``name`` occurs multiple times. If
@@ -998,6 +1003,8 @@ class Function(cntk_py.Function):
 
         Args:
             name (str): names to look for
+            depth (int, default 0): how deep into the block hierarchy the DFS
+             algorithm should go into. Set to -1 for infinite depth.
 
         Returns:
             :class:`Function` object matching ``name``
@@ -1006,7 +1013,7 @@ class Function(cntk_py.Function):
             :func:`find_all_with_name`
         '''
         from cntk.logging import graph
-        return graph.find_by_name(self, name)
+        return graph.find_by_name(self, name, depth)
 
     @typemap
     def save(self, filename):

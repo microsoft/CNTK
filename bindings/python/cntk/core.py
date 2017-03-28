@@ -318,7 +318,7 @@ class Value(cntk_py.Value):
 
             return cntk_py.Value(ndav)
 
-        elif len(var.dynamic_axes) <= 1 and isinstance(data, list):
+        elif len(var.dynamic_axes) <= 1 and isinstance(data, list) and len(data) > 1:
             warnings.warn('you provided the minibatch data as a list, but '
                           'your corresponding input variable (uid "%s") has '
                           'only one dynamic axis (batch axis). To speed up '
@@ -541,7 +541,7 @@ def asarray(variable, value):
         warnings.warn('converting Value object to CSR format might be very costly')
 
         # TODO: Add direct conversion, since creating an intermediate array might be very slow
-        dense_data = network.eval(value, value.device())
+        dense_data = network.eval(value, device=value.device())
         array_to_return = [sparse.csr_matrix(seq) for seq in dense_data]
 
     else:

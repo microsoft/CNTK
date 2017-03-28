@@ -10,6 +10,7 @@
 #include <functional>
 #include "Sequences.h"
 #include "TensorShape.h"
+#include "ReaderConstants.h"
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
@@ -44,6 +45,7 @@ struct ReaderConfiguration
 struct EpochConfiguration : public ReaderConfiguration
 {
     size_t m_totalEpochSizeInSamples;       // Total size of the epoch in samples
+    size_t m_totalEpochSizeInSweeps {g_infinity}; // Total size of the epoch in sweeps (default = no limit).
     size_t m_epochIndex;                    // Current epoch index [0 .. max number of epochs)
 };
 
