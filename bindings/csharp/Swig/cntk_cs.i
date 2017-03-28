@@ -1532,17 +1532,16 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     //
-    // Copy the data of the Value object into the buffer provided by 'sequences'.
-    // The 'sequences' is a list of sequences with variable length. 
-    // The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
-    // Each element of the outer list represents a sequence.
-    // Each sequence, represented by List<T>, contains a variable number of samples. 
+    // Return the data of the Value object as a list of sequences with variable length.
+    // This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
+    // Each sequence, represented by IList<T>, contains a variable number of samples.
     // Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
-    // The number of samples = the count of elements in List<T> / the count of elements of the sample
+    // The number of samples = (the count of elements in IList<T>)/(the count of elements of the sample)
     // The shape of the variable should match the shape of the Value object.
     //
-    public void CopyVariableValueTo<T>(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences)
+    public System.Collections.Generic.IList<System.Collections.Generic.IList<T>> GetDenseData<T>(Variable outputVariable)
     {
+        var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<T>>();
         if (typeof(T).Equals(typeof(float)))
         {
             if (GetDataType() != DataType.Float)
@@ -1552,10 +1551,92 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
             var seqVec = new FloatVectorVector();
             CopyVariableValueToFloat(outputVariable, seqVec);
-            sequences.Clear();
+
             foreach (var seq in seqVec)
             {
-                var seqList = seq as System.Collections.Generic.IEnumerable<T>;
+                var seqList = seq as System.Collections.Generic.IList<T>;
+                if (seqList == null)
+                    throw new System.TypeAccessException("Cannot convert to the value type.");
+                // It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.
+                sequences.Add(new System.Collections.Generic.List<T>(seqList));
+            }
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            if (GetDataType() != DataType.Double)
+            {
+                throw new System.ArgumentException("The value type does not match the list type.");
+            }
+
+            var seqVec = new DoubleVectorVector();
+            CopyVariableValueToDouble(outputVariable, seqVec);
+            foreach (var seq in seqVec)
+            {
+                var seqList = seq as System.Collections.Generic.IList<T>;
+                if (seqList == null)
+                    throw new System.TypeAccessException("Cannot convert to the value type.");
+                // It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.
+                sequences.Add(new System.Collections.Generic.List<T>(seqList));
+            }
+        }
+        else
+        {
+            throw new System.ArgumentException("The value type does not match the list type.");
+        }
+        return sequences;
+    }
+
+    //
+    // Return the data of the Value object as a list of sequences with variable length.
+    // This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
+    // Each sequence, represented by List<int>, contains a variable number of samples.
+    // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable.
+    // The number of samples = the count of elements in List<int>.
+    //
+    public System.Collections.Generic.IList<System.Collections.Generic.IList<int>> GetOneHotData(Variable outputVariable)
+    {
+        var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<int>>();
+        var seqVec = new SizeTVectorVector();
+        CopyVariableValueTo(outputVariable, seqVec);
+        foreach(var seq in seqVec)
+        {
+            var seqList = new System.Collections.Generic.List<int>(seq.Count);
+            foreach (var element in seq)
+            {
+                seqList.Add((int)element);
+            }
+            sequences.Add(seqList);
+        }
+        return sequences;
+    }
+
+    //
+    // Copy the data of the Value object into the buffer provided by 'sequences'.
+    // The 'sequences' is a list of sequences with variable length. 
+    // The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
+    // Each element of the outer list represents a sequence.
+    // Each sequence, represented by List<T>, contains a variable number of samples. 
+    // Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
+    // The number of samples = the count of elements in List<T> / the count of elements of the sample
+    // The shape of the variable should match the shape of the Value object.
+    //
+    [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetData() instead.")]
+    public void CopyVariableValueTo<T>(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences)
+    {
+        sequences.Clear();
+        if (typeof(T).Equals(typeof(float)))
+        {
+            if (GetDataType() != DataType.Float)
+            {
+                throw new System.ArgumentException("The value type does not match the list type.");
+            }
+
+            var seqVec = new FloatVectorVector();
+            CopyVariableValueToFloat(outputVariable, seqVec);
+
+            foreach (var seq in seqVec)
+            {
+                var seqList = seq as System.Collections.Generic.IList<T>;
                 if (seqList == null)
                     throw new System.TypeAccessException("Cannot convert to the value type.");
                 sequences.Add(new System.Collections.Generic.List<T>(seqList));
@@ -1570,10 +1651,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
             var seqVec = new DoubleVectorVector();
             CopyVariableValueToDouble(outputVariable, seqVec);
-            sequences.Clear();
             foreach (var seq in seqVec)
             {
-                var seqList = seq as System.Collections.Generic.IEnumerable<T>;
+                var seqList = seq as System.Collections.Generic.IList<T>;
                 if (seqList == null)
                     throw new System.TypeAccessException("Cannot convert to the value type.");
                 sequences.Add(new System.Collections.Generic.List<T>(seqList));
@@ -1594,13 +1674,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable. 
     // The number of samples = the count of elements in List<int>.
     //
+    [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetData() instead.")]
     public void CopyVariableValueTo(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences)
     {
-        if (outputVariable.Shape[0] != outputVariable.Shape.TotalSize)
-        {
-            throw new System.ArgumentException("The sample variable's leading axis dimensionality must equal to the total size of the shape for sparse data");
-        }
-
         var seqVec = new SizeTVectorVector();
         CopyVariableValueTo(outputVariable, seqVec);
 
