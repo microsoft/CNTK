@@ -170,9 +170,8 @@ def create_model_greedy(s2smodel):
         # which holds 'input' in its closure.
         unfold = UnfoldFrom(lambda history: s2smodel(history, input) >> hardmax,
                             until_predicate=lambda w: w[...,sentence_end_index],  # stop once sentence_end_index was max-scoring output
-                            length_increase=length_increase, initial_state=sentence_start)
-        # TODO: The signature should be changed, so that the initial_state is passed as data.
-        return unfold(dynamic_axes_like=input)
+                            length_increase=length_increase)
+        return unfold(initial_state=sentence_start, dynamic_axes_like=input)
     return model_greedy
 
 def create_criterion_function(model):
