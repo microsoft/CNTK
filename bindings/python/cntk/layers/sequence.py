@@ -475,18 +475,16 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
 
 
 # TODO: This API is still suboptimal, and should be fixed as follows:
-#  - the returned layer function should take the initial_state
 #  - the input length factor should be a layer function; in addition, a fixed max length should be possible
-#  - map_state_function is unused and should be removed
 #  - BUGBUG: tuple-valued state should be supported
-def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name=''):
+def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name=''):
     '''
-    UnfoldFrom(generator_function, until_predicate=None, length_increase=1, initial_state=None, name='')
+    UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name='')
 
     Layer factory function to create a function that implements a recurrent generator.
     Starting with a seed state, the ``UnfoldFrom()`` layer
     repeatedly applies ``generator_function`` and emits the sequence of results.
-    ``UnfoldFrom(f, initial_state=s)``
+    ``UnfoldFrom(f)(s)``
     emits the sequence ``f(s), f(f(s)), f(f(f(s))), ...``.
     ``s`` can be tuple-valued.
 
@@ -500,7 +498,7 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
 
     A variant allows the state and the emitted sequence to be different. In that case,
     ``f`` returns a tuple (output value, new state), and
-    ``UnfoldFrom(f, initial_state=s)``
+    ``UnfoldFrom(f)(s)``
     would emit the sequence ``f(s)[0], f(f(s)[1])[0], f(f(f(s)[1])[1])[0], ...``.
 
     The maximum length of the output sequence is not unlimited, but determined by the argument to
@@ -525,20 +523,18 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
       This is subject to the maximum length as determined by the input sequence and ``length_increase``.
       If this parameter is not provided, the output length will be equal to the specified maximum length.
      length_increase (float, defaults to 1): the maximum number of output items is equal to the
-      number of items of the argument to the unfold function, multiplied by this factor.
+      number of items of the `dynamic_axis_like` argument to the returned `unfold()` function, multiplied by this factor.
       For example, pass 1.5 here if the output sequence can be at most 50% longer than the input.
-     initial_state (scalar or tensor without batch dimension; or a tuple thereof):
-      the seed value for the state
      name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.functions.Function`: 
-        A function that accepts one argument (which must be a sequence and provides
-        a reference for the maximum length of the output sequence), and performs the unfold operation on it
+        :class:`~cntk.ops.functions.Function(initial_state, dynamic_axis_like)`: 
+         A function that accepts two arguments (`initial state` and `dynamic_axis_like`), and performs the unfold operation on it.
+         The `initial state` argument is the initial state for the recurrence.
+         The `dynamic_axis_like` must be a sequence and provides a reference for the maximum length of the output sequence.
     '''
 
     generator_function = _sanitize_function(generator_function)
-    map_state_function = _sanitize_function(map_state_function)
     until_predicate    = _sanitize_function(until_predicate)
 
     # check the signature of the passed function
@@ -546,12 +542,10 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         raise TypeError('generator_function should take 1 positional argument (state) and return a single output or a tuple (output, new state)')
 
     # TODO: having to pass the dynamic axis is suboptimal. Any better way?
-    # BUGBUG: initial_state must be passed to unfold_from
     # We can still pass dynamic_axes_like; reads like "unfold from XXX along axis of YYY".
     # And if we can close over 'input' in the generator, we can also bake it into what we pass, i.e. the length.
     @Function
-    def unfold_from(dynamic_axes_like):
-    #def unfold_from(initial_state, dynamic_axes_like):
+    def unfold_from(initial_state, dynamic_axes_like):
         # create a new dynamic axis if a length increase is specified
         out_axis = dynamic_axes_like
         if length_increase != 1:
@@ -564,8 +558,6 @@ def UnfoldFrom(generator_function, map_state_function=identity, until_predicate=
         z = generator_function(prev_state) # returns either (output) or (output, new state)
         output = z.outputs[0]
         new_state = z.outputs[1] if len(z.outputs) > 1 else output # we allow generator to return a single value if it is identical to the new state
-        # apply map_state_function if given
-        new_state = map_state_function(new_state)
         # implant the dynamic axis (from dynamic_axes_like)
         from cntk.internal import sanitize_input, typemap
         from ..cntk_py import reconcile_dynamic_axis

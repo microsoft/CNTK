@@ -184,11 +184,11 @@ def test_unfold(device_id):
     ####################################################
     # Test 1: simple unfold
     ####################################################
-    UF = UnfoldFrom(double_up, initial_state=1)
+    UF = UnfoldFrom(double_up)
     @Function
     @Signature(Sequence[Tensor[1]])
     def FU(x):
-        return UF(x)
+        return UF(Constant(1), x)
     r = FU(x)
     exp = [[[ 2 ], [ 4 ], [ 8 ]],
            [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
@@ -197,11 +197,11 @@ def test_unfold(device_id):
     ####################################################
     # Test 2: unfold with length increase and terminating condition
     ####################################################
-    UF = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63),  initial_state=1, length_increase=1.6)
+    UF = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63), length_increase=1.6)
     @Function
     @Signature(Sequence[Tensor[1]])
     def FU(x):
-        return UF(x)
+        return UF(Constant(1), x)
     r = FU(x)
     exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
            [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate
