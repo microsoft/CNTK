@@ -42,7 +42,7 @@ class Function(cntk_py.Function):
     # a CNTK Functions from a Python function (@Function).
     def __new__(cls, *args, **kwargs):
         if len(args) > 0 and hasattr(args[0], '__call__') and not isinstance(args[0], Function): # overload
-            return Function.to_Function(*args, **kwargs)
+            return Function._to_Function(*args, **kwargs)
         return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args
 
     def __init__(self, *args, **kwargs):
@@ -60,7 +60,7 @@ class Function(cntk_py.Function):
     _placeholders_under_construction = set()
 
     @staticmethod
-    def to_Function(f, make_block=False, op_name=None, name=None):
+    def _to_Function(f, make_block=False, op_name=None, name=None):
         '''
         ``@Function`` constructs a Function from a Python lambda
         where the Function's input signature is defined by the lambda.
