@@ -176,7 +176,7 @@ class NDArrayView(cntk_py.NDArrayView):
         '''
         return super(NDArrayView, self).slice_view(
                 list(reversed(start_offset)),
-                list(reversed(extent)), 
+                list(reversed(extent)),
                 read_only)
 
 
@@ -227,25 +227,27 @@ class Value(cntk_py.Value):
         else:
             super(Value, self).__init__(ndav)
 
-    def to_seq(self, variable=None):
+    def as_sequences(self, variable):
         '''
         Convert a Value to a sequence of NumPy arrays that have their masked
         entries removed.
 
         Returns:
-            a list of NumPy arrays
+            If variable contains more dynamic axes than the batch axis, a list
+            of NumPy arrays (if dense) or a SciPy CSR array (if sparse) will be
+            returned. Otherwise, the arrays will be returned directly.
         '''
         if self.is_sparse():
             network = _sparse_to_dense_network_cache(variable.shape)
 
-            warnings.warn('converting Value object to CSR format might be very costly')
+            warnings.warn('converting Value object to CSR format might be slow')
 
-            # TODO: Add direct conversion, since creating an intermediate array might be very slow
-            dense_data = network.eval(self, self.device())
+            # TODO: Add direct conversion, since creating an intermediate array might be slow
+            dense_data = network.eval(self, device=self.device())
             return [sparse.csr_matrix(seq) for seq in dense_data]
 
         else:
-            # Just checking for mask without retrieving
+            # Checking for mask without retrieving
             has_mask = super(Value, self).mask() is not None
 
             if has_mask:
@@ -257,7 +259,13 @@ class Value(cntk_py.Value):
                     value_sequences = self.unpack_variable_value(variable, True, cpu())
                     return [seq.asarray() for seq in value_sequences[0]]
             else:
-                return self.asarray()
+                # This might be costly, but we need to return a list for
+                # consistency.
+                arr = self.asarray()
+                if not arr.shape:
+                    return [arr]
+                else:
+                    return list(arr)
 
     @staticmethod
     def _as_best_data_type(var, sample):
@@ -452,8 +460,7 @@ class Value(cntk_py.Value):
 
         if isinstance(batch, np.ndarray):
             batch = batch.tolist()
-        elif isinstance(batch, list) and\
-                isinstance(batch[0], np.ndarray):
+        elif isinstance(batch, list) and isinstance(batch[0], np.ndarray):
             batch = [b.tolist() for b in batch]
 
         try:

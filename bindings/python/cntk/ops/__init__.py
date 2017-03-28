@@ -1649,7 +1649,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> y = C.future_value(x) # using initial state of 0 by default
         >>> y.eval({x:x0})
-        array([[[[  6.,   7.],
+        [array([[[  6.,   7.],
                  [  8.,   9.],
                  [ 10.,  11.]],
         <BLANKLINE>
@@ -1663,7 +1663,7 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         <BLANKLINE>
                 [[  0.,   0.],
                  [  0.,   0.],
-                 [  0.,   0.]]]], dtype=float32)
+                 [  0.,   0.]]], dtype=float32)]
 
     Args:
         x: the tensor (or its name) from which the future value is obtained.
@@ -1724,7 +1724,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
         >>> y = C.past_value(x) # initial_state is 0 by default
         >>> y.eval({x:x0})
-        array([[[[  0.,   0.],
+        [array([[[  0.,   0.],
                  [  0.,   0.],
                  [  0.,   0.]],
         <BLANKLINE>
@@ -1738,7 +1738,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         <BLANKLINE>
                 [[ 12.,  13.],
                  [ 14.,  15.],
-                 [ 16.,  17.]]]], dtype=float32)
+                 [ 16.,  17.]]], dtype=float32)]
 
         >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
         >>> s = Input(**Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
@@ -1749,7 +1749,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 2. ,  2.5]]]], dtype=float32)
         >>> y = C.past_value(x, initial_state=s)
         >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
-        array([[[[  0. ,   0.5],
+        [array([[[  0. ,   0.5],
                  [  1. ,   1.5],
                  [  2. ,   2.5]],
         <BLANKLINE>
@@ -1763,7 +1763,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         <BLANKLINE>
                 [[ 12. ,  13. ],
                  [ 14. ,  15. ],
-                 [ 16. ,  17. ]]]], dtype=float32)
+                 [ 16. ,  17. ]]], dtype=float32)]
 
     Args:
         x: the tensor (or its name) from which the past value is obtained
@@ -2056,15 +2056,15 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
 
     Example:
         >>> data = np.asarray([[[1, 2],
-        ...                      [4, 5]]], dtype=np.float32)
+        ...                     [4, 5]]], dtype=np.float32)
 
         >>> x = C.input_variable((2,))
         >>> C.one_hot(x, 6, False).eval({x:data})
-        array([[[[ 0.,  1.,  0.,  0.,  0.,  0.],
+        [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
                  [ 0.,  0.,  1.,  0.,  0.,  0.]],
         <BLANKLINE>
                 [[ 0.,  0.,  0.,  0.,  1.,  0.],
-                 [ 0.,  0.,  0.,  0.,  0.,  1.]]]], dtype=float32)
+                 [ 0.,  0.,  0.,  0.,  0.,  1.]]], dtype=float32)]
 
     Args:
         x: input tensor, the value must be positive integer and less than num_class
@@ -2101,31 +2101,31 @@ def reduce_sum(x, axis=None, name=''):
         >>> x0 = np.arange(16,dtype=np.float32).reshape(2,2,2,2)
         >>> # reduce over all static axes
         >>> C.reduce_mean(x).eval({x:x0})
-        array([[  1.5,   5.5],
-               [  9.5,  13.5]], dtype=float32)
+        [array([  1.5,   5.5], dtype=float32),
+         array([  9.5,  13.5], dtype=float32)]
         >>> # reduce over specified axes
         >>> C.reduce_mean(x,axis=0).eval({x:x0})
-        array([[[[  1.,   2.]],
+        [array([[[  1.,   2.]],
         <BLANKLINE>
-                [[  5.,   6.]]],
+                [[  5.,   6.]]], dtype=float32),
         <BLANKLINE>
         <BLANKLINE>
-               [[[  9.,  10.]],
+         array([[[  9.,  10.]],
         <BLANKLINE>
-                [[ 13.,  14.]]]], dtype=float32)
+                [[ 13.,  14.]]], dtype=float32)]
         >>> C.reduce_mean(x,axis=1).eval({x:x0})
-        array([[[[  0.5],
+        [array([[[  0.5],
                  [  2.5]],
         <BLANKLINE>
                 [[  4.5],
-                 [  6.5]]],
+                 [  6.5]]], dtype=float32),
         <BLANKLINE>
         <BLANKLINE>
-               [[[  8.5],
+         array([[[  8.5],
                  [ 10.5]],
         <BLANKLINE>
                 [[ 12.5],
-                 [ 14.5]]]], dtype=float32)
+                 [ 14.5]]], dtype=float32)]
         >>> # reduce over all axes
         >>> np.round(C.reduce_mean(x, axis=C.Axis.all_axes()).eval({x:x0}),5)
         7.5

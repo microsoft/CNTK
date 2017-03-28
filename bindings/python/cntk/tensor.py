@@ -5,6 +5,7 @@
 # ==============================================================================
 
 import warnings
+from scipy import sparse
 
 class TensorOpsMixin(object):
     '''
@@ -162,13 +163,23 @@ class ArrayMixin(object):
         Converts the instance's data to a NumPy array.
         '''
         import cntk
-        if isinstance(self, (cntk.Constant, cntk.Parameter)):
-            return self.value
+        result = None
+        if isinstance(self, cntk.Constant):
+            ndav = super(cntk.Constant, self).value()
+            is_sparse = ndav.is_sparse()
+        elif isinstance(self, cntk.Parameter):
+            ndav = super(cntk.Parameter, self).value()
+            is_sparse = ndav.is_sparse()
         elif isinstance(self, (cntk.cntk_py.Constant, cntk.cntk_py.Parameter)):
-            return self.value().to_ndarray()
+            ndav = self.value()
+            is_sparse = ndav.is_sparse()
 
         elif isinstance(self, (cntk.cntk_py.NDArrayView, cntk.cntk_py.NDMask)):
-            return self.to_ndarray()
+            ndav = self
+            if isinstance(self, cntk.cntk_py.NDArrayView):
+                is_sparse = ndav.is_sparse()
+            else:
+                is_sparse = False
 
         # Value and MinibatchData have a mask, which means that we need the
         # corresponding Variable to do the proper conversion. For easy
@@ -181,20 +192,36 @@ class ArrayMixin(object):
             else:
                 value = self
 
+            is_sparse = value.is_sparse()
+
             if isinstance(value, cntk.Value):
                 has_mask = super(cntk.Value, value).mask() is not None
-                arr = value.data
+                ndav = value.data
             elif isinstance(value, cntk.cntk_py.Value):
                 has_mask = value.mask() is not None
-                arr = value.data()
+                ndav = value.data()
 
             if has_mask:
                 warnings.warn('asarray() will ignore the mask information. '
-                              'Please use to_seq() to do the proper '
+                              'Please use as_sequences() to do the proper '
                               'conversion.')
 
-            return arr.to_ndarray()
+        if is_sparse:
+            from cntk.internal.sanitize import _sparse_to_dense_network_cache
+            network = _sparse_to_dense_network_cache((ndav.shape[-1],))
 
+            warnings.warn('converting Value object to CSR format might be slow')
+
+            dense_data = network.eval(self, device=self.device())
+            if isinstance(dense_data, list):
+                result = [sparse.csr_matrix(d) for d in dense_data]
+            else:
+                result = sparse.csr_matrix(dense_data)
+
+        else:
+            result = ndav.to_ndarray()
+
+        return result
 
 def _add_asarray(klass):
     member_name = 'asarray'
@@ -203,4 +230,4 @@ def _add_asarray(klass):
         raise ValueError('class "%s" has already an attribute "%s"' %
                          (klass, member_name))
 
-    setattr(klass, member_name, getattr(ArrayMixin, member_name))
+    setattr(klass, member_name, ArrayMixin.__dict__[member_name])

@@ -303,14 +303,14 @@ def test_full_sweep_minibatch(tmpdir):
 
     features = mb[features_si]
     assert features.end_of_sweep
-    assert len(features.to_seq()) == 2
+    assert len(features.as_sequences()) == 2
     expected_features = \
             [
                 [[0],[1],[2],[3]],
                 [[4],[5],[6]]
             ]
 
-    for res, exp in zip (features.to_seq(), expected_features):
+    for res, exp in zip (features.as_sequences(), expected_features):
         assert np.allclose(res, exp)
 
     assert np.allclose(features.data.mask,
@@ -319,13 +319,13 @@ def test_full_sweep_minibatch(tmpdir):
 
     labels = mb[labels_si]
     assert labels.end_of_sweep
-    assert len(labels.to_seq()) == 2
+    assert len(labels.as_sequences()) == 2
     expected_labels = \
             [
                 [[0],[1],[3]],
                 [[1],[2]]
             ]
-    for res, exp in zip (labels.to_seq(), expected_labels):
+    for res, exp in zip (labels.as_sequences(), expected_labels):
         assert np.allclose(res, exp)
 
     assert np.allclose(labels.data.mask,

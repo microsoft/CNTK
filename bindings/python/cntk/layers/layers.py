@@ -158,13 +158,13 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
      >>> e.shape
          (5,)
      >>> e(C.Value.one_hot([[1], [0], [0], [1]], num_classes=2))
-     array([[[ 0.7,  0.6,  0.3,  0.2,  0.9]],
+     [array([[ 0.7,  0.6,  0.3,  0.2,  0.9]], dtype=float32),
      <BLANKLINE>
-            [[ 0.5,  0.3,  0.1,  0.4,  0.2]],
+      array([[ 0.5,  0.3,  0.1,  0.4,  0.2]], dtype=float32),
      <BLANKLINE>
-            [[ 0.5,  0.3,  0.1,  0.4,  0.2]],
+      array([[ 0.5,  0.3,  0.1,  0.4,  0.2]], dtype=float32),
      <BLANKLINE>
-            [[ 0.7,  0.6,  0.3,  0.2,  0.9]]], dtype=float32)
+      array([[ 0.7,  0.6,  0.3,  0.2,  0.9]], dtype=float32)]
 
     Args:
      shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer

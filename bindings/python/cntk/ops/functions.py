@@ -1,10 +1,13 @@
 from cntk import cntk_py, Value
 from cntk.device import DeviceDescriptor, cpu
-from cntk.internal import map_if_possible, typemap, sanitize_var_map, sanitize_batch, sanitize_dtype_cntk, _as_tuple, sanitize_variable_value_dict, sanitize_Function_attributes
+from cntk.internal import map_if_possible, typemap, sanitize_var_map,\
+                          sanitize_batch, sanitize_dtype_cntk, _as_tuple,\
+                          sanitize_variable_value_dict,\
+                          sanitize_Function_attributes,\
+                          _value_as_sequence_or_array, _value_as_sequence
 from cntk.internal.utils import get_python_function_arguments, map_function_arguments
 from ..variables import Record, Variable
 from enum import Enum, unique
-
 
 @unique
 class CloneMethod(Enum):
@@ -656,11 +659,10 @@ class Function(cntk_py.Function):
         keep_for_backward = set(keep_for_backward or {})
 
         state = super(Function, self)._forward(in_var_map, output_map, device,
-                                             keep_for_backward)
+                                               keep_for_backward)
         if as_numpy:
             for k, val in output_map.items():
-                map_if_possible(val)
-                output_map[k] = val.to_seq(variable=k)
+                output_map[k] = _value_as_sequence_or_array(val, k)
 
         return state, output_map
 
@@ -713,8 +715,7 @@ class Function(cntk_py.Function):
 
         if as_numpy:
             for var, value in var_gradients.items():
-                map_if_possible(value)
-                var_gradients[var] = value.to_seq(var)
+                var_gradients[var] = _value_as_sequence_or_array(value, var)
 
         return var_gradients
 
@@ -755,7 +756,7 @@ class Function(cntk_py.Function):
              If ``outputs`` were specified (to fetch values for), this method returns a tuple where the 2nd element
              of the tuple is the ``outputs`` values; a dict with keys of specified ``outputs`` variables and
              values of computed ``outputs``, or a single NumPy array if there is only one output value.
-             Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes 
+             Each element has the same shape as the ``wrt`` or ``outputs`` variables including dynamic axes
              (such as the batch axis).
         '''
         if device is None:
@@ -778,13 +779,9 @@ class Function(cntk_py.Function):
 
         if as_numpy:
             for k in output_map:
-                val = output_map[k]
-                map_if_possible(val)
-                output_map[k] = val.to_seq(k)
+                output_map[k] = _value_as_sequence_or_array(output_map[k], k)
             for k in wrt_map:
-                val = wrt_map[k]
-                map_if_possible(val)
-                wrt_map[k] = val.to_seq(k)
+                wrt_map[k] = _value_as_sequence_or_array(wrt_map[k], k)
 
         if len(output_map) == 0:
             return sanitize_variable_value_dict(wrt_map)
@@ -1149,9 +1146,8 @@ class UserFunction(Function):
              A BackPropState instance, which is used by :func:`backward`.
         '''
         if self.as_numpy:
-            map_if_possible(arguments)
             inputs = self.inputs
-            arguments = tuple(v.to_seq(inputs[i]) for i, v in enumerate(arguments))
+            arguments = tuple(_value_as_sequence_or_array(v, inputs[i]) for i, v in enumerate(arguments))
 
         map_if_possible(outputs)
         map_if_possible(outputs_to_retain)
@@ -1207,7 +1203,7 @@ class UserFunction(Function):
         if self.as_numpy:
             map_if_possible(root_gradients)
             for v in root_gradients:
-                root_gradients[v] = root_gradients[v].to_seq(v)
+                root_gradients[v] = _value_as_sequence_or_array(root_gradients[v], v)
 
             state = cntk_py.UserBackPropState.data(state)
 

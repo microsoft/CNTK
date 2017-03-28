@@ -39,12 +39,15 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         return self.number_of_samples
 
-    def to_seq(self, variable=None):
+    def as_sequences(self, variable=None):
         '''
         Convert the value of this minibatch instance to a sequence of NumPy
         arrays that have their masked entries removed.
+
+        Returns:
+            a list of NumPy arrays if dense, otherwise a SciPy CSR array
         '''
-        return self.data.to_seq(variable)
+        return self.data.as_sequences(variable)
 
     @property
     def shape(self):
