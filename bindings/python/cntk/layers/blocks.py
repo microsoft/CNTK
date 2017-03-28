@@ -11,7 +11,7 @@ blocks -- basic building blocks that are semantically not layers (not used in a 
 
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input, placeholder, combine, alias, sequence
+from cntk import parameter, constant, input, placeholder, combine, alias, sequence, Constant
 from cntk.variables import Record
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
@@ -125,31 +125,6 @@ def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
     dtype = get_default_override(Parameter, dtype=dtype)
     init = _initializer_for(init)
     return parameter(shape, init=init, dtype=dtype, name=name)
-
-def Constant(value, shape=None, dtype=default_override_or(np.float32), name=''):
-    '''
-    Constant(value, shape=None, dtype=np.float32, name='')
-
-    Constructs a Variable object that is constant.
-    This is a wrapper around :func:`~cntk.ops.constant`.
-
-    Example:
-     >>> c = Constant(1, (2,3))
-     >>> c.value
-         array([[ 1.,  1.,  1.],
-                [ 1.,  1.,  1.]], dtype=float32)
-
-    Args:
-        value (object): the object you want to make constant
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        dtype (np.dtype, defaults to np.float32): data type
-        name (str, defaults to ''): the name of the Function instance in the network
-    Returns:
-        a constant Variable
-    '''
-
-    dtype = get_default_override(Constant, dtype=dtype)
-    return constant(value, shape=shape, dtype=dtype, name=name)
 
 # TODO: this function should not be necessary anymore
 def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,

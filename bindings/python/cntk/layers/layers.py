@@ -10,7 +10,7 @@
 from __future__ import division
 import numpy as np
 from ..ops.functions import Function
-from ..variables import Variable, Record
+from ..variables import Variable, Record, Constant
 from ..ops import parameter, input, placeholder, combine
 from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from cntk.internal import _as_tuple

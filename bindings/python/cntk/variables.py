@@ -2,9 +2,9 @@ import numpy as np
 from cntk import cntk_py, NDArrayView
 from cntk.device import DeviceDescriptor, use_default_device
 from .tensor import TensorOpsMixin
+from .default_options import get_default_override, default_override_or
 from cntk.internal import typemap, sanitize_precision, sanitize_value, \
         sanitize_shape, sanitize_dtype_cntk
-
 
 class Record(dict):
     '''
@@ -335,7 +335,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
-    def __init__(self, value=None, shape=None, dtype=None, device=None, name=''):
+    def __init__(self, value=None, shape=None, dtype=default_override_or(np.float32), device=None, name=''):
 
         if not device:
             device = use_default_device()
@@ -343,6 +343,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
             shape = ()
 
+        dtype = get_default_override(Constant, dtype=dtype)
         if dtype is not None:
             if isinstance(value, np.ndarray) and dtype != value.dtype:
                 value = np.array(value, dtype=dtype)
