@@ -576,9 +576,9 @@ def test_sequential_convolution_without_reduction_dim(device_id):
 
     # this one still fails
     # Reshape: Operand (sub-)dimensions '[3]' incompatible with desired replacement (sub-)dimensions '[]'. Number of elements must be the same..
-    #m = Embedding(emb_dim)(x)
-    #m = reshape(m, (emb_dim,1))
-    #m = Convolution(filter_shape=(3,1), num_filters=13, pad=True, sequential=True)(m)
+    m = Embedding(emb_dim)(x)
+    m = reshape(m, (emb_dim,1))
+    m = Convolution(filter_shape=(3,1), num_filters=13, pad=True, sequential=True)(m)
 
     m = Embedding(emb_dim)(x)
     m = Convolution(filter_shape=3, pad=True, sequential=True)(m)
