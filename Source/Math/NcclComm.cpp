@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+// Copyright (c) 2016-2017, NVIDIA CORPORATION. All rights reserved.
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 
@@ -58,7 +58,7 @@ NcclComm::NcclComm(int deviceId, const MPIWrapperPtr& mpi)
     if (res != ncclSuccess)
       RuntimeError("NcclComm failed to initialize ncclComm_t: %s", ncclGetErrorString(res));
 
-    cudaStreamCreateWithFlags(&m_stream, cudaStreamNonBlocking)
+    cudaStreamCreateWithFlags(&m_stream, cudaStreamDefault)
         || "cudaStreamCreateWithFlags failed";
     fprintf(stderr, "NcclComm: initialized\n");
 }
