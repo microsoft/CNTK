@@ -1620,7 +1620,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     // The number of samples = the count of elements in List<T> / the count of elements of the sample
     // The shape of the variable should match the shape of the Value object.
     //
-    [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetData() instead.")]
+    [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetDenseData() instead.")]
     public void CopyVariableValueTo<T>(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences)
     {
         sequences.Clear();
@@ -1674,7 +1674,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable. 
     // The number of samples = the count of elements in List<int>.
     //
-    [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetData() instead.")]
+    [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetOneHotData() instead.")]
     public void CopyVariableValueTo(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences)
     {
         var seqVec = new SizeTVectorVector();

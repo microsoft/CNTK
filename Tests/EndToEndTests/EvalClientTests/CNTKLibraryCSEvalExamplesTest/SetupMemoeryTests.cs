@@ -66,9 +66,8 @@ namespace CNTKLibraryCSEvalExamples
                 outputDataMap.Add(outputVar, null);
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
-                var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 Console.WriteLine("\nTest object reference inside SetupUsingResetModel.\n");
                 MemoryTests.WriteOutputs();
