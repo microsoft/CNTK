@@ -202,7 +202,7 @@ class DeepQAgent(object):
         self._explorer = explorer
         self._minibatch_size = minibatch_size
         self._history = History(input_shape)
-        self._memory = ReplayMemory(1000000, input_shape, 4)
+        self._memory = ReplayMemory(500000, input_shape, 4)
         self._action_taken = 0
 
         # Metrics accumulator
@@ -237,7 +237,7 @@ class DeepQAgent(object):
 
         # Define the loss, using Huber Loss (More robust to outliers)
         @Function
-        @Signature(environment=Tensor(input_shape), actions=Tensor(input_shape), q_targets=Tensor(input_shape))
+        @Signature(environment=Tensor(input_shape), actions=Tensor(nb_actions), q_targets=Tensor(1))
         def criterion(environment, actions, q_targets):
             # Define the loss, using Huber Loss (More robust to outliers)
             # actions is a sparse One Hot encoding of the action done by the agent
@@ -330,7 +330,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-e', '--epoch', default=100, type=int, help='Number of epochs to run (epoch = 250k actions')
     parser.add_argument('-d', '--device', default=-1, type=int, help='-1 for CPU, >= 0 for GPU mapping GPU id')
-    parser.add_argument('env', default='Pong-v3', type=str, nargs='1', help='Gym Atari environment to run')
+    parser.add_argument('env', default='Pong-v3', type=str, metavar='N', nargs='?', help='Gym Atari environment to run')
 
     args = parser.parse_args()
 
@@ -338,8 +338,7 @@ if __name__ == '__main__':
     env = gym.make(args.env)
 
     # 2. Make agent
-    memory = ReplayMemory(1000000, (84, 84), 4)
-    agent = DeepQAgent((4, 84, 84), env.available_actions)
+    agent = DeepQAgent((4, 84, 84), env.action_space.n)
 
     # Train
     current_state = env.reset()
