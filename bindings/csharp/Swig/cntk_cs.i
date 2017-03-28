@@ -383,6 +383,15 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         get { return GetCPUDevice(); }
     }
 
+    public static DeviceDescriptor GPUDevice(int deviceId)
+    {
+        if (deviceId < 0)
+        {
+            throw new System.ArgumentException("The paraemter deviceId should not be a negative value");
+        }
+        return GPUDevice((uint)deviceId);
+    }
+
     public static System.Collections.Generic.IList<DeviceDescriptor> AllDevices()
     {
         var deviceVector = GetAllDevices();
@@ -921,10 +930,18 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public NDShape(int numAxes, int dimension) : this((uint)numAxes, (uint)dimension)
     {
+        if (numAxes < 0 || dimension < 0)
+        {
+            throw new System.ArgumentException("The paraemter numAxes or dimension should not be a negative value");
+        }
     }
 
     public NDShape(int numAxes) : this((uint)numAxes)
     {
+        if (numAxes < 0)
+        {
+            throw new System.ArgumentException("The paraemter numAxes should not be a negative value");
+        }
     }
 
     public int Rank
@@ -968,11 +985,19 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public NDShape SubShape(int beginAxisId, int endAxisId)
     {
+        if (beginAxisId < 0 || endAxisId < 0)
+        {
+            throw new System.ArgumentException("The paraemter beginAxisId or endAxisId should not be a negative value");
+        }
         return SubShape((uint)beginAxisId, (uint)endAxisId);
     }
 
     public NDShape SubShape(int beginAxisId)
     {
+        if (beginAxisId < 0)
+        {
+            throw new System.ArgumentException("The paraemter beginAxisId should not be a negative value");
+        }
         return SubShape((uint)beginAxisId);
     }
 
@@ -981,6 +1006,10 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         var dimVector = new SizeTVector();
         foreach (var element in dimensions)
         {
+            if (element < 0)
+            {
+                throw new System.ArgumentException("The paraemter diemnsions cannot contain a negative value");
+            }
             dimVector.Add((uint)element);
         }
         return new NDShape(dimVector);
@@ -1091,6 +1120,10 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         var inputVector = new SizeTVector();
         foreach (var element in input)
         {
+            if (element < 0)
+            {
+                throw new System.ArgumentException("The paraemter diemnsions cannot contain a negative value");
+            }
             inputVector.Add((uint)element);
         }
         return inputVector;
@@ -1366,7 +1399,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return Create<T>(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
     }
 
-    private static Value Create<T>(int dimension,
+    public static Value Create<T>(int dimension,
                                   System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> sequences,
                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
