@@ -25,25 +25,20 @@ namespace CNTK
 
     Trainer::Trainer(const FunctionPtr& model, const FunctionPtr& lossFunction, const FunctionPtr& evaluationFunction,
                      const std::vector<LearnerPtr>& parameterLearners,
-                    const std::vector<ProgressWriterPtr>& progressWriters)
-        : m_model(model),
+                    const std::vector<ProgressWriterPtr>& progressWriters) 
+        : Evaluator(evaluationFunction, progressWriters, false),
+          m_model(model),
           m_lossFunction(lossFunction),
-          m_evaluationFunction(evaluationFunction),
           m_parameterLearners(std::make_shared<Learners>(parameterLearners)),
           m_prevMinibatchNumSamples(0),
           m_distributed(false),
           m_aggregatedTrainingLossValue(std::make_shared<Accumulator>()),
-          m_aggregatedTrainingEvalCriterionValue(),
-          m_aggregatedTestEvalCriterionValue(),
-          m_progressWriters(progressWriters.begin(), progressWriters.end())
+          m_aggregatedTrainingEvalCriterionValue()
     {
-        // By default we set the number of threads to hardware concurrency.
-        if (!Internal::MaxNumCPUThreadsSet())
-            SetMaxNumCPUThreads(std::thread::hardware_concurrency());
-
         std::vector<Variable> combinedFunctionArgs;
         if (m_model) // model is optional, since it may not be adding any information on top of lossFunction
             combinedFunctionArgs = m_model->Outputs();
+
         combinedFunctionArgs.push_back(m_lossFunction);
         if (!m_lossFunction->Output().DynamicAxes().empty())
         {
@@ -59,29 +54,14 @@ namespace CNTK
                 combinedFunctionArgs.push_back(m_trainingSampleCountVar);
         }
 
-        if (m_evaluationFunction)
+        if (evaluationFunction)
         {
-            combinedFunctionArgs.push_back(m_evaluationFunction);
-
-            if (!m_evaluationFunction->Output().DynamicAxes().empty())
-            {
-                m_aggregatedEvaluationFunction = ReduceSum(m_evaluationFunction);
-                combinedFunctionArgs.push_back(m_aggregatedEvaluationFunction);
-                m_testSampleCountVar = m_evaluationFunction;
-            }
-            else
-            {
-                m_aggregatedEvaluationFunction = m_evaluationFunction;
-                m_testSampleCountVar = m_evaluationFunction->RootFunction()->Inputs()[0];
-                if ((m_testSampleCountVar != m_trainingSampleCountVar) && (model->Output() != m_testSampleCountVar))
-                    combinedFunctionArgs.push_back(m_testSampleCountVar);
-            }
-            
-            m_aggregatedTrainingEvalCriterionValue = std::make_shared<Accumulator>();
-            m_aggregatedTestEvalCriterionValue = std::make_shared<Accumulator>();
+            auto evalArgs = GetCombinedEvalFunctionArgs();
+            combinedFunctionArgs.insert(combinedFunctionArgs.end(), evalArgs.begin(), evalArgs.end());
         }
 
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
+        SetCombinedEvalFunction(m_combinedTrainingFunction);
 
         auto modelParameters = m_combinedTrainingFunction->Parameters();
         m_learnerParameters = m_parameterLearners->GetParameters();
@@ -109,65 +89,12 @@ namespace CNTK
         m_distributed = m_parameterLearners->IsDistributed();
     }
 
-    static size_t GetSampleCount(const Variable& var, const ValuePtr& value)
-    {
-        auto valueDataShape = value->Shape();
-        size_t numMaskedSamples = value->MaskedCount();
-        size_t numSamplesInDataArrayView = valueDataShape.SubShape(var.Shape().Rank()).TotalSize();
-        if (numMaskedSamples > numSamplesInDataArrayView)
-            LogicError("Number (%d) of masked values cannot exceed the number (%d) of samples that the Value object's Data NDArrayView can hold.",
-                       (int)numMaskedSamples, (int)numSamplesInDataArrayView);
-
-        return (numSamplesInDataArrayView - numMaskedSamples);
-    }
-
-    static std::unordered_map<Variable, ValuePtr> GetInputs(const std::unordered_map<Variable, MinibatchData>& arguments)
-    {
-        std::unordered_map<Variable, ValuePtr> inputs(arguments.size());
-        for (const auto& kv : arguments)
-        {
-            inputs[kv.first] = kv.second.data;
-        }
-        return inputs;
-    }
-
     static bool IsAtSweepEnd(const std::unordered_map<Variable, MinibatchData>& arguments)
     {
         return std::any_of(arguments.begin(), arguments.end(), [](const std::pair<const Variable, MinibatchData>& kv)
         {
             return kv.second.sweepEnd;
         });
-    }
-
-    double Trainer::TestMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
-    {
-        return TestMinibatch(GetInputs(arguments), computeDevice);
-    }
-
-    double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
-    {
-        size_t sampleCount = 0;
-        return TestMinibatch(arguments, computeDevice, sampleCount);
-    }
-
-    double Trainer::TestMinibatch(const std::unordered_map<Variable, ValuePtr>& arguments, const DeviceDescriptor& computeDevice, size_t& sampleCount)
-    {
-        if (!m_aggregatedEvaluationFunction)
-            InvalidArgument("Trainer::TestMinibatch: Cannot test when no evaluation function was specified during 'this' trainer's construction.");
-
-        // TODO: Should we refactor this code that is somewhat similar to the prologue of the TrainMinibatch function
-        std::unordered_map<Variable, ValuePtr> outputs = { { m_aggregatedEvaluationFunction, nullptr }, { m_testSampleCountVar, nullptr } };
-
-        m_combinedTrainingFunction->Forward(arguments, outputs, computeDevice);
-        const ValuePtr& aggregateEvalCriterionValue = outputs[m_aggregatedEvaluationFunction];
-        sampleCount = GetSampleCount(m_testSampleCountVar, outputs[m_testSampleCountVar]);
-
-        UpdateTestProgress(sampleCount, aggregateEvalCriterionValue, computeDevice);
-
-        // TODO: it is not optimal to return average evaluation after each minibatch, since it potentially requires a
-        // roundtrip to GPU. A better approach would be to have a separate method to return the average evaluation on
-        // demand, as done for training. However, removing the below return is an API breaking change.
-        return aggregateEvalCriterionValue->AsScalar<double>() / sampleCount;
     }
 
     bool Trainer::TrainMinibatch(const std::unordered_map<Variable, MinibatchData>& arguments, const DeviceDescriptor& computeDevice /*= DeviceDescriptor::UseDefaultDevice()*/)
@@ -304,37 +231,6 @@ namespace CNTK
         if (m_aggregatedTrainingEvalCriterionValue)
         {
             m_aggregatedTrainingEvalCriterionValue->Reset();
-        }
-    }
-
-    void Trainer::UpdateTestProgress(size_t numSamples, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice)
-    {
-        if (numSamples == 0)
-        {
-            return;
-        }
-
-        if (m_aggregatedTestEvalCriterionValue)
-        {
-            m_aggregatedTestEvalCriterionValue->Update(evalCriterion, computeDevice);
-        }
-
-        for (auto& progressWriter : m_progressWriters)
-        {
-            progressWriter->UpdateTest(numSamples, m_aggregatedTestEvalCriterionValue);
-        }
-    }
-
-    void Trainer::SummarizeTestProgress()
-    {
-        for (auto& progressWriter : m_progressWriters)
-        {
-            progressWriter->WriteTestSummary(m_aggregatedTestEvalCriterionValue);
-        }
-
-        if (m_aggregatedTestEvalCriterionValue)
-        {
-            m_aggregatedTestEvalCriterionValue->Reset();
         }
     }
 

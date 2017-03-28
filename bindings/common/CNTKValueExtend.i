@@ -25,6 +25,26 @@
         return CNTK::Value::Create<double>(sampleShape, sequences, sequenceStartFlags, device, readOnly);
     }
 
+    static CNTK::ValuePtr CNTK::Value::CreateBatchFloat(const NDShape& sampleShape, const std::vector<float>& batchData,
+        const DeviceDescriptor& device, bool readOnly = false ) {
+        return CNTK::Value::CreateBatch<float>(sampleShape, batchData, device, readOnly);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateBatchDouble(const NDShape& sampleShape, const std::vector<double>& batchData,
+        const DeviceDescriptor& device, bool readOnly = false ) {
+        return CNTK::Value::CreateBatch<double>(sampleShape, batchData, device, readOnly);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(const NDShape& sampleShape, const std::vector<float>& sequenceData,
+        bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::CreateSequence<float>(sampleShape, sequenceData, sequenceStartFlag, device, readOnly);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateSequenceDouble(const NDShape& sampleShape, const std::vector<double>& sequenceData,
+        bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::CreateSequence<double>(sampleShape, sequenceData, sequenceStartFlag, device, readOnly);
+    }
+
     // Instantiation template functions: ND onehot vector input.
     static CNTK::ValuePtr CNTK::Value::CreateOneHotFloat(const CNTK::NDShape& sampleShape, const std::vector<std::vector<size_t>>& oneHotSequences,
         const CNTK::DeviceDescriptor& device, bool readOnly = false) {
@@ -65,6 +85,26 @@
     static CNTK::ValuePtr CNTK::Value::CreateOneHotDouble(size_t dimension, const std::vector<std::vector<size_t>>& oneHotSequences,
         const std::vector<bool>& sequenceStartFlags, const CNTK::DeviceDescriptor& device, bool readOnly = false) {
         return CNTK::Value::Create<double>(CNTK::NDShape({dimension}), oneHotSequences, sequenceStartFlags, device, readOnly);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateBatchFloat(size_t dimension, const std::vector<size_t>& batchData,
+        const DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::CreateBatch<float>(dimension, batchData, device, false);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateBatchDouble(size_t dimension, const std::vector<size_t>& batchData,
+        const DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::CreateBatch<double>(dimension, batchData, device, false);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateSequenceFloat(size_t dimension, const std::vector<size_t>& sequenceData,
+        bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::CreateSequence<float>(dimension, sequenceData, sequenceStartFlag, device, false);
+    }
+
+    static CNTK::ValuePtr CNTK::Value::CreateSequenceDouble(size_t dimension, const std::vector<size_t>& sequenceData,
+        bool sequenceStartFlag, const DeviceDescriptor& device, bool readOnly = false) {
+        return CNTK::Value::CreateSequence<double>(dimension, sequenceData, sequenceStartFlag, device, false);
     }
 
     // Instantiation template functions: ND sparse input.

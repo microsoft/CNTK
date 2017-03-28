@@ -1287,6 +1287,15 @@ namespace CNTK
         return BinaryOp(PrimitiveOpType::FutureValue, operand, initialState, std::move(additionalProperties), name);
     }
 
+    FunctionPtr OneHotOp(const Variable& operand, size_t numClass, bool outputSparse, Axis& axis, const std::wstring& name)
+    {
+        auto additionalProperties = Dictionary();
+        additionalProperties[PrimitiveFunction::AttributeNameNumClass] = numClass;
+        additionalProperties[PrimitiveFunction::AttributeNameOneHotOutputSparse] = outputSparse;
+        additionalProperties[PrimitiveFunction::AttributeNameOneHotAxis] = axis;
+        return UnaryOp(PrimitiveOpType::OneHot, operand, std::move(additionalProperties), name);
+    }
+
     FunctionPtr ReduceSum(const Variable& operand, const std::wstring& name)
     {
         return UnaryOp(PrimitiveOpType::SumAll, operand, Dictionary(), name);
@@ -1336,8 +1345,6 @@ namespace CNTK
         const NDShape& strides,
         const std::vector<bool>& sharing,
         const std::vector<bool>& autoPadding,
-        const NDShape& lowerPad,
-        const NDShape& upperPad,
         size_t maxTempMemSizeInSamples,
         const std::wstring& name)
     {
@@ -1346,8 +1353,6 @@ namespace CNTK
             strides,
             sharing,
             autoPadding,
-            lowerPad,
-            upperPad,
             false,
             { 0 },
             maxTempMemSizeInSamples,
@@ -1359,8 +1364,6 @@ namespace CNTK
         const NDShape& strides,
         const std::vector<bool>& sharing,
         const std::vector<bool>& autoPadding,
-        const NDShape& lowerPad,
-        const NDShape& upperPad,
         const NDShape& outputShape,
         size_t maxTempMemSizeInSamples,
         const std::wstring& name)
@@ -1370,8 +1373,6 @@ namespace CNTK
             strides,
             sharing,
             autoPadding,
-            lowerPad,
-            upperPad,
             true,
             outputShape,
             maxTempMemSizeInSamples,
@@ -1390,8 +1391,6 @@ namespace CNTK
                         const NDShape& poolingWindowShape,
                         const NDShape& strides,
                         const std::vector<bool>& autoPadding,
-                        const NDShape& lowerPad,
-                        const NDShape& upperPad,
                         const bool ceilOutDim,
                         const bool includePad,
                         const std::wstring& name)
@@ -1401,8 +1400,8 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNamePoolingWindowShape] = poolingWindowShape;
         additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
         additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
-        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
+        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
         additionalProperties[PrimitiveFunction::AttributeNameCeilOutDim] = ceilOutDim;
         additionalProperties[PrimitiveFunction::AttributeNameIncludePad] = includePad;
 
@@ -1415,8 +1414,6 @@ namespace CNTK
                           const NDShape& poolingWindowShape,
                           const NDShape& strides,
                           const std::vector<bool>& autoPadding,
-                          const NDShape& lowerPad,
-                          const NDShape& upperPad,
                           const std::wstring& name)
     {
         auto additionalProperties = Dictionary();
@@ -1424,8 +1421,8 @@ namespace CNTK
         additionalProperties[PrimitiveFunction::AttributeNameUnpoolingWindowShape] = poolingWindowShape;
         additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
         additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
-        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+        additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
+        additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
 
         std::vector<Variable> operands = { operand, poolingInput};
         return AsComposite(MakeSharedObject<PrimitiveFunction>(PrimitiveOpType::Unpooling, operands, std::move(additionalProperties), name), name);
@@ -1821,8 +1818,6 @@ namespace CNTK
             const NDShape& strides,
             const std::vector<bool>& sharing,
             const std::vector<bool>& autoPadding,
-            const NDShape& lowerPad,
-            const NDShape& upperPad,
             bool transpose,
             const NDShape& outputShape,
             size_t maxTempMemSizeInSamples,
@@ -1838,8 +1833,8 @@ namespace CNTK
             additionalProperties[PrimitiveFunction::AttributeNameStrides] = strides;
             additionalProperties[PrimitiveFunction::AttributeNameSharing] = AsDictionaryValueVector(sharing);
             additionalProperties[PrimitiveFunction::AttributeNameAutoPadding] = AsDictionaryValueVector(autoPadding);
-            additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = lowerPad;
-            additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = upperPad;
+            additionalProperties[PrimitiveFunction::AttributeNameLowerPad] = NDShape({0});
+            additionalProperties[PrimitiveFunction::AttributeNameUpperPad] = NDShape({0});
             additionalProperties[PrimitiveFunction::AttributeNameTranspose] = transpose;
             additionalProperties[PrimitiveFunction::AttributeNameOutputShape] = outputShape;
             additionalProperties[PrimitiveFunction::AttributeNameMaxTempMemSizeInSamples] = maxTempMemSizeInSamples;
