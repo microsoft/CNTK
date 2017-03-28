@@ -255,7 +255,7 @@ def test_session_restart_from_end_checkpoint(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter()
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -284,7 +284,7 @@ def test_session_restart_from_end_checkpoint(tmpdir, device_id):
     writer.testing_summary_counter = 0
 
     # restoring from a particular checkpoint should not cause any training
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     training_session(trainer=t, mb_source=mbs,
         mb_size=4, var_to_stream=input_map,
         max_samples=60, progress_frequency=20,
@@ -343,7 +343,7 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
     writer.training_summary_counter = 2
 
     # restoring from a particular checkpoint and again save everything from the 3 epoch
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     training_session(
         trainer=t, mb_source=mbs,
         mb_size=4, var_to_stream=input_map,
@@ -381,7 +381,7 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
     os.rename(str(tmpdir / "restart_from_checkpoint1.ckp"), str(tmpdir / "restart_from_checkpoint.ckp"))
 
     # restoring from a particular checkpoint and again save everything from the 3 epoch
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     training_session(
         trainer=t, mb_source=mbs,
         mb_size=4, var_to_stream=input_map,
