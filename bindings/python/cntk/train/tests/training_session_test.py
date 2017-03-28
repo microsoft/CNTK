@@ -54,7 +54,7 @@ ctf_data = '''\
 '''
 
 
-def mb_source(tmpdir, fileprefix, epoch_size=FULL_DATA_SWEEP):
+def mb_source(tmpdir, fileprefix, max_samples=FULL_DATA_SWEEP):
     ctf_file = str(tmpdir / (fileprefix + '2seqtest.txt'))
     with open(ctf_file, 'w') as f:
         f.write(ctf_data)
@@ -63,7 +63,7 @@ def mb_source(tmpdir, fileprefix, epoch_size=FULL_DATA_SWEEP):
         features=StreamDef(field='S0', shape=input_dim, is_sparse=True),
         labels=StreamDef(field='S1', shape=input_dim, is_sparse=True)
     )),
-        randomize=False, epoch_size=epoch_size)
+        randomize=False, max_samples=max_samples)
     return mbs
 
 
@@ -128,7 +128,7 @@ def test_session_sanity_check(tmpdir, device_id):
 def test_session_max_samples(tmpdir, device_id):
     device = cntk_device(device_id)
     t, feature, label = create_sample_model(device)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -148,7 +148,7 @@ def test_session_cross_validation_at_end(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25]])
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
 
     input_map = {
@@ -171,7 +171,7 @@ def test_session_cross_validation_3_times(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25], [92, 25], [92, 25]])
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
 
     input_map = {
@@ -194,7 +194,7 @@ def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25], [92, 25], [92, 25]])
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "cv")
 
     input_map = {
@@ -232,7 +232,7 @@ def test_session_progress_print(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter()
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -301,7 +301,7 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter()
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -406,7 +406,7 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
 def test_session_cv_callback_3_times(tmpdir, device_id):
     device = cntk_device(device_id)
     t, feature, label = create_sample_model(device)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -434,7 +434,7 @@ def test_session_cv_callback_3_times(tmpdir, device_id):
 def test_session_cv_callback_with_cross_validation_3_times(tmpdir, device_id):
     device = cntk_device(device_id)
     t, feature, label = create_sample_model(device)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     cv_mbs = mb_source(tmpdir, "cv")
 
     input_map = {
@@ -469,7 +469,7 @@ def test_session_cv_callback_with_cross_validation_3_times(tmpdir, device_id):
 def test_session_cv_callback_early_exit(tmpdir, device_id):
     device = cntk_device(device_id)
     t, feature, label = create_sample_model(device)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
 
     input_map = {
         feature: mbs.streams.features,
@@ -498,7 +498,7 @@ def test_session_with_test(tmpdir, device_id):
     device = cntk_device(device_id)
     writer = MockProgressWriter(expected_test_summary=[[92, 25]])
     t, feature, label = create_sample_model(device, writer)
-    mbs = mb_source(tmpdir, "training", epoch_size=INFINITELY_REPEAT)
+    mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     mbs1 = mb_source(tmpdir, "test")
 
     input_map = {

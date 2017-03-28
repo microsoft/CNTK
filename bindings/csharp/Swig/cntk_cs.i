@@ -263,6 +263,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_struct CNTK::MinibatchData;
 %ignore_class CNTK::MinibatchSource;
 %ignore_struct CNTK::MinibatchInfo;
+%ignore_struct CNTK::MinibatchSourceConfig;
 
 %ignore_function CNTK::CreateCompositeMinibatchSource;
 %ignore_struct CNTK::StreamConfiguration;
@@ -344,6 +345,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %ignore_function CNTK::Internal::AreEqual;
 %ignore_function CNTK::PrintBuiltInfo;
 %ignore_function CNTK::Internal::DefaultPackThresholdSizeInBytes;
+%ignore_function CNTK::Internal::ToDictionary;
 
 %ignore_class CNTK::Internal::TensorBoardFileWriter;
 

@@ -8,7 +8,7 @@ from __future__ import print_function
 import numpy as np
 import os
 from cntk import Trainer, Axis
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk.learners import momentum_sgd, fsadagrad, momentum_as_time_constant_schedule, learning_rate_schedule, UnitType
 from cntk import input, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, \
                  element_select, alias, hardmax, placeholder, combine, parameter, times, plus
@@ -64,7 +64,7 @@ def create_reader(path, is_training):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features = StreamDef(field='S0', shape=input_vocab_dim, is_sparse=True),
         labels   = StreamDef(field='S1', shape=label_vocab_dim, is_sparse=True)
-    )), randomize = is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )), randomize = is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 ########################
 # define the model     #

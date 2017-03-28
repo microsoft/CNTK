@@ -7,7 +7,7 @@
 import sys
 import os
 from cntk import Trainer, Axis #, text_format_minibatch_source, StreamConfiguration
-from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
+from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT
 from cntk.device import cpu, try_set_default_device
 from cntk.learners import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input, sequence
@@ -23,7 +23,7 @@ def create_reader(path, is_training, input_dim, label_dim):
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features = StreamDef(field='x', shape=input_dim,   is_sparse=True),
         labels   = StreamDef(field='y', shape=label_dim,   is_sparse=False)
-    )), randomize=is_training, epoch_size = INFINITELY_REPEAT if is_training else FULL_DATA_SWEEP)
+    )), randomize=is_training, max_sweeps = INFINITELY_REPEAT if is_training else 1)
 
 # Defines the LSTM model for classifying sequences
 def LSTM_sequence_classifer_net(feature, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
