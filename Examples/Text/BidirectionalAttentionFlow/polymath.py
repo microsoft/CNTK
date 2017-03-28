@@ -56,6 +56,41 @@ class PolyMath:
             return C.times(wg, glove) + C.times(wn, nonglove)
         return func
         
+    def input_layer(self,cgw,cnw,cc,qgw,qnw,qc):
+        cgw_ph = C.placeholder_variable()
+        cnw_ph = C.placeholder_variable()
+        cc_ph  = C.placeholder_variable()
+        qgw_ph = C.placeholder_variable()
+        qnw_ph = C.placeholder_variable()
+        qc_ph  = C.placeholder_variable()
+    
+        input_chars = C.placeholder_variable(shape=(self.c_dim,))
+        input_glove_words = C.placeholder_variable(shape=(self.wg_dim,))
+        input_nonglove_words = C.placeholder_variable(shape=(self.wn_dim,))
+
+        # we need to reshape because GlobalMaxPooling/reduce_max is retaining a trailing singleton dimension
+        # todo GlobalPooling/reduce_max should have a keepdims default to False
+        embedded = C.splice(
+            self.embed()(input_glove_words, input_nonglove_words), 
+            C.reshape(self.charcnn(C.reshape(input_chars, (1, self.word_size, C.InferredDimension))), self.convs))
+            
+        input_layers = C.layers.Sequential([
+            HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
+            C.layers.Dropout(self.dropout),
+            OptimizedRnnStack(self.hidden_dim, bidirectional=True),
+        ])
+        
+        q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qgw_ph,qnw_ph,qc_ph])))
+        c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cgw_ph,cnw_ph,cc_ph])))
+
+        q_processed = input_layers(q_emb) # synth_embedding for query
+        c_processed = input_layers(c_emb) # synth_embedding for context
+        return C.as_block(
+            C.combine([c_processed, q_processed]),
+            [(cgw_ph, cgw),(cnw_ph, cnw),(cc_ph, cc),(qgw_ph, qgw),(qnw_ph, qnw),(qc_ph, qc)],
+            'input_layer',
+            'input_layer')
+        
     def attention_layer(self, context, query):
         q_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
         c_processed = C.placeholder_variable(shape=(2*self.hidden_dim,))
@@ -153,27 +188,8 @@ class PolyMath:
         ab = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ab')
         ae = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ae')
 
-        input_chars = C.placeholder_variable(shape=(self.c_dim,))
-        input_glove_words = C.placeholder_variable(shape=(self.wg_dim,))
-        input_nonglove_words = C.placeholder_variable(shape=(self.wn_dim,))
-
-        # we need to reshape because GlobalMaxPooling/reduce_max is retaining a trailing singleton dimension
-        # todo GlobalPooling/reduce_max should have a keepdims default to False
-        embedded = C.splice(
-            self.embed()(input_glove_words, input_nonglove_words), 
-            C.reshape(self.charcnn(C.reshape(input_chars, (1, self.word_size, C.InferredDimension))), self.convs))
-            
-        input_layers = C.layers.Sequential([
-            HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
-            C.layers.Dropout(self.dropout),
-            OptimizedRnnStack(self.hidden_dim, bidirectional=True),
-        ])
-        
-        q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qgw,qnw,qc])))
-        c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cgw,cnw,cc])))
-
-        q_processed = input_layers(q_emb) # synth_embedding for query
-        c_processed = input_layers(c_emb) # synth_embedding for context
+        #input layer
+        c_processed, q_processed = self.input_layer(cgw,cnw,cc,qgw,qnw,qc).outputs
         
         # attention layer
         att_context = self.attention_layer(c_processed, q_processed)
@@ -189,7 +205,12 @@ class PolyMath:
         end_loss = seq_loss(end_logits, ae)
         return C.combine([start_logits, end_logits]), start_loss + end_loss
 
-    def f1_score_naive(self, ab, ae, start_logits, end_logits):
+    def f1_score_naive(self, ab_var, ae_var, start_logits_var, end_logits_var):
+        ab = C.placeholder_variable(shape=())
+        ae = C.placeholder_variable(shape=())
+        start_logits = C.placeholder_variable(shape=())
+        end_logits = C.placeholder_variable(shape=())
+
         oab = seq_hardmax(start_logits)
         oae = seq_hardmax(end_logits)
         answers = C.splice(ab, C.sequence.delay(ae), oab, C.sequence.delay(oae)) # make end non-inclusive
@@ -206,16 +227,29 @@ class PolyMath:
         precision = common_len / test_len
         recall = common_len / gt_len
         f1 = precision * recall * 2 / (precision + recall)
-        return C.combine([f1, precision, recall, C.greater(common_len, 0), start_match, end_match])
- 
-    def f1_score(self, ab, ae, start_logits, end_logits):
+        
+        return C.as_block(
+            C.combine([f1, precision, recall, C.greater(common_len, 0), start_match, end_match]),
+            [(ab, ab_var), (ae, ae_var), (start_logits, start_logits_var), (end_logits, end_logits_var)],
+            'f1_score_layer',
+            'f1_score_layer')
+
+    def f1_score(self, ab_var, ae_var, start_logits_var, end_logits_var):
+        ab = C.placeholder_variable(shape=())
+        ae = C.placeholder_variable(shape=())
+        start_logits = C.placeholder_variable(shape=())
+        end_logits = C.placeholder_variable(shape=())
+
         start_end_prob = seq_softmax(C.splice(start_logits, end_logits))
-        vw, _ = C.layers.PastValueWindow(self.max_context_len, C.Axis.new_leading_axis(), go_backwards=True)(C.splice(start_end_prob,ab,ae)).outputs
+        combined = C.splice(start_end_prob,ab,ae)
+        vw, vw_mask = C.layers.PastValueWindow(self.max_context_len, C.Axis.new_leading_axis(), go_backwards=True)(combined).outputs
+        vw = vw * vw_mask # todo: remove this after the _ bug fixes and we can ignore vw_mask
         start_prob = C.slice(vw,1,0,1)
         end_prob = C.slice(vw,1,1,2)
-        joint_prob = C.times_transpose(start_prob, end_prob)
+        joint_prob_mask = C.constant(np.asarray(np.triu(np.ones(self.max_context_len)),dtype=np.float32), shape=(self.max_context_len, self.max_context_len)) # start <= end
+        joint_prob = C.times_transpose(start_prob, end_prob) * joint_prob_mask
         joint_prob_loc = C.equal(joint_prob, C.reduce_max(joint_prob))
-        idx0 = C.argmax(C.reduce_max(joint_prob_loc,0),0)
+        idx0 = C.argmax(C.reduce_max(joint_prob_loc,0),1)
         idx1 = C.argmax(C.reduce_max(joint_prob_loc,1),0)
         start_pos = C.element_min(idx0,idx1)
         end_pos = C.element_max(idx0,idx1)
@@ -231,4 +265,8 @@ class PolyMath:
         precision = common_len / test_len
         recall = common_len / gt_len
         f1 = precision * recall * 2 / (precision + recall)
-        return C.combine([f1, precision, recall, C.greater(common_len, 0), C.equal(start_pos, gt_start), C.equal(end_pos, gt_end)])
+        return C.as_block(
+            C.combine([f1, precision, recall, C.greater(common_len, 0), C.equal(start_pos, gt_start), C.equal(end_pos, gt_end)]),
+            [(ab, ab_var), (ae, ae_var), (start_logits, start_logits_var), (end_logits, end_logits_var)],
+            'f1_score_layer',
+            'f1_score_layer')

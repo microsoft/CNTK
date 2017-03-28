@@ -15,18 +15,24 @@ def OptimizedRnnStack(hidden_dim, num_layers=1, recurrent_op='lstm', init=C.glor
 
 def HighwayBlock(dim, # ideally this should be inferred, but times does not allow inferred x inferred parameter for now
                  name=''):
-    transform_weight_initializer=C.normal(1 / np.sqrt(dim))
+    transform_weight_initializer=0
     transform_bias_initializer=0
-    update_weight_initializer=C.normal(1 / np.sqrt(dim))
+    update_weight_initializer=0
     update_bias_initializer=0
-    x  = C.placeholder_variable()
-    WT = C.Parameter(_INFERRED + (dim,), init=transform_weight_initializer, name=name+'_WT')
-    bT = C.Parameter(dim,                init=transform_bias_initializer,   name=name+'_bT')
-    WU = C.Parameter(_INFERRED + (dim,), init=update_weight_initializer,    name=name+'_WU')
-    bU = C.Parameter(dim,                init=update_bias_initializer,      name=name+'_bU')
-    transform_gate = C.sigmoid(C.times(x, WT, name=name+'_T') + bT)
-    update = C.relu(C.times(x, WU, name=name+'_U') + bU)
-    return x + transform_gate * (update - x)
+    def func(x_var):
+        x  = C.placeholder_variable()
+        WT = C.Parameter((dim,dim,), init=transform_weight_initializer, name=name+'_WT')
+        bT = C.Parameter(dim,        init=transform_bias_initializer,   name=name+'_bT')
+        WU = C.Parameter((dim,dim,), init=update_weight_initializer,    name=name+'_WU')
+        bU = C.Parameter(dim,        init=update_bias_initializer,      name=name+'_bU')
+        transform_gate = C.sigmoid(C.times(x, WT, name=name+'_T') + bT)
+        update = C.relu(C.times(x, WU, name=name+'_U') + bU)
+        return C.as_block(
+            x + transform_gate * (update - x),
+            [(x, x_var)],
+            'HighwayBlock',
+            'HighwayBlock'+name)
+    return func
     
 def HighwayNetwork(dim, highway_layers, name=''):
     return C.layers.For(range(highway_layers), lambda i : HighwayBlock(dim, name=name+str(i)))
@@ -41,10 +47,8 @@ def seq_hardmax(logits):
     return s * C.equal(s_acc, 1) # only pick the first one
 
 def seq_softmax(logits):
-    #log_sum = C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, logits.shape))(logits)
-    #return C.exp(logits - C.sequence.broadcast_as(log_sum, logits))
-    log_sum = C.layers.Recurrence(C.log_add_exp, initial_state=C.constant(-1e+30, logits.shape))(logits)
-    return C.exp(logits - C.sequence.broadcast_as(C.sequence.last(log_sum), logits))
+    log_sum = C.layers.Fold(C.log_add_exp, initial_state=C.constant(-1e+30, logits.shape))(logits)
+    return C.exp(logits - C.sequence.broadcast_as(log_sum, logits))
 
 class LambdaFunc(C.ops.functions.UserFunction):
     def __init__(self,
