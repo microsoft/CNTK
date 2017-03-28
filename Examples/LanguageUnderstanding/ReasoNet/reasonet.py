@@ -10,7 +10,10 @@ from cntk.layers.blocks import _INFERRED, Parameter
 from cntk.internal import _as_tuple, sanitize_input
 import cntk.learners as learners
 from cntk.layers import GRU
-from .utils import *
+try:
+  from utils import *
+except Exception:
+  from .utils import *
 
 def create_reader(path, vocab_dim, entity_dim, randomize, rand_size= DEFAULT_RANDOMIZATION_WINDOW, size=INFINITELY_REPEAT):
   """
@@ -44,20 +47,20 @@ def attention_model(context_memory, query_memory, init_status, hidden_dim, att_d
   status = init_status
   output = [None]*max_steps*2
   sum_prob = None
-  context_cos_sim = project_cosine_sim(att_dim, name='context_attention')
-  query_cos_sim = project_cosine_sim(att_dim, name='query_attention')
-  ans_cos_sim = project_cosine_sim(att_dim, name='candidate_attention')
+  context_attention_score = attention_score(att_dim, name='context_attention')
+  query_attention_score = attention_score(att_dim, name='query_attention')
+  answer_attention_score = attention_score(att_dim, name='candidate_attention')
   stop_gate = termination_gate(name='terminate_prob')
   prev_stop = 0
   for step in range(max_steps):
-    context_attention_weight = context_cos_sim(status, context_memory)
-    query_attention_weight = query_cos_sim(status, query_memory)
+    context_attention_weight = context_attention_score(status, context_memory)
+    query_attention_weight = query_attention_score(status, query_memory)
     context_attention = sequence.reduce_sum(times(context_attention_weight, context_memory), name='C-Att')
     query_attention = sequence.reduce_sum(times(query_attention_weight, query_memory), name='Q-Att')
     attention = ops.splice(query_attention, context_attention, name='att-sp')
     status = gru(status, attention).output
     termination_prob = stop_gate(status)
-    ans_attention = ans_cos_sim(status, context_memory)
+    ans_attention = answer_attention_score(status, context_memory)
     output[step*2] = ans_attention
     if step < max_steps -1:
       stop_prob = prev_stop + ops.log(termination_prob, name='log_stop')
@@ -76,7 +79,7 @@ def attention_model(context_memory, query_memory, init_status, hidden_dim, att_d
   return combine_func
 
 class model_params:
-  def __init__(self, vocab_dim, entity_dim, hidden_dim, embedding_dim=100, embedding_init=None, share_rnn_param=False, max_rl_steps=5, dropout_rate=None, init=glorot_uniform(), model_name='rsn'):
+  def __init__(self, vocab_dim, entity_dim, hidden_dim, attention_dim, embedding_dim=100, embedding_init=None, share_rnn_param=False, max_rl_steps=5, dropout_rate=None, init=glorot_uniform(), model_name='rsn'):
     self.vocab_dim = vocab_dim
     self.entity_dim = entity_dim
     self.hidden_dim = hidden_dim
@@ -87,7 +90,7 @@ class model_params:
     self.init = init
     self.model_name = model_name
     self.share_rnn_param = share_rnn_param
-    self.attention_dim = 384
+    self.attention_dim = attention_dim
 
 def bind_data(func, data):
   """
@@ -136,15 +139,18 @@ def create_model(params):
     query_embedding  = times(query_sequence , embedding, name='query_embedding')
     context_embedding = times(context_sequence, embedding, name='context_embedding')
   
-  contextGruW = Parameter(_INFERRED +  _as_tuple(params.hidden_dim), init=glorot_uniform(), name='gru_params')
-  queryGruW = Parameter(_INFERRED +  _as_tuple(params.hidden_dim), init=glorot_uniform(), name='gru_params')
+  context_gru_weights = Parameter(_INFERRED +  _as_tuple(params.hidden_dim), init=glorot_uniform(), name='context_gru_params')
+  if params.share_rnn_param:
+    query_gru_weights = context_gru_weights
+  else:
+    query_gru_weights = Parameter(_INFERRED +  _as_tuple(params.hidden_dim), init=glorot_uniform(), name='query_gru_params')
 
   entity_embedding = ops.times(context_sequence, embedding_matrix, name='constant_entity_embedding')
   # Unlike other words in the context, we keep the entity vectors fixed as a random vector so that each vector just means an identifier of different entities in the context and it has no semantic meaning
   full_context_embedding = ops.element_select(entity_ids_mask, entity_embedding, context_embedding)
-  context_memory = ops.optimized_rnnstack(full_context_embedding, contextGruW, params.hidden_dim, 1, True, recurrent_op='gru', name='context_mem')
+  context_memory = ops.optimized_rnnstack(full_context_embedding, context_gru_weights, params.hidden_dim, 1, True, recurrent_op='gru', name='context_mem')
 
-  query_memory = ops.optimized_rnnstack(query_embedding, queryGruW, params.hidden_dim, 1, True, recurrent_op='gru', name='query_mem')
+  query_memory = ops.optimized_rnnstack(query_embedding, query_gru_weights, params.hidden_dim, 1, True, recurrent_op='gru', name='query_mem')
   qfwd = ops.slice(sequence.last(query_memory), -1, 0, params.hidden_dim, name='fwd')
   qbwd = ops.slice(sequence.first(query_memory), -1, params.hidden_dim, params.hidden_dim*2, name='bwd')
   init_status = ops.splice(qfwd, qbwd, name='Init_Status') # get last fwd status and first bwd status

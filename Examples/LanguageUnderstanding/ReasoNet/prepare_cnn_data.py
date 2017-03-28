@@ -4,6 +4,7 @@ import re
 import requests
 import sys
 import tarfile
+import zipfile
 import shutil
 
 def merge_files(folder, target):
@@ -47,6 +48,19 @@ def download_cnn(target="."):
   tar.extractall(target)
   print("Finished to download {0} to {1}".format(url, target))
 
+def download_glove_retrained_embedding(target="."):
+  url="http://nlp.stanford.edu/data/glove.6B.zip"
+  if os.path.exists(os.path.join(target, "glove")):
+    shutil.rmtree(os.path.join(target, "glove"))
+  target=os.path.join(target, "glove")
+  if not os.path.exists(target):
+    os.makedirs(target)
+  print("Start to download glove pretrained embedding data from {0} to {1}".format(url, target))
+  request = requests.get(url)
+  zipf = zipfile.ZipFile(io.BytesIO(request.content), mode='r')
+  zipf.extractall(target)
+  print("Finished to download {0} to {1}".format(url, target))
+
 def file_exists(src):
   return (os.path.isfile(src) and os.path.exists(src))
 
@@ -67,7 +81,7 @@ if not (file_exists(raw_train_data) and file_exists(raw_test_data) and file_exis
 merge_files(os.path.join(data_path, "cnn/questions/training"), raw_train_data)
 merge_files(os.path.join(data_path, "cnn/questions/test"), raw_test_data)
 merge_files(os.path.join(data_path, "cnn/questions/validation"), raw_validation_data)
-print("All necessary data are downloaded to {0}".format(data_path))
+print("All necessary cnn data are downloaded to {0}".format(data_path))
 
 vocab_path=os.path.join(data_path, "cnn/cnn.vocab")
 train_ctf=os.path.join(data_path, "cnn/training.ctf")
@@ -80,3 +94,7 @@ if not (file_exists(train_ctf) and file_exists(test_ctf) and file_exists(validat
   Vocabulary.build_corpus(entity_vocab, word_vocab, raw_test_data, test_ctf)
   Vocabulary.build_corpus(entity_vocab, word_vocab, raw_validation_data, validation_ctf)
 print("Training data conversion finished.")
+
+if not file_exists(os.path.join(data_path, "glove/glove.6B.100d.txt")):
+  download_glove_retrained_embedding(data_path)
+print("Glove embedding data downloaded.")

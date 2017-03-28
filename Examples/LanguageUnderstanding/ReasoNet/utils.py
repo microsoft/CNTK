@@ -5,12 +5,16 @@ import math
 from cntk import Trainer, Axis, device, combine
 from cntk.layers.blocks import Stabilizer, _initializer_for,  _INFERRED, Parameter, Placeholder
 from cntk.layers import Recurrence, Convolution, Dense
-from cntk.ops import input, cross_entropy_with_softmax, classification_error, sequence, reduce_sum, \
-    parameter, times, element_times, past_value, plus, placeholder, reshape, constant, sigmoid, convolution, tanh, times_transpose, greater, cosine_distance, element_divide, element_select, exp, future_value, past_value
+from cntk.ops import input, sequence, reduce_sum, \
+    parameter, times, element_times, past_value, plus, placeholder, reshape, constant, sigmoid, convolution, tanh, times_transpose, greater, element_divide, element_select, exp, future_value, past_value
+from cntk.losses import cosine_distance
 from cntk.internal import _as_tuple, sanitize_input
 from cntk.initializer import uniform, glorot_uniform
 
-from .wordvocab import *
+try:
+  from wordvocab import *
+except Exception:
+  from .wordvocab import *
 
 class logger:
   __name=''
@@ -23,8 +27,10 @@ class logger:
     if not os.path.exists("log"):
       os.mkdir("log")
     if name=='' or name is None:
-      logger.__name='train'
-    logger.__logfile = 'log/{}_{}.log'.format(name, datetime.now().strftime("%m-%d_%H.%M.%S"))
+      logger.__name = 'train'
+    else:
+      logger.__name = name
+    logger.__logfile = 'log/{}_{}.log'.format(logger.__name, datetime.now().strftime("%m-%d_%H.%M.%S"))
     if os.path.exists(logger.__logfile):
       os.remove(logger.__logfile)
     print('Log with log file: {0}'.format(logger.__logfile))
@@ -89,8 +95,8 @@ def project_cosine(project_dim, init = glorot_uniform(), name=''):
   Wi = Parameter(_INFERRED + (project_dim,), init = init, name='Wi')
   Wm = Parameter(_INFERRED + (project_dim,), init = init, name='Wm')
 
-  status = placeholder_variable(name='status')
-  memory = placeholder_variable(name='memory')
+  status = placeholder(name='status')
+  memory = placeholder(name='memory')
 
   projected_status = times(status, Wi, name = 'projected_status')   
   projected_memory = times(memory, Wm, name = 'projected_memory')
