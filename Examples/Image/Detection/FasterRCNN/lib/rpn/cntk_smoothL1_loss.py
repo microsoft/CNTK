@@ -8,8 +8,8 @@ import numpy as np
 from fast_rcnn.config import cfg
 
 DEBUG = True
-debug_fwd = False
-debug_bkw = False
+debug_fwd = True
+debug_bkw = True
 
 class SmoothL1Loss(UserFunction):
     """

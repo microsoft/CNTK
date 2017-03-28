@@ -16,18 +16,19 @@ sys.path.append(os.path.join(abs_path, "lib", "rpn"))
 sys.path.append(os.path.join(abs_path, "lib", "nms"))
 sys.path.append(os.path.join(abs_path, "lib", "nms", "gpu"))
 
-from cntk import Trainer, UnitType, load_model, user_function, Axis
+from cntk import *
+#from cntk import Trainer, UnitType, load_model, user_function, Axis, input, parameter, times, combine, relu, softmax, roipooling, reduce_sum, slice, splice, reshape, plus, CloneMethod
+#from cntk.ops import parameter, times, combine, relu, softmax, roipooling, reduce_sum, slice, splice, reshape, plus
+#from cntk.ops.functions import CloneMethod
 from cntk.io import MinibatchSource, ImageDeserializer, CTFDeserializer, StreamDefs, StreamDef
-from cntk.io.transforms import *
+from cntk.io.transforms import scale
 from cntk.initializer import glorot_uniform
-from cntk.layers import Placeholder, Constant, Convolution
+from cntk.layers import placeholder, Convolution, Constant
 from cntk.learners import momentum_sgd, learning_rate_schedule, momentum_as_time_constant_schedule
 from cntk.logging import log_number_of_parameters, ProgressPrinter
-from cntk.logging.graph import find_by_name, plot
+from cntk.logging.graph import find_by_name, plot, get_node_outputs
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
-from cntk.ops import input_variable, parameter, times, combine, relu, softmax, roipooling, reduce_sum, slice, splice, reshape
-from cntk.ops.functions import CloneMethod
 from lib.rpn.cntk_anchor_target_layer import AnchorTargetLayer
 from lib.rpn.cntk_proposal_layer import ProposalLayer
 from lib.rpn.cntk_proposal_target_layer import ProposalTargetLayer
@@ -37,6 +38,7 @@ from lib.rpn.cntk_ignore_label import IgnoreLabel
 ###############################################################
 ###############################################################
 make_mode = False
+graph_type = "pdf" # "png" or "pdf"
 
 # file and stream names
 map_filename_postfix = '.imgMap.txt'
@@ -54,7 +56,7 @@ num_rois = 100
 epoch_size = 25
 num_test_images = 5
 mb_size = 1
-max_epochs = 3
+max_epochs = 3 # 3
 momentum_time_constant = 10
 
 # model specific variables (only AlexNet for now)
@@ -73,12 +75,12 @@ else:
 
 
 # Instantiates a composite minibatch source for reading images, roi coordinates and roi labels for training Fast R-CNN
-def create_mb_source(img_height, img_width, img_channels, n_rois, data_path, data_set):
+def create_mb_source(img_height, img_width, img_channels, n_rois, data_path):
     rois_dim = 5 * n_rois
 
     path = os.path.normpath(os.path.join(abs_path, data_path))
-    map_file = os.path.join(path, data_set + map_filename_postfix)
-    roi_file = os.path.join(path, data_set + rois_filename_postfix)
+    map_file = os.path.join(path, "train" + map_filename_postfix)
+    roi_file = os.path.join(path, "train" + rois_filename_postfix)
 
     if not os.path.exists(map_file) or not os.path.exists(roi_file):
         raise RuntimeError("File '%s' or '%s' does not exist. "
@@ -94,10 +96,30 @@ def create_mb_source(img_height, img_width, img_channels, n_rois, data_path, dat
 
     # read rois and labels
     roi_source = CTFDeserializer(roi_file, StreamDefs(
-        rois = StreamDef(field=roi_stream_name, shape=rois_dim, is_sparse=False)))
+        roiAndLabel = StreamDef(field=roi_stream_name, shape=rois_dim, is_sparse=False)))
 
     # define a composite reader
-    return MinibatchSource([image_source, roi_source], epoch_size=sys.maxsize, randomize=data_set == "train")
+    return MinibatchSource([image_source, roi_source], epoch_size=sys.maxsize, randomize=True)
+
+
+def create_test_mb_source(img_height, img_width, img_channels, n_rois, data_path):
+    path = os.path.normpath(os.path.join(abs_path, data_path))
+    map_file = os.path.join(path, "train" + map_filename_postfix)
+
+    if not os.path.exists(map_file):
+        raise RuntimeError("File '%s' does not exist. "
+                           "Please run install_fastrcnn.py from Examples/Image/Detection/FastRCNN to fetch them" %
+                           (map_file))
+
+    # read images
+    transforms = [scale(width=img_width, height=img_height, channels=img_channels,
+                        scale_mode="pad", pad_value=114, interpolations='linear')]
+
+    image_source = ImageDeserializer(map_file, StreamDefs(
+        features = StreamDef(field='image', transforms=transforms)))
+
+    # define a composite reader
+    return MinibatchSource([image_source], epoch_size=sys.maxsize, randomize=False)
 
 
 # Defines the Faster R-CNN network model for detecting objects in images
@@ -112,8 +134,8 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
     last_node    = find_by_name(loaded_model, last_hidden_node_name)
 
     # Clone the conv layers and the fully connected layers of the network
-    conv_layers = combine([conv_node.owner]).clone(CloneMethod.freeze, {feature_node: Placeholder()})
-    fc_layers = combine([last_node.owner]).clone(CloneMethod.clone, {pool_node: Placeholder()})
+    conv_layers = combine([conv_node.owner]).clone(CloneMethod.freeze, {feature_node: placeholder()})
+    fc_layers = combine([last_node.owner]).clone(CloneMethod.clone, {pool_node: placeholder()})
 
     # Create the Faster R-CNN model
     feat_norm = features - Constant(114)
@@ -168,9 +190,11 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
     shp = (2,num_anchors,) + rpn_cls_score.shape[-2:]
     rpn_cls_prob_reshape = reshape(rpn_cls_prob, shp)
 
-    rpn_rois = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info=im_info))
+    rpn_rois_raw = user_function(ProposalLayer(rpn_cls_prob_reshape, rpn_bbox_pred, im_info=im_info))
+    rpn_rois = plus(rpn_rois_raw, 0, name='rpn_rois')
     ptl = user_function(ProposalTargetLayer(rpn_rois, gt_boxes))
-    rois = ptl.outputs[0]
+    rois_raw = ptl.outputs[0]
+    rois = plus(rois_raw, 0, name='rpn_target_rois')
     labels = ptl.outputs[1]
     bbox_targets = ptl.outputs[2]
 
@@ -182,12 +206,12 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
     # prediction head
     W_pred = parameter(shape=(4096, n_classes), init=glorot_uniform())
     b_pred = parameter(shape=n_classes, init=0)
-    cls_score = times(fc_out, W_pred) + b_pred
+    cls_score = plus(times(fc_out, W_pred), b_pred, name='cls_score')
 
     # regression head
     W_regr = parameter(shape=(4096, n_classes*4), init=glorot_uniform())
     b_regr = parameter(shape=n_classes*4, init=0)
-    bbox_pred = times(fc_out, W_regr) + b_regr
+    bbox_pred = plus(times(fc_out, W_regr), b_regr, name='bbox_regr')
 
     # loss function
     loss_cls = cross_entropy_with_softmax(cls_score, labels, axis=1)
@@ -204,28 +228,54 @@ def faster_rcnn_predictor(features, gt_boxes, n_classes):
     return cls_score, loss, pred_error
 
 
+def create_eval_model(model, image_input):
+    # modify Faster RCNN model by excluding target layers and losses
+    feature_node = find_by_name(model, "img_input")
+    conv_node = find_by_name(model, "conv5.y")
+    rpn_roi_node = find_by_name(model, "rpn_rois")
+    rpn_target_roi_node = find_by_name(model, "rpn_target_rois")
+    cls_score_node = find_by_name(model, "cls_score")
+    bbox_pred_node = find_by_name(model, "bbox_regr")
+
+    conv_rpn_layers = combine([conv_node.owner, rpn_roi_node.owner])\
+        .clone(CloneMethod.freeze, {feature_node: placeholder()})
+    roi_fc_layers = combine([cls_score_node.owner, bbox_pred_node.owner])\
+        .clone(CloneMethod.clone, {conv_node: placeholder(), rpn_target_roi_node: placeholder()})
+
+    conv_rpn_net = conv_rpn_layers(image_input)
+    conv_out = conv_rpn_net.outputs[0]
+    rpn_rois = conv_rpn_net.outputs[1]
+
+    pred_net = roi_fc_layers(conv_out, rpn_rois)
+    cls_score = pred_net.outputs[0]
+    bbox_regr = pred_net.outputs[1]
+
+    cls_pred = softmax(cls_score, axis=1, name='cls_pred')
+    return combine([cls_pred, rpn_rois, bbox_regr])
+
+
 # Trains a Faster R-CNN model
 def train_faster_rcnn(debug_output=False):
     if debug_output:
         print("Storing graphs and intermediate models to %s." % os.path.join(abs_path))
 
     # Create the minibatch source
-    minibatch_source = create_mb_source(image_height, image_width, num_channels, num_rois, base_path, "train")
+    minibatch_source = create_mb_source(image_height, image_width, num_channels, num_rois, base_path)
 
     # Input variables denoting features and labeled ground truth rois (as 5-tuples per roi)
-    image_input = input_variable((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()])
-    roi_input   = input_variable((num_rois, 5), dynamic_axes=[Axis.default_batch_axis()])
+    image_input = input((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name='img_input')
+    roi_input   = input((num_rois, 5), dynamic_axes=[Axis.default_batch_axis()])
 
     # define mapping from reader streams to network inputs
     input_map = {
-        image_input: minibatch_source.streams.features,
-        roi_input: minibatch_source.streams.rois
+        image_input: minibatch_source[features_stream_name],
+        roi_input: minibatch_source[roi_stream_name]
     }
 
     # Instantiate the Faster R-CNN prediction model and loss function
     cls_score, loss, pred_error = faster_rcnn_predictor(image_input, roi_input, num_classes)
     if debug_output:
-        plot(loss, os.path.join(abs_path, "graph_frcn.png"))
+        plot(loss, os.path.join(abs_path, "graph_frcn." + graph_type))
 
     # Set learning parameters
     l2_reg_weight = 0.0005
@@ -254,25 +304,37 @@ def train_faster_rcnn(debug_output=False):
         if debug_output:
             cls_score.save(os.path.join(abs_path, "frcn_py_%s.model" % (epoch+1)))
 
-    return cls_score
+    return loss
 
 
 # Tests a Faster R-CNN model
-def eval_faster_rcnn(model):
-    test_minibatch_source = create_mb_source(image_height, image_width, num_channels, num_rois, base_path, "test")
-    # !!! TODO: modify Faster RCNN model by excluding target layers and losses
+def eval_faster_rcnn(model, debug_output=False):
+    image_input = input((num_channels, image_height, image_width), dynamic_axes=[Axis.default_batch_axis()], name='img_input')
+    frcn_eval = create_eval_model(model, image_input)
+
+    if debug_output:
+        plot(frcn_eval, os.path.join(abs_path, "graph_frcn_eval." + graph_type))
+
+    test_minibatch_source = create_test_mb_source(image_height, image_width, num_channels, num_rois, base_path)
     input_map = {
-        model.arguments[0]: test_minibatch_source[features_stream_name],
-        model.arguments[1]: test_minibatch_source[roi_stream_name],
+        image_input: test_minibatch_source[features_stream_name],
     }
 
     # evaluate test images and write netwrok output to file
-    print("Evaluating Fast R-CNN model for %s images." % num_test_images)
+    print("Evaluating Faster R-CNN model for %s images." % num_test_images)
     results_file_path = base_path + "test.z"
     with open(results_file_path, 'wb') as results_file:
         for i in range(0, num_test_images):
             data = test_minibatch_source.next_minibatch(1, input_map=input_map)
-            output = model.eval(data)
+            output = frcn_eval.eval(data)
+
+            out_dict = dict([(k.name, k) for k in output])
+            out_cls_pred = output[out_dict['cls_pred']]
+            out_rpn_rois = output[out_dict['rpn_rois']]
+            out_bbox_regr = output[out_dict['bbox_regr']]
+
+            import pdb; pdb.set_trace()
+
             out_values = output[0, 0].flatten()
             np.savetxt(results_file, out_values[np.newaxis], fmt="%.6f")
             if (i+1) % 100 == 0:
@@ -285,7 +347,7 @@ def eval_faster_rcnn(model):
 # If a trained model is already available it is loaded an no training will be performed.
 if __name__ == '__main__':
     os.chdir(base_path)
-    model_path = os.path.join(abs_path, "frcn_py.model")
+    model_path = os.path.join(abs_path, "faster_rcnn_py.model")
 
     #import pdb; pdb.set_trace()
 
@@ -298,7 +360,5 @@ if __name__ == '__main__':
         trained_model.save(model_path)
         print("Stored trained model at %s" % model_path)
 
-    import pdb; pdb.set_trace()
-
     # Evaluate the test set
-    eval_faster_rcnn(trained_model)
+    eval_faster_rcnn(trained_model, debug_output=True)

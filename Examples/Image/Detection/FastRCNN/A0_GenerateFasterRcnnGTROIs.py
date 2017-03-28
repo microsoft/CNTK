@@ -59,14 +59,23 @@ if not datasetName.startswith("pascalVoc"):
                     targetw, targeth, w_offset, h_offset, scale = roiTransformPadScaleParams(
                         imgWidth, imgHeight, cntk_padWidth, cntk_padHeight)
 
+                    # TODO: return scaled and padded boxes?
+                    # For CNTK: convert and scale gt_box coords from x, y, w, h relative to x1, y1, x2, y2 absolute
+                    #whwh = (1000, 1000, 1000, 1000)  # TODO: get image width and height OR better scale beforehand
+                    #ngtb = np.vstack((gt_boxes[:, 0], gt_boxes[:, 1], gt_boxes[:, 0] + gt_boxes[:, 2], gt_boxes[:, 1] + gt_boxes[:, 3]))
+                    #gt_boxes[:, :-1] = ngtb.transpose() * whwh
+
                     boxesStr = "|roiAndLabel "
                     for boxIndex, box in enumerate(gtBoxes):
                         rect = roiTransformPadScale(box, w_offset, h_offset, scale)
-                        boxesStr += getCntkRoiCoordsLine(rect, cntk_padWidth, cntk_padHeight)
-                        boxesStr += " {}".format(gtLabelInd[boxIndex])
+                        label = gtLabelInd[boxIndex]
+                        if label > 0:
+                            boxesStr += getCntkRoiCoordsLine(rect, cntk_padWidth, cntk_padHeight)
+                            boxesStr += " {}".format(label)
 
-                    roisFile.write("{}\t{}\n".format(cnt, boxesStr))
-                    mapFile.write("{}]\t{}\t0\n".format(cnt, imgPath))
-                    cnt += 1
+                    if boxesStr != "|roiAndLabel ":
+                        roisFile.write("{}\t{}\n".format(cnt, boxesStr))
+                        mapFile.write("{}\t{}\t0\n".format(cnt, imgPath))
+                        cnt += 1
 
 print ("DONE.")

@@ -18,8 +18,8 @@ from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
 
 DEBUG = False
-debug_fwd = False
-debug_bkw = False
+debug_fwd = True
+debug_bkw = True
 
 class AnchorTargetLayer(UserFunction):
     """
@@ -101,6 +101,17 @@ class AnchorTargetLayer(UserFunction):
         # im_info
         #im_info = bottom[2].data[0, :]
         im_info = self._im_info
+
+        # For CNTK: convert and scale gt_box coords from x, y, w, h relative to x1, y1, x2, y2 absolute
+        im_width = 1000
+        im_height = 1000
+        whwh = (im_width, im_height, im_width, im_height) # TODO: get image width and height OR better scale beforehand
+        ngtb = np.vstack((gt_boxes[:, 0], gt_boxes[:, 1], gt_boxes[:, 0] + gt_boxes[:, 2], gt_boxes[:, 1] + gt_boxes[:, 3]))
+        gt_boxes[:, :-1] = ngtb.transpose() * whwh
+
+        # remove zero padded ground truth boxes
+        keep = np.where((gt_boxes[:,2] - gt_boxes[:,0]) * (gt_boxes[:,3] - gt_boxes[:,1]) > 0)
+        gt_boxes = gt_boxes[keep]
 
         if DEBUG:
             print ('')

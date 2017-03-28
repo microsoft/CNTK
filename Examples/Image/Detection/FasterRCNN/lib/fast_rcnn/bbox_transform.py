@@ -7,6 +7,8 @@
 
 import numpy as np
 
+# compute example and gt width ctr, width and height
+# and returns optimal target deltas
 def bbox_transform(ex_rois, gt_rois):
     ex_widths = ex_rois[:, 2] - ex_rois[:, 0] + 1.0
     ex_heights = ex_rois[:, 3] - ex_rois[:, 1] + 1.0
@@ -27,8 +29,19 @@ def bbox_transform(ex_rois, gt_rois):
         (targets_dx, targets_dy, targets_dw, targets_dh)).transpose()
     return targets
 
+# gets
+# - boxes (n, 4) as [x_low, y_low, x_high, y_high]
+# - deltas (n, 4) as [dx, dy, dw, dh]
+# returns
+# - pred_boxes (n, 4) as [x_low, y_low, x_high, y_high]
+# where
+# pred_ctr_x = dx * widths + ctr_x
+# --> pred_x_low = pred_ctr_x - 0.5 * pred_w
+# and
+# pred_w = np.exp(dw) * widths
 def bbox_transform_inv(boxes, deltas):
     if boxes.shape[0] == 0:
+        import pdb; pdb.set_trace()
         return np.zeros((0, deltas.shape[1]), dtype=deltas.dtype)
 
     boxes = boxes.astype(deltas.dtype, copy=False)

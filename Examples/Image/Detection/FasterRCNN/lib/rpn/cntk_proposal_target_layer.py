@@ -15,9 +15,9 @@ from fast_rcnn.config import cfg
 from fast_rcnn.bbox_transform import bbox_transform
 from utils.cython_bbox import bbox_overlaps
 
-DEBUG = False
-debug_fwd = False
-debug_bkw = False
+DEBUG = True
+debug_fwd = True
+debug_bkw = True
 
 #class ProposalTargetLayer(caffe.Layer):
 class ProposalTargetLayer(UserFunction):
@@ -31,8 +31,8 @@ class ProposalTargetLayer(UserFunction):
         super(ProposalTargetLayer, self).__init__([arg1, arg2], name=name)
 
         #layer_params = yaml.load(self.param_str_)
-        self._num_classes = 17 #layer_params['num_classes']
-        self._rois_per_image = 100
+        self._num_classes = cfg["CNTK"].NUM_CLASSES #layer_params['num_classes']
+        self._rois_per_image = cfg["CNTK"].ROIS_PER_IMAGE
         self._count = 0
         self._fg_num = 0
         self._bg_num = 0
@@ -59,7 +59,7 @@ class ProposalTargetLayer(UserFunction):
         # bbox_outside_weights
         ##top[4].reshape(1, self._num_classes * 4)
 
-        return [output_variable(rois_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False),
+        return [output_variable(rois_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False), # , name="rpn_target_rois"
                 output_variable(labels_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False),
                 output_variable(bbox_targets_shape, self.inputs[0].dtype, self.inputs[0].dynamic_axes, needs_gradient=False)]
 
@@ -76,9 +76,18 @@ class ProposalTargetLayer(UserFunction):
         gt_boxes = bottom[1][0,:] #.data
 
         # For CNTK: convert and scale gt_box coords from x, y, w, h relative to x1, y1, x2, y2 absolute
-        whwh = (1000, 1000, 1000, 1000) # TODO: get image width and height OR better scale beforehand
+        im_width = 1000
+        im_height = 1000
+        whwh = (im_width, im_height, im_width, im_height) # TODO: get image width and height OR better scale beforehand
         ngtb = np.vstack((gt_boxes[:, 0], gt_boxes[:, 1], gt_boxes[:, 0] + gt_boxes[:, 2], gt_boxes[:, 1] + gt_boxes[:, 3]))
         gt_boxes[:, :-1] = ngtb.transpose() * whwh
+
+        # remove zero padded ground truth boxes
+        keep = np.where((gt_boxes[:,2] - gt_boxes[:,0]) * (gt_boxes[:,3] - gt_boxes[:,1]) > 0)
+        gt_boxes = gt_boxes[keep]
+
+        assert gt_boxes.shape[0] > 0, \
+            "No ground truth boxes provided"
 
         # Include ground-truth boxes in the set of candidate rois
         #zeros = np.zeros((gt_boxes.shape[0], 1), dtype=gt_boxes.dtype)
@@ -218,6 +227,7 @@ def _sample_rois(all_rois, gt_boxes, fg_rois_per_image, rois_per_image, num_clas
     examples.
     """
     # overlaps: (rois x gt_boxes)
+
     overlaps = bbox_overlaps(
         np.ascontiguousarray(all_rois[:, 1:5], dtype=np.float),
         np.ascontiguousarray(gt_boxes[:, :4], dtype=np.float))

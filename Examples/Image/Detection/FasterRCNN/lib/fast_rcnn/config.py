@@ -27,6 +27,17 @@ __C = edict()
 #   from fast_rcnn_config import cfg
 cfg = __C
 
+
+#
+# CNTK parameters
+#
+
+__C.CNTK = edict()
+
+__C.CNTK.ROIS_PER_IMAGE = 100
+__C.CNTK.NUM_CLASSES = 17
+
+
 #
 # Training options
 #
