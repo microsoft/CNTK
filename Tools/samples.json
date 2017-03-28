@@ -35,7 +35,7 @@
         "category": ["Image"],
         "name":  "Transfer Learning",
         "url":  "https://github.com/Microsoft/CNTK/blob/master/Tutorials/CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb",
-        "description":  "Recognize flowers and animal in natural scene images using deep transfer learning with pre-trained ResNet data.",
+        "description":  "Recognize flowers and animals in natural scene images using deep transfer learning with pre-trained ResNet data.",
         "language":  ["Python"],
         "type":  ["Tutorial", "Recipe"]
     },
