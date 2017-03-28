@@ -16,6 +16,7 @@ from .core import *
 from .ops import *
 from .device import *
 from .train import *
+from .eval import *
 from .learners import *
 from .losses import *
 from .metrics import *
