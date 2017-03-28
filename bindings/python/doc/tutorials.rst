@@ -40,6 +40,9 @@ Tutorials
 #.  *Training with Sampled Softmax*
      CNTK 207: `Training with Sampled Softmax`_
 
+#.  *Recognize flowers and animals in natural scene images using deep transfer learning*
+     CNTK 301: `Deep transfer learning with pre-trained ResNet model`_
+
 Try these notebooks pre-installed on `CNTK Azure Notebooks`_ for free. 
 
 For our Japanese users, you can find some of the `tutorials in Japanese`_ (unsupported).
@@ -57,9 +60,10 @@ For our Japanese users, you can find some of the `tutorials in Japanese`_ (unsup
 .. _`Reinforcement learning basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_203_Reinforcement_Learning_Basics.ipynb
 .. _`Sequence to sequence basics`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_204_Sequence_To_Sequence.ipynb
 .. _`Artistic Style Transfer`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_205_Artistic_Style_Transfer.ipynb
-.. _`Basic Generative Adversarial Networks (GAN)`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_206A_Basic_GAN.ipynb
+.. _`Basic Generative Adversarial Networks (GAN)`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_206_Basic_GAN.ipynb
 .. _`Deep Convolutional GAN`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_206B_DCGAN.ipynb
 .. _`Training with Sampled Softmax`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_207_Training_with_Sampled_Softmax.ipynb
+.. _`Deep transfer learning with pre-trained ResNet model`: https://github.com/Microsoft/CNTK/blob/v2.0.beta15.0/Tutorials/CNTK_301_Image_Recognition_with_Deep_Transfer_Learning.ipynb
 
 .. _`CNTK Azure Notebooks`: https://notebooks.azure.com/cntk/libraries/tutorials
 .. _`tutorials in Japanese`: https://notebooks.azure.com/library/cntkbeta2_ja
