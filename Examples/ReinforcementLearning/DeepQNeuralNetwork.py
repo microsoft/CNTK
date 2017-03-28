@@ -265,7 +265,7 @@ class DeepQAgent(object):
             )
 
             self._episode_q_means.append(np.mean(self._episode_q_means))
-            self._episode_q_stddev.append(np.std(self._episode_q_means))
+            self._episode_q_stddev.append(np.std(self._episode_q_stddev))
 
             action = q_values.argmax()
 
