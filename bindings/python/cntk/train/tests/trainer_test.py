@@ -117,7 +117,7 @@ def test_eval_sparse_dense(tmpdir, device_id):
     mbs = MinibatchSource(CTFDeserializer(ctf_file, StreamDefs(
         features  = StreamDef(field='S0', shape=input_vocab_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
-    )), randomize=False, epoch_size = 2)
+    )), randomize=False, max_samples = 2)
 
     raw_input = sequence.input(shape=input_vocab_dim, sequence_axis=Axis('inputAxis'), name='raw_input', is_sparse=True)
 

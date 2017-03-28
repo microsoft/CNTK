@@ -36,7 +36,7 @@ def create_reader(path, randomize, input_vocab_dim, label_vocab_dim, size=INFINI
     return MinibatchSource(CTFDeserializer(path, StreamDefs(
         features  = StreamDef(field='S0', shape=input_vocab_dim,  is_sparse=True),
         labels    = StreamDef(field='S1', shape=label_vocab_dim,  is_sparse=True)
-    )), randomize=randomize, epoch_size = size)
+    )), randomize=randomize, max_samples = size)
 
 def create_trainer(network, epoch_size, num_quantization_bits, block_size, warm_up):
     # Instantiate the trainer object to drive the model training
