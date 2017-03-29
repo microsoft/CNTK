@@ -339,13 +339,12 @@ def test_MinibatchData_and_Value_as_input(tmpdir):
     # Test Value
     assert res.eval(mb[f1_si].data) == [[200]]
     # Test NumPy (converted back from MinibatchData)
-    assert res.eval(mb[f1_si].value) == [[200]]
+    assert res.eval(mb[f1_si].asarray()) == [[200]]
     # Test Value
     assert res.eval(mb[f1_si].data) == [[200]]
 
 
 def test_output_subset_evaluation(device_id):
-    
     try:
         gpu_device = gpu(0)
     except ValueError:

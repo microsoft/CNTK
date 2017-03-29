@@ -106,12 +106,37 @@ def test_mask(batch, seq_starts, expected):
         s = sanitize_batch(var, batch, seq_starts)
         assert np.allclose(s.mask, expected)
 
-def test_one_hot():
+def test_one_hot_raises():
     with pytest.raises(ValueError):
         s = Value.one_hot([[1.0, 2.0], [3.]], 4)
     with pytest.raises(ValueError):
         s = Value.one_hot([1, 2], 4)
-        
+
+
+@pytest.mark.parametrize("dtype", [
+    (None),
+    (int),
+    (np.int),
+    (np.int8),
+    (np.int16),
+    (np.int32),
+    (np.int64),
+])
+def test_one_hot_int_types(dtype):
+    data = [[0,2,1],[1]]
+    if dtype is not None:
+        data = [np.asarray(d, dtype=dtype) for d in data]
+    a = Value.one_hot(data, 3)
+    i = sequence.input(shape=(3,))
+    b = i * 1
+    expected = [[[ 1.,  0.,  0.],
+                 [ 0.,  0.,  1.],
+                 [ 0.,  1.,  0.]],
+                [[ 0.,  1.,  0.]]]
+    for a, b in zip (b.eval({i:a}), expected):
+        assert np.allclose(a, b)
+
+
 def test_one_hot_skip():
     a = Value.one_hot([[0,1,Value.ONE_HOT_SKIP]], 3)
     i = sequence.input(shape=(3,))

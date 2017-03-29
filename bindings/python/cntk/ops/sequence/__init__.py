@@ -73,7 +73,7 @@ def is_first(seq, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[ 1.,  0.,  0.,  0.]], dtype=float32)
+        [array([ 1.,  0.,  0.,  0.], dtype=float32)]
 
     Args:
         seq: the symbolic tensor denoting a sequence
@@ -99,7 +99,7 @@ def is_last(seq, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[ 0.,  0.,  0.,  1.]], dtype=float32)
+        [array([ 0.,  0.,  0.,  1.], dtype=float32)]
 
     Args:
         seq: the symbolic tensor denoting a sequence
@@ -206,22 +206,23 @@ def where(condition, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0, dtype=np.float32), (1,4,3,2))
         >>> z.eval({x:x0})
-        array([[[ 0.],
+        [array([[ 0.],
                 [ 0.],
                 [ 1.],
-                [ 1.]]], dtype=float32)
+                [ 1.]], dtype=float32)]
         >>> y = C.sequence.where(z)
         >>> y.eval({x:x0})
-        array([[ 2.,  3.]], dtype=float32)
+        [array([ 2.,  3.], dtype=float32)]
 
         >>> # repeat frame[1] twice, frame[3] three times, and frame[4] twice
         >>> C.sequence.where(C.sequence.input(1)).eval([[[1], [2], [1], [3], [2]]])
-        array([[ 0.,  1.,  1.,  2.,  3.,  3.,  3.,  4.,  4.]], dtype=float32)
+        [array([ 0.,  1.,  1.,  2.,  3.,  3.,  3.,  4.,  4.], dtype=float32)]
         >>> # note that the above are the indices that are passed to 
 
         >>> # repeat frames with a fractional factor
         >>> C.sequence.where(C.sequence.input(1)).eval([[[1.2]]*10])
-        array([[ 0.,  0.,  1.,  2.,  3.,  4.,  5.,  5.,  6.,  7.,  8.,  9.]], dtype=float32)
+        [array([ 0.,  0.,  1.,  2.,  3.,  4.,  5.,  5.,  6.,  7.,  8.,  9.],
+            dtype=float32)]
         >>> # as a result, a 1.2 times stretch is realized by duplicating frame[0] and frame[5]
 
     Args:
@@ -252,13 +253,13 @@ def gather(seq, condition, new_sequence_axis_typeinfo=None, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 12.,  13.],
+        [array([[[ 12.,  13.],
                  [ 14.,  15.],
                  [ 16.,  17.]],
         <BLANKLINE>
                 [[ 18.,  19.],
                  [ 20.,  21.],
-                 [ 22.,  23.]]]], dtype=float32)
+                 [ 22.,  23.]]], dtype=float32)]
 
     Args:
         seq: the symbolic sequence from which elements will be selected
@@ -300,7 +301,7 @@ def scatter(seq, condition, new_sequence_axis_typeinfo=None, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 18.,  19.],
+        [array([[[ 18.,  19.],
                  [ 20.,  21.],
                  [ 22.,  23.]],
         <BLANKLINE>
@@ -314,7 +315,7 @@ def scatter(seq, condition, new_sequence_axis_typeinfo=None, name=''):
         <BLANKLINE>
                 [[  0.,   0.],
                  [  0.,   0.],
-                 [  0.,   0.]]]], dtype=float32)
+                 [  0.,   0.]]], dtype=float32)]
 
     Args:
         seq: the symbolic sequence from which elements will be copied in the
@@ -354,7 +355,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         >>> # create one sequence of 4 tensors each with shape (3,2)
         >>> x0 = np.reshape(np.arange(24.0,dtype=np.float32),(1,4,3,2))
         >>> y.eval({x:x0})
-        array([[[[ 18.,  19.],
+        [array([[[ 18.,  19.],
                  [ 20.,  21.],
                  [ 22.,  23.]],
         <BLANKLINE>
@@ -368,7 +369,7 @@ def broadcast_as(operand, broadcast_as_operand, name=''):
         <BLANKLINE>
                 [[ 18.,  19.],
                  [ 20.,  21.],
-                 [ 22.,  23.]]]], dtype=float32)
+                 [ 22.,  23.]]], dtype=float32)]
 
     Args:
         operand: the symbolic tensor whose value will be broadcast
