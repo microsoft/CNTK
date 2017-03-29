@@ -383,6 +383,15 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         get { return GetCPUDevice(); }
     }
 
+    public static DeviceDescriptor GPUDevice(int deviceId)
+    {
+        if (deviceId < 0)
+        {
+            throw new System.ArgumentException("The paraemter deviceId should not be a negative value");
+        }
+        return GPUDevice((uint)deviceId);
+    }
+
     public static System.Collections.Generic.IList<DeviceDescriptor> AllDevices()
     {
         var deviceVector = GetAllDevices();
@@ -718,7 +727,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return _Clone(ParameterCloningMethod.Share);
     }
 
-    public void Evaluate(System.Collections.Generic.Dictionary<Variable, Value> arguments, System.Collections.Generic.Dictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
+    public void Evaluate(System.Collections.Generic.IDictionary<Variable, Value> arguments, System.Collections.Generic.IDictionary<Variable, Value> outputs, DeviceDescriptor computeDevice)
     {
         // Evaluate the rootFunction.
         var argMap = new UnorderedMapVariableValuePtr();
@@ -921,10 +930,18 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public NDShape(int numAxes, int dimension) : this((uint)numAxes, (uint)dimension)
     {
+        if (numAxes < 0 || dimension < 0)
+        {
+            throw new System.ArgumentException("The paraemter numAxes or dimension should not be a negative value");
+        }
     }
 
     public NDShape(int numAxes) : this((uint)numAxes)
     {
+        if (numAxes < 0)
+        {
+            throw new System.ArgumentException("The paraemter numAxes should not be a negative value");
+        }
     }
 
     public int Rank
@@ -968,11 +985,19 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
     public NDShape SubShape(int beginAxisId, int endAxisId)
     {
+        if (beginAxisId < 0 || endAxisId < 0)
+        {
+            throw new System.ArgumentException("The paraemter beginAxisId or endAxisId should not be a negative value");
+        }
         return SubShape((uint)beginAxisId, (uint)endAxisId);
     }
 
     public NDShape SubShape(int beginAxisId)
     {
+        if (beginAxisId < 0)
+        {
+            throw new System.ArgumentException("The paraemter beginAxisId should not be a negative value");
+        }
         return SubShape((uint)beginAxisId);
     }
 
@@ -981,6 +1006,10 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         var dimVector = new SizeTVector();
         foreach (var element in dimensions)
         {
+            if (element < 0)
+            {
+                throw new System.ArgumentException("The paraemter diemnsions cannot contain a negative value");
+            }
             dimVector.Add((uint)element);
         }
         return new NDShape(dimVector);
@@ -1091,6 +1120,10 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         var inputVector = new SizeTVector();
         foreach (var element in input)
         {
+            if (element < 0)
+            {
+                throw new System.ArgumentException("The paraemter diemnsions cannot contain a negative value");
+            }
             inputVector.Add((uint)element);
         }
         return inputVector;
@@ -1366,7 +1399,7 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         return Create<T>(dimension, batchOfSequences, sequenceStartFlags, device, readOnly);
     }
 
-    private static Value Create<T>(int dimension,
+    public static Value Create<T>(int dimension,
                                   System.Collections.Generic.IEnumerable<System.Collections.Generic.IEnumerable<int>> sequences,
                                   System.Collections.Generic.IEnumerable<bool> sequenceStartFlags,
                                   DeviceDescriptor device,
@@ -1499,17 +1532,16 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     }
 
     //
-    // Copy the data of the Value object into the buffer provided by 'sequences'.
-    // The 'sequences' is a list of sequences with variable length. 
-    // The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
-    // Each element of the outer list represents a sequence.
-    // Each sequence, represented by List<T>, contains a variable number of samples. 
+    // Return the data of the Value object as a list of sequences with variable length.
+    // This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
+    // Each sequence, represented by IList<T>, contains a variable number of samples.
     // Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
-    // The number of samples = the count of elements in List<T> / the count of elements of the sample
+    // The number of samples = (the count of elements in IList<T>)/(the count of elements of the sample)
     // The shape of the variable should match the shape of the Value object.
     //
-    public void CopyVariableValueTo<T>(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences)
+    public System.Collections.Generic.IList<System.Collections.Generic.IList<T>> GetDenseData<T>(Variable outputVariable)
     {
+        var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<T>>();
         if (typeof(T).Equals(typeof(float)))
         {
             if (GetDataType() != DataType.Float)
@@ -1519,10 +1551,92 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
             var seqVec = new FloatVectorVector();
             CopyVariableValueToFloat(outputVariable, seqVec);
-            sequences.Clear();
+
             foreach (var seq in seqVec)
             {
-                var seqList = seq as System.Collections.Generic.IEnumerable<T>;
+                var seqList = seq as System.Collections.Generic.IList<T>;
+                if (seqList == null)
+                    throw new System.TypeAccessException("Cannot convert to the value type.");
+                // It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.
+                sequences.Add(new System.Collections.Generic.List<T>(seqList));
+            }
+        }
+        else if (typeof(T).Equals(typeof(double)))
+        {
+            if (GetDataType() != DataType.Double)
+            {
+                throw new System.ArgumentException("The value type does not match the list type.");
+            }
+
+            var seqVec = new DoubleVectorVector();
+            CopyVariableValueToDouble(outputVariable, seqVec);
+            foreach (var seq in seqVec)
+            {
+                var seqList = seq as System.Collections.Generic.IList<T>;
+                if (seqList == null)
+                    throw new System.TypeAccessException("Cannot convert to the value type.");
+                // It is required to create a new List from seq, since seq is dependent on the life cycle of seqVec.
+                sequences.Add(new System.Collections.Generic.List<T>(seqList));
+            }
+        }
+        else
+        {
+            throw new System.ArgumentException("The value type does not match the list type.");
+        }
+        return sequences;
+    }
+
+    //
+    // Return the data of the Value object as a list of sequences with variable length.
+    // This method returns an IList<IList<T>>. Each element of the outer list represents a sequence.
+    // Each sequence, represented by List<int>, contains a variable number of samples.
+    // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable.
+    // The number of samples = the count of elements in List<int>.
+    //
+    public System.Collections.Generic.IList<System.Collections.Generic.IList<int>> GetOneHotData(Variable outputVariable)
+    {
+        var sequences = new System.Collections.Generic.List<System.Collections.Generic.IList<int>>();
+        var seqVec = new SizeTVectorVector();
+        CopyVariableValueTo(outputVariable, seqVec);
+        foreach(var seq in seqVec)
+        {
+            var seqList = new System.Collections.Generic.List<int>(seq.Count);
+            foreach (var element in seq)
+            {
+                seqList.Add((int)element);
+            }
+            sequences.Add(seqList);
+        }
+        return sequences;
+    }
+
+    //
+    // Copy the data of the Value object into the buffer provided by 'sequences'.
+    // The 'sequences' is a list of sequences with variable length. 
+    // The number of items contained in the outer list of 'sequences' is the number of sequences in the Value object.
+    // Each element of the outer list represents a sequence.
+    // Each sequence, represented by List<T>, contains a variable number of samples. 
+    // Each sample consits of a fixed number of elements with type of 'T'. The number of elements is determined by the variable shape.
+    // The number of samples = the count of elements in List<T> / the count of elements of the sample
+    // The shape of the variable should match the shape of the Value object.
+    //
+    [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetDenseData() instead.")]
+    public void CopyVariableValueTo<T>(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<T>> sequences)
+    {
+        sequences.Clear();
+        if (typeof(T).Equals(typeof(float)))
+        {
+            if (GetDataType() != DataType.Float)
+            {
+                throw new System.ArgumentException("The value type does not match the list type.");
+            }
+
+            var seqVec = new FloatVectorVector();
+            CopyVariableValueToFloat(outputVariable, seqVec);
+
+            foreach (var seq in seqVec)
+            {
+                var seqList = seq as System.Collections.Generic.IList<T>;
                 if (seqList == null)
                     throw new System.TypeAccessException("Cannot convert to the value type.");
                 sequences.Add(new System.Collections.Generic.List<T>(seqList));
@@ -1537,10 +1651,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
             var seqVec = new DoubleVectorVector();
             CopyVariableValueToDouble(outputVariable, seqVec);
-            sequences.Clear();
             foreach (var seq in seqVec)
             {
-                var seqList = seq as System.Collections.Generic.IEnumerable<T>;
+                var seqList = seq as System.Collections.Generic.IList<T>;
                 if (seqList == null)
                     throw new System.TypeAccessException("Cannot convert to the value type.");
                 sequences.Add(new System.Collections.Generic.List<T>(seqList));
@@ -1561,13 +1674,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     // Each sample is represented by an index of the OneHot vector. The size of the OneHot vector should match that defined in the variable. 
     // The number of samples = the count of elements in List<int>.
     //
+    [System.Obsolete("CopyVariableValueTo() will be deprecated soon. Please use GetOneHotData() instead.")]
     public void CopyVariableValueTo(Variable outputVariable, System.Collections.Generic.List<System.Collections.Generic.List<int>> sequences)
     {
-        if (outputVariable.Shape[0] != outputVariable.Shape.TotalSize)
-        {
-            throw new System.ArgumentException("The sample variable's leading axis dimensionality must equal to the total size of the shape for sparse data");
-        }
-
         var seqVec = new SizeTVectorVector();
         CopyVariableValueTo(outputVariable, seqVec);
 

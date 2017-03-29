@@ -42,7 +42,7 @@ class Function(cntk_py.Function):
     # a CNTK Functions from a Python function (@Function).
     def __new__(cls, *args, **kwargs):
         if len(args) > 0 and hasattr(args[0], '__call__') and not isinstance(args[0], Function): # overload
-            return Function.to_Function(*args, **kwargs)
+            return Function._to_Function(*args, **kwargs)
         return super(Function, cls).__new__(cls) # for some reason, passing *args, **kwargs fails with "object() takes no args
 
     def __init__(self, *args, **kwargs):
@@ -50,16 +50,17 @@ class Function(cntk_py.Function):
             return
         super(Function, self).__init__(*args, **kwargs)
 
-    class NamedOutput:
-        def __init__(self, **kwargs):
-            for kw in kwargs: # TODO: only allow one arg
-                self.name = kw
-                self.arg = kwargs[kw]
+    # TODO: bring this back once we have a design for name-accessible .outputs etc.
+    #class NamedOutput:
+    #    def __init__(self, **kwargs):
+    #        for kw in kwargs: # TODO: only allow one arg
+    #            self.name = kw
+    #            self.arg = kwargs[kw]
 
     _placeholders_under_construction = set()
 
     @staticmethod
-    def to_Function(f, make_block=False, op_name=None, name=None):
+    def _to_Function(f, make_block=False, op_name=None, name=None):
         '''
         ``@Function`` constructs a Function from a Python lambda
         where the Function's input signature is defined by the lambda.
@@ -98,8 +99,8 @@ class Function(cntk_py.Function):
         # An input is created if the parameter is annotated with a Tensor(...) type.
         # In this case, CNTK will immediately trigger type inference.
         # Unannotated parameters will yield placeholder_variables instead.
+        from .. import placeholder, input
         def make_arg_variable(name, annotations):
-            from .. import placeholder, input
             from ..variables import Variable
             if isinstance(annotations.get(name, None), Variable.Type):
                 var_type = annotations[name]
@@ -129,7 +130,7 @@ class Function(cntk_py.Function):
 
             # helpers
             def force_order_args(fun_args):
-                block_args = [make_arg_variable(fun_arg.name, annotations) for fun_arg in fun_args]  # placeholders inside the BlockFunction
+                block_args = [placeholder(name=fun_arg.name) for fun_arg in fun_args]   # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
@@ -147,10 +148,12 @@ class Function(cntk_py.Function):
                         Function._placeholders_under_construction.remove(arg)
                 # resolve tuples and NamedOutputs  --TODO: check for duplicates
                 def resolve_named(output):
-                    if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
-                        output = alias(output.arg, name=output.name)
-                    elif isinstance(output, cntk_py.Variable):
+                    #if isinstance(output, Function.NamedOutput): # a tuple member is wrapped in a NamedOutput class, we got a name for it
+                    #    output = alias(output.arg, name=output.name)
+                    # ^^ TODO: Complete the design for name-accessible .outputs, then bring this back.
+                    if isinstance(output, cntk_py.Variable):
                         output = combine([output]) # workaround: wrap in another combine() call
+                    # TODO: ^^ is this still necessary? Or is this a sanitize() call we need here?
                     return output
                 if isinstance(out, tuple): # multi-valued function, returned as a tuple
                     out = [resolve_named(output) for output in out]
@@ -165,13 +168,12 @@ class Function(cntk_py.Function):
                 else:
                     out = resolve_named(out)
                 return out
-            # ensure parameter ordering
             # if called from BlockFunction() then wrap into a block
             if make_block: # if we make a block then run off a separate set
                 block_args = [make_arg_variable(arg.name, annotations) for arg in args]  # placeholders inside the BlockFunction
                 out = invoke(block_args)
                 out = as_block(composite=out, block_arguments_map=list(zip(block_args, args)), block_op_name=op_name, block_instance_name=name)
-            # not a block
+            # not a block: ensure parameter ordering
             else:
                 fun_args = args
                 #if len(fun_args) > 1:
