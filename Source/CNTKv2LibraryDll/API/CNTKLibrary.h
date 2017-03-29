@@ -2036,6 +2036,12 @@ private:
         {}
 
         ///
+        /// Create a clone of 'this' constant with the specified DataType. 
+        /// This only supports converting from a lower precision type to a higher precision type (e.g. DataType::Float to DataType::Double)
+        ///
+        CNTK_API Constant CloneAs(DataType dataType) const;
+
+        ///
         /// Create a scalar constant. The specified value is cast to the specified DataType
         ///
         static inline ::CNTK::Constant Scalar(::CNTK::DataType dataType, double value, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
@@ -3163,19 +3169,15 @@ namespace CNTK
             functor(rootFunction);
 
             if (traverseInsideBlockFunction && rootFunction->IsBlock())
-            {
                 PreorderTraverseFunctions(rootFunction->BlockRoot(), visitedFunctions, functor, traverseInsideBlockFunction);
-            }
-            else
+
+            std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
+            for (const auto& rootInput : rootFunctionInputs)
             {
-                std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
-                for (const auto& rootInput : rootFunctionInputs)
+                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
                 {
-                    if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
-                    {
-                        const auto& function = rootInput.Owner();
-                        PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
-                    }
+                    const auto& function = rootInput.Owner();
+                    PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
                 }
             }
         }

@@ -358,7 +358,7 @@ class Value(cntk_py.Value):
                           'only one dynamic axis (batch axis). To speed up '
                           'graph execution, please convert the data '
                           'beforehand into one NumPy array to speed up '
-                          ' training.' % var.uid)
+                          'training.' % var.uid)
 
         if isinstance(data, cntk_py.NDArrayView):
             return cntk_py.Value(data)
