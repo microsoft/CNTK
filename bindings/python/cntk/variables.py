@@ -1,9 +1,11 @@
 import numpy as np
-from cntk import cntk_py, NDArrayView
-from cntk.device import DeviceDescriptor, use_default_device
+
+from . import cntk_py
+from .core import NDArrayView
+from .device import DeviceDescriptor, use_default_device
 from .tensor import TensorOpsMixin
 from .default_options import get_default_override, default_override_or
-from cntk.internal import typemap, sanitize_precision, sanitize_value, \
+from .internal import typemap, sanitize_precision, sanitize_value, \
         sanitize_shape, sanitize_dtype_cntk
 
 class Record(dict):
