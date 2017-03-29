@@ -304,7 +304,7 @@ class DeepQAgent(object):
             self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
     def _compute_q(self, actions, rewards, post_states, dones):
-        q_hat = self._target_net.evaluate(post_states)
+        q_hat = self._target_net.eval(post_states)
         q_hat_eval = q_hat.max(axis=1)
         q_targets = (1 - dones) * (self.gamma * q_hat_eval) + rewards
 
