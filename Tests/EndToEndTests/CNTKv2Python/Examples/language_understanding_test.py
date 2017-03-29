@@ -12,6 +12,7 @@ from cntk import DeviceDescriptor
 
 TOLERANCE_ABSOLUTE = 1E-1  # TODO: Once set_fixed_random_seed(1) is honored, this must be tightened a lot.
 
+from cntk import placeholder
 from cntk.layers import *
 from cntk.internal.utils import *
 from cntk.logging import *
@@ -42,7 +43,7 @@ def create_test_model():
         ])
 
 def with_lookahead():
-    x = Placeholder()
+    x = placeholder()
     future_x = future_value(x)
     apply_x = splice (x, future_x)
     return apply_x

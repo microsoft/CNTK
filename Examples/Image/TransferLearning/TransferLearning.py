@@ -9,9 +9,8 @@ import numpy as np
 import os
 from PIL import Image
 from cntk.device import try_set_default_device, gpu
-from cntk import load_model
+from cntk import load_model, placeholder
 from cntk import Trainer, UnitType
-from cntk.layers import Placeholder, Constant
 from cntk.logging.graph import find_by_name, get_node_outputs
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef
 import cntk.io.transforms as xforms
@@ -79,7 +78,7 @@ def create_model(base_model_file, feature_node_name, last_hidden_node_name, num_
     # Clone the desired layers with fixed weights
     cloned_layers = combine([last_node.owner]).clone(
         CloneMethod.freeze if freeze else CloneMethod.clone,
-        {feature_node: Placeholder(name='features')})
+        {feature_node: placeholder(name='features')})
 
     # Add new dense layer for class prediction
     feat_norm  = input_features - Constant(114)
