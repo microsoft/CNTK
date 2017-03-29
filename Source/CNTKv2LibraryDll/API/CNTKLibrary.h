@@ -2035,6 +2035,8 @@ private:
             : Constant(shape, dataType, ConstantInitializer(initValue), device, name)
         {}
 
+        CNTK_API Constant As(DataType dataType) const;
+
         ///
         /// Create a scalar constant. The specified value is cast to the specified DataType
         ///

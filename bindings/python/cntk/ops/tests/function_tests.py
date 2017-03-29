@@ -388,4 +388,12 @@ def test_block_with_unused_outputs():
     eval_root = combine([block.outputs[0]])
     result = eval_root.eval({input_var1 : np.asarray([3], dtype=np.float32), input_var2 : np.asarray([-3], dtype=np.float32)})
     assert np.array_equal(result, [[ 4.]])
+
+def test_constant_data_type_mismatch():
+    a = constant(np.triu(np.ones(5)), shape=(5,5))
+    i = input(shape=(5,5))
+    b = a * i
+
+    with pytest.raises(ValueError):
+        b.eval({i:[[np.asarray(np.random.rand(5,5),dtype=np.float32)]]})
     
