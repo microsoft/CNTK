@@ -289,7 +289,7 @@ class DeepQAgent(object):
 
     def train(self):
         if (self._action_taken % self._train_interval) == 0:
-            pre_states, actions, rewards, post_states, dones = self._memory.minibatch(self._minibatch_size)
+            pre_states, actions, post_states, rewards, dones = self._memory.minibatch(self._minibatch_size)
             q_value_targets = self._compute_q(actions, rewards, post_states, dones)
 
             self._trainer.train_minibatch(
