@@ -3,13 +3,9 @@
 # for full license information.
 # ==============================================================================
 
-import sys
 import numbers
 import collections
-import copy
 import numpy as np
-from numbers import Number
-from scipy import sparse
 
 from .. import cntk_py
 from ..axis import Axis

@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+import warnings
 from .. import cntk_py, Value
 from ..tensor import ArrayMixin
 from cntk.internal import typemap
@@ -48,6 +49,25 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
             a list of NumPy arrays if dense, otherwise a SciPy CSR array
         '''
         return self.data.as_sequences(variable)
+
+    @property
+    def data(self):
+        '''
+        The Value representation of the minibatch.
+        '''
+        return super(MinibatchData, self).data()
+
+    @property
+    def value(self):
+        '''
+        The value of the minibatch as a NumPy array.
+        '''
+        warnings.warn('the .value property is deprecated. Please use '
+                      '.asarray() or .as_sequences() to get the NumPy '
+                      'representations or .data to get the Value '
+                      'representation', RuntimeWarning)
+
+        return self.as_sequences()
 
     @property
     def shape(self):

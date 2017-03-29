@@ -227,7 +227,7 @@ class Value(cntk_py.Value):
         else:
             super(Value, self).__init__(ndav)
 
-    def as_sequences(self, variable):
+    def as_sequences(self, variable=None):
         '''
         Convert a Value to a sequence of NumPy arrays that have their masked
         entries removed.
@@ -238,6 +238,9 @@ class Value(cntk_py.Value):
             returned. Otherwise, the arrays will be returned directly.
         '''
         if self.is_sparse():
+            if variable is None:
+                raise ValueError('cannot convert sparse value to sequences '
+                                 'wihtout the corresponding variable')
             network = _sparse_to_dense_network_cache(variable.shape)
 
             warnings.warn('converting Value object to CSR format might be slow')
