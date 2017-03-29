@@ -126,7 +126,7 @@ def test_depth_first_search(depth):
 
 @pytest.mark.parametrize("depth,prefix_count", [
     (0, {
-            "input('image'":1,
+            "Input('image'":1,
             "Dense:":1,
             "MaxPooling:":1,
             "Convolution:":1,
@@ -134,7 +134,7 @@ def test_depth_first_search(depth):
             "Parameter('b'":2,
             }),
      (-1, {
-            "input('image'":1,
+            "Input('image'":1,
             "Dense:":1,
             "MaxPooling:":1,
             "Convolution:":1,
@@ -145,7 +145,7 @@ def test_depth_first_search(depth):
             "Times":1,
             }),
      (1, {
-            "input('image'":1,
+            "Input('image'":1,
             "Dense:":1,
             "MaxPooling:":1,
             "Convolution:":1,
@@ -155,7 +155,7 @@ def test_depth_first_search(depth):
             "Times":1,
             }),
      (2, {
-            "input('image'":1,
+            "Input('image'":1,
             "Dense:":1,
             "MaxPooling:":1,
             "Convolution:":1,
@@ -164,7 +164,7 @@ def test_depth_first_search(depth):
             "Plus:":1,
             "Times":1,
             # in addition to depth=1...
-            "Pooling: placeholder(": 1,
+            "Pooling: Placeholder(": 1,
             }),
      ])
 def test_depth_first_search_blocks(depth, prefix_count):
@@ -186,5 +186,5 @@ def test_depth_first_search_blocks(depth, prefix_count):
     found_str = [str(v) for v in found]
 
     assert len(found) == sum(prefix_count.values())
-    # for prefix, count in prefix_count.items():
-        # assert sum(f.startswith(prefix) for f in found_str) == count
+    for prefix, count in prefix_count.items():
+        assert sum(f.startswith(prefix) for f in found_str) == count

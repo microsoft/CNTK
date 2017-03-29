@@ -2529,7 +2529,9 @@ from cntk.axis import Axis
 def _input_spec(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
                 dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
-    We need _input_spec because input is python built-in and because of typemap
+    We need _input_spec because input is python built-in and because of typemap, must remain
+    in sync with input.
+    TODO: Investigate to remove it.
     '''
     pass
 
