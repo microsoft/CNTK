@@ -83,101 +83,10 @@ def _inject_name(f, name):
             f = combine(list(f.outputs), name=name) # BUGBUG: Does this actually name things?
     return f
 
-# TODO: this function should not be necessary anymore
-def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,
-          dynamic_axes=Axis.default_input_variable_dynamic_axes(), name=''):
-    '''
-    Input(shape, dtype=np.float32, needs_gradient=True, is_sparse=False, dynamic_axes=Axis.default_input_variable_dynamic_axes(), name='')
-
-    Constructs an Input variable.
-    Input variables are used when explicitly constructing a graph.
-    In the context of the Layers library, however, the preferred method is to use the @\ :func:`~cntk.utils.Signature` pattern.
-    This is a wrapper around :func:`~cntk.ops.input_variable`.
-
-    Example:
-     >>> # an input receptacle for explicit graph building
-     >>> x = Input((2,3), is_sparse=True)
-     >>> x.is_sparse
-         True
-     >>> x.shape
-         (2, 3)
-     >>> y = sigmoid(x)
-     >>> y.shape
-         (2, 3)
-
-     >>> # but the preferred pattern is to use the @Function/@Signature pattern instead:
-     >>> from cntk.ops.functions import Function
-     >>> from cntk.layers.typing import *
-     >>> @Function
-     ... @Signature(x = Tensor[2,3])
-     ... def y(x):
-     ...     return sigmoid(x)
-     >>> y.shape
-         (2, 3)
-
-     >>> # type specifications can also be directly passed to Input:
-     >>> x = Input(**SparseTensor[2,3])
-     >>> x.is_sparse
-         True
-     >>> x.shape
-         (2, 3)
-     >>> y = sigmoid(x)
-     >>> y.shape
-         (2, 3)
-
-    Args:
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        dtype (np.dtype, defaults to np.float32): data type
-        needs_gradient (bool, defaults to `True`):
-        is_sparse (bool, defaults to `False`):
-        dynamic_axes (object, `Axis.default_input_variable_dynamic_axes`):
-        name (str, defaults to ''): the name of the Function instance in the network
-        
-    Returns:
-        an input Variable
-    '''
-
-    dtype = get_default_override(Input, dtype=dtype)
-    return input(shape=shape, dtype=dtype, needs_gradient=needs_gradient, is_sparse=is_sparse,
-                          dynamic_axes=dynamic_axes, name=name)
-
-def Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder'):
-    '''
-    Placeholder(shape=None, dynamic_axes=None, is_sparse=False, name='placeholder')
-
-    Constructs a Placeholder variable.
-    This is only used for explicit graph building.
-    This is a wrapper around :func:`~cntk.ops.placeholder_variable`.
-
-    Example:
-     >>> # an function-input placeholder for explicit graph building
-     >>> x = Placeholder()
-     >>> x.shape   # "-2" indicates unknown shape
-         (-2,)
-
-    Args:
-        shape (`int` or `tuple` of `ints`, defaults to `None`): vector or tensor dimension of the output of this layer
-        dynamic_axes (object, defaults to `None`):
-        is_sparse (bool, defaults to `False`):
-        name (str, defaults to 'placeholder'): the name of the Function instance in the network
-        
-    Returns:
-        a placeholder Variable
-    '''
-
-    if shape is not None or dynamic_axes is not None or is_sparse is not None:
-        import warnings
-        warnings.warn('Placeholder() no longer requires shapes, axes, or sparse to be specified. Please just remove the arguments.', DeprecationWarning)
-    return placeholder(name=name)
-    # TODO: delete these vv once confirmed that this is indeed not used anymore
-    #p = placeholder(shape=shape, dynamic_axes=dynamic_axes, is_sparse=is_sparse, name=name) # TODO: use (*args, **kwargs)?
-    # BUGBUG: placeholder does not know is_sparse
-    #return placeholder(shape=shape, dynamic_axes=dynamic_axes, name=name) # TODO: use (*args, **kwargs)?
-
 def ForwardDeclaration(name='forward_declaration'):
     '''
     Helper for recurrent network declarations.
-    Returns a Placeholder variable with an added method resolve_to() to be called
+    Returns a placeholder variable with an added method resolve_to() to be called
     at the end to close the loop.
     This is used for explicit graph building with recurrent connections.
 
@@ -201,7 +110,7 @@ def ForwardDeclaration(name='forward_declaration'):
     Returns:
         a placeholder variable with a method ``resolve_to()`` that resolves it to another variable
     '''
-    var_fwd = Placeholder(name=name)
+    var_fwd = placeholder(name=name)
     def resolve_to(var):
         from cntk import cntk_py
         #if isinstance(var, cntk_py.Function):

@@ -8,13 +8,13 @@ from cntk.internal import typemap, sanitize_input
 from cntk.internal.utils import get_data_type
 
 from ...axis import Axis
-
+from ...default_options import get_default_override, default_override_or
 ##########################################################################
 # variable ops
 ##########################################################################
 
 @typemap
-def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           sequence_axis=Axis.default_dynamic_axis(), name=''):
     '''
     It creates an input in the network: a place where data,
@@ -29,7 +29,7 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
         name (str, optional): the name of the Function instance in the network
 
     Returns:
-        :class:`~cntk.ops.variables.Variable`
+        :class:`~cntk.variables.Variable`
     '''
     from ... import input
     return input(shape, dtype, needs_gradient, is_sparse, [Axis.default_batch_axis(), sequence_axis], name)
