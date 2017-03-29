@@ -202,7 +202,7 @@ class DeepQAgent(object):
         self._explorer = explorer
         self._minibatch_size = minibatch_size
         self._history = History(input_shape)
-        self._memory = ReplayMemory(500000, input_shape, 4)
+        self._memory = ReplayMemory(500000, input_shape[1:], 4)
         self._action_taken = 0
 
         # Metrics accumulator
@@ -260,7 +260,7 @@ class DeepQAgent(object):
             # Use the network to output the best action
             env_with_history = self._history.value
             q_values = self._action_value_net.eval(
-                env_with_history.reshape((1,) + state.shape)  # Append batch axis with only one sample to evaluate
+                env_with_history.reshape((1,) + env_with_history.shape)  # Append batch axis with only one sample to evaluate
             )
 
             self._episode_q_means.append(np.mean(self._episode_q_means))
