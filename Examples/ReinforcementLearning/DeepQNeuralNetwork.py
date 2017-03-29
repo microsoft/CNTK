@@ -394,7 +394,7 @@ if __name__ == '__main__':
     env = gym.make(args.env)
 
     # 2. Make agent
-    agent = DeepQAgent((4, 84, 84), env.action_space.n)
+    agent = DeepQAgent((4, 84, 84), env.action_space.n, device_id=args.device)
 
     # Train
     current_state = as_ale_input(env.reset())
