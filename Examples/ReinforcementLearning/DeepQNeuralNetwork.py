@@ -253,7 +253,7 @@ class DeepQAgent(object):
 
         self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir='metrics', model=criterion)
         self._learner = l_sgd
-        self._trainer = Trainer(self._action_value_net, (criterion, None), l_sgd, [self._metrics_writer])
+        self._trainer = Trainer(criterion, (criterion, None), l_sgd, [self._metrics_writer])
 
     def act(self, state):
         """
@@ -326,10 +326,10 @@ class DeepQAgent(object):
             q_value_targets = self._compute_q(actions, rewards, post_states, dones)
 
             self._trainer.train_minibatch(
-                self._action_value_net.argument_map(
+                self._trainer.loss_function.argument_map(
                     environment=pre_states,
-                    actions=Value.one_hot([actions], self.nb_actions),
-                    q_targets=q_value_targets
+                    actions=Value.one_hot(actions.reshape(-1, 1).tolist(), self.nb_actions),
+                    q_targets=q_value_targets.reshape(-1, 1)
                 )
             )
 
