@@ -263,8 +263,8 @@ class DeepQAgent(object):
                 env_with_history.reshape((1,) + env_with_history.shape)  # Append batch axis with only one sample to evaluate
             )
 
-            self._episode_q_means.append(np.mean(self._episode_q_means))
-            self._episode_q_stddev.append(np.std(self._episode_q_stddev))
+            self._episode_q_means.append(np.mean(q_values))
+            self._episode_q_stddev.append(np.std(q_values))
 
             action = q_values.argmax()
 
