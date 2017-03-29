@@ -669,7 +669,7 @@ Factory function to create a single-layer or multi-layer recurrence.
     Recurrence(step_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name='')
     RecurrenceFrom(step_function, go_backwards=default_override_or(False), return_full_state=False, name='')
     Fold(folder_function, go_backwards=default_override_or(False), initial_state=default_override_or(0), return_full_state=False, name='')
-    UnfoldFrom(generator_function, map_state_function=identity, until_predicate=None, length_increase=1, initial_state=None, name='')
+    UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name='')
 
 Parameters
 ~~~~~~~~~~

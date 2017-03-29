@@ -184,11 +184,11 @@ def test_unfold(device_id):
     ####################################################
     # Test 1: simple unfold
     ####################################################
-    UF = UnfoldFrom(double_up, initial_state=1)
+    UF = UnfoldFrom(double_up)
     @Function
     @Signature(Sequence[Tensor[1]])
     def FU(x):
-        return UF(x)
+        return UF(Constant(1), x)
     r = FU(x)
     exp = [[[ 2 ], [ 4 ], [ 8 ]],
            [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]]]
@@ -197,11 +197,11 @@ def test_unfold(device_id):
     ####################################################
     # Test 2: unfold with length increase and terminating condition
     ####################################################
-    UF = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63),  initial_state=1, length_increase=1.6)
+    UF = UnfoldFrom(double_up, until_predicate=lambda x: greater(x, 63), length_increase=1.6)
     @Function
     @Signature(Sequence[Tensor[1]])
     def FU(x):
-        return UF(x)
+        return UF(Constant(1), x)
     r = FU(x)
     exp = [[[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ]],         # tests length_increase
            [[ 2 ], [ 4 ], [ 8 ], [ 16 ], [ 32 ], [ 64 ]]] # tests early cut-off due to until_predicate
@@ -555,7 +555,7 @@ def test_layers_convolution_2d(device_id):
 
 def test_sequential_convolution_without_reduction_dim(device_id):
     c = Convolution(3, init=np.array([4., 2., 1.]), sequential=True, pad=False, reduction_rank=0, bias=False)
-    c.update_signature(Sequence[Tensor[()]]) # input is a sequence of scalars
+    c.update_signature(Sequence[Tensor[()]])  # input is a sequence of scalars
     data = [np.array([2., 6., 4., 8., 6.])]   # like a short audio sequence, in the dynamic dimension
     out = c(data)
     exp = [[24., 40., 38.]]
@@ -567,6 +567,22 @@ def test_sequential_convolution_without_reduction_dim(device_id):
     out = c(data)
     exp = [[[24.], [40.], [38]]] # not reducing; hence, output is also a sequence of dim-1 vectors
     np.testing.assert_array_equal(out, exp, err_msg='Error in sequential convolution without reduction dimension')
+
+    # these cases failed before
+    emb_dim = 10
+    x = Input(**Sequence[Tensor[20]])
+    m = Embedding(emb_dim)(x)
+    m = Convolution(filter_shape=3, sequential=True)(m)
+
+    # this one still fails
+    # Reshape: Operand (sub-)dimensions '[3]' incompatible with desired replacement (sub-)dimensions '[]'. Number of elements must be the same..
+    m = Embedding(emb_dim)(x)
+    m = reshape(m, (emb_dim,1))
+    m = Convolution(filter_shape=(3,1), num_filters=13, pad=True, sequential=True)(m)
+
+    m = Embedding(emb_dim)(x)
+    m = Convolution(filter_shape=3, pad=True, sequential=True)(m)
+
 
 ####################################
 # 1D convolution without reduction dimension

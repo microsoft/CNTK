@@ -427,8 +427,9 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
             lpad = (filter_shape[-filter_rank]-1) // 2  # even frames: take from right; odd frames: symmetric
             x = _window(x, axis=-filter_rank, begin=-lpad, end=-lpad+filter_shape[-filter_rank], step=1, stride=strides[-filter_rank], initial_state=None)
         # actual convolution
+        sequential_emulated_axis = len(pad) - filter_rank if sequential else None # static-axis convolution must not pad the simulated sequential dimension (it must reduce to 1)
         r = convolution (W, x,
-                         strides=strides, sharing=sharing, auto_padding=pad,
+                         strides=strides, sharing=sharing, auto_padding=tuple(p if i != sequential_emulated_axis else False for i, p in enumerate(pad)),
                          # TODO: can we rename auto_padding to pad?
                          max_temp_mem_size_in_samples=max_temp_mem_size_in_samples)
         # if sequential and not padding, then strip the extraneous boundary values
@@ -1013,8 +1014,6 @@ def GlobalAveragePooling(name=''):
 def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
                  strides=1,
                  pad=False,
-                 lower_pad=0,
-                 upper_pad=0, 
                  name=''):
 
     strides     = _pad_to_shape(filter_shape, strides, 'strides')
@@ -1022,8 +1021,7 @@ def MaxUnpooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     @BlockFunction('MaxUnpooling', name)
     def maxunpool(x, y):
-        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad,
-                         lower_pad=_as_tuple(lower_pad), upper_pad=_as_tuple(upper_pad))
+        return unpooling (x, y, PoolingType_Max, filter_shape, strides=strides, auto_padding=pad)
     return maxunpool
 
 

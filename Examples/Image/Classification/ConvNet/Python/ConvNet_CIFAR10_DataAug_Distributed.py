@@ -50,7 +50,7 @@ def create_image_mb_source(map_file, mean_file, train, total_number_of_samples):
             features = cntk.io.StreamDef(field='image', transforms=transforms), # first column in map file is referred to as 'image'
             labels   = cntk.io.StreamDef(field='label', shape=num_classes))),   # and second as 'label'
         randomize=train,
-        epoch_size=total_number_of_samples,
+        max_samples=total_number_of_samples,
         multithreaded_deserializer = True)
 
 # Create the network.
