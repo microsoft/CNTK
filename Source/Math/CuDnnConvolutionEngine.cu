@@ -369,10 +369,10 @@ private:
         m_outT.UpdateBatchSize(batchSize);
 
         // keep running if nothing changes
-        if ((!algo.NeedAutotuning(batchSize)) && (workspace.BufferSize() >= algo.AlgoWorkspaceSize)) return;
+        if (!algo.NeedAutotuning(batchSize)) return;
 
-        // if batchsize changes again when just finish init, go back to init again
-        if (algo.autotuningState == AutotuningState::PendingTuning && batchSize > algo.MBSizeForCurrentAlgo)
+        // if batchsize changes again win just finish init, go back to init again
+        if (algo.autotuningState == AutotuningState::PendingTuning && batchSize != algo.MBSizeForCurrentAlgo)
             algo.autotuningState = AutotuningState::Init;
 
         // batchSize is bigger than the one when initialize current workspace, need free up space and go back to init
@@ -401,15 +401,13 @@ private:
         {
             // Reserve 100MB and give workspace size of m_MaxWorkspaceSize
             size_t free, total, resizeTo = 0;
-            size_t curSize = workspace.BufferSize();
             CUDA_CALL(cudaMemGetInfo(&free, &total));
-            free += workspace.BufferSize();
             // If we have more than 100MB, reserve that and assign rest to workspace
-            if(free > (total/50)) resizeTo = free - (total/50) + sizeof(ElemType);
+            if(free > 100000000) resizeTo = free - 100000000 + sizeof(ElemType);
             // We don't need memory more than MAX
             if(resizeTo > algo.AlgoWorkspaceSize) resizeTo = algo.AlgoWorkspaceSize;
             if(resizeTo > 0) workspace.Resize(resizeTo/sizeof(ElemType), 1);
-            algo.MBSizeForCurrentWorkspace = algo.MBSizeForCurrentAlgo;
+            algo.MBSizeForCurrentWorkspace = batchSize;
 
             // Pending State now, let's do a find and get algorithm Perfs
             typename TAlgo::typeT algoPerf[MaxAlgoCount];
@@ -431,11 +429,8 @@ private:
             algo.selectedAlgo = (*res).algo;
             algo.maxAlgo = algo.selectedAlgo;
             algo.autotuningState = AutotuningState::Running;
-            algo.AlgoWorkspaceSize = (*res).memory;
-            resizeTo = curSize > algo.AlgoWorkspaceSize ? curSize : algo.AlgoWorkspaceSize;
-            workspace.Resize(resizeTo/sizeof(ElemType), 1, 0, false);
         } // Use stored algo when batchsize go back to max. Likely happen when last batch in epoch lacking data
-        else if (batchSize == algo.MBSizeForCurrentWorkspace && workspace.BufferSize() >= algo.AlgoWorkspaceSize)
+        else if (batchSize == algo.MBSizeForCurrentWorkspace)
         {
             algo.selectedAlgo = algo.maxAlgo;
             algo.MBSizeForCurrentAlgo = batchSize;
@@ -462,8 +457,6 @@ private:
             algo.MBSizeForCurrentAlgo = batchSize;
             algo.selectedAlgo = (*res).algo;
             algo.autotuningState = AutotuningState::Running;
-            algo.AlgoWorkspaceSize = (*res).memory;
-            workspace.Resize(algo.AlgoWorkspaceSize/sizeof(ElemType), 1);
         } // use fast method to get algorithm when batchsize get smaller. Avoid severe slowdown when batchsize change frequently
         else
         {
