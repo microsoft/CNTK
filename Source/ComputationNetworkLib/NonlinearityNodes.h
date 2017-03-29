@@ -591,6 +591,7 @@ public:
     StochasticBinaryNode(const ScriptableObjects::IConfigRecordPtr configp)
         : StochasticBinaryNode(configp->Get(L"deviceId"), L"<placeholder>", configp->Get(L"neuronST"), configp->Get(L"RFAdjusted"), configp->Get(L"passThrough"), configp->Get(L"annealRate"))
     {
+        AttachInputsFromConfig(configp, this->GetExpectedNumInputs());
     }
 
     virtual void /*ComputationNode::*/ ForwardProp(const FrameRange& fr) override
