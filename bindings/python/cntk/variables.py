@@ -274,7 +274,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
 
     Parameters are Variables and therefore they inherit all their methods.
     '''
-    def __init__(self, shape=None, init=None, dtype=default_override_or(None),
+    def __init__(self, shape=None, init=None, dtype=default_override_or(np.float32),
                  device=None, name=''):
         if not device:
             device = use_default_device()
@@ -343,7 +343,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
-    def __init__(self, value=None, shape=None, dtype=default_override_or(None), device=None, name=''):
+    def __init__(self, value=None, shape=None, dtype=default_override_or(np.float32), device=None, name=''):
 
         if not device:
             device = use_default_device()
