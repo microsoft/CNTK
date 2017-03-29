@@ -37,7 +37,7 @@ label_stream_name = 'labels'
 new_output_node_name = "prediction"
 
 # Learning parameters
-max_epochs = 1
+max_epochs = 20
 mb_size = 50
 lr_per_mb = [0.2]*10 + [0.1]
 momentum_per_mb = 0.9
