@@ -263,6 +263,20 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     of floating point numbers that can be modified by a training
     procedure.
 
+    Example:
+         >>> p = C.Parameter((13,42,7), init=C.glorot_uniform())
+         >>> p.shape
+             (13, 42, 7)
+
+         >>> # example with inferred dimensions
+         >>> W = C.Parameter((C.InferredDimension, 42), init=C.glorot_uniform())
+         >>> W.shape   # -1 indicates dimension yet to be inferred
+             (-1, 42)
+         >>> x = C.input(13)
+         >>> y = C.times(x, W)  # times operation now knows that the input dimension of W must be 13
+         >>> W.shape          # hence, the shape has been updated
+             (13, 42)
+
     Args:
        shape (`tuple`): the shape of the tensor holding the parameters
        init (value (`np.ndarray`, `list`, `float`, `int`) or
@@ -337,6 +351,12 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     of floating point numbers that cannot be modified.
 
     A Constant is a :class:`~cntk.variables.Variable` and therefore inherits all its methods.
+
+    Example:
+         >>> c = C.Constant(1, (2,3))
+         >>> c.value
+             array([[ 1.,  1.,  1.],
+                    [ 1.,  1.,  1.]], dtype=float32)
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.

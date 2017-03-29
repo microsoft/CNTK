@@ -104,6 +104,13 @@ if errorlevel 1 exit /b 1
 echo(
 popd
 
+pushd cntk
+echo RUNNING cntk\variables doctests...
+pytest variables.py
+if errorlevel 1 exit /b 1
+echo(
+popd
+
 pushd cntk\losses
 echo RUNNING cntk\losses doctests...
 pytest __init__.py
