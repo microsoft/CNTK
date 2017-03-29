@@ -315,14 +315,15 @@ class DeepQAgent(object):
         Plot current buffers accumulated values to visualize agent learning 
         :return: None
         """
+        if len(self._episode_q_means) > 0:
+            mean_q = np.asscalar(np.mean(self._episode_q_means))
+            self._metrics_writer.write_value('Mean Q per ep.', mean_q, self._action_taken)
 
-        mean_q = 0 if len(self._episode_q_means) == 0 else np.asscalar(np.mean(self._episode_q_means))
-        std_q = 0 if len(self._episode_q_stddev) == 0 else np.asscalar(np.mean(self._episode_q_stddev))
-        sum_rewards = sum(self._episode_rewards)
+        if len(self._episode_q_stddev) > 0:
+            std_q = np.asscalar(np.mean(self._episode_q_stddev))
+            self._metrics_writer.write_value('Mean Std Q per ep.', std_q, self._action_taken)
 
-        self._metrics_writer.write_value('Mean Q per ep.', mean_q, self._action_taken)
-        self._metrics_writer.write_value('Mean Std Q per ep.', std_q, self._action_taken)
-        self._metrics_writer.write_value('Sum rewards per ep.', sum_rewards, self._action_taken)
+        self._metrics_writer.write_value('Sum rewards per ep.', sum(self._episode_rewards), self._action_taken)
 
 
 def as_ale_input(environment):
@@ -355,7 +356,9 @@ if __name__ == '__main__':
         reward = np.clip(reward, -1, 1)
 
         agent.observe(current_state, action, reward, done)
-        agent.train()
+
+        if step > 100000:
+            agent.train()
 
         current_state = new_state
 
