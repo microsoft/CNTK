@@ -17,6 +17,12 @@ from cntk.trainer import Trainer
 
 
 class ReplayMemory(object):
+    """
+    Replay Memory keeps track of the environment dynamic.
+    We store all the transition (s(t), action, s(t+1), reward, done).
+    The replay memory allows us to effectively sample minibatch from it, and generate the correct state representation
+    (w.r.t the number of previous frames needed)
+    """
     def __init__(self, size, sample_shape, history_length=4):
         self._pos = 0
         self._count = 0
@@ -250,6 +256,12 @@ class DeepQAgent(object):
         self._trainer = Trainer(self._action_value_net, (criterion, None), l_sgd, [self._metrics_writer])
 
     def act(self, state):
+        """
+        This allows the agent to select the next action to perform in regard of the current state of the environment.
+        It follows the terminology used in the Nature paper. 
+        :param state: The current environment state
+        :return: Int >= 0 : Next action to do
+        """
         # Append the state to the short term memory (ie. History)
         self._history.append(state)
 
@@ -260,12 +272,14 @@ class DeepQAgent(object):
             # Use the network to output the best action
             env_with_history = self._history.value
             q_values = self._action_value_net.eval(
-                env_with_history.reshape((1,) + env_with_history.shape)  # Append batch axis with only one sample to evaluate
+                # Append batch axis with only one sample to evaluate
+                env_with_history.reshape((1,) + env_with_history.shape)
             )
 
             self._episode_q_means.append(np.mean(q_values))
             self._episode_q_stddev.append(np.std(q_values))
 
+            # Return the value maximizing the expected reward
             action = q_values.argmax()
 
         # Keep track of interval action counter
@@ -273,6 +287,14 @@ class DeepQAgent(object):
         return action
 
     def observe(self, old_state, action, reward, done):
+        """
+        This allows the agent to observe the output of doing the action it selected through act() on the old_state
+        :param old_state: Previous environment state
+        :param action: Action done by the agent
+        :param reward: Reward for doing this action in the old_state environment
+        :param done: Indicate if the action has terminated the environment
+        :return: None
+        """
         self._episode_rewards.append(reward)
 
         # If done, reset short term memory (ie. History)
@@ -288,6 +310,17 @@ class DeepQAgent(object):
         self._memory.append(old_state, action, reward, done)
 
     def train(self):
+        """
+        This allows the agent to train itself to better understand the environment dynamics.
+        The agent will compute the expected reward for the state(t+1) 
+        and update the expected reward at step t according to this.
+        <BLANKLINE>
+        The target expectation is computed thourgh the Target Network, which is a more stable version
+        of the Action Value Network for increasing training stability
+        <BLANKLINE>
+        The Target Network is a frozen copy of the Action Value Network updated as regular intervals
+        :return: None
+        """
         if (self._action_taken % self._train_interval) == 0:
             pre_states, actions, post_states, rewards, dones = self._memory.minibatch(self._minibatch_size)
             q_value_targets = self._compute_q(actions, rewards, post_states, dones)
@@ -300,10 +333,23 @@ class DeepQAgent(object):
                 )
             )
 
+        # Update the Target Network if needed
         if (self._action_taken % self._target_update_interval) == 0:
             self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
     def _compute_q(self, actions, rewards, post_states, dones):
+        """
+        In the training process, this function computes the target expected reward w.r.t to the Bellman Equation.
+        https://en.wikipedia.org/wiki/Bellman_equation
+        <BLANKLINE>
+        It takes a minibatch of values and compute the expected reward according to the actions done by the agent.
+        It also takes into account if the action ended the environment or not.
+        :param actions: Actions done by the agent
+        :param rewards: Rewards got for doing above actions
+        :param post_states: States after doing above actions
+        :param dones: Terminal environment flag after doing above actions  
+        :return: Updated expected reward 
+        """
         q_hat = self._target_net.eval(post_states)
         q_hat_eval = q_hat.max(axis=1)
         q_targets = (1 - dones) * (self.gamma * q_hat_eval) + rewards
@@ -327,6 +373,12 @@ class DeepQAgent(object):
 
 
 def as_ale_input(environment):
+    """
+    Convert the Atari environment RGB output (210, 160, 3) to an ALE one (84, 84).
+    We first convert the image to a gray scale image, and resize it. 
+    :param environment: Environment to be converted
+    :return: Environment converted (84, 84)
+    """
     from PIL import Image
     return np.array(Image.fromarray(environment, 'RGB').convert('L').resize((84, 84)))
 
