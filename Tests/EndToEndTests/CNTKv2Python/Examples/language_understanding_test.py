@@ -51,7 +51,7 @@ def with_lookahead():
 def BiRecurrence(fwd, bwd):
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
-    x = Placeholder()
+    x = placeholder()
     apply_x = splice (F(x), G(x))
     return apply_x
 
@@ -59,7 +59,7 @@ def BNBiRecurrence(fwd, bwd, test_dual=True): # special version that calls one s
     F = Recurrence(fwd)
     G = Recurrence(fwd, go_backwards=True)
     BN = BatchNormalization(normalization_time_constant=-1)
-    x = Placeholder()
+    x = placeholder()
     # The following code applies the same BN function object twice.
     # When running whole-corpus estimation of means/vars, this must lead to the same estimate
     # although it is estimated on twice the amount of data (each sample is used twice).
@@ -84,7 +84,7 @@ def test_language_understanding(device_id):
         # change to intent classifier   --moved up here since this fails, as repro
         # BUGBUG: Broken, need to pass new criterion to train().
         #with default_options(initial_state=0.1):  # inject an option to mimic the BS version identically; remove some day
-        #    select_last = slice(Placeholder(), Axis.default_dynamic_axis(), -1, 0)
+        #    select_last = slice(placeholder(), Axis.default_dynamic_axis(), -1, 0)
         #    # BUGBUG: Fails with "RuntimeError: The specified dynamic axis named defaultDynamicAxis does not match any of the dynamic axes of the operand"
         #    run_model_test('change to intent classifier', Sequential([
         #        Embedding(emb_dim),
