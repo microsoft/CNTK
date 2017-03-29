@@ -34,9 +34,9 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         ...                            splice])                            # concatenate them
         >>> y = make_trigram(x)
         >>> y(x0)
-        array([[[ 2.,  3.,  0.,  1.,  0.,  0.],
+        [array([[ 2.,  3.,  0.,  1.,  0.,  0.],
                 [ 4.,  5.,  2.,  3.,  0.,  1.],
-                [ 0.,  0.,  4.,  5.,  2.,  3.]]], dtype=float32)
+                [ 0.,  0.,  4.,  5.,  2.,  3.]], dtype=float32)]
         >>> #    --(t-1)--  ---t---  --(t+1)--      
 
     Args:
@@ -334,9 +334,9 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      >>> cum_sum = Recurrence(C.plus, initial_state=Constant([0, 0.5]))
      >>> y = cum_sum(x)
      >>> y(x0)
-     array([[[   3. ,    2.5],
+     [array([[   3. ,    2.5],
              [  16. ,   44.5],
-             [ -84. ,  144.5]]], dtype=float32)
+             [ -84. ,  144.5]], dtype=float32)]
 
     Args:
      step_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):

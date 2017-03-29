@@ -279,7 +279,7 @@ def train(train_reader, valid_reader, vocab, i2w, s2smodel, max_epochs, epoch_si
 
 # This decodes the test set and counts the string error rate.
 def evaluate_decoding(reader, s2smodel, i2w):
-    
+
     model_decoding = create_model_greedy(s2smodel) # wrap the greedy decoder around the model
 
     progress_printer = ProgressPrinter(tag='Evaluation')
@@ -301,7 +301,7 @@ def evaluate_decoding(reader, s2smodel, i2w):
 
         num_total += len(outputs)
         num_wrong += sum([label != output for output, label in zip(outputs, labels)])
-        
+
     rate = num_wrong / num_total
     print("string error rate of {:.1f}% in {} samples".format(100 * rate, num_total))
     return rate
@@ -321,7 +321,7 @@ def Evaluator(model, criterion):
         parameters |= set(model.parameters)
     if metric:
         parameters |= set(metric.parameters)
-    dummy_learner = momentum_sgd(tuple(parameters), 
+    dummy_learner = momentum_sgd(tuple(parameters),
                                  lr = learning_rate_schedule(1, UnitType.minibatch),
                                  momentum = momentum_as_time_constant_schedule(0))
     return Trainer(model, (loss, metric), dummy_learner)
@@ -382,10 +382,10 @@ def translate(tokens, model_decoding, vocab, i2w, show_attention=False, max_labe
     # print out translation and stop at the sequence-end tag
     prediction = np.argmax(pred, axis=-1)
     translation = [i2w[i] for i in prediction]
-    
+
     # show attention window (requires matplotlib, seaborn, and pandas)
     if use_attention and show_attention:
-    
+
         #att_value = model_decoding.attention_model.attention_weights(query)
         # BUGBUG: fails with "Forward: Feature Not Implemented"
         q = combine([model_decoding.attention_model.attention_weights])
@@ -440,7 +440,7 @@ def get_vocab(path):
     vocab = [w.strip() for w in open(path).readlines()]
     i2w = { i:w for i,w in enumerate(vocab) }
     w2i = { w:i for i,w in enumerate(vocab) }
-    
+
     return (vocab, i2w, w2i)
 
 # Given a vocab and tensor, print the output
@@ -454,9 +454,9 @@ def debug_attention(model, input):
     words_p = q(input)
     words = words_p[0]
     p     = words_p[1]
-    len = words.shape[attention_axis-1]
+    seq_len = words[0].shape[attention_axis-1]
     span = 7 #attention_span  #7 # test sentence is 7 tokens long
-    p_sq = np.squeeze(p[0,:len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
+    p_sq = np.squeeze(p[0][:seq_len,:span,0,:]) # (batch, len, attention_span, 1, vector_dim)
     opts = np.get_printoptions()
     np.set_printoptions(precision=5)
     print(p_sq)
@@ -477,7 +477,7 @@ if __name__ == '__main__':
 
     # create inputs and create model
     model = create_model()
-    
+
     # train
     train_reader = create_reader(os.path.join(DATA_DIR, TRAINING_DATA), True)
     valid_reader = create_reader(os.path.join(DATA_DIR, VALIDATION_DATA), True)
@@ -489,7 +489,7 @@ if __name__ == '__main__':
     # test string error rate on decoded output
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
     evaluate_decoding(test_reader, model, i2w)
-    
+
     # test same metric same as in training on test set
     test_reader = create_reader(os.path.join(DATA_DIR, TESTING_DATA), False)
     evaluate_metric(test_reader, model)

@@ -39,6 +39,8 @@ Simple_Test = [
 ]
 
 
+shouldExpand=true
+
 Simple_TestDeserializers = {
     reader = {
         randomize = true
@@ -57,11 +59,11 @@ Simple_TestDeserializers = {
                 }
             }:{
                 type = "HTKFeatureDeserializer" ; module = "HTKDeserializers"
+                expandToUtterance = $shouldExpand$
                 input = {
                     features2 = {
                         dim = 100
                         scpFile = "$DataDir$/ivector.rscp"
-                        expandToUtterance = true
                     }
                 }
             }:{

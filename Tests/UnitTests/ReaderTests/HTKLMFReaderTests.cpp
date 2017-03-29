@@ -757,8 +757,36 @@ BOOST_AUTO_TEST_CASE(HTKIVectorFrame)
     };
 
     test({ L"frameMode=true" }, "Simple_Test");
-    test({ L"frameMode=true" }, "Simple_TestDeserializers");
+    test({ L"frameMode=true", L"shouldExpand=true" }, "Simple_TestDeserializers");
 };
+
+BOOST_AUTO_TEST_CASE(HTKNoPropagationOfUtteranceIVectorFrame)
+{
+    std::vector<std::wstring> additionalParameters = { L"frameMode=true", L"shouldExpand=false" };
+    BOOST_REQUIRE_EXCEPTION(
+        HelperRunReaderTest<double>(
+            testDataPath() + "/Config/HTKMLFReaderIVectorSimple_Config.cntk",
+            testDataPath() + "/Control/HTKMLFReaderIVectorSimple_Control.txt",
+            testDataPath() + "/Control/HTKMLFReaderIVectorSimple_Output.txt",
+            "Simple_TestDeserializers",
+            "reader",
+            400,
+            30,
+            1,
+            2,
+            1,
+            0,
+            1,
+            false,
+            false,
+            true,
+            additionalParameters),
+        runtime_error,
+        [](const runtime_error& e)
+        { return string("Sequence with key 'fsh060057A-0002' has '1' frame(s),"
+            " whereas the primary sequence expects at least '2' frames") == e.what(); });
+};
+
 
 BOOST_AUTO_TEST_CASE(HTKIVectorSequence)
 {
@@ -784,7 +812,7 @@ BOOST_AUTO_TEST_CASE(HTKIVectorSequence)
     };
 
     test({ L"frameMode=false", L"precision=float" }, "Simple_Test");
-    test({ L"frameMode=false", L"precision=float" }, "Simple_TestDeserializers");
+    test({ L"frameMode=false", L"precision=float", L"shouldExpand=true" }, "Simple_TestDeserializers");
 };
 
 BOOST_AUTO_TEST_CASE(HTKIVectorBptt)
@@ -810,7 +838,7 @@ BOOST_AUTO_TEST_CASE(HTKIVectorBptt)
             additionalParameters);
     };
     test({ L"frameMode=false", L"truncated=true" }, "Simple_Test");
-    test({ L"frameMode=false", L"truncated=true, truncationLength=30" }, "Simple_TestDeserializers");
+    test({ L"frameMode=false", L"truncated=true, truncationLength=30", L"shouldExpand=true" }, "Simple_TestDeserializers");
 };
 
 BOOST_AUTO_TEST_SUITE_END()

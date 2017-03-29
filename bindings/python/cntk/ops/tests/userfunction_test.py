@@ -318,17 +318,17 @@ class MultiOutputUserFunction(UserFunction):
     def forward(self, arguments, outputs, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
 
-        outputs[self.outputs[0]] = arguments[0] + 2*arguments[1]
-        outputs[self.outputs[1]] = 2*arguments[0] + arguments[1]
+        outputs[self.outputs[0]] = [a0 + 2*a1 for a0, a1 in zip(*arguments)]
+        outputs[self.outputs[1]] = [2*a0 + a1 for a0, a1 in zip(*arguments)]
 
         return None
 
     def backward(self, state, root_gradients, variables):
         if self.inputs[0] in variables:
-            variables[self.inputs[0]] = root_gradients[self.outputs[0]] + 2*root_gradients[self.outputs[1]]
+            variables[self.inputs[0]] = [r0 + 2*r1 for r0, r1 in zip(root_gradients[self.outputs[0]], root_gradients[self.outputs[1]])]
 
         if self.inputs[1] in variables:
-            variables[self.inputs[1]] = 2*root_gradients[self.outputs[0]] + root_gradients[self.outputs[1]]
+            variables[self.inputs[1]] = [2*r0 + r1 for r0, r1 in zip(root_gradients[self.outputs[0]], root_gradients[self.outputs[1]])]
 
 def test_multioutput_udf():
     dim = 2
@@ -364,7 +364,8 @@ class MyPlusWithNoGradientToRightOperand(UserFunction):
     def forward(self, arguments, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
 
-        result = arguments[0] + arguments[1]
+        result = [a0+a1 for a0,a1 in zip(*arguments)]
+
         return None, result
 
     def backward(self, state, root_gradients, input_gradients):
@@ -395,7 +396,8 @@ class MyPlusWithNoGradientNeededForOutput(UserFunction):
     def forward(self, arguments, device=None, outputs_to_retain=None):
         assert len(self.inputs)==2
 
-        result = arguments[0] + arguments[1]
+        result = [a0+a1 for a0,a1 in zip(*arguments)]
+
         return None, result
 
     def backward(self, state, root_gradients, input_gradients):
@@ -409,6 +411,7 @@ def test_udf_output_needs_no_gradient():
 
     x_data = [AA([[1., 2.], [3., 4.]], dtype=np.float32)]
     y_data = [AA([[5., 6.], [7., 8.]], dtype=np.float32)]
+
     gradients, result = op.grad({x : x_data, y : y_data}, op.arguments, [op.output])
 
     assert np.allclose(gradients[op.arguments[0]], [[[0., 0.], [0., 0.]]])

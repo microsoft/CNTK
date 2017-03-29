@@ -4,6 +4,7 @@
 # for full license information.
 # ==============================================================================
 
+import warnings
 from .. import cntk_py, Value
 from ..tensor import ArrayMixin
 from cntk.internal import typemap
@@ -39,19 +40,49 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         return self.number_of_samples
 
+    def as_sequences(self, variable=None):
+        '''
+        Convert the value of this minibatch instance to a sequence of NumPy
+        arrays that have their masked entries removed.
+
+        Returns:
+            a list of NumPy arrays if dense, otherwise a SciPy CSR array
+        '''
+        return self.data.as_sequences(variable)
+
+    @property
+    def data(self):
+        '''
+        The Value representation of the minibatch.
+        '''
+        return super(MinibatchData, self).data()
+
     @property
     def value(self):
         '''
         The value of the minibatch as a NumPy array.
         '''
-        return Value.to_seq(self.data)
+        warnings.warn('the .value property is deprecated. Please use '
+                      '.asarray() or .as_sequences() to get the NumPy '
+                      'representations or .data to get the Value '
+                      'representation', RuntimeWarning)
+
+        return self.as_sequences()
 
     @property
     def shape(self):
         '''
         The shape of the data in this minibatch as tuple.
         '''
-        return self.data.shape().dimensions()
+        return self.data.shape
+
+    @property
+    @typemap
+    def data(self):
+        '''
+        Retrieves the underlying :class:`~cntk.core.Value` instance.
+        '''
+        return super(MinibatchData, self).data
 
     @property
     def mask(self):

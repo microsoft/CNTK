@@ -58,6 +58,8 @@ namespace CNTK
         {
             auto evalArgs = GetCombinedEvalFunctionArgs();
             combinedFunctionArgs.insert(combinedFunctionArgs.end(), evalArgs.begin(), evalArgs.end());
+
+            m_aggregatedTrainingEvalCriterionValue = std::make_shared<Accumulator>();
         }
 
         m_combinedTrainingFunction = Combine(combinedFunctionArgs);
