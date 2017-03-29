@@ -301,6 +301,43 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
     }
 
+    NDArrayViewPtr NDArrayView::UpdateFromOperation(double beta, const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, int reductionOpInt)
+    {
+        const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator) (opInt);
+        const auto reductionOp = (Microsoft::MSR::CNTK::ElementWiseOperator) (reductionOpInt);
+        if (inputs.size() < 1 || inputs.size() > 3)
+            LogicError("NDArrayView::UpdateFromOperation: Invalid number of inputs: %d", (int)inputs.size());
+        // types must match
+        for (const auto& input : inputs)
+        {
+            if (input->m_dataType != m_dataType)
+                LogicError("NDArrayView::UpdateFromOperation: Input argument's DataType %s differs from result's DataType %s", DataTypeName(input->m_dataType), DataTypeName(m_dataType));
+        }
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            switch (inputs.size())
+            {
+            case 1:
+                GetWritableTensorView<float>()->DoUnaryOpOf((float)beta, *inputs[0]->GetTensorView<float>(), (float)alpha, op, reductionOp);
+                break;
+            case 2:
+                GetWritableTensorView<float>()->DoBinaryOpOf((float)beta, *inputs[0]->GetTensorView<float>(), *inputs[1]->GetTensorView<float>(), (float)alpha, op, reductionOp);
+                break;
+            case 3:
+                GetWritableTensorView<float>()->DoTernaryOpOf((float)beta, *inputs[0]->GetTensorView<float>(), *inputs[1]->GetTensorView<float>(), *inputs[2]->GetTensorView<float>(), (float)alpha, op, reductionOp);
+                break;
+            }
+            break;
+        case DataType::Double:
+            // TODO: finish this
+        default:
+            LogicError("NDArrayView::Alias: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+        return this->shared_from_this();
+    }
+
     NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const
     {
         auto rank = Shape().Rank();
