@@ -9,7 +9,7 @@ import numpy as np
 import os
 from PIL import Image
 from cntk.device import try_set_default_device, gpu
-from cntk import load_model, placeholder
+from cntk import load_model, placeholder, Constant
 from cntk import Trainer, UnitType
 from cntk.logging.graph import find_by_name, get_node_outputs
 from cntk.io import MinibatchSource, ImageDeserializer, StreamDefs, StreamDef

@@ -13,7 +13,7 @@ def get_data_type(*args):
     """
     Calculates the highest precision numpy data type of the provided parameters.
     If the parameter is a Function instance, it calculates it based on its
-    inputs. Placeholders are ignored in the type determination.
+    inputs. placeholders are ignored in the type determination.
 
     Args:
         args (number, list, NumPy array, :class:`~cntk.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
