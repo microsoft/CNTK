@@ -1078,19 +1078,30 @@ namespace CNTK
 
             // We need to patch the Computation node mappings for the arguments of block functions 
             // since for recurrent inputs, the mappings are not fully established the first time
-            std::function<void(const FunctionPtr&)> PatchBlockArgumentsMapping;
-            PatchBlockArgumentsMapping = [this, &PatchBlockArgumentsMapping](const FunctionPtr& function) {
-                BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(function.get());
-                if (blockFunction)
+            std::function<void(const Variable&)> PatchBlockArgumentsAndOutputsMapping;
+            PatchBlockArgumentsAndOutputsMapping = [this, &PatchBlockArgumentsAndOutputsMapping](const Variable& var) {
+                if (var.IsOutput())
                 {
-                    auto compositeArguments = blockFunction->Composite()->Arguments();
-                    for (auto compositeArgument : compositeArguments)
-                        m_variableToNodeMap[compositeArgument] = m_variableToNodeMap.at(compositeArgument.BlockFunctionVariableMapping());
+                    BlockFunction* blockFunction = dynamic_cast<BlockFunction*>(var.Owner().get());
+                    if (blockFunction)
+                    {
+                        PostorderTraverseVariables(blockFunction->BlockRoot(), PatchBlockArgumentsAndOutputsMapping);
 
-                    PreorderTraverseFunctions(function->BlockRoot(), PatchBlockArgumentsMapping);
+                        auto compositeArguments = blockFunction->Composite()->Arguments();
+                        for (auto compositeArgument : compositeArguments)
+                        {
+                            auto mappingVarNodeIter = m_variableToNodeMap.find(compositeArgument.BlockFunctionVariableMapping());
+                            if (mappingVarNodeIter != m_variableToNodeMap.end())
+                                m_variableToNodeMap[compositeArgument] = mappingVarNodeIter->second;
+                        }
+
+                        auto mappingVarNodeIter = m_variableToNodeMap.find(var.BlockFunctionVariableMapping());
+                        if (mappingVarNodeIter != m_variableToNodeMap.end())
+                            m_variableToNodeMap[var] = mappingVarNodeIter->second;
+                    }
                 }
             };
-            PreorderTraverseFunctions(rootFunction, PatchBlockArgumentsMapping);
+            PostorderTraverseVariables(rootFunction, PatchBlockArgumentsAndOutputsMapping);
 
             std::function<bool(const Variable&)> IsVariableRoot = [this, &IsVariableRoot](const Variable& outputVar) {
                 auto mappingVariable = GetMappingVariable(outputVar);

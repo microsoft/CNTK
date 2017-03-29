@@ -3163,19 +3163,15 @@ namespace CNTK
             functor(rootFunction);
 
             if (traverseInsideBlockFunction && rootFunction->IsBlock())
-            {
                 PreorderTraverseFunctions(rootFunction->BlockRoot(), visitedFunctions, functor, traverseInsideBlockFunction);
-            }
-            else
+
+            std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
+            for (const auto& rootInput : rootFunctionInputs)
             {
-                std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
-                for (const auto& rootInput : rootFunctionInputs)
+                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
                 {
-                    if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
-                    {
-                        const auto& function = rootInput.Owner();
-                        PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
-                    }
+                    const auto& function = rootInput.Owner();
+                    PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
                 }
             }
         }
