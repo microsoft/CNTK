@@ -133,8 +133,29 @@ echo(
 popd
 
 pushd cntk\layers
+echo RUNNING cntk\blocks doctests...
+pytest blocks.py
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\layers
 echo RUNNING cntk\layers doctests...
 pytest layers.py
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\layers
+echo RUNNING cntk\sequence doctests...
+pytest sequence.py
+if errorlevel 1 exit /b 1
+echo(
+popd
+
+pushd cntk\layers
+echo RUNNING cntk\higher_order_layers doctests...
+pytest higher_order_layers.py
 if errorlevel 1 exit /b 1
 echo(
 popd

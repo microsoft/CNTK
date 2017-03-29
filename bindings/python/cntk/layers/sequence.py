@@ -21,7 +21,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers import Input, Sequential
+        >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
         >>> x = C.input(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
@@ -84,7 +84,7 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers import Input, Sequential
+        >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
         >>> x = C.input(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
@@ -309,7 +309,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     Note: ``Recurrence()`` is the equivalent to what in functional programming is often called ``scanl()``.
 
     Example:
-     >>> from cntk.layers import Input, Constant, Sequential
+     >>> from cntk.layers import Sequential
      >>> from cntk.layers.typing import Tensor, Sequence
 
      >>> # a recurrent LSTM layer
