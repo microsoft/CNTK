@@ -464,11 +464,12 @@ class Value(cntk_py.Value):
             batch = [b.tolist() for b in batch]
 
         try:
-            data_type = type(batch[0][0])
+            elem = batch[0][0]
         except:
             raise ValueError('input must be a list of list of integers')
 
-        if data_type != int and not issubclass(data_type, np.integer):
+        if not isinstance(elem, numbers.Integral):
+            data_type = type(elem)
             raise ValueError('supplied data to one_hot() must be of type integer'
                              ' and not "%s" since it is index data.' % data_type)
 
