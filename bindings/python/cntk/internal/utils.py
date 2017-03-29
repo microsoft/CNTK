@@ -83,7 +83,7 @@ def get_python_function_arguments(f):
     else:
         def getfullargspec(f):
             from inspect import getargspec
-            from cntk_py.variables import Record
+            from ..variables import Record
 
             annotations = getattr(f, '__annotations__', {})
             #f.__annotations__ = None  # needed when faking it under Python 3 for debugging purposes
