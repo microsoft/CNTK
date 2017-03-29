@@ -16,7 +16,7 @@ We use a fixed crop ratio of `0.8` and scale the image to `32x32` pixels for tra
 
 `python BN_Inception_CIFAR10.py`
 
-In our test, The BN-Inception model for CIFAR achieves an error rate of about `6.0%`.
+In our test, the BN-Inception model for CIFAR-10 achieves an error rate of about `6.2%`.
 
 For more parameter definitions, please use `-h` command to see the help text:
 
