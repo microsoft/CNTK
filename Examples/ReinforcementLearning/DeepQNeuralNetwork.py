@@ -20,7 +20,7 @@ class ReplayMemory(object):
     """
     Replay Memory keeps track of the environment dynamic.
     We store all the transition (s(t), action, s(t+1), reward, done).
-    The replay memory allows us to effectively sample minibatch from it, and generate the correct state representation
+    The replay memory allows us to efficiently sample minibatch from it, and generate the correct state representation
     (w.r.t the number of previous frames needed)
     """
     def __init__(self, size, sample_shape, history_length=4):
@@ -30,7 +30,7 @@ class ReplayMemory(object):
         self._history_length = max(1, history_length)
         self._state_shape = sample_shape
         self._states = np.zeros((size,) + sample_shape, dtype=np.float32)
-        self._actions = np.zeros(size, dtype=np.uint8)
+        self._actions = np.zeros(size, dtype=np.uint16)
         self._rewards = np.zeros(size, dtype=np.float32)
         self._terminals = np.zeros(size, dtype=np.uint8)
 
