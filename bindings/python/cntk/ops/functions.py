@@ -130,7 +130,7 @@ class Function(cntk_py.Function):
 
             # helpers
             def force_order_args(fun_args):
-                block_args = [placeholder(name=fun_arg.name) for fun_arg in fun_args]
+                block_args = [placeholder(name=fun_arg.name) for fun_arg in fun_args]   # placeholders inside the BlockFunction
                 combined_block_args = combine(block_args)                               # the content of the BlockFunction
                 arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
                 return as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name='Tuple').outputs
