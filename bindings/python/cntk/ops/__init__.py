@@ -20,7 +20,6 @@ from .. import cntk_py
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
 
-
 @typemap
 def combine(operands, name=''):
     '''
@@ -2728,18 +2727,6 @@ def constant(value=None, shape=None, dtype=None, device=None, name=''):
     '''
     from ..variables import Constant
     return Constant(value, shape, dtype, device, name)
-
-identity = combine([placeholder('keep')])
-'''
-identity()
-Identity function.
-This is useful to pass to layers that accept, e.g., a non-linearity,
-but you wish to have none.
-
-Example:
- >>> linear_layer = Dense(500, activation=identity)
-'''
-# Note: We cannot use alias() here since parameter-shape inference cannot be done through alias().
 
 ##########################################################################
 # normalization ops

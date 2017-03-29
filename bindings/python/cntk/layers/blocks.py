@@ -11,7 +11,7 @@ blocks -- basic building blocks that are semantically not layers (not used in a 
 
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input, placeholder, combine, alias, sequence, identity
+from cntk import parameter, constant, input, placeholder, combine, alias, sequence
 from cntk.variables import Record
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
@@ -279,6 +279,21 @@ def ForwardDeclaration(name='forward_declaration'):
         var.owner.replace_placeholders({var_fwd: var})   # resolves var_fwd := var
     var_fwd.resolve_to = resolve_to
     return var_fwd
+
+
+@Function
+def identity(keep):
+    '''
+    identity()
+    Identity function.
+    This is useful to pass to layers that accept, e.g., a non-linearity,
+    but you wish to have none.
+
+    Example:
+     >>> linear_layer = Dense(500, activation=identity)
+    '''
+    # Note: We cannot use alias() here since parameter-shape inference cannot be done through alias().
+    return combine([keep])
 
 
 def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True), name=''):
