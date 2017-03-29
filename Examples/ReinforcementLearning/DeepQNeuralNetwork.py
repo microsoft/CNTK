@@ -121,7 +121,7 @@ class ReplayMemory(object):
 class History(object):
     """
     Accumulator keeping track of the N previous frames to be used by the agent
-    for evaluation purpose
+    for evaluation
     """
 
     def __init__(self, shape):
