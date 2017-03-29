@@ -11,8 +11,8 @@ blocks -- basic building blocks that are semantically not layers (not used in a 
 
 from __future__ import division
 import numpy as np
-from cntk import parameter, constant, input, placeholder, combine, alias, sequence, Constant
-from cntk.variables import Record
+from cntk import input, placeholder, combine, alias, sequence, parameter, constant
+from cntk.variables import Record, Constant, Parameter
 from cntk.axis import Axis
 from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
 from .typing import Signature
@@ -82,49 +82,6 @@ def _inject_name(f, name):
         else:
             f = combine(list(f.outputs), name=name) # BUGBUG: Does this actually name things?
     return f
-
-# TODO: Move this into the lower layer where these are defined.
-# some mappings--these currently exist only so that I can name the nodes for debugging
-def Parameter(shape, init, dtype=default_override_or(np.float32), name=''):
-    '''
-    Parameter(shape, init, dtype=np.float32, name='')
-
-    Constructs a Parameter variable.
-    Some operations, such as :func:`~cntk.ops.times`,
-    can update a parameter's shape depending on its data input. For those dimensions, pass :const:`~cntk.InferredDimension`.
-
-    This is a wrapper around :func:`~cntk.ops.parameter` that allows to specify
-    the ``dtype`` (float/double) per :class:`~cntk.default_options`.
-
-    Example:
-     >>> p = Parameter((13,42,7), init=glorot_uniform())
-     >>> p.shape
-         (13, 42, 7)
-
-     >>> # example with inferred dimensions
-     >>> W = Parameter((InferredDimension, 42), init=glorot_uniform())
-     >>> W.shape   # -1 indicates dimension yet to be inferred
-         (-1, 42)
-     >>> x = Input(13)
-     >>> y = times(x, W)  # times operation now knows that the input dimension of W must be 13
-     >>> W.shape          # hence, the shape has been updated
-         (13, 42)
-
-    Args:
-        shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
-        init (scalar or NumPy array or :mod:`cntk.initializer`): initial value of weights `W`
-        dtype (np.dtype, defaults to np.float32): data type
-        name (str, defaults to ''): the name of the Function instance in the network
-    Returns:
-        a learnable parameter Variable
-    '''
-    
-    pure = get_default_override(None, pure=default_override_or(False))
-    if pure:
-        raise TypeError('parameters cannot be created inside a @Function def')
-    dtype = get_default_override(Parameter, dtype=dtype)
-    init = _initializer_for(init)
-    return parameter(shape, init=init, dtype=dtype, name=name)
 
 # TODO: this function should not be necessary anymore
 def Input(shape, dtype=default_override_or(np.float32), needs_gradient=True, is_sparse=False,

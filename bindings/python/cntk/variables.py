@@ -255,7 +255,6 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
 
         return cntk_py.Constant(self)
 
-
 class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     '''
     A trainable parameter. It can be a scalar, vector, matrix, or tensor
@@ -275,24 +274,33 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
 
     Parameters are Variables and therefore they inherit all their methods.
     '''
-    def __init__(self, shape=None, init=None, dtype=None,
+    def __init__(self, shape=None, init=None, dtype=default_override_or(None),
                  device=None, name=''):
         if not device:
             device = use_default_device()
 
+        if init is None:
+            init = 0
+
+        pure = get_default_override(None, pure=default_override_or(False))
+        if pure:
+            raise TypeError('parameters cannot be created inside a @Function def')
+
+        from _cntk_py import constant_initializer
+        if np.isscalar(init):
+            init = constant_initializer(init)
+            if not shape:
+                shape = ()
+
+        dtype = get_default_override(Parameter, dtype=dtype)
         if dtype is not None:
             if isinstance(init, np.ndarray) and dtype != init.dtype:
                 init = np.array(init, dtype=dtype)
         else:
-            if np.isscalar(init) and not shape:
-                shape = ()
             if isinstance(init, np.ndarray):
                 dtype = init.dtype
             else:
                 dtype = np.float32
-
-        if init is None:
-            init = 0
 
         if isinstance(init, (np.ndarray, list, float, int)):
             ndav = sanitize_value(shape, init, dtype, device)
@@ -326,7 +334,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
-    A Constant is a :class:`~cntk.ops.variables.Variable` and therefore inherits all its methods.
+    A Constant is a :class:`~cntk.variables.Variable` and therefore inherits all its methods.
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
@@ -335,7 +343,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
-    def __init__(self, value=None, shape=None, dtype=default_override_or(np.float32), device=None, name=''):
+    def __init__(self, value=None, shape=None, dtype=default_override_or(None), device=None, name=''):
 
         if not device:
             device = use_default_device()
