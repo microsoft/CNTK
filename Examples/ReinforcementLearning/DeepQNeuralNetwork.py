@@ -325,6 +325,10 @@ class DeepQAgent(object):
         self._metrics_writer.write_value('Sum rewards per ep.', sum_rewards, self._action_taken)
 
 
+def as_ale_input(environment):
+    from PIL import Image
+    return np.array(Image.fromarray(environment, 'RGB').convert('L').resize((84, 84)))
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-e', '--epoch', default=100, type=int, help='Number of epochs to run (epoch = 250k actions')
@@ -340,11 +344,12 @@ if __name__ == '__main__':
     agent = DeepQAgent((4, 84, 84), env.action_space.n)
 
     # Train
-    current_state = env.reset()
+    current_state = as_ale_input(env.reset())
     max_steps = args.epoch * 250000
     for step in six.moves.range(max_steps):
         action = agent.act(current_state)
         new_state, reward, done, _ = env.step(action)
+        new_state = as_ale_input(new_state)
 
         # Clipping reward for training stability
         reward = np.clip(reward, -1, 1)
@@ -355,4 +360,4 @@ if __name__ == '__main__':
         current_state = new_state
 
         if done:
-            current_state = env.reset()
+            current_state = as_ale_input(env.reset())
