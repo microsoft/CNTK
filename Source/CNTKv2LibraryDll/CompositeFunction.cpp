@@ -970,7 +970,7 @@ namespace CNTK
         {
             // If the inputVar is a constant and not the right DataType let's coerce it to the right type
             if (inputVar.IsConstant() && (nonConstInputDataType != DataType::Unknown) && (inputVar.GetDataType() != nonConstInputDataType))
-                inputVar = Constant(inputVar).As(nonConstInputDataType);
+                inputVar = Constant(inputVar).CloneAs(nonConstInputDataType);
 
             auto baseNodePtr = GetNode(inputVar, network, builder, variableToNodeMap, isVariableRootMap, inputsToExcludeGradientsFor);
             inputNodes.push_back((baseNodePtr != nullptr) ? baseNodePtr->template As<ComputationNode<ElementType>>()->shared_from_this() : nullptr);

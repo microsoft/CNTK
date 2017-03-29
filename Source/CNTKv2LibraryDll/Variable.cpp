@@ -548,7 +548,7 @@ namespace CNTK
         m_dataFields->SetValueInitialization(initializer, device);
     }
 
-    Constant Constant::As(DataType dataType) const
+    Constant Constant::CloneAs(DataType dataType) const
     {
         if (dataType != DataType::Double)
             InvalidArgument("Constant::Clone: Cannot clone Constant '%S' with DataType '%s' to DataType '%s'.", AsString().c_str(), DataTypeName(GetDataType()), DataTypeName(dataType));

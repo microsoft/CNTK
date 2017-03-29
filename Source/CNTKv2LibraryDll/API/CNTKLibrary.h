@@ -2035,7 +2035,11 @@ private:
             : Constant(shape, dataType, ConstantInitializer(initValue), device, name)
         {}
 
-        CNTK_API Constant As(DataType dataType) const;
+        ///
+        /// Create a clone of 'this' constant with the specified DataType. 
+        /// This only supports converting from a lower precision type to a higher precision type (e.g. DataType::Float to DataType::Double)
+        ///
+        CNTK_API Constant CloneAs(DataType dataType) const;
 
         ///
         /// Create a scalar constant. The specified value is cast to the specified DataType
