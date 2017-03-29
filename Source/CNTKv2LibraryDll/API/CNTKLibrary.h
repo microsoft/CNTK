@@ -697,11 +697,18 @@ namespace CNTK
         CNTK_API NDArrayViewPtr Alias(bool readOnly = false) const;
 
         ///
-        /// Performs an in-place operation, *this = beta * *this + alpha * reductionOp(op(inputs)).
+        /// Performs a numeric operation in-place, *this = beta * *this + alpha * reductionOp(op(inputs)).
         /// *this must have the desired shape. Broadcasting and reduction rules apply.
         /// For beta=0, *this may contain uninitialized/undefined values.
         ///
-        CNTK_API NDArrayViewPtr UpdateFromOperation(double beta, const std::vector<NDArrayViewPtr>& inputs, double alpha, int op, int reductionOp);
+        CNTK_API NDArrayViewPtr NumericOperationInPlace(double beta, const std::vector<NDArrayViewPtr>& inputs, double alpha, int op, int reductionOp);
+
+        ///
+        /// Performs a numeric operation, returning NDArrayView(beta * *this + alpha * op(inputs)).
+        /// The result is shaped according to broadcasting rules.
+        /// For beta=0, *this may contain uninitialized/undefined values.
+        ///
+        CNTK_API static NDArrayViewPtr NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op);
 
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data

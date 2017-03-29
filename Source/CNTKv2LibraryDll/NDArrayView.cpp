@@ -301,17 +301,17 @@ namespace CNTK
         return MakeSharedObject<NDArrayView>(GetDataType(), Device(), GetStorageFormat(), Shape(), IsReadOnly() || readOnly, tensorView);
     }
 
-    NDArrayViewPtr NDArrayView::UpdateFromOperation(double beta, const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, int reductionOpInt)
+    NDArrayViewPtr NDArrayView::NumericOperationInPlace(double beta, const std::vector<NDArrayViewPtr>& inputs, double alpha, int opInt, int reductionOpInt)
     {
         const auto          op = (Microsoft::MSR::CNTK::ElementWiseOperator) (opInt);
         const auto reductionOp = (Microsoft::MSR::CNTK::ElementWiseOperator) (reductionOpInt);
         if (inputs.size() < 1 || inputs.size() > 3)
-            LogicError("NDArrayView::UpdateFromOperation: Invalid number of inputs: %d", (int)inputs.size());
+            LogicError("NDArrayView::NumericOperationInPlace: Invalid number of inputs: %d", (int)inputs.size());
         // types must match
         for (const auto& input : inputs)
         {
             if (input->m_dataType != m_dataType)
-                LogicError("NDArrayView::UpdateFromOperation: Input argument's DataType %s differs from result's DataType %s", DataTypeName(input->m_dataType), DataTypeName(m_dataType));
+                LogicError("NDArrayView::NumericOperationInPlace: Input argument's DataType %s differs from result's DataType %s", DataTypeName(input->m_dataType), DataTypeName(m_dataType));
         }
         switch (m_dataType)
         {
@@ -329,13 +329,45 @@ namespace CNTK
                 break;
             }
             break;
-        case DataType::Double:
-            // TODO: finish this
+        case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
+            switch (inputs.size())
+            {
+            case 1:
+                GetWritableTensorView<double>()->DoUnaryOpOf((double)beta, *inputs[0]->GetTensorView<double>(), (double)alpha, op, reductionOp);
+                break;
+            case 2:
+                GetWritableTensorView<double>()->DoBinaryOpOf((double)beta, *inputs[0]->GetTensorView<double>(), *inputs[1]->GetTensorView<double>(), (double)alpha, op, reductionOp);
+                break;
+            case 3:
+                GetWritableTensorView<double>()->DoTernaryOpOf((double)beta, *inputs[0]->GetTensorView<double>(), *inputs[1]->GetTensorView<double>(), *inputs[2]->GetTensorView<double>(), (double)alpha, op, reductionOp);
+                break;
+            }
+            break;
         default:
-            LogicError("NDArrayView::Alias: Unsupported DataType %s", DataTypeName(m_dataType));
+            LogicError("NDArrayView::NumericOperationInPlace: Unsupported DataType %s", DataTypeName(m_dataType));
             break;
         }
-        return this->shared_from_this();
+        return this->shared_from_this(); // return ourselves to allow for chaining
+    }
+
+    /*static*/ NDArrayViewPtr NDArrayView::NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op)
+    {
+        // for element-wise operations, the output shape is the axis-wise max over all inputs
+        // TODO: eventually, this must be reconciled with all the shape-inference code
+        size_t rank = 0;
+        for (const auto& input : inputs)
+            rank = std::max(rank, input->Shape().Rank());
+        NDShape shape(rank, 1);
+        for (const auto& input : inputs)
+        {
+            const auto& inputShape = input->Shape();
+            for (size_t k = 0; k < inputShape.Rank(); k++)
+                shape[k] = std::max(shape[k], inputShape[k]);
+        }
+        // create result object; properties besides shape are inherited from input 0 for now
+        NDArrayViewPtr result = MakeSharedObject<NDArrayView>(inputs[0]->GetDataType(), inputs[0]->GetStorageFormat(), shape, inputs[0]->Device());
+        // perform operation in-place on result object
+        return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, op, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opSum/*not reducing, actually*/);
     }
 
     NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const
