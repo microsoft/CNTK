@@ -12,6 +12,7 @@ namespace CNTKLibraryCSEvalExamples
         public static Variable OutputVar0;
         public static Variable InputVar0;
         public static Variable ArgumentVar0;
+        public static Value OutputVal;
 
         public static void ValidateObjectReferences(DeviceDescriptor device)
         {
@@ -41,6 +42,9 @@ namespace CNTKLibraryCSEvalExamples
                 Console.WriteLine("OutputVar0: " + OutputVar0.AsString() + "Name: " + OutputVar0.Name + "Shape: " + OutputVar0.Shape.AsString());
                 Console.WriteLine("InputVar0: " + InputVar0.AsString() + "Name: " + InputVar0.Name + "Shape: " + InputVar0.Shape.AsString());
                 Console.WriteLine("ArgumentVar0: " + ArgumentVar0.AsString() + "Name: " + ArgumentVar0.Name + "Shape: " + ArgumentVar0.Shape.AsString());
+                Console.WriteLine("OutputVal: " + "Device: " + OutputVal.Device.AsString() + "Storage: " + OutputVal.StorgeFormat + "Shape: " + OutputVal.Shape.AsString() + "Data:");
+                var outputData = OutputVal.GetDenseData<float>(OutputVar);
+                CNTKLibraryManagedExamples.PrintOutput(OutputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
             {

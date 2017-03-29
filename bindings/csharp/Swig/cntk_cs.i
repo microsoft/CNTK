@@ -609,10 +609,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
 %typemap(cscode) CNTK::Function %{
 
-    // This is a reference to prevent premature garbage collection 
-    // and resulting in dangling access to Variable.
-    private UnorderedMapVariableValuePtr outMap = new UnorderedMapVariableValuePtr();
-
     public static Function LoadModel(byte[] modelBuffer, DeviceDescriptor computeDevice)
     {
         return LoadModel(modelBuffer, (uint)modelBuffer.Length, computeDevice);
@@ -731,12 +727,12 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         // Evaluate the rootFunction.
         var argMap = new UnorderedMapVariableValuePtr();
+        var outMap = new UnorderedMapVariableValuePtr();
         foreach (var p in arguments)
         {
             argMap.Add(p.Key, p.Value);
         }
 
-        outMap.Clear();
         foreach (var p in outputs)
         {
             outMap.Add(p.Key, p.Value);
@@ -746,18 +742,21 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 
         foreach (var p in outMap)
         {
+            // for shared_ptr<Value>, the p.Value returns a copy, so it is safe to use it directly in outputs.
             outputs[p.Key] = p.Value;
         }
     }
 
     public System.Collections.Generic.IList<Function> FindAllWithName(string name, bool nestedSearchInsideBlockFunction = false)
     {
-        var funcVector = _FindAllWithName(name, nestedSearchInsideBlockFunction);
-        var funcArray = new Function[funcVector.Count];
-        // The CopyTo is to ensure that elements in funcVector live beyond the lifecycle of funcVector.
-        funcVector.CopyTo(funcArray);
-        var funcList = new System.Collections.Generic.List<Function>(funcArray);
-        return funcList;
+        var funcPtrVector = _FindAllWithName(name, nestedSearchInsideBlockFunction);
+        var funcPtrList = new System.Collections.Generic.List<Function>(funcPtrVector.Count);
+        for (int i = 0; i < funcPtrVector.Count; i++)
+        {
+            // for shared_ptr, the funcPtrVector[i] returns a copy, so it is safe to directly use it in return list.
+            funcPtrList.Add(funcPtrVector[i]);
+        }
+        return funcPtrList;
     }
 %}
 
@@ -1275,12 +1274,10 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         if (typeof(T).Equals(typeof(float)))
         {
             var inputAsSequencesVector = new FloatVectorVector();
-            var keepRefsLive = new System.Collections.Generic.List<FloatVector>();
             foreach (var seq in sequences)
             {
                 var seqVector = AsFloatVector(seq);
-                // This is to make sure that seqVector not to be reclaimed until the Value object is created.
-                keepRefsLive.Add(seqVector);
+                // The seqVector is copied when adding to inputAsSequencesVector.
                 inputAsSequencesVector.Add(seqVector);
             }
             return Value.CreateDenseFloat(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
@@ -1288,12 +1285,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         else if (typeof(T).Equals(typeof(double)))
         {
             var inputAsSequencesVector = new DoubleVectorVector();
-            var keepRefsLive = new System.Collections.Generic.List<DoubleVector>();
             foreach (var seq in sequences)
             {
                 var seqVector = AsDoubleVector(seq);
-                // This is to make sure that seqVector not to be reclaimed until the Value object is created.
-                keepRefsLive.Add(seqVector);
                 inputAsSequencesVector.Add(seqVector);
             }
             return Value.CreateDenseDouble(sampleShape, inputAsSequencesVector, seqFlags, device, readOnly);
@@ -1313,12 +1307,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         var seqFlags = AsBoolVector(sequenceStartFlags);
         var inputSeqVector = new SizeTVectorVector();
-        var keepRefsLive = new System.Collections.Generic.List<SizeTVector>();
         foreach (var seq in sequences)
         {
             var s = AsSizeTVector(seq);
-            // This is to make sure that seqVector not to be reclaimed until the Value object is created.
-            keepRefsLive.Add(s);
             inputSeqVector.Add(s);
         }
         if (typeof(T).Equals(typeof(float)))
@@ -1407,12 +1398,9 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
     {
         var seqFlags = AsBoolVector(sequenceStartFlags);
         var inputSeqVector = new SizeTVectorVector();
-        // This is to make sure that seqVector not to be reclaimed until the Value object is created.
-        var keepRefsLive = new System.Collections.Generic.List<SizeTVector>();
         foreach (var seq in sequences)
         {
             var s = AsSizeTVector(seq);
-            keepRefsLive.Add(s);
             inputSeqVector.Add(s);
         }
         if (typeof(T).Equals(typeof(float)))
