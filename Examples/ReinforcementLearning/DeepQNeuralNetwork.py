@@ -328,7 +328,7 @@ class DeepQAgent(object):
             self._trainer.train_minibatch(
                 self._action_value_net.argument_map(
                     environment=pre_states,
-                    actions=Value.one_hot(actions, self.nb_actions),
+                    actions=Value.one_hot([actions], self.nb_actions),
                     q_targets=q_value_targets
                 )
             )
