@@ -22,23 +22,28 @@ more common case) is as follows:
     >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
     >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
     >>> cntk.squared_error(x, y).eval({x:x0, y:y0})
-    array([[ 29.]], dtype=float32)
+    [array([ 29.], dtype=float32)]
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 
 The squared error is then of course ``(2-4)**2 + (1-6)**2 = 29``.
 
-As the graph nodes implement the NumPy array interface, you can easily access
-their content and use them in other NumPy operations:
+Most of the data containers like parameters, constants, values, etc. implement
+the asarray() method, which returns a NumPy interface.
 
     >>> import cntk as C
     >>> c = C.constant(3, shape=(2,3))
-    >>> np.asarray(c)
+    >>> c.asarray()
     array([[ 3.,  3.,  3.],
            [ 3.,  3.,  3.]], dtype=float32)
-    >>> np.ones_like(c)
+    >>> np.ones_like(c.asarray())
     array([[ 1.,  1.,  1.],
            [ 1.,  1.,  1.]], dtype=float32)
+
+For values that have a sequence axis, ``asarray()`` cannot work since, it requires
+the shape to be rectangular and sequences most of the time have different
+lengths. In that case, ``as_sequences(var)`` returns a list of NumPy arrays,
+where every NumPy arrays has the shape of the static axes of ``var``.
 
 Overview and first run
 ----------------------
