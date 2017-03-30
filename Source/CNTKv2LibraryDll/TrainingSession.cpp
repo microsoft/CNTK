@@ -12,15 +12,6 @@
 
 namespace CNTK
 {
-    namespace Internal
-    {
-        // TODO: Workaround for back compat. Should not be used and will be removed in the next version.
-        CNTK_API void AddProgressWriters(const TrainerPtr& t, const std::vector<ProgressWriterPtr>& w)
-        {
-            t->AddProgressWriters(w);
-        }
-    }
-
     using namespace std;
 
     const static std::wstring s_trainingMinibatchSource = L"TrainingMinibatchSource";
@@ -71,42 +62,6 @@ namespace CNTK
     {
     }
 
-    TrainingSessionPtr CreateBasicTrainingSession(
-        const MinibatchSourcePtr& trainingSource,
-        const TrainerPtr& trainer,
-        const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
-        const MinibatchSizeSchedule& minibatchSizeSchedule,
-        size_t checkpointFrequencyinSamples,
-        const std::wstring& checkPointFileName,
-        const MinibatchSourcePtr& crossValidationSource,
-        const MinibatchSizeSchedule& crossValidationSchedule,
-        size_t crossValidationFrequencyInSamples,
-        bool restoreFromCheckpointIfExists,
-        bool saveAllCheckpoints,
-        size_t maxNumberOfSamples,
-        size_t progressFrequency,
-        const std::vector<ProgressWriterPtr>& progressWriters)
-    {
-        fprintf(stderr, "WARNING:CreateBasicTrainingSession is deprecated and will be removed in the next beta (13)."
-            "Instructions for updating:"
-            "Please switch to CreateTrainingSession function and then call SetCheckpointing/SetCrossValidation/SetPrintingProgress as needed.");
-
-        return MakeSharedObject<TrainingSession>(trainingSource,
-            trainer,
-            modelInputToMinibatchSourceStream,
-            minibatchSizeSchedule,
-            checkpointFrequencyinSamples,
-            checkPointFileName,
-            crossValidationSource,
-            crossValidationSchedule,
-            crossValidationFrequencyInSamples,
-            restoreFromCheckpointIfExists,
-            saveAllCheckpoints,
-            maxNumberOfSamples,
-            progressFrequency,
-            progressWriters);
-    }
-
     TrainingSessionPtr CreateTrainingSession(
         const TrainerPtr& trainer,
         const MinibatchSourcePtr& trainingSource,
@@ -125,33 +80,6 @@ namespace CNTK
             maxNumTrainingSamples,
             progressFrequency,
             checkpointing, crossValidation, test);
-    }
-
-    TrainingSession::TrainingSession(
-        const MinibatchSourcePtr& trainingSource,
-        const TrainerPtr& trainer,
-        const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
-        const MinibatchSizeSchedule& schedule,
-        size_t checkpointFrequencyInSamples,
-        const std::wstring& checkPointFileName,
-        const MinibatchSourcePtr& crossValidationSource,
-        const MinibatchSizeSchedule& crossValidationSchedule,
-        size_t crossValidationFrequencyInSamples,
-        bool restoreFromCheckpointIfExists,
-        bool saveAllCheckpoints,
-        size_t maxNumberOfSamples,
-        size_t progressFrequencyInSamples,
-        const std::vector<ProgressWriterPtr>& progressWriters)
-        : TrainingSession(
-            trainer, trainingSource, schedule, modelInputToMinibatchSourceStream, maxNumberOfSamples, progressFrequencyInSamples,
-            CheckpointConfig(checkPointFileName, checkpointFrequencyInSamples, restoreFromCheckpointIfExists, saveAllCheckpoints),
-            CrossValidationConfig(crossValidationSource, crossValidationSchedule, crossValidationFrequencyInSamples),
-            TestConfig(nullptr))
-    {
-        if (progressFrequencyInSamples)
-        {
-            trainer->AddProgressWriters(progressWriters);
-        }
     }
 
     TrainingSession::TrainingSession(

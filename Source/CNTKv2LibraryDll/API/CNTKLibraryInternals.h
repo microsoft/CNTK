@@ -237,9 +237,6 @@ namespace CNTK
         // This is meant for debugging purposes only and is very likely to be deprecated in the future.
         CNTK_API void SaveAsLegacyModel(const FunctionPtr& rootFunction, const std::wstring& modelFile);
 
-        // TODO: Workaround for back compat. Should not be used and will be removed in the next version.
-        CNTK_API void AddProgressWriters(const TrainerPtr&, const std::vector<ProgressWriterPtr>&);
-
         CNTK_API size_t NewUniqueId();
 
         // Internal hooks for testing and higher-level bindings

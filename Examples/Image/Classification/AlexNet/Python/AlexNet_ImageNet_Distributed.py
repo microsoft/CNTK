@@ -174,7 +174,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     # Train all minibatches 
     training_session(
         trainer=trainer, mb_source = train_source,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         mb_size = minibatch_size,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename=os.path.join(model_path, model_name), restore=restore),

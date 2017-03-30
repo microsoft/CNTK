@@ -39,6 +39,46 @@ class Function(cntk_py.Function):
 
     If it has only one output, one can invoke Variable methods on it, which it
     will relay to its only output.
+
+    `Function` objects can also be constructed directly from a Python lambda,
+    by means of the `@Function` decorator.
+    The `Function`'s input signature is defined by the lambda.
+
+    Example:
+
+      >>> @Function
+      ... def f(x):
+      ...     return x * x
+      >>> from cntk import debugging
+      >>> debugging.dump_signature(f)
+      Function(x: Sequence[tensor]) -> Sequence[tensor]
+
+    The above form creates a CNTK Function whose arguments are placeholder variables.
+    Such a function can only be combined with other symbolic functions.
+
+    To train a Function or pass data to it, you need to declare the types
+    of the arguments. In this case, the @Function decorator creates a CNTK Function
+    whose arguments are input variables.
+
+    If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.::
+
+      @Function
+      def f(x:Tensor[13]):
+          return x * x
+
+    If you are working with Python 2.7, use CNTK's `@:class:~cntk.layers.typing.Signature` decorator instead::
+
+      >>> from cntk.layers.typing import *
+      >>> @Function
+      ... @Signature(Tensor[13])
+      ... def f(x):
+      ...     return x * x
+      >>> debugging.dump_signature(f)
+      Function(x: Tensor[13]) -> Tensor[13]
+
+    ``make_block=True`` is an internal parameter used to implement `@:func:~cntk.layers.blocks.BlockFunction()`.
+    If `BlockFunction()` passes `True``, then the result will be wrapped
+    in :func:``~cntk.ops.as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
     '''
 
     # We override the constructors to implement an overload that constructs
@@ -64,38 +104,7 @@ class Function(cntk_py.Function):
 
     @staticmethod
     def _to_Function(f, make_block=False, op_name=None, name=None):
-        '''
-        ``@Function`` constructs a Function from a Python lambda
-        where the Function's input signature is defined by the lambda.
-
-        Use this as a decorator, e.g.::
-
-          @Function
-          def f(x): return x * x
-
-        The above form creates a CNTK Function whose arguments are placeholder variables.
-        Such a function can only be combined with others symbolic functions.
-
-        To train a Function or pass data to it, you need to declare the types
-        of the arguments. In this case, the @Function decorator creates a CNTK Function
-        whose arguments are input variables.
-
-        If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.::
-
-          @Function
-          def f(x:Tensor[13]):
-              return x * x
-
-        If you are working with Python 2.7, use CNTK's @Signature decorator instead::
-
-          @Function
-          @Signature(Tensor[13])
-          def f(x):
-              return x * x
-
-        ``make_block=True`` is used to implement @BlockFunction(). If given the result will be wrapped
-        in ``as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
-        '''
+        '''implements @Function decorator; see :class:`~cntk.layers.functions.Function`'''
         f_name = f.__name__ # (only used for debugging and error messages)
 
         # helper to create a CNTK placeholder or input for a given name
@@ -1203,7 +1212,8 @@ class UserFunction(Function):
         if self.as_numpy:
             map_if_possible(root_gradients)
             for v in root_gradients:
-                root_gradients[v] = _value_as_sequence_or_array(root_gradients[v], v)
+                if v.needs_gradient:
+                    root_gradients[v] = _value_as_sequence_or_array(root_gradients[v], v)
 
             state = cntk_py.UserBackPropState.data(state)
 

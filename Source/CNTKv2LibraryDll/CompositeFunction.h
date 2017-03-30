@@ -128,28 +128,54 @@ namespace CNTK
         template <typename FunctionType>
         static void PreorderTraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder = false)
         {
+            TraverseVariables(rootFunction, functor, pythonOperandOrder, /*preOrder =*/ true);
+        }
+
+        template <typename FunctionType>
+        static void PostorderTraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder = false)
+        {
+            TraverseVariables(rootFunction, functor, pythonOperandOrder, /*preOrder =*/ false);
+        }
+
+        template <typename FunctionType>
+        static void TraverseVariables(const FunctionPtr& rootFunction, const FunctionType& functor, bool pythonOperandOrder, bool preOrder)
+        {
             std::unordered_set<FunctionPtr> visitedFunctions;
-            PreorderTraverseVariables(rootFunction, visitedFunctions, functor, pythonOperandOrder);
+            TraverseVariables(rootFunction, visitedFunctions, functor, pythonOperandOrder, preOrder);
         }
 
         // Recursively traverses the Function graph underlying the 'rootFunction' invoking the provided functor for all visited nodes in the graph.
         template <typename FunctionType>
-        static void PreorderTraverseVariables(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor, bool pythonOperandOrder = false)
+        static void TraverseVariables(const FunctionPtr& rootFunction, std::unordered_set<FunctionPtr>& visitedFunctions, const FunctionType& functor, bool pythonOperandOrder, bool preOrder)
         {
             visitedFunctions.insert(rootFunction);
             auto rootFunctionOutputs = rootFunction->InitOutputs();
-            for (const auto& rootOutput : rootFunctionOutputs)
-                functor(rootOutput);
+
+            if (preOrder)
+            {
+                for (const auto& rootOutput : rootFunctionOutputs)
+                    functor(rootOutput);
+            }
 
             auto rootFunctionInputs = rootFunction->Inputs(pythonOperandOrder);
             for (const auto& rootInput : rootFunctionInputs)
             {
-                functor(rootInput);
-                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                if (rootInput.IsOutput())
                 {
-                    const auto& function = rootInput.Owner();
-                    PreorderTraverseVariables(function, visitedFunctions, functor, pythonOperandOrder);
+                    if (visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
+                    {
+                        const auto& function = rootInput.Owner();
+                        TraverseVariables(function, visitedFunctions, functor, pythonOperandOrder, preOrder);
+                    }
                 }
+                else
+                    functor(rootInput);
+            }
+
+            if (!preOrder)
+            {
+                for (const auto& rootOutput : rootFunctionOutputs)
+                    functor(rootOutput);
             }
         }
 
@@ -201,13 +227,13 @@ namespace CNTK
             vector<FunctionPtr> functions;
             std::vector<Variable> inputs;
             std::unordered_set<Variable> uniqueInputs;
-            PreorderTraverseVariables(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const Variable& var) {
+            TraverseVariables(rootFunction, visitedFunctions, [&inputs, &uniqueInputs](const Variable& var) {
                 if (!var.IsOutput() && uniqueInputs.find(var) == uniqueInputs.end())
                 {
                     inputs.push_back(var);
                     uniqueInputs.insert(var);
                 }
-           }, pythonOperandOrder);
+           }, pythonOperandOrder, /*preOrder =*/ true);
 
             return inputs;
         }

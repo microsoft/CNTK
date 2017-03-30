@@ -137,7 +137,7 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
 
     training_session = cntk.training_session(
         trainer = trainer, mb_source = train_source, 
-        var_to_stream = input_map, 
+        model_inputs_to_streams = input_map, 
         mb_size = minibatch_size,
         checkpoint_config = CheckpointConfig(frequency=epoch_size, filename=os.path.join(model_path, model_name), restore=restore),
         progress_frequency = epoch_size,

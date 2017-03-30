@@ -90,7 +90,7 @@ def simple_mnist(tensorboard_logdir=None):
         trainer=trainer,
         mb_source = reader_train,
         mb_size = minibatch_size,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         max_samples = num_samples_per_sweep * num_sweeps_to_train_with,
         progress_frequency=num_samples_per_sweep
     ).train()
