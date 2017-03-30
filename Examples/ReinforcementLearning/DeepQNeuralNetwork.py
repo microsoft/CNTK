@@ -34,13 +34,13 @@ class ReplayMemory(object):
         self._terminals = np.zeros(size, dtype=np.uint8)
 
     def append(self, state, action, reward, done):
-        """
-        Appends the specified transition to the memory.
-        :param state: The state to append (should have the same shape as defined at initialization time)
-        :param action: An integer representing the action done
-        :param reward: An integer representing the reward received for doing this action
-        :param done: A boolean specifying if this state is a terminal (episode has finished)
-        :return:
+        """ Appends the specified transition to the memory.
+        
+        Attributes:
+            state (Tensor[sample_shape]): The state to append
+            action (int): An integer representing the action done
+            reward (float): An integer representing the reward received for doing this action
+            done (bool): A boolean specifying if this state is a terminal (episode has finished)        
         """
         assert state.shape == self._state_shape, \
             'Invalid state shape (required: %s, got: %s)' % (self._state_shape, state.shape)
@@ -54,11 +54,14 @@ class ReplayMemory(object):
         self._pos = (self._pos + 1) % self._max_size
 
     def sample(self, size):
-        """
-        Generate a random minibatch. The returned indices can be retrieved using #get_state().
-        See the method #minibatch() if you want to retrieve samples directly
-        :param size: The minibatch size
-        :return: Indexes of the sampled states
+        """ Generate a random minibatch. The returned indices can be retrieved using #get_state().
+            See the method #minibatch() if you want to retrieve samples directly
+            
+        Attributes:
+            size (int): The minibatch size
+            
+        Returns:
+             Indexes of the sampled states ([int])
         """
 
         # Local variable access are faster in loops
@@ -80,10 +83,13 @@ class ReplayMemory(object):
         return indexes
 
     def minibatch(self, size):
-        """
-        Generate a minibatch with the number of samples specified by the size parameter.
-        :param size: Minibatch size
-        :return: Tensor[minibatch_size, input_shape...)
+        """ Generate a minibatch with the number of samples specified by the size parameter.
+        
+        Attributes:
+            size (int): Minibatch size
+            
+        Returns:
+            tuple: Tensor[minibatch_size, input_shape...], [int], [float], [bool] 
         """
         indexes = self.sample(size)
 
@@ -96,10 +102,13 @@ class ReplayMemory(object):
         return pre_states, actions, post_states, rewards, dones
 
     def get_state(self, index):
-        """
-        Return the specified state with the replay memory
-        :param index: State's index
-        :return: Tensor[history_length, input_shape...]
+        """ Return the specified state with the replay memory
+        
+        Attributes:
+            index (int): State's index
+            
+        Returns:
+            State at specified index (Tensor[history_length, input_shape...])
         """
         if self._count == 0:
             raise IndexError('Empty Memory')
@@ -126,13 +135,26 @@ class History(object):
 
     @property
     def value(self):
+        """ Underlying buffer with N previous states stacked along first axis
+        
+        Returns:
+            Tensor[shape]   
+        """
         return self._buffer
 
     def append(self, state):
+        """ Append state to the history
+        
+        Attributes:
+            state (Tensor) : The state to append to the memory
+        """
         self._buffer[:-1] = self._buffer[1:]
         self._buffer[-1] = state
 
     def reset(self):
+        """ Reset the memory. Underlying buffer set all indexes to 0
+         
+        """
         self._buffer.fill(0)
 
 
@@ -149,9 +171,19 @@ class LinearEpsilonAnnealingExplorer(object):
         self._a = (end - start) / steps
 
     def __call__(self, nb_actions):
+        """ Select a random action
+        
+        Attributes:
+            nb_actions (int): Number of actions available        
+        """
         return np.random.choice(nb_actions)
 
     def _epsilon(self, step):
+        """ Compute the epsilon parameter according to the specified step
+        
+        Attributes:
+            step (int)
+        """
         if step < 0:
             return self._start
         elif step > self._steps:
@@ -160,6 +192,14 @@ class LinearEpsilonAnnealingExplorer(object):
             return self._a * step + self._start
 
     def is_exploring(self, step):
+        """ Commodity method indicating if the agent should explore
+        
+        Attributes:
+            step (int) : Current step 
+        
+        Returns:
+             bool : True if exploring, False otherwise
+        """
         return np.random.rand() < self._epsilon(step)
 
 
@@ -229,11 +269,13 @@ class DeepQAgent(object):
         self._trainer = Trainer(criterion, (criterion, None), l_sgd, [self._metrics_writer])
 
     def act(self, state):
-        """
-        This allows the agent to select the next action to perform in regard of the current state of the environment.
-        It follows the terminology used in the Nature paper. 
-        :param state: The current environment state
-        :return: Int >= 0 : Next action to do
+        """ This allows the agent to select the next action to perform in regard of the current state of the environment.
+        It follows the terminology used in the Nature paper.
+         
+        Attributes:
+            state (Tensor[input_shape]): The current environment state
+            
+        Returns: Int >= 0 : Next action to do
         """
         # Append the state to the short term memory (ie. History)
         self._history.append(state)
@@ -260,13 +302,13 @@ class DeepQAgent(object):
         return action
 
     def observe(self, old_state, action, reward, done):
-        """
-        This allows the agent to observe the output of doing the action it selected through act() on the old_state
-        :param old_state: Previous environment state
-        :param action: Action done by the agent
-        :param reward: Reward for doing this action in the old_state environment
-        :param done: Indicate if the action has terminated the environment
-        :return: None
+        """ This allows the agent to observe the output of doing the action it selected through act() on the old_state
+        
+        Attributes:
+            old_state (Tensor[input_shape]): Previous environment state
+            action (int): Action done by the agent
+            reward (float): Reward for doing this action in the old_state environment
+            done (bool): Indicate if the action has terminated the environment
         """
         self._episode_rewards.append(reward)
 
@@ -283,16 +325,14 @@ class DeepQAgent(object):
         self._memory.append(old_state, action, reward, done)
 
     def train(self):
-        """
-        This allows the agent to train itself to better understand the environment dynamics.
+        """ This allows the agent to train itself to better understand the environment dynamics.
         The agent will compute the expected reward for the state(t+1) 
         and update the expected reward at step t according to this.
 
         The target expectation is computed through the Target Network, which is a more stable version
         of the Action Value Network for increasing training stability
 
-        The Target Network is a frozen copy of the Action Value Network updated as regular intervals
-        :return: None
+        The Target Network is a frozen copy of the Action Value Network updated as regular intervals        
         """
 
         agent_step = self._num_actions_taken
@@ -315,17 +355,20 @@ class DeepQAgent(object):
                     self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
     def _compute_q(self, actions, rewards, post_states, dones):
-        """
-        In the training process, this function computes the target expected reward w.r.t to the Bellman Equation.
+        """ In the training process, this function computes the target expected reward w.r.t to the Bellman Equation.
         https://en.wikipedia.org/wiki/Bellman_equation
 
         It takes a minibatch of values and computes the expected reward according to the actions done by the agent.
         It also takes into account if the action ended the environment or not.
-        :param actions: Actions done by the agent
-        :param rewards: Rewards received for doing above actions
-        :param post_states: States after doing above actions
-        :param dones: Terminal environment flag after doing above actions  
-        :return: Updated expected reward 
+        
+        Attributes:
+            actions (int): Actions done by the agent
+            rewards (float): Rewards received for doing above actions
+            post_states (Tensor[input_shape]): States after doing above actions
+            dones (bool): Terminal environment flag after doing above actions
+            
+        Returns:
+            Tensor[-1, 1], Updated expected reward 
         """
         q_hat = self._target_net.eval(post_states)
         q_targets = (1 - dones) * (self.gamma * q_hat.max(axis=1)) + rewards
@@ -333,9 +376,7 @@ class DeepQAgent(object):
         return np.array(q_targets, dtype=np.float32)
 
     def _plot_metrics(self):
-        """
-        Plot current buffers accumulated values to visualize agent learning 
-        :return: None
+        """Plot current buffers accumulated values to visualize agent learning 
         """
         if len(self._episode_q_means) > 0:
             mean_q = np.asscalar(np.mean(self._episode_q_means))
@@ -349,8 +390,7 @@ class DeepQAgent(object):
 
     @staticmethod
     def huber_loss(y, y_hat, delta):
-        """
-        Compute the Huber Loss as part of the model graph
+        """ Compute the Huber Loss as part of the model graph
     
         Huber Loss is more robust to outliers. It is defined as:
          if |y - y_hat| < delta :
@@ -358,10 +398,13 @@ class DeepQAgent(object):
         else :
             delta * |y - y_hat| - 0.5 * delta**2
     
-        :param y: Target value
-        :param y_hat: Estimated value
-        :param delta: Outliers threshold
-        :return: float
+        Attributes:
+            y (Tensor[-1, 1]): Target value
+            y_hat(Tensor[-1, 1]): Estimated value
+            delta (float): Outliers threshold
+        
+        Returns:
+            CNTK Graph Node
         """
         half_delta_squared = 0.5 * delta * delta
         error = y - y_hat
@@ -375,11 +418,14 @@ class DeepQAgent(object):
 
 
 def as_ale_input(environment):
-    """
-    Convert the Atari environment RGB output (210, 160, 3) to an ALE one (84, 84).
-    We first convert the image to a gray scale image, and resize it. 
-    :param environment: Environment to be converted
-    :return: Environment converted (84, 84)
+    """Convert the Atari environment RGB output (210, 160, 3) to an ALE one (84, 84).
+    We first convert the image to a gray scale image, and resize it.
+     
+    Attributes:
+        environment (Tensor[input_shape]): Environment to be converted
+    
+    Returns:
+         Tensor[84, 84] : Environment converted
     """
     from PIL import Image
     return np.array(Image.fromarray(environment).convert('L').resize((84, 84)))
