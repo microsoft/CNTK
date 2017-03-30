@@ -17,29 +17,29 @@ InceptionV4(input, labelDim, bnTimeConst) =
     # 147 x 147 x 64
     branch1_conv3x3 = ConvBNReLULayer{96, (3:3), (2:2), false, bnTimeConst}(conv3)
     branch1_pool    = MaxPoolingLayer{(3:3), stride = (2:2), pad = false}(conv3)
-    branch1 = Splice((branch1_conv3x3:branch1_pool), axis=3)
+    branch1_concat  = Splice((branch1_conv3x3:branch1_pool), axis=3)
     # 73 x 73 x 160
     branch2_conv3x3 = Sequential( 
         ConvBNReLULayer{64, (1:1), (1:1), true, bnTimeConst} :
         ConvBNReLULayer{96, (3:3), (1:1), false, bnTimeConst}
-    ) (branch1)
+    ) (branch1_concat)
     branch2_conv7x7_3x3 = Sequential( 
         ConvBNReLULayer{64, (1:1), (1:1), true, bnTimeConst} :
         ConvBNReLULayer{64, (7:1), (1:1), true, bnTimeConst} :
         ConvBNReLULayer{64, (1:7), (1:1), true, bnTimeConst} :
         ConvBNReLULayer{96, (3:3), (1:1), false, bnTimeConst}
-    ) (branch1)
-    branch2 = Splice((branch2_conv3x3:branch2_conv7x7_3x3), axis=3)
+    ) (branch1_concat)
+    branch2_concat  = Splice((branch2_conv3x3:branch2_conv7x7_3x3), axis=3)
     # 71 x 71 x 192
-    branch3_conv3x3 = ConvBNReLULayer{192, (3:3), (2:2), false, bnTimeConst}(branch2)
-    branch3_pool    = MaxPoolingLayer{(3:3), stride = (2:2), pad = false}(branch2)
-    branch3 = Splice((branch3_conv3x3:branch3_pool), axis=3)
+    branch3_conv3x3 = ConvBNReLULayer{192, (3:3), (2:2), false, bnTimeConst}(branch2_concat)
+    branch3_pool    = MaxPoolingLayer{(3:3), stride = (2:2), pad = false}(branch2_concat)
+    branch3_concat  = Splice((branch3_conv3x3:branch3_pool), axis=3)
 
     #
     # Inception Blocks
     #
     # 35 x 35 x 384
-    inceptionA_1 = InceptionA{bnTimeConst}(branch3)
+    inceptionA_1 = InceptionA{bnTimeConst}(branch3_concat)
     inceptionA_2 = InceptionA{bnTimeConst}(inceptionA_1)
     inceptionA_3 = InceptionA{bnTimeConst}(inceptionA_2)
     inceptionA_4 = InceptionA{bnTimeConst}(inceptionA_3)

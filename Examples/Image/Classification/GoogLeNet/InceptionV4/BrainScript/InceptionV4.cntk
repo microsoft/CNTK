@@ -19,8 +19,8 @@ DataDir     = "$RootDir$"
 OutputDir   = "$RootDir$/Output"
 ModelDir    = "$OutputDir$/Model"
 MeanDir     = "$ConfigDir$"
-stderr      = "$OutputDir$/InceptionV3"
-modelPath   = "$ModelDir$/InceptionV3"
+stderr      = "$OutputDir$/InceptionV4"
+modelPath   = "$ModelDir$/InceptionV4"
     
 ImageH    = 299
 ImageW    = 299
