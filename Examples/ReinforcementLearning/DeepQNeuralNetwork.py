@@ -18,10 +18,10 @@ from cntk.trainer import Trainer
 
 class ReplayMemory(object):
     """
-    Replay Memory keeps track of the environment dynamic.
-    We store all the transition (s(t), action, s(t+1), reward, done).
-    The replay memory allows us to efficiently sample minibatch from it, and generate the correct state representation
-    (w.r.t the number of previous frames needed)
+    ReplayMemory keeps track of the environment dynamic.
+    We store all the transitions (s(t), action, s(t+1), reward, done).
+    The replay memory allows us to efficiently sample minibatchs from it, and generate the correct state representation
+    (w.r.t the number of previous frames needed).
     """
     def __init__(self, size, sample_shape, history_length=4):
         self._pos = 0
@@ -36,7 +36,7 @@ class ReplayMemory(object):
 
     def append(self, state, action, reward, done):
         """
-        Appends the specified memory to the history.
+        Appends the specified transition to the memory.
         :param state: The state to append (should have the same shape as defined at initialization time)
         :param action: An integer representing the action done
         :param reward: An integer reprensenting the reward received for doing this action
@@ -59,7 +59,6 @@ class ReplayMemory(object):
         Generate a random minibatch. The returned indices can be retrieved using #get_state().
         See the method #minibatch() if you want to retrieve samples directly
         :param size: The minibatch size
-        :param replace: Indicate if one index can appear multiple times (True), only once (False)
         :return: Indexes of the sampled states
         """
 
@@ -71,7 +70,6 @@ class ReplayMemory(object):
         while len(indexes) < size:
             index = np.random.randint(history_len, count)
 
-            # Check if replace=False to not include same index multiple times
             if index not in indexes:
 
                 # if not wrapping over current pointer,
@@ -100,7 +98,7 @@ class ReplayMemory(object):
 
     def get_state(self, index):
         """
-        Return the specified state with the visual memory
+        Return the specified state with the replay memory
         :param index: State's index
         :return: Tensor[history_length, input_shape...]
         """
@@ -173,7 +171,7 @@ class DeepQAgent(object):
         Compute the Huber Loss as part of the model graph
     
         Huber Loss is more robust to outliers. It is defined as:
-         if |y - h_hat| < delta :
+         if |y - y_hat| < delta :
             0.5 * (y - y_hat)**2
         else :
             delta * |y - y_hat| - 0.5 * delta**2
@@ -236,7 +234,7 @@ class DeepQAgent(object):
             # actions is a sparse One Hot encoding of the action done by the agent
             q_acted = reduce_sum(self._action_value_net(environment) * actions, axis=0)
 
-            # Define the trainer with Huber Loss function
+            # Define training criterion as the Huber Loss function
             return DeepQAgent.huber_loss(q_targets, q_acted, 1.0)
 
         # Target model (used to compute target QValues in training process, updated less frequently)
@@ -312,10 +310,10 @@ class DeepQAgent(object):
         This allows the agent to train itself to better understand the environment dynamics.
         The agent will compute the expected reward for the state(t+1) 
         and update the expected reward at step t according to this.
-        <BLANKLINE>
+
         The target expectation is computed through the Target Network, which is a more stable version
         of the Action Value Network for increasing training stability
-        <BLANKLINE>
+
         The Target Network is a frozen copy of the Action Value Network updated as regular intervals
         :return: None
         """
@@ -343,11 +341,11 @@ class DeepQAgent(object):
         """
         In the training process, this function computes the target expected reward w.r.t to the Bellman Equation.
         https://en.wikipedia.org/wiki/Bellman_equation
-        <BLANKLINE>
-        It takes a minibatch of values and compute the expected reward according to the actions done by the agent.
+
+        It takes a minibatch of values and computes the expected reward according to the actions done by the agent.
         It also takes into account if the action ended the environment or not.
         :param actions: Actions done by the agent
-        :param rewards: Rewards got for doing above actions
+        :param rewards: Rewards received for doing above actions
         :param post_states: States after doing above actions
         :param dones: Terminal environment flag after doing above actions  
         :return: Updated expected reward 
