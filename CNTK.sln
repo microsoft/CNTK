@@ -1508,6 +1508,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CPPExtensibilityExamples", 
 EndProject
 Project("{888888A0-9F3D-457C-B088-3A5042F75D52}") = "PythonExamples", "Examples\PythonExamples.pyproj", "{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CNTKLibraryCSEvalUnitTests", "Tests\UnitTests\CNTKLibraryCSEvalUnitTests\CNTKLibraryCSEvalUnitTests.csproj", "{6671A4BB-89A1-47BD-88A8-6FD59AF65747}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug_CpuOnly|x64 = Debug_CpuOnly|x64
@@ -1989,6 +1991,16 @@ Global
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_CpuOnly|x64.ActiveCfg = Release|Any CPU
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release_NoOpt|x64.ActiveCfg = Release|Any CPU
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01}.Release|x64.ActiveCfg = Release|Any CPU
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Debug_CpuOnly|x64.ActiveCfg = Debug_CpuOnly|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Debug_CpuOnly|x64.Build.0 = Debug_CpuOnly|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Debug|x64.ActiveCfg = Debug|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Debug|x64.Build.0 = Debug|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Release_CpuOnly|x64.ActiveCfg = Release_CpuOnly|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Release_CpuOnly|x64.Build.0 = Release_CpuOnly|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Release_NoOpt|x64.ActiveCfg = Release_NoOpt|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Release_NoOpt|x64.Build.0 = Release_NoOpt|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Release|x64.ActiveCfg = Release|x64
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2199,5 +2211,6 @@ Global
 		{7A27E076-296E-41A8-BA76-164071251372} = {3BF56127-6F0F-41CF-BFCE-31165A0A5E73}
 		{40A8CC31-8C08-4156-AE08-E8C0FADC3509} = {7A27E076-296E-41A8-BA76-164071251372}
 		{292FF4EE-D9DD-4BA7-85F7-6A22148D1E01} = {47755F2E-D674-4175-9E38-8EA053455072}
+		{6671A4BB-89A1-47BD-88A8-6FD59AF65747} = {6F19321A-65E7-4829-B00C-3886CD6C6EDE}
 	EndGlobalSection
 EndGlobal
