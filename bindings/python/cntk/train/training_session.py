@@ -125,7 +125,7 @@ class TrainingSession(cntk_py.TrainingSession):
         trainer (:class:`~cntk.train.trainer.Trainer`): trainer
         mb_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for training
         mb_size (:class:`~cntk.cntk_py.minibatch_size_schedule` or int): minibatch size schedule for training
-        var_to_stream (dict): mapping between input variables and input streams
+        model_inputs_to_streams (dict): mapping between input variables and input streams
         max_samples (int): maximum number of samples used for training
         progress_frequency (int): frequency in samples for aggregated progress printing
         checkpoint_config (:class:`CheckpointConfig`): checkpoint configuration
@@ -133,7 +133,7 @@ class TrainingSession(cntk_py.TrainingSession):
         test_config (:class:`TestConfig`): test configuration
     '''
     def __init__(self, trainer, mb_source, mb_size,
-                 var_to_stream, max_samples,
+                 model_inputs_to_streams, max_samples,
                  progress_frequency, 
                  checkpoint_config,
                  cv_config,
@@ -145,7 +145,7 @@ class TrainingSession(cntk_py.TrainingSession):
         if mb_source is None:
             raise ValueError("Training minibatch source must not be None.")
 
-        if var_to_stream is None or len(var_to_stream) == 0:
+        if model_inputs_to_streams is None or len(model_inputs_to_streams) == 0:
             raise ValueError(
                 "Mapping between input vars and streams should not be empty.")
 
@@ -169,7 +169,7 @@ class TrainingSession(cntk_py.TrainingSession):
             self.cv_callback = cv_config.callback
 
         super(TrainingSession, self).__init__(trainer, mb_source, schedule,
-            var_to_stream, max_samples,  
+            model_inputs_to_streams, max_samples,  
             progress_frequency, 
             checkpoint_config,
             cv_config,
@@ -252,27 +252,12 @@ def minibatch_size_schedule(schedule, epoch_size=1):
         'schedule must be either a float or a list, not %s' % type(schedule))
 
 @typemap
-def training_session(training_minibatch_source=None,        # deprecated, will be removed in the next version
-                     trainer=None,                          
-                     mb_size_schedule=None,                 # deprecated, will be removed in the next version
-                     progress_printer=None,                 # deprecated, will be removed in the next version
-                     model_inputs_to_mb_source_mapping={},  # deprecated, will be removed in the next version
-                     checkpoint_filename=None,              # deprecated, will be removed in the next version
-                     checkpoint_frequency=None,             # deprecated, will be removed in the next version
-                     save_all_checkpoints=False,            # deprecated, will be removed in the next version
-                     restore=True,                          # deprecated, will be removed in the next version
-                     progress_frequency=None,               # deprecated, will be removed in the next version
-                     cv_source=None,                        # deprecated, will be removed in the next version
-                     cv_mb_size_schedule=None,              # deprecated, will be removed in the next version
-                     cv_frequency=None,                     # deprecated, will be removed in the next version
-                     max_training_samples=None,             # deprecated, will be removed in the next version
-                     # new parameters with renaming
-                     mb_source=None, 
-                     mb_size=None,
-                     var_to_stream=None, 
+def training_session(trainer,                          
+                     mb_source, 
+                     mb_size,
+                     model_inputs_to_streams, 
+                     progress_frequency=None,              
                      max_samples=None,
-                     training_config=None,
-                     progress_config=None,
                      checkpoint_config=None,
                      cv_config=None,
                      test_config=None):
@@ -280,73 +265,27 @@ def training_session(training_minibatch_source=None,        # deprecated, will b
     A factory function to create a training session object.
 
     Args: 
-        training_minibatch_source (:class:`~cntk.io.MinibatchSource`): !DEPRECATED! use mb_source instead
         trainer (:class:`~cntk.train.trainer.Trainer`): trainer
-        mb_size_schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): !DEPRECATED! use mb_size instead
-        progress_printer (list): !DEPRECATED! list of progress writers from :mod:`cntk.utils`
-        model_inputs_to_mb_source_mapping (dict): !DEPRECATED! use var_to_stream instead
-        checkpoint_filename (str): !DEPRECATED! checkpoint file name.
-        checkpoint_frequency (int): !DEPRECATED! checkpoint frequency in samples. If 0, no checkpointing takes place. 
-          If ``sys.maxsize``, a single checkpoint is taken at the end of the training.
-        save_all_checkpoints (bool): !DEPRECATED! saves all checkpoints, using ``checkpoint_filename`` as prefix and checkpoint index as a suffix.
-        restore (bool): flag, indicating whether to restore from available checkpoint before the start of the training
-        progress_frequency (int): frequency in samples for aggregated progress printing
-        cv_source (:class:`~cntk.io.MinibatchSource`): !DEPRECATED! minibatch source used for cross validation
-        cv_frequency (int): !DEPRECATED! frequency in samples for cross validation
-        cv_mb_size_schedule (:class:`~cntk.cntk_py.minibatch_size_schedule`): !DEPRECATED! minibatch schedule for cross validation
-          If ``sys.maxsize``, a single cross validation is performed at the end of training.
-        max_training_samples (int): !DEPRECATED! use max_samples instead
-
         mb_source (:class:`~cntk.io.MinibatchSource`): minibatch source used for training
         mb_size (:class:`~cntk.cntk_py.minibatch_size_schedule`): minibatch schedule for training
-        var_to_stream (dict): mapping between input variables and input streams
+        model_inputs_to_streams (dict): mapping between input variables and input streams
+        progress_frequency (int): frequency in samples for aggregated progress printing
         max_samples (int): maximum number of samples used for training
         checkpoint_config (:class:`~CheckpointConfig`): checkpoint configuration
         cv_config (:class:`~CrossValidationConfig`): cross validation configuration
+        test_config (:class:`~TestConfig`): test configuration
 
     Returns:
         Instance of :class:`~TrainingSession`
     '''
-    if checkpoint_filename is not None or   \
-       checkpoint_frequency is not None or  \
-       save_all_checkpoints != False or     \
-       restore != True or                   \
-       cv_source is not None or             \
-       cv_mb_size_schedule is not None or   \
-       training_minibatch_source is not None or  \
-       model_inputs_to_mb_source_mapping != {} or \
-       max_training_samples is not None or  \
-       cv_frequency is not None:
-        import warnings
-        warnings.warn('The provided parameters will be removed.'
-                      ' All aspects of training session can be'
-                      ' configured using config objects.')
-
-    if mb_source is None:
-        mb_source = training_minibatch_source
-
-    if mb_size is None:
-        mb_size = mb_size_schedule
-
-    if var_to_stream is None:
-        var_to_stream = model_inputs_to_mb_source_mapping
-
-    if max_samples is None:
-        max_samples = max_training_samples
-
     if checkpoint_config is None:
-        checkpoint_config = CheckpointConfig(checkpoint_filename, checkpoint_frequency,
-                                             restore, save_all_checkpoints)
+        checkpoint_config = CheckpointConfig(filename=None)
 
     if cv_config is None:
-       cv_config = CrossValidationConfig(
-                cv_source, cv_mb_size_schedule, cv_frequency)
+       cv_config = CrossValidationConfig(source=None)
 
     if test_config is None:
        test_config = TestConfig(source=None)
 
-    if progress_frequency != 0 and progress_printer is not None:
-        cntk_py._add_progress_writers(trainer, [progress_printer])
-
-    return TrainingSession(trainer, mb_source, mb_size, var_to_stream, max_samples,
+    return TrainingSession(trainer, mb_source, mb_size, model_inputs_to_streams, max_samples,
                            progress_frequency, checkpoint_config, cv_config, test_config)

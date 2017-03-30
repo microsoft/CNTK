@@ -10,7 +10,7 @@
 from __future__ import division
 import numpy as np
 from ..ops.functions import Function
-from ..variables import Variable, Record
+from ..variables import Variable, Record, Constant
 from ..ops import parameter, input, placeholder, combine
 from ..ops import times, element_times, convolution, convolution_transpose, pooling, unpooling, batch_normalization, dropout, splice, reshape, sequence, softmax, tanh, reduce_sum, reduce_mean, sqrt
 from cntk.internal import _as_tuple
@@ -34,7 +34,7 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
 
     Example:
      >>> f = Dense(5, activation=C.relu)
-     >>> x = Input(3)
+     >>> x = input(3)
      >>> h = f(x)
      >>> h.shape
          (5,)
@@ -141,7 +141,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     Example:
      >>> # learnable embedding
      >>> f = Embedding(5)
-     >>> x = Input(3)
+     >>> x = input(3)
      >>> e = f(x)
      >>> e.shape
          (5,)
@@ -153,18 +153,15 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
      >>> f.E.value
          array([[ 0.5,  0.3,  0.1,  0.4,  0.2],
                 [ 0.7,  0.6,  0.3,  0.2,  0.9]], dtype=float32)
-     >>> x = Input(2, is_sparse=True)
+     >>> x = input(2, is_sparse=True)
      >>> e = f(x)
      >>> e.shape
          (5,)
      >>> e(C.Value.one_hot([[1], [0], [0], [1]], num_classes=2))
-     array([[[ 0.7,  0.6,  0.3,  0.2,  0.9]],
-     <BLANKLINE>
-            [[ 0.5,  0.3,  0.1,  0.4,  0.2]],
-     <BLANKLINE>
-            [[ 0.5,  0.3,  0.1,  0.4,  0.2]],
-     <BLANKLINE>
-            [[ 0.7,  0.6,  0.3,  0.2,  0.9]]], dtype=float32)
+     array([[ 0.7,  0.6,  0.3,  0.2,  0.9],
+            [ 0.5,  0.3,  0.1,  0.4,  0.2],
+            [ 0.5,  0.3,  0.1,  0.4,  0.2],
+            [ 0.7,  0.6,  0.3,  0.2,  0.9]], dtype=float32)
 
     Args:
      shape (`int` or `tuple` of `ints`): vector or tensor dimension of the output of this layer
@@ -297,7 +294,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
     Example:
      >>> # 2D convolution of 5x4 receptive field with output feature-map depth 128:
      >>> f = Convolution((5,4), 128, activation=C.relu)
-     >>> x = Input((3,480,640))  # 3-channel color image
+     >>> x = input((3,480,640))  # 3-channel color image
      >>> h = f(x)
      >>> h.shape
          (128, 476, 637)
@@ -306,7 +303,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
 
      >>> # 2D convolution over a one-channel black-and-white image, padding, and stride 2 along width dimension
      >>> f = Convolution((3,3), 128, reduction_rank=0, pad=True, strides=(1,2), activation=C.relu)
-     >>> x = Input((480,640))
+     >>> x = input((480,640))
      >>> h = f(x)
      >>> h.shape
          (128, 480, 320)
@@ -316,7 +313,7 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
      >>> # 3D convolution along dynamic axis over a sequence of 2D color images
      >>> from cntk.layers.typing import Sequence, Tensor
      >>> f = Convolution((2,5,4), 128, sequential=True, activation=C.relu) # over 2 consecutive frames
-     >>> x = Input(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
+     >>> x = input(**Sequence[Tensor[3,480,640]])  # a variable-length video of 640x480 RGB images
      >>> h = f(x)
      >>> h.shape   # this is the shape per video frame: 637x476 activation vectors of length 128 each
          (128, 476, 637)
@@ -652,7 +649,7 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
     Example:
      >>> # 2D convolution transpose of 3x4 receptive field with output feature-map depth 128:
      >>> f = ConvolutionTranspose((3,4), 128, activation=C.relu)
-     >>> x = Input((3,480,640))  # 3-channel color image
+     >>> x = input((3,480,640))  # 3-channel color image
      >>> h = f(x)
      >>> h.shape
          (128, 482, 643)
@@ -863,7 +860,7 @@ def MaxPooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     Example:
      >>> f = MaxPooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
-     >>> h = Input((32,240,320))  # e.g. 32-dim feature map
+     >>> h = input((32,240,320))  # e.g. 32-dim feature map
      >>> hp = f(h)
      >>> hp.shape  # spatial dimension has been halved due to stride, and lost one due to 3x3 window without padding
          (32, 119, 159)
@@ -915,7 +912,7 @@ def AveragePooling(filter_shape,  # shape of receptive field, e.g. (3,3)
 
     Example:
      >>> f = AveragePooling((3,3), strides=2)  # reduce dimensionality by 2, pooling over windows of 3x3
-     >>> h = Input((32,240,320))  # e.g. 32-dim feature map
+     >>> h = input((32,240,320))  # e.g. 32-dim feature map
      >>> hp = f(h)
      >>> hp.shape  # spatial dimension has been halved due to stride, and lost one due to 3x3 window without padding
          (32, 119, 159)
@@ -1036,11 +1033,11 @@ def Dropout(dropout_rate=None, keep_prob=None, name=''):
 
     Example:
      >>> f = Dropout(0.2)   # "drop 20% of activations"
-     >>> h = Input(3)
+     >>> h = input(3)
      >>> hd = f(h)
 
      >>> f = Dropout(keep_prob=0.8)   # "keep 80%"
-     >>> h = Input(3)
+     >>> h = input(3)
      >>> hd = f(h)
 
     Args:

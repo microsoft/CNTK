@@ -21,9 +21,9 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers import Input, Sequential
+        >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = Input(**Sequence[Tensor[2]])
+        >>> x = C.input(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
         >>> x0
         array([[[ 0.,  1.],
@@ -34,9 +34,9 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         ...                            splice])                            # concatenate them
         >>> y = make_trigram(x)
         >>> y(x0)
-        array([[[ 2.,  3.,  0.,  1.,  0.,  0.],
+        [array([[ 2.,  3.,  0.,  1.,  0.,  0.],
                 [ 4.,  5.,  2.,  3.,  0.,  1.],
-                [ 0.,  0.,  4.,  5.,  2.,  3.]]], dtype=float32)
+                [ 0.,  0.,  4.,  5.,  2.,  3.]], dtype=float32)]
         >>> #    --(t-1)--  ---t---  --(t+1)--      
 
     Args:
@@ -84,9 +84,9 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers import Input, Sequential
+        >>> from cntk.layers import Sequential
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = Input(**Sequence[Tensor[2]])
+        >>> x = C.input(**Sequence[Tensor[2]])
         >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))
         >>> x0
         array([[[ 0.,  1.],
@@ -185,8 +185,8 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
      >>> from cntk.layers.typing import *
 
      >>> # a plain sequence-to-sequence model in training (where label length is known)
-     >>> en = Input(**SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
-     >>> fr = Input(**SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
+     >>> en = C.input(**SequenceOver[Axis('m')][SparseTensor[20000]])  # English input sentence
+     >>> fr = C.input(**SequenceOver[Axis('n')][SparseTensor[30000]])  # French target sentence
 
      >>> embed = Embedding(300)
      >>> encoder = Recurrence(LSTM(500), return_full_state=True)
@@ -309,7 +309,7 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     Note: ``Recurrence()`` is the equivalent to what in functional programming is often called ``scanl()``.
 
     Example:
-     >>> from cntk.layers import Input, Constant, Sequential
+     >>> from cntk.layers import Sequential
      >>> from cntk.layers.typing import Tensor, Sequence
 
      >>> # a recurrent LSTM layer
@@ -327,16 +327,16 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
      ('defaultBatchAxis', 'defaultDynamicAxis')
 
      >>> # cumulative sum over inputs
-     >>> x = Input(**Sequence[Tensor[2]])
+     >>> x = C.input(**Sequence[Tensor[2]])
      >>> x0 = np.array([[   3,    2],
      ...                [  13,   42],
      ...                [-100, +100]])
      >>> cum_sum = Recurrence(C.plus, initial_state=Constant([0, 0.5]))
      >>> y = cum_sum(x)
      >>> y(x0)
-     array([[[   3. ,    2.5],
+     [array([[   3. ,    2.5],
              [  16. ,   44.5],
-             [ -84. ,  144.5]]], dtype=float32)
+             [ -84. ,  144.5]], dtype=float32)]
 
     Args:
      step_function (:class:`~cntk.ops.functions.Function` or equivalent Python function):
@@ -425,7 +425,7 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
      ...                                    Dense(1, activation=sigmoid) ])
 
      >>> # element-wise max-pooling over an input sequence
-     >>> x = Input(**Sequence[Tensor[2]])
+     >>> x = C.input(**Sequence[Tensor[2]])
      >>> x0 = np.array([[ 1, 2 ],
      ...                [ 6, 3 ],
      ...                [ 4, 2 ],
