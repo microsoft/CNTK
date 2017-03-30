@@ -2,7 +2,6 @@ from argparse import ArgumentParser
 
 import gym
 import numpy as np
-import six
 from cntk import Signature, TensorBoardProgressWriter
 from cntk.core import Value
 from cntk.device import set_default_device, cpu, gpu
@@ -40,7 +39,7 @@ class ReplayMemory(object):
         :param state: The state to append (should have the same shape as defined at initialization time)
         :param action: An integer representing the action done
         :param reward: An integer reprensenting the reward received for doing this action
-        :param is_terminal: A boolean specifying if this state is a terminal (episode has finished)
+        :param done: A boolean specifying if this state is a terminal (episode has finished)
         :return:
         """
         assert state.shape == self._state_shape, \
@@ -400,9 +399,11 @@ if __name__ == '__main__':
     agent = DeepQAgent((4, 84, 84), env.action_space.n, device_id=args.device)
 
     # Train
-    current_state = as_ale_input(env.reset())
+    current_step = 0
     max_steps = args.epoch * 250000
-    for step in six.moves.range(max_steps):
+    current_state = as_ale_input(env.reset())
+
+    while current_step < max_steps:
         action = agent.act(current_state)
         new_state, reward, done, _ = env.step(action)
         new_state = as_ale_input(new_state)
@@ -417,3 +418,5 @@ if __name__ == '__main__':
 
         if done:
             current_state = as_ale_input(env.reset())
+
+        current_step += 1
