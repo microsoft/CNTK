@@ -5,13 +5,15 @@
 # ==============================================================================
 
 '''
-The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.functions.Function.update_signature()` and CNTK @:class:`~cntk.functions.Function` type signatures.
+The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.functions.Function.update_signature` and type signatures for the CNTK :class:`~cntk.functions.Function` decorator.
 
-The type of a CNTK :class:`~cntk.variables.Variable` is defined by 5 properties: `shape`, `dynamic_axes`, `is_sparse`, `dtype`, and `needs_gradient`.
+The type of a CNTK :class:`~cntk.variables.Variable` is defined by five properties: `shape`, `dynamic_axes`, `is_sparse`, `dtype`, and `needs_gradient`.
 Some API functions accept these variables as independent arguments, e.g. :class:`~cntk.Input`.
 The typing module provides a Pythonic way to group the variable type properties into a data structure :class:`~cntk.variables.Variable.Type`.
 
-Python type syntax can be used to create such a record.
+Python type syntax can be used to create such a record for the three main properties, `shape`, `dynamic_axes`, and `is_sparse`,
+using :type:`~cntk.layers.typing.Tensor`,  :type:`~cntk.layers.typing.SparseTensor`,  :type:`~cntk.layers.typing.ParameterTensor`,
+:type:`~cntk.layers.typing.Sequence`,  and :type:`~cntk.layers.typing.SequenceOver`.
 
 Example:
     >>> # Tensor[...] denotes a data variable (with implied batch dimension)
@@ -74,13 +76,17 @@ Example:
     ... def criterion(input, label):
     ...     output = model(input)
     ...     return cross_entropy_with_softmax(output, label)
-    >>> debugging.dump_signature(criterion, 'criterion')
-    criterion(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
+    >>> debugging.dump_signature(criterion)
+    Function(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
 
 Using Python type syntax, besides being more concise and easier to memorize, has the added benefit of beign able to more easily talk about types of CNTK objects,
 very similar to how one would talk about the types of Python objects (e.g. `List[Tuple[int,float]]`).
 This is particularly beneficial for the functional-programming style of the Layers library, where functions are also reasoned about by their types.
 In functional programming, it has been observed that getting the types of functions right is a critical step towards correct code.
+
+Note that the type syntax does not allow to specify the special-purpose type property `needs_gradient`,
+nor to `dtype` which instead should be specified as a global setting.
+If these properties are needed, please use construct a :class:`~cntk.variables.Variable.Type` directly.
 '''
 
 from ..axis import Axis
@@ -159,6 +165,7 @@ def Signature(*args, **kwargs):
      @Function
      def f(x: Tensor[42]):
          return sigmoid(x)
+
      # Python 2.7:
      @Function
      @Signature(Tensor[42])

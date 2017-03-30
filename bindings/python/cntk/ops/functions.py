@@ -62,9 +62,9 @@ class Function(cntk_py.Function):
 
     If you use Python 3, Functions with types are declared using Python annotation syntax, e.g.::
 
-      `@Function
+      @Function
       def f(x:Tensor[13]):
-          return x * x`
+          return x * x
 
     If you are working with Python 2.7, use CNTK's `@:class:~cntk.layers.typing.Signature` decorator instead::
 
@@ -76,7 +76,8 @@ class Function(cntk_py.Function):
       >>> debugging.dump_signature(f)
       Function(x: Tensor[13]) -> Tensor[13]
 
-    ``make_block=True`` is used to implement `@:func:~cntk.layers.blocks.BlockFunction()`. If given the result will be wrapped
+    ``make_block=True`` is an internal parameter used to implement `@:func:~cntk.layers.blocks.BlockFunction()`.
+    If `BlockFunction()` passes `True``, then the result will be wrapped
     in :func:``~cntk.ops.as_block()``, using the supplied ``op_name`` and ``name`` parameters, which are otherwise ignored.
     '''
 
