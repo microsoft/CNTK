@@ -938,7 +938,18 @@ namespace CNTK
         explicit Axis(int staticAxisIdx)
             : m_staticAxisIdx(staticAxisIdx), m_isOrderedDynamicAxis(false)
         {
-            m_name = StaticAxisNamePrefix + std::to_wstring(staticAxisIdx);
+            if (IsStaticAxis())
+                m_name = StaticAxisNamePrefix + std::to_wstring(staticAxisIdx);
+            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForAllStaticAxes)
+                m_name = L"AllStaticAxes";
+            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForUnknownAxes)
+                m_name = L"UnknownAxes";
+            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForAllAxes)
+                m_name = L"AllAxes";
+            else if (m_staticAxisIdx == SentinelStaticAxisIndexValueForDynamicAxes)
+                m_name = StaticAxisNamePrefix + L"DynamicAxisSentinel";
+            else
+                LogicError("Unknown sentinel value for Axis");
         }
 
         ///
@@ -1034,6 +1045,11 @@ namespace CNTK
         /// Name of 'this' axis
         ///
         const std::wstring& Name() const { return m_name; }
+
+        ///
+        /// Returns a string representation for this Axis.
+        ///
+        CNTK_API std::wstring AsString() const;
 
         ///
         /// Default constructor; results in an invalid axis object.
@@ -2985,7 +3001,9 @@ namespace CNTK
         }
 
         ///
-        /// Returns all Input variables of 'this' Function.
+        /// Returns all inputs of 'this' Function.
+        /// Note that inputs here denotes all Variables that feed into this Function including any
+        /// Parameter/Constant Variables that are children of 'this' Function.
         ///
         std::vector<Variable> Inputs(bool pythonOperandOrder = false) const
         {
@@ -5278,6 +5296,7 @@ namespace CNTK
         /// The firstUpdatesToWrite arguments only apply on arithemetic schedule. If specified, the first
         /// 'firstUpdatesToWrite' updates will be written explicitly before using an arithmetic schedule.
         ///
+        // TODO: Encapsulate (freq, firstToWrite) as an update schedule type.
         CNTK_API ProgressWriter(size_t trainingUpdateWriteFrequency, size_t trainingFirstUpdatesToWrite,
                                 size_t testUpdateWriteFrequency, size_t testFirstUpdatesToWrite,
                                 size_t distributedSyncUpdateWriteFrequency, size_t distributedSyncFirstUpdatesToWrite);
