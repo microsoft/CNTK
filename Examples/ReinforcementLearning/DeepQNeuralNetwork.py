@@ -226,6 +226,7 @@ class DeepQAgent(object):
                 Dense(256, init=he_uniform(scale=0.01)),
                 Dense(nb_actions, activation=None, init=he_uniform(scale=0.01))
             ])
+        self._action_value_net.update_signature(Tensor[input_shape])
 
         # Define the loss, using Huber Loss (More robust to outliers)
         @Function
