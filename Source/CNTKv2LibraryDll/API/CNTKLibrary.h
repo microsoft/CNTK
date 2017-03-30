@@ -131,6 +131,26 @@ namespace CNTK
         }
     }
 
+    ///
+    /// Enumeration type representing logging verbosity levels.
+    ///
+    enum class TraceLevel : unsigned int
+    {
+        Error = 0,
+        Warning = 1,
+        Info = 2
+    };
+
+    ///
+    /// Specifies global logging verbosity level.
+    ///
+    CNTK_API void SetTraceLevel(TraceLevel value);
+
+    ///
+    /// Returns current logging verbosity level.
+    ///
+    CNTK_API TraceLevel GetTraceLevel();
+
     /// A collection of additional information needed for the distributed trainer to aggregate the gradients
     struct MinibatchInfo
     {
@@ -4786,15 +4806,6 @@ namespace CNTK
     /// 
     struct MinibatchSourceConfig
     {
-        // TODO: This is general enough and be hoisted out once there are specific use-cases outside of
-        // configuring a MinibatchSource.
-        enum TraceLevel : unsigned int
-        {
-            Error = 0,
-            Warning = 1,
-            Info = 2
-        };
-
         ///
         /// Creates a new minibatch source configuration, with enabled randomization and
         /// the randomization window set to DefaultRandomizationWindowInChunks when 'randomize' is
@@ -4835,7 +4846,7 @@ namespace CNTK
         ///
         /// Output verbosity level.
         ///
-        TraceLevel traceLevel { TraceLevel::Warning };
+        TraceLevel traceLevel{ GetTraceLevel() };
 
         ///
         /// Truncation length in samples, non-zero value enables the truncation (only applicable for BPTT,

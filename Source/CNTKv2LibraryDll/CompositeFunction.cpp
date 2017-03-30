@@ -311,7 +311,8 @@ namespace CNTK
             }
             else 
             {
-                if (Internal::GetComputationNetworkTraceLevel() > 0) {
+                if (GetTraceLevel() >= TraceLevel::Warning) 
+                {
                     // TODO: all logging functionality should be refactored to live in a logging utility class. 
                     fprintf(stderr, "WARNING: no state information found for the stateful function (%ls) "
                         "when deserializing from a dictionary (version=%zu). "

@@ -263,6 +263,8 @@ namespace CNTK
 
         CNTK_API void SetGPUMemoryAllocationTraceLevel(int traceLevel);
 
+        CNTK_API void SetMathLibTraceLevel(int traceLevel);
+
         CNTK_API void ForceDeterministicAlgorithms();
         CNTK_API bool ShouldForceDeterministicAlgorithms();
 

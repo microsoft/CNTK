@@ -960,7 +960,7 @@ namespace CNTK
 
         if (version < 4 && op == PrimitiveOpType::BatchNormalization)
         {
-            if (Internal::GetComputationNetworkTraceLevel() > 0)
+            if (GetTraceLevel() >= TraceLevel::Warning)
             {
                 // TODO: all logging functionality should be refactored to live in a logging utility class. 
                 fprintf(stderr, "WARNING: the dictionary (version=%zu) does not contain a required "
