@@ -321,21 +321,25 @@ class DeepQAgent(object):
         The Target Network is a frozen copy of the Action Value Network updated as regular intervals
         :return: None
         """
-        if (self._action_taken % self._train_interval) == 0:
-            pre_states, actions, post_states, rewards, dones = self._memory.minibatch(self._minibatch_size)
-            q_value_targets = self._compute_q(actions, rewards, post_states, dones)
 
-            self._trainer.train_minibatch(
-                self._trainer.loss_function.argument_map(
-                    environment=pre_states,
-                    actions=Value.one_hot(actions.reshape(-1, 1).tolist(), self.nb_actions),
-                    q_targets=q_value_targets.reshape(-1, 1)
+        agent_step = self._action_taken
+
+        if agent_step >= self._train_after:
+            if (agent_step % self._train_interval) == 0:
+                pre_states, actions, post_states, rewards, dones = self._memory.minibatch(self._minibatch_size)
+                q_value_targets = self._compute_q(actions, rewards, post_states, dones)
+
+                self._trainer.train_minibatch(
+                    self._trainer.loss_function.argument_map(
+                        environment=pre_states,
+                        actions=Value.one_hot(actions.reshape(-1, 1).tolist(), self.nb_actions),
+                        q_targets=q_value_targets.reshape(-1, 1)
+                    )
                 )
-            )
 
-        # Update the Target Network if needed
-        if (self._action_taken % self._target_update_interval) == 0:
-            self._target_net = self._action_value_net.clone(CloneMethod.freeze)
+                # Update the Target Network if needed
+                if (agent_step % self._target_update_interval) == 0:
+                    self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
     def _compute_q(self, actions, rewards, post_states, dones):
         """
@@ -408,9 +412,7 @@ if __name__ == '__main__':
         reward = np.clip(reward, -1, 1)
 
         agent.observe(current_state, action, reward, done)
-
-        if step > 100000:
-            agent.train()
+        agent.train()
 
         current_state = new_state
 
