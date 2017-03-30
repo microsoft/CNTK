@@ -31,11 +31,24 @@ namespace CNTKLibraryCSEvalUnitTests
             var var1Clone = model1Clone.Output;
             var var2 = model2.Output;
 
-            // Test equality of variable
+            // Test equality operation defined in SWIG
             var newVar1 = var1;
-            Assert.AreEqual(var1, newVar1);
-            Assert.AreNotEqual(var1, var1Clone);
-            Assert.AreNotEqual(var1, var2);
+            Assert.IsTrue(var1 == newVar1);
+            Assert.IsFalse(var1 == var1Clone);
+            Assert.IsFalse(var1 == var2);
+            Assert.IsFalse(var1 != newVar1);
+            Assert.IsTrue(var1 != var1Clone);
+            Assert.IsTrue(var1 != var2);
+            Assert.IsTrue(var1.Equals((System.Object)newVar1));
+            Assert.IsFalse(var1.Equals((System.Object)var2));
+            // Test non-Variable oject.
+            Assert.IsFalse(var1.Equals(new System.Object()));
+            Assert.IsFalse(var1.Equals(model1));
+            Assert.IsTrue(var1.Equals(newVar1));
+            Assert.IsFalse(var1.Equals(var2));
+            Assert.AreEqual(var1.GetHashCode(), newVar1.GetHashCode());
+            Assert.AreNotEqual(var1.GetHashCode(), var2.GetHashCode());
+
 
             // Test varaible properties
 
