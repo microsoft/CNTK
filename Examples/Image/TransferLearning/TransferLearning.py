@@ -159,7 +159,7 @@ def eval_single_image(loaded_model, image_path, image_width, image_height):
     output = loaded_model.eval(arguments)
 
     # return softmax probabilities
-    sm = softmax(output[0, 0])
+    sm = softmax(output[0])
     return sm.eval()
 
 
@@ -188,11 +188,11 @@ def eval_test_images(loaded_model, output_file, test_map_file, image_width, imag
 
                 np.savetxt(results_file, probs[np.newaxis], fmt="%.3f")
                 if pred_count % 100 == 0:
-                    print("Processed {0} samples ({1} correct)".format(pred_count, (correct_count / pred_count)))
+                    print("Processed {0} samples ({1} correct)".format(pred_count, (float(correct_count) / pred_count)))
                 if pred_count >= num_images:
                     break
 
-    print ("{0} of {1} prediction were correct {2}.".format(correct_count, pred_count, (correct_count / pred_count)))
+    print ("{0} of {1} prediction were correct {2}.".format(correct_count, pred_count, (float(correct_count) / pred_count)))
 
 
 if __name__ == '__main__':
