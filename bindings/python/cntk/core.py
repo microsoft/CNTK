@@ -35,7 +35,7 @@ class NDArrayView(cntk_py.NDArrayView):
          should be put on
     '''
 
-    def __init__(self, shape, data_type, device=None):
+    def __init__(self, shape, data_type=np.float32, device=None):
         from cntk.internal import sanitize_shape, sanitize_dtype_cntk
         shape = sanitize_shape(shape)
         data_type = sanitize_dtype_cntk(data_type)

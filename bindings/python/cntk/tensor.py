@@ -231,3 +231,31 @@ def _add_asarray(klass):
                          (klass, member_name))
 
     setattr(klass, member_name, ArrayMixin.__dict__[member_name])
+
+# --- experimental direct-mode support for simple NDArrayView operations ---
+
+from cntk.core import NDArrayView
+
+class NDArrayViewOpsMixin(object):
+    '''
+    This class defines math overloads so that CNTK NDArrayViews can be operated on in math
+    expressions.
+    '''
+
+    # operator overload for (+) where self is the left operand
+    def __add__(self, other):
+        return NDArrayView.numeric_operation([self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
+
+    def __iadd__(self, other):
+        self.numeric_operation_in_place(1.0, [other], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+        return self
+
+def _add_ndarrayview_ops(klass):
+    for op_name in ['add', 'iadd']:
+        overload_name = '__%s__' % op_name
+
+        if getattr(klass, overload_name, None):
+            raise ValueError('class "%s" already has operator overload "%s"' %
+                             (klass, overload_name))
+
+        setattr(klass, overload_name, NDArrayViewOpsMixin.__dict__[overload_name])

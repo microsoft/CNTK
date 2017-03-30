@@ -370,6 +370,18 @@ namespace CNTK
         return result->NumericOperationInPlace(0.0/*nothing to add to*/, inputs, alpha, op, (int)Microsoft::MSR::CNTK::ElementWiseOperator::opSum/*not reducing, actually*/);
     }
 
+    NDArrayViewPtr NDArrayView::MatrixProductInPlace(double beta, bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha)
+    {
+        beta; transC; transA; inputB; transB; alpha;
+        return inputA;
+    }
+
+    /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank)
+    {
+        transA; inputB; transB; alpha;
+        return inputA;
+    }
+
     NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const
     {
         auto rank = Shape().Rank();

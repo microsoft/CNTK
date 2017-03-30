@@ -711,6 +711,21 @@ namespace CNTK
         CNTK_API static NDArrayViewPtr NumericOperation(const std::vector<NDArrayViewPtr>& inputs, double alpha, int op);
 
         ///
+        /// Performs a numeric operation in-place, *this = beta * *this + alpha * trC(alpha * trA(inputA) * trB(inputB)).
+        /// where trX is transposition if transX is true.
+        /// *this must have the correct output shape.
+        /// For beta=0, *this may contain uninitialized/undefined values.
+        ///
+        CNTK_API NDArrayViewPtr MatrixProductInPlace(double beta, bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha);
+
+        ///
+        /// Performs the matrix product, returning NDArrayView(beta * *this + alpha * trC(alpha * trA(inputA) * trB(inputB)))
+        /// where trX is transposition if transX is true.
+        /// For beta=0, *this may contain uninitialized/undefined values.
+        ///
+        CNTK_API static NDArrayViewPtr MatrixProduct(const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank);
+
+        ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data
         /// corresponding to the specified slice of 'this' view.
         ///

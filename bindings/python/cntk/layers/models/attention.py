@@ -55,9 +55,10 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
         # --- decoder state
         # project decoder hidden state
         h_dec_proj = attn_proj_dec(h_dec)
-        tanh_out = tanh(h_dec_proj + h_enc_proj)  # (attention_span, attention_dim)
-        u = attn_proj_tanh(tanh_out)              # (attention_span, 1)
-        u_masked = u + (h_enc_valid - 1) * 50     # logzero-out the unused elements for the softmax denominator  TODO: use a less arbitrary number than 50
+        tanh_out = tanh(h_dec_proj + h_enc_proj)     # (attention_span, attention_dim)
+        u = attn_proj_tanh(tanh_out)                 # (attention_span, 1)
+        infinity = 50                                # This is a somewhat gross approximation. TODO: use a less arbitrary number than 50
+        u_masked = u + (h_enc_valid - 1) * infinity  # logzero-out the unused elements for the softmax denominator
         attention_weights = softmax(u_masked, axis=attention_axis) #, name='attention_weights')
         attention_weights = Label('attention_weights')(attention_weights)
         # now take weighted sum over the encoder state vectors
