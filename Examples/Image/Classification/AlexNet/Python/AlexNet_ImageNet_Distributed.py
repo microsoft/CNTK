@@ -18,7 +18,7 @@ from cntk import *
 from cntk.train.distributed import *
 from cntk.io import ImageDeserializer, MinibatchSource, StreamDef, StreamDefs, FULL_DATA_SWEEP
 import cntk.io.transforms as xforms
-from cntk.layers import Placeholder, Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
+from cntk.layers import Convolution2D, Activation, MaxPooling, Dense, Dropout, default_options, Sequential
 from cntk.initializer import normal
 
 # default Paths relative to current python file.
@@ -69,7 +69,7 @@ def create_image_mb_source(map_file, is_training, total_number_of_samples):
 # where a_{x,y}^i is the activity of a neuron comoputed by applying kernel i at position (x,y)
 # N is the total number of kernals, n is half normalization width.
 def LocalResponseNormalization(k, n, alpha, beta, name=''):
-    x = Placeholder(name='lrn_arg')
+    x = cntk.placeholder(name='lrn_arg')
     x2 = cntk.square(x)
     # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
     x2s = cntk.reshape(x2, (1, cntk.InferredDimension), 0, 1)

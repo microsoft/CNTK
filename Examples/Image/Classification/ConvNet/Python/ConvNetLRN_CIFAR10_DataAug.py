@@ -52,7 +52,7 @@ def create_reader(map_file, mean_file, is_training):
 # where a_{x,y}^i is the activity of a neuron comoputed by applying kernel i at position (x,y)
 # N is the total number of kernals, n is half normalization width.
 def LocalResponseNormalization(k, n, alpha, beta, name=''):
-    x = cntk.layers.Placeholder(name='lrn_arg')
+    x = cntk.placeholder(name='lrn_arg')
     x2 = cntk.square(x)
     # reshape to insert a fake singleton reduction dimension after the 3th axis (channel axis). Note Python axis order and BrainScript are reversed.
     x2s = cntk.reshape(x2, (1, cntk.InferredDimension), 0, 1)

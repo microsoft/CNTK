@@ -1,10 +1,12 @@
 import numpy as np
-from cntk import cntk_py, NDArrayView
-from cntk.device import DeviceDescriptor, use_default_device
-from .tensor import TensorOpsMixin
-from cntk.internal import typemap, sanitize_precision, sanitize_value, \
-        sanitize_shape, sanitize_dtype_cntk
 
+from . import cntk_py
+from .core import NDArrayView
+from .device import DeviceDescriptor, use_default_device
+from .tensor import TensorOpsMixin
+from .default_options import get_default_override, default_override_or
+from .internal import typemap, sanitize_precision, sanitize_value, \
+        sanitize_shape, sanitize_dtype_cntk
 
 class Record(dict):
     '''
@@ -255,12 +257,25 @@ class Variable(VariableMixin, TensorOpsMixin, cntk_py.Variable):
 
         return cntk_py.Constant(self)
 
-
 class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
     '''
     A trainable parameter. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that can be modified by a training
     procedure.
+
+    Example:
+         >>> p = C.Parameter((13,42,7), init=C.glorot_uniform())
+         >>> p.shape
+             (13, 42, 7)
+
+         >>> # example with inferred dimensions
+         >>> W = C.Parameter((C.InferredDimension, 42), init=C.glorot_uniform())
+         >>> W.shape   # -1 indicates dimension yet to be inferred
+             (-1, 42)
+         >>> x = C.input(13)
+         >>> y = C.times(x, W)  # times operation now knows that the input dimension of W must be 13
+         >>> W.shape          # hence, the shape has been updated
+             (13, 42)
 
     Args:
        shape (`tuple`): the shape of the tensor holding the parameters
@@ -275,24 +290,33 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
 
     Parameters are Variables and therefore they inherit all their methods.
     '''
-    def __init__(self, shape=None, init=None, dtype=None,
+    def __init__(self, shape=None, init=None, dtype=default_override_or(np.float32),
                  device=None, name=''):
         if not device:
             device = use_default_device()
 
+        if init is None:
+            init = 0
+
+        pure = get_default_override(None, pure=default_override_or(False))
+        if pure:
+            raise TypeError('parameters cannot be created inside a @Function def')
+
+        from _cntk_py import constant_initializer
+        if np.isscalar(init):
+            init = constant_initializer(init)
+            if not shape:
+                shape = ()
+
+        dtype = get_default_override(Parameter, dtype=dtype)
         if dtype is not None:
             if isinstance(init, np.ndarray) and dtype != init.dtype:
                 init = np.array(init, dtype=dtype)
         else:
-            if np.isscalar(init) and not shape:
-                shape = ()
             if isinstance(init, np.ndarray):
                 dtype = init.dtype
             else:
                 dtype = np.float32
-
-        if init is None:
-            init = 0
 
         if isinstance(init, (np.ndarray, list, float, int)):
             ndav = sanitize_value(shape, init, dtype, device)
@@ -326,7 +350,13 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     A constant value. It can be a scalar, vector, matrix, or tensor
     of floating point numbers that cannot be modified.
 
-    A Constant is a :class:`~cntk.ops.variables.Variable` and therefore inherits all its methods.
+    A Constant is a :class:`~cntk.variables.Variable` and therefore inherits all its methods.
+
+    Example:
+         >>> c = C.Constant(1, (2,3))
+         >>> c.value
+             array([[ 1.,  1.,  1.],
+                    [ 1.,  1.,  1.]], dtype=float32)
 
     Args:
        value (`np.ndarray` or `list` or `float` or `int`): Initial value.
@@ -335,7 +365,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
        device (:class:`~cntk.device.DeviceDescriptor`): the device on which the values should reside.
        name (`str`): an optional name for this constant.
     '''
-    def __init__(self, value=None, shape=None, dtype=None, device=None, name=''):
+    def __init__(self, value=None, shape=None, dtype=default_override_or(np.float32), device=None, name=''):
 
         if not device:
             device = use_default_device()
@@ -343,6 +373,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
             shape = ()
 
+        dtype = get_default_override(Constant, dtype=dtype)
         if dtype is not None:
             if isinstance(value, np.ndarray) and dtype != value.dtype:
                 value = np.array(value, dtype=dtype)
