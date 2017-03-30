@@ -9,6 +9,7 @@
 %include <std_shared_ptr.i>
 %include <windows.i>
 %include <attribute.i>
+#include <exception.i>
 
 %{
     #include "CNTKLibrary.h"
@@ -28,21 +29,13 @@
 %template(FloatVectorVector) std::vector<std::vector<float>>;
 %template(DoubleVectorVector) std::vector<std::vector<double>>;
 
-SWIG_STD_VECTOR_ENHANCED(size_t)
 %template(SizeTVector) std::vector<size_t>;
-SWIG_STD_VECTOR_ENHANCED(double)
 %template(DoubleVector) std::vector<double>;
-SWIG_STD_VECTOR_ENHANCED(float)
 %template(FloatVector) std::vector<float>;
-SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
 %template(VariableVector) std::vector<CNTK::Variable>;
-SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
 %template(AxisVector) std::vector<CNTK::Axis>;
-SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
 %template(NDArrayViewPtrVector) std::vector<std::shared_ptr<CNTK::NDArrayView>>;
-SWIG_STD_VECTOR_ENHANCED(bool)
 %template(BoolVector) std::vector<bool>;
-SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %template(DeviceDescriptorVector) std::vector<CNTK::DeviceDescriptor>;
 
 %template(UnorderedMapVariableValuePtr) std::unordered_map<CNTK::Variable, std::shared_ptr<CNTK::Value>>;

@@ -1,5 +1,13 @@
 %include <arrays_csharp.i>
 %include "std_unordered_map.i"
+SWIG_STD_VECTOR_ENHANCED(size_t)
+SWIG_STD_VECTOR_ENHANCED(double)
+SWIG_STD_VECTOR_ENHANCED(float)
+SWIG_STD_VECTOR_ENHANCED(CNTK::Variable)
+SWIG_STD_VECTOR_ENHANCED(CNTK::Axis)
+SWIG_STD_VECTOR_ENHANCED(std::shared_ptr<CNTK::NDArrayView>)
+SWIG_STD_VECTOR_ENHANCED(bool)
+SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
 %include "managed_language_base.i"
 
 %rename (GetAllDevices) CNTK::DeviceDescriptor::AllDevices;
