@@ -149,7 +149,7 @@ class LinearEpsilonAnnealingExplorer(object):
         self._start = start
         self._stop = end
 
-        self._a = -(end - start) / steps
+        self._a = (end - start) / steps
 
     def __call__(self, nb_actions):
         return np.random.choice(nb_actions)
@@ -242,15 +242,12 @@ class DeepQAgent(object):
         # Target model (used to compute target QValues in training process, updated less frequently)
         self._target_net = self._action_value_net.clone(CloneMethod.freeze)
 
-        # Define the learning rate (w.r.t to unit_gain=True)
-        lr_per_sample = learning_rate / minibatch_size / (1 - momentum)
-        lr_schedule = learning_rate_schedule(lr_per_sample, UnitType.sample)
-
         # Adam based SGD
+        lr_schedule = learning_rate_schedule(learning_rate, UnitType.minibatch)
         m_schedule = momentum_schedule(momentum)
         vm_schedule = momentum_schedule(0.999)
         l_sgd = adam(self._action_value_net.parameters, lr_schedule,
-                     momentum=m_schedule, unit_gain=True, variance_momentum=vm_schedule)
+                     momentum=m_schedule, variance_momentum=vm_schedule)
 
         self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir='metrics', model=criterion)
         self._learner = l_sgd
@@ -384,7 +381,7 @@ def as_ale_input(environment):
     :return: Environment converted (84, 84)
     """
     from PIL import Image
-    return np.array(Image.fromarray(environment, 'RGB').convert('L').resize((84, 84)))
+    return np.array(Image.fromarray(environment).convert('L').resize((84, 84)))
 
 if __name__ == '__main__':
     parser = ArgumentParser()
