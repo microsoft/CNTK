@@ -207,7 +207,7 @@ class DeepQAgent(object):
         self._minibatch_size = minibatch_size
         self._history = History(input_shape)
         self._memory = ReplayMemory(500000, input_shape[1:], 4)
-        self._action_taken = 0
+        self._num_actions_taken = 0
 
         # Metrics accumulator
         self._episode_rewards, self._episode_q_means, self._episode_q_stddev = [], [], []
@@ -262,7 +262,7 @@ class DeepQAgent(object):
         self._history.append(state)
 
         # If policy requires agent to explore, sample random action
-        if self._explorer.is_exploring(self._action_taken):
+        if self._explorer.is_exploring(self._num_actions_taken):
             action = self._explorer(self.nb_actions)
         else:
             # Use the network to output the best action
@@ -279,7 +279,7 @@ class DeepQAgent(object):
             action = q_values.argmax()
 
         # Keep track of interval action counter
-        self._action_taken += 1
+        self._num_actions_taken += 1
         return action
 
     def observe(self, old_state, action, reward, done):
@@ -318,7 +318,7 @@ class DeepQAgent(object):
         :return: None
         """
 
-        agent_step = self._action_taken
+        agent_step = self._num_actions_taken
 
         if agent_step >= self._train_after:
             if (agent_step % self._train_interval) == 0:
@@ -362,13 +362,13 @@ class DeepQAgent(object):
         """
         if len(self._episode_q_means) > 0:
             mean_q = np.asscalar(np.mean(self._episode_q_means))
-            self._metrics_writer.write_value('Mean Q per ep.', mean_q, self._action_taken)
+            self._metrics_writer.write_value('Mean Q per ep.', mean_q, self._num_actions_taken)
 
         if len(self._episode_q_stddev) > 0:
             std_q = np.asscalar(np.mean(self._episode_q_stddev))
-            self._metrics_writer.write_value('Mean Std Q per ep.', std_q, self._action_taken)
+            self._metrics_writer.write_value('Mean Std Q per ep.', std_q, self._num_actions_taken)
 
-        self._metrics_writer.write_value('Sum rewards per ep.', sum(self._episode_rewards), self._action_taken)
+        self._metrics_writer.write_value('Sum rewards per ep.', sum(self._episode_rewards), self._num_actions_taken)
 
 
 def as_ale_input(environment):
