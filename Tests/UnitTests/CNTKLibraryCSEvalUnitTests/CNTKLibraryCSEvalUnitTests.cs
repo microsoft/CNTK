@@ -7,17 +7,16 @@ namespace CNTKLibraryCSEvalUnitTests
     [TestClass]
     public class CNTKLibraryCSEvalUnitTests
     {
-        private DeviceDescriptor device;
-        Function model1;
-        Function model1Clone;
-        Function model2;
+        private static DeviceDescriptor device;
+        private static Function model1;
+        private static Function model1Clone;
+        private static Function model2;
+        private static string modelFilePath = "resnet20.dnn";
 
         [ClassInitialize()]
-        public void ClassInit()
+        public static void ClassInit(TestContext context)
         {
             // Todo: use a test model which has known properties, e.g inputs, outputs.
-            string modelFilePath = "resnet20.dnn";
-
             device = ShouldRunOnGpu() ? DeviceDescriptor.GPUDevice(0) : DeviceDescriptor.CPUDevice;
 
             model1 = Function.LoadModel(modelFilePath, device);
