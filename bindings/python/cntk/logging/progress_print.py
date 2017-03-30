@@ -435,7 +435,7 @@ class TensorBoardProgressWriter(cntk_py.ProgressWriter):
         if freq is None:
             freq = sys.maxsize
 
-        super(TensorBoardProgressWriter, self).__init__(freq, 0, sys.maxsize, 0)
+        super(TensorBoardProgressWriter, self).__init__(freq, 0, sys.maxsize, 0, sys.maxsize, 0)
 
         # Only log either when rank is not specified or when rank is 0.
         self.writer = cntk_py.TensorBoardFileWriter(log_dir, model) if not rank else None

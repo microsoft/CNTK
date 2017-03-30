@@ -1633,6 +1633,8 @@ def element_select(flag, value_if_true, value_if_false, name=''):
 @typemap
 def future_value(x, initial_state=None, time_step=1, name=''):
     '''
+    DEPRECATED.
+
     This function returns the future value w.r.t. ``x``. It is most often used when
     creating RNNs. The resulting tensor has the same shape as the input but is
     the next logical sample. The ``time_step`` parameter is the number of steps
@@ -1674,20 +1676,18 @@ def future_value(x, initial_state=None, time_step=1, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
 
-    from cntk.internal import sanitize_dtype_cntk
-    from ..cntk_py import Constant
-    from cntk.cntk_py import future_value
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'sequence.future_value() instead.', DeprecationWarning)
 
-    if initial_state is None:
-        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
-
-    x = sanitize_input(x)
-    return future_value(x, initial_state, time_step, name)
+    return sequence.future_value(x, initial_state, time_step, name)
 
 
 @typemap
 def past_value(x, initial_state=None, time_step=1, name=''):
     '''
+    DEPRECATED.
+
     This function returns the past value w.r.t. ``x``. It is most often used when
     creating RNNs. The resulting tensor has the same shape as the input but is
     the previous logical sample. The ``time_step`` parameter is the number of steps
@@ -1774,17 +1774,11 @@ def past_value(x, initial_state=None, time_step=1, name=''):
         :class:`~cntk.ops.functions.Function`
     '''
 
-    from cntk.internal import sanitize_dtype_cntk
-    from ..cntk_py import Constant
-    from cntk.cntk_py import past_value
+    import warnings
+    warnings.warn('This will be removed in future versions. Please use '
+            'sequence.past_value() instead.', DeprecationWarning)
 
-    if initial_state is None:
-        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
-    else:
-        initial_state = sanitize_input(initial_state)
-
-    x = sanitize_input(x)
-    return past_value(x, initial_state, time_step, name)
+    return sequence.past_value(x, initial_state, time_step, name)
 
 
 # TODO: does this belong into .sequence?

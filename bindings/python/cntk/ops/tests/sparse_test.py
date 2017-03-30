@@ -135,7 +135,7 @@ def test_training_3d_sparse_sequence_with_recurrence(device_id):
         a_projection = times(a, w_i)
 
         p_o = C.placeholder()
-        h = C.past_value(p_o)
+        h = C.sequence.past_value(p_o)
         w_h = C.parameter(init=w_init_h, device=dev)
         h_projection = times(h, w_h)        
         z = a_projection + h_projection

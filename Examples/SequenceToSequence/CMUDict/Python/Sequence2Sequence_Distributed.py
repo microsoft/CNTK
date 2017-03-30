@@ -17,7 +17,7 @@ from cntk.device import try_set_default_device, gpu
 from cntk.train.distributed import *
 from cntk.io import MinibatchSource, CTFDeserializer, StreamDef, StreamDefs, INFINITELY_REPEAT, FULL_DATA_SWEEP
 from cntk.learners import learning_rate_schedule, UnitType, momentum_sgd, momentum_as_time_constant_schedule
-from cntk import input, cross_entropy_with_softmax, classification_error, sequence, past_value, future_value, element_select, alias, hardmax
+from cntk import input, cross_entropy_with_softmax, classification_error, sequence, element_select, alias, hardmax
 from cntk.ops.functions import CloneMethod
 from cntk.train.training_session import *
 from cntk.logging import *
@@ -87,7 +87,7 @@ def create_network(input_vocab_dim, label_vocab_dim):
     encoder_outputH = stabilize(input_sequence)
     for i in range(0, num_layers):
         (encoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
-            encoder_outputH.output, hidden_dim, hidden_dim, future_value, future_value)
+            encoder_outputH.output, hidden_dim, hidden_dim, sequence.future_value, sequence.future_value)
 
     thought_vectorH = sequence.first(encoder_outputH)
     thought_vectorC = sequence.first(encoder_outputC)
@@ -100,20 +100,20 @@ def create_network(input_vocab_dim, label_vocab_dim):
     # Decoder
     decoder_history_hook = alias(label_sequence, name='decoder_history_hook') # copy label_sequence
 
-    decoder_input = element_select(is_first_label, label_sentence_start_scattered, past_value(
+    decoder_input = element_select(is_first_label, label_sentence_start_scattered, sequence.past_value(
         decoder_history_hook))
 
     decoder_outputH = stabilize(decoder_input)
     for i in range(0, num_layers):
         if (i > 0):
-            recurrence_hookH = past_value
-            recurrence_hookC = past_value
+            recurrence_hookH = sequence.past_value
+            recurrence_hookC = sequence.past_value
         else:
             isFirst = sequence.is_first(label_sequence)
             recurrence_hookH = lambda operand: element_select(
-                isFirst, thought_vector_broadcastH, past_value(operand))
+                isFirst, thought_vector_broadcastH, sequence.past_value(operand))
             recurrence_hookC = lambda operand: element_select(
-                isFirst, thought_vector_broadcastC, past_value(operand))
+                isFirst, thought_vector_broadcastC, sequence.past_value(operand))
 
         (decoder_outputH, encoder_outputC) = LSTMP_component_with_self_stabilization(
             decoder_outputH.output, hidden_dim, hidden_dim, recurrence_hookH, recurrence_hookC)

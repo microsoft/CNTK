@@ -10,7 +10,7 @@ from cntk import *
 
 def test_outputs():
     fwd_state = placeholder("placeholder")
-    prev_state = past_value(fwd_state, name="prev_state")
+    prev_state = sequence.past_value(fwd_state, name="prev_state")
     z = abs(prev_state, "abs")
     output = z.output
     z = z.replace_placeholders({fwd_state: z.output})

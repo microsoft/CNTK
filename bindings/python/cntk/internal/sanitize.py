@@ -493,8 +493,8 @@ def memoize(func):
 
 @memoize
 def _sparse_to_dense_network_cache(input_shape):
-    from cntk.ops import times, input
+    from cntk.ops import times, sequence
 
-    temp_input = input(input_shape)
+    temp_input = sequence.input(input_shape)
     eye_shape = input_shape[-1]
     return times(temp_input, np.eye(eye_shape))
