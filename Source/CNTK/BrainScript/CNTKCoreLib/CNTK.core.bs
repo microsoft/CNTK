@@ -125,6 +125,18 @@ ConvolutionTransposeLayer {numOutputChannels,
     }.res
 }.apply
 
+# BilinearUpsamplingLayer -- upsample input activations using transposed convolution with bilinear weights.
+BilinearUpsamplingLayer {numInputChannels, numOutputChannels, kernelSize, stride} =
+{
+    kernelShape = kernelSize:kernelSize:numOutputChannels
+    paramShape = _ConcatArrays (kernelShape, _AsArray (numInputChannels))
+    W = ParameterTensor{paramShape, init = 'bilinear', initValueScale = 1, initOnCPUOnly = true, learningRateMultiplier = 0}
+    sharing = true    # TODO: support this
+    apply (x) = {
+        c = ConvolutionTranspose (W, x, kernelShape, mapDims = numInputChannels, stride = stride, sharing = sharing, autoPadding = false, lowerPad = 0, upperPad = 0, outputShape = None, maxTempMemSizeInSamples = 0)
+    }.c
+}.apply
+
 # MaxPoolingLayer, AveragePoolingLayer -- create a max- or average-pooling layer
 _PoolingLayer {poolKind,            # "max" or "average"
                filterShape,         # e.g. (3:3)
