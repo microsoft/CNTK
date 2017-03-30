@@ -3403,6 +3403,15 @@ void GPUMatrix<ElemType>::StochasticBinaryForward(const GPUMatrix<ElemType>& a, 
     _stochasticbinaryForward<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), b.Data(), d_rands, N, annealSlope);
     CUDA_CALL(cudaFree(d_rands));
     CURAND_CALL(curandDestroyGenerator(gens));
+
+    //ElemType* input = new ElemType[N];
+    //cudaMemcpy(input, a.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //ElemType* output = new ElemType[N];
+    //cudaMemcpy(output, b.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //for (int i = 0; i < 20; i++) if (std::isnan(input[i]) || std::isnan(output[i])) fprintf(stderr, "in %f out %f ", input[i], output[i]);
+    ////fprintf(stderr, "\n");
+    //delete[] input;
+    //delete[] output;
 }
 
 template <class ElemType>
@@ -3429,6 +3438,18 @@ void GPUMatrix<ElemType>::StochasticBinaryBackward(const GPUMatrix<ElemType>& a,
             _stochasticbinaryBackward_Anneal<ElemType><<<blocksPerGrid, GridDim::maxThreadsPerBlock, 0, t_stream>>>(a.Data(), output.Data(), outgrad.Data(), ingrad.Data(), N, annealSlope);
         }
     }
+
+    //ElemType* inputs = new ElemType[N];
+    //cudaMemcpy(inputs, a.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //ElemType* ingrads = new ElemType[N];
+    //cudaMemcpy(ingrads, ingrad.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //ElemType* outgrads = new ElemType[N];
+    //cudaMemcpy(outgrads, outgrad.Data(), N * sizeof(ElemType), cudaMemcpyDeviceToHost);
+    //for (int i = 0; i < 20; i++) if (std::isnan(inputs[i]) || std::isnan(outgrads[i]) || std::isnan(ingrads[i])) fprintf(stderr, "in %f ingrads %f outgrads %f ", inputs[i], ingrads[i], outgrads[i]);
+    ////fprintf(stderr, "\n");
+    //delete[] inputs;
+    //delete[] ingrads;
+    //delete[] outgrads;
 }
 
 #pragma region Static BLAS Functions
