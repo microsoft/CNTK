@@ -12,8 +12,8 @@ Some API functions accept these variables as independent arguments, e.g. :class:
 The typing module provides a Pythonic way to group the variable type properties into a data structure :class:`~cntk.variables.Variable.Type`.
 
 Python type syntax can be used to create such a record for the three main properties, `shape`, `dynamic_axes`, and `is_sparse`,
-using :type:`~cntk.layers.typing.Tensor`,  :type:`~cntk.layers.typing.SparseTensor`,  :type:`~cntk.layers.typing.ParameterTensor`,
-:type:`~cntk.layers.typing.Sequence`,  and :type:`~cntk.layers.typing.SequenceOver`.
+using :class:`~cntk.layers.typing.Tensor`,  :class:`~cntk.layers.typing.SparseTensor`,  :class:`~cntk.layers.typing.ParameterTensor`,
+:class:`~cntk.layers.typing.Sequence`,  and :class:`~cntk.layers.typing.SequenceOver`.
 
 Example:
     >>> # Tensor[...] denotes a data variable (with implied batch dimension)
