@@ -71,7 +71,7 @@ introduced, overloaded operators can be applied to them to form an operator grap
   import cntk as C
 
   # Create an input with the shape (2,3,*)
-  >>> x = C.input_variable((2,3), name='features')
+  >>> x = C.input((2,3), name='features')
 
   # Create a constant scalar with value 2
   >>> c = C.constant(value=2)
@@ -80,29 +80,29 @@ introduced, overloaded operators can be applied to them to form an operator grap
   >>> w = C.parameter((2,3))
 
   # Set up some test input data to check the operators.
-  # We specify a full batch having a sequence with one element, which is a
+  # We specify a full batch having one element, which is a
   # (2,3) matrix.
-  >>> test_input = [[ np.asarray([[10,20,30],[40,50,60]]) ]]
+  >>> test_input = [ np.asarray([[10,20,30],[40,50,60]]) ]
 
   # Elementwise multiplication operation
   >>> op  = x * c
 
   # Evaluate the op using test_input
   >>> print(op.eval({ x: test_input }))
-  [array([[[  20.,   40.,   60.],
-          [  80.,  100.,  120.]]], dtype=float32)]
+  array([[[  20.,   40.,   60.],
+          [  80.,  100.,  120.]]], dtype=float32)
 
   # Same as above (2 will be converted to constant)
   >>> op2 = x * 2
   >>> print(op2.eval({ x: test_input }))
-  [array([[[  20.,   40.,   60.],
-          [  80.,  100.,  120.]]], dtype=float32)]
+  array([[[  20.,   40.,   60.],
+          [  80.,  100.,  120.]]], dtype=float32)
 
   #  Elementwise multiplication of two 2x3 matrices
   >>> op3 = x * [[1,2,3], [4,5,6]]
   >>> print(op3.eval({ x: test_input}))
-  [array([[[  10.,   40.,   90.],
-          [ 160.,  250.,  360.]]], dtype=float32)]
+  array([[[  10.,   40.,   90.],
+          [ 160.,  250.,  360.]]], dtype=float32)
 
 
 Broadcasting

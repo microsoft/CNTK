@@ -21,11 +21,11 @@ def _dense_value_to_ndarray_test(data, num_of_dynamic_axes, expected_value_shape
     shape = (5,)
 
     if num_of_dynamic_axes == 2:
-        var = input_variable(shape)
+        var = sequence.input(shape)
     elif num_of_dynamic_axes == 1:
-        var = input_variable(shape, dynamic_axes=[Axis.default_batch_axis()])
+        var = input(shape)
     else:
-        var = input_variable(shape, dynamic_axes=[])
+        var = input(shape, dynamic_axes=[])
 
     # conversion array -> value
     val = asvalue(var, data)
@@ -45,11 +45,11 @@ def _sparse_value_to_csr_test(data, num_of_dynamic_axes, expected_value_shape, e
     shape = (3,)
 
     if num_of_dynamic_axes == 2:
-        var = input_variable(shape, is_sparse=True)
+        var = sequence.input(shape, is_sparse=True)
     elif num_of_dynamic_axes == 1:
-        var = input_variable(shape, is_sparse=True, dynamic_axes=[Axis.default_batch_axis()])
+        var = input(shape, is_sparse=True)
     else:
-        var = input_variable(shape, is_sparse=True, dynamic_axes=[])
+        var = input(shape, is_sparse=True, dynamic_axes=[])
 
     # conversion csr array -> value
     val = asvalue(var, data)
@@ -147,7 +147,7 @@ def test_sparse_failing_value_to_csr(data, num_of_dynamic_axes, expected_value_s
 def test_asarray_method():
     shape = (3,)
 
-    var = input_variable(shape, is_sparse=True)
+    var = sequence.input(shape, is_sparse=True)
 
     csr = sparse.csr_matrix
     data = [csr([[1,0,2],

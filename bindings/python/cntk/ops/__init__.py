@@ -2054,16 +2054,16 @@ def one_hot(x, num_classes, sparse_output=False, axis=-1, name=''):
     Create one hot tensor based on the input tensor
 
     Example:
-        >>> data = np.asarray([[[1, 2],
-        ...                     [4, 5]]], dtype=np.float32)
+        >>> data = np.asarray([[1, 2],
+        ...                    [4, 5]], dtype=np.float32)
 
-        >>> x = C.input_variable((2,))
+        >>> x = C.input((2,))
         >>> C.one_hot(x, 6, False).eval({x:data})
-        [array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
-                 [ 0.,  0.,  1.,  0.,  0.,  0.]],
+        array([[[ 0.,  1.,  0.,  0.,  0.,  0.],
+                [ 0.,  0.,  1.,  0.,  0.,  0.]],
         <BLANKLINE>
                 [[ 0.,  0.,  0.,  0.,  1.,  0.],
-                 [ 0.,  0.,  0.,  0.,  0.,  1.]]], dtype=float32)]
+                 [ 0.,  0.,  0.,  0.,  0.,  1.]]], dtype=float32)
 
     Args:
         x: input tensor, the value must be positive integer and less than num_class
