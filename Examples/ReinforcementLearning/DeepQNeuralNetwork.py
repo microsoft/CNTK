@@ -38,7 +38,7 @@ class ReplayMemory(object):
         Appends the specified transition to the memory.
         :param state: The state to append (should have the same shape as defined at initialization time)
         :param action: An integer representing the action done
-        :param reward: An integer reprensenting the reward received for doing this action
+        :param reward: An integer representing the reward received for doing this action
         :param done: A boolean specifying if this state is a terminal (episode has finished)
         :return:
         """
