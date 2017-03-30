@@ -156,9 +156,9 @@ class LinearEpsilonAnnealingExplorer(object):
 
     def _epsilon(self, step):
         if step < 0:
-            return self._stop
-        elif step > self._steps:
             return self._start
+        elif step > self._steps:
+            return self._stop
         else:
             return self._a * step + self._start
 
