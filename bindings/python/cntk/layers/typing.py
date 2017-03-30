@@ -5,7 +5,88 @@
 # ==============================================================================
 
 '''
-typing -- basic CNTK type meta-classes for CNTK @Function type signatures
+The CNTK typing module contains basic CNTK type meta-classes for :func:`~cntk.functions.Function.update_signature` and type signatures for the CNTK :class:`~cntk.functions.Function` decorator.
+
+The type of a CNTK :class:`~cntk.variables.Variable` is defined by five properties: `shape`, `dynamic_axes`, `is_sparse`, `dtype`, and `needs_gradient`.
+Some API functions accept these variables as independent arguments, e.g. :class:`~cntk.Input`.
+The typing module provides a Pythonic way to group the variable type properties into a data structure :class:`~cntk.variables.Variable.Type`.
+
+Python type syntax can be used to create such a record for the three main properties, `shape`, `dynamic_axes`, and `is_sparse`,
+using :class:`~cntk.layers.typing.Tensor`,  :class:`~cntk.layers.typing.SparseTensor`,  :class:`~cntk.layers.typing.ParameterTensor`,
+:class:`~cntk.layers.typing.Sequence`,  and :class:`~cntk.layers.typing.SequenceOver`.
+
+Example:
+    >>> # Tensor[...] denotes a data variable (with implied batch dimension)
+    >>> from cntk.layers.typing import *
+    >>> tp = Tensor[13,42]
+    >>> tp.shape
+    (13, 42)
+    >>> tp.is_sparse
+    False
+    >>> [str(axis.name) for axis in tp.dynamic_axes]
+    ['defaultBatchAxis']
+
+    >>> # SparseTensor[...] is a sparse Tensor
+    >>> tp = SparseTensor[9000]
+    >>> tp.is_sparse
+    True
+
+This record can be directly passed to update_signature().
+
+Example:
+    >>> from cntk.layers import *
+    >>> f = Dense(500)
+    >>> f.update_signature(Tensor[13,42])
+    >>> f.shape
+    (500,)
+
+    >>> # This is just the same as saying
+    >>> f = Dense(500)
+    >>> f.update_signature(Variable.Type(shape=(13,42), dynamic_axes=[Axis.default_batch_axis()]))
+    >>> f.shape
+    (500,)
+
+To specify types with a dynamic axis, use `Sequence[]`.
+
+Example:
+    >>> tp = Sequence[SparseTensor[9000]]
+    >>> [str(axis.name) for axis in tp.dynamic_axes]
+    ['defaultBatchAxis', 'defaultDynamicAxis']
+
+This will refer to the default dynamic axis. If your model uses multiple dynamic axes, such as a sequence-to-sequence model,
+you use `SequenceOver[]` to define your own sequence type for each.
+
+Example:
+    >>> InputSequence = SequenceOver[Axis('input')]
+    >>> tp = InputSequence[SparseTensor[9000]]
+    >>> [str(axis.name) for axis in tp.dynamic_axes]
+    ['defaultBatchAxis', 'input']
+
+The typing syntax can be used to directly define CNTK functions with their input types.
+This is often done for the criterion function.
+
+Example:
+    >>> from cntk import debugging, cross_entropy_with_softmax
+    >>> model = Sequential([Embedding(300), Fold(GRU(128)), Dense(10)])
+    >>> debugging.dump_signature(model)
+    Function(keep: Sequence[tensor]) -> Sequence[tensor]
+    >>> inputAxis = Axis('inputAxis')
+    >>> @Function
+    ... @Signature(input=SequenceOver[inputAxis][Tensor[128]], label=Tensor[10])
+    ... def criterion(input, label):
+    ...     output = model(input)
+    ...     return cross_entropy_with_softmax(output, label)
+    >>> debugging.dump_signature(criterion)
+    Function(input: SequenceOver[inputAxis][Tensor[128]], label: Tensor[10]) -> Tensor[1]
+
+Using Python type syntax, besides being more concise and easier to memorize, has the added benefit of beign able to more easily talk about types of CNTK objects,
+very similar to how one would talk about the types of Python objects (e.g. `List[Tuple[int,float]]`).
+This is particularly beneficial for the functional-programming style of the Layers library, where functions are also reasoned about by their types.
+In functional programming, it has been observed that getting the types of functions right is a critical step towards correct code.
+
+Note that the type syntax does not allow to specify the special-purpose type property `needs_gradient`,
+nor to `dtype` which instead should be specified as a global setting.
+If these properties are needed, please use construct a :class:`~cntk.variables.Variable.Type` directly.
 '''
 
 from ..axis import Axis
@@ -24,11 +105,11 @@ def _make_tensor_meta(cls_name, **kwargs):
 # If you want a sequence, say Sequence[tensor].
 # ParameterTensor has no axis.
 # BUGBUG: Scalars cannot be described since Tensor[] is invalid. Use 'float'?
-Tensor          = _make_tensor_meta('Tensor',       is_sparse=False, dynamic_axes=Axis.default_batch_axis())
+Tensor          = _make_tensor_meta('Tensor',       is_sparse=False, dynamic_axes=[Axis.default_batch_axis()])
 '''
 Meta class to denote a data tensor (with batch axis). Use with dimensions, e.g. ``Tensor[13,42]``.
 '''
-SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=Axis.default_batch_axis())
+SparseTensor    = _make_tensor_meta('SparseTensor', is_sparse=True , dynamic_axes=[Axis.default_batch_axis()])
 '''
 Meta class to denote a sparse data tensor (with batch axis). Use with dimensions, e.g. ``SparseTensor[129]``.
 '''
@@ -84,6 +165,7 @@ def Signature(*args, **kwargs):
      @Function
      def f(x: Tensor[42]):
          return sigmoid(x)
+
      # Python 2.7:
      @Function
      @Signature(Tensor[42])
