@@ -211,7 +211,8 @@ class DeepQAgent(object):
     def __init__(self, input_shape, nb_actions,
                  gamma=0.99, explorer=LinearEpsilonAnnealingExplorer(1, 0.1, 1000000),
                  learning_rate=0.00025, momentum=0.95, minibatch_size=32, device_id=-1,
-                 train_after=200000, train_interval=4, target_update_interval=10000):
+                 train_after=200000, train_interval=4, target_update_interval=10000,
+                 monitor=True):
         self.input_shape = input_shape
         self.nb_actions = nb_actions
         self.gamma = gamma
@@ -264,7 +265,7 @@ class DeepQAgent(object):
         l_sgd = adam(self._action_value_net.parameters, lr_schedule,
                      momentum=m_schedule, variance_momentum=vm_schedule)
 
-        self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir='metrics', model=criterion)
+        self._metrics_writer = TensorBoardProgressWriter(freq=1, log_dir='metrics', model=criterion) if monitor else None
         self._learner = l_sgd
         self._trainer = Trainer(criterion, (criterion, None), l_sgd, [self._metrics_writer])
 
@@ -434,6 +435,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('-e', '--epoch', default=100, type=int, help='Number of epochs to run (epoch = 250k actions')
     parser.add_argument('-d', '--device', default=-1, type=int, help='-1 for CPU, >= 0 for GPU mapping GPU id')
+    parser.add_argument('-p', '--plot', action='store_true', default=True, help='Flag for enabling Tensorboard')
     parser.add_argument('env', default='Pong-v3', type=str, metavar='N', nargs='?', help='Gym Atari environment to run')
 
     args = parser.parse_args()
@@ -442,7 +444,7 @@ if __name__ == '__main__':
     env = gym.make(args.env)
 
     # 2. Make agent
-    agent = DeepQAgent((4, 84, 84), env.action_space.n, device_id=args.device)
+    agent = DeepQAgent((4, 84, 84), env.action_space.n, device_id=args.device, monitor=args.plot)
 
     # Train
     current_step = 0
