@@ -15,7 +15,7 @@ from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitiz
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
-from ..default_options import get_default_override, default_override_or
+from ..default_options import _get_default_override, default_override_or
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
@@ -2557,7 +2557,7 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
     
     shape = sanitize_shape(shape)
-    dtype = get_default_override(_input_spec, dtype=dtype)
+    dtype = _get_default_override(_input_spec, dtype=dtype)
     if dtype is None:
         dtype = np.float32
     dtype = sanitize_dtype_cntk(dtype)

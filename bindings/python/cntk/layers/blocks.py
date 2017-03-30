@@ -20,6 +20,7 @@ from cntk.internal import _as_tuple
 from cntk.initializer import glorot_uniform
 from _cntk_py import InferredDimension
 from cntk.default_options import *
+from cntk.default_options import _get_default_override
 
 from cntk.ops.functions import Function
 
@@ -178,7 +179,7 @@ def Stabilizer(steepness=4, enable_self_stabilization=default_override_or(True),
         A function
     '''
 
-    enable_self_stabilization = get_default_override(Stabilizer, enable_self_stabilization=enable_self_stabilization)
+    enable_self_stabilization = _get_default_override(Stabilizer, enable_self_stabilization=enable_self_stabilization)
 
     if not enable_self_stabilization: # disabled (typically through global option; otherwise one would not call this in the first place)
         return identity
@@ -386,11 +387,11 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
         A function ``(prev_h, prev_c, input) -> (h, c)`` that implements one step of a recurrent LSTM layer.
     '''
 
-    activation                = get_default_override(RNNUnit, activation=activation)
-    use_peepholes             = get_default_override(LSTM, use_peepholes=use_peepholes)
-    init                      = get_default_override(LSTM, init=init)
-    init_bias                 = get_default_override(LSTM, init_bias=init_bias)
-    enable_self_stabilization = get_default_override(LSTM, enable_self_stabilization=enable_self_stabilization)
+    activation                = _get_default_override(RNNUnit, activation=activation)
+    use_peepholes             = _get_default_override(LSTM, use_peepholes=use_peepholes)
+    init                      = _get_default_override(LSTM, init=init)
+    init_bias                 = _get_default_override(LSTM, init_bias=init_bias)
+    enable_self_stabilization = _get_default_override(LSTM, enable_self_stabilization=enable_self_stabilization)
 
     return _RecurrentBlock('LSTM', shape, cell_shape, activation=activation, use_peepholes=use_peepholes,
                            init=init, init_bias=init_bias,
@@ -430,10 +431,10 @@ def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
         A function ``(prev_h, input) -> h`` where ``h = activation(input @ W + prev_h @ R + b)``
     '''
 
-    activation                = get_default_override(RNNUnit, activation=activation)
-    init                      = get_default_override(RNNUnit, init=init)
-    init_bias                 = get_default_override(RNNUnit, init_bias=init_bias)
-    enable_self_stabilization = get_default_override(RNNUnit, enable_self_stabilization=enable_self_stabilization)
+    activation                = _get_default_override(RNNUnit, activation=activation)
+    init                      = _get_default_override(RNNUnit, init=init)
+    init_bias                 = _get_default_override(RNNUnit, init_bias=init_bias)
+    enable_self_stabilization = _get_default_override(RNNUnit, enable_self_stabilization=enable_self_stabilization)
 
     return _RecurrentBlock('RNNUnit', shape, cell_shape, activation=activation, use_peepholes=False,
                            init=init, init_bias=init_bias,
@@ -472,10 +473,10 @@ def GRU(shape, cell_shape=None, activation=default_override_or(tanh),
         A function ``(prev_h, input) -> h`` that implements one step of a recurrent GRU layer.
     '''
 
-    activation                = get_default_override(GRU, activation=activation)
-    init                      = get_default_override(GRU, init=init)
-    init_bias                 = get_default_override(GRU, init_bias=init_bias)
-    enable_self_stabilization = get_default_override(GRU, enable_self_stabilization=enable_self_stabilization)
+    activation                = _get_default_override(GRU, activation=activation)
+    init                      = _get_default_override(GRU, init=init)
+    init_bias                 = _get_default_override(GRU, init_bias=init_bias)
+    enable_self_stabilization = _get_default_override(GRU, enable_self_stabilization=enable_self_stabilization)
 
     return _RecurrentBlock('GRU', shape, cell_shape, activation=activation, use_peepholes=False,
                            init=init, init_bias=init_bias,

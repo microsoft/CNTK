@@ -17,7 +17,7 @@ from cntk.internal import _as_tuple
 from .blocks import *
 from .higher_order_layers import *
 from .blocks import _initializer_for, _get_initial_state_or_default, _INFERRED # helpers
-
+from cntk.default_options import _get_default_override
 
 def Dense(shape, activation=default_override_or(identity), init=default_override_or(glorot_uniform()),
           input_rank=None, map_rank=None,
@@ -62,10 +62,10 @@ def Dense(shape, activation=default_override_or(identity), init=default_override
         A function that accepts one argument and applies the operation to it
     '''
 
-    activation = get_default_override(Dense, activation=activation)
-    init       = get_default_override(Dense, init=init)
-    bias       = get_default_override(Dense, bias=bias)
-    init_bias  = get_default_override(Dense, init_bias=init_bias)
+    activation = _get_default_override(Dense, activation=activation)
+    init       = _get_default_override(Dense, init=init)
+    bias       = _get_default_override(Dense, bias=bias)
+    init_bias  = _get_default_override(Dense, init_bias=init_bias)
 
     output_shape = _as_tuple(shape)
 
@@ -183,7 +183,7 @@ def Embedding(shape=None, init=default_override_or(glorot_uniform()), weights=No
     if weights is None:
         if shape is None:
             raise ValueError('Embedding: output shape must be specified')
-        init = get_default_override(Embedding, init=init)
+        init = _get_default_override(Embedding, init=init)
         shape = _as_tuple(shape)
         weight_shape = _INFERRED + shape
         E = Parameter(weight_shape, init=init, name='E')
@@ -345,11 +345,11 @@ def Convolution(filter_shape,     # shape of receptive field, e.g. (3,3)
         A function that accepts one argument and applies the convolution operation to it
     '''
 
-    activation = get_default_override(Convolution, activation=activation)
-    init       = get_default_override(Convolution, init=init)
-    pad        = get_default_override(Convolution, pad=pad)
-    bias       = get_default_override(Convolution, bias=bias)
-    init_bias  = get_default_override(Convolution, init_bias=init_bias)
+    activation = _get_default_override(Convolution, activation=activation)
+    init       = _get_default_override(Convolution, init=init)
+    pad        = _get_default_override(Convolution, pad=pad)
+    bias       = _get_default_override(Convolution, bias=bias)
+    init_bias  = _get_default_override(Convolution, init_bias=init_bias)
 
     # tuplify all tuple inputs that can also be given as scalars if rank 1
     filter_shape = _as_tuple(filter_shape)
@@ -491,11 +491,11 @@ def Convolution1D(filter_shape,     # shape of receptive field, e.g. (3)
 
     '''
     
-    activation = get_default_override(Convolution1D, activation=activation)
-    init       = get_default_override(Convolution1D, init=init)
-    pad        = get_default_override(Convolution1D, pad=pad)
-    bias       = get_default_override(Convolution1D, bias=bias)
-    init_bias  = get_default_override(Convolution1D, init_bias=init_bias)
+    activation = _get_default_override(Convolution1D, activation=activation)
+    init       = _get_default_override(Convolution1D, init=init)
+    pad        = _get_default_override(Convolution1D, pad=pad)
+    bias       = _get_default_override(Convolution1D, bias=bias)
+    init_bias  = _get_default_override(Convolution1D, init_bias=init_bias)
     if len(_as_tuple(filter_shape)) != 1: 
          raise ValueError('Convolution1D: filter_shape must be a scalar')
     return Convolution(filter_shape, num_filters=num_filters, activation=activation, init=init, pad=pad, strides=strides, sharing=True, bias=bias, init_bias=init_bias, reduction_rank=reduction_rank, op_name='Convolution1D', name=name)
@@ -540,11 +540,11 @@ def Convolution2D(filter_shape,     # shape of receptive field, e.g. (3,3). Must
 
     '''
 
-    activation = get_default_override(Convolution2D, activation=activation)
-    init       = get_default_override(Convolution2D, init=init)
-    pad        = get_default_override(Convolution2D, pad=pad)
-    bias       = get_default_override(Convolution2D, bias=bias)
-    init_bias  = get_default_override(Convolution2D, init_bias=init_bias)
+    activation = _get_default_override(Convolution2D, activation=activation)
+    init       = _get_default_override(Convolution2D, init=init)
+    pad        = _get_default_override(Convolution2D, pad=pad)
+    bias       = _get_default_override(Convolution2D, bias=bias)
+    init_bias  = _get_default_override(Convolution2D, init_bias=init_bias)
     if len(_as_tuple(filter_shape)) > 2: 
          raise ValueError('Convolution2D: filter_shape must be a scalar or a 2D tuple, e.g. 3 or (3,3)')
     filter_shape = _pad_to_shape((0,0), filter_shape, 'filter_shape')
@@ -590,11 +590,11 @@ def Convolution3D(filter_shape,     # shape of receptive field, e.g. (3,3,3). Mu
 
     '''
 
-    activation = get_default_override(Convolution3D, activation=activation)
-    init       = get_default_override(Convolution3D, init=init)
-    pad        = get_default_override(Convolution3D, pad=pad)
-    bias       = get_default_override(Convolution3D, bias=bias)
-    init_bias  = get_default_override(Convolution3D, init_bias=init_bias)
+    activation = _get_default_override(Convolution3D, activation=activation)
+    init       = _get_default_override(Convolution3D, init=init)
+    pad        = _get_default_override(Convolution3D, pad=pad)
+    bias       = _get_default_override(Convolution3D, bias=bias)
+    init_bias  = _get_default_override(Convolution3D, init_bias=init_bias)
     if len(_as_tuple(filter_shape)) > 3: 
          raise ValueError('Convolution3D: filter_shape must be a scalar or a 3D tuple, e.g. 3 or (3,3,3)')
     filter_shape = _pad_to_shape((0,0,0), filter_shape, 'filter_shape')
@@ -680,12 +680,12 @@ def ConvolutionTranspose(filter_shape,        # shape of receptive field, e.g. (
         :class:`~cntk.ops.functions.Function` that accepts one argument and applies the convolution operation to it
     '''
 
-    activation = get_default_override(ConvolutionTranspose, activation=activation)
-    init       = get_default_override(ConvolutionTranspose, init=init)
-    pad        = get_default_override(ConvolutionTranspose, pad=pad)
-    bias       = get_default_override(ConvolutionTranspose, bias=bias)
-    init_bias  = get_default_override(ConvolutionTranspose, init_bias=init_bias)
-    output_shape = get_default_override(ConvolutionTranspose, output_shape=output_shape)
+    activation = _get_default_override(ConvolutionTranspose, activation=activation)
+    init       = _get_default_override(ConvolutionTranspose, init=init)
+    pad        = _get_default_override(ConvolutionTranspose, pad=pad)
+    bias       = _get_default_override(ConvolutionTranspose, bias=bias)
+    init_bias  = _get_default_override(ConvolutionTranspose, init_bias=init_bias)
+    output_shape = _get_default_override(ConvolutionTranspose, output_shape=output_shape)
 
     # tuplify all tuple inputs that can also be given as scalars if rank 1
     filter_shape = _as_tuple(filter_shape)
@@ -748,12 +748,12 @@ def ConvolutionTranspose1D(filter_shape,        # a scalar, e.g., 3
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 1-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.
     '''
-    activation = get_default_override(ConvolutionTranspose1D, activation=activation)
-    init       = get_default_override(ConvolutionTranspose1D, init=init)
-    pad        = get_default_override(ConvolutionTranspose1D, pad=pad)
-    bias       = get_default_override(ConvolutionTranspose1D, bias=bias)
-    init_bias  = get_default_override(ConvolutionTranspose1D, init_bias=init_bias)
-    output_shape = get_default_override(ConvolutionTranspose1D, output_shape=output_shape)
+    activation = _get_default_override(ConvolutionTranspose1D, activation=activation)
+    init       = _get_default_override(ConvolutionTranspose1D, init=init)
+    pad        = _get_default_override(ConvolutionTranspose1D, pad=pad)
+    bias       = _get_default_override(ConvolutionTranspose1D, bias=bias)
+    init_bias  = _get_default_override(ConvolutionTranspose1D, init_bias=init_bias)
+    output_shape = _get_default_override(ConvolutionTranspose1D, output_shape=output_shape)
     if len(_as_tuple(filter_shape)) != 1: 
          raise ValueError('ConvolutionTranspose1D: filter_shape must be a scalar')
     return ConvolutionTranspose(filter_shape, num_filters, activation, init, pad, strides, True, bias, init_bias, output_shape, name=name)
@@ -776,12 +776,12 @@ def ConvolutionTranspose2D(filter_shape,        # a 2D tuple, e.g., (3,3)
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 2-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.
     '''
-    activation = get_default_override(ConvolutionTranspose2D, activation=activation)
-    init       = get_default_override(ConvolutionTranspose2D, init=init)
-    pad        = get_default_override(ConvolutionTranspose2D, pad=pad)
-    bias       = get_default_override(ConvolutionTranspose2D, bias=bias)
-    init_bias  = get_default_override(ConvolutionTranspose2D, init_bias=init_bias)
-    output_shape = get_default_override(ConvolutionTranspose2D, output_shape=output_shape)
+    activation = _get_default_override(ConvolutionTranspose2D, activation=activation)
+    init       = _get_default_override(ConvolutionTranspose2D, init=init)
+    pad        = _get_default_override(ConvolutionTranspose2D, pad=pad)
+    bias       = _get_default_override(ConvolutionTranspose2D, bias=bias)
+    init_bias  = _get_default_override(ConvolutionTranspose2D, init_bias=init_bias)
+    output_shape = _get_default_override(ConvolutionTranspose2D, output_shape=output_shape)
     if len(_as_tuple(filter_shape)) > 2: 
          raise ValueError('ConvolutionTranspose2D: filter_shape must be a scalar or a 2D tuple, e.g. 3 or (3,3)')
     filter_shape = _pad_to_shape((0,0), filter_shape, 'filter_shape')
@@ -805,12 +805,12 @@ def ConvolutionTranspose3D(filter_shape,        # a 3D tuple, e.g., (3,3,3)
     Same as `ConvolutionTranspose()` except that filter_shape is verified to be 3-dimensional.
     See `ConvolutionTranspose()` for extensive documentation.
     '''
-    activation = get_default_override(ConvolutionTranspose3D, activation=activation)
-    init       = get_default_override(ConvolutionTranspose3D, init=init)
-    pad        = get_default_override(ConvolutionTranspose3D, pad=pad)
-    bias       = get_default_override(ConvolutionTranspose3D, bias=bias)
-    init_bias  = get_default_override(ConvolutionTranspose3D, init_bias=init_bias)
-    output_shape = get_default_override(ConvolutionTranspose3D, output_shape=output_shape)
+    activation = _get_default_override(ConvolutionTranspose3D, activation=activation)
+    init       = _get_default_override(ConvolutionTranspose3D, init=init)
+    pad        = _get_default_override(ConvolutionTranspose3D, pad=pad)
+    bias       = _get_default_override(ConvolutionTranspose3D, bias=bias)
+    init_bias  = _get_default_override(ConvolutionTranspose3D, init_bias=init_bias)
+    output_shape = _get_default_override(ConvolutionTranspose3D, output_shape=output_shape)
     if len(_as_tuple(filter_shape)) > 3: 
          raise ValueError('ConvolutionTranspose3D: filter_shape must be a scalar or a 3D tuple, e.g. 3 or (3,3,3)')
     filter_shape = _pad_to_shape((0,0,0), filter_shape, 'filter_shape')
@@ -890,7 +890,7 @@ def MaxPooling(filter_shape,  # shape of receptive field, e.g. (3,3)
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the max-pooling operation to it
     '''
-    pad = get_default_override(MaxPooling, pad=pad)
+    pad = _get_default_override(MaxPooling, pad=pad)
     return _Pooling(PoolingType_Max, filter_shape, strides=strides, pad=pad, op_name='MaxPooling', name=name)
 
 
@@ -942,7 +942,7 @@ def AveragePooling(filter_shape,  # shape of receptive field, e.g. (3,3)
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the average-pooling operation to it
     '''
-    pad = get_default_override(AveragePooling, pad=pad)
+    pad = _get_default_override(AveragePooling, pad=pad)
     return _Pooling(PoolingType_Average, filter_shape, strides=strides, pad=pad, op_name='AveragePooling', name=name)
 
 
@@ -1086,7 +1086,7 @@ def Activation(activation=default_override_or(identity), name=''):
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    activation = get_default_override(Activation, activation=activation)
+    activation = _get_default_override(Activation, activation=activation)
     @BlockFunction('Activation', name)
     def activation_f(x):
         return activation(x) 
@@ -1135,10 +1135,10 @@ def BatchNormalization(map_rank=default_override_or(None),  # if given then norm
         A function that accepts one argument and applies the operation to it
     '''
 
-    map_rank                    = get_default_override(BatchNormalization, map_rank=map_rank)
-    normalization_time_constant = get_default_override(BatchNormalization, normalization_time_constant=normalization_time_constant)
-    epsilon                     = get_default_override(BatchNormalization, epsilon=epsilon)
-    use_cntk_engine             = get_default_override(BatchNormalization, use_cntk_engine=use_cntk_engine)
+    map_rank                    = _get_default_override(BatchNormalization, map_rank=map_rank)
+    normalization_time_constant = _get_default_override(BatchNormalization, normalization_time_constant=normalization_time_constant)
+    epsilon                     = _get_default_override(BatchNormalization, epsilon=epsilon)
+    use_cntk_engine             = _get_default_override(BatchNormalization, use_cntk_engine=use_cntk_engine)
 
     # parameters bound to this Function
     norm_shape  = _INFERRED
@@ -1186,7 +1186,7 @@ def LayerNormalization(initial_scale=1, initial_bias=0, epsilon=default_override
         cntk.ops.functions.Function:
         A function that accepts one argument and applies the operation to it
     '''
-    epsilon = get_default_override(LayerNormalization, epsilon=epsilon)
+    epsilon = _get_default_override(LayerNormalization, epsilon=epsilon)
 
     # parameters bound to this Function
     scale = Parameter((), init=initial_scale, name='scale')  # TODO: if this gets usage then offer a Softplus version like Stabilizer() for stability?

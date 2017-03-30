@@ -10,7 +10,7 @@ from ..variables import Record
 from ..ops import combine, past_value, future_value, splice, sequence
 from .blocks import *
 from .blocks import _get_initial_state_or_default, _inject_name
-
+from cntk.default_options import _get_default_override
 
 def Delay(T=1, initial_state=default_override_or(0), name=''):
     '''
@@ -48,7 +48,7 @@ def Delay(T=1, initial_state=default_override_or(0), name=''):
         cntk.ops.functions.Function: 
         A function that accepts one argument (which must be a sequence) and returns it delayed by ``T`` steps
     '''
-    initial_state = get_default_override(Delay, initial_state=initial_state)
+    initial_state = _get_default_override(Delay, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
     # expression
@@ -122,7 +122,7 @@ def PastValueWindow(window_size, axis, go_backwards=default_override_or(False), 
         spliced along ``axis``.
     '''
 
-    go_backwards = get_default_override(PastValueWindow, go_backwards=go_backwards)
+    go_backwards = _get_default_override(PastValueWindow, go_backwards=go_backwards)
 
     # helper to get the nth element
     def nth(input, offset):
@@ -217,7 +217,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
         The initial state can be a sequence, in which case its last (or first if ``go_backwards``) item is used.
     '''
 
-    go_backwards  = get_default_override(RecurrenceFrom, go_backwards=go_backwards)
+    go_backwards  = _get_default_override(RecurrenceFrom, go_backwards=go_backwards)
 
     step_function = _sanitize_function(step_function)
 
@@ -362,8 +362,8 @@ def Recurrence(step_function, go_backwards=default_override_or(False), initial_s
     # BUGBUG: whereas passing a NumPy array fails with "TypeError: cannot convert value of dictionary"
     #cum_sum = Recurrence(C.plus, initial_state=Constant([0, 0.5]))
 
-    go_backwards  = get_default_override(Recurrence, go_backwards=go_backwards)
-    initial_state = get_default_override(Recurrence, initial_state=initial_state)
+    go_backwards  = _get_default_override(Recurrence, go_backwards=go_backwards)
+    initial_state = _get_default_override(Recurrence, initial_state=initial_state)
     initial_state = _get_initial_state_or_default(initial_state)
 
     step_function = _sanitize_function(step_function)
@@ -461,8 +461,8 @@ def Fold(folder_function, go_backwards=default_override_or(False), initial_state
         A function that accepts one argument (which must be a sequence) and performs the fold operation on it
     '''
 
-    go_backwards  = get_default_override(Fold, go_backwards=go_backwards)
-    initial_state = get_default_override(Fold, initial_state=initial_state)
+    go_backwards  = _get_default_override(Fold, go_backwards=go_backwards)
+    initial_state = _get_default_override(Fold, initial_state=initial_state)
 
     # get the scan function
     recurrence = Recurrence(folder_function, go_backwards=go_backwards, initial_state=initial_state, return_full_state=return_full_state)

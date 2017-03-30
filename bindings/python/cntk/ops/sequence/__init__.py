@@ -8,7 +8,7 @@ from cntk.internal import typemap, sanitize_input
 from cntk.internal.utils import get_data_type
 
 from ...axis import Axis
-from ...default_options import get_default_override, default_override_or
+from ...default_options import default_override_or
 ##########################################################################
 # variable ops
 ##########################################################################

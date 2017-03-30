@@ -4,7 +4,7 @@ from . import cntk_py
 from .core import NDArrayView
 from .device import DeviceDescriptor, use_default_device
 from .tensor import TensorOpsMixin
-from .default_options import get_default_override, default_override_or
+from .default_options import _get_default_override, default_override_or
 from .internal import typemap, sanitize_precision, sanitize_value, \
         sanitize_shape, sanitize_dtype_cntk
 
@@ -298,7 +298,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         if init is None:
             init = 0
 
-        pure = get_default_override(None, pure=default_override_or(False))
+        pure = _get_default_override(None, pure=default_override_or(False))
         if pure:
             raise TypeError('parameters cannot be created inside a @Function def')
 
@@ -308,7 +308,7 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
             if not shape:
                 shape = ()
 
-        dtype = get_default_override(Parameter, dtype=dtype)
+        dtype = _get_default_override(Parameter, dtype=dtype)
         if dtype is not None:
             if isinstance(init, np.ndarray) and dtype != init.dtype:
                 init = np.array(init, dtype=dtype)
@@ -373,7 +373,7 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         if (np.isscalar(value) or isinstance(value, np.ndarray)) and not shape:
             shape = ()
 
-        dtype = get_default_override(Constant, dtype=dtype)
+        dtype = _get_default_override(Constant, dtype=dtype)
         if dtype is not None:
             if isinstance(value, np.ndarray) and dtype != value.dtype:
                 value = np.array(value, dtype=dtype)

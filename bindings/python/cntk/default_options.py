@@ -56,7 +56,7 @@ class default_override_or:
 def is_default_override(value):
     return isinstance(value, default_override_or)
 
-def get_default_override(function_or_class, **kwargs):
+def _get_default_override(function_or_class, **kwargs):
     '''
     Looks up an option default override.
     Meant to be used inside functions that use this facility.

@@ -12,7 +12,7 @@ from __future__ import division
 from cntk.ops.functions import Function
 from ..blocks import _inject_name # helpers
 from .. import *
-
+from cntk.default_options import _get_default_override
 
 # AttentionModel block
 def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
@@ -26,9 +26,9 @@ def AttentionModel(attention_dim, attention_span=None, attention_axis=None,
     as described in Bahdanau, et al., "Neural machine translation by jointly learning to align and translate."
     '''
 
-    init                      = get_default_override(AttentionModel, init=init)
-    go_backwards              = get_default_override(AttentionModel, go_backwards=go_backwards)
-    enable_self_stabilization = get_default_override(AttentionModel, enable_self_stabilization=enable_self_stabilization)
+    init                      = _get_default_override(AttentionModel, init=init)
+    go_backwards              = _get_default_override(AttentionModel, go_backwards=go_backwards)
+    enable_self_stabilization = _get_default_override(AttentionModel, enable_self_stabilization=enable_self_stabilization)
 
     # until CNTK can handle multiple nested dynamic loops, we require fixed windows and fake it
     if attention_span is None or attention_axis is None:

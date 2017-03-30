@@ -8,6 +8,7 @@ import numpy as np
 from cntk import *
 from cntk.layers import *
 from cntk.layers.typing import *
+from cntk.default_options import _get_default_override
 
 # Note: We do not test gradients here, assuming that those are tested elsewhere.
 # Forward outputs are tested to verify that the structure of the layer is as expected.
@@ -38,7 +39,7 @@ def assert_list_of_arrays_equal(r, exp, err_msg):
 
 def test_default_options():
     def Test(some_param=default_override_or(13)):
-        some_param = get_default_override(Test, some_param=some_param)
+        some_param = _get_default_override(Test, some_param=some_param)
         return some_param
     assert Test() == 13
     assert Test(42) == 42
