@@ -641,6 +641,7 @@ public:
 %feature("director") CNTK::ProgressWriter;
 %ignore CNTK::ProgressWriter::UpdateTraining;
 %ignore CNTK::ProgressWriter::UpdateTest;
+%ignore CNTK::ProgressWriter::UpdateDistributedSync;
 %ignore CNTK::ProgressWriter::WriteTrainingSummary;
 %ignore CNTK::ProgressWriter::WriteTestSummary;
 

@@ -33,7 +33,8 @@ namespace CNTK
           m_prevMinibatchNumSamples(0),
           m_distributed(false),
           m_aggregatedTrainingLossValue(std::make_shared<Accumulator>()),
-          m_aggregatedTrainingEvalCriterionValue()
+          m_aggregatedTrainingEvalCriterionValue(),
+          m_prevDistributedTotalNumSamples(0)
     {
         std::vector<Variable> combinedFunctionArgs;
         if (m_model) // model is optional, since it may not be adding any information on top of lossFunction
@@ -185,6 +186,9 @@ namespace CNTK
             evalCriterion = m_prevMinibatchAggregateEvalCriterionValue->Data();
         }
 
+        auto currentWorkerNumSamples = m_prevMinibatchNumSamples;
+        auto prevTotalNumSamples = TotalNumberOfSamplesSeen();
+
         MinibatchInfo info{ arguments.empty(), sweepEnd, m_prevMinibatchNumSamples, trainingLoss, evalCriterion };
         bool updated = m_parameterLearners->Update(gradients, info);
         m_prevMinibatchNumSamples = info.numberOfSamples;
@@ -195,6 +199,17 @@ namespace CNTK
             // Have to reassign loss and criterion.
             m_prevMinibatchAggregateEvalCriterionValue = std::make_shared<Value>(info.evalCriterionValue);
             m_prevMinibatchAggregateTrainingLossValue = std::make_shared<Value>(info.trainingLossValue);
+        }
+
+        // Did we do a distributed sync?
+        // We determine this by checking if the increase in total #samples is > #samples processed by local worker
+        auto currentTotalNumSamples = TotalNumberOfSamplesSeen();
+        if ((currentTotalNumSamples - prevTotalNumSamples) > currentWorkerNumSamples)
+        {
+            for (auto& progressWriter : m_progressWriters)
+                progressWriter->UpdateDistributedSync(currentTotalNumSamples - m_prevDistributedTotalNumSamples, nullptr);
+
+            m_prevDistributedTotalNumSamples = currentTotalNumSamples;
         }
 
         return updated;

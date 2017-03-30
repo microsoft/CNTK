@@ -163,12 +163,17 @@ def train_and_test(network, trainer, train_reader, test_reader, epoch_size, mini
 def sequence_to_sequence_translator(train_data, test_data, epoch_size=908241, num_quantization_bits=default_quantization_bits, block_size=3200, warm_up=0, minibatch_size=72, max_epochs=10, randomize_data=False, log_to_file=None, num_mbs_per_log=10, gen_heartbeat=False):
     cntk.debugging.set_computation_network_trace_level(0)
 
+    distributed_sync_report_freq = None
+    if block_size is not None:
+        distributed_sync_report_freq = 1
+
     progress_printer = ProgressPrinter(freq=num_mbs_per_log,
         tag='Training',
         log_to_file=log_to_file,
         rank=Communicator.rank(),
         gen_heartbeat=gen_heartbeat,
-        num_epochs=max_epochs)
+        num_epochs=max_epochs,
+        distributed_freq=distributed_sync_report_freq)
 
     input_vocab_dim = 69
     label_vocab_dim = 69
