@@ -165,32 +165,10 @@ class LinearEpsilonAnnealingExplorer(object):
 
 
 class DeepQAgent(object):
-    @staticmethod
-    def huber_loss(y, y_hat, delta):
-        """
-        Compute the Huber Loss as part of the model graph
-    
-        Huber Loss is more robust to outliers. It is defined as:
-         if |y - y_hat| < delta :
-            0.5 * (y - y_hat)**2
-        else :
-            delta * |y - y_hat| - 0.5 * delta**2
-    
-        :param y: Target value
-        :param y_hat: Estimated value
-        :param delta: Outliers threshold
-        :return: float
-        """
-        half_delta_squared = 0.5 * delta * delta
-        error = y - y_hat
-        abs_error = abs(error)
-
-        less_than = 0.5 * square(error)
-        more_than = (delta * abs_error) - half_delta_squared
-        loss_per_sample = element_select(less(abs_error, delta), less_than, more_than)
-
-        return reduce_sum(loss_per_sample, name='loss')
-
+    """
+    Implementation of Deep Q Neural Network agent like in: 
+        Nature 518. "Human-level control through deep reinforcement learning" (Mnih & al. 2015)
+    """
     def __init__(self, input_shape, nb_actions,
                  gamma=0.99, explorer=LinearEpsilonAnnealingExplorer(1, 0.1, 1000000),
                  learning_rate=0.00025, momentum=0.95, minibatch_size=32, device_id=-1,
@@ -369,6 +347,32 @@ class DeepQAgent(object):
             self._metrics_writer.write_value('Mean Std Q per ep.', std_q, self._num_actions_taken)
 
         self._metrics_writer.write_value('Sum rewards per ep.', sum(self._episode_rewards), self._num_actions_taken)
+
+    @staticmethod
+    def huber_loss(y, y_hat, delta):
+        """
+        Compute the Huber Loss as part of the model graph
+    
+        Huber Loss is more robust to outliers. It is defined as:
+         if |y - y_hat| < delta :
+            0.5 * (y - y_hat)**2
+        else :
+            delta * |y - y_hat| - 0.5 * delta**2
+    
+        :param y: Target value
+        :param y_hat: Estimated value
+        :param delta: Outliers threshold
+        :return: float
+        """
+        half_delta_squared = 0.5 * delta * delta
+        error = y - y_hat
+        abs_error = abs(error)
+
+        less_than = 0.5 * square(error)
+        more_than = (delta * abs_error) - half_delta_squared
+        loss_per_sample = element_select(less(abs_error, delta), less_than, more_than)
+
+        return reduce_sum(loss_per_sample, name='loss')
 
 
 def as_ale_input(environment):
