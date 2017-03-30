@@ -5,7 +5,6 @@
 # ==============================================================================
 
 from .. import cntk_py
-from ..variables import Record
 import numpy as np
 
 _VARIABLE_OR_FUNCTION = (cntk_py.Variable, cntk_py.Function)
@@ -14,7 +13,7 @@ def get_data_type(*args):
     """
     Calculates the highest precision numpy data type of the provided parameters.
     If the parameter is a Function instance, it calculates it based on its
-    inputs. Placeholders are ignored in the type determination.
+    inputs. placeholders are ignored in the type determination.
 
     Args:
         args (number, list, NumPy array, :class:`~cntk.variables.Variable`, or :class:`~cntk.ops.functions.Function`): input
@@ -84,6 +83,8 @@ def get_python_function_arguments(f):
     else:
         def getfullargspec(f):
             from inspect import getargspec
+            from ..variables import Record
+
             annotations = getattr(f, '__annotations__', {})
             #f.__annotations__ = None  # needed when faking it under Python 3 for debugging purposes
             a = getargspec(f)

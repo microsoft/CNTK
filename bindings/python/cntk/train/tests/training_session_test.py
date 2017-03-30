@@ -120,7 +120,7 @@ def test_session_sanity_check(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs,
-        var_to_stream=input_map,
+        model_inputs_to_streams=input_map,
         mb_size=4
     ).train(device)
 
@@ -137,7 +137,7 @@ def test_session_max_samples(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs,
-        var_to_stream=input_map,
+        model_inputs_to_streams=input_map,
         mb_size=4, max_samples=20
     ).train(device)
 
@@ -158,7 +158,7 @@ def test_session_cross_validation_at_end(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, 
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=20,
         cv_config = CrossValidationConfig(source=mbs1)
     ).train(device)
@@ -181,7 +181,7 @@ def test_session_cross_validation_3_times(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, 
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
         cv_config = CrossValidationConfig(source=mbs1, frequency=20, mb_size=2),
     ).train(device)
@@ -206,7 +206,7 @@ def test_session_cross_validation_3_times_checkpoints_2_save_all(tmpdir, device_
 
     training_session(
         trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
         checkpoint_config = CheckpointConfig(frequency=35, preserve_all=True,
                                              filename=str(tmpdir / "checkpoint_save_all")),
@@ -244,7 +244,7 @@ def test_session_progress_print(tmpdir, device_id):
     training_session(
         trainer=t, mb_source=mbs, 
         mb_size=minibatch_size_schedule(4),
-        var_to_stream=input_map, max_samples=60,
+        model_inputs_to_streams=input_map, max_samples=60,
         progress_frequency=10
     ).train(device)
 
@@ -265,7 +265,7 @@ def test_session_restart_from_end_checkpoint(tmpdir, device_id):
     test_dir = str(tmpdir)
 
     training_session(trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency=20,
         checkpoint_config = CheckpointConfig(frequency=20,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
@@ -286,7 +286,7 @@ def test_session_restart_from_end_checkpoint(tmpdir, device_id):
     # restoring from a particular checkpoint should not cause any training
     mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     training_session(trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency=20,
         checkpoint_config = CheckpointConfig(frequency=35, restore=True,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
@@ -311,7 +311,7 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
     test_dir = str(tmpdir)
 
     training_session(trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency = 20,
         checkpoint_config = CheckpointConfig(frequency=20, preserve_all=True,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
@@ -346,7 +346,7 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
     mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     training_session(
         trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency=20,
         checkpoint_config = CheckpointConfig(frequency=20, restore=True, preserve_all= True,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
@@ -384,7 +384,7 @@ def test_session_restart_from_checkpoint_preserve_all(tmpdir, device_id):
     mbs = mb_source(tmpdir, "training", max_samples=INFINITELY_REPEAT)
     training_session(
         trainer=t, mb_source=mbs,
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60, progress_frequency=20,
         checkpoint_config = CheckpointConfig(frequency=20, restore=True, preserve_all= True,
                                              filename=str(tmpdir / "restart_from_checkpoint"))
@@ -425,7 +425,7 @@ def test_session_cv_callback_3_times(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, mb_size=4,
-        var_to_stream=input_map, max_samples=60,
+        model_inputs_to_streams=input_map, max_samples=60,
         cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
     assert counter == [3]
@@ -459,7 +459,7 @@ def test_session_cv_callback_with_cross_validation_3_times(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, mb_size=4,
-        var_to_stream=input_map, max_samples=60,
+        model_inputs_to_streams=input_map, max_samples=60,
         cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
 
@@ -487,7 +487,7 @@ def test_session_cv_callback_early_exit(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, mb_size=4,
-        var_to_stream=input_map,
+        model_inputs_to_streams=input_map,
         max_samples=60,
         cv_config = CrossValidationConfig(frequency=20, callback=cv_callback)
     ).train(device)
@@ -508,7 +508,7 @@ def test_session_with_test(tmpdir, device_id):
 
     training_session(
         trainer=t, mb_source=mbs, 
-        mb_size=4, var_to_stream=input_map,
+        mb_size=4, model_inputs_to_streams=input_map,
         max_samples=60,
         test_config = TestConfig(source=mbs1, mb_size=2),
     ).train(device)

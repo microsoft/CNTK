@@ -15,7 +15,7 @@ from cntk.internal import sanitize_input, sanitize_shape, sanitize_axis, sanitiz
 from cntk.internal.utils import get_data_type
 from ..axis import Axis
 from .. import cntk_py
-
+from ..default_options import get_default_override, default_override_or
 
 TIMES_NO_INFERRED_INPUT_RANK                            = cntk_py.TimesNoInferredInputRank
 TIMES_REDUCE_SEQUENCE_AXIS_WITHOUT_INFERRED_INPUT_RANK  = cntk_py.TimesReduceSequenceAxisWithoutInferredInputRank
@@ -1700,9 +1700,8 @@ def past_value(x, initial_state=None, time_step=1, name=''):
 
     Example:
         >>> # create example input: one sequence with 4 tensors of shape (3, 2)
-        >>> from cntk.layers import Input
         >>> from cntk.layers.typing import Tensor, Sequence
-        >>> x = Input(**Sequence[Tensor[3,2]])
+        >>> x = input(**Sequence[Tensor[3,2]])
         >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
         >>> x0
         array([[[[  0.,   1.],
@@ -1741,7 +1740,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
                  [ 16.,  17.]]], dtype=float32)]
 
         >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
-        >>> s = Input(**Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
+        >>> s = input(**Tensor[3,2])  # not a Sequence[], e.g. a final encoder hidden state
         >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,1,3,2))
         >>> s0
         array([[[[ 0. ,  0.5],
@@ -2527,8 +2526,17 @@ def dropout(x, dropout_rate=0.0, name=''):
 from cntk.device import use_default_device
 from cntk.axis import Axis
 
+def _input_spec(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
+                dynamic_axes=[Axis.default_batch_axis()], name=''):
+    '''
+    We need _input_spec because input is python built-in and because of typemap, must remain
+    in sync with input.
+    TODO: Investigate to remove it.
+    '''
+    pass
+
 @typemap
-def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
+def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is_sparse=False,
           dynamic_axes=[Axis.default_batch_axis()], name=''):
     '''
     It creates an input in the network: a place where data,
@@ -2547,9 +2555,9 @@ def input(shape, dtype=np.float32, needs_gradient=False, is_sparse=False,
     '''
     from cntk.cntk_py import input_variable
     from cntk.internal import sanitize_shape, sanitize_dtype_cntk
-
+    
     shape = sanitize_shape(shape)
-
+    dtype = get_default_override(_input_spec, dtype=dtype)
     if dtype is None:
         dtype = np.float32
     dtype = sanitize_dtype_cntk(dtype)

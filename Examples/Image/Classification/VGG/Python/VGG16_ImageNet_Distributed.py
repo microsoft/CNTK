@@ -165,11 +165,11 @@ def train_and_test(network, trainer, train_source, test_source, minibatch_size, 
     # Train all minibatches 
     training_session(
         trainer=trainer, mb_source = train_source,
-        var_to_stream = input_map,
+        model_inputs_to_streams = input_map,
         mb_size_schedule = mb_size_schedule,
         progress_frequency=epoch_size,
         checkpoint_config = CheckpointConfig(filename = os.path.join(model_path, model_name), restore=restore),
-        test_config = TestConfig(source=test_source, schedule=mb_size_schedule)
+        test_config = TestConfig(source=test_source, mb_size=mb_size_schedule)
     ).train()
 
 # Train and evaluate the network.
