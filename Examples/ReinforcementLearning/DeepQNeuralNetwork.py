@@ -316,7 +316,7 @@ class DeepQAgent(object):
         The agent will compute the expected reward for the state(t+1) 
         and update the expected reward at step t according to this.
         <BLANKLINE>
-        The target expectation is computed thourgh the Target Network, which is a more stable version
+        The target expectation is computed through the Target Network, which is a more stable version
         of the Action Value Network for increasing training stability
         <BLANKLINE>
         The Target Network is a frozen copy of the Action Value Network updated as regular intervals
@@ -356,8 +356,7 @@ class DeepQAgent(object):
         :return: Updated expected reward 
         """
         q_hat = self._target_net.eval(post_states)
-        q_hat_eval = q_hat.max(axis=1)
-        q_targets = (1 - dones) * (self.gamma * q_hat_eval) + rewards
+        q_targets = (1 - dones) * (self.gamma * q_hat.max(axis=1)) + rewards
 
         return np.array(q_targets, dtype=np.float32)
 
