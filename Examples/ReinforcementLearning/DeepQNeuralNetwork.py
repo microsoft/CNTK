@@ -160,7 +160,7 @@ class LinearEpsilonAnnealingExplorer(object):
         elif step > self._steps:
             return self._start
         else:
-            return self._a * step + self._stop
+            return self._a * step + self._start
 
     def is_exploring(self, step):
         return np.random.rand() < self._epsilon(step)
