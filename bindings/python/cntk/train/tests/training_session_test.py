@@ -84,7 +84,7 @@ def create_sample_model(device, writer=None):
 
 class MockProgressWriter(cntk_py.ProgressWriter):
     def __init__(self, expected_test_summary=None, training_summary_counter=0):
-        super(MockProgressWriter, self).__init__(1, 0, 1, 0)
+        super(MockProgressWriter, self).__init__(1, 0, 1, 0, sys.maxsize, 0)
         self.training_summary_counter = training_summary_counter
         self.test_summary_counter = 0
         self.expected_test_summary = expected_test_summary

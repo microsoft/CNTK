@@ -44,7 +44,7 @@ def create_test_model():
 
 def with_lookahead():
     x = placeholder()
-    future_x = future_value(x)
+    future_x = sequence.future_value(x)
     apply_x = splice (x, future_x)
     return apply_x
 

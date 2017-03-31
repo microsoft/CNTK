@@ -4599,6 +4599,8 @@ namespace CNTK
 
         AccumulatorPtr m_aggregatedTrainingLossValue;
         AccumulatorPtr m_aggregatedTrainingEvalCriterionValue;
+
+        size_t m_prevDistributedTotalNumSamples;
     };
 
     ///
@@ -5277,7 +5279,8 @@ namespace CNTK
         /// 'firstUpdatesToWrite' updates will be written explicitly before using an arithmetic schedule.
         ///
         CNTK_API ProgressWriter(size_t trainingUpdateWriteFrequency, size_t trainingFirstUpdatesToWrite,
-                                size_t testUpdateWriteFrequency, size_t testFirstUpdatesToWrite);
+                                size_t testUpdateWriteFrequency, size_t testFirstUpdatesToWrite,
+                                size_t distributedSyncUpdateWriteFrequency, size_t distributedSyncFirstUpdatesToWrite);
 
         ///
         /// Destructor.
@@ -5298,6 +5301,13 @@ namespace CNTK
         CNTK_API virtual void OnWriteTestUpdate(const std::pair<size_t, size_t>& /*samples*/,
                                                 const std::pair<size_t, size_t>& /*updates*/,
                                                 const std::pair<double, double>& /*aggregateMetric*/) {};
+
+        /// Actually outputs information about the synchronization across parallel workers
+        /// in distributed training. Overridable in derived classes.
+        ///
+        CNTK_API virtual void OnWriteDistributedSyncUpdate(const std::pair<size_t, size_t>& /*samples*/,
+                                                           const std::pair<size_t, size_t>& /*updates*/,
+                                                           const std::pair<double, double>& /*aggregateMetric*/) {};
 
         ///
         /// Called after each training update, regardless whether the actual write is needed.
@@ -5338,6 +5348,11 @@ namespace CNTK
         void UpdateTest(size_t numSamples, const ValuePtr& accumulatedMetric);
 
         ///
+        /// Updates the writer with the accumulated metric since the start of evaluation.
+        ///
+        void UpdateDistributedSync(size_t numSamples, const ValuePtr& accumulatedMetric);
+
+        ///
         /// Writes a summary of training progress since the last call to this function.
         ///
         void WriteTrainingSummary(const ValuePtr& accumulatedLoss, const ValuePtr& accumulatedMetric);
@@ -5354,6 +5369,7 @@ namespace CNTK
         class Impl;
         std::unique_ptr<Impl> m_training;
         std::unique_ptr<Impl> m_test;
+        std::unique_ptr<Impl> m_distributedSync;
     };
 
     /// Creates an instance of the training session class. Parameters match the parameters of the TrainingSession constructor.

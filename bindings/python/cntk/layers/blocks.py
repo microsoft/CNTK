@@ -14,7 +14,7 @@ import numpy as np
 from cntk import input, placeholder, combine, alias, sequence, parameter, constant
 from cntk.variables import Record, Constant, Parameter
 from cntk.axis import Axis
-from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus, past_value, future_value
+from cntk.ops import times, slice, sigmoid, tanh, log, exp, softplus
 from .typing import Signature
 from cntk.internal import _as_tuple
 from cntk.initializer import glorot_uniform
@@ -96,7 +96,7 @@ def ForwardDeclaration(name='forward_declaration'):
      >>> x = C.input(**Sequence[Tensor[2]])
      >>> ones_like_input = sequence.broadcast_as(1, x)  # sequence of scalar ones of same length as input
      >>> out_fwd = ForwardDeclaration()  # placeholder for the state variables
-     >>> out = past_value(out_fwd, initial_state=0) + ones_like_input
+     >>> out = sequence.past_value(out_fwd, initial_state=0) + ones_like_input
      >>> out_fwd.resolve_to(out)
      >>> length = sequence.last(out)
      >>> x0 = np.reshape(np.arange(6,dtype=np.float32),(1,3,2))

@@ -13,7 +13,7 @@ import pytest
 from ..functions import *
 from ...train.trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input, placeholder, times, plus, past_value, sequence, as_composite, combine, convolution, splice, as_block
+from .. import constant, parameter, input, placeholder, times, plus, sequence, as_composite, combine, convolution, splice, as_block
 from ... import InferredDimension, gpu, cpu
 from .ops_test_utils import compare_lists_of_np_arrays, AA, cntk_device
 
@@ -190,7 +190,7 @@ def test_data_type_inference():
 def test_recurrence_shape_inference():
     i = sequence.input((2,))
     p = placeholder()
-    p_past = past_value(p)
+    p_past = sequence.past_value(p)
     p_past_plus_i = p_past + i
 
     p_past_plus_i.replace_placeholder(p_past_plus_i.output)

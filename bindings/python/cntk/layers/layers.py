@@ -208,9 +208,9 @@ def _window(x, axis, begin, end, step, stride, initial_state=None):
     helper to expand a sequence into a window, splicing them along the given axis (which must already exist)
     '''
     shifted = [
-        past_value(x, initial_state=initial_state, time_step=-t) if t < 0 else
+        sequence.past_value(x, initial_state=initial_state, time_step=-t) if t < 0 else
         x                                                        if t == 0 else
-        future_value(x, initial_state=initial_state, time_step=t)
+        sequence.future_value(x, initial_state=initial_state, time_step=t)
         for t in range(begin, end, step)
     ]
     r = splice(*shifted, axis=axis)
