@@ -13,6 +13,8 @@ from cntk.learners import sgd, learning_rate_schedule, UnitType
 from cntk.ops import input, sequence
 from cntk.losses import cross_entropy_with_softmax
 from cntk.metrics import classification_error
+from cntk.logging import *
+from cntk.layers import *
 
 #abs_path = os.path.dirname(os.path.abspath(__file__))
 #sys.path.append(os.path.join(abs_path, "..", "..", "..", "common"))
@@ -192,19 +194,20 @@ def LSTMP_cell_with_self_stabilization(input, prev_output, prev_cell_state):
 def LSTMP_component_with_self_stabilization(input, output_dim, cell_dim, recurrence_hookH=past_value, recurrence_hookC=past_value):
     dh = placeholder(
         shape=(output_dim), dynamic_axes=input.dynamic_axes)
-    dc = placeholder(
-        shape=(cell_dim), dynamic_axes=input.dynamic_axes)
+    #dc = placeholder(
+    #    shape=(cell_dim), dynamic_axes=input.dynamic_axes)
 
-    LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
-    actualDh = recurrence_hookH(LSTMCell[0])
-    actualDc = recurrence_hookC(LSTMCell[1])
+    #LSTMCell = LSTMP_cell_with_self_stabilization(input, dh, dc)
+    LSTMCell = RNNUnit(cell_dim, activation=relu)(dh, input)
+    actualDh = recurrence_hookH(LSTMCell)#[0])
+    #actualDc = recurrence_hookC(LSTMCell[1])
 
     # Form the recurrence loop by replacing the dh and dc placeholders with
     # the actualDh and actualDc
-    LSTMCell[0].replace_placeholders(
-        {dh: actualDh.output, dc: actualDc.output})
+    LSTMCell.replace_placeholders(
+        {dh: actualDh.output})#, dc: actualDc.output})
     
-    return (LSTMCell[0], LSTMCell[1])
+    return (LSTMCell)#, LSTMCell[1])
 
 
 def print_training_progress(trainer, mb, frequency):
@@ -226,9 +229,14 @@ def create_reader(path, is_training, input_dim, label_dim):
 
 # Defines the LSTM model for classifying sequences
 def LSTM_sequence_classifer_net(feature, num_output_classes, embedding_dim, LSTM_dim, cell_dim):
+    return Sequential([
+        Embedding(embedding_dim),
+        Fold(RNNUnit(cell_dim, activation=relu)),
+        Dense(num_output_classes)
+    ])(feature)
     embedding_function = embedding(feature, embedding_dim)
     LSTM_function = LSTMP_component_with_self_stabilization(
-        embedding_function.output, LSTM_dim, cell_dim)[0]
+        embedding_function.output, LSTM_dim, cell_dim)  #[0]
     thought_vector = sequence.last(LSTM_function)
 
     return linear_layer(thought_vector, num_output_classes)
@@ -246,38 +254,44 @@ def train_sequence_classifier(debug_output=False):
     label = input(num_output_classes)
 
     # Instantiate the sequence classification model
-    classifier_output = LSTM_sequence_classifer_net(
+    model = LSTM_sequence_classifer_net(
         features, num_output_classes, embedding_dim, hidden_dim, cell_dim)
 
-    ce = cross_entropy_with_softmax(classifier_output, label)
-    pe = classification_error(classifier_output, label)
+    ce = cross_entropy_with_softmax(model, label)
+    pe = classification_error(model, label)
 
     rel_path = r"../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), rel_path)
 
     reader = create_reader(path, True, input_dim, num_output_classes)
 
-    input_map = {
-        features : reader.streams.features,
-        label    : reader.streams.labels
-    }
-
-    lr_per_sample = learning_rate_schedule(0.0005, UnitType.sample)
+    lr_per_sample = learning_rate_schedule(0.05, UnitType.sample)
     # Instantiate the trainer object to drive the model training
-    trainer = Trainer(classifier_output, (ce, pe),
-                      sgd(classifier_output.parameters, lr=lr_per_sample))
+    trainer = Trainer(model, (ce, pe),
+                      sgd(model.parameters, lr=lr_per_sample))
+
+    # process minibatches and perform model training
+    training_progress_output_freq = 10
+    log_number_of_parameters(model) ; print()
+    progress_printer = ProgressPrinter(freq=training_progress_output_freq, first=10, tag='Training') # more detailed logging
+    #progress_printer = ProgressPrinter(tag='Training')
 
     # Get minibatches of sequences to train with and perform model training
     minibatch_size = 200
-    training_progress_output_freq = 10
 
     if debug_output:
         training_progress_output_freq = training_progress_output_freq/3
 
     for i in range(251):
+        input_map = {
+            features : reader.streams.features,
+            label    : reader.streams.labels
+        }
         mb = reader.next_minibatch(minibatch_size, input_map=input_map)
         trainer.train_minibatch(mb)
-        print_training_progress(trainer, i, training_progress_output_freq)
+        #print_training_progress(trainer, i, training_progress_output_freq)
+        progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
+    loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy
 
