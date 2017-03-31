@@ -48,8 +48,8 @@ def convnet_mnist(debug_output=False):
         drop4 = cntk.layers.Dropout(0.5)(f4)
         z     = cntk.layers.Dense(num_output_classes, activation=None)(drop4)
 
-    ce = cntk.ops.cross_entropy_with_softmax(z, label_var)
-    pe = cntk.ops.classification_error(z, label_var)
+    ce = cntk.losses.cross_entropy_with_softmax(z, label_var)
+    pe = cntk.metrics.classification_error(z, label_var)
 
     reader_train = create_reader(os.path.join(data_path, 'Train-28x28_cntk_text.txt'), True, input_dim, num_output_classes)
 
@@ -60,12 +60,12 @@ def convnet_mnist(debug_output=False):
 
     # Set learning parameters
     lr_per_sample    = [0.001]*10 + [0.0005]*10 + [0.0001]
-    lr_schedule      = cntk.learning_rate_schedule(lr_per_sample, cntk.learner.UnitType.sample, epoch_size)
+    lr_schedule      = cntk.learning_rate_schedule(lr_per_sample, cntk.learners.UnitType.sample, epoch_size)
     mm_time_constant = [0]*5 + [1024]
-    mm_schedule      = cntk.learner.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
+    mm_schedule      = cntk.learners.momentum_as_time_constant_schedule(mm_time_constant, epoch_size)
 
     # Instantiate the trainer object to drive the model training
-    learner = cntk.learner.momentum_sgd(z.parameters, lr_schedule, mm_schedule)
+    learner = cntk.learners.momentum_sgd(z.parameters, lr_schedule, mm_schedule)
     progress_printer = cntk.logging.ProgressPrinter(tag='Training', num_epochs=max_epochs)
     trainer = cntk.Trainer(z, (ce, pe), learner, progress_printer)
 
