@@ -9,6 +9,7 @@ Unit tests for reshaping operations.
 """
 
 import numpy as np
+import scipy as sp
 import pytest
 import cntk as C
 from .ops_test_utils import cntk_device
@@ -191,4 +192,23 @@ def test_times_sparse_operand_reduce_multiple_axes():
     
     with pytest.raises(RuntimeError):
         a_projection = times(a, w)
-   
+
+def test_non_sequence_sparse_one_hot():
+    i = C.input(())
+    sparse_one_hot = C.one_hot(i, num_classes=3, sparse_output=True)
+    indices = np.asarray([2, 0, 1])
+    result = sparse_one_hot.eval({i : indices})
+    result_indices = result.dot(np.array([0, 1, 2]))
+    assert np.array_equal(result_indices, indices)
+
+def test_gather_2D_using_one_hot_and_times():
+    i = C.sequence.input((1,))
+    indices = [[2, 0], [1]]
+    sparse_one_hot = C.one_hot(i, num_classes=3, sparse_output=True)
+    w = C.parameter((-1, 2, 3), init=C.glorot_uniform())
+    t = C.times(sparse_one_hot, w, output_rank=2)
+    result = t.eval({i : indices})
+    w_value = w.value
+    expected_result = [np.stack([np.expand_dims(np.asarray(w_value[idx]), axis=0) for idx in seq]) for seq in indices]
+    assert np.array_equal(result[0], expected_result[0])
+    assert np.array_equal(result[1], expected_result[1])

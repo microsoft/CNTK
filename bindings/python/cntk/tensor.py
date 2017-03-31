@@ -208,7 +208,7 @@ class ArrayMixin(object):
 
         if is_sparse:
             from cntk.internal.sanitize import _sparse_to_dense_network_cache
-            network = _sparse_to_dense_network_cache((ndav.shape[-1],))
+            network = _sparse_to_dense_network_cache((ndav.shape[-1],), False)
 
             warnings.warn('converting Value object to CSR format might be slow')
 

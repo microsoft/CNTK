@@ -248,7 +248,7 @@ class Value(cntk_py.Value):
             if variable is None:
                 raise ValueError('cannot convert sparse value to sequences '
                                  'wihtout the corresponding variable')
-            network = _sparse_to_dense_network_cache(variable.shape)
+            network = _sparse_to_dense_network_cache(variable.shape, True)
 
             warnings.warn('converting Value object to CSR format might be slow')
 
