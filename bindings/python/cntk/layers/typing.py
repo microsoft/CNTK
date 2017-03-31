@@ -15,6 +15,8 @@ Python type syntax can be used to create such a record for the three main proper
 using :class:`~cntk.layers.typing.Tensor`,  :class:`~cntk.layers.typing.SparseTensor`,  :class:`~cntk.layers.typing.ParameterTensor`,
 :class:`~cntk.layers.typing.Sequence`,  and :class:`~cntk.layers.typing.SequenceOver`.
 
+We have a new type system in the layers module to make the input type more readable. This new type system is subject to change, please give us feedback on github or stackoverflow
+
 Example:
     >>> # Tensor[...] denotes a data variable (with implied batch dimension)
     >>> from cntk.layers.typing import *
