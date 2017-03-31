@@ -2036,6 +2036,12 @@ private:
         {}
 
         ///
+        /// Create a clone of 'this' constant with the specified DataType. 
+        /// This only supports converting from a lower precision type to a higher precision type (e.g. DataType::Float to DataType::Double)
+        ///
+        CNTK_API Constant CloneAs(DataType dataType) const;
+
+        ///
         /// Create a scalar constant. The specified value is cast to the specified DataType
         ///
         static inline ::CNTK::Constant Scalar(::CNTK::DataType dataType, double value, const ::CNTK::DeviceDescriptor& device = DeviceDescriptor::CPUDevice())
@@ -3163,19 +3169,15 @@ namespace CNTK
             functor(rootFunction);
 
             if (traverseInsideBlockFunction && rootFunction->IsBlock())
-            {
                 PreorderTraverseFunctions(rootFunction->BlockRoot(), visitedFunctions, functor, traverseInsideBlockFunction);
-            }
-            else
+
+            std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
+            for (const auto& rootInput : rootFunctionInputs)
             {
-                std::vector<Variable> rootFunctionInputs = rootFunction->Inputs();
-                for (const auto& rootInput : rootFunctionInputs)
+                if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
                 {
-                    if (rootInput.IsOutput() && visitedFunctions.find(rootInput.Owner()) == visitedFunctions.end())
-                    {
-                        const auto& function = rootInput.Owner();
-                        PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
-                    }
+                    const auto& function = rootInput.Owner();
+                    PreorderTraverseFunctions(function, visitedFunctions, functor, traverseInsideBlockFunction);
                 }
             }
         }
@@ -4580,9 +4582,6 @@ namespace CNTK
         void UpdateTrainingProgress(size_t numSamples, const ValuePtr& loss, const ValuePtr& evalCriterion, const DeviceDescriptor& computeDevice);
         void AddProgressWriters(const std::vector<ProgressWriterPtr>& progressWriters);
 
-        // TODO: Workaround for back compat. Should not be used and will be removed in the next version.
-        friend CNTK_API void ::CNTK::Internal::AddProgressWriters(const TrainerPtr&, const std::vector<ProgressWriterPtr>&);
-
         FunctionPtr m_model;
         FunctionPtr m_combinedTrainingFunction;
         FunctionPtr m_lossFunction;
@@ -4600,6 +4599,8 @@ namespace CNTK
 
         AccumulatorPtr m_aggregatedTrainingLossValue;
         AccumulatorPtr m_aggregatedTrainingEvalCriterionValue;
+
+        size_t m_prevDistributedTotalNumSamples;
     };
 
     ///
@@ -5158,39 +5159,6 @@ namespace CNTK
             const CrossValidationConfig& crossValidation,
             const TestConfig& test);
 
-        /// !!! DEPRECATED !!!
-        /// Constructor of the training session: 
-        /// trainingSource : a minibatch source that will be used for training
-        /// trainer : an instance of a trainer
-        /// modelInputsToMinibatchSourceMapping : mapping between the input node of the model and the corresponding stream
-        /// minibatchSizeSchedule : a minibatch size schedule used for training
-        /// checkpointFrequencyInSamples : an approximate number of global samples processed accross the workers
-        ///    after which the checkpoint is taken. Should be positive number if the checkpoint file is specified.
-        /// checkpointFilename : a file name of the checkpoint file, if empty, the checkpointing is disabled.
-        /// crossValidationSource: a minibatch source that will be used for cross validation.
-        /// crossValidationSchedule : a minibatch size schedule for cross validation.
-        /// restoreFromCheckpointIfExists: flag, indicating whether perform restore of the training session from the checkpoint before the start of the training.
-        /// keepExistingCheckpoints: flag, indicating whether to store all checkpoints, by default only the last checkpoint is preserved
-        /// maxNumberOfTrainingSamples : max number of samples after which the training should be stopped
-        /// progressFrequency : an approximate number of global samples processed accross the workers
-        ///    after which the summary of metrics is reported using the progress_printer
-        ///
-        CNTK_API TrainingSession(
-            const MinibatchSourcePtr& trainingSource,
-            const TrainerPtr& trainer,
-            const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
-            const MinibatchSizeSchedule& minibatchSizeSchedule,
-            size_t checkpointFrequencyInSamples,
-            const std::wstring& checkPointFileName,
-            const MinibatchSourcePtr& crossValidationSource = nullptr,
-            const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(1),
-            size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
-            bool restoreFromCheckpointIfExists = true,
-            bool keepExistingCheckpoints = false,
-            size_t maxNumberOfTrainingSamples = std::numeric_limits<size_t>::max(),
-            size_t progressFrequency = std::numeric_limits<size_t>::max(),
-            const std::vector<ProgressWriterPtr>& progressWriters = {});
-
         ///
         /// Runs the session.
         ///
@@ -5291,26 +5259,6 @@ namespace CNTK
         TestConfig m_test;
     };
 
-    ///
-    /// !!! DEPRECATED !!!
-    /// Creates an instance of the training session class. Parameters match the paramters of the TrainingSession constructor.
-    ///
-    CNTK_API TrainingSessionPtr CreateBasicTrainingSession(
-        const MinibatchSourcePtr& trainingSource,
-        const TrainerPtr& trainer,
-        const std::unordered_map<Variable, StreamInformation>& modelInputToMinibatchSourceStream,
-        const MinibatchSizeSchedule& minibatchSizeSchedule,
-        size_t checkpointFrequencyInSamples,
-        const std::wstring& checkPointFileName,
-        const MinibatchSourcePtr& crossValidationSource = nullptr,
-        const MinibatchSizeSchedule& crossValidationSchedule = MinibatchSizeSchedule(1),
-        size_t crossValidationFrequencyInSamples = std::numeric_limits<size_t>::max(),
-        bool restoreFromCheckpointIfExists = true,
-        bool keepExistingCheckpoints = false,
-        size_t maxNumberOfTrainingSamples = std::numeric_limits<size_t>::max(),
-        size_t progressFrequency = std::numeric_limits<size_t>::max(),
-        const std::vector<ProgressWriterPtr>& progressWriters = {});
-
     CNTK_API void PrintBuiltInfo();
 
     ///
@@ -5331,7 +5279,8 @@ namespace CNTK
         /// 'firstUpdatesToWrite' updates will be written explicitly before using an arithmetic schedule.
         ///
         CNTK_API ProgressWriter(size_t trainingUpdateWriteFrequency, size_t trainingFirstUpdatesToWrite,
-                                size_t testUpdateWriteFrequency, size_t testFirstUpdatesToWrite);
+                                size_t testUpdateWriteFrequency, size_t testFirstUpdatesToWrite,
+                                size_t distributedSyncUpdateWriteFrequency, size_t distributedSyncFirstUpdatesToWrite);
 
         ///
         /// Destructor.
@@ -5352,6 +5301,13 @@ namespace CNTK
         CNTK_API virtual void OnWriteTestUpdate(const std::pair<size_t, size_t>& /*samples*/,
                                                 const std::pair<size_t, size_t>& /*updates*/,
                                                 const std::pair<double, double>& /*aggregateMetric*/) {};
+
+        /// Actually outputs information about the synchronization across parallel workers
+        /// in distributed training. Overridable in derived classes.
+        ///
+        CNTK_API virtual void OnWriteDistributedSyncUpdate(const std::pair<size_t, size_t>& /*samples*/,
+                                                           const std::pair<size_t, size_t>& /*updates*/,
+                                                           const std::pair<double, double>& /*aggregateMetric*/) {};
 
         ///
         /// Called after each training update, regardless whether the actual write is needed.
@@ -5392,6 +5348,11 @@ namespace CNTK
         void UpdateTest(size_t numSamples, const ValuePtr& accumulatedMetric);
 
         ///
+        /// Updates the writer with the accumulated metric since the start of evaluation.
+        ///
+        void UpdateDistributedSync(size_t numSamples, const ValuePtr& accumulatedMetric);
+
+        ///
         /// Writes a summary of training progress since the last call to this function.
         ///
         void WriteTrainingSummary(const ValuePtr& accumulatedLoss, const ValuePtr& accumulatedMetric);
@@ -5408,6 +5369,7 @@ namespace CNTK
         class Impl;
         std::unique_ptr<Impl> m_training;
         std::unique_ptr<Impl> m_test;
+        std::unique_ptr<Impl> m_distributedSync;
     };
 
     /// Creates an instance of the training session class. Parameters match the parameters of the TrainingSession constructor.
@@ -5419,9 +5381,9 @@ namespace CNTK
         const std::unordered_map<Variable, StreamInformation>& inputVarToStream,
         size_t maxNumTrainingSamples,
         size_t progressFrequency,
-        const CheckpointConfig& checkpointing,
-        const CrossValidationConfig& crossValidation,
-        const TestConfig& test);
+        const CheckpointConfig& checkpointing = { L"" },
+        const CrossValidationConfig& crossValidation = { nullptr },
+        const TestConfig& test = { nullptr });
 }
 
 

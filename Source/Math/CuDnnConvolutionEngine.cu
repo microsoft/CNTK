@@ -410,7 +410,7 @@ private:
             // We don't need memory more than MAX
             if(resizeTo > algo.AlgoWorkspaceSize) resizeTo = algo.AlgoWorkspaceSize;
             if(resizeTo > 0) workspace.Resize(resizeTo/sizeof(ElemType), 1);
-            algo.MBSizeForCurrentWorkspace = algo.MBSizeForCurrentAlgo;
+            algo.MBSizeForCurrentWorkspace = batchSize;
 
             // Pending State now, let's do a find and get algorithm Perfs
             typename TAlgo::typeT algoPerf[MaxAlgoCount];

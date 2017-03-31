@@ -58,16 +58,10 @@ MLFDataDeserializer::MLFDataDeserializer(CorpusDescriptorPtr corpus, const Confi
         LogicError("Mlf deserializer does not support primary mode - it cannot control chunking.");
     }
 
-    argvector<ConfigValue> inputs = cfg("input");
-    if (inputs.size() != 1)
-    {
-        LogicError("MLFDataDeserializer supports a single input stream only.");
-    }
-
     std::wstring precision = cfg(L"precision", L"float");;
     m_elementType = AreEqualIgnoreCase(precision, L"float") ? ElementType::tfloat : ElementType::tdouble;
 
-    ConfigParameters input = inputs.front();
+    ConfigParameters input = cfg("input");
     auto inputName = input.GetMemberIds().front();
 
     ConfigParameters streamConfig = input(inputName);

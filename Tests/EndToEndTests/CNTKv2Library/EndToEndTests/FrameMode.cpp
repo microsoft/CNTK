@@ -52,17 +52,14 @@ namespace
         auto trainer = CreateTrainer(classifier.output, classifier.trainingLoss, classifier.prediction, { factory({ SGDLearner(classifier.output->Parameters(), LearningRatePerSampleSchedule(learningRatePerSample)) }) });
         size_t checkpointFrequency = 7000;
 
-        TrainingSessionPtr session = CreateBasicTrainingSession(
-            minibatchSource,
+        TrainingSessionPtr session = CreateTrainingSession(
             trainer,
-            { { classifier.features, featureStreamInfo }, { classifier.labels, labelStreamInfo } },
+            minibatchSource,
             MinibatchSizeSchedule(minibatchSize),
-            checkpointFrequency,
-            L"test",
-            nullptr,
-            MinibatchSizeSchedule(1),
-            0,
-            false);
+            { { classifier.features, featureStreamInfo }, { classifier.labels, labelStreamInfo } },
+            std::numeric_limits<size_t>::max(),
+            std::numeric_limits<size_t>::max(),
+            CheckpointConfig(L"test", checkpointFrequency, false));
 
         session->Train(device);
     }

@@ -62,7 +62,7 @@ public:
     static std::unique_ptr<ConvolutionEngine<ElemType>> Create(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, 
                                                                ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind = PoolKind::None,
                                                                ConvolutionEngineKind enabledEngines = ConvolutionEngineKind::All,
-                                                               std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false, bool poolPadMode = false);
+                                                               std::wstring logPrefix = L"", bool forceDeterministicAlgorithms = false, bool poolIncludePad = false);
 
     DISABLE_COPY_AND_MOVE(ConvolutionEngine);
 
@@ -75,8 +75,8 @@ public:
     virtual bool ImplementsGradientOverwriteOptimization() const { return false; }
 
 protected:
-    ConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolPadMode = false)
-        : m_geometry(geometry), m_deviceId(deviceId), m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_poolKind(poolKind), m_poolPadMode(poolPadMode)
+    ConvolutionEngine(ConvolveGeometryPtr geometry, DEVICEID_TYPE deviceId, ImageLayoutKind imageLayout, size_t maxTempMemSizeInSamples, PoolKind poolKind, bool poolIncludePad = false)
+        : m_geometry(geometry), m_deviceId(deviceId), m_imageLayout(imageLayout), m_maxTempMemSizeInSamples(maxTempMemSizeInSamples), m_poolKind(poolKind), m_poolIncludePad(poolIncludePad)
     {
         assert(m_geometry != nullptr);
     }
@@ -105,7 +105,7 @@ protected:
     ImageLayoutKind m_imageLayout;
     size_t m_maxTempMemSizeInSamples;
     PoolKind m_poolKind;
-    bool m_poolPadMode;
+    bool m_poolIncludePad;
 };
 
 #pragma warning(pop)

@@ -80,11 +80,10 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get evaluate result as dense output
-                var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+                PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
             {
@@ -167,12 +166,11 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Retrieve the evaluation result.
-                var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // Output result
-                PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+                PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
             {
@@ -258,15 +256,14 @@ namespace CNTKLibraryCSEvalExamples
                     evaluatorFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                     // Get evaluate result as dense output
-                    var outputBuffer = new List<List<float>>();
                     var outputVal = outputDataMap[outputVar];
-                    outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                    var outputData = outputVal.GetDenseData<float>(outputVar);
 
                     // Serialize output
                     lock (lockObj)
                     {
                         Console.WriteLine(string.Format("Evaluation result for {0}:", image));
-                        PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+                        PrintOutput(outputVar.Shape.TotalSize, outputData);
                     }
                 }
                 finally
@@ -337,11 +334,10 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get evaluate result as dense output
-                var outputBuffer = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputBuffer);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                PrintOutput(outputVar.Shape.TotalSize, outputBuffer);
+                PrintOutput(outputVar.Shape.TotalSize, outputData);
             }
             catch (Exception ex)
             {
@@ -356,7 +352,7 @@ namespace CNTKLibraryCSEvalExamples
         /// <typeparam name="T">The data value type</typeparam>
         /// <param name="sampleSize">The size of each sample.</param>
         /// <param name="outputBuffer">The evaluation result data.</param>
-        private static void PrintOutput<T>(int sampleSize, List<List<T>> outputBuffer)
+        private static void PrintOutput<T>(int sampleSize, IList<IList<T>> outputBuffer)
         {
             Console.WriteLine("The number of sequences in the batch: " + outputBuffer.Count);
             int seqNo = 0;
@@ -456,9 +452,8 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get output result
-                var outputData = new List<List<float>>();
-                Value outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputData);
+                var outputVal = outputDataMap[outputVar];
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // output the result
                 var outputSampleSize = (int)outputVar.Shape.TotalSize;
@@ -580,9 +575,8 @@ namespace CNTKLibraryCSEvalExamples
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
                 // Get evaluation result.
-                var outputData = new List<List<float>>();
                 var outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputData);
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
                 // output the result
                 var outputSampleSize = (int)outputVar.Shape.TotalSize;
@@ -700,12 +694,11 @@ namespace CNTKLibraryCSEvalExamples
                 // Evalaute the model.
                 modelFunc.Evaluate(inputDataMap, outputDataMap, device);
 
-                // Get output result
-                var outputData = new List<List<float>>();
-                Value outputVal = outputDataMap[outputVar];
-                outputVal.CopyVariableValueTo(outputVar, outputData);
+                // Get result
+                var outputVal = outputDataMap[outputVar];
+                var outputData = outputVal.GetDenseData<float>(outputVar);
 
-                // output the result
+                // Output the result
                 var outputSampleSize = (int)outputVar.Shape.TotalSize;
                 if (outputData.Count != 1)
                 {
@@ -761,7 +754,6 @@ namespace CNTKLibraryCSEvalExamples
                 throw new FileNotFoundException(string.Format("File '{0}' not found.", filePath));
             }
         }
-
 
         private static Dictionary<string, int> buildVocabIndex(string filePath)
         {

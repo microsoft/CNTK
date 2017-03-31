@@ -13,7 +13,7 @@ import pytest
 from ..functions import *
 from ...train.trainer import *
 from ...initializer import glorot_uniform
-from .. import constant, parameter, input, placeholder, times, plus, past_value, sequence, as_composite, combine, convolution, splice
+from .. import constant, parameter, input, placeholder, times, plus, sequence, as_composite, combine, convolution, splice, as_block
 from ... import InferredDimension, gpu, cpu
 from .ops_test_utils import compare_lists_of_np_arrays, AA, cntk_device
 
@@ -190,7 +190,7 @@ def test_data_type_inference():
 def test_recurrence_shape_inference():
     i = sequence.input((2,))
     p = placeholder()
-    p_past = past_value(p)
+    p_past = sequence.past_value(p)
     p_past_plus_i = p_past + i
 
     p_past_plus_i.replace_placeholder(p_past_plus_i.output)
@@ -339,13 +339,12 @@ def test_MinibatchData_and_Value_as_input(tmpdir):
     # Test Value
     assert res.eval(mb[f1_si].data) == [[200]]
     # Test NumPy (converted back from MinibatchData)
-    assert res.eval(mb[f1_si].value) == [[200]]
+    assert res.eval(mb[f1_si].asarray()) == [[200]]
     # Test Value
     assert res.eval(mb[f1_si].data) == [[200]]
 
 
 def test_output_subset_evaluation(device_id):
-    
     try:
         gpu_device = gpu(0)
     except ValueError:
@@ -371,3 +370,30 @@ def test_output_subset_evaluation(device_id):
 
     _, result = op.forward({x1 : np.asarray([1, 2, 3])}, [op1], device=device)
     assert np.array_equal(result[op1], np.asarray([[3], [4], [5]]))
+
+
+def test_block_with_unused_outputs():
+    p1 = placeholder()
+    p3 = placeholder()
+    func1 = as_block(p1 + 1, [(p1, p3)], 'plus_func_1')
+    p2 = placeholder()
+    p4 = placeholder()
+    func2 = as_block(p2 + 1, [(p2, p4)], 'plus_func_2')
+    p5 = placeholder()
+    func3 = as_block(combine([func2]), [(p4, p5)], 'empty_block')
+    input_var1 = input(shape=())
+    input_var2 = input(shape=())
+    block = as_block(combine([func1, func3]), [(p3, input_var1), (p5, input_var2)], 'multi_output_block')
+    
+    eval_root = combine([block.outputs[0]])
+    result = eval_root.eval({input_var1 : np.asarray([3], dtype=np.float32), input_var2 : np.asarray([-3], dtype=np.float32)})
+    assert np.array_equal(result, [[ 4.]])
+
+def test_constant_data_type_mismatch():
+    a = constant(np.triu(np.ones(5)), shape=(5,5))
+    i = input(shape=(5,5))
+    b = a * i
+
+    with pytest.raises(ValueError):
+        b.eval({i:[[np.asarray(np.random.rand(5,5),dtype=np.float32)]]})
+    

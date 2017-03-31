@@ -168,7 +168,7 @@ def test_depth_first_search(depth):
             }),
      ])
 def test_depth_first_search_blocks(depth, prefix_count):
-    from cntk.layers import Sequential, Convolution, MaxPooling, Dense, Input
+    from cntk.layers import Sequential, Convolution, MaxPooling, Dense
     from cntk.default_options import default_options
 
     with default_options(activation=relu):
@@ -179,7 +179,7 @@ def test_depth_first_search_blocks(depth, prefix_count):
             ]
         )
 
-    in1 = Input(shape=(3, 256, 256), name='image')
+    in1 = input(shape=(3, 256, 256), name='image')
     img = image_to_vec(in1)
 
     found = depth_first_search(img, lambda x: True, depth=depth)

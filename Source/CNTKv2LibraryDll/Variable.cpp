@@ -547,4 +547,15 @@ namespace CNTK
     {
         m_dataFields->SetValueInitialization(initializer, device);
     }
+
+    Constant Constant::CloneAs(DataType dataType) const
+    {
+        if (dataType != DataType::Double)
+            InvalidArgument("Constant::Clone: Cannot clone Constant '%S' with DataType '%s' to DataType '%s'.", AsString().c_str(), DataTypeName(GetDataType()), DataTypeName(dataType));
+
+        auto originalConstantValue = Value();
+        auto constantValueCPU = originalConstantValue->DeepClone(DeviceDescriptor::CPUDevice(), true);
+        NDArrayViewPtr newConstantValue = CloneAsDataType(constantValueCPU, dataType, true);
+        return Constant(newConstantValue->DeepClone(originalConstantValue->Device(), originalConstantValue->IsReadOnly()), Name());
+    }
 }

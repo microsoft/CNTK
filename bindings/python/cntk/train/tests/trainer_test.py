@@ -294,32 +294,6 @@ def test_trainer_with_some_params_not_learned():
 
     trainer.test_minibatch(arguments)
 
-def test_not_replaced_placeholders():
-    
-    def wrap_in_block(fun_args, name):
-        block_args = [placeholder(name=arg.name) for arg in fun_args]  # placeholders inside the BlockFunction
-        combined_block_args = combine(block_args)                               # the content of the BlockFunction
-        arg_map = list(zip(block_args, fun_args))                               # after wrapping, the block_args map to args
-        combined_args = as_block(composite=combined_block_args, block_arguments_map=arg_map, block_op_name=name)
-        return combined_args
-
-
-    input_dim = 2
-    x = sequence.input(shape=(input_dim,))
-    p1 = placeholder()
-    p2 = placeholder()
-
-    a = abs(x)
-    b = wrap_in_block(list(a.outputs) + [p1], "my_first_block")
-    b = wrap_in_block(list(b.outputs) + [p2], "my_second_block")
-    b = past_value(b.outputs[0])
-
-    model = b.replace_placeholders({p1:b.outputs[0], p2:b.outputs[0]})
-
-    x0 = [[1, 1],[2, 2]]
-    with pytest.raises(RuntimeError):
-        model.forward({x : x0}, model.outputs)
-
 def test_disallow_seq_starts_with_Value_objects():
     one_hot_batch = [[2,5], [0,1,6]]
     dim = 10
