@@ -41,11 +41,11 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
 
 # define the criterion fnction
 # note: not using @Function here since using the same for dynamite
-def create_criterion(model):
+def create_criterion(namespace, model):
     def criterion(input: Sequence[SparseTensor[input_dim]], label: Tensor[num_output_classes]):
         z = model(input)
-        ce = cross_entropy_with_softmax(z, label)
-        pe = classification_error(z, label)
+        ce = namespace.cross_entropy_with_softmax(z, label)
+        pe = namespace.classification_error(z, label)
         return (ce, pe)
     return criterion
 
@@ -59,8 +59,8 @@ def train(debug_output=False):
     model = create_model(cntk.layers, num_output_classes, embedding_dim, hidden_dim)
     dmodel = create_model(dynamite, num_output_classes, embedding_dim, hidden_dim)
 
-    criterion = Function(create_criterion(model))
-    dcriterion = create_criterion(dmodel)
+    criterion = Function(create_criterion(cntk, model))
+    dcriterion = create_criterion(dynamite, dmodel)
     debugging.dump_signature(criterion)
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
