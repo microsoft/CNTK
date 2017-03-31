@@ -87,6 +87,7 @@ def times(a,b):
 plus = binary_op('+')
 element_times = binary_op('*')
 cross_entropy_with_softmax = reducing_binary_op('cross_entropy_with_softmax')
+classification_error = reducing_binary_op('classification_error')
 
 tanh = unary_op('tanh')
 sigmoid = unary_op('sigmoid')

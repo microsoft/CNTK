@@ -19,6 +19,10 @@ from cntk.layers import *
 import cntk
 import dynamite
 
+input_dim = 2000
+hidden_dim = 25
+embedding_dim = 50
+num_output_classes = 5
 
 # Create the reader
 def create_reader(path, is_training, input_dim, label_dim):
@@ -35,13 +39,18 @@ def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
         Dense(num_output_classes)
     ])
 
+# define the criterion fnction
+# note: not using @Function here since using the same for dynamite
+def create_criterion(model):
+    def criterion(input: Sequence[SparseTensor[input_dim]], label: Tensor[num_output_classes]):
+        z = model(input)
+        ce = cross_entropy_with_softmax(z, label)
+        pe = classification_error(z, label)
+        return (ce, pe)
+    return criterion
+
 # Create and train a LSTM sequence classification model
 def train(debug_output=False):
-    input_dim = 2000
-    hidden_dim = 25
-    embedding_dim = 50
-    num_output_classes = 5
-
     # Input variables denoting the features and label data
     #features = sequence.input(shape=input_dim, is_sparse=True)
     #label = input(num_output_classes)
@@ -50,13 +59,9 @@ def train(debug_output=False):
     model = create_model(cntk.layers, num_output_classes, embedding_dim, hidden_dim)
     dmodel = create_model(dynamite, num_output_classes, embedding_dim, hidden_dim)
 
-    @Function
-    def criterion(input: Sequence[SparseTensor[input_dim]], label: Tensor[num_output_classes]):
-        z = model(input)
-        ce = cross_entropy_with_softmax(z, label)
-        pe = classification_error(z, label)
-        return (ce, pe)
-    #debugging.dump_signature(criterion)
+    criterion = Function(create_criterion(model))
+    dcriterion = create_criterion(dmodel)
+    debugging.dump_signature(criterion)
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     reader = create_reader(os.path.dirname(os.path.abspath(__file__)) + '/' + rel_path, True, input_dim, num_output_classes)
@@ -80,8 +85,11 @@ def train(debug_output=False):
 
     for i in range(251):
         mb = reader.next_minibatch(minibatch_size)
+        # CNTK static
         trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
         progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
+        # CNTK dynamite
+        #dynamite.train_minibatch(dcriterion, mb)
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy
