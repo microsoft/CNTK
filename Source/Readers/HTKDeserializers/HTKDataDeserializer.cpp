@@ -4,8 +4,6 @@
 //
 
 #include "stdafx.h"
-#define __STDC_FORMAT_MACROS
-#include <inttypes.h>
 #include "HTKDataDeserializer.h"
 #include "ConfigHelper.h"
 #include "Basics.h"
@@ -186,7 +184,7 @@ void HTKDataDeserializer::InitializeChunkDescriptions(const vector<string>& path
 
     fprintf(stderr,
         "HTKDataDeserializer::HTKDataDeserializer: "
-        "selected %" PRIu64 " utterances grouped into %" PRIu64 " chunks, "
+        "selected '%zu' utterances grouped into '%zu' chunks, "
         "average chunk size: %.1f utterances, %.1f frames "
         "(for I/O: %.1f utterances, %.1f frames)\n",
         utterances.size(),

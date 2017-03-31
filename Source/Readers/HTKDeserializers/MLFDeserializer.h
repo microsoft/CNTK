@@ -42,12 +42,19 @@ private:
     class SequenceChunk;
     class FrameChunk;
 
-    void InitializeChunkDescriptions(CorpusDescriptorPtr corpus, const ConfigHelper& config, const std::wstring& stateListPath, size_t dimension);
-    void InitializeStream(const std::wstring& name, size_t dimension);
+    // Initializes chunk descriptions.
+    void InitializeChunkDescriptions(CorpusDescriptorPtr corpus, const ConfigHelper& config, const std::wstring& stateListPath);
 
-    // Vector that maps KeyType.m_sequence into an utterance ID (or SIZE_MAX if the key is not assigned).
+    // Initializes a single stream this deserializer exposes.
+    void InitializeStream(const std::wstring& name);
+
+    // In frame mode initializes data for all categories/labels in order to
+    // avoid memory copy.
+    void InitializeReadOnlyArrayOfLabels();
+
+    // Vector that maps KeyType.m_sequence into an utterance ID (or type max() if the key is not assigned).
     // This assumes that IDs introduced by the corpus are dense (which they right now, depending on the number of invalid / filtered sequences).
-    std::vector<std::pair<const ChunkDescriptor*, const SequenceDescriptor*>> m_keyToSequence;
+    std::vector<std::pair<ChunkIdType, uint32_t>> m_keyToSequence;
 
     // Type of the data this serializer provides.
     ElementType m_elementType;

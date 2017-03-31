@@ -12,7 +12,8 @@
 namespace Microsoft { namespace MSR { namespace CNTK {
 
     // Representation of a state list table.
-    // Whole table is preserved in memory, because it is never more than thousands states.
+    // The table is preserved in memory, the number of states is only expected to be a couple of thousands,
+    // so it is fine to keep all in memory.
     class StateTable : boost::noncopyable
     {
     public:
@@ -34,19 +35,19 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             return stateName.size() > 3 && !strncmp(stateName.c_str(), "sil", 3);
         }
 
-        static std::vector<boost::iterator_range<char*>> ReadLines(const std::wstring& path, std::vector<char>& buffer);
+        static std::vector<boost::iterator_range<char*>> ReadNonEmptyLines(const std::wstring& path, std::vector<char>& buffer);
 
-        std::vector<bool> m_silStateMask; // [state index] => true if is sil state (cached)
+        std::vector<bool> m_silStateMask;                     // [state index] => true if is sil state (cached)
         std::unordered_map<std::string, size_t> m_stateTable; // for state <=> index
     };
 
     typedef std::shared_ptr<StateTable> StateTablePtr;
     typedef unsigned short ClassIdType;
 
-    // Representation an MLF range.
+    // Representation of an MLF range.
     class MLFFrameRange
     {
-        static const double htkTimeToFrame;
+        static const double s_htkTimeToFrame;
 
         uint32_t m_firstFrame;     // start frame
         uint32_t m_numFrames;      // number of frames
@@ -54,7 +55,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
     public:
         // Parses format with original HTK state align MLF format and state list and builds an MLFFrameRange.
-        void Build(const vector<boost::iterator_range<char*>>& tokens, const unordered_map<std::string, size_t>& stateTable);
+        void Build(const vector<boost::iterator_range<char*>>& tokens, const unordered_map<std::string, size_t>& stateTable, size_t byteOffset);
 
         ClassIdType ClassId() const { return m_classId;    }
         uint32_t FirstFrame() const { return m_firstFrame; }
@@ -65,13 +66,13 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // There are two formats:
         //  - original HTK
         //  - Dong's hacked format: ts te senonename senoneid
-        static std::pair<size_t, size_t> ParseFrameRange(const std::vector<boost::iterator_range<char*>>& tokens);
+        static std::pair<size_t, size_t> ParseFrameRange(const std::vector<boost::iterator_range<char*>>& tokens, size_t byteOffset);
 
     private:
-        void VerifyAndSaveRange(const std::pair<size_t, size_t>& frameRange, size_t uid);
+        void VerifyAndSaveRange(const std::pair<size_t, size_t>& frameRange, size_t uid, size_t byteOffset);
     };
 
-    // Utility class for parsing an mlf utterance.
+    // Utility class for parsing an MLF utterance.
     class MLFUtteranceParser
     {
         const StateTablePtr m_states;
@@ -80,7 +81,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         MLFUtteranceParser(const StateTablePtr& states) : m_states(states)
         {}
 
-        bool Parse(const SequenceDescriptor& utterance, const boost::iterator_range<char*>& utteranceData, std::vector<MLFFrameRange>& result);
+        bool Parse(const boost::iterator_range<char*>& utteranceData, std::vector<MLFFrameRange>& result, size_t sequenceOffset);
     };
 
 }}} // namespace

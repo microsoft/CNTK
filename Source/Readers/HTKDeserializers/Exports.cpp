@@ -54,11 +54,11 @@ extern "C" DATAREADER_API void GetReaderD(IDataReader** preader)
 // TODO: Not safe from the ABI perspective. Will be uglified to make the interface ABI.
 extern "C" DATAREADER_API bool CreateDeserializer(IDataDeserializer** deserializer, const std::wstring& type, const ConfigParameters& deserializerConfig, CorpusDescriptorPtr corpus,  bool primary)
 {
-    if (type == L"HTKFeatureDeserializer" || type == L"htk")
+    if (type == L"HTKFeatureDeserializer")
     {
         *deserializer = new HTKDataDeserializer(corpus, deserializerConfig, primary);
     }
-    else if (type == L"HTKMLFDeserializer" || type == L"mlf")
+    else if (type == L"HTKMLFDeserializer")
     {
         *deserializer = new MLFDeserializer(corpus, deserializerConfig, primary);
     }

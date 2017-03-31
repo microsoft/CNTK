@@ -3,12 +3,12 @@
 // Licensed under the MIT license. See LICENSE.md file in the project root for full license information.
 //
 #include "stdafx.h"
-#define __STDC_FORMAT_MACROS
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
-#include <inttypes.h>
 #include "MLFUtils.h"
 
+// Disabling some deprecation warnings in boost.
+// Classes that we use are not deprecated.
 #pragma warning(disable:4348 4459 4100)
 #include <boost/algorithm/string.hpp>
 #include <boost/spirit/include/qi.hpp>
@@ -18,10 +18,16 @@ using namespace std;
 
 namespace Microsoft { namespace MSR { namespace CNTK {
 
+    inline void EraseEmptyLines(vector<boost::iterator_range<char*>>& lines)
+    {
+        auto end = std::remove_if(lines.begin(), lines.end(), [](const boost::iterator_range<char*>& r) { return r.empty(); });
+        lines.erase(end, lines.end());
+    }
+
     void StateTable::ReadStateList(const wstring& stateListPath)
     {
         vector<char> buffer; // buffer owns the characters -- don't release until done
-        vector<boost::iterator_range<char*>> lines = ReadLines(stateListPath, buffer);
+        vector<boost::iterator_range<char*>> lines = ReadNonEmptyLines(stateListPath, buffer);
         size_t index = 0;
         m_silStateMask.reserve(lines.size());
 
@@ -29,25 +35,24 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         {
             string line(lines[index].begin(), lines[index].end());
 
+            if (m_stateTable.find(line) != m_stateTable.end())
+                RuntimeError("Deduplicate two states with the same name '%s' from the state table '%ls'.", line.c_str(), stateListPath.c_str());
+
             m_stateTable[line] = index;
             m_silStateMask.push_back(IsSilState(line));
         }
 
-        if (index != m_stateTable.size())
-            RuntimeError("readstatelist: lines (%d) not equal to statelistmap size (%d)", (int)index, (int)m_stateTable.size());
-
-        if (m_stateTable.size() != m_silStateMask.size())
-            RuntimeError("readstatelist: size of statelookuparray (%d) not equal to statelistmap size (%d)", (int)m_silStateMask.size(), (int)m_stateTable.size());
-
-        fprintf(stderr, "total %lu state names in state list %ls\n", (unsigned long)m_stateTable.size(), stateListPath.c_str());
+        assert(index == m_stateTable.size());
+        fprintf(stderr, "Total (%zu) state names in state list '%ls'\n", m_stateTable.size(), stateListPath.c_str());
 
         if (m_stateTable.empty())
-            RuntimeError("State list table is not allowed to be empty.");
+            RuntimeError("State list table '%ls' is not allowed to be empty.", stateListPath.c_str());
     }
 
-    vector<boost::iterator_range<char*>> StateTable::ReadLines(const wstring& path, vector<char>& buffer)
+    vector<boost::iterator_range<char*>> StateTable::ReadNonEmptyLines(const wstring& path, vector<char>& buffer)
     {
-        // load it into RAM in one huge chunk
+        // load it into RAM in one huge chunk, not more than a couple 
+        // thousand states.
         auto_file_ptr f(fopenOrDie(path, L"rb"));
         size_t len = filesize(f);
         buffer.reserve(len + 1);
@@ -55,79 +60,79 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         buffer.push_back(0); // this makes it a proper C string
 
         vector<boost::iterator_range<char*>> lines;
-        lines.reserve(len / 20);
         auto range = boost::make_iterator_range(buffer.data(), buffer.data() + buffer.size());
         boost::split(lines, range, boost::is_any_of("\r\n"));
 
-        auto end = std::remove_if(lines.begin(), lines.end(), [](const boost::iterator_range<char*>& r) { return r.begin() == r.end(); });
-        lines.erase(end, lines.end());
+        EraseEmptyLines(lines);
         return lines;
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////////////////
+    const double MLFFrameRange::s_htkTimeToFrame = 100000.0;
 
-    const double MLFFrameRange::htkTimeToFrame = 100000.0;
-
-    void MLFFrameRange::Build(const vector<boost::iterator_range<char*>>& tokens, const unordered_map<string, size_t>& stateTable)
+    void MLFFrameRange::Build(const vector<boost::iterator_range<char*>>& tokens, const unordered_map<string, size_t>& stateTable, size_t byteOffset)
     {
-        auto range = ParseFrameRange(tokens);
+        auto range = ParseFrameRange(tokens, byteOffset);
         size_t uid;
         if (!stateTable.empty()) // state table is given, check the state against the table.
         {
             auto stateName = string(tokens[2].begin(), tokens[2].end());
             auto index = stateTable.find(stateName);
             if (index == stateTable.end())
-                RuntimeError("MLFFrameRange: state %s not found in statelist", stateName.c_str());
+                RuntimeError("Offset '%zu': frame range state '%s' is not found in the statelist", byteOffset, stateName.c_str());
 
             uid = index->second; // get state index
         }
         else
         {
-            // This is too simplistic for parsing more complex MLF formats.Fix when needed,
-            // add support so that it can handle conditions where time instead of frame numer is used.
+            // This is too simplistic for parsing more complex MLF formats. Fix when needed,
+            // add support so that it can handle conditions where time instead of frame number is used.
             if (tokens.size() != 4)
-                RuntimeError("MLFFrameRange: currently we only support 4-column format or state list table.");
+                RuntimeError("Offset '%zu': CNTK supports 4-column format frame range or state list table.", byteOffset);
 
             if (!boost::spirit::qi::parse(tokens[3].begin(), tokens[3].end(), boost::spirit::qi::int_, uid))
-                RuntimeError("MLFFrameRange: cannot parse class id.");
+                RuntimeError("Offset '%zu': cannot parse class id of the frame range", byteOffset);
         }
 
-        VerifyAndSaveRange(range, uid);
+        VerifyAndSaveRange(range, uid, byteOffset);
     }
 
-    void MLFFrameRange::VerifyAndSaveRange(const pair<size_t, size_t>& frameRange, size_t uid)
+    void MLFFrameRange::VerifyAndSaveRange(const pair<size_t, size_t>& frameRange, size_t uid, size_t byteOffset)
     {
         if (frameRange.second < frameRange.first)
-            RuntimeError("MLFFrameRange Error: end time earlier than start time.");
+            RuntimeError("Offset '%zu': frame range end time is earlier than start time.", byteOffset);
 
         m_firstFrame = (unsigned int)frameRange.first;
         m_numFrames = (unsigned int)(frameRange.second - frameRange.first);
         m_classId = (ClassIdType)uid;
 
         // check for numeric overflow
-        if (m_firstFrame != frameRange.first || m_firstFrame + m_numFrames != frameRange.second || m_classId != uid)
-            RuntimeError("MLFFrameRange Error: not enough bits for one of the values.");
+        if (m_firstFrame != frameRange.first || m_firstFrame + m_numFrames != frameRange.second)
+            RuntimeError("Offset '%zu': not enough bits for one of the frame range values.", byteOffset);
+
+        if(m_classId != uid)
+            RuntimeError("Offset '%zu': not enough bits to represent a class id '%zu'.", byteOffset, uid);
     }
 
-    pair<size_t, size_t> MLFFrameRange::ParseFrameRange(const vector<boost::iterator_range<char*>>& tokens)
+    pair<size_t, size_t> MLFFrameRange::ParseFrameRange(const vector<boost::iterator_range<char*>>& tokens, size_t byteOffset)
     {
         if (tokens.size() < 2)
-            RuntimeError("MLFFrameRange: currently MLF does not support format with less than two columns.");
+            RuntimeError("Offset '%zu': do not support frame range format with less than two columns.", byteOffset);
 
         double rts = 0;
         if (!boost::spirit::qi::parse(tokens[0].begin(), tokens[0].end(), boost::spirit::qi::double_, rts))
-            RuntimeError("MLFFrameRange: cannot parse start frame.");
+            RuntimeError("Offset '%zu': cannot parse start frame of range.", byteOffset);
 
         double rte = 0;
         if (!boost::spirit::qi::parse(tokens[1].begin(), tokens[1].end(), boost::spirit::qi::double_, rte))
-            RuntimeError("MLFFrameRange: cannot parse end frame.");
+            RuntimeError("Offset '%zu': cannot parse end frame of range.", byteOffset);
 
-        // if the difference between two frames is more than htkTimeToFrame, we expect conversion to time
-        if (rte - rts >= htkTimeToFrame - 1) // convert time to frame
+        // Simulating the old reader behavior.
+        // If the difference between two frames is more than s_htkTimeToFrame, we expect conversion to time
+        if (rte - rts >= s_htkTimeToFrame - 1) // convert time to frame
         {
             return make_pair(
-                (size_t)(rts / htkTimeToFrame + 0.5),
-                (size_t)(rte / htkTimeToFrame + 0.5));
+                (size_t)(rts / s_htkTimeToFrame + 0.5),
+                (size_t)(rte / s_htkTimeToFrame + 0.5));
         }
         else
         {
@@ -135,21 +140,17 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         }
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    bool MLFUtteranceParser::Parse(const SequenceDescriptor& sequence, const boost::iterator_range<char*>& sequenceData, vector<MLFFrameRange>& utterance)
+    // Parses the data into a vector of MLFFrameRanges.
+    bool MLFUtteranceParser::Parse(const boost::iterator_range<char*>& sequenceData, vector<MLFFrameRange>& utterance, size_t sequenceOffset)
     {
         // Split to lines.
         vector<boost::iterator_range<char*>> lines;
         lines.reserve(512);
 
         boost::split(lines, sequenceData, boost::is_any_of("\r\n"));
+        EraseEmptyLines(lines);
 
-        auto end = std::remove_if(lines.begin(), lines.end(),
-            [](const boost::iterator_range<char*>& a) { return std::distance(a.begin(), a.end()) == 0; });
-        lines.erase(end, lines.end());
-
-        // Start actual parsing of actual entry
+        // Start parsing of actual entry
         size_t idx = 0;
         string sequenceKey = string(lines[idx].begin(), lines[idx].end());
         idx++;
@@ -157,12 +158,12 @@ namespace Microsoft { namespace MSR { namespace CNTK {
         // Check that mlf entry has a correct sequence key.
         if (sequenceKey.length() < 3 || sequenceKey[0] != '"' || sequenceKey[sequenceKey.length() - 1] != '"')
         {
-            fprintf(stderr, "WARNING: sequence entry (%s)\n", sequenceKey.c_str());
-            fprintf(stderr, "Skip current mlf entry from offset '%" PRIu64 "' until offset '%" PRIu64 "'.\n", sequence.m_fileOffsetBytes, sequence.m_fileOffsetBytes + sequence.m_byteSize);
+            fprintf(stderr, "WARNING: skipping sequence entry '%s' due to it being too short or not quoted\n", sequenceKey.c_str());
             return false;
         }
 
-        sequenceKey = sequenceKey.substr(1, sequenceKey.length() - 2); // strip quotes
+        // strip quotes
+        sequenceKey = sequenceKey.substr(1, sequenceKey.length() - 2);
 
         if (sequenceKey.size() > 2 && sequenceKey[0] == '*' && sequenceKey[1] == '/')
             sequenceKey = sequenceKey.substr(2);
@@ -189,7 +190,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
             boost::split(tokens, lines[i], boost::is_any_of(" "));
 
             auto& current = utterance[i - s];
-            current.Build(tokens, m_states ? m_states->States() : empty);
+            current.Build(tokens, m_states ? m_states->States() : empty, sequenceOffset + std::distance(sequenceData.begin(), lines[i].begin()));
 
             // Check that frames are sequential.
             if (i > s)
@@ -197,7 +198,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
                 const auto& previous = utterance[i - s - 1];
                 if (previous.FirstFrame() + previous.NumFrames() != current.FirstFrame())
                 {
-                    fprintf(stderr, "WARNING: Labels are not in the consecutive order MLF in label set: %s", sequenceKey.c_str());
+                    fprintf(stderr, "WARNING: Labels are not in the consecutive order MLF in label set for utterance '%s'", sequenceKey.c_str());
                     return false;
                 }
             }
@@ -205,7 +206,7 @@ namespace Microsoft { namespace MSR { namespace CNTK {
 
         if (utterance.front().FirstFrame() != 0)
         {
-            fprintf(stderr, "WARNING: Invalid first frame in utterance: %s", sequenceKey.c_str());
+            fprintf(stderr, "WARNING: Invalid first frame in utterance '%s'", sequenceKey.c_str());
             return false;
         }
 
