@@ -1,5 +1,16 @@
+# Variable: deferred computation
+# Value: GPU direct object
+#
+# >>> d = gpu(0)
+# >>> x=internal.sanitize_value((3,), a, np.float32, gpu(0))    # returns an NDArrayView
+# >>> x
+# <cntk.core.NDArrayView; proxy of <Swig Object of type 'CNTK::NDArrayViewPtr *' at 0x0000003ABB2EDBD0> >
+# >>> x.to_ndarray()
+# array([  1.,  15.,   3.], dtype=float32)
+
 import numpy as np
 import collections
+from timeit import default_timer as timer
 
 INFER = 0
 times_initializer="x" # for now a dummy string that is not None
@@ -150,7 +161,7 @@ def Embedding(N):
     E = Parameter((INFER,N), initializer=times_initializer)
     @Model(E=E)
     def embedding(x):
-        return times(x,E)
+        yield times(x,E)
     return embedding
 
 def Sequential(functions):
@@ -349,70 +360,3 @@ def dump_graph(v):
     for node in order:
         print_node(node)
     return len(order)
-
-# ---
-
-in_dim = 3  # 30000
-embed_dim = 300
-hidden_dim = 512
-num_classes = 3 #0000
-
-def create_model():
-    encoder = Sequential([
-        Embedding(embed_dim),
-        #Recurrence(LSTM(hidden_dim), initial_state=(0,0)),
-        Fold(LSTM(hidden_dim), initial_state=(0,0)),
-        Dense(num_classes)
-    ])
-    model = encoder
-    return model
-
-def read_minibatch():
-    # returns list of arrays
-    lens = range(10,35,1)   # a total input batch size of 550 time steps
-    batch = {T:                             # item id
-                ([13 for t in range(T)],    # input
-                 42)                        # labels
-             for T in lens}
-    return batch
-
-def train_minibatch(criterion, mb):
-    # for now, manually do the batch loop
-    crit = 0
-    for inp, lab in mb.values():
-        z = model(inp)
-        ce = cross_entropy_with_softmax(z, lab)
-        crit = plus(crit, ce)
-    return crit
-
-if True:
-    from timeit import default_timer as timer
-
-    p1 = Embedding(1)(1)
-    v1 = plus(p1, 3 * np.array([[4]]))
-    v2 = plus(p1, 5 * np.array([[6]]))
-    v = v1 + v2
-    dump_graph(v)
-
-    model = create_model()
-    print(dir(model))
-    #model[0]
-    dump_parameters(model)
-    def criterion(inp, lab):
-        z = model(inp)
-        ce = cross_entropy_with_softmax(z, lab)
-        return ce
-    mb = read_minibatch()  # (input: list[Sequence[tensor]]], labels: list[tensor]])
-    start = timer()
-    repetitions = 10
-    for count in range(repetitions):
-        crit = train_minibatch(criterion, mb)
-        eval(crit)
-    end = timer()
-    dump_graph(crit)
-    eval(crit)
-    num_nodes = len(topo_sort(crit))
-    num_samples = sum(len(batch_item[0]) for batch_item in mb.values())
-    dur = (end - start) / repetitions
-    print('dur:', dur, 'sec for', num_nodes, 'nodes, dur per node:', dur/num_nodes*1000,
-          'ms, nodes/sec:', num_nodes/dur, 'samples/sec:', num_samples/dur)
