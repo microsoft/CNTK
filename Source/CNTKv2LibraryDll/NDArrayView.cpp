@@ -372,14 +372,53 @@ namespace CNTK
 
     NDArrayViewPtr NDArrayView::MatrixProductInPlace(double beta, bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha)
     {
-        beta; transC; transA; inputB; transB; alpha;
-        return inputA;
+        // types must match
+        for (const auto& input : { inputA, inputB })
+        {
+            if (input->m_dataType != m_dataType)
+                LogicError("NDArrayView::MatrixProductInPlace: Input argument's DataType %s differs from result's DataType %s", DataTypeName(input->m_dataType), DataTypeName(m_dataType));
+        }
+        switch (m_dataType)
+        {
+        case DataType::Float:
+            GetWritableTensorView<float>()->DoMatrixProductOf((float)beta, transC, *inputA->GetTensorView<float>(), transA, *inputB->GetTensorView<float>(), transB, (float)alpha);
+            break;
+        case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
+            GetWritableTensorView<double>()->DoMatrixProductOf((double)beta, transC, *inputA->GetTensorView<double>(), transA, *inputB->GetTensorView<double>(), transB, (double)alpha);
+            break;
+        default:
+            LogicError("NDArrayView::MatrixProductInPlace: Unsupported DataType %s", DataTypeName(m_dataType));
+            break;
+        }
+        return this->shared_from_this(); // return ourselves to allow for chaining
     }
 
-    /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank)
+    /*static*/ NDArrayViewPtr NDArrayView::MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank)
     {
-        transA; inputB; transB; alpha;
-        return inputA;
+        // shape inference
+        auto shapeA = inputA->Shape();
+        auto shapeB = inputB->Shape();
+        const bool isVec = shapeB.Rank() == 1;
+        if (isVec)
+            shapeB = NDShape({ shapeB[0], 1 });
+        const auto SwapDims = [](NDShape& shape, bool trans) 
+        {
+            if (shape.Rank() != 2)
+                LogicError("NDArrayView::MatrixProductInPlace: For now only true 2D matrices are supported, invalid shape '%S'", shape.AsString().c_str());
+            if (trans)
+                shape = NDShape({ shape[1], shape[0] });
+        };
+        SwapDims(shapeA, transA);
+        SwapDims(shapeB, transB);
+        auto shapeC = NDShape({ shapeA[0], shapeB[1] });
+        if (isVec && !transC && !transB) // TODO: get this right
+            shapeC = NDShape({ shapeC[0] });
+        else
+            SwapDims(shapeC, transC);
+        // create result object; properties besides shape are inherited from input 0 for now
+        NDArrayViewPtr result = MakeSharedObject<NDArrayView>(inputA->GetDataType(), inputA->GetStorageFormat(), shapeC, inputA->Device());
+        // perform operation in-place on result object
+        return result->MatrixProductInPlace(0.0/*nothing to add to*/, transC, inputA, transA, inputB, transB, alpha);
     }
 
     NDArrayViewPtr NDArrayView::SliceView(const std::vector<size_t>& startOffset, const std::vector<size_t>& extent, bool readOnly) const

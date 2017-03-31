@@ -723,7 +723,7 @@ namespace CNTK
         /// where trX is transposition if transX is true.
         /// For beta=0, *this may contain uninitialized/undefined values.
         ///
-        CNTK_API static NDArrayViewPtr MatrixProduct(const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank);
+        CNTK_API static NDArrayViewPtr MatrixProduct(bool transC, const NDArrayViewPtr& inputA, bool transA, const NDArrayViewPtr& inputB, bool transB, double alpha, size_t outputRank);
 
         ///
         /// Creates a new NDArrayView which is an alias of a slice of 'this' view; i.e. a new view over the underlying data

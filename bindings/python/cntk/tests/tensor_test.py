@@ -39,3 +39,30 @@ def test_numpy_conversion():
     #check Parameter
     p = parameter(shape=(2,3), init=1)
     assert np.all(p.asarray() == np.ones((2,3)))
+
+def test_ndarrayview_operators():
+    from scipy.special import expit
+    prec = np.float32
+
+    def test(what, args, rtol=0, atol=0):
+        args = [arg.astype(prec, copy=True) for arg in args]
+        # TensorView
+        res_tv = what(*[NDArrayView.from_dense(arg) for arg in args]).to_ndarray()
+        # numpy
+        res_np = what(*args)
+        print(res_tv)
+        print(res_np)
+        assert np.allclose(res_tv, res_np, rtol=rtol, atol=atol)
+
+    x = np.array([[1., 2., 3.],[4., 5., 6.]])
+    y = np.array([[13.],[42.]])
+
+    # binary ops
+    test(lambda a, b: a + b, [x, y])
+    test(lambda a, b: a @ b, [y.reshape(1,2), x])
+
+    # unary ops
+    test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [x], rtol=1e-5)
+
+    # in-place ops
+    test(lambda a, b: a.__iadd__(b), [x, y]) # make sure that does not change 'x' in numpy
