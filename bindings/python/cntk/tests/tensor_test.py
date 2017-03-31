@@ -40,14 +40,15 @@ def test_numpy_conversion():
     p = parameter(shape=(2,3), init=1)
     assert np.all(p.asarray() == np.ones((2,3)))
 
-def test_ndarrayview_operators():
+@pytest.mark.parametrize("precision", [np.float32, np.float64])
+def test_ndarrayview_operators(device_id, precision):
     from scipy.special import expit
-    prec = np.float32
+    from cntk.ops.tests.ops_test_utils import cntk_device
 
     def test(what, args, rtol=0, atol=0):
-        args = [arg.astype(prec, copy=True) for arg in args]
+        args = [arg.astype(precision, copy=True) for arg in args]
         # TensorView
-        res_tv = what(*[NDArrayView.from_dense(arg) for arg in args]).to_ndarray()
+        res_tv = what(*[NDArrayView.from_dense(arg, device=cntk_device(device_id)) for arg in args]).to_ndarray()
         # numpy
         res_np = what(*args)
         print(res_tv)
