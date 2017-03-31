@@ -1116,6 +1116,45 @@ void CPUSparseMatrix<ElemType>::MultiplyAndAdd(ElemType alpha, const CPUMatrix<E
     }
 }
 
+// c[:,j] = alpha * v[j] * a[:,j] + beta * c[:,j]
+template <class ElemType>
+void CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUSparseMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    if (v.GetNumRows() != 1 && v.GetNumCols() != 1)
+        InvalidArgument("the argument v must be a vector"); // v is a vector
+
+    if (a.GetFormat() != matrixFormatSparseCSC)
+        NOT_IMPLEMENTED;
+
+    if (beta == 0)
+    {
+        c.RequireSize(a.GetNumRows(), a.GetNumCols());
+        c.SetValue((ElemType)0);
+    }
+    else
+        c.VerifySize(a.GetNumRows(), a.GetNumCols()); // Can't resize if beta != 0
+
+    const ElemType* vd = v.Data();
+
+#pragma omp parallel for
+    for (long col = 0; col < (long)a.GetNumCols(); col++)
+    {
+        auto start = a.SecondaryIndexLocation()[col];
+        auto end = a.SecondaryIndexLocation()[col + 1];
+
+        for (auto p = start; p < end; p++)
+        {
+            auto row = a.MajorIndexLocation()[p];
+            ElemType val = a.Buffer()[p];
+
+            if (beta == 0) // don't even read the memory if beta is 0
+                c(row, col) = alpha * vd[col] * val;
+            else
+                c(row, col) = alpha * vd[col] * val + beta * c(row, col);
+        }
+    }
+}
+
 // dense += sparse
 template <class ElemType>
 void CPUSparseMatrix<ElemType>::ScaleAndAdd(const ElemType alpha, const CPUSparseMatrix<ElemType>& lhs, CPUMatrix<ElemType>& rhs)
