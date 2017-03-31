@@ -54,8 +54,9 @@ class ReplayMemory(object):
         self._pos = (self._pos + 1) % self._max_size
 
     def sample(self, size):
-        """ Generate a random minibatch. The returned indices can be retrieved using #get_state().
-            See the method #minibatch() if you want to retrieve samples directly
+        """ Generate size random integers mapping indices in the memory.
+            The returned indices can be retrieved using #get_state().
+            See the method #minibatch() if you want to retrieve samples directly.
             
         Attributes:
             size (int): The minibatch size
@@ -64,7 +65,7 @@ class ReplayMemory(object):
              Indexes of the sampled states ([int])
         """
 
-        # Local variable access are faster in loops
+        # Local variable access is faster in loops
         count, pos, history_len, terminals = self._count - 1, self._pos, \
                                              self._history_length, self._terminals
         indexes = []
@@ -296,7 +297,6 @@ class DeepQAgent(object):
             # Compute the q_targets
             q_targets = compute_q_targets(post_states, rewards, terminals)
 
-            # Define the loss, using Huber Loss (More robust to outliers)
             # actions is a sparse One Hot encoding of the action done by the agent
             q_acted = reduce_sum(self._action_value_net(pre_states) * actions, axis=0)
 
@@ -376,9 +376,9 @@ class DeepQAgent(object):
         and update the expected reward at step t according to this.
 
         The target expectation is computed through the Target Network, which is a more stable version
-        of the Action Value Network for increasing training stability
+        of the Action Value Network for increasing training stability.
 
-        The Target Network is a frozen copy of the Action Value Network updated as regular intervals        
+        The Target Network is a frozen copy of the Action Value Network updated as regular intervals.        
         """
 
         agent_step = self._num_actions_taken
