@@ -4836,6 +4836,29 @@ void CPUMatrix<ElemType>::Multiply1x1AndWeightedAdd(ElemType alpha, const CPUMat
             c(i, j) = b(i, j) * f + c(i, j) * beta;
 }
 
+template <class ElemType>
+void CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const CPUMatrix<ElemType>& a, const CPUMatrix<ElemType>& v, ElemType beta, CPUMatrix<ElemType>& c)
+{
+    if (v.GetNumRows() != 1 && v.GetNumCols() != 1)
+        InvalidArgument("the argument v must be a vector"); // v is a vector
+
+    if (beta == 0)
+        c.RequireSize(a.GetNumRows(), a.GetNumCols());
+    else
+        c.VerifySize(a.GetNumRows(), a.GetNumCols()); // Can't resize if beta != 0
+
+    const ElemType* vd = v.Data();
+
+    if (beta == 0) // don't even read the memory if beta is 0
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+            c(i, j) = alpha * a(i, j) * vd[j];
+    else
+#pragma omp parallel for
+        foreach_coord(i, j, c)
+            c(i, j) = alpha * a(i, j) * vd[j] + c(i, j) * beta;
+}
+
 /* compute singular value decomposition as
     A = U*SIGMA*VT
     W is used as temp working memory

@@ -866,8 +866,8 @@ end with a zero:
 Notes
 ~~~~~
 
-This layer is a wrapper around the ``past_value()`` and
-``future_value()`` primitives.
+This layer is a wrapper around the ``sequence.past_value()`` and
+``sequence.future_value()`` primitives.
 
 Example
 ~~~~~~~

@@ -179,6 +179,13 @@ class NDArrayView(cntk_py.NDArrayView):
                 list(reversed(extent)),
                 read_only)
 
+    @typemap
+    def device(self):
+        '''
+        Retrieves the :class:`~cntk.device.DeviceDescriptor` instance.
+        '''
+        return super(NDArrayView, self).device()
+
 
 class Value(cntk_py.Value):
     '''
@@ -302,13 +309,13 @@ class Value(cntk_py.Value):
 
         else:
             raise ValueError('only integer, float32 and float64 are '
-                                'supported, you gave %s' % sample.dtype)
+                             'supported, you gave %s' % sample.dtype)
 
         if convert_to_var_dtype:
             warnings.warn('your data is of type "%s", but your input '
-                            'variable (uid "%s") expects "%s". Please convert '
-                            'your data beforehand to speed up training.' %
-                            (sample.dtype, var.uid, str(var.dtype)))
+                          'variable (uid "%s") expects "%s". Please convert '
+                          'your data beforehand to speed up training.' %
+                          (sample.dtype, var.uid, str(var.dtype)))
             sample = sample.astype(var.dtype)
 
         return sample

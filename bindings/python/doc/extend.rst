@@ -186,10 +186,7 @@ computation can be moved to the constructor::
             self.new_p = {}
             self.grad_input = {}
 
-            # we just need the batch axis
-            ba = Axis.default_batch_axis()
-
-            self.sample_count_input = input_variable((), dynamic_axes=[ba], name='count')
+            self.sample_count_input = cntk.input((), name='count')
 
             lr = lr_schedule[0]  # assuming constant learning rate
             eta = lr / self.sample_count_input
@@ -197,7 +194,7 @@ computation can be moved to the constructor::
             # we need one graph per parameter shape
             for param in parameters:
                 p_shape = param.shape
-                self.grad_input[p_shape] = input_variable(p_shape, dynamic_axes=[ba])
+                self.grad_input[p_shape] = cntk.input(p_shape)
                 self.new_p[p_shape] = param - eta * self.grad_input[p_shape]
 
         def update(self, gradient_values, training_sample_count, sweep_end):

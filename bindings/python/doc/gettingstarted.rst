@@ -17,12 +17,12 @@ pass for that node using its inputs, and returns the result of the forward pass.
 more common case) is as follows:
 
     >>> import numpy as np
-    >>> x = cntk.input_variable(2)
-    >>> y = cntk.input_variable(2)
+    >>> x = cntk.input(2)
+    >>> y = cntk.input(2)
     >>> x0 = np.asarray([[2., 1.]], dtype=np.float32)
     >>> y0 = np.asarray([[4., 6.]], dtype=np.float32)
     >>> cntk.squared_error(x, y).eval({x:x0, y:y0})
-    [array([ 29.], dtype=float32)]
+    array([ 29.], dtype=float32)
 
 In the above example we are first setting up two input variables with shape ``(1, 2)``. We then setup a ``squared_error`` node with those two variables as 
 inputs. Within the ``eval()`` method we can setup the input-mapping of the data for those two variables. In this case we pass in two numpy arrays. 

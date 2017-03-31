@@ -3137,6 +3137,55 @@ __global__ void _dense1DConvMultSparseCSCTransposeAndAddToDense(
 }
 
 template <class ElemType>
+__global__ void _columnwiseScaleAndWeightedAdd(
+    ElemType alpha,
+    const ElemType* aData,
+    const ElemType* vData,
+    ElemType beta,
+    ElemType* cData,
+    int m, int n)
+{
+    CUDA_LONG id = blockDim.x * blockIdx.x + threadIdx.x;
+    if (id >= m * n)
+        return;
+
+    CUDA_LONG col = id / m;
+
+    if (beta == 0) // don't even read the memory if beta is 0
+        cData[id] = alpha * vData[col] * aData[id];
+    else
+        cData[id] = alpha * vData[col] * aData[id] + beta * cData[id];
+}
+
+template <class ElemType>
+__global__ void _columnwiseScaleAndWeightedAdd4CSC(
+    ElemType alpha,
+    const ElemType* aData, const GPUSPARSE_INDEX_TYPE* aSecondaryIndices, const GPUSPARSE_INDEX_TYPE* aMajorIndices,
+    const ElemType* vData,
+    ElemType beta,
+    ElemType* cData,
+    int m, int n)
+{
+    CUDA_LONG col = blockDim.x * blockIdx.x + threadIdx.x;
+    if (col >= n)
+        return;
+
+    GPUSPARSE_INDEX_TYPE start = aSecondaryIndices[col];
+    GPUSPARSE_INDEX_TYPE end = aSecondaryIndices[col + 1];
+
+    for (GPUSPARSE_INDEX_TYPE p = start; p < end; p++)
+    {
+        GPUSPARSE_INDEX_TYPE row = aMajorIndices[p];
+        ElemType val = aData[p];
+
+        if (beta == 0) // don't even read the memory if beta is 0
+            cData[IDX2C(row, col, m)] = alpha * vData[col] * val;
+        else
+            cData[IDX2C(row, col, m)] = alpha * vData[col] * val + beta * cData[IDX2C(row, col, m)];
+    }
+}
+
+template <class ElemType>
 __global__ void _reshape(
     const int oldNumRows,                       // old row count
     const int oldNumCols,                       // old col count

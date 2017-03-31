@@ -7,7 +7,7 @@
 # sequence -- first/higher-order functions over sequences, like Recurrence()
 
 from ..variables import Record
-from ..ops import combine, past_value, future_value, splice, sequence
+from ..ops import combine, splice, sequence
 from .blocks import *
 from .blocks import _get_initial_state_or_default, _inject_name
 
@@ -193,7 +193,7 @@ def RecurrenceFrom(step_function, go_backwards=default_override_or(False), retur
      >>> decoder = RecurrenceFrom(LSTM(500))       # decoder starts from a data-dependent initial state, hence -From()
      >>> emit = Dense(30000)
      >>> h, c = encoder(embed(en)).outputs         # LSTM encoder has two outputs (h, c)
-     >>> z = emit(decoder(h, c, past_value(fr)))   # decoder takes encoder outputs as initial state
+     >>> z = emit(decoder(h, c, sequence.past_value(fr)))   # decoder takes encoder outputs as initial state
      >>> loss = C.cross_entropy_with_softmax(z, fr)
 
     Args:
@@ -570,7 +570,7 @@ def UnfoldFrom(generator_function, until_predicate=None, length_increase=1, name
 
         # apply until_predicate if given
         if until_predicate is not None:
-            valid_frames = Recurrence(lambda h, x: (1-past_value(x)) * h, initial_state=1, name='valid_frames')(until_predicate(output))
+            valid_frames = Recurrence(lambda h, x: (1-sequence.past_value(x)) * h, initial_state=1, name='valid_frames')(until_predicate(output))
             output = sequence.gather(output, valid_frames, name='valid_output')
 
         return output

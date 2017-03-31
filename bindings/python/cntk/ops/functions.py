@@ -1212,7 +1212,8 @@ class UserFunction(Function):
         if self.as_numpy:
             map_if_possible(root_gradients)
             for v in root_gradients:
-                root_gradients[v] = _value_as_sequence_or_array(root_gradients[v], v)
+                if v.needs_gradient:
+                    root_gradients[v] = _value_as_sequence_or_array(root_gradients[v], v)
 
             state = cntk_py.UserBackPropState.data(state)
 

@@ -4954,6 +4954,25 @@ void Matrix<ElemType>::ConvolveAndWeightedAdd(ElemType alpha, const Matrix<ElemT
     }
 }
 
+/// <summary>Columnwise scale with col-major matrix and accumulate.</summary>
+/// <param name="alpha">Scalar</param>
+/// <param name="a">Input matrix</param>
+/// <param name="v">Input scale vector for each column of a</param>
+/// <param name="beta">Scalar</param>
+/// <param name="c">Resulting matrix, the same shape as a</param>
+template <class ElemType>
+void Matrix<ElemType>::ColumnwiseScaleAndWeightedAdd(ElemType alpha, const Matrix<ElemType>& a, const Matrix<ElemType>& v, ElemType beta, Matrix<ElemType>& c)
+{
+    DecideAndMoveToRightDevice(a, v, c);
+
+    DISPATCH_MATRIX_ON_FLAG(&a,
+        nullptr,
+        CPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
+        GPUMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix),
+        CPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_CPUSparseMatrix, *v.m_CPUMatrix, beta, *c.m_CPUMatrix),
+        GPUSparseMatrix<ElemType>::ColumnwiseScaleAndWeightedAdd(alpha, *a.m_GPUSparseMatrix, *v.m_GPUMatrix, beta, *c.m_GPUMatrix));
+}
+
 /// <summary>Matrix-scalar multiply with col-major matrices: c = alpha * a + c</summary>
 /// if a is a column vector, add to all columns of c
 /// if a is a row vector, add to all rows of c

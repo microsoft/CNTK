@@ -38,9 +38,166 @@ def input(shape, dtype=default_override_or(np.float32), needs_gradient=False, is
 # sequence ops
 ##########################################################################
 
+@typemap
+def future_value(x, initial_state=None, time_step=1, name=''):
+    '''
+    This function returns the future value w.r.t. ``x``. It is most often used when
+    creating RNNs. The resulting tensor has the same shape as the input but is
+    the next logical sample. The ``time_step`` parameter is the number of steps
+    to look into the future and is 1 by default. If there is no future value (i.e.
+    the current sample is the last one in the tensor) then the ``initial_state``
+    value is returned.
+
+    The initial state can be a constant (scalar or tensor), a learnable tensor
+    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
+
+    Example:
+        >>> x = C.sequence.input(shape=(3,2))
+        >>> # Create one sequence with 4 tensors of shape (3, 2)
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> y = C.sequence.future_value(x) # using initial state of 0 by default
+        >>> y.eval({x:x0})
+        [array([[[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]],
+        <BLANKLINE>
+                [[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]]], dtype=float32)]
+
+    Args:
+        x: the tensor (or its name) from which the future value is obtained.
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
+        time_step (int): the number of time steps to look into the future (default 1)
+        name (str, optional): the name of the Function instance in the network
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.internal import sanitize_dtype_cntk
+    from ...cntk_py import Constant
+    from cntk.cntk_py import future_value
+
+    if initial_state is None:
+        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+
+    x = sanitize_input(x)
+    return future_value(x, initial_state, time_step, name)
+
+
+@typemap
+def past_value(x, initial_state=None, time_step=1, name=''):
+    '''
+    This function returns the past value w.r.t. ``x``. It is most often used when
+    creating RNNs. The resulting tensor has the same shape as the input but is
+    the previous logical sample. The ``time_step`` parameter is the number of steps
+    to look into the past and is 1 by default. If there is no past value (i.e.
+    the current sample is the first one in the tensor)  then the ``initial_state``
+    value is returned.
+
+    The initial state can be a constant (scalar or tensor), a learnable tensor
+    or input data (which has a batch dimension, as needed for sequence-to-sequence models).
+
+    Example:
+        >>> # create example input: one sequence with 4 tensors of shape (3, 2)
+        >>> from cntk.layers.typing import Tensor, Sequence
+        >>> x = C.sequence.input((3,2))
+        >>> x0 = np.reshape(np.arange(24,dtype=np.float32),(1,4,3,2))
+        >>> x0
+        array([[[[  0.,   1.],
+                 [  2.,   3.],
+                 [  4.,   5.]],
+        <BLANKLINE>
+                [[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]],
+        <BLANKLINE>
+                [[ 18.,  19.],
+                 [ 20.,  21.],
+                 [ 22.,  23.]]]], dtype=float32)
+
+        >>> # this demonstrates how past_value shifts the sequence by one, padding with initial_state
+        >>> y = C.sequence.past_value(x) # initial_state is 0 by default
+        >>> y.eval({x:x0})
+        [array([[[  0.,   0.],
+                 [  0.,   0.],
+                 [  0.,   0.]],
+        <BLANKLINE>
+                [[  0.,   1.],
+                 [  2.,   3.],
+                 [  4.,   5.]],
+        <BLANKLINE>
+                [[  6.,   7.],
+                 [  8.,   9.],
+                 [ 10.,  11.]],
+        <BLANKLINE>
+                [[ 12.,  13.],
+                 [ 14.,  15.],
+                 [ 16.,  17.]]], dtype=float32)]
+
+        >>> # here, we pass a the initial_state as input data (e.g. sequence-to-sequence)
+        >>> s = C.input((3,2))  # not a sequence, e.g. a final encoder hidden state
+        >>> s0 = np.reshape(np.arange(6,dtype=np.float32)/2,(1,3,2))
+        >>> s0
+        array([[[ 0. ,  0.5],
+                [ 1. ,  1.5],
+                [ 2. ,  2.5]]], dtype=float32)
+        >>> y = C.sequence.past_value(x, initial_state=s)
+        >>> y.eval({x:x0, s:s0}) # same as the previous example except for the first time step
+        [array([[[  0. ,   0.5],
+                 [  1. ,   1.5],
+                 [  2. ,   2.5]],
+        <BLANKLINE>
+                [[  0. ,   1. ],
+                 [  2. ,   3. ],
+                 [  4. ,   5. ]],
+        <BLANKLINE>
+                [[  6. ,   7. ],
+                 [  8. ,   9. ],
+                 [ 10. ,  11. ]],
+        <BLANKLINE>
+                [[ 12. ,  13. ],
+                 [ 14. ,  15. ],
+                 [ 16. ,  17. ]]], dtype=float32)]
+
+    Args:
+        x: the tensor (or its name) from which the past value is obtained
+        initial_state: tensor or scalar representing the initial value to be used when the input tensor is shifted in time.
+        time_step (int): the number of time steps to look into the past (default 1)
+        name (str, optional): the name of the Function instance in the network
+
+    Returns:
+        :class:`~cntk.ops.functions.Function`
+    '''
+
+    from cntk.internal import sanitize_dtype_cntk
+    from ...cntk_py import Constant
+    from cntk.cntk_py import past_value
+
+    if initial_state is None:
+        initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)
+    else:
+        initial_state = sanitize_input(initial_state)
+
+    x = sanitize_input(x)
+    return past_value(x, initial_state, time_step, name)
+
+
 def delay(x, initial_state=None, time_step=1, name=''):
     '''
-    This function combines :func:`~cntk.ops.past_value` and :func:`~cntk.ops.future_value` into a single function.
+    This function combines :func:`~cntk.ops.sequence.past_value` and :func:`~cntk.ops.sequence.future_value` into a single function.
     This is useful when the time_step is computed and can be positive, negative, or 0.
 
     Args:
@@ -49,7 +206,7 @@ def delay(x, initial_state=None, time_step=1, name=''):
         time_step (int): the number of time steps to look into the past, where negative values mean to look into the future, and 0 means a no-op (default 1).
         name (str, optional): the name of the Function instance in the network
     '''
-    from ...ops import alias, past_value, future_value, element_select, element_divide, placeholder, exp 
+    from ...ops import alias, element_select, element_divide, placeholder, exp 
     if time_step > 0:
         return past_value  (x, time_step= time_step, initial_state=initial_state, name=name)
     elif time_step < 0:
@@ -424,7 +581,7 @@ def reduce_max(x, name=''):
   Returns:
     The max value in the input sequence
   """
-  from ...ops import past_value, future_value, element_select, placeholder, greater 
+  from ...ops import element_select, placeholder, greater 
   m = placeholder(shape=(1,), dynamic_axes = x.dynamic_axes, name='max')
   o = element_select(greater(x, future_value(m)), x, future_value(m))
   rlt = o.replace_placeholders({m:sanitize_input(o)})

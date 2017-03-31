@@ -6,7 +6,7 @@ from cntk import Trainer, Axis, device, combine
 from cntk.layers.blocks import Stabilizer, _initializer_for,  _INFERRED, Parameter, Placeholder
 from cntk.layers import Recurrence, Convolution, Dense
 from cntk.ops import input, sequence, reduce_sum, \
-    parameter, times, element_times, past_value, plus, placeholder, reshape, constant, sigmoid, convolution, tanh, times_transpose, greater, element_divide, element_select, exp, future_value, past_value
+    parameter, times, element_times, plus, placeholder, reshape, constant, sigmoid, convolution, tanh, times_transpose, greater, element_divide, element_select, exp
 from cntk.losses import cosine_distance
 from cntk.internal import _as_tuple, sanitize_input
 from cntk.initializer import uniform, glorot_uniform
