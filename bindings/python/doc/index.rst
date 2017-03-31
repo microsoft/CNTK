@@ -15,6 +15,9 @@ to expose such an API to the CNTK system, thus enabling the use of higher-level
 tools such as IDEs to facilitate the definition of computational networks, to execute
 them on sample data in real time. Please give feedback through these `channels`_.
 
+We have a new type system in the layers module to make the input type more readable.
+This new type system is subject to change, please give us feedback on github or stackoverflow
+
 .. toctree::
    :maxdepth: 2
 
