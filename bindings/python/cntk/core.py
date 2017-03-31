@@ -179,6 +179,13 @@ class NDArrayView(cntk_py.NDArrayView):
                 list(reversed(extent)),
                 read_only)
 
+    @typemap
+    def device(self):
+        '''
+        Retrieves the :class:`~cntk.device.DeviceDescriptor` instance.
+        '''
+        return super(NDArrayView, self).device()
+
 
 class Value(cntk_py.Value):
     '''

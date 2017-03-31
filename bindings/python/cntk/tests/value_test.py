@@ -164,3 +164,9 @@ def test_asarray_method():
         for a, d in zip(as_csr, data):
             assert (a==d).toarray().all()
 
+
+def test_ndarray_device():
+    ndav = NDArrayView((2,3), np.float32)
+    dev = ndav.device()
+    assert isinstance(dev, DeviceDescriptor)
+    assert str(dev) == 'Device CPU'
