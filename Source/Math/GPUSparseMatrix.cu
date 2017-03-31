@@ -2919,15 +2919,6 @@ GPUSparseMatrix<ElemType>& GPUSparseMatrix<ElemType>::AssignOneHot(const GPUMatr
                                                                                       a.GetNumRows(),
                                                                                       a.GetNumCols(),
                                                                                       N);
-    
-    GPUSPARSE_INDEX_TYPE second[3];
-    CUDA_CALL(cudaMemcpy(&second, secondaryIndices, sizeof(GPUSPARSE_INDEX_TYPE) * 3, cudaMemcpyDeviceToHost));
-
-    GPUSPARSE_INDEX_TYPE major[4];
-    CUDA_CALL(cudaMemcpy(&major, majorIndices, sizeof(GPUSPARSE_INDEX_TYPE) * 4, cudaMemcpyDeviceToHost));
-
-    ElemType value[4];
-    CUDA_CALL(cudaMemcpy(&value, targetData, sizeof(ElemType) * 4, cudaMemcpyDeviceToHost));
 
     return *this;
 }
