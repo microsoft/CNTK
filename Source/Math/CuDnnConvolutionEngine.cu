@@ -11,7 +11,7 @@
 #include <typeindex>
 #include "CuDnnCommon.h"
 
-template<>
+template <>
 const char* CudaErrString<cudnnStatus_t>(cudnnStatus_t x)
 {
     return cudnnGetErrorString(x);
