@@ -16,7 +16,7 @@ abs_path = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(abs_path)
 sys.path.append(os.path.join(abs_path, "..", "..", "..", "..", "Examples", "Image", "Classification", "ConvNet", "Python"))
 from prepare_test_data import prepare_CIFAR10_data
-from ConvNet_CIFAR10_DataAug import create_reader, create_convnet_cifar10_model, train_and_evaluate
+from ConvNet_CIFAR10_DataAug import create_reader, create_convnet_cifar10_model, train_model
 
 #TOLERANCE_ABSOLUTE = 2E-1
 
@@ -38,7 +38,7 @@ def test_cifar_convnet_error(device_id):
     reader_test  = create_reader(os.path.join(base_path, 'test_map.txt'), os.path.join(base_path, 'CIFAR-10_mean.xml'), False)
 
     model = create_convnet_cifar10_model(num_classes=10)
-    test_error = train_and_evaluate(reader_train, reader_test, model, epoch_size=256, max_epochs=1)
+    test_error = train_model(reader_train, reader_test, model, epoch_size=256, max_epochs=1)
 
 # We are removing tolerance in error because running small epoch size has huge variance in accuracy. Will add
 # tolerance back once convolution operator is determinsitic. 
