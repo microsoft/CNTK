@@ -55,7 +55,7 @@ def convnet_mnist(debug_output=False):
 
     # training config
     epoch_size = 60000                    # for now we manually specify epoch size
-    minibatch_size = 128
+    minibatch_size = 64
     max_epochs = 40
 
     # Set learning parameters
