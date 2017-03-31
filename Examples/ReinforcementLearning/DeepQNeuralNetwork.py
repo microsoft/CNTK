@@ -10,7 +10,7 @@ from cntk.layers import Convolution2D, Dense, default_options
 from cntk.layers.typing import Tensor
 from cntk.learners import adam, learning_rate_schedule, momentum_schedule, UnitType
 from cntk.models import Sequential
-from cntk.ops import abs, element_select, less, relu, reduce_sum, square
+from cntk.ops import abs, argmax, element_select, less, relu, reduce_max, reduce_sum, square
 from cntk.ops.functions import CloneMethod, Function
 from cntk.trainer import Trainer
 
@@ -29,9 +29,9 @@ class ReplayMemory(object):
         self._history_length = max(1, history_length)
         self._state_shape = sample_shape
         self._states = np.zeros((size,) + sample_shape, dtype=np.float32)
-        self._actions = np.zeros(size, dtype=np.uint16)
+        self._actions = np.zeros(size, dtype=np.uint8)
         self._rewards = np.zeros(size, dtype=np.float32)
-        self._terminals = np.zeros(size, dtype=np.uint8)
+        self._terminals = np.zeros(size, dtype=np.float32)
 
     def append(self, state, action, reward, done):
         """ Appends the specified transition to the memory.
@@ -203,6 +203,34 @@ class LinearEpsilonAnnealingExplorer(object):
         return np.random.rand() < self._epsilon(step)
 
 
+def huber_loss(y, y_hat, delta):
+    """ Compute the Huber Loss as part of the model graph
+
+    Huber Loss is more robust to outliers. It is defined as:
+     if |y - y_hat| < delta :
+        0.5 * (y - y_hat)**2
+    else :
+        delta * |y - y_hat| - 0.5 * delta**2
+
+    Attributes:
+        y (Tensor[-1, 1]): Target value
+        y_hat(Tensor[-1, 1]): Estimated value
+        delta (float): Outliers threshold
+    
+    Returns:
+        CNTK Graph Node
+    """
+    half_delta_squared = 0.5 * delta * delta
+    error = y - y_hat
+    abs_error = abs(error)
+
+    less_than = 0.5 * square(error)
+    more_than = (delta * abs_error) - half_delta_squared
+    loss_per_sample = element_select(less(abs_error, delta), less_than, more_than)
+
+    return reduce_sum(loss_per_sample, name='loss')
+
+
 class DeepQAgent(object):
     """
     Implementation of Deep Q Neural Network agent like in: 
@@ -244,19 +272,36 @@ class DeepQAgent(object):
             ])
         self._action_value_net.update_signature(Tensor[input_shape])
 
-        # Define the loss, using Huber Loss (More robust to outliers)
-        @Function
-        @Signature(environment=Tensor[input_shape], actions=Tensor[nb_actions], q_targets=Tensor[1])
-        def criterion(environment, actions, q_targets):
-            # Define the loss, using Huber Loss (More robust to outliers)
-            # actions is a sparse One Hot encoding of the action done by the agent
-            q_acted = reduce_sum(self._action_value_net(environment) * actions, axis=0)
-
-            # Define training criterion as the Huber Loss function
-            return DeepQAgent.huber_loss(q_targets, q_acted, 1.0)
+        # Return the indexes of the maximum expectation from the network
+        self._choose_action = argmax(self._action_value_net, name='q_values_argmax')
 
         # Target model (used to compute target QValues in training process, updated less frequently)
         self._target_net = self._action_value_net.clone(CloneMethod.freeze)
+
+        # # Define the function that will compute the target q_values as part of the computation graph
+        @Function
+        @Signature(post_states=Tensor[input_shape], rewards=Tensor[()], terminals=Tensor[()])
+        def compute_q_targets(post_states, rewards, terminals):
+            return element_select(
+                terminals,
+                rewards,
+                gamma * reduce_max(self._target_net(post_states), axis=1) + rewards,
+            )
+
+        # Define the loss, using Huber Loss (More robust to outliers)
+        @Function
+        @Signature(pre_states=Tensor[input_shape], actions=Tensor[nb_actions],
+                   post_states=Tensor[input_shape], rewards=Tensor[()], terminals=Tensor[()])
+        def criterion(pre_states, actions, post_states, rewards, terminals):
+            # Compute the q_targets
+            q_targets = compute_q_targets(post_states, rewards, terminals)
+
+            # Define the loss, using Huber Loss (More robust to outliers)
+            # actions is a sparse One Hot encoding of the action done by the agent
+            q_acted = reduce_sum(self._action_value_net(pre_states) * actions, axis=0)
+
+            # Define training criterion as the Huber Loss function
+            return huber_loss(q_targets, q_acted, 1.0)
 
         # Adam based SGD
         lr_schedule = learning_rate_schedule(learning_rate, UnitType.minibatch)
@@ -340,41 +385,21 @@ class DeepQAgent(object):
 
         if agent_step >= self._train_after:
             if (agent_step % self._train_interval) == 0:
-                pre_states, actions, post_states, rewards, dones = self._memory.minibatch(self._minibatch_size)
-                q_value_targets = self._compute_q(actions, rewards, post_states, dones)
+                pre_states, actions, post_states, rewards, terminals = self._memory.minibatch(self._minibatch_size)
 
                 self._trainer.train_minibatch(
                     self._trainer.loss_function.argument_map(
-                        environment=pre_states,
+                        pre_states=pre_states,
                         actions=Value.one_hot(actions.reshape(-1, 1).tolist(), self.nb_actions),
-                        q_targets=q_value_targets.reshape(-1, 1)
+                        post_states=post_states,
+                        rewards=rewards,
+                        terminals=terminals
                     )
                 )
 
                 # Update the Target Network if needed
                 if (agent_step % self._target_update_interval) == 0:
                     self._target_net = self._action_value_net.clone(CloneMethod.freeze)
-
-    def _compute_q(self, actions, rewards, post_states, dones):
-        """ In the training process, this function computes the target expected reward w.r.t to the Bellman Equation.
-        https://en.wikipedia.org/wiki/Bellman_equation
-
-        It takes a minibatch of values and computes the expected reward according to the actions done by the agent.
-        It also takes into account if the action ended the environment or not.
-        
-        Attributes:
-            actions (int): Actions done by the agent
-            rewards (float): Rewards received for doing above actions
-            post_states (Tensor[input_shape]): States after doing above actions
-            dones (bool): Terminal environment flag after doing above actions
-            
-        Returns:
-            Tensor[-1, 1], Updated expected reward 
-        """
-        q_hat = self._target_net.eval(post_states)
-        q_targets = (1 - dones) * (self.gamma * q_hat.max(axis=1)) + rewards
-
-        return np.array(q_targets, dtype=np.float32)
 
     def _plot_metrics(self):
         """Plot current buffers accumulated values to visualize agent learning 
@@ -388,34 +413,6 @@ class DeepQAgent(object):
             self._metrics_writer.write_value('Mean Std Q per ep.', std_q, self._num_actions_taken)
 
         self._metrics_writer.write_value('Sum rewards per ep.', sum(self._episode_rewards), self._num_actions_taken)
-
-    @staticmethod
-    def huber_loss(y, y_hat, delta):
-        """ Compute the Huber Loss as part of the model graph
-    
-        Huber Loss is more robust to outliers. It is defined as:
-         if |y - y_hat| < delta :
-            0.5 * (y - y_hat)**2
-        else :
-            delta * |y - y_hat| - 0.5 * delta**2
-    
-        Attributes:
-            y (Tensor[-1, 1]): Target value
-            y_hat(Tensor[-1, 1]): Estimated value
-            delta (float): Outliers threshold
-        
-        Returns:
-            CNTK Graph Node
-        """
-        half_delta_squared = 0.5 * delta * delta
-        error = y - y_hat
-        abs_error = abs(error)
-
-        less_than = 0.5 * square(error)
-        more_than = (delta * abs_error) - half_delta_squared
-        loss_per_sample = element_select(less(abs_error, delta), less_than, more_than)
-
-        return reduce_sum(loss_per_sample, name='loss')
 
 
 def as_ale_input(environment):
