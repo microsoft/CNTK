@@ -101,10 +101,10 @@ def create_criterion_function(model, normalize=identity):
     return criterion
 
 ########################
-# train & eval action  #
+# train action  #
 ########################
 
-def train_and_evaluate(reader, reader_test, model, epoch_size=50000, max_epochs=80):
+def train_model(reader, reader_test, model, epoch_size=50000, max_epochs=80):
 
     # declare the model's input dimension
     # Training does not require this, but it is needed for deployment.
@@ -200,7 +200,7 @@ if __name__=='__main__':
     # train
     reader      = create_reader(os.path.join(data_path, 'train_map.txt'), os.path.join(data_path, 'CIFAR-10_mean.xml'), True)
     reader_test = create_reader(os.path.join(data_path, 'test_map.txt'),  os.path.join(data_path, 'CIFAR-10_mean.xml'), False)
-    train_and_evaluate(reader, reader_test, model, max_epochs=5)
+    train_model(reader, reader_test, model, max_epochs=80)
 
     # save and load (as an illustration)
     path = data_path + "/model.cmf"

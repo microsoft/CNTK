@@ -67,7 +67,7 @@ def LocalResponseNormalization(k, n, alpha, beta, name=''):
 
 # Train and evaluate the network.
 def convnetlrn_cifar10_dataaug(reader_train, reader_test, epoch_size=50000, max_epochs = 80):
-    _cntk_py.set_computation_network_trace_level(1)
+    _cntk_py.set_computation_network_trace_level(0)
 
     # Input variables denoting the features and label data
     input_var = cntk.input((num_channels, image_height, image_width))
