@@ -67,6 +67,7 @@ def test_ndarrayview_operators(device_id, precision):
 
     # unary ops
     test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [x])#, rtol=1e-10)
+    test(lambda a: a.tanh() if isinstance(a, NDArrayView) else np.tanh(a), [x])#, rtol=1e-10)
     test(lambda a: a.relu() if isinstance(a, NDArrayView) else np.maximum(a,0), [x])
 
     # reduction ops

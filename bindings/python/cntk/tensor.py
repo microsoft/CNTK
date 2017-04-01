@@ -266,6 +266,8 @@ class NDArrayViewOpsMixin(object):
     # non-linearities
     def sigmoid(self):
         return NDArrayView.numeric_operation([self], 1.0,  8) #  8 = ElementWiseOperator.opSigmoid
+    def tanh(self):
+        return NDArrayView.numeric_operation([self], 1.0,  9) #  9 = ElementWiseOperator.opTanh
     def relu(self):
         return NDArrayView.numeric_operation([self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
 
@@ -282,7 +284,7 @@ def _add_ndarrayview_ops(klass):
                           '__iadd__',
                           '__matmul__',
                           'dot', 'dot_transpose',
-                          'sigmoid', 'relu',
+                          'sigmoid', 'tanh', 'relu',
                           'reduce_log_sum']:
         if getattr(klass, overload_name, None):
             raise ValueError('class "%s" already has operator overload "%s"' %
