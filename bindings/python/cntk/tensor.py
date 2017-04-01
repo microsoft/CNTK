@@ -276,7 +276,7 @@ class NDArrayViewOpsMixin(object):
 
     def __matmul__(self, other):
         if len(self.shape) == 0: # TODO: allow for scalar zero (initial_state)
-            self1 = NDArrayView(shape=(other.shape[0]), data_type=other.dtype, device=other.device) # reduce to scalar
+            self1 = NDArrayView(shape=(other.shape[0]), data_type=other.dtype, device=other.device()) # reduce to scalar
             # BUGBUG: How to get the precision in the right way?
             # TODO: test case
             self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
