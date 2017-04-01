@@ -47,7 +47,7 @@ Train = {
         labels   = Input {labelDim}
 
         # apply model to features
-        model    = InceptionV4Norm(features, labelDim, bnTimeConst)
+        model    = InceptionResNetV2Norm(features, labelDim, bnTimeConst)
         z        = model.z
 
         # connect to system

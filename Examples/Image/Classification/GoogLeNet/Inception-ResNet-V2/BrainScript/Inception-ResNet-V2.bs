@@ -57,9 +57,9 @@ InceptionResNetV2(input, labelDim, bnTimeConst) =
     inceptionResNetB_8 = InceptionResNetB{bnTimeConst}(inceptionResNetB_7)
     inceptionResNetB_9 = InceptionResNetB{bnTimeConst}(inceptionResNetB_8)
     inceptionResNetB_10 = InceptionResNetB{bnTimeConst}(inceptionResNetB_9)
-    # 17 x 17 x 1154
+    # 17 x 17 x 1152
     reduction_2 = ReductionB{bnTimeConst}(inceptionResNetB_10)
-    # 8 x 8 x 2146
+    # 8 x 8 x 2144
     InceptionResNetC_1 = InceptionResNetC{bnTimeConst}(reduction_2)
     InceptionResNetC_2 = InceptionResNetC{bnTimeConst}(InceptionResNetC_1)
     InceptionResNetC_3 = InceptionResNetC{bnTimeConst}(InceptionResNetC_2)
@@ -69,19 +69,19 @@ InceptionResNetV2(input, labelDim, bnTimeConst) =
     #
     # Prediction
     #
-    # 8 x 8 x 2048
+    # 8 x 8 x 2144
     pool1 = AveragePoolingLayer{(8:8)}(InceptionResNetC_5)
-    # 1 x 1 x 2048
+    # 1 x 1 x 2144
     drop = Dropout(pool1)
-    # 1 x 1 x 2048
+    # 1 x 1 x 2144
     z = LinearLayer{labelDim, init = 'heNormal'}(drop)
 }
 
 #
-# Inception V4 model with normalized input, to use the below function
+# Inception-ResNet-V2 model with normalized input, to use the below function
 # remove "ImageNet1K_mean.xml" from each reader.
 #
-InceptionV4Norm(input, labelDim, bnTimeConst) = 
+InceptionResNetV2Norm(input, labelDim, bnTimeConst) = 
 {
     # Normalize inputs to -1 and 1.
     featMean  = 128
@@ -89,5 +89,5 @@ InceptionV4Norm(input, labelDim, bnTimeConst) =
     Normalize{m,f} = x => f .* (x - m)
             
     inputNorm = Normalize{featMean, featScale}(input)
-    model     = InceptionV4(inputNorm, labelDim, bnTimeConst)
+    model     = InceptionResNetV2(inputNorm, labelDim, bnTimeConst)
 }.model

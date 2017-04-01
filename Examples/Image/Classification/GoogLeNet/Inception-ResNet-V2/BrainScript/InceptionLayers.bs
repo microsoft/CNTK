@@ -16,7 +16,7 @@ ConvBNReLULayer {outChannels, kernel, stride, pad, bnTimeConst} = Sequential(
 #
 # Figure 16 from https://arxiv.org/pdf/1602.07261v2.pdf
 #
-InceptionResNetA {bnTimeConst} = {
+InceptionResNetA {bnTimeConst, scale} = {
     apply(x) = {
         # 1x1 Convolution
         branch1x1 = ConvBNReLULayer{32, (1:1), (1:1), true, bnTimeConst}(x)
@@ -38,7 +38,8 @@ InceptionResNetA {bnTimeConst} = {
         concat = Splice((branch1x1:branch3x3:branch3x3dbl), axis=3)
         residual = ConvBNLayer{384, (1:1), (1:1), true, bnTimeConst}(concat)
 
-        sum = Plus(residual, x)
+        scaledResidual = Times(scale, residual)
+        sum = Plus(scaledResidual, x)
         out = ReLU(sum)
     }.out
 }.apply
@@ -46,7 +47,7 @@ InceptionResNetA {bnTimeConst} = {
 #
 # Figure 17 from https://arxiv.org/pdf/1602.07261v2.pdf
 #
-InceptionResNetB {bnTimeConst} = {
+InceptionResNetB {bnTimeConst, scale} = {
     apply(x) = {
         # 1x1 Convolution
         branch1x1 = ConvBNReLULayer{192, (1:1), (1:1), true, bnTimeConst}(x)
@@ -60,9 +61,10 @@ InceptionResNetB {bnTimeConst} = {
 
         # Concat
         concat = Splice((branch1x1:branch7x7), axis=3)
-        residual = ConvBNLayer{1154, (1:1), (1:1), true, bnTimeConst}(concat)
+        residual = ConvBNLayer{1152, (1:1), (1:1), true, bnTimeConst}(concat)
 
-        sum = Plus(residual, x)
+        scaledResidual = Times(scale, residual)
+        sum = Plus(scaledResidual, x)
         out = ReLU(sum)
     }.out
 }.apply
@@ -70,7 +72,7 @@ InceptionResNetB {bnTimeConst} = {
 #
 # Figure 19 from https://arxiv.org/pdf/1602.07261v2.pdf
 #
-InceptionResNetC {bnTimeConst} = {
+InceptionResNetC {bnTimeConst, scale} = {
     apply(x) = {
         # 1x1 Convolution
         branch1x1 = ConvBNReLULayer{192, (1:1), (1:1), true, bnTimeConst}(x)
@@ -84,9 +86,10 @@ InceptionResNetC {bnTimeConst} = {
 
         # Concat
         concat = Splice((branch1x1:branch3x3), axis=3)
-        residual = ConvBNLayer{2048, (1:1), (1:1), true, bnTimeConst}(concat)
+        residual = ConvBNLayer{2144, (1:1), (1:1), true, bnTimeConst}(concat)
 
-        sum = Plus(residual, x)
+        scaledResidual = Times(scale, residual)
+        sum = Plus(scaledResidual, x)
         out = ReLU(sum)
     }.out
 }.apply
