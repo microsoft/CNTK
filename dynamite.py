@@ -24,6 +24,16 @@ class Variable:
         v.inputs = inputs
         v.computed = False
         return v
+    def eval(self):
+        def to_data(nparray):
+            data = cntk.NDArrayView.from_dense(np.array(nparray, np.float32)) # BUGBUG: device?? precision??
+            data.__class__ = cntk.cntk_py.NDArrayView
+            return data
+        self.data = self.op(*(input.data if isinstance(input, Variable) else
+                              to_data(input)
+                              for input in self.inputs))
+        self.computed = True
+        pass
     def __add__(self, other):
         return plus(self, other)
     def __sub__(self, other):
@@ -339,14 +349,16 @@ def eval(v):
         op_batch = ready_ops[key]
         # execute it
         #print('batch of', len(op_batch), 'for op', key)
+        for v in op_batch:
+            v.eval()  # non-batched for now
         batches_run += 1
         # done with this one
         #  - for each member of the batched op, check each consumer whether it is now ready; if so, move to ready set
         #  - delete the batched group
         del ready_ops[key]  # remove from set before we add the newly ready ones
         for v in op_batch:
-            assert not v.computed
-            v.computed = True # value is available now
+            #assert not v.computed
+            #v.computed = True # value is available now
             ops_run += 1
             for p in v.consumers:
                 assert p.non_ready_inputs > 0
@@ -400,4 +412,6 @@ def train_minibatch(criterion, *batch_args):
     for args in zip(*batch_args):
         ce, *_ = criterion(*args)
         crit = plus(crit, ce)
-    return crit
+    # evaluate
+    eval(crit)
+    return crit.data # and return the NDArrayView, so that we can accumulate GPU-side
