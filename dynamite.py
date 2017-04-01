@@ -27,7 +27,7 @@ class Variable:
     def eval(self):
         def to_data(nparray):
             data = cntk.NDArrayView.from_dense(np.array(nparray, np.float32)) # BUGBUG: device?? precision??
-            data.__class__ = cntk.cntk_py.NDArrayView
+            #data.__class__ = cntk.cntk_py.NDArrayView
             return data
         self.data = self.op(*(input.data if isinstance(input, Variable) else
                               to_data(input)
@@ -51,15 +51,17 @@ class Parameter(Variable):
         if initializer:
             self.initializer = initializer
         self.computed = True # BUGBUG: but we don't have data
-    def share_data_from(self, other): # keep a reference to the other NDArrayView object
-        self.shape = other.shape().dimensions()
-        self.data = other  # NDArrayView
+    def share_data_from(self, other): # keep a reference to the other Parameter's NDArrayView object
+        data = other.data
+        data.__class__ = data.__class__ = cntk.core.NDArrayView
+        self.shape = data.shape
+        self.data = data  # NDArrayView
     def resize(self, shape):
         self.shape = shape
 
 class Constant(Variable):
-    def __new__(cls, data, initializer=None): # data = NDArrayView
-        v = Variable.__new__(cls, data.shape().dimensions(), 'Constant', [])
+    def __new__(cls, data: cntk.core.NDArrayView, initializer=None):
+        v = Variable.__new__(cls, data.shape, 'Constant', [])
         v.data = data  # NDArrayView
         v.computed = True
         return v

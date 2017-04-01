@@ -45,9 +45,8 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
             shape = data.shape().dimensions()  # drop a superfluous length dimension
             item_shape = shape[1:]
             def wrap(data):
+                data.__class__ = data.__class__ = cntk.core.NDArrayView
                 return dynamite.Constant(data) # wrap in a dynamite Variable
-                #map_if_possible(data)
-                #return data
             if has_axis:
                 # BUGBUG: shape parameters are not getting reversed; doing it manually
                 return [wrap(data.slice_view(tuple(reversed((t,) + (0,) * len(item_shape))), tuple(reversed((1,) + item_shape)))) for t in range(shape[0])]
@@ -95,12 +94,12 @@ def train(debug_output=False):
     debugging.dump_signature(criterion)
 
     # share static model's parameters over to dynamic model
-    dmodel.__items__[0].E              .share_data_from(model.embed.E.data)
-    dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  .data)
-    dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  .data)
-    dmodel.__items__[1].step_function.b.share_data_from(model.rnn.b  .data)
-    dmodel.__items__[2].W              .share_data_from(model.dense.W.data)
-    dmodel.__items__[2].b              .share_data_from(model.dense.b.data)
+    dmodel.__items__[0].E              .share_data_from(model.embed.E)
+    dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  )
+    dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  )
+    dmodel.__items__[1].step_function.b.share_data_from(model.rnn.b  )
+    dmodel.__items__[2].W              .share_data_from(model.dense.W)
+    dmodel.__items__[2].b              .share_data_from(model.dense.b)
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     reader = create_reader(os.path.dirname(os.path.abspath(__file__)) + '/' + rel_path, True, input_dim, num_output_classes)
