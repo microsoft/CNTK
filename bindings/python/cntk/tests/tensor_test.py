@@ -60,6 +60,7 @@ def test_ndarrayview_operators(device_id, precision):
 
     # binary ops
     test(lambda a, b: a + b, [x, y])
+    test(lambda a, b: a - b, [x, y])
     test(lambda a, b: a * b, [x, y])
     test(lambda a, b: a @ b, [y.reshape(1,2), x])
     test(lambda a, b: a.dot(b), [y.reshape(1,2), x])
@@ -74,4 +75,5 @@ def test_ndarrayview_operators(device_id, precision):
     test(lambda a: a.reduce_log_sum() if isinstance(a, NDArrayView) else np.log(np.sum(np.exp(a))), [x])#, rtol=1e-8)
 
     # in-place ops
-    test(lambda a, b: a.__iadd__(b), [x, y]) # make sure that does not change 'x' in numpy
+    test(lambda a, b: a.__iadd__(b), [x, y]) 
+    test(lambda a, b: a.__isub__(b), [x, y]) 

@@ -245,6 +245,8 @@ class NDArrayViewOpsMixin(object):
     # infix operators
     def __add__(self, other):
         return NDArrayView.numeric_operation([self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
+    def __sub__(self, other):
+        return NDArrayView.numeric_operation([self, other], 1.0, 25) # 25 = ElementWiseOperator.opDifference
     def __mul__(self, other):
         return NDArrayView.numeric_operation([self, other], 1.0, 26) # 26 = ElementWiseOperator.opElementwiseProduct
 
@@ -255,6 +257,9 @@ class NDArrayViewOpsMixin(object):
     # in-place variants
     def __iadd__(self, other):
         self.numeric_operation_in_place(1.0, [other], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+        return self
+    def __isub__(self, other): # realized as an in-place add-to with alpha=-1
+        self.numeric_operation_in_place(1.0, [other], -1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
         return self
 
     def __matmul__(self, other):
@@ -279,9 +284,9 @@ class NDArrayViewOpsMixin(object):
         return res
 
 def _add_ndarrayview_ops(klass):
-    for overload_name in ['__add__', '__mul__',
+    for overload_name in ['__add__', '__sub__', '__mul__',
                           '__radd__', '__rmul__',
-                          '__iadd__',
+                          '__iadd__', '__isub__',
                           '__matmul__',
                           'dot', 'dot_transpose',
                           'sigmoid', 'tanh', 'relu',
