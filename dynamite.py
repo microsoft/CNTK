@@ -34,7 +34,7 @@ class Variable:
         return times(self, other)
 
 class Parameter(Variable):
-    def __new__(cls,  shape, initializer=None):
+    def __new__(cls, shape, initializer=None):
         v = Variable.__new__(cls, shape, 'Parameter', [])
         return v
     def __init__(self, shape, initializer=None):
@@ -46,6 +46,13 @@ class Parameter(Variable):
         self.data = other  # NDArrayView
     def resize(self, shape):
         self.shape = shape
+
+class Constant(Variable):
+    def __new__(cls, data, initializer=None): # data = NDArrayView
+        v = Variable.__new__(cls, data.shape().dimensions(), 'Constant', [])
+        v.data = data  # NDArrayView
+        v.computed = True
+        return v
 
 def BroadcastingBinary(binary_op):
     # BUGBUG: testing for nested sequences must know how to align... how to do that?

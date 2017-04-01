@@ -44,17 +44,16 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
         def fix_up(data):
             shape = data.shape().dimensions()  # drop a superfluous length dimension
             item_shape = shape[1:]
+            def wrap(data):
+                return dynamite.Constant(data) # wrap in a dynamite Variable
+                #map_if_possible(data)
+                #return data
             if has_axis:
-                # CONTINUE HERE
-                # fails with: NDArrayView::SliceView: Cannot create a slice which is not contiguous in memory. This NDArrayView shape = [3 x 2000], slice offset = [0 x 0], slice extent = [2000 x 1].
-                #data = [data.slice_view((t,) + (0,) * len(item_shape), (1,) + item_shape) for t in range(shape[0])]
-                # BUGBUG: shape parameters are not getting reversed
-                data = [data.slice_view(tuple(reversed((t,) + (0,) * len(item_shape))), tuple(reversed((1,) + item_shape))) for t in range(shape[0])]
+                # BUGBUG: shape parameters are not getting reversed; doing it manually
+                return [wrap(data.slice_view(tuple(reversed((t,) + (0,) * len(item_shape))), tuple(reversed((1,) + item_shape)))) for t in range(shape[0])]
             else:
                 assert shape[0] == 1
-                data = data.as_shape(item_shape)
-                map_if_possible(data)
-            return data
+                return wrap(data.as_shape(item_shape))
         return [fix_up(seq) for seq in sequences]
     return tuple(convert(inp, var) for inp, var in zip(inputs, variables))
 
@@ -95,7 +94,7 @@ def train(debug_output=False):
     dcriterion = create_criterion(dynamite, dmodel)
     debugging.dump_signature(criterion)
 
-    # transplant parameters
+    # share static model's parameters over to dynamic model
     dmodel.__items__[0].E              .share_data_from(model.embed.E.data)
     dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  .data)
     dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  .data)
