@@ -40,10 +40,13 @@ class Parameter(Variable):
     def __init__(self, shape, initializer=None):
         if initializer:
             self.initializer = initializer
-        self.computed = True
-    def resize(self, shape, refcheck=False):
+        self.computed = True # BUGBUG: but we don't have data
+    def share_data_from(self, other): # keep a reference to the other NDArrayView object
+        self.shape = other.shape().dimensions()
+        self.data = other  # NDArrayView
+    def resize(self, shape):
         self.shape = shape
-    
+
 def BroadcastingBinary(binary_op):
     # BUGBUG: testing for nested sequences must know how to align... how to do that?
     def broadcasting_binary_op(a,b):
@@ -88,8 +91,7 @@ def unary_reduction_op(opcode):
 def times(a,b):
     if hasattr(b, 'initializer'):
         b.resize((a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1,
-                  b.shape[1]),
-                 refcheck=False)
+                  b.shape[1]))
         del b.initializer
     return Variable((b.shape[1],), cntk.NDArrayView.dot, (a,b))
 
@@ -97,13 +99,12 @@ def times(a,b):
 def times_transpose(a,b):
     if hasattr(b, 'initializer'):
         b.resize((b.shape[0],
-                  a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1),
-                 refcheck=False)
+                  a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1))
         del b.initializer
     return Variable((b.shape[0],), cntk.NDArrayView.dot_transpose, (a,b))
 
 plus = binary_op(cntk.NDArrayView.__add__)
-minus = binary_op(cntk.NDArrayView.__add__)
+minus = binary_op(cntk.NDArrayView.__sub__)
 element_times = binary_op(cntk.NDArrayView.__mul__)
 
 tanh = unary_op(cntk.NDArrayView.tanh)
@@ -133,7 +134,7 @@ def Model(**kwargs):
         return f
     return patch
 
-def Dense(N, activation=identity):
+def Dense(N, activation=identity, name=''):
     W = Parameter((INFER,N), initializer=times_initializer)
     b = Parameter((N,))
     @Model(W=W, b=b)
@@ -141,7 +142,7 @@ def Dense(N, activation=identity):
         return activation(x @ W + b)
     return dense
 
-def RNNUnit(N, activation=sigmoid):
+def RNNUnit(N, activation=sigmoid, name=''):
     W = Parameter((INFER,N), initializer=times_initializer)
     R = Parameter((INFER,N), initializer=times_initializer)
     b = Parameter((N,))
@@ -181,7 +182,7 @@ def LSTM(N, activation=sigmoid):
         return (ht, ct)
     return lstm
 
-def Embedding(N):
+def Embedding(N, name=''):
     E = Parameter((INFER,N), initializer=times_initializer)
     @Model(E=E)
     def embedding(x):

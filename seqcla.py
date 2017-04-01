@@ -66,9 +66,9 @@ cntk.RNNUnit = cntk.layers.RNNUnit
 cntk.Dense = cntk.layers.Dense
 def create_model(namespace, num_output_classes, embedding_dim, hidden_dim):
     return namespace.Sequential([
-        namespace.Embedding(embedding_dim),
-        namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu)),
-        namespace.Dense(num_output_classes)
+        namespace.Embedding(embedding_dim, name='embed'),
+        namespace.Fold(namespace.RNNUnit(hidden_dim, activation=namespace.relu, name='rnn')),
+        namespace.Dense(num_output_classes, name='dense')
     ])
 
 # define the criterion fnction
@@ -94,6 +94,14 @@ def train(debug_output=False):
     criterion = Function(create_criterion(cntk, model))
     dcriterion = create_criterion(dynamite, dmodel)
     debugging.dump_signature(criterion)
+
+    # transplant parameters
+    dmodel.__items__[0].E              .share_data_from(model.embed.E.data)
+    dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  .data)
+    dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  .data)
+    dmodel.__items__[1].step_function.b.share_data_from(model.rnn.b  .data)
+    dmodel.__items__[2].W              .share_data_from(model.dense.W.data)
+    dmodel.__items__[2].b              .share_data_from(model.dense.b.data)
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     reader = create_reader(os.path.dirname(os.path.abspath(__file__)) + '/' + rel_path, True, input_dim, num_output_classes)
@@ -124,6 +132,8 @@ def train(debug_output=False):
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
         dynamite.train_minibatch(dcriterion, *args)
         args = None  # deref; otherwise resize will fail
+        #print('static', dmodel.__items__[0].E.data.to_ndarray())
+        #print('dynamic', model.embed.E.value)
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy
