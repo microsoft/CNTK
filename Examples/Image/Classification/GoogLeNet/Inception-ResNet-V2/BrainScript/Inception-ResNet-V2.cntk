@@ -18,7 +18,6 @@ ImageNetDir = "$ConfigDir$"
 DataDir     = "$RootDir$"
 OutputDir   = "$RootDir$/Output"
 ModelDir    = "$OutputDir$/Model"
-MeanDir     = "$ConfigDir$"
 stderr      = "$OutputDir$/InceptionResNetV2"
 modelPath   = "$ModelDir$/InceptionResNetV2"
     
@@ -41,13 +40,14 @@ Train = {
         imageShape  = $ImageH$:$ImageW$:$ImageC$
         labelDim    = $NumLabels$
         bnTimeConst = 4096
+        scaleRatio  = 0.1
 
         # inputs
         features = Input {imageShape}
         labels   = Input {labelDim}
 
         # apply model to features
-        model    = InceptionResNetV2Norm(features, labelDim, bnTimeConst)
+        model    = InceptionResNetV2Norm(features, labelDim, bnTimeConst, scaleRatio)
         z        = model.z
 
         # connect to system
@@ -62,7 +62,7 @@ Train = {
         outputNodes     = (z)
     }
 
-    SGD = {		
+    SGD = {
         epochSize = 0
         minibatchSize = 256 # 8 GPUs
         learningRatesPerMB = 3.6*2:3.384
@@ -72,9 +72,9 @@ Train = {
         L2RegWeight = 0.0001
         numMBsToShowResult = 100
         dropoutRate = 0.2
-        
+
         #disableRegInBatchNormalization = true
-		
+
         autoAdjust = [
             autoAdjustLR = "adjustAfterEpoch"
             reduceLearnRateIfImproveLessThan = 1000
@@ -82,8 +82,8 @@ Train = {
             learnRateDecreaseFactor = 0.94
             loadBestModel = false
         ]
-		
-		ParallelTrain = [
+
+        ParallelTrain = [
             parallelizationMethod = "DataParallelSGD"
             distributedMBReading = "true"
             parallelizationStartEpoch = 1
@@ -108,7 +108,7 @@ Train = {
             }
         })
     }
-    
+
     cvreader = {
         verbosity = 0 ; randomize = false
         deserializers = ({
@@ -145,5 +145,5 @@ Eval = [
                 labels = { labelDim = $NumLabels$ }
             }
         })
-    } 
+    }
 ]
