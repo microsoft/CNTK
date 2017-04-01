@@ -3709,8 +3709,18 @@ namespace CNTK
     ///
     /// Per dimension mean-variance normalization of the specified input operand.
     ///
-    CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"");
+    CNTK_API FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const Variable& mean, const Variable& invStdDev, const std::wstring& name = L"");
 
+    ///
+    /// Per dimension mean-variance normalization of the specified input operand.
+    ///
+    inline FunctionPtr PerDimMeanVarianceNormalize(const Variable& operand, const NDArrayViewPtr& mean, const NDArrayViewPtr& invStdDev, const std::wstring& name = L"")
+    {
+        Constant meanVar(mean);
+        Constant invStdDevVar(invStdDev);
+
+        return PerDimMeanVarianceNormalize(operand, meanVar, invStdDevVar, name);
+    }
 
     ///
     /// Convolution 
