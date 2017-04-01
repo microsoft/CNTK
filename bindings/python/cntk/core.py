@@ -11,7 +11,7 @@ from scipy import sparse
 from . import cntk_py
 from .device import use_default_device, cpu, DeviceKind
 from cntk.internal import typemap
-from cntk.internal.sanitize import sanitize_batch, _sparse_to_dense_network_cache
+from cntk.internal.sanitize import sanitize_batch, sanitize_precision, _sparse_to_dense_network_cache
 
 
 def _is_c_contiguous(data):
@@ -145,6 +145,13 @@ class NDArrayView(cntk_py.NDArrayView):
         return ndav
 
     @property
+    def dtype(self):
+        '''
+        The NumPy type of this variable.
+        '''
+        return sanitize_precision(self.get_data_type())
+
+    @property
     def shape(self):
         '''
         The shape of this instance.
@@ -179,6 +186,7 @@ class NDArrayView(cntk_py.NDArrayView):
                 list(reversed(extent)),
                 read_only)
 
+    # BUGBUG: Shouldn't this be a @property?
     @typemap
     def device(self):
         '''
