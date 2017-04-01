@@ -91,6 +91,7 @@ classification_error = reducing_binary_op('classification_error')
 
 tanh = unary_op('tanh')
 sigmoid = unary_op('sigmoid')
+relu = unary_op('relu')
 softmax = unary_op('softmax')
 row_slice_0 = unary_op('row_slice')
 def row_slice(x, begin, end):
@@ -118,14 +119,14 @@ def Dense(N, activation=identity):
         return activation(x @ W + b)
     return dense
 
-def RNNBlock(N, activation=sigmoid):
+def RNNUnit(N, activation=sigmoid):
     W = Parameter((INFER,N), initializer=times_initializer)
     R = Parameter((INFER,N), initializer=times_initializer)
     b = Parameter((N,))
     @Model(W=W, R=R, b=b)
-    def rnn_block(s,x):
+    def rnn_step(s,x):
         return activation(plus(plus(times(s,R), times(x,W)), b))
-    return rnn_block
+    return rnn_step
 
 def LSTM(N, activation=sigmoid):
     # TODO
@@ -162,7 +163,7 @@ def Embedding(N):
     E = Parameter((INFER,N), initializer=times_initializer)
     @Model(E=E)
     def embedding(x):
-        yield times(x,E)
+        return times(x,E)
     return embedding
 
 def Sequential(functions):
@@ -361,3 +362,12 @@ def dump_graph(v):
     for node in order:
         print_node(node)
     return len(order)
+
+def train_minibatch(criterion, *batch_args):
+    # for now, manually do the batch loop
+    crit = 0
+    z = zip(*batch_args)
+    for args in zip(*batch_args):
+        ce, *_ = criterion(*args)
+        crit = plus(crit, ce)
+    return crit
