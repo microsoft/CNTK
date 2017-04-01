@@ -12,7 +12,7 @@ ConvBNReLULayer {outChannels, kernel, stride, pad, bnScale, bnTimeConst} = Seque
 InceptionWithAvgPoolLayer {num1x1, num3x3r, num3x3, num3x3dblr, num3x3dbl, numPool, bnScale, bnTimeConst} = {
     apply(x) = {
         # 1x1 Convolution
-        branch1x1 = ConvBNReLULayer{num1x1, (1:1), (1:1), true, bnScale, bnTimeConst}(x)
+        branch1x1 = ConvBNReLULayer{num1x1, (1:1), (1:1), true, bnScale, bnTimeConst} (x)
 
         # 3x3 Convolution
         branch3x3 = Sequential( 
@@ -40,7 +40,7 @@ InceptionWithAvgPoolLayer {num1x1, num3x3r, num3x3, num3x3dblr, num3x3dbl, numPo
 InceptionWithMaxPoolLayer {num1x1, num3x3r, num3x3, num3x3dblr, num3x3dbl, numPool, bnScale, bnTimeConst} = {
     apply(x) = {
         # 1x1 Convolution
-        branch1x1 = ConvBNReLULayer{num1x1, (1:1), (1:1), true, bnScale, bnTimeConst}(x)
+        branch1x1 = ConvBNReLULayer{num1x1, (1:1), (1:1), true, bnScale, bnTimeConst} (x)
 
         # 3x3 Convolution
         branch3x3 = Sequential( 
@@ -81,7 +81,7 @@ InceptionPassThroughLayer {num1x1, num3x3r, num3x3, num3x3dblr, num3x3dbl, numPo
         ) (x)
         
         # Max Pooling
-        branch_pool = MaxPoolingLayer{(3:3), stride=(2:2), pad=true}(x)
+        branch_pool = MaxPoolingLayer{(3:3), stride=(2:2), pad=true} (x)
 
         out = Splice((branch3x3:branch3x3dbl:branch_pool), axis=3)
     }.out
