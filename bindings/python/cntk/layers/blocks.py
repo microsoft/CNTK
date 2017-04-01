@@ -397,7 +397,7 @@ def LSTM(shape, cell_shape=None, activation=default_override_or(tanh), use_peeph
                            enable_self_stabilization=enable_self_stabilization, name=name)
 
 
-# TODO: needs better name
+# TODO: needs better name.. RNNStep?
 def RNNUnit(shape, cell_shape=None, activation=default_override_or(sigmoid),
             init=default_override_or(glorot_uniform()), init_bias=default_override_or(0),
             enable_self_stabilization=default_override_or(False),

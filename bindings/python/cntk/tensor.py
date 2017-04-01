@@ -242,25 +242,46 @@ class NDArrayViewOpsMixin(object):
     expressions.
     '''
 
+    # infix operators
     def __add__(self, other):
         return NDArrayView.numeric_operation([self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
+    def __mul__(self, other):
+        return NDArrayView.numeric_operation([self, other], 1.0, 26) # 26 = ElementWiseOperator.opElementwiseProduct
 
-    __radd__ = __add__ # so far makes no sense since we don't type-cast anyway
+    # so far these make no sense since we don't type-cast anyway
+    __radd__ = __add__
+    __rmul__ = __mul__
 
+    # in-place variants
     def __iadd__(self, other):
         self.numeric_operation_in_place(1.0, [other], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
         return self
 
     def __matmul__(self, other):
         return NDArrayView.matrix_product(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
-
     dot = __matmul__
+    def dot_transpose(self, other): # other gets transposed
+        return NDArrayView.matrix_product(False, other, True, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
 
+    # non-linearities
     def sigmoid(self):
-        return NDArrayView.numeric_operation([self], 1.0, 8) # 8 = ElementWiseOperator.opSigmoid
+        return NDArrayView.numeric_operation([self], 1.0,  8) #  8 = ElementWiseOperator.opSigmoid
+    def relu(self):
+        return NDArrayView.numeric_operation([self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
+
+    # reductions
+    def reduce_log_sum(self, other):
+        self.numeric_operation_in_place(1.0, [other], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+        return NDArrayView.numeric_operation([self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
 
 def _add_ndarrayview_ops(klass):
-    for overload_name in ['__add__', '__radd__', '__iadd__', '__matmul__', 'dot', 'sigmoid']:
+    for overload_name in ['__add__', '__mul__',
+                          '__radd__', '__rmul__',
+                          '__iadd__',
+                          '__matmul__',
+                          'dot', 'dot_transpose',
+                          'sigmoid', 'relu',
+                          'reduce_log_sum']:
         if getattr(klass, overload_name, None):
             raise ValueError('class "%s" already has operator overload "%s"' %
                              (klass, overload_name))

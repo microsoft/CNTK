@@ -60,10 +60,14 @@ def test_ndarrayview_operators(device_id, precision):
 
     # binary ops
     test(lambda a, b: a + b, [x, y])
+    test(lambda a, b: a * b, [x, y])
     test(lambda a, b: a @ b, [y.reshape(1,2), x])
+    test(lambda a, b: a.dot(b), [y.reshape(1,2), x])
+    test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [y.reshape(1,2), x.transpose()])
 
     # unary ops
     test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [x], rtol=1e-5)
+    test(lambda a: a.relu() if isinstance(a, NDArrayView) else np.maximum(a,0), [x])
 
     # in-place ops
     test(lambda a, b: a.__iadd__(b), [x, y]) # make sure that does not change 'x' in numpy
