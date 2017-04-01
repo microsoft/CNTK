@@ -245,13 +245,20 @@ class NDArrayViewOpsMixin(object):
     expressions.
     '''
 
+    def _num_op(*args):
+        res = NDArrayView.numeric_operation(*args)
+        return res
+    def _mat_prod(*args):
+        res = NDArrayView.matrix_product(*args)
+        return res
+
     # infix operators
     def __add__(self, other):
-        return NDArrayView.numeric_operation([self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
+        return NDArrayViewOpsMixin._num_op([self, other], 1.0, 24) # 24 = ElementWiseOperator.opSum
     def __sub__(self, other):
-        return NDArrayView.numeric_operation([self, other], 1.0, 25) # 25 = ElementWiseOperator.opDifference
+        return NDArrayViewOpsMixin._num_op([self, other], 1.0, 25) # 25 = ElementWiseOperator.opDifference
     def __mul__(self, other):
-        return NDArrayView.numeric_operation([self, other], 1.0, 26) # 26 = ElementWiseOperator.opElementwiseProduct
+        return NDArrayViewOpsMixin._num_op([self, other], 1.0, 26) # 26 = ElementWiseOperator.opElementwiseProduct
 
     # so far these make no sense since we don't type-cast anyway
     __radd__ = __add__
@@ -266,26 +273,26 @@ class NDArrayViewOpsMixin(object):
         return self
 
     def __matmul__(self, other):
-        if self.shape().rank() == 0: # TODO: allow for scalar zero (initial_state)
-            import numpy as np
-            self1 = NDArrayView(shape=(other.shape().dimensions()[0]), data_type=np.float32, device=other.device()) # reduce to scalar
-            # BUGBUG: How to get the precision in the right way?
-            # TODO: test case
-            self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
-            self = self1
-        return NDArrayView.matrix_product(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
+        #if self.shape().rank() == 0: # TODO: allow for scalar zero (initial_state)
+        #    import numpy as np
+        #    self1 = NDArrayView(shape=(other.shape().dimensions()[0]), data_type=np.float32, device=other.device()) # reduce to scalar
+        #    # BUGBUG: How to get the precision in the right way?
+        #    # TODO: test case
+        #    self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+        #    self = self1
+        return NDArrayViewOpsMixin._mat_prod(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
     dot = __matmul__
     def dot_transpose(self, other): # other gets transposed
-        return NDArrayView.matrix_product(False, other, True, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
+        return NDArrayViewOpsMixin._mat_prod(False, other, True, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
         # BUGBUG: fails with: DoMatrixProductOf: Ranks [5 x 1]' * [5] -> [1 x 1] mismatch.
 
     # non-linearities
     def sigmoid(self):
-        return NDArrayView.numeric_operation([self], 1.0,  8) #  8 = ElementWiseOperator.opSigmoid
+        return NDArrayViewOpsMixin._num_op([self], 1.0,  8) #  8 = ElementWiseOperator.opSigmoid
     def tanh(self):
-        return NDArrayView.numeric_operation([self], 1.0,  9) #  9 = ElementWiseOperator.opTanh
+        return NDArrayViewOpsMixin._num_op([self], 1.0,  9) #  9 = ElementWiseOperator.opTanh
     def relu(self):
-        return NDArrayView.numeric_operation([self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
+        return NDArrayViewOpsMixin._num_op([self], 1.0, 14) # 14 = ElementWiseOperator.opLinearRectifier
 
     # reductions
     def reduce_log_sum(self):
