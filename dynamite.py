@@ -9,6 +9,7 @@
 # array([  1.,  15.,   3.], dtype=float32)
 
 import numpy as np
+import cntk  # note: keep in 'cntk' namespace in here
 import collections
 from timeit import default_timer as timer
 
@@ -17,7 +18,6 @@ times_initializer="x" # for now a dummy string that is not None
 
 class Variable:
     def __new__(cls, shape, op, inputs):
-        #v = NDArray.__new__(cls, tuple(0 for dim in shape))
         v = object.__new__(cls)
         v.shape = shape
         v.op = op
@@ -26,6 +26,8 @@ class Variable:
         return v
     def __add__(self, other):
         return plus(self, other)
+    def __sub__(self, other):
+        return minus(self, other)
     def __mul__(self, other):
         return element_times(self, other)
     def __matmul__(self, other):
@@ -75,6 +77,13 @@ def unary_op(opcode):
         return Variable(x.shape, opcode, (x,))
     return f
 
+def unary_reduction_op(opcode):
+    def f(x):
+        if isinstance(x, list): # broadcast along sequence
+            return map(f, x)
+        return Variable((1,), opcode, (x,))  # BUGBUG: change shape to () once we support this correctly
+    return f
+
 @BroadcastingBinary
 def times(a,b):
     if hasattr(b, 'initializer'):
@@ -82,20 +91,33 @@ def times(a,b):
                   b.shape[1]),
                  refcheck=False)
         del b.initializer
-    return Variable((b.shape[1],), '@', (a,b))
+    return Variable((b.shape[1],), cntk.NDArrayView.dot, (a,b))
 
-plus = binary_op('+')
-element_times = binary_op('*')
-cross_entropy_with_softmax = reducing_binary_op('cross_entropy_with_softmax')
-classification_error = reducing_binary_op('classification_error')
+@BroadcastingBinary
+def times_transpose(a,b):
+    if hasattr(b, 'initializer'):
+        b.resize((b.shape[0],
+                  a.shape[0] if isinstance(a, (np.ndarray, Variable)) else 1),
+                 refcheck=False)
+        del b.initializer
+    return Variable((b.shape[0],), cntk.NDArrayView.dot_transpose, (a,b))
 
-tanh = unary_op('tanh')
-sigmoid = unary_op('sigmoid')
-relu = unary_op('relu')
-softmax = unary_op('softmax')
-row_slice_0 = unary_op('row_slice')
-def row_slice(x, begin, end):
-    return row_slice_0(x) # (ignore dims for this test)
+plus = binary_op(cntk.NDArrayView.__add__)
+minus = binary_op(cntk.NDArrayView.__add__)
+element_times = binary_op(cntk.NDArrayView.__mul__)
+
+tanh = unary_op(cntk.NDArrayView.tanh)
+sigmoid = unary_op(cntk.NDArrayView.sigmoid)
+relu = unary_op(cntk.NDArrayView.relu)
+#softmax = unary_op(cntk.NDArrayView.softmax)
+#row_slice_0 = unary_op(cntk.NDArrayView.row_slice)
+#def row_slice(x, begin, end):
+#    return row_slice_0(x) # (ignore dims for this test)
+reduce_log_sum = unary_reduction_op(cntk.NDArrayView.reduce_log_sum)
+
+def cross_entropy_with_softmax(output, label):
+    return reduce_log_sum(output) - times_transpose(label, output)
+classification_error = cross_entropy_with_softmax  # TODO... for now
 
 def identity(x):
     return x
