@@ -344,6 +344,13 @@ class Parameter(VariableMixin, TensorOpsMixin, cntk_py.Parameter):
         else:
             raise TypeError("Unsupported value type: %s", type(val))
 
+    @property
+    def data(self):
+        '''
+        value as a NDArrayView
+        '''
+        return super(Parameter, self).value()
+
 
 class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
     '''
@@ -396,4 +403,3 @@ class Constant(VariableMixin, TensorOpsMixin, cntk_py.Constant):
         NumPy array of the value
         '''
         return super(Constant, self).value().to_ndarray()
-

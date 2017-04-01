@@ -236,6 +236,9 @@ def _add_asarray(klass):
 
 from cntk.core import NDArrayView
 
+# TODO: change all of these here to return core.NDArrayView, not cntk_py.NDArrayView
+# TODO: change dynamite.py to use core.NDArrayView as well
+# TODO: fix matrix-product dims: (1) allow scalars; (2) transpose dims failed (Ranks [5 x 1]' * [5] -> [1 x 1] mismatch.)
 class NDArrayViewOpsMixin(object):
     '''
     This class defines math overloads so that CNTK NDArrayViews can be operated on in math
@@ -263,10 +266,18 @@ class NDArrayViewOpsMixin(object):
         return self
 
     def __matmul__(self, other):
+        if self.shape().rank() == 0: # TODO: allow for scalar zero (initial_state)
+            import numpy as np
+            self1 = NDArrayView(shape=(other.shape().dimensions()[0]), data_type=np.float32, device=other.device()) # reduce to scalar
+            # BUGBUG: How to get the precision in the right way?
+            # TODO: test case
+            self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+            self = self1
         return NDArrayView.matrix_product(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
     dot = __matmul__
     def dot_transpose(self, other): # other gets transposed
         return NDArrayView.matrix_product(False, other, True, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
+        # BUGBUG: fails with: DoMatrixProductOf: Ranks [5 x 1]' * [5] -> [1 x 1] mismatch.
 
     # non-linearities
     def sigmoid(self):
