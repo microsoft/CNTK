@@ -247,9 +247,11 @@ class NDArrayViewOpsMixin(object):
 
     def _num_op(*args):
         res = NDArrayView.numeric_operation(*args)
+        res.__class__ = args[0][0].__class__
         return res
     def _mat_prod(*args):
         res = NDArrayView.matrix_product(*args)
+        res.__class__ = args[1].__class__
         return res
 
     # infix operators
@@ -273,13 +275,12 @@ class NDArrayViewOpsMixin(object):
         return self
 
     def __matmul__(self, other):
-        #if self.shape().rank() == 0: # TODO: allow for scalar zero (initial_state)
-        #    import numpy as np
-        #    self1 = NDArrayView(shape=(other.shape().dimensions()[0]), data_type=np.float32, device=other.device()) # reduce to scalar
-        #    # BUGBUG: How to get the precision in the right way?
-        #    # TODO: test case
-        #    self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
-        #    self = self1
+        if len(self.shape) == 0: # TODO: allow for scalar zero (initial_state)
+            self1 = NDArrayView(shape=(other.shape[0]), data_type=other.dtype, device=other.device) # reduce to scalar
+            # BUGBUG: How to get the precision in the right way?
+            # TODO: test case
+            self1.numeric_operation_in_place(0.0, [self], 1.0, 2, 24) # 2 = ElementWiseOperator.opCopy
+            self = self1
         return NDArrayViewOpsMixin._mat_prod(False, other, False, self, False, 1.0, 1) # note: shapes are swapped, so we swap the order as well
     dot = __matmul__
     def dot_transpose(self, other): # other gets transposed
