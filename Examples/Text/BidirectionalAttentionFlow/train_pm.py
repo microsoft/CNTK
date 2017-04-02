@@ -110,7 +110,7 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
     trainer = C.Trainer(z, (loss, None), learner, progress_writers)
 
     if profiling:
-        C.start_profiler(sync_gpu=True)
+        C.debugging.start_profiler(sync_gpu=True)
 
     train_data_file = os.path.join(data_path, training_config['train_data'])
     train_data_ext = os.path.splitext(train_data_file)[-1].lower()
@@ -122,12 +122,12 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
         minibatch_size = training_config['minibatch_size'] # number of samples
         epoch_size = training_config['epoch_size']
-
+        
         C.training_session(
             trainer=trainer,
             mb_source = mb_source,
             mb_size = minibatch_size,
-            var_to_stream = input_map,
+            model_inputs_to_streams = input_map,
             max_samples = epoch_size * max_epochs,
             checkpoint_config = C.CheckpointConfig(filename = model_file, restore=restore),
             progress_frequency = epoch_size
@@ -145,12 +145,12 @@ def train(data_path, model_path, log_file, config_file, restore=False, profiling
 
             trainer.summarize_training_progress()
             if profiling:
-                enable_profiler()
+                C.debugging.enable_profiler()
 
         C.combine(z, loss).save(model_file)
     
     if profiling:
-        stop_profiler()
+        C.debugging.stop_profiler()
         
 def test(test_data, model_path, config_file):
     polymath = PolyMath(config_file)
