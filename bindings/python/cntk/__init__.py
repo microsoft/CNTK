@@ -22,6 +22,7 @@ from .learners import *
 from .losses import *
 from .metrics import *
 from .initializer import *
+from .default_options import *
 
 from . import debugging
 from . import logging
