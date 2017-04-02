@@ -29,11 +29,17 @@ class Variable:
             data = cntk.NDArrayView.from_dense(np.array(nparray, np.float32)) # BUGBUG: device?? precision??
             #data.__class__ = cntk.cntk_py.NDArrayView
             return data
-        self.data = self.op(*(input.data if isinstance(input, Variable) else
+        try:
+          self.data = self.op(*(input.data if isinstance(input, Variable) else
                               to_data(input)
                               for input in self.inputs))
+        except: # (for catching stuff in the debugger; remove this)
+          raise
         self.computed = True
-        pass
+    def to_ndarray(self):
+        if not self.computed:  # compute lazily (this is where all the difficult stuff will happen w.r.t. batching)
+            eval(self)
+        return self.data.to_ndarray()
     def __add__(self, other):
         return plus(self, other)
     def __sub__(self, other):
@@ -416,4 +422,5 @@ def train_minibatch(criterion, *batch_args):
         crit = plus(crit, ce)
     # evaluate
     eval(crit)
+    print(crit.to_ndarray())
     return crit.data # and return the NDArrayView, so that we can accumulate GPU-side

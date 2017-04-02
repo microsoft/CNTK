@@ -35,7 +35,7 @@ def create_reader(path, is_training, input_dim, label_dim):
 # convert CNTK reader's minibatch to our internal representation
 def from_cntk_mb(inputs: tuple, variables: tuple):
     def convert(self, var):
-        data = self.data
+        data = self.data.deep_clone()  # make a copy since Reader will reuse it, and may get tripped up by sharing
         # unpack MBLayout
         sequences, _ = data.unpack_variable_value(var, True, data.device())
         # turn into correct NDArrayView types
@@ -45,6 +45,7 @@ def from_cntk_mb(inputs: tuple, variables: tuple):
             shape = data.shape().dimensions()  # drop a superfluous length dimension
             item_shape = shape[1:]
             def wrap(data):
+                # fails with: SmallVector: index overflow
                 data.__class__ = data.__class__ = cntk.core.NDArrayView
                 return dynamite.Constant(data) # wrap in a dynamite Variable
             if has_axis:
@@ -94,12 +95,13 @@ def train(debug_output=False):
     debugging.dump_signature(criterion)
 
     # share static model's parameters over to dynamic model
-    dmodel.__items__[0].E              .share_data_from(model.embed.E)
-    dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  )
-    dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  )
-    dmodel.__items__[1].step_function.b.share_data_from(model.rnn.b  )
+    # Note: This must be done in exactly this order for the matrices, otherwise it affects the result. Seems some random init happens here.
     dmodel.__items__[2].W              .share_data_from(model.dense.W)
     dmodel.__items__[2].b              .share_data_from(model.dense.b)
+    dmodel.__items__[1].step_function.b.share_data_from(model.rnn.b  )
+    dmodel.__items__[1].step_function.W.share_data_from(model.rnn.W  )
+    dmodel.__items__[1].step_function.R.share_data_from(model.rnn.H  )
+    dmodel.__items__[0].E              .share_data_from(model.embed.E)
 
     rel_path = "../CNTK/Tests/EndToEndTests/Text/SequenceClassification/Data/Train.ctf"
     reader = create_reader(os.path.dirname(os.path.abspath(__file__)) + '/' + rel_path, True, input_dim, num_output_classes)
@@ -128,7 +130,8 @@ def train(debug_output=False):
         progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
         # CNTK dynamite
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
-        dynamite.train_minibatch(dcriterion, *args)
+        crit = dynamite.train_minibatch(dcriterion, *args)
+        #print(crit.to_ndarray())
         args = None  # deref; otherwise resize will fail
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)
