@@ -235,6 +235,7 @@ class InputValueBase : public ComputationNode<ElemType>, public NumInputs<0>, pu
     void Init(const TensorShape& sampleLayout, bool isSparse, const std::wstring axisName, float learningRateMultiplier = 0)
     {
         m_isSparse = isSparse;
+        Base::m_isValueSparse = isSparse;
         MarkValueNonSharable();
         if (isSparse)
             ConvertToSparseMatrix();
@@ -373,25 +374,6 @@ public:
         if (printMetadata)
         {
             fstream << "[" << string(GetSampleLayout()) << "]";
-        }
-    }
-
-private:
-    // determine the size that we should set our Matrix storage to
-    void DetermineDataSize(size_t& rows, size_t& cols) const override
-    {
-        if (!m_isSparse || !HasMBLayout())
-            Base::DetermineDataSize(rows, cols);
-        else
-        {
-            const auto& shape = GetSampleLayout();
-            size_t rank = shape.GetRank();
-            rows = rank > 0 ? shape[0] : 1;
-            cols = rank > 0 ? 1 : 1;
-            for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
-                cols *= shape[k];
-
-            cols *= GetMBLayout()->GetNumCols();
         }
     }
 

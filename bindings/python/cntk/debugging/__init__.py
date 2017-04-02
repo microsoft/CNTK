@@ -57,7 +57,7 @@ def dump_function(root, tag=None):
         actual_name = axis.name
         if actual_name in axis_names:
             return axis_names[actual_name]
-        if axis.name == "staticAxis_2147483645":  # TODO: what is the correct way of testing this?
+        if axis.name == "UnknownAxes":  # TODO: what is the correct way of testing this?
             name = "?"
         elif axis.name == "defaultBatchAxis":
             name = "b*"

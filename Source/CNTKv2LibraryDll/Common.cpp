@@ -635,7 +635,7 @@ namespace CNTK
 
     /*static*/ const Axis& Axis::DefaultDynamicAxis()
     {
-        static const Axis s_defaultDynamicAxis(L"DefaultSequenceAxis");
+        static const Axis s_defaultDynamicAxis(L"defaultDynamicAxis");
         return s_defaultDynamicAxis;
     }
 
@@ -647,7 +647,7 @@ namespace CNTK
 
     /*static*/ const Axis& Axis::DefaultBatchAxis()
     {
-        static const Axis s_defaultBatchAxis(L"DefaultBatchAxis", false);
+        static const Axis s_defaultBatchAxis(L"defaultBatchAxis", false);
         return s_defaultBatchAxis;
     }
 

@@ -247,8 +247,8 @@ class Value(cntk_py.Value):
         if self.is_sparse():
             if variable is None:
                 raise ValueError('cannot convert sparse value to sequences '
-                                 'wihtout the corresponding variable')
-            network = _sparse_to_dense_network_cache(variable.shape, True)
+                                 'without the corresponding variable')
+            network = _sparse_to_dense_network_cache(variable.shape, True, self.device())
 
             warnings.warn('converting Value object to CSR format might be slow')
 
@@ -380,6 +380,16 @@ class Value(cntk_py.Value):
 
             if seq_starts:
                 data = list(np.atleast_1d(data))
+            else:
+                data = Value._as_best_data_type(var, data)
+                ndav = NDArrayView.from_data(data, device)
+
+                return cntk_py.Value(ndav)
+
+        if isinstance(data, sparse.csr_matrix):
+            if seq_starts:
+                raise ValueError('seq_starts are not supported with data specified as a single '
+                                 'SciPy sparse CSR matrix. Please provide a list instead')
             else:
                 data = Value._as_best_data_type(var, data)
                 ndav = NDArrayView.from_data(data, device)

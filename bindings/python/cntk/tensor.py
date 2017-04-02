@@ -208,15 +208,21 @@ class ArrayMixin(object):
 
         if is_sparse:
             from cntk.internal.sanitize import _sparse_to_dense_network_cache
-            network = _sparse_to_dense_network_cache((ndav.shape[-1],), False)
 
+            network = _sparse_to_dense_network_cache(ndav.shape[1:], False, self.device())
             warnings.warn('converting Value object to CSR format might be slow')
-
             dense_data = network.eval(self, device=self.device())
+
+            def to_csr(dense_data):
+                if len(dense_data.shape) > 2:
+                    raise ValueError('Cannot convert a sparse NDArrayView or Value object '
+                                     'with shape %s of rank > 2 to a scipy.csr matrix.' % str(dense_data.shape))
+                return sparse.csr_matrix(dense_data)
+                
             if isinstance(dense_data, list):
-                result = [sparse.csr_matrix(d) for d in dense_data]
+                result = [to_csr(d) for d in dense_data]
             else:
-                result = sparse.csr_matrix(dense_data)
+                result = to_csr(dense_data)
 
         else:
             result = ndav.to_ndarray()

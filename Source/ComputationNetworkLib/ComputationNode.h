@@ -308,7 +308,7 @@ public:
 
     ComputationNodeBase(DEVICEID_TYPE deviceId, const wstring& name) :
         m_deviceId(deviceId), m_outputNeededDuringBackprop(true), m_learningRateMultiplier(0),
-        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name)
+        m_gradientInitialized(false), m_nodeName(name == L"" ? CreateUniqNodeName() : name), m_isValueSparse(false)
     {
         // TODO: should m_learningRateMultiplier be set to 0? Or should every node have a way to add its own say on the learning rate for all its inputs?
         // we store a unique numeric number for every node that is constructed, as a debugging aid
@@ -699,6 +699,11 @@ public:
                 if (child->GetSampleMatrixNumRows() == 0)
                     RuntimeError("%ls: input %ls %ls has 0 elements.", NodeDescription().c_str(), child->NodeName().c_str(), child->OperationName().c_str());
         }
+
+        // By default the only case when the Value of a node is sparse 
+        // is when the node has a single input with sparse Value
+        if ((GetNumInputs() == 1) && m_inputs[0]->IsValueSparse())
+            m_isValueSparse = true;
     }
 
 protected:
@@ -895,6 +900,8 @@ public:
     // Helper that returns [a x b x c], including dynamic axes.
     const std::string ShapeDescription() const;
 
+    bool IsValueSparse() const { return m_isValueSparse; }
+
     // debugging helper
     size_t m_uniqueNumericId; // (a unique handle for debugging)
 protected:
@@ -909,6 +916,8 @@ protected:
 
     // inputs
     std::vector<ComputationNodeBasePtr> m_inputs;
+
+    bool m_isValueSparse;
 
     // dimensions and layout
     // Data is stored as a Matrix object, but often it is interpreted as a tensor.
@@ -1599,21 +1608,38 @@ public:
 protected:
 
     // determine the size that we should set our Matrix storage to
-    virtual void DetermineDataSize(size_t& rows, size_t& cols) const
+    void DetermineDataSize(size_t& rows, size_t& cols) const
     {
-        if (HasMBLayout())
-        {
-            rows = GetSampleMatrixNumRows();
-            cols = GetSampleMatrixNumCols();
-        }
-        else
+        if (m_isValueSparse && HasMBLayout())
         {
             const auto& shape = GetSampleLayout();
             size_t rank = shape.GetRank();
-            rows = rank > 0 ? shape[0] : 0;
-            cols = rank > 0 ?        1 : 0;
+            rows = rank > 0 ? shape[0] : 1;
+
+            // TODO: TensorShape should have a method to 
+            // easily compute size of subshapes
+            cols = 1;
             for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
                 cols *= shape[k];
+
+            cols *= GetMBLayout()->GetNumCols();
+        }
+        else
+        {
+            if (HasMBLayout())
+            {
+                rows = GetSampleMatrixNumRows();
+                cols = GetSampleMatrixNumCols();
+            }
+            else
+            {
+                const auto& shape = GetSampleLayout();
+                size_t rank = shape.GetRank();
+                rows = rank > 0 ? shape[0] : 0;
+                cols = rank > 0 ? 1 : 0;
+                for (size_t k = 1; k < rank; k++)   // all dimensions except leading one
+                    cols *= shape[k];
+            }
         }
     }
 

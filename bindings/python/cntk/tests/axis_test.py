@@ -33,4 +33,4 @@ def test_axis_str():
     assert str(C.Axis.unknown_dynamic_axes()) == "(Axis('UnknownAxes'),)"
     assert str(Axis(1)) == "Axis('staticAxisIdx=1')"
     assert str(Axis(-1)) == "Axis('staticAxisIdx=-1')"
-    assert str(i.dynamic_axes) == "(Axis('DefaultBatchAxis'), Axis('DefaultSequenceAxis'))"
+    assert str(i.dynamic_axes) == "(Axis('defaultBatchAxis'), Axis('defaultDynamicAxis'))"
