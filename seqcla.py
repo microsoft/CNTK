@@ -125,16 +125,16 @@ def train(debug_output=False):
 
     for i in range(251):
         mb = reader.next_minibatch(minibatch_size)
-        # CNTK static
-        trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
-        progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
-        # CNTK dynamite
+        # CNTK dynamite  --do this first before CNTK updates anything
         args = from_cntk_mb((mb[reader.streams.features], mb[reader.streams.labels]), criterion.arguments)
         crit = dynamite.train_minibatch(dcriterion, *args)
-        #print(crit.to_ndarray())
+        print(crit.to_ndarray() / len(args[0]))
         args = None  # deref; otherwise resize will fail
         #print('static', dmodel.__items__[0].E.data.to_ndarray())
         #print('dynamic', model.embed.E.value)
+        # CNTK static
+        trainer.train_minibatch(criterion.argument_map(mb[reader.streams.features], mb[reader.streams.labels]))
+        progress_printer.update_with_trainer(trainer, with_metric=True)    # log progress
     loss, metric, actual_samples = progress_printer.epoch_summary(with_metric=True)
 
     import copy

@@ -36,10 +36,12 @@ class Variable:
         except: # (for catching stuff in the debugger; remove this)
           raise
         self.computed = True
-    def to_ndarray(self):
+    def value(self):  # return the NDArrayView
         if not self.computed:  # compute lazily (this is where all the difficult stuff will happen w.r.t. batching)
             eval(self)
-        return self.data.to_ndarray()
+        return self.data
+    def to_ndarray(self):
+        return self.value().to_ndarray()
     def __add__(self, other):
         return plus(self, other)
     def __sub__(self, other):
@@ -422,5 +424,4 @@ def train_minibatch(criterion, *batch_args):
         crit = plus(crit, ce)
     # evaluate
     eval(crit)
-    print(crit.to_ndarray())
-    return crit.data # and return the NDArrayView, so that we can accumulate GPU-side
+    return crit
