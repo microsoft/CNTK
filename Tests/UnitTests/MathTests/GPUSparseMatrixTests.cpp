@@ -734,6 +734,29 @@ BOOST_FIXTURE_TEST_CASE(GPUSparseMatrixOneHot, RandomSeedFixture)
     
     BOOST_CHECK(dirty_result.IsValid());
     BOOST_CHECK(dirty_dense.IsEqualTo(dirty_exp, 1e-6));
+
+    double data2[2] = {3,0};
+    GPUMatrix<double> m3(1, 2, c_deviceIdZero);
+    m3.SetValue(1, 2, c_deviceIdZero, data2, matrixFormatRowMajor);
+
+    double exp_data2[12];
+    memset(&exp_data2[0], 0, sizeof(double) * 12);
+    exp_data2[3] = exp_data2[6] = 1;
+    GPUMatrix<double> exp_m(6, 2, c_deviceIdZero);
+    exp_m.SetValue(6, 2, c_deviceIdZero, exp_data2, matrixFormatColMajor);
+
+    GPUSparseMatrix<double> exp_m_sparse(c_deviceIdZero, matrixFormatSparseCSC);
+    exp_m_sparse.SetValue(exp_m);
+
+    vector<size_t> shape3(3);
+    shape3[0] = num_class; shape3[1] = 2; shape3[2] = 1;
+
+    GPUSparseMatrix<double> result_m(c_deviceIdZero, matrixFormatSparseCSC);
+    result_m.AssignOneHot(m3, shape3, 0);
+
+    BOOST_CHECK(result_m.IsValid());
+    BOOST_CHECK(result_m.IsEqualTo(exp_m_sparse, 1e-6));
+
 }
 
 BOOST_AUTO_TEST_SUITE_END()
