@@ -176,7 +176,9 @@ class ArrayMixin(object):
 
         elif isinstance(self, (cntk.cntk_py.NDArrayView, cntk.cntk_py.NDMask)):
             ndav = self
-            if isinstance(self, cntk.cntk_py.NDArrayView):
+            if isinstance(self, cntk.NDArrayView):
+                is_sparse = ndav.is_sparse
+            elif isinstance(self, cntk.cntk_py.NDArrayView):
                 is_sparse = ndav.is_sparse()
             else:
                 is_sparse = False
@@ -192,12 +194,12 @@ class ArrayMixin(object):
             else:
                 value = self
 
-            is_sparse = value.is_sparse()
-
             if isinstance(value, cntk.Value):
+                is_sparse = value.is_sparse
                 has_mask = super(cntk.Value, value).mask() is not None
                 ndav = value.data
-            elif isinstance(value, cntk.cntk_py.Value):
+            else:
+                is_sparse = value.is_sparse()
                 has_mask = value.mask() is not None
                 ndav = value.data()
 
@@ -212,7 +214,11 @@ class ArrayMixin(object):
 
             warnings.warn('converting Value object to CSR format might be slow')
 
-            dense_data = network.eval(self, device=self.device())
+            device = self.device
+            if callable(device):
+                device = device()
+
+            dense_data = network.eval(self, device=device)
             if isinstance(dense_data, list):
                 result = [sparse.csr_matrix(d) for d in dense_data]
             else:

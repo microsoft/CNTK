@@ -11,7 +11,9 @@ from scipy import sparse
 from . import cntk_py
 from .device import use_default_device, cpu, DeviceKind
 from cntk.internal import typemap
-from cntk.internal.sanitize import sanitize_batch, _sparse_to_dense_network_cache
+from cntk.internal.sanitize import sanitize_batch,\
+                                   _sparse_to_dense_network_cache,\
+                                   data_type_to_dtype
 
 
 def _is_c_contiguous(data):
@@ -179,12 +181,34 @@ class NDArrayView(cntk_py.NDArrayView):
                 list(reversed(extent)),
                 read_only)
 
+    @property
     @typemap
     def device(self):
         '''
         Retrieves the :class:`~cntk.device.DeviceDescriptor` instance.
         '''
         return super(NDArrayView, self).device()
+
+    @property
+    def is_sparse(self):
+        '''
+        Whether the data is sparse or dense
+        '''
+        return super(NDArrayView, self).is_sparse()
+
+    @property
+    def is_read_only(self):
+        '''
+        Whether the data is read-only
+        '''
+        return super(NDArrayView, self).is_read_only()
+
+    @property
+    def dtype(self):
+        '''
+        NumPy data type of the instance
+        '''
+        return data_type_to_dtype(self.get_data_type())
 
 
 class Value(cntk_py.Value):
@@ -244,16 +268,16 @@ class Value(cntk_py.Value):
             of NumPy arrays (if dense) or a SciPy CSR array (if sparse) will be
             returned. Otherwise, the arrays will be returned directly.
         '''
-        if self.is_sparse():
+        if self.is_sparse:
             if variable is None:
                 raise ValueError('cannot convert sparse value to sequences '
-                                 'wihtout the corresponding variable')
+                                 'without the corresponding variable')
             network = _sparse_to_dense_network_cache(variable.shape)
 
             warnings.warn('converting Value object to CSR format might be slow')
 
             # TODO: Add direct conversion, since creating an intermediate array might be slow
-            dense_data = network.eval(self, device=self.device())
+            dense_data = network.eval(self, device=self.device)
             return [sparse.csr_matrix(seq) for seq in dense_data]
 
         else:
@@ -534,6 +558,35 @@ class Value(cntk_py.Value):
         Number of samples in this value object.
         '''
         return self.shape[0]
+
+    @property
+    @typemap
+    def device(self):
+        '''
+        Retrieves the :class:`~cntk.device.DeviceDescriptor` instance.
+        '''
+        return super(Value, self).device()
+
+    @property
+    def is_sparse(self):
+        '''
+        Whether the data is sparse or dense
+        '''
+        return super(Value, self).is_sparse()
+
+    @property
+    def is_read_only(self):
+        '''
+        Whether the data is read-only
+        '''
+        return super(Value, self).is_read_only()
+
+    @property
+    def dtype(self):
+        '''
+        NumPy data type of the instance
+        '''
+        return data_type_to_dtype(self.get_data_type())
 
 
 def user_function(user_func):

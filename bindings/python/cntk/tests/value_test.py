@@ -4,6 +4,7 @@
 # ==============================================================================
 
 import pytest
+import numpy as np
 import scipy.sparse as sparse
 csr = sparse.csr_matrix
 
@@ -178,8 +179,30 @@ def test_asarray_method():
             assert (a == d).toarray().all()
 
 
-def test_ndarray_device():
-    ndav = NDArrayView((2, 3), np.float32)
-    dev = ndav.device()
+def test_value_properties():
+    ndav = NDArrayView((1, 2, 3), np.float32)
+    val = Value(batch=ndav)
+
+    dev = val.device
     assert isinstance(dev, DeviceDescriptor)
     assert str(dev) == 'CPU'
+
+    assert val.is_read_only == False
+
+    assert val.is_sparse == False
+
+    assert val.dtype == np.float32
+
+
+def test_ndarray_properties():
+    ndav = NDArrayView((2, 3), np.float32)
+
+    dev = ndav.device
+    assert isinstance(dev, DeviceDescriptor)
+    assert str(dev) == 'CPU'
+
+    assert ndav.is_read_only == False
+
+    assert ndav.is_sparse == False
+
+    assert ndav.dtype == np.float32

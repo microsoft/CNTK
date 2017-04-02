@@ -359,6 +359,17 @@ def sanitize_var_map(op_arguments, arguments, precision=None,
     return var_map
 
 
+def data_type_to_dtype(data_type):
+    if data_type == cntk_py.DataType_Float:
+        return np.float32
+    elif data_type == cntk_py.DataType_Double:
+        return np.float64
+    elif data_type == cntk_py.DataType_Unknown:
+        return object
+    else:
+        raise ValueError('data_type %s is not supported'%data_type)
+
+
 def sanitize_dtype_numpy(dtype):
     is_type = isinstance(dtype, type) or isinstance(dtype, np.dtype)
     is_str = is_string(dtype)
