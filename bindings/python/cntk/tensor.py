@@ -176,7 +176,9 @@ class ArrayMixin(object):
 
         elif isinstance(self, (cntk.cntk_py.NDArrayView, cntk.cntk_py.NDMask)):
             ndav = self
-            if isinstance(self, cntk.cntk_py.NDArrayView):
+            if isinstance(self, cntk.NDArrayView):
+                is_sparse = ndav.is_sparse
+            elif isinstance(self, cntk.cntk_py.NDArrayView):
                 is_sparse = ndav.is_sparse()
             else:
                 is_sparse = False
@@ -192,12 +194,12 @@ class ArrayMixin(object):
             else:
                 value = self
 
-            is_sparse = value.is_sparse()
-
             if isinstance(value, cntk.Value):
+                is_sparse = value.is_sparse
                 has_mask = super(cntk.Value, value).mask() is not None
                 ndav = value.data
-            elif isinstance(value, cntk.cntk_py.Value):
+            else:
+                is_sparse = value.is_sparse()
                 has_mask = value.mask() is not None
                 ndav = value.data()
 
@@ -209,16 +211,22 @@ class ArrayMixin(object):
         if is_sparse:
             from cntk.internal.sanitize import _sparse_to_dense_network_cache
 
-            network = _sparse_to_dense_network_cache(ndav.shape[1:], False, self.device())
+            device = self.device
+            if callable(device):
+                device = device()
+
+            network = _sparse_to_dense_network_cache(ndav.shape[1:], False,
+                    device)
             warnings.warn('converting Value object to CSR format might be slow')
-            dense_data = network.eval(self, device=self.device())
+ 
+            dense_data = network.eval(self, device=device)
 
             def to_csr(dense_data):
                 if len(dense_data.shape) > 2:
                     raise ValueError('Cannot convert a sparse NDArrayView or Value object '
                                      'with shape %s of rank > 2 to a scipy.csr matrix.' % str(dense_data.shape))
                 return sparse.csr_matrix(dense_data)
-                
+
             if isinstance(dense_data, list):
                 result = [to_csr(d) for d in dense_data]
             else:
