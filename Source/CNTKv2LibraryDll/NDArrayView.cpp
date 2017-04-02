@@ -381,7 +381,10 @@ namespace CNTK
         switch (m_dataType)
         {
         case DataType::Float:
-            GetWritableTensorView<float>()->DoMatrixProductOf((float)beta, transC, *inputA->GetTensorView<float>(), transA, *inputB->GetTensorView<float>(), transB, (float)alpha);
+            // BUGBUG: the m_tensorView gets a patched shape that is padded to min 2 axes, but we need truthful shapes
+            // It doesn't seem to happen always, maybe depending on how the object is created.
+            // So maybe for now we can find a outside workaround and not commit this fix here.
+            TensorView<float>(*GetWritableTensorView<float>(), AsTensorShape(m_viewShape)).DoMatrixProductOf((float)beta, transC, TensorView<float>(*inputA->GetTensorView<float>(), AsTensorShape(inputA->Shape())), transA, TensorView<float>(*inputB->GetTensorView<float>(), AsTensorShape(inputB->Shape())), transB, (float)alpha);
             break;
         case DataType::Double: // note: keep this block a 100% copy of above, replacing float with double
             GetWritableTensorView<double>()->DoMatrixProductOf((double)beta, transC, *inputA->GetTensorView<double>(), transA, *inputB->GetTensorView<double>(), transB, (double)alpha);

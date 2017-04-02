@@ -67,12 +67,12 @@ def test_ndarrayview_operators(device_id, precision):
     test(lambda a, b: a.dot_transpose(b) if isinstance(a, NDArrayView) else a.dot(b.transpose()), [y.reshape(1,2), x.transpose()])
 
     # unary ops
-    test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [x])#, rtol=1e-10)
-    test(lambda a: a.tanh() if isinstance(a, NDArrayView) else np.tanh(a), [x])#, rtol=1e-10)
+    test(lambda a: a.sigmoid() if isinstance(a, NDArrayView) else expit(a), [x], rtol=1e-6)
+    test(lambda a: a.tanh() if isinstance(a, NDArrayView) else np.tanh(a), [x], rtol=1e-6)
     test(lambda a: a.relu() if isinstance(a, NDArrayView) else np.maximum(a,0), [x])
 
     # reduction ops
-    test(lambda a: a.reduce_log_sum() if isinstance(a, NDArrayView) else np.log(np.sum(np.exp(a))), [x])#, rtol=1e-8)
+    test(lambda a: a.reduce_log_sum() if isinstance(a, NDArrayView) else np.log(np.sum(np.exp(a))), [x], rtol=1e-6)
 
     # in-place ops
     test(lambda a, b: a.__iadd__(b), [x, y]) 
