@@ -696,11 +696,10 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
     }
 
-    // Todo: do we have a better place to put this function?
-    public static Function Combine(System.Collections.Generic.IEnumerable<Variable> outputVariables)
+    public static Function Combine(System.Collections.Generic.IEnumerable<Variable> operands)
     {
         var varVect = new VariableVector();
-        foreach (var v in outputVariables)
+        foreach (var v in operands)
         {
             varVect.Add(v);
         }
@@ -1807,7 +1806,6 @@ SWIG_STD_VECTOR_ENHANCED(CNTK::DeviceDescriptor)
         }
     }
 %}
-
 
 %include "CNTKLibraryInternals.h"
 %include "CNTKLibrary.h"
