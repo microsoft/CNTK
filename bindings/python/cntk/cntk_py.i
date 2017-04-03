@@ -1707,6 +1707,7 @@ DATA_TYPE.__eq__ = lambda a,b: (a is not None and b is not None and EQ(a,b)) or 
 %py_repr_for(Parameter)
 %py_repr_for(Constant)
 %py_repr_for(Function)
+%py_repr_for(Axis)
 
 %py_eq_for(Variable, Variable_eq)
 %py_hash_for(Variable)

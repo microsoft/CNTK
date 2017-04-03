@@ -5,6 +5,7 @@
 
 import pytest
 import scipy.sparse as sparse
+import cntk as C
 csr = sparse.csr_matrix
 
 from ..core import *
@@ -16,7 +17,6 @@ from cntk import asarray, asvalue
 
 test_numbers = [4., 5, 6., 7., 8.]
 test_array = AA(test_numbers, dtype=np.float32)
-
 
 def _dense_value_to_ndarray_test(data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes):
     shape = (5,)
@@ -42,7 +42,6 @@ def _dense_value_to_ndarray_test(data, num_of_dynamic_axes, expected_value_shape
 
     assert result_shapes == expected_array_shapes
 
-
 def _sparse_value_to_csr_test(data, num_of_dynamic_axes, expected_value_shape, expected_csr_shapes):
     shape = (3,)
 
@@ -65,31 +64,29 @@ def _sparse_value_to_csr_test(data, num_of_dynamic_axes, expected_value_shape, e
 
     assert csr_result_shapes == expected_csr_shapes
 
-
 DENSE_CONFIGURATIONS = [
     # (dense data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes)
     ([[test_array],
-      [test_array, test_array]], 2, (2, 2, 5), [(1, 5), (2, 5)]),
+      [test_array, test_array]], 2, (2,2,5), [(1,5),(2,5)]),
     ([test_array,
-      test_array], 2, (2, 1, 5), [(1, 5), (1, 5)]),
+      test_array], 2, (2, 1, 5), [(1,5), (1,5)]),
     ([[test_array],
-      [test_array]], 2, (2, 1, 5), [(1, 5), (1, 5)]),
+      [test_array]], 2, (2, 1, 5), [(1,5), (1,5)]),
     (test_array, 2, (5,), [(), (), (), (), ()]),
-    (AA([test_numbers], dtype=np.float32), 2, (1, 5), [(5,)]),
+    (AA([test_numbers], dtype=np.float32), 2, (1,5), [(5,)]),
     (AA([test_numbers, test_numbers], dtype=np.float32),
      2, (2, 5), [(5,), (5,)]),
     ([test_array,
-      test_array], 1, (2, 1, 5), (2, 1, 5)),
+      test_array], 1, (2,1,5), (2,1,5)),
     ([[test_array],
-      [test_array]], 1, (2, 1, 5), (2, 1, 5)),
-    (AA([test_numbers, test_numbers], dtype=np.float32), 1, (2, 5), (2, 5)),
-    (AA([test_numbers], dtype=np.float32), 1, (1, 5), (1, 5)),
+      [test_array]], 1, (2,1,5), (2,1,5)),
+    (AA([test_numbers, test_numbers], dtype=np.float32), 1, (2,5), (2,5)),
+    (AA([test_numbers], dtype=np.float32), 1, (1,5), (1,5)),
     ([test_array,
-      test_array], 0, (2, 5), (2, 5)),
-    (AA([test_numbers, test_numbers], dtype=np.float32), 0, (2, 5), (2, 5)),
+      test_array], 0, (2,5), (2,5)),
+    (AA([test_numbers, test_numbers], dtype=np.float32), 0, (2,5), (2,5)),
     (test_array, 0, (5,), (5,)),
 ]
-
 
 @pytest.mark.parametrize("data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes", DENSE_CONFIGURATIONS)
 def test_dense_value_to_ndarray(data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes):
@@ -98,19 +95,18 @@ def test_dense_value_to_ndarray(data, num_of_dynamic_axes, expected_value_shape,
 
 SPARSE_ARRAYS = [
     # (sparse data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes)
-    ([csr([[1., 0., 2.], [2., 3., 0.]]),
-      csr([5., 0., 1.])], 2, (2, 2, 3), [(2, 3), (1, 3)]),
-    ([csr([1, 0, 2]),
-      csr([5, 0, 1])], 2, (2, 1, 3), [(1, 3), (1, 3)]),
-    ([csr([[1, 0, 2], [2, 3, 4]])], 2, (1, 2, 3), [(2, 3)]),
-    ([csr([1, 0, 2]),
-      csr([5, 0, 1])], 1, (2, 1, 3), [(1, 3), (1, 3)]),
-    ([csr([[1, 0, 2], [2, 3, 0]]),
-      csr([[5, 0, 1], [2, 3, 0]])], 1, (2, 2, 3), [(2, 3), (2, 3)]),
-    ([csr([[1, 0, 2], [2, 3, 4]])], 1, (1, 2, 3), [(2, 3)]),
-    (csr([1, 0, 2]), 0, (1, 3), [(1, 3)]),
+    ([csr([[1.,0.,2.], [2.,3.,0.]]),
+      csr([5.,0.,1.])], 2, (2, 2, 3), [(2,3),(1,3)]),
+    ([csr([1,0,2]),
+      csr([5,0,1])], 2, (2, 1, 3),[(1,3),(1,3)]),
+    ([csr([[1,0,2],[2,3,4]])], 2, (1, 2, 3), [(2,3)]),
+    ([csr([1,0,2]),
+      csr([5,0,1])], 1, (2, 1, 3), [(1,3),(1,3)]),
+    ([csr([[1,0,2], [2,3,0]]),
+      csr([[5,0,1], [2,3,0]])], 1, (2, 2, 3), [(2,3),(2,3)]),
+    ([csr([[1,0,2],[2,3,4]])], 1, (1, 2, 3), [(2,3)]),
+    (csr([1,0,2]), 0, (1, 3), [(1,3)]),
 ]
-
 
 @pytest.mark.parametrize("data, num_of_dynamic_axes, expected_value_shape, expected_csr_shapes", SPARSE_ARRAYS)
 def test_sparse_value_to_csr(data, num_of_dynamic_axes, expected_value_shape, expected_csr_shapes):
@@ -120,7 +116,7 @@ def test_sparse_value_to_csr(data, num_of_dynamic_axes, expected_value_shape, ex
 DENSE_FAILING_CONFIGURATIONS = [
     # (dense data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes)
     ([[test_array],
-      [test_array, test_array]], 0, (2, 2, 5), [(1, 5), (2, 5)]),
+     [test_array, test_array]], 0, (2,2,5), [(1,5),(2,5)]),
     # TODO: enable once check is implemented
     #([[test_array],
     #  [test_array]], 0, (2, 1, 5), [(1, 5),(1, 5)]),
@@ -130,18 +126,18 @@ DENSE_FAILING_CONFIGURATIONS = [
 
 SPARSE_FAILING_CONFIGURATIONS = [
     # (sparse data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes)
-    (csr([[1, 0, 2], [2, 3, 0]]), 2, (1, 3), [(1, 3)]),
-    (csr([[1, 0, 2], [2, 3, 4]]), 2, (2, 1, 3), [(1, 3), (1, 3)]),
-    (csr([[1, 0, 2], [2, 3, 0]]), 1, (1, 3), [(1, 3)]),
-    ([csr([[1, 0, 2], [2, 3, 4]])], 0, (1, 2, 3), [(2, 3)]),
-    ([csr([[1, 0, 2], [2, 3, 0]]),
-      csr([5, 0, 1])], 0, (2, 2, 3), [(2, 3), (1, 3)]),
-    ([csr([1, 0, 2])], 0, (1, 3), [(1, 3)]),
+    # TODO: Following configurations are not meant to fail as expected
+    #(csr([[1,0,2], [2,3,0]]), 2, (1, 3), [(1,3)]),
+    #(csr([[1,0,2],[2,3,4]]), 2, (2, 1, 3), [(1,3),(1,3)]),
+    #(csr([[1,0,2], [2,3,0]]), 1, (1, 3), [(1,3)]),
+    ([csr([[1,0,2],[2,3,4]])], 0, (1, 2, 3), [(2,3)]),
+    ([csr([[1,0,2], [2,3,0]]),
+      csr([5,0,1])], 0, (2, 2, 3), [(2,3),(1,3)]),
+    ([csr([1,0,2])], 0, (1, 3), [(1,3)]),
     # TODO: enable once check is implemented
     #([csr([[1,0,2], [2,3,0]]),
     #  csr([5,0,1])], 1, (2, 2, 3), [(2,3),(1,3)]),
 ]
-
 
 @pytest.mark.parametrize("data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes", DENSE_FAILING_CONFIGURATIONS)
 def test_dense_failing_value_to_ndarray(data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes):
@@ -149,34 +145,38 @@ def test_dense_failing_value_to_ndarray(data, num_of_dynamic_axes, expected_valu
         _dense_value_to_ndarray_test(
             data, num_of_dynamic_axes, expected_value_shape, expected_array_shapes)
 
-
 @pytest.mark.parametrize("data, num_of_dynamic_axes, expected_value_shape, expected_csr_shapes", SPARSE_FAILING_CONFIGURATIONS)
 def test_sparse_failing_value_to_csr(data, num_of_dynamic_axes, expected_value_shape, expected_csr_shapes):
     with pytest.raises(ValueError):
         _sparse_value_to_csr_test(
             data, num_of_dynamic_axes, expected_value_shape, expected_csr_shapes)
 
-
 def test_asarray_method():
     shape = (3,)
 
     var = sequence.input(shape, is_sparse=True)
 
-    csr = sparse.csr_matrix
-    data = [csr([[1, 0, 2],
-                 [5, 0, 1]])]
+    data = [csr([[1,0,2], [5,0,1]])]
+    # conversion array -> value
+    val = asvalue(var, data)
+    as_csr = val.as_sequences(var)
+    for a, d in zip(as_csr, data):
+        assert (a==d).toarray().all()
+
+    var = C.input(shape, is_sparse=True)
+
+    data = csr([[1,0,2], [5,0,1]])
     # conversion array -> value
     val = asvalue(var, data)
     for v in [
-            val,  # Value
-            super(Value, val),  # cntk_py.Value
-            val.data,  # NDArrayView
-            super(NDArrayView, val.data),  # cntk_py.NDArrayView
-    ]:
+            val, # Value
+            super(Value, val), # cntk_py.Value
+            val.data, # NDArrayView
+            super(NDArrayView, val.data), # cntk_py.NDArrayView
+            ]:
         as_csr = v.asarray()
         for a, d in zip(as_csr, data):
-            assert (a == d).toarray().all()
-
+            assert (a==d).toarray().all()
 
 def test_ndarray_device():
     ndav = NDArrayView((2, 3), np.float32)

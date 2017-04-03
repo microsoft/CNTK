@@ -576,7 +576,7 @@ namespace CNTK
         return *result;
     }
 
-    /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxis_";
+    /*static*/ const std::wstring Axis::StaticAxisNamePrefix = L"staticAxisIdx=";
 
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForDynamicAxes = std::numeric_limits<int>::max();
     /*static*/ const int Axis::SentinelStaticAxisIndexValueForAllStaticAxes = std::numeric_limits<int>::max() - 1;
@@ -666,6 +666,16 @@ namespace CNTK
     void Axis::RegisterAxisName(const std::wstring& axisName)
     {
         s_uniqueDynamicAxisNames.RegisterAxisName(axisName);
+    }
+
+    std::wstring Axis::AsString() const
+    {
+        std::wstringstream wss;
+        wss << "Axis('";
+        wss << m_name;
+        wss << "')";
+
+        return wss.str();
     }
 
     void SetMaxNumCPUThreads(size_t numCPUThreads)

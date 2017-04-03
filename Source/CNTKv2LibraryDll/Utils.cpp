@@ -563,6 +563,16 @@ namespace CNTK
             InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
                             (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
 
+        if (valueShape.Rank() > (varShape.Rank() + numDynamicAxes))
+        {
+            for (size_t i = 0; i < (maxAddionalValueAxes - numDynamicAxes); ++i)
+            {
+                if (valueShape[varShape.Rank() + i] != 1)
+                    InvalidArgument("Value rank (%d) should be larger than the Variable rank (%d) at most by number of dynamic axes (%d); Variable = '%S', Value shape = '%S'.",
+                                    (int)valueShape.Rank(), (int)varShape.Rank(), (int)numDynamicAxes, var.AsString().c_str(), valueShape.AsString().c_str());
+            }
+        }
+
         if (valueShape.SubShape(0, varShape.Rank()) != varShape)
         {
             InvalidArgument("The %s dimensions of the Value shape '%S' do not match the Variable '%S' shape '%S'.",
