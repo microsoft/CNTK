@@ -192,7 +192,7 @@ class VariableMixin(object):
                 for axis in reversed(axes):
                     if axis.name == 'defaultBatchAxis':  # axis == Axis.default_batch_axis():  --TODO: how to do this right?
                         continue
-                    if axis.name == 'defaultDynamicAxis' or axis.name == 'staticAxis_2147483645': # TODO: how to do this right?
+                    if axis.name == 'defaultDynamicAxis' or axis.name == 'UnknownAxes': # TODO: how to do this right?
                         t = 'Sequence'
                     else:
                         t = 'SequenceOver[' + axis.name + ']'

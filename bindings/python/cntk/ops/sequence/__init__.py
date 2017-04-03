@@ -183,8 +183,7 @@ def past_value(x, initial_state=None, time_step=1, name=''):
     '''
 
     from cntk.internal import sanitize_dtype_cntk
-    from ...cntk_py import Constant
-    from cntk.cntk_py import past_value
+    from cntk.cntk_py import Constant, past_value
 
     if initial_state is None:
         initial_state = Constant.scalar(sanitize_dtype_cntk(np.float32), 0.0)

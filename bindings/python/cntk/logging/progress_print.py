@@ -48,6 +48,10 @@ class ProgressPrinter(cntk_py.ProgressWriter):
           test results.
         test_first (`int`, default 0): similar to ``first``, but applies to printing intermediate test results.
         metric_is_pct (`bool`, default True): Treat metric as a percentage for output purposes.
+        distributed_freq (`int` or `None`, default `None`): similar to ``freq``, but applies to printing distributed-training 
+          worker synchronization info.
+        distributed_first (`int`, default 0): similar to ``first``, but applies to printing distributed-training 
+          worker synchronization info.
     '''
 
     def __init__(self, freq=None, first=0, tag='', log_to_file=None, rank=None, gen_heartbeat=False, num_epochs=300,

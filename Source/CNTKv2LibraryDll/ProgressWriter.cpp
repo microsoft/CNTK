@@ -164,7 +164,7 @@ namespace CNTK
     {
         m_distributedSync->Update(samples, nullptr, accumulatedMetric,
             [this](const std::pair<size_t, size_t> samples, std::pair<size_t, size_t> updates,
-                const std::pair<double, double> /*aggregateLoss*/, std::pair<double, double> aggregateMetric)
+                   const std::pair<double, double> /*aggregateLoss*/, std::pair<double, double> aggregateMetric)
         {
             OnWriteDistributedSyncUpdate(samples, updates, aggregateMetric);
         });
