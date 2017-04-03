@@ -216,10 +216,6 @@ class Value(cntk_py.Value):
     Internal representation of minibatch data.
 
     Args:
-        shape (tuple): shape of the value
-        value (None or value that can be cast to NumPy array): the value to
-         be converted
-        dtype: data type (np.float32 or np.float64)
         batch: batch input for `var`.
          It can be:
 
@@ -235,23 +231,15 @@ class Value(cntk_py.Value):
          should be put on
     '''
 
-    def __init__(self, shape=None, dtype=None, batch=None, seq_starts=None, device=None):
+    def __init__(self, batch, seq_starts=None, device=None):
         if device is None:
             device = use_default_device()
 
-        if shape and dtype:
-            # FIXME is this needed?
-            ndav = NDArrayView(shape, dtype, device)
-
-        elif batch:
-            if isinstance(batch, np.ndarray):
-                ndav = NDArrayView.from_dense(batch, device)
-            else:
-                ndav = batch
-
+        if isinstance(batch, np.ndarray):
+            ndav = NDArrayView.from_dense(batch, device)
         else:
-            raise ValueError('either shape and dtype or batch must be'
-                             'provided')
+            ndav = batch
+
 
         if seq_starts:
             super(Value, self).__init__(ndav, seq_starts)

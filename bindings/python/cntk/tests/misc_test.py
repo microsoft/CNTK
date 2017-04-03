@@ -36,11 +36,6 @@ def test_callstack2():
         cntk.io.MinibatchSource(cntk.io.CTFDeserializer("", streams={}))
     assert '[CALL STACK]' in str(excinfo.value)
 
-def test_Value_raises():
-    from cntk import NDArrayView, Value
-    with pytest.raises(ValueError):
-        nd = NDArrayView.from_dense(np.asarray([[[4,5]]], dtype=np.float32))
-        val = Value(nd)
 
 def test_cpu_and_gpu_devices():
     device = cpu()
