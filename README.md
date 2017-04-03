@@ -2,6 +2,22 @@
 Give us feedback through these [channels](https://github.com/Microsoft/CNTK/wiki/Feedback-Channels).
 
 # Latest news
+***2017-03-31.* V 2.0 Release Candidate 1**  
+With Release Candidate 1 the Microsoft Cognitive Toolkit enters the final set of enhancements before release of the production version of CNTK v.2.0. 
+
+Highlights:
+* The release candidate contains [all changes and improvements introduced in CNTK 2.0 during beta phase](https://github.com/Microsoft/CNTK/wiki/CNTK-2.0-Beta-Highlights).
+* Enables Caffe-converted pretrained models on image classification including AlexNet, ResNet, VGG and BN-Inception. 
+* Slice now supports multiple-axis slicing.
+* Improves performance and memory footprint
+* Improvements in the [device selection API](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_1_Release_Notes).
+* New Python [model debugging functions](https://www.cntk.ai/pythondocs/cntk.debugging.html#module-cntk.debugging.debug).
+* Improvements in Python and C# API. See the [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_1_Release_Notes) for detailed description.
+* New file names for [CNTK libraries and dlls](https://github.com/Microsoft/CNTK/wiki/CNTK-Shared-Libraries-Naming-Format).
+
+The [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_1_Release_Notes) contain an overview. 
+Get the release from the [CNTK Releases Page](https://github.com/Microsoft/CNTK/releases).
+
 ***2017-03-24.* Important Note breaking changes**
 There are breaking changes in master compared to beta15, click [here](https://github.com/Microsoft/CNTK/wiki/Breaking-changes-in-Master-compared-to-beta15) for more information.
 

@@ -107,7 +107,7 @@ class MinibatchData(cntk_py.MinibatchData, ArrayMixin):
         '''
         Whether the data in this minibatch is sparse.
         '''
-        return self.data.is_sparse()
+        return self.data.is_sparse
 
     def __len__(self):
         return self.num_sequences
