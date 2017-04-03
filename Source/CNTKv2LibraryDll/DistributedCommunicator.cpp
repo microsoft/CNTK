@@ -69,6 +69,17 @@ namespace CNTK
 
     MPICommunicatorImpl::MPICommunicatorImpl(size_t packThresholdSizeInBytes)
     {
+        m_packThresholdSizeInBytes = packThresholdSizeInBytes;
+
+        // Do not instantiate MPI, if we're not running under mpiexec.
+        if (MPIWrapper::GetTotalNumberOfMPINodes() == 0)
+        {
+            m_currentWorker.m_globalRank = 0;
+            m_currentWorker.m_hostId = L"";
+            m_workers.insert(m_currentWorker);
+            return;
+        }
+
         m_mpi = MPIWrapper::GetInstance();
         if (m_mpi == nullptr)
         {
@@ -84,7 +95,6 @@ namespace CNTK
                 // TOOD: Nodes have to exchange their names.
                 m_workers.insert({ i,  L"" });
         }
-        m_packThresholdSizeInBytes = packThresholdSizeInBytes;
     }
 
     void MPICommunicatorImpl::Initialize(const std::vector<NDArrayViewPtr>& values)
