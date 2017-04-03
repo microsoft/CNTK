@@ -139,8 +139,8 @@ class VideoReader(object):
                             center_h + self.height / 2))
         
         norm_image = np.array(image, dtype=np.float32)
-        norm_image -= 128.0
-        norm_image /= 128.0
+        norm_image -= 127.5
+        norm_image /= 127.5
 
         # (channel, height, width)
         return np.ascontiguousarray(np.transpose(norm_image, (2, 0, 1)))
