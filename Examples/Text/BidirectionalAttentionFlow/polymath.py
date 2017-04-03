@@ -23,7 +23,7 @@ class PolyMath:
 
         self.wg_dim = known
         self.wn_dim = len(self.vocab) - known
-        self.c_dim = len(self.chars) * self.word_size
+        self.c_dim = len(self.chars)
         self.a_dim = 1
 
         self.hidden_dim = model_config['hidden_dim']
@@ -64,7 +64,7 @@ class PolyMath:
         qnw_ph = C.placeholder_variable()
         qc_ph  = C.placeholder_variable()
     
-        input_chars = C.placeholder_variable(shape=(self.c_dim,))
+        input_chars = C.placeholder_variable(shape=(1,self.word_size,self.c_dim))
         input_glove_words = C.placeholder_variable(shape=(self.wg_dim,))
         input_nonglove_words = C.placeholder_variable(shape=(self.wn_dim,))
 
@@ -72,7 +72,7 @@ class PolyMath:
         # todo GlobalPooling/reduce_max should have a keepdims default to False
         embedded = C.splice(
             self.embed()(input_glove_words, input_nonglove_words), 
-            C.reshape(self.charcnn(C.reshape(input_chars, (1, self.word_size, C.InferredDimension))), self.convs))
+            C.reshape(self.charcnn(input_chars), self.convs))
             
         input_layers = C.layers.Sequential([
             HighwayNetwork(dim=(embedded.shape[0]), highway_layers=self.highway_layers),
@@ -80,8 +80,11 @@ class PolyMath:
             OptimizedRnnStack(self.hidden_dim, bidirectional=True),
         ])
         
-        q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qgw_ph,qnw_ph,qc_ph])))
-        c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cgw_ph,cnw_ph,cc_ph])))
+        qce = C.one_hot(qc_ph, num_classes=self.c_dim)
+        cce = C.one_hot(cc_ph, num_classes=self.c_dim)
+                
+        q_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [qgw_ph,qnw_ph,qce])))
+        c_emb = embedded.clone(C.CloneMethod.share, dict(zip(embedded.placeholders, [cgw_ph,cnw_ph,cce])))
 
         q_processed = input_layers(q_emb) # synth_embedding for query
         c_processed = input_layers(c_emb) # synth_embedding for context
@@ -183,8 +186,8 @@ class PolyMath:
         cnw = C.input_variable(self.wn_dim, dynamic_axes=[b,c], is_sparse=True, name='cnw')
         qgw = C.input_variable(self.wg_dim, dynamic_axes=[b,q], is_sparse=True, name='qgw')
         qnw = C.input_variable(self.wn_dim, dynamic_axes=[b,q], is_sparse=True, name='qnw')
-        cc = C.input_variable(self.c_dim, dynamic_axes=[b,c], name='cc')
-        qc = C.input_variable(self.c_dim, dynamic_axes=[b,q], name='qc')
+        cc = C.input_variable((1,self.word_size), dynamic_axes=[b,c], name='cc')
+        qc = C.input_variable((1,self.word_size), dynamic_axes=[b,q], name='qc')
         ab = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ab')
         ae = C.input_variable(self.a_dim, dynamic_axes=[b,c], name='ae')
 
@@ -242,25 +245,24 @@ class PolyMath:
 
         start_end_prob = seq_softmax(C.splice(start_logits, end_logits))
         combined = C.splice(start_end_prob,ab,ae)
-        vw, vw_mask = C.layers.PastValueWindow(self.max_context_len, C.Axis.new_leading_axis(), go_backwards=True)(combined).outputs
-        vw = vw * vw_mask # todo: remove this after the _ bug fixes and we can ignore vw_mask
+        vw, _ = C.layers.PastValueWindow(self.max_context_len, C.Axis.new_leading_axis(), go_backwards=True)(combined).outputs
         start_prob = C.slice(vw,1,0,1)
         end_prob = C.slice(vw,1,1,2)
         joint_prob_mask = C.constant(np.asarray(np.triu(np.ones(self.max_context_len)),dtype=np.float32), shape=(self.max_context_len, self.max_context_len)) # start <= end
         joint_prob = C.times_transpose(start_prob, end_prob) * joint_prob_mask
-        joint_prob_loc = C.equal(joint_prob, C.reduce_max(joint_prob))
-        idx0 = C.argmax(C.reduce_max(joint_prob_loc,0),1)
-        idx1 = C.argmax(C.reduce_max(joint_prob_loc,1),0)
-        start_pos = C.element_min(idx0,idx1)
-        end_pos = C.element_max(idx0,idx1)
-
+        joint_prob_loc = C.equal(joint_prob, C.reduce_max(joint_prob, axis=C.Axis.all_static_axes()))
+        start_pos = C.argmax(C.reduce_max(joint_prob_loc,1),0)
+        end_pos = C.argmax(C.reduce_max(joint_prob_loc,0),1)
+        
         gt_start = C.argmax(C.slice(vw,1,2,3),0)
         gt_end = C.argmax(C.slice(vw,1,3,4),0)
         
         test_len = end_pos - start_pos + 1
         gt_len = gt_end - gt_start + 1
-        common_end = C.element_max(C.element_min(gt_end, end_pos), start_pos - 1)
+        
         common_start = C.element_max(gt_start, start_pos)
+        common_end = C.element_max(C.element_min(gt_end, end_pos), common_start - 1)
+
         common_len = common_end - common_start + 1
         precision = common_len / test_len
         recall = common_len / gt_len

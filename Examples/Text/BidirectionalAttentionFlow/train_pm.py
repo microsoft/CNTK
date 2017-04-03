@@ -22,14 +22,14 @@ def create_mb_and_map(func, data_file, polymath, randomize=True, repeat=True):
         C.io.CTFDeserializer(
             data_file,
             C.io.StreamDefs(
-                context_g_words  = C.io.StreamDef('cgw', shape=polymath.wg_dim, is_sparse=True),
-                query_g_words    = C.io.StreamDef('qgw', shape=polymath.wg_dim, is_sparse=True),
-                context_ng_words = C.io.StreamDef('cnw', shape=polymath.wn_dim, is_sparse=True),
-                query_ng_words   = C.io.StreamDef('qnw', shape=polymath.wn_dim, is_sparse=True),
-                answer_begin     = C.io.StreamDef('ab',  shape=polymath.a_dim,  is_sparse=False),
-                answer_end       = C.io.StreamDef('ae',  shape=polymath.a_dim,  is_sparse=False),
-                context_chars    = C.io.StreamDef('cc',  shape=polymath.c_dim,  is_sparse=True),
-                query_chars      = C.io.StreamDef('qc',  shape=polymath.c_dim,  is_sparse=True))),
+                context_g_words  = C.io.StreamDef('cgw', shape=polymath.wg_dim,     is_sparse=True),
+                query_g_words    = C.io.StreamDef('qgw', shape=polymath.wg_dim,     is_sparse=True),
+                context_ng_words = C.io.StreamDef('cnw', shape=polymath.wn_dim,     is_sparse=True),
+                query_ng_words   = C.io.StreamDef('qnw', shape=polymath.wn_dim,     is_sparse=True),
+                answer_begin     = C.io.StreamDef('ab',  shape=polymath.a_dim,      is_sparse=False),
+                answer_end       = C.io.StreamDef('ae',  shape=polymath.a_dim,      is_sparse=False),
+                context_chars    = C.io.StreamDef('cc',  shape=polymath.word_size,  is_sparse=False),
+                query_chars      = C.io.StreamDef('qc',  shape=polymath.word_size,  is_sparse=False))),
         randomize=randomize,
         epoch_size=C.io.INFINITELY_REPEAT if repeat else C.io.FULL_DATA_SWEEP)
 
@@ -71,8 +71,8 @@ def create_tsv_reader(func, tsv_file, polymath, seqs):
                 context_ng_words = C.one_hot([[C.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in cwids] for cwids in batch['cwids']], polymath.wn_dim)
                 query_g_words    = C.one_hot([[C.ONE_HOT_SKIP if i >= polymath.wg_dim else i for i in qwids] for qwids in batch['qwids']], polymath.wg_dim)
                 query_ng_words   = C.one_hot([[C.ONE_HOT_SKIP if i < polymath.wg_dim else i - polymath.wg_dim for i in qwids] for qwids in batch['qwids']], polymath.wn_dim)
-                context_chars = [[np.sum(np.eye(polymath.c_dim)[[i * len(polymath.chars) + c for i, c in enumerate(cc)]], axis=0) for cc in ccids] for ccids in batch['ccids']]
-                query_chars   = [[np.sum(np.eye(polymath.c_dim)[[i * len(polymath.chars) + c for i, c in enumerate(qc)]], axis=0) for qc in qcids] for qcids in batch['qcids']]
+                context_chars = [[cc for cc in ccids+[-1]*max(0,polymath.word_size-len(ccids))] for ccids in batch['ccids']]
+                query_chars   = [[qc for qc in qcids+[-1]*max(0,polymath.word_size-len(qcids))] for qcids in batch['qcids']]
                 answer_begin = batch['baidx']
                 answer_end = batch['eaidx']
 

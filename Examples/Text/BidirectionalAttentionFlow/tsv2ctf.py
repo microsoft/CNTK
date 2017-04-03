@@ -125,10 +125,10 @@ def tsv_to_ctf(f, g, vocab, chars, is_test):
                     out.append('|qgw {}:{}'.format(qwid, 1))
                     out.append('|qnw {}:{}'.format(0, 0))
             if ccid is not None:
-                outc = ' '.join(['%d:1' % (i * len(chars) + c) for i, c in enumerate(ccid)]) # TODO, change it to generate 2D sparse once the reader support is in
+                outc = ' '.join(['%d' % c for c in ccid+[-1]*max(word_size - len(ccid), 0)])
                 out.append('|cc %s' % outc)
             if qcid is not None:
-                outq = ' '.join(['%d:1' % (i * len(chars) + c) for i, c in enumerate(qcid)]) # TODO, change it to generate 2D sparse once the reader support is in
+                outq = ' '.join(['%d' % c for c in qcid+[-1]*max(word_size - len(qcid), 0)])
                 out.append('|qc %s' % outq)
             g.write('\t'.join(out))
             g.write('\n')
