@@ -15,7 +15,7 @@ Highlights:
 * Improvements in Python and C# API. See the [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_1_Release_Notes) for detailed description.
 * New file names for [CNTK libraries and dlls](https://github.com/Microsoft/CNTK/wiki/CNTK-Shared-Libraries-Naming-Format).
 
-The [release notes](https://github.com/Microsoft/CNTK/wiki/ReleaseNotes/CNTK_2_0_RC_1_Release_Notes) contain an overview. 
+The [release notes](https://github.com/Microsoft/CNTK/wiki/CNTK_2_0_RC_1_Release_Notes) contain an overview. 
 Get the release from the [CNTK Releases Page](https://github.com/Microsoft/CNTK/releases).
 
 ***2017-03-24.* Important Note breaking changes**
